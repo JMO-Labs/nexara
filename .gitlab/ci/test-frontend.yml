@@ -1,0 +1,37 @@
+##
+# @file .gitlab/ci/test-frontend.yml
+# @brief Frontend test job with Vitest and coverage reporting.
+#
+# Runs Vitest with V8 coverage provider. Produces HTML coverage
+# for Pages, Cobertura XML for MR diff annotations, and terminal
+# output for GitLab's built-in coverage parsing.
+##
+
+test:frontend:
+  stage: test
+  image: $NODE_IMAGE
+  extends:
+    - .cache:node-rw
+  needs:
+    - job: lint:eslint
+      optional: true
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - cd frontend
+    - npx vitest run --coverage --reporter=verbose --reporter=junit --outputFile=report.xml
+  coverage: '/All files\s*\|\s*[\d.]+\s*\|\s*[\d.]+\s*\|\s*[\d.]+\s*\|\s*([\d.]+)/'
+  artifacts:
+    when: always
+    paths:
+      - frontend/coverage/
+      - frontend/report.xml
+    reports:
+      junit: frontend/report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: frontend/coverage/cobertura-coverage.xml
+    expire_in: 30 days
+  rules: !reference [.rules:frontend-changes, rules]

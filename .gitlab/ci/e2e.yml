@@ -1,0 +1,40 @@
+##
+# @file .gitlab/ci/e2e.yml
+# @brief Playwright end-to-end test job (manual trigger).
+#
+# Runs Playwright browser tests against the built Docker image
+# stack. Currently a stub activated via manual trigger -- will be
+# fully wired once Playwright test suites exist in the frontend.
+##
+
+e2e:playwright:
+  stage: e2e
+  image: mcr.microsoft.com/playwright:v1.50.0-noble
+  needs:
+    - job: build:docker
+      optional: true
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/playwright"
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - npx playwright install --with-deps chromium
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - echo "Running Playwright E2E tests..."
+    - cd frontend
+    - npx playwright test --reporter=html
+  after_script:
+    - echo "Playwright report available in frontend/playwright-report/"
+  artifacts:
+    when: always
+    paths:
+      - frontend/playwright-report/
+      - frontend/test-results/
+    expire_in: 14 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+      when: manual
+  allow_failure: true

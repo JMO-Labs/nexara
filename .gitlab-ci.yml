@@ -1,0 +1,50 @@
+##
+# @file .gitlab-ci.yml
+# @brief Root GitLab CI/CD pipeline for the Nexara monorepo.
+#
+# Orchestrates lint, test, security, build, scan, e2e, reporting,
+# documentation, and release stages across both the Nuxt 3 frontend
+# and FastAPI backend. Optimized for GitLab.com Free tier with
+# change-detection rules and aggressive caching.
+##
+
+stages:
+  - lint
+  - test
+  - security
+  - build
+  - scan
+  - e2e
+  - report
+  - pages
+  - release
+
+include:
+  - local: ".gitlab/ci/variables.yml"
+  - local: ".gitlab/ci/lint-backend.yml"
+  - local: ".gitlab/ci/lint-frontend.yml"
+  - local: ".gitlab/ci/test-backend.yml"
+  - local: ".gitlab/ci/test-frontend.yml"
+  - local: ".gitlab/ci/security.yml"
+  - local: ".gitlab/ci/build.yml"
+  - local: ".gitlab/ci/container-scan.yml"
+  - local: ".gitlab/ci/e2e.yml"
+  - local: ".gitlab/ci/badges.yml"
+  - local: ".gitlab/ci/pages.yml"
+  - local: ".gitlab/ci/release.yml"
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: never
+
+default:
+  interruptible: true
+  retry:
+    max: 1
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure

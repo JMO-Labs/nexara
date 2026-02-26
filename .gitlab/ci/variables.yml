@@ -1,0 +1,134 @@
+##
+# @file .gitlab/ci/variables.yml
+# @brief Shared CI/CD variables for all pipeline jobs.
+#
+# Centralizes image references, service credentials, and cache key
+# templates so child configs remain DRY. Override any variable at
+# the project or group level in GitLab Settings > CI/CD > Variables.
+##
+
+variables:
+  # ── Container images ──────────────────────────────────────────────
+  PYTHON_IMAGE: "python:3.12-alpine"
+  NODE_IMAGE: "node:20-alpine"
+  KANIKO_IMAGE: "gcr.io/kaniko-project/executor:v1.23.2-debug"
+  TRIVY_IMAGE: "aquasec/trivy:latest"
+  GITLEAKS_IMAGE: "zricethezav/gitleaks:latest"
+
+  # ── Python / uv ──────────────────────────────────────────────────
+  PYTHON_VERSION: "3.12"
+  UV_SYSTEM_PYTHON: "1"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+  # ── Node.js ──────────────────────────────────────────────────────
+  NODE_VERSION: "20"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.cache/npm"
+
+  # ── PostgreSQL test service ──────────────────────────────────────
+  POSTGRES_DB: "nexara_test"
+  POSTGRES_USER: "nexara"
+  POSTGRES_PASSWORD: "nexara_test_password"
+  POSTGRES_HOST_AUTH_METHOD: "trust"
+  DATABASE_URL: "postgresql+asyncpg://nexara:nexara_test_password@postgres:5432/nexara_test"
+
+  # ── Docker / Registry ───────────────────────────────────────────
+  DOCKER_BUILDKIT: "1"
+  NEXARA_IMAGE: "$CI_REGISTRY_IMAGE/nexara"
+
+  # ── Misc ─────────────────────────────────────────────────────────
+  FF_USE_FASTZIP: "true"
+  ARTIFACT_COMPRESSION_LEVEL: "fast"
+  TRANSFER_METER_FREQUENCY: "5s"
+
+# ── Reusable rule anchors ────────────────────────────────────────
+# These YAML anchors are referenced by child configs via `!reference`.
+# GitLab resolves them at pipeline creation time.
+
+.rules:backend-changes:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        paths:
+          - "backend/**"
+          - "pyproject.toml"
+          - "uv.lock"
+          - ".gitlab-ci.yml"
+          - ".gitlab/ci/**"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+.rules:frontend-changes:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        paths:
+          - "frontend/**"
+          - "package*.json"
+          - ".gitlab-ci.yml"
+          - ".gitlab/ci/**"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+.rules:default-branch-only:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.rules:tag-only:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+.rules:default-branch-and-tag:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+# ── Reusable cache templates ────────────────────────────────────
+.cache:python:
+  cache:
+    key: "uv-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - "$CI_PROJECT_DIR/.cache/uv"
+      - "backend/.venv/"
+    policy: pull
+
+.cache:python-rw:
+  cache:
+    key: "uv-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - "$CI_PROJECT_DIR/.cache/uv"
+      - "backend/.venv/"
+    policy: pull-push
+
+.cache:node:
+  cache:
+    key: "node-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - "$CI_PROJECT_DIR/.cache/npm"
+      - "frontend/node_modules/"
+    policy: pull
+
+.cache:node-rw:
+  cache:
+    key: "node-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - "$CI_PROJECT_DIR/.cache/npm"
+      - "frontend/node_modules/"
+    policy: pull-push
+
+# ── Shared before_script snippets ────────────────────────────────
+.setup:python:
+  before_script:
+    - apk add --no-cache gcc musl-dev libffi-dev
+    - pip install --quiet uv
+    - cd backend
+    - uv venv .venv
+    - uv sync --frozen 2>/dev/null || uv sync
+    - source .venv/bin/activate
+    - cd "$CI_PROJECT_DIR"
+
+.setup:node:
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - cd "$CI_PROJECT_DIR"

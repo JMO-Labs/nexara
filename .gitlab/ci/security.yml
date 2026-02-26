@@ -1,0 +1,115 @@
+##
+# @file .gitlab/ci/security.yml
+# @brief Security scanning jobs for the Nexara monorepo.
+#
+# Uses open-source tools compatible with GitLab.com Free tier:
+#   - Bandit: Python static application security testing (SAST)
+#   - pip-audit: Python dependency vulnerability scanning
+#   - npm audit: Node.js dependency vulnerability scanning
+#   - gitleaks: Secret/credential detection in git history
+#
+# All jobs are allow_failure:true initially. Tighten once the
+# codebase stabilizes and baseline issues are resolved.
+##
+
+security:bandit:
+  stage: security
+  image: $PYTHON_IMAGE
+  extends:
+    - .cache:python
+  before_script:
+    - pip install --quiet bandit[toml]
+  script:
+    - echo "Running Bandit Python SAST..."
+    - >-
+      bandit
+      -r backend/app/
+      -f json
+      -o bandit-report.json
+      --severity-level medium
+      --confidence-level medium
+      || true
+    - bandit -r backend/app/ -f txt --severity-level medium --confidence-level medium || true
+    - echo "Bandit scan complete. Report saved to bandit-report.json"
+  artifacts:
+    when: always
+    paths:
+      - bandit-report.json
+    expire_in: 30 days
+  rules: !reference [.rules:backend-changes, rules]
+  allow_failure: true
+
+security:pip-audit:
+  stage: security
+  image: $PYTHON_IMAGE
+  extends:
+    - .cache:python
+  before_script:
+    - pip install --quiet uv pip-audit
+    - cd backend
+    - uv venv .venv
+    - uv sync --frozen 2>/dev/null || uv sync
+    - source .venv/bin/activate
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - echo "Running pip-audit dependency scan..."
+    - cd backend
+    - pip-audit --format=json --output=pip-audit-report.json || true
+    - pip-audit || true
+    - echo "pip-audit scan complete."
+  artifacts:
+    when: always
+    paths:
+      - backend/pip-audit-report.json
+    expire_in: 30 days
+  rules: !reference [.rules:backend-changes, rules]
+  allow_failure: true
+
+security:npm-audit:
+  stage: security
+  image: $NODE_IMAGE
+  extends:
+    - .cache:node
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - echo "Running npm audit..."
+    - cd frontend
+    - npm audit --omit=dev --json > npm-audit-report.json || true
+    - npm audit --omit=dev || true
+    - echo "npm audit complete."
+  artifacts:
+    when: always
+    paths:
+      - frontend/npm-audit-report.json
+    expire_in: 30 days
+  rules: !reference [.rules:frontend-changes, rules]
+  allow_failure: true
+
+security:gitleaks:
+  stage: security
+  image:
+    name: $GITLEAKS_IMAGE
+    entrypoint: [""]
+  script:
+    - echo "Running gitleaks secret detection..."
+    - >-
+      gitleaks detect
+      --source="$CI_PROJECT_DIR"
+      --report-format=json
+      --report-path=gitleaks-report.json
+      --verbose
+      || true
+    - echo "gitleaks scan complete."
+  artifacts:
+    when: always
+    paths:
+      - gitleaks-report.json
+    expire_in: 30 days
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  allow_failure: true

@@ -1,0 +1,149 @@
+##
+# @file .gitlab/ci/badges.yml
+# @brief Generates SVG badges from CI artifacts for GitLab Pages.
+#
+# Uses anybadge to create status badges from test coverage, Python
+# version, Node version, license, and security scan results. Badges
+# are collected by the pages job and served at /badges/*.svg.
+##
+
+report:badges:
+  stage: report
+  image: $PYTHON_IMAGE
+  needs:
+    - job: test:backend
+      optional: true
+      artifacts: true
+    - job: test:frontend
+      optional: true
+      artifacts: true
+    - job: security:bandit
+      optional: true
+      artifacts: true
+    - job: scan:container
+      optional: true
+      artifacts: true
+  before_script:
+    - pip install --quiet anybadge
+    - mkdir -p badges
+  script:
+    - |
+      # -- Backend coverage badge --
+      BACKEND_COV="N/A"
+      if [ -f backend/coverage.xml ]; then
+        BACKEND_COV=$(python3 -c "
+      import xml.etree.ElementTree as ET
+      try:
+          tree = ET.parse('backend/coverage.xml')
+          rate = float(tree.getroot().attrib.get('line-rate', 0))
+          print(f'{rate * 100:.1f}')
+      except Exception:
+          print('N/A')
+      ")
+      fi
+      echo "Backend coverage: ${BACKEND_COV}%"
+      if [ "$BACKEND_COV" != "N/A" ]; then
+        anybadge -l "backend coverage" -v "${BACKEND_COV}%" \
+          -f badges/coverage-backend.svg \
+          --color="#4c1" 2>/dev/null || \
+        anybadge -l "backend coverage" -v "${BACKEND_COV}%" \
+          -f badges/coverage-backend.svg
+      else
+        anybadge -l "backend coverage" -v "N/A" \
+          -f badges/coverage-backend.svg --color="#9f9f9f"
+      fi
+
+    - |
+      # -- Frontend coverage badge --
+      FRONTEND_COV="N/A"
+      if [ -f frontend/coverage/cobertura-coverage.xml ]; then
+        FRONTEND_COV=$(python3 -c "
+      import xml.etree.ElementTree as ET
+      try:
+          tree = ET.parse('frontend/coverage/cobertura-coverage.xml')
+          rate = float(tree.getroot().attrib.get('line-rate', 0))
+          print(f'{rate * 100:.1f}')
+      except Exception:
+          print('N/A')
+      ")
+      fi
+      echo "Frontend coverage: ${FRONTEND_COV}%"
+      if [ "$FRONTEND_COV" != "N/A" ]; then
+        anybadge -l "frontend coverage" -v "${FRONTEND_COV}%" \
+          -f badges/coverage-frontend.svg \
+          --color="#4c1" 2>/dev/null || \
+        anybadge -l "frontend coverage" -v "${FRONTEND_COV}%" \
+          -f badges/coverage-frontend.svg
+      else
+        anybadge -l "frontend coverage" -v "N/A" \
+          -f badges/coverage-frontend.svg --color="#9f9f9f"
+      fi
+
+    - |
+      # -- Python version badge --
+      anybadge -l "python" -v "$PYTHON_VERSION" \
+        -f badges/python.svg --color="#3776ab"
+
+    - |
+      # -- Node version badge --
+      anybadge -l "node" -v "$NODE_VERSION" \
+        -f badges/node.svg --color="#339933"
+
+    - |
+      # -- License badge --
+      anybadge -l "license" -v "GPL-3.0" \
+        -f badges/license.svg --color="#blue"
+
+    - |
+      # -- Security badge (based on Bandit + Trivy results) --
+      SEC_STATUS="passing"
+      SEC_COLOR="#4c1"
+
+      if [ -f bandit-report.json ]; then
+        BANDIT_HIGH=$(python3 -c "
+      import json
+      try:
+          data = json.load(open('bandit-report.json'))
+          results = data.get('results', [])
+          high = sum(1 for r in results if r.get('issue_severity') == 'HIGH')
+          print(high)
+      except Exception:
+          print(0)
+      ")
+        if [ "$BANDIT_HIGH" -gt 0 ] 2>/dev/null; then
+          SEC_STATUS="issues found"
+          SEC_COLOR="#dfb317"
+        fi
+      fi
+
+      if [ -f trivy-report.json ]; then
+        TRIVY_CRIT=$(python3 -c "
+      import json
+      try:
+          data = json.load(open('trivy-report.json'))
+          results = data.get('Results', [])
+          crit = 0
+          for r in results:
+              for v in r.get('Vulnerabilities', []):
+                  if v.get('Severity') == 'CRITICAL':
+                      crit += 1
+          print(crit)
+      except Exception:
+          print(0)
+      ")
+        if [ "$TRIVY_CRIT" -gt 0 ] 2>/dev/null; then
+          SEC_STATUS="critical"
+          SEC_COLOR="#e05d44"
+        fi
+      fi
+
+      anybadge -l "security" -v "$SEC_STATUS" \
+        -f badges/security.svg --color="$SEC_COLOR"
+
+    - echo "All badges generated in badges/"
+    - ls -la badges/
+  artifacts:
+    paths:
+      - badges/
+    expire_in: 30 days
+  rules: !reference [.rules:default-branch-and-tag, rules]

@@ -1,0 +1,42 @@
+##
+# @file .gitlab/ci/lint-frontend.yml
+# @brief Frontend linting jobs: ESLint and Prettier format checking.
+#
+# Both jobs use change-detection rules to skip when only backend
+# files have been modified, conserving CI compute minutes.
+##
+
+lint:eslint:
+  stage: lint
+  image: $NODE_IMAGE
+  extends:
+    - .cache:node-rw
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - echo "Running ESLint..."
+    - cd frontend
+    - npx eslint . --format gitlab
+  rules: !reference [.rules:frontend-changes, rules]
+  allow_failure: false
+
+lint:prettier:
+  stage: lint
+  image: $NODE_IMAGE
+  extends:
+    - .cache:node
+  needs:
+    - job: lint:eslint
+      optional: true
+  before_script:
+    - cd frontend
+    - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
+    - cd "$CI_PROJECT_DIR"
+  script:
+    - echo "Checking Prettier formatting..."
+    - cd frontend
+    - npx prettier --check "**/*.{ts,vue,js,json,css,scss,md}"
+  rules: !reference [.rules:frontend-changes, rules]
+  allow_failure: false

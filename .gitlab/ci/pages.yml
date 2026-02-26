@@ -1,0 +1,99 @@
+##
+# @file .gitlab/ci/pages.yml
+# @brief GitLab Pages deployment: MkDocs + Doxygen + reports + badges.
+#
+# Assembles the public/ directory from multiple sources:
+#   - MkDocs Material site (project documentation)
+#   - Doxygen-generated Python API reference
+#   - Coverage HTML reports (backend + frontend)
+#   - Playwright reports (when available)
+#   - Generated SVG badges
+#
+# The pages job name MUST be "pages" for GitLab Pages to deploy.
+##
+
+pages:
+  stage: pages
+  image: $PYTHON_IMAGE
+  needs:
+    - job: report:badges
+      optional: true
+      artifacts: true
+    - job: test:backend
+      optional: true
+      artifacts: true
+    - job: test:frontend
+      optional: true
+      artifacts: true
+    - job: e2e:playwright
+      optional: true
+      artifacts: true
+  before_script:
+    - apk add --no-cache doxygen graphviz
+    - pip install --quiet mkdocs-material
+  script:
+    # -- Build MkDocs site --
+    - |
+      if [ -f docs/mkdocs.yml ]; then
+        echo "Building MkDocs documentation..."
+        mkdocs build -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
+      else
+        echo "No mkdocs.yml found, creating minimal index..."
+        mkdir -p public
+        echo "<html><body><h1>Nexara Documentation</h1><p>MkDocs not yet configured.</p></body></html>" > public/index.html
+      fi
+
+    # -- Generate Doxygen API docs --
+    - |
+      if [ -f docs/Doxyfile ]; then
+        echo "Generating Doxygen API documentation..."
+        cd docs
+        doxygen Doxyfile
+        cd "$CI_PROJECT_DIR"
+        if [ -d docs/build/api ]; then
+          mkdir -p public/api
+          cp -r docs/build/api/* public/api/
+        fi
+      else
+        echo "No Doxyfile found, skipping Doxygen generation."
+      fi
+
+    # -- Collect backend coverage report --
+    - |
+      if [ -d backend/htmlcov ]; then
+        echo "Collecting backend coverage report..."
+        mkdir -p public/coverage/backend
+        cp -r backend/htmlcov/* public/coverage/backend/
+      fi
+
+    # -- Collect frontend coverage report --
+    - |
+      if [ -d frontend/coverage ]; then
+        echo "Collecting frontend coverage report..."
+        mkdir -p public/coverage/frontend
+        cp -r frontend/coverage/* public/coverage/frontend/
+      fi
+
+    # -- Collect Playwright report --
+    - |
+      if [ -d frontend/playwright-report ]; then
+        echo "Collecting Playwright report..."
+        mkdir -p public/playwright
+        cp -r frontend/playwright-report/* public/playwright/
+      fi
+
+    # -- Collect badges --
+    - |
+      if [ -d badges ]; then
+        echo "Collecting generated badges..."
+        mkdir -p public/badges
+        cp -r badges/* public/badges/
+      fi
+
+    - echo "GitLab Pages content assembled in public/"
+    - ls -la public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  rules: !reference [.rules:default-branch-only, rules]
