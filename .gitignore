@@ -205,3 +205,71 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# =============================================================================
+# Frontend (Node.js / Nuxt 3)
+# =============================================================================
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Nuxt build and cache
+frontend/.nuxt/
+frontend/.output/
+frontend/.nitro/
+frontend/.cache/
+
+# Vitest coverage
+frontend/coverage/
+
+# Playwright test output
+frontend/test-results/
+frontend/playwright-report/
+
+# TypeScript generated outputs
+frontend/types/api.d.ts
+
+# Misc
+frontend/.eslintcache
+frontend/*.local
+
+# =============================================================================
+# Backend (Python / FastAPI)
+# =============================================================================
+
+# Virtual environment (uv)
+backend/.venv/
+
+# Compiled translation catalogs (generated from .po files by pybabel/msgfmt)
+backend/locales/**/*.mo
+
+# Alembic generated env markers (keep versions/ tracked)
+backend/alembic/__pycache__/
+
+# =============================================================================
+# Deployment / Infrastructure
+# =============================================================================
+
+# Real env files — never commit secrets
+deploy/.env
+# Docker layer cache
+deploy/.docker-cache/
+
+# Helm chart lock (auto-generated)
+deploy/helm/nexara/Chart.lock
+
+# =============================================================================
+# OS / Editor
+# =============================================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Plans (local planning documents, not part of the application source)
+# =============================================================================
+plans/
