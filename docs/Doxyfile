@@ -1,0 +1,72 @@
+# @file docs/Doxyfile
+# @brief Doxygen configuration for Nexara Python backend API documentation.
+#
+# Generates HTML documentation from Doxygen-style docstrings in the
+# FastAPI backend source. Output is collected by the GitLab Pages
+# job and served at /api/ on the documentation site.
+
+#---------------------------------------------------------------------------
+# Project metadata
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "Nexara API"
+PROJECT_BRIEF          = "FastAPI backend for the Nexara community platform"
+PROJECT_NUMBER         = ""
+OUTPUT_DIRECTORY       = build
+
+#---------------------------------------------------------------------------
+# Input configuration
+#---------------------------------------------------------------------------
+INPUT                  = ../backend/app
+RECURSIVE              = YES
+FILE_PATTERNS          = *.py
+EXCLUDE_PATTERNS       = */__pycache__/* */migrations/* */.venv/*
+
+#---------------------------------------------------------------------------
+# Python-specific settings
+#---------------------------------------------------------------------------
+OPTIMIZE_OUTPUT_JAVA   = YES
+PYTHON_DOCSTRING       = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+
+#---------------------------------------------------------------------------
+# Output format
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+HTML_OUTPUT            = api
+HTML_COLORSTYLE        = LIGHT
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+
+#---------------------------------------------------------------------------
+# Graphs and diagrams
+#---------------------------------------------------------------------------
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+DIRECTORY_GRAPH        = YES
+
+#---------------------------------------------------------------------------
+# Warnings and errors
+#---------------------------------------------------------------------------
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+
+#---------------------------------------------------------------------------
+# Preprocessing
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+SEARCH_INCLUDES        = YES
