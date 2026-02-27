@@ -212,3 +212,30 @@ class TestRestoreUser:
         assert data["is_active"] is True
         mock_audit_repo.append.assert_awaited_once()
         assert mock_audit_repo.append.await_args[1]["action"] == "admin.user.restored"
+
+
+class TestListUsers:
+    """@brief Tests for AdminService.list_users()."""
+
+    @pytest.mark.asyncio
+    async def test_delegates_to_user_repo_with_search(self):
+        """list_users should delegate to user_repo.list_by_community_search."""
+        mock_users = [_make_target_user()]
+        mock_user_repo = AsyncMock()
+        mock_user_repo.list_by_community_search.return_value = (mock_users, None)
+
+        service = AdminService(
+            session=MagicMock(),
+            user_repo=mock_user_repo,
+            audit_repo=AsyncMock(),
+            community_id=COMMUNITY_ID,
+            settings=_make_settings(),
+        )
+
+        users, cursor = await service.list_users(search="test", limit=10)
+
+        mock_user_repo.list_by_community_search.assert_awaited_once_with(
+            COMMUNITY_ID, search="test", limit=10, cursor=None,
+        )
+        assert len(users) == 1
+        assert cursor is None

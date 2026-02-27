@@ -42,7 +42,7 @@
               @click="$emit('close')"
             >
               <component :is="item.icon" class="h-5 w-5 text-muted-foreground" />
-              {{ item.label }}
+              {{ $t(item.labelKey) }}
             </NuxtLink>
           </div>
         </nav>
@@ -81,15 +81,15 @@ defineEmits<{
 /** @brief Navigation items shown in the mobile drawer. */
 const navItems = computed(() => {
   const items = [
-    { path: '/app', icon: NewspaperIcon, label: 'Feed' },
-    { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
-    { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
-    { path: '/app/media', icon: PhotoIcon, label: 'Media' },
-    { path: '/app/members', icon: UserGroupIcon, label: 'Members' },
-    { path: '/app/settings', icon: Cog6ToothIcon, label: 'Settings' },
+    { path: '/app', icon: NewspaperIcon, labelKey: 'nav.feed' },
+    { path: '/app/events', icon: CalendarDaysIcon, labelKey: 'nav.events' },
+    { path: '/app/chat', icon: ChatBubbleLeftRightIcon, labelKey: 'nav.chat' },
+    { path: '/app/media', icon: PhotoIcon, labelKey: 'nav.media' },
+    { path: '/app/members', icon: UserGroupIcon, labelKey: 'nav.members' },
+    { path: '/app/settings', icon: Cog6ToothIcon, labelKey: 'nav.settings' },
   ]
   if (authStore.user?.role === 'admin') {
-    items.splice(-1, 0, { path: '/app/admin', icon: ShieldCheckIcon, label: 'Admin' })
+    items.splice(-1, 0, { path: '/app/admin', icon: ShieldCheckIcon, labelKey: 'nav.admin' })
   }
   return items
 })

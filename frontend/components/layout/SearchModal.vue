@@ -77,7 +77,7 @@
                     @click="navigateTo(item)"
                   >
                     <component :is="item.icon" class="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span>{{ item.label }}</span>
+                    <span>{{ $t(item.labelKey) }}</span>
                   </button>
                 </div>
               </div>
@@ -101,7 +101,7 @@
                 @click="navigateTo(item)"
               >
                 <component :is="item.icon" class="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{{ item.label }}</span>
+                <span>{{ $t(item.labelKey) }}</span>
               </button>
             </template>
           </div>
@@ -128,11 +128,13 @@ import {
 
 interface SearchItem {
   id: string
-  label: string
+  labelKey: string
   icon: Component
   path: string
-  group: string
+  groupKey: string
 }
+
+const { t } = useI18n()
 
 const open = defineModel<boolean>('open', { default: false })
 
@@ -143,27 +145,28 @@ const dialogRef = ref<HTMLElement | null>(null)
 
 /** @brief Quick-access navigation items shown when search is empty. */
 const quickActions: SearchItem[] = [
-  { id: 'feed', label: 'Feed', icon: NewspaperIcon, path: '/app', group: 'Pages' },
-  { id: 'events', label: 'Events', icon: CalendarDaysIcon, path: '/app/events', group: 'Pages' },
-  { id: 'chat', label: 'Chat', icon: ChatBubbleLeftRightIcon, path: '/app/chat', group: 'Pages' },
-  { id: 'members', label: 'Members', icon: UserGroupIcon, path: '/app/members', group: 'Pages' },
+  { id: 'feed', labelKey: 'nav.feed', icon: NewspaperIcon, path: '/app', groupKey: 'search.pages' },
+  { id: 'events', labelKey: 'nav.events', icon: CalendarDaysIcon, path: '/app/events', groupKey: 'search.pages' },
+  { id: 'chat', labelKey: 'nav.chat', icon: ChatBubbleLeftRightIcon, path: '/app/chat', groupKey: 'search.pages' },
+  { id: 'members', labelKey: 'nav.members', icon: UserGroupIcon, path: '/app/members', groupKey: 'search.pages' },
 ]
 
 /** @brief Stub search results filtered by query. Real API integration comes later. */
 const filteredResults = computed<SearchItem[]>(() => {
   const q = query.value.toLowerCase().trim()
   if (!q) return []
-  return quickActions.filter(item => item.label.toLowerCase().includes(q))
+  return quickActions.filter(item => t(item.labelKey).toLowerCase().includes(q))
 })
 
-/** @brief Group search results by their group label. */
+/** @brief Group search results by their group key. */
 const groupedResults = computed(() => {
   const groups: Record<string, { label: string; items: SearchItem[] }> = {}
   for (const item of filteredResults.value) {
-    if (!groups[item.group]) {
-      groups[item.group] = { label: item.group, items: [] }
+    const key = item.groupKey
+    if (!groups[key]) {
+      groups[key] = { label: t(key), items: [] }
     }
-    groups[item.group].items.push(item)
+    groups[key].items.push(item)
   }
   return Object.values(groups)
 })

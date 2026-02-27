@@ -130,6 +130,8 @@
 import { ref, reactive } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 
+const { t: $t } = useI18n()
+
 definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
@@ -152,12 +154,12 @@ async function handleRegister(): Promise<void> {
   errorMessage.value = ''
 
   if (form.password.length < 12) {
-    errorMessage.value = 'Password must be at least 12 characters'
+    errorMessage.value = $t('auth.errors.weakPassword')
     loading.value = false
     return
   }
   if (form.username.length < 3) {
-    errorMessage.value = 'Username must be at least 3 characters'
+    errorMessage.value = $t('auth.errors.usernameShort')
     loading.value = false
     return
   }

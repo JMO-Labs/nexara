@@ -161,3 +161,26 @@ class TestCreateReport:
         assert result.status == "pending"
         session.add.assert_called_once()
         session.flush.assert_awaited_once()
+
+
+class TestListReports:
+    """@brief Tests for ModerationRepository.list_reports()."""
+
+    @pytest.mark.asyncio
+    async def test_list_reports_returns_reports_and_cursor(self):
+        """list_reports should return a list of reports and a next_cursor."""
+        report = MagicMock(spec=ContentReport)
+        report.id = uuid.uuid4()
+        report.created_at = datetime.now(UTC)
+
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [report]
+        session.execute.return_value = mock_result
+
+        repo = ModerationRepository(session)
+        reports, cursor = await repo.list_reports(limit=10)
+
+        session.execute.assert_awaited_once()
+        assert len(reports) == 1
+        assert cursor is None

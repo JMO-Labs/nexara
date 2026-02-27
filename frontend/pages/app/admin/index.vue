@@ -76,7 +76,7 @@
             {{ metrics.waf_blocks_total?.toLocaleString() ?? 0 }}
           </p>
           <p class="mt-1 text-sm text-muted-foreground">
-            Total blocks in current period
+            {{ $t('admin.wafBlocksPeriod') }}
           </p>
         </div>
       </div>

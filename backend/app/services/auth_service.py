@@ -1,15 +1,14 @@
 """
 @file auth_service.py
-@brief Authentication business logic: register, login, token rotation, 2FA, password reset.
+@brief Authentication business logic: register, login, token rotation, 2FA.
 
-Orchestrates repositories, security utilities, and config to implement all
-auth flows.  OIDC logic lives in :mod:`app.services.oidc_service` to keep
-this module under the 400-line limit.
+Orchestrates repositories, security utilities, and config to implement core
+auth flows.  OIDC logic lives in :mod:`app.services.oidc_service` and
+password-reset / HIBP checking in :mod:`app.services.password_service`.
 """
 
 from __future__ import annotations
 
-import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -43,6 +42,7 @@ from app.models.user import User
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.password_service import PasswordService
 
 logger = structlog.get_logger(__name__)
 
@@ -65,6 +65,7 @@ class AuthService:
         self._user_repo = UserRepository(session)
         self._token_repo = TokenRepository(session)
         self._invite_repo = InviteRepository(session)
+        self._password_svc = PasswordService(session, self._settings)
 
     async def register(
         self,
@@ -105,6 +106,9 @@ class AuthService:
             role = invite.role
         else:
             invite = None
+
+        if await self._password_svc.check_hibp(password):
+            raise ConflictError(message=_("This password has appeared in a data breach and cannot be used"))
 
         if await self._user_repo.email_exists(email):
             raise ConflictError(message=_("Email is already registered"))
@@ -284,91 +288,16 @@ class AuthService:
         return codes
 
     async def check_hibp(self, password: str) -> bool:
-        """
-        @brief Check a password against the HaveIBeenPwned breached-passwords API.
-
-        Uses the k-anonymity range API: only the first 5 chars of the SHA-1
-        hash are sent to the server, so the full password is never exposed.
-
-        @param password Plaintext password to check.
-        @return True if the password has been seen in a breach.
-        """
-        if not self._settings.HIBP_CHECK_ENABLED:
-            return False
-
-        import hashlib
-
-        import httpx
-
-        sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # noqa: S324
-        prefix, suffix = sha1[:5], sha1[5:]
-
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"https://api.pwnedpasswords.com/range/{prefix}",
-                    timeout=5.0,
-                )
-            if resp.status_code != 200:
-                logger.warning("hibp_api_error", status=resp.status_code)
-                return False
-
-            for line in resp.text.splitlines():
-                parts = line.split(":")
-                if len(parts) == 2 and parts[0].strip() == suffix:
-                    count = int(parts[1].strip())
-                    logger.info("hibp_password_found", count=count)
-                    return True
-        except Exception:
-            logger.warning("hibp_check_failed", exc_info=True)
-
-        return False
+        """@brief Delegate to PasswordService.check_hibp."""
+        return await self._password_svc.check_hibp(password)
 
     async def request_password_reset(self, email: str) -> str | None:
-        """
-        @brief Generate a password reset token if the email exists.
-
-        Returns the raw token (caller sends the email).  Returns None if the
-        email is not found — the route handler returns the same response
-        regardless to prevent account enumeration.
-
-        @param email Email address.
-        @return Raw reset token or None.
-        """
-        user = await self._user_repo.find_by_email(email)
-        if not user:
-            return None
-        token = secrets.token_urlsafe(32)
-        family_id = uuid.uuid4()
-        expires = datetime.now(UTC) + timedelta(hours=1)
-        await self._token_repo.create(
-            user_id=user.id,
-            token_hash=hash_token(token),
-            family_id=family_id,
-            expires_at=expires,
-        )
-        return token
+        """@brief Delegate to PasswordService.request_password_reset."""
+        return await self._password_svc.request_password_reset(email)
 
     async def reset_password(self, token: str, new_password: str) -> None:
-        """
-        @brief Apply a new password using a valid reset token.
-
-        @param token The raw reset token.
-        @param new_password The new password.
-        @raises AuthenticationError If the token is invalid or expired.
-        """
-        stored = await self._token_repo.find_by_hash(hash_token(token))
-        if not stored or stored.revoked_at or stored.expires_at < datetime.now(UTC):
-            raise AuthenticationError(message=_("Invalid or expired reset token"))
-
-        user = await self._user_repo.get_by_id(stored.user_id)
-        if not user:
-            raise NotFoundError(message=_("User not found"))
-
-        await self._user_repo.update(user, {"password_hash": hash_password(new_password)})
-        await self._token_repo.revoke(stored.id)
-        await self._token_repo.revoke_all_for_user(user.id)
-        logger.info("password_reset_complete", user_id=str(user.id))
+        """@brief Delegate to PasswordService.reset_password."""
+        await self._password_svc.reset_password(token, new_password)
 
     # ── Helpers ───────────────────────────────────────────────────────────
 

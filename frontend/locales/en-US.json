@@ -11,6 +11,7 @@
     "members": "Members",
     "settings": "Settings",
     "admin": "Admin",
+    "more": "More",
     "logout": "Log out",
     "darkMode": "Dark mode",
     "lightMode": "Light mode"
@@ -82,6 +83,7 @@
       "usernameTaken": "This username is already taken.",
       "weakPassword": "Password must be at least 12 characters.",
       "inviteRequired": "An invite code is required to register.",
+      "usernameShort": "Username must be at least 3 characters.",
       "inviteInvalid": "This invite code is invalid or has expired.",
       "sessionExpired": "Your session has expired. Please log in again."
     }
@@ -130,6 +132,7 @@
   "search": {
     "placeholder": "Search...",
     "hint": "Quick actions",
+    "pages": "Pages",
     "noResults": "No results found.",
     "recent": "Recent",
     "all": "All",
@@ -255,6 +258,11 @@
     "filterSuspend": "Suspend",
     "justNow": "Just now",
     "minutesAgo": "{count} min ago",
-    "hoursAgo": "{count} hr ago"
+    "hoursAgo": "{count} hr ago",
+    "inviteCreated": "Invite created",
+    "inviteRevoked": "Invite revoked",
+    "settingsSaved": "Settings saved",
+    "brandingDescription": "Customize community logo, colors, and display name.",
+    "wafBlocksPeriod": "Total blocks in current period"
   }
 }

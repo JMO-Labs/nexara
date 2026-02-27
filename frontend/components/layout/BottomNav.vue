@@ -19,10 +19,10 @@
       :class="isActive(item.path)
         ? 'text-primary'
         : 'text-muted-foreground hover:text-foreground'"
-      :aria-label="item.label"
+      :aria-label="$t(item.labelKey)"
     >
       <component :is="item.icon" class="h-5 w-5" />
-      <span class="text-[10px] font-medium">{{ item.label }}</span>
+      <span class="text-[10px] font-medium">{{ $t(item.labelKey) }}</span>
     </NuxtLink>
   </nav>
 </template>
@@ -43,11 +43,11 @@ const route = useRoute()
 
 /** @brief Navigation items for the compact bottom bar. */
 const navItems = [
-  { path: '/app', icon: NewspaperIcon, label: 'Feed' },
-  { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
-  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
-  { path: '/app/media', icon: PhotoIcon, label: 'Media' },
-  { path: '/app/settings', icon: EllipsisHorizontalIcon, label: 'More' },
+  { path: '/app', icon: NewspaperIcon, labelKey: 'nav.feed' },
+  { path: '/app/events', icon: CalendarDaysIcon, labelKey: 'nav.events' },
+  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, labelKey: 'nav.chat' },
+  { path: '/app/media', icon: PhotoIcon, labelKey: 'nav.media' },
+  { path: '/app/settings', icon: EllipsisHorizontalIcon, labelKey: 'nav.more' },
 ]
 
 /**

@@ -193,6 +193,36 @@ class TestUpload:
         mock_repo.create.assert_not_awaited()
 
 
+class TestGetMetadata:
+    """@brief Tests for MediaService.get_metadata()."""
+
+    @pytest.mark.asyncio
+    async def test_get_metadata_returns_response_for_existing_media(self):
+        """get_metadata should return MediaResponse when media exists."""
+        from app.services.media_service import MediaService
+
+        mock_media = _make_media()
+        mock_repo = AsyncMock()
+        mock_repo.get.return_value = mock_media
+        mock_storage = AsyncMock()
+        mock_user_repo = AsyncMock()
+
+        with patch("app.services.media_service.MediaResponse") as MockResponse:
+            MockResponse.model_validate.return_value = MagicMock()
+            service = MediaService(
+                media_repo=mock_repo,
+                storage_backend=mock_storage,
+                user_repo=mock_user_repo,
+                community_id=COMMUNITY_ID,
+            )
+
+            result = await service.get_metadata(mock_media.id)
+
+        mock_repo.get.assert_awaited_once_with(mock_media.id)
+        MockResponse.model_validate.assert_called_once_with(mock_media)
+        assert result is not None
+
+
 class TestDelete:
     """@brief Tests for MediaService.delete()."""
 

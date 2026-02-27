@@ -87,7 +87,7 @@
         {{ $t('admin.branding') }}
       </h2>
       <p class="mb-4 text-sm text-muted-foreground">
-        Customize community logo, colors, and display name.
+        {{ $t('admin.brandingDescription') }}
       </p>
       <NuxtLink
         to="/app/settings"
@@ -133,7 +133,7 @@ async function handleSave(): Promise<void> {
   loading.value = true
   try {
     await api.put('/admin/settings', form.value)
-    uiStore.showToast({ type: 'success', message: 'Settings saved' })
+    uiStore.showToast({ type: 'success', message: $t('admin.settingsSaved') })
   } catch (e) {
     uiStore.showToast({
       type: 'error',

@@ -200,7 +200,7 @@ async function handleCreateInvite(): Promise<void> {
       email: createForm.value.email,
       role: createForm.value.role,
     })
-    uiStore.showToast({ type: 'success', message: 'Invite created' })
+    uiStore.showToast({ type: 'success', message: $t('admin.inviteCreated') })
     createForm.value = { email: '', role: 'member' }
     await fetchInvites()
   } catch (e) {
@@ -216,7 +216,7 @@ async function handleCreateInvite(): Promise<void> {
 async function handleRevoke(inv: InviteListItem): Promise<void> {
   try {
     await api.del(`/admin/invites/${inv.id}`)
-    uiStore.showToast({ type: 'success', message: 'Invite revoked' })
+    uiStore.showToast({ type: 'success', message: $t('admin.inviteRevoked') })
     await fetchInvites()
   } catch (e) {
     uiStore.showToast({
