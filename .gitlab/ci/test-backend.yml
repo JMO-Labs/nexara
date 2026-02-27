@@ -18,7 +18,7 @@ test:backend:unit:
   before_script:
     - pip install --quiet uv
     - cd backend
-    - uv venv .venv
+    - uv venv .venv --clear
     - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
   script:
     - >-
