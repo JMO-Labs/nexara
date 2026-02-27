@@ -19,7 +19,7 @@ test:backend:unit:
     - pip install --quiet uv
     - cd backend
     - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
+    - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
   script:
     - >-
       .venv/bin/pytest tests/unit/
@@ -67,7 +67,7 @@ test:backend:integration:
     - pip install --quiet uv
     - cd backend
     - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
+    - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
     - until pg_isready -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 1; done
   script:
     - >-

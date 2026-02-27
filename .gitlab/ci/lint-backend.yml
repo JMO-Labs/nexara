@@ -31,7 +31,7 @@ lint:mypy:
     - pip install --quiet uv
     - cd backend
     - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
+    - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
   script:
     - echo "Running mypy type checking..."
     - .venv/bin/mypy app/ --ignore-missing-imports
