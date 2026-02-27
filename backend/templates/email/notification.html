@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Notification - {{ community_name }}{% endblock %}
+{% block content %}
+<h2 style="color: {{ color_primary }};">New notification</h2>
+<p><strong>{{ notification_type | replace('_', ' ') | title }}</strong></p>
+{% if message %}
+<p>{{ message }}</p>
+{% endif %}
+{% if link %}
+<p><a href="{{ link }}" style="color: {{ color_primary }};">View details</a></p>
+{% endif %}
+{% endblock %}

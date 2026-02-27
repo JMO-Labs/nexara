@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}You're invited - {{ community_name }}{% endblock %}
+{% block content %}
+<h2 style="color: {{ color_primary }};">You're invited to {{ community_name }}</h2>
+{% if message %}
+<p>{{ message }}</p>
+{% endif %}
+<p>
+  <a href="{{ invite_url | default('#') }}" style="display: inline-block; padding: 12px 24px; background: {{ color_primary }}; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Accept invite</a>
+</p>
+{% endblock %}
