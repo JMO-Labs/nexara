@@ -32,10 +32,9 @@ lint:mypy:
     - cd backend
     - uv venv .venv
     - uv sync --frozen 2>/dev/null || uv sync
-    - source .venv/bin/activate
-    - cd "$CI_PROJECT_DIR"
   script:
     - echo "Running mypy type checking..."
-    - mypy backend/app/ --ignore-missing-imports
+    - cd backend
+    - .venv/bin/mypy app/ --ignore-missing-imports
   rules: !reference [.rules:backend-changes, rules]
   allow_failure: true
