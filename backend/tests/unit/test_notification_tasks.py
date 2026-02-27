@@ -30,9 +30,10 @@ class TestSendEmailNotification:
     def test_task_name(self):
         assert send_email_notification.name == "app.tasks.notification_tasks.send_email_notification"
 
-    def test_returns_status(self):
+    def test_returns_error_for_invalid_uuid(self):
+        """Invalid UUID strings should return error status without raising."""
         result = send_email_notification("fake-user-id", "comment", {"post_id": "123"})
-        assert result["status"] == "sent"
+        assert result["status"] == "error"
 
 
 class TestDispatchEventReminders:

@@ -18,9 +18,10 @@ class TestGenerateThumbnail:
     def test_time_limit(self):
         assert generate_thumbnail.time_limit == 300
 
-    def test_returns_processed_status(self):
+    def test_returns_error_for_invalid_uuid(self):
+        """Invalid media_id UUID string returns error status."""
         result = generate_thumbnail("fake-media-id")
-        assert result["status"] == "processed"
+        assert result["status"] == "error"
 
 
 class TestTranscodeVideo:
