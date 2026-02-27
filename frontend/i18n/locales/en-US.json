@@ -1,0 +1,138 @@
+{
+  "app": {
+    "name": "Nexara",
+    "tagline": "Your self-hosted community platform"
+  },
+  "nav": {
+    "feed": "Feed",
+    "events": "Events",
+    "chat": "Chat",
+    "media": "Media",
+    "members": "Members",
+    "settings": "Settings",
+    "admin": "Admin",
+    "logout": "Log out",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode"
+  },
+  "landing": {
+    "hero": {
+      "title": "Welcome to {communityName}",
+      "subtitle": "A private space for your community to connect, share, and grow together.",
+      "getStarted": "Get Started",
+      "viewOnGithub": "View on GitHub"
+    },
+    "features": {
+      "title": "Everything your community needs",
+      "feed": "Activity Feed",
+      "feedDesc": "Share updates, photos, and ideas with your community.",
+      "events": "Events & Calendar",
+      "eventsDesc": "Plan gatherings and never miss an important date.",
+      "chat": "Real-time Chat",
+      "chatDesc": "Stay connected with instant messaging.",
+      "media": "Photo Galleries",
+      "mediaDesc": "Share and organize your community's memories.",
+      "pwa": "Works Offline",
+      "pwaDesc": "Install as an app on any device."
+    },
+    "selfHosted": {
+      "title": "Self-hosted & Private",
+      "description": "Your data stays on your server. No cloud, no tracking, full control."
+    },
+    "install": {
+      "title": "Get Started in Minutes",
+      "description": "One command to launch your community."
+    }
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Create account",
+    "logout": "Log out",
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "username": "Username",
+    "displayName": "Display name",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "sendResetLink": "Send reset link",
+    "resetSent": "If an account exists with that email, a reset link has been sent.",
+    "setNewPassword": "Set new password",
+    "passwordUpdated": "Your password has been updated. You can now log in.",
+    "loginWithOidc": "Log in with SSO",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "inviteToken": "Invite code",
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "enterCode": "Enter the 6-digit code from your authenticator app",
+      "code": "Verification code",
+      "verify": "Verify",
+      "useBackupCode": "Use a backup code",
+      "backupCode": "Backup code",
+      "invalid": "Invalid code. Please try again."
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password.",
+      "accountDisabled": "This account has been disabled.",
+      "emailTaken": "An account with this email already exists.",
+      "usernameTaken": "This username is already taken.",
+      "weakPassword": "Password must be at least 12 characters.",
+      "inviteRequired": "An invite code is required to register.",
+      "inviteInvalid": "This invite code is invalid or has expired.",
+      "sessionExpired": "Your session has expired. Please log in again."
+    }
+  },
+  "feed": {
+    "title": "Activity Feed",
+    "createPost": "What's on your mind?",
+    "submit": "Post",
+    "loadMore": "Load more",
+    "noMorePosts": "You've reached the end",
+    "emptyFeed": "No posts yet. Be the first to share something!",
+    "comment": "Comment",
+    "comments": "Comments",
+    "reply": "Reply",
+    "addComment": "Write a comment...",
+    "submitComment": "Send",
+    "reactions": "Reactions",
+    "share": "Share",
+    "postDetail": "Post detail",
+    "editPost": "Edit",
+    "deletePost": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this post?",
+    "markdownPreview": "Preview",
+    "attachMedia": "Attach media"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "close": "Close",
+    "search": "Search...",
+    "noResults": "No results found",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "toast": {
+    "success": "Success",
+    "error": "Error",
+    "info": "Info",
+    "warning": "Warning"
+  },
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "toggleSidebar": "Toggle sidebar",
+    "toggleDarkMode": "Toggle dark mode",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "notifications": "Notifications",
+    "userMenu": "User menu"
+  }
+}
