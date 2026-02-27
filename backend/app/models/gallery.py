@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
@@ -17,7 +18,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -62,6 +63,15 @@ class Gallery(Base):
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_event_gallery: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    search_fts = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', "
+            "coalesce(title, '') || ' ' || "
+            "coalesce(description, ''))",
+            persisted=True,
+        ),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
@@ -90,6 +100,7 @@ class Gallery(Base):
             "galleries_event_gallery_idx", "event_id",
             unique=True, postgresql_where=(is_event_gallery.is_(True)),
         ),
+        Index("galleries_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
 
 

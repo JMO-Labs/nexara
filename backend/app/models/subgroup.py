@@ -6,8 +6,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Text, Boolean, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Computed, DateTime, ForeignKey, Index, Text, func
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -38,6 +38,15 @@ class Subgroup(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    search_fts = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', "
+            "coalesce(name, '') || ' ' || "
+            "coalesce(description, ''))",
+            persisted=True,
+        ),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
@@ -48,6 +57,7 @@ class Subgroup(Base):
     __table_args__ = (
         Index("subgroups_slug_idx", "slug"),
         Index("subgroups_active_idx", "archived_at", postgresql_where=(archived_at.is_(None))),
+        Index("subgroups_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
 
 

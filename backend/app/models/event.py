@@ -8,6 +8,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
@@ -15,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -62,6 +63,16 @@ class Event(Base):
     )
     source_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     rsvp_labels: Mapped[dict | None] = mapped_column(JSONB)
+    search_fts = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', "
+            "coalesce(title, '') || ' ' || "
+            "coalesce(description, '') || ' ' || "
+            "coalesce(location, ''))",
+            persisted=True,
+        ),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False,
     )
@@ -73,6 +84,7 @@ class Event(Base):
         Index("events_starts_idx", "starts_at"),
         Index("events_ical_uid_idx", "ical_uid"),
         Index("events_subgroup_idx", "subgroup_id", postgresql_where=(subgroup_id.isnot(None))),
+        Index("events_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
 
 

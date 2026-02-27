@@ -9,6 +9,7 @@ from datetime import date, datetime
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -16,7 +17,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -78,6 +79,18 @@ class User(Base):
         BigInteger, nullable=False, server_default="10737418240",
     )
 
+    # Full-text search
+    search_fts = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', "
+            "coalesce(display_name, '') || ' ' || "
+            "coalesce(username, '') || ' ' || "
+            "coalesce(bio, ''))",
+            persisted=True,
+        ),
+    )
+
     # Timestamps
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
@@ -92,4 +105,5 @@ class User(Base):
         Index("users_email_idx", "email"),
         Index("users_role_idx", "role"),
         Index("users_username_idx", "username"),
+        Index("users_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
