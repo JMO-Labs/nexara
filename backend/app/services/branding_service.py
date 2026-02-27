@@ -15,7 +15,6 @@ import structlog
 from redis.asyncio import Redis
 
 from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
-from app.core.i18n import _
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
 from app.schemas.branding import BrandingResponse, BrandingUpdate

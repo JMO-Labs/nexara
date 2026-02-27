@@ -20,8 +20,6 @@ from app.core.i18n import _
 from app.core.security import get_jwks
 from app.models.user import User
 from app.schemas.auth import (
-    InviteCreateRequest,
-    InviteResponse,
     LoginRequest,
     LoginResponse,
     PasswordResetConfirmPayload,

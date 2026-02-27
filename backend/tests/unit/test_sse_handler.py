@@ -7,9 +7,8 @@ Tests cover event generation, heartbeat behavior, and connection lifecycle.
 
 from __future__ import annotations
 
-import asyncio
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 

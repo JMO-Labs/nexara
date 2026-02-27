@@ -3,8 +3,6 @@
 @brief Unit tests for the SQLAlchemy base model and mixins.
 """
 
-import uuid
-from datetime import datetime
 
 from sqlalchemy import inspect
 

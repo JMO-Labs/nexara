@@ -16,7 +16,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
-from app.core.security import create_access_token, hash_password
+from app.core.security import hash_password
 
 
 def _make_settings() -> Settings:
@@ -70,10 +70,10 @@ class TestRegisterEndpoint:
             "requires_2fa": False,
         }
 
-        with patch("app.api.v1.auth.AuthService") as MockSvc:
+        with patch("app.api.v1.auth.AuthService") as mock_svc_cls:
             mock_svc = AsyncMock()
             mock_svc.register.return_value = mock_result
-            MockSvc.return_value = mock_svc
+            mock_svc_cls.return_value = mock_svc
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -115,10 +115,10 @@ class TestLoginEndpoint:
             "requires_2fa": False,
         }
 
-        with patch("app.api.v1.auth.AuthService") as MockSvc:
+        with patch("app.api.v1.auth.AuthService") as mock_svc_cls:
             mock_svc = AsyncMock()
             mock_svc.login.return_value = mock_result
-            MockSvc.return_value = mock_svc
+            mock_svc_cls.return_value = mock_svc
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -138,10 +138,10 @@ class TestLoginEndpoint:
             "two_factor_token": "pending-jwt",
         }
 
-        with patch("app.api.v1.auth.AuthService") as MockSvc:
+        with patch("app.api.v1.auth.AuthService") as mock_svc_cls:
             mock_svc = AsyncMock()
             mock_svc.login.return_value = mock_result
-            MockSvc.return_value = mock_svc
+            mock_svc_cls.return_value = mock_svc
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -158,10 +158,10 @@ class TestLoginEndpoint:
     async def test_login_invalid_credentials(self, test_app):
         from app.core.exceptions import AuthenticationError
 
-        with patch("app.api.v1.auth.AuthService") as MockSvc:
+        with patch("app.api.v1.auth.AuthService") as mock_svc_cls:
             mock_svc = AsyncMock()
             mock_svc.login.side_effect = AuthenticationError(message="Invalid email or password")
-            MockSvc.return_value = mock_svc
+            mock_svc_cls.return_value = mock_svc
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:

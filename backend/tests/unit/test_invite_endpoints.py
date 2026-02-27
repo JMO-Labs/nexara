@@ -83,10 +83,10 @@ class TestCreateInvite:
         mock_invite.raw_token = "placeholder"
 
         try:
-            with patch("app.api.v1.invites.InviteRepository") as MockRepo:
+            with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
                 mock_repo = AsyncMock()
                 mock_repo.create.return_value = mock_invite
-                MockRepo.return_value = mock_repo
+                mock_repo_cls.return_value = mock_repo
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -141,10 +141,10 @@ class TestListInvites:
         test_app.dependency_overrides[get_current_user] = _override
 
         try:
-            with patch("app.api.v1.invites.InviteRepository") as MockRepo:
+            with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
                 mock_repo = AsyncMock()
                 mock_repo.list_active.return_value = []
-                MockRepo.return_value = mock_repo
+                mock_repo_cls.return_value = mock_repo
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -174,10 +174,10 @@ class TestDeleteInvite:
         invite_id = uuid.uuid4()
 
         try:
-            with patch("app.api.v1.invites.InviteRepository") as MockRepo:
+            with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
                 mock_repo = AsyncMock()
                 mock_repo.delete_invite.return_value = True
-                MockRepo.return_value = mock_repo
+                mock_repo_cls.return_value = mock_repo
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:

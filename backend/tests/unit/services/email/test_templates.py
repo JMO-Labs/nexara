@@ -5,11 +5,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
-from app.services.email.templates import EmailTemplateRenderer, TEMPLATES_DIR
+from app.services.email.templates import EmailTemplateRenderer
 
 
 class TestTemplatesRender:

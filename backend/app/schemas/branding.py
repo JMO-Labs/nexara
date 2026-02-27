@@ -13,7 +13,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 """@brief Regex for validating 6-digit hex color strings."""
 

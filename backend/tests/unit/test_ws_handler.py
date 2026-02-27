@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.api.v1.ws import AUTH_TIMEOUT_SECONDS, _authenticate, _close_safe, _message_loop
+from app.api.v1.ws import _authenticate, _close_safe, _message_loop
 from app.core.config import Settings
-from app.services.realtime.protocol import InboundType, OutboundType
+from app.services.realtime.protocol import OutboundType
 
 
 def _make_settings() -> Settings:
@@ -63,7 +63,7 @@ class TestAuthenticate:
         ws.send_text = AsyncMock()
         ws.client_state = MagicMock()
 
-        with patch("app.api.v1.ws._close_safe", new_callable=AsyncMock) as mock_close:
+        with patch("app.api.v1.ws._close_safe", new_callable=AsyncMock):
             result = await _authenticate(ws)
 
         assert result is None

@@ -3,9 +3,7 @@
 @brief Unit tests for the generic base repository.
 """
 
-import uuid
 
-import pytest
 
 from app.repositories.base import BaseRepository
 

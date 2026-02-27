@@ -19,7 +19,7 @@ from app.models.user import User
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
-from app.services.storage.base import StorageBackend, StorageKeyNotFoundError
+from app.services.storage.base import StorageBackend
 from app.services.storage.quota import (
     QuotaExceededError,
     check_quota,

@@ -237,7 +237,10 @@ class TestAuditLogModel:
 
     def test_required_columns(self):
         cols = _get_columns("audit_log")
-        expected = {"id", "actor_id", "action", "target_type", "target_id", "metadata", "created_at"}
+        expected = {
+            "id", "actor_id", "action", "target_type",
+            "target_id", "metadata", "created_at",
+        }
         assert expected.issubset(cols)
 
 

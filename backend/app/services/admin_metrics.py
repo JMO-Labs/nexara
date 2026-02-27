@@ -64,7 +64,7 @@ def _counter_by_label(counter) -> dict[str, int]:
         if isinstance(labels, tuple) and len(labels) == 1:
             result[str(labels[0])] = int(child._value.get())
         elif isinstance(labels, tuple):
-            key = "_".join(str(l) for l in labels)
+            key = "_".join(str(label) for label in labels)
             result[key] = int(child._value.get())
     return result
 

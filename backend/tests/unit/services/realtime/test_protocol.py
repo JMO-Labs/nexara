@@ -48,7 +48,10 @@ class TestOutboundTypes:
     """@brief Verify outbound message type enum values."""
 
     def test_all_types_present(self):
-        expected = {"auth_ok", "auth_error", "pong", "notification", "feed_update", "presence", "typing"}
+        expected = {
+            "auth_ok", "auth_error", "pong", "notification",
+            "feed_update", "presence", "typing",
+        }
         actual = {t.value for t in OutboundType}
         assert expected == actual
 

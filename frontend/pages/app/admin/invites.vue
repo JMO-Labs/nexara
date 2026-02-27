@@ -28,7 +28,7 @@
             type="email"
             required
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          />
+          >
         </div>
         <div class="min-w-[120px]">
           <label

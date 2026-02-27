@@ -14,7 +14,6 @@ from typing import Any
 
 import structlog
 
-from app.core.i18n import _
 from app.models.notification import Notification
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.dependencies import get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository

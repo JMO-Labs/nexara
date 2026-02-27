@@ -81,7 +81,7 @@ async def _authenticate(ws: WebSocket) -> UUID | None:
     """
     try:
         raw = await asyncio.wait_for(ws.receive_text(), timeout=AUTH_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("ws_auth_timeout")
         await _close_safe(ws, 4001, _("Authentication timeout"))
         return None
@@ -108,7 +108,7 @@ async def _authenticate(ws: WebSocket) -> UUID | None:
     try:
         payload = decode_token(token, expected_type="access")
         user_id = UUID(payload["sub"])
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError):
         error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": _("Invalid token")})
         await ws.send_text(error_msg)
         await _close_safe(ws, 4001, _("Invalid token"))

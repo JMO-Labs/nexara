@@ -34,7 +34,7 @@ const typeIcons: Record<string, typeof BellIcon> = {
   invite_accepted: UserPlusIcon,
 }
 
-const props = defineProps<{
+defineProps<{
   /** @brief Whether the panel is visible. */
   open: boolean
 }>()

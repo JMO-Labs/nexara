@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
 from sqlalchemy import Column, Text, select
 from sqlalchemy.dialects.postgresql import UUID
 

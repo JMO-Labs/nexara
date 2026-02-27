@@ -11,18 +11,16 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_db
 from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import SearchResponse
 from app.services.search_service import SearchService
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.dependencies import get_db
 
 router = APIRouter(prefix="/search", tags=["search"])
 """@brief Search router for full-text search across content types."""

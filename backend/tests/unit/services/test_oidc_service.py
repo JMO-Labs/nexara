@@ -157,16 +157,21 @@ class TestHandleCallback:
             "groups": ["nexara-member"],
         }
 
-        with (
-            patch("app.services.oidc_service.httpx.AsyncClient") as mock_client_cls,
-            patch("app.services.oidc_service.OIDCService._verify_id_token", return_value=claims),
-        ):
-            mock_client = AsyncMock()
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client.post.return_value = mock_token_resp
-            mock_client_cls.return_value = mock_client
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post.return_value = mock_token_resp
 
+        with (
+            patch(
+                "app.services.oidc_service.httpx.AsyncClient",
+                return_value=mock_client,
+            ),
+            patch(
+                "app.services.oidc_service.OIDCService._verify_id_token",
+                return_value=claims,
+            ),
+        ):
             result = await svc.handle_callback("auth-code", "code-verifier")
 
         assert result["access_token"]
@@ -191,13 +196,21 @@ class TestHandleCallback:
         }
 
         with (
-            patch("app.services.oidc_service.httpx.AsyncClient") as mock_client_cls,
-            patch("app.services.oidc_service.OIDCService._verify_id_token", return_value=claims),
-            patch("app.services.oidc_service.OIDCService._exchange_code", return_value={"id_token": "t"}),
+            patch("app.services.oidc_service.httpx.AsyncClient"),
+            patch(
+                "app.services.oidc_service.OIDCService._verify_id_token",
+                return_value=claims,
+            ),
+            patch(
+                "app.services.oidc_service.OIDCService._exchange_code",
+                return_value={"id_token": "t"},
+            ),
         ):
-            result = await svc.handle_callback("auth-code", "code-verifier")
+            await svc.handle_callback("auth-code", "code-verifier")
 
-        svc._user_repo.update.assert_any_call(existing_user, {"oidc_sub": "oidc-sub-456", "role": "member"})
+        svc._user_repo.update.assert_any_call(
+            existing_user, {"oidc_sub": "oidc-sub-456", "role": "member"},
+        )
 
     @pytest.mark.asyncio
     async def test_missing_sub_raises(self):
@@ -205,8 +218,14 @@ class TestHandleCallback:
         claims = {"email": "test@example.com"}
 
         with (
-            patch("app.services.oidc_service.OIDCService._exchange_code", return_value={"id_token": "t"}),
-            patch("app.services.oidc_service.OIDCService._verify_id_token", return_value=claims),
+            patch(
+                "app.services.oidc_service.OIDCService._exchange_code",
+                return_value={"id_token": "t"},
+            ),
+            patch(
+                "app.services.oidc_service.OIDCService._verify_id_token",
+                return_value=claims,
+            ),
         ):
             from app.core.exceptions import AuthenticationError
             with pytest.raises(AuthenticationError, match="missing subject"):

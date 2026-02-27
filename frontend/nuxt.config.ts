@@ -20,6 +20,7 @@ export default defineNuxtConfig({
 
   /** @brief Nuxt modules in load order. */
   modules: [
+    '@nuxt/eslint',
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@nuxtjs/i18n',

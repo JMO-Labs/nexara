@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 import pytest
@@ -24,7 +24,7 @@ class TestUserResponse:
     """@brief Public user profile response tests."""
 
     def test_minimal(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         resp = UserResponse(
             id=uuid4(),
             username="alice",
@@ -36,7 +36,7 @@ class TestUserResponse:
         assert resp.last_seen_at is None
 
     def test_full(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         resp = UserResponse(
             id=uuid4(),
             username="bob",
@@ -58,7 +58,7 @@ class TestUserDetailResponse:
     """@brief Detailed user profile response tests (private fields)."""
 
     def test_includes_private_fields(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         resp = UserDetailResponse(
             id=uuid4(),
             username="alice",

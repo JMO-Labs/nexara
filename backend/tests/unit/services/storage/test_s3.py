@@ -6,7 +6,7 @@ All S3 interactions are mocked via AsyncMock context managers.
 No real S3/MinIO service is required.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from botocore.exceptions import ClientError

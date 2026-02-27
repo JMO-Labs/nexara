@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestTakeStorageSnapshot:
     """@brief Tests for take_storage_snapshot task."""
@@ -82,7 +80,10 @@ class TestCleanupExpiredLinkPreviews:
 
     def test_task_name(self):
         from app.tasks.retention_tasks import cleanup_expired_link_previews
-        assert cleanup_expired_link_previews.name == "app.tasks.retention_tasks.cleanup_expired_link_previews"
+        assert (
+            cleanup_expired_link_previews.name
+            == "app.tasks.retention_tasks.cleanup_expired_link_previews"
+        )
 
     def test_returns_count(self):
         from app.tasks.retention_tasks import cleanup_expired_link_previews

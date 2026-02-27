@@ -6,8 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount  } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminAuditLog from '~/pages/app/admin/audit-log.vue'
 import AdminAuditLogTable from '~/components/admin/AuditLogTable.vue'

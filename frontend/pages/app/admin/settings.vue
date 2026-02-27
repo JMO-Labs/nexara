@@ -27,7 +27,7 @@
             v-model="form.enable_registration"
             type="checkbox"
             class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-          />
+          >
         </div>
         <div class="flex items-center justify-between gap-4">
           <label
@@ -41,7 +41,7 @@
             v-model="form.require_invite"
             type="checkbox"
             class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-          />
+          >
         </div>
         <div class="flex items-center justify-between gap-4">
           <label
@@ -55,7 +55,7 @@
             v-model="form.waf_enabled"
             type="checkbox"
             class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-          />
+          >
         </div>
         <div>
           <label
@@ -70,7 +70,7 @@
             type="number"
             min="1"
             class="w-full max-w-[200px] rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          />
+          >
         </div>
         <button
           type="submit"

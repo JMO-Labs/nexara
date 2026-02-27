@@ -16,7 +16,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
-from app.core.security import create_access_token
 
 
 def _make_settings() -> Settings:
@@ -106,11 +105,11 @@ class TestPatchMe:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch("app.api.v1.users.UserService") as MockSvc:
+            with patch("app.api.v1.users.UserService") as mock_svc_cls:
                 mock_svc = AsyncMock()
                 updated = _mock_user(display_name="Updated")
                 mock_svc.update_profile.return_value = updated
-                MockSvc.return_value = mock_svc
+                mock_svc_cls.return_value = mock_svc
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -139,9 +138,9 @@ class TestDeleteMe:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch("app.api.v1.users.UserService") as MockSvc:
+            with patch("app.api.v1.users.UserService") as mock_svc_cls:
                 mock_svc = AsyncMock()
-                MockSvc.return_value = mock_svc
+                mock_svc_cls.return_value = mock_svc
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -171,10 +170,10 @@ class TestGetUserById:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch("app.api.v1.users.UserService") as MockSvc:
+            with patch("app.api.v1.users.UserService") as mock_svc_cls:
                 mock_svc = AsyncMock()
                 mock_svc.get_user.return_value = target_user
-                MockSvc.return_value = mock_svc
+                mock_svc_cls.return_value = mock_svc
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:

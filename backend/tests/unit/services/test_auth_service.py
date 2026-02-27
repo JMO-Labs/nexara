@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.config import Settings
-from app.core.security import hash_password, hash_token
+from app.core.security import hash_password
 from app.services.auth_service import AuthService
 
 
@@ -36,7 +36,9 @@ def _make_user(**overrides):
     """@brief Build a mock User object with sensible defaults."""
     user = MagicMock()
     user.id = overrides.get("id", uuid.uuid4())
-    user.community_id = overrides.get("community_id", uuid.UUID("00000000-0000-0000-0000-000000000001"))
+    user.community_id = overrides.get(
+        "community_id", uuid.UUID("00000000-0000-0000-0000-000000000001"),
+    )
     user.email = overrides.get("email", "test@example.com")
     user.username = overrides.get("username", "testuser")
     user.display_name = overrides.get("display_name", "Test User")

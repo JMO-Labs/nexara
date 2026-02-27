@@ -11,8 +11,6 @@ from typing import Any
 import structlog
 
 from app.core.i18n import _
-from app.models.user import User
-from app.models.user_settings import UserSettings
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.settings import (

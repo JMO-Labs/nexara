@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AuthenticationError, NotFoundError
+from app.core.exceptions import AuthenticationError
 from app.services.password_service import PasswordService
 
 

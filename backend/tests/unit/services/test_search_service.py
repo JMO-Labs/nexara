@@ -9,7 +9,7 @@ using mocked SearchRepository.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -63,14 +63,14 @@ class TestSearch:
         post = type("Post", (), {
             "id": uuid.uuid4(),
             "content": "Test post content",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         })()
         user_result = type("User", (), {
             "id": uuid.uuid4(),
             "display_name": "Alice",
             "username": "alice",
             "bio": "Developer",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         })()
 
         mock_repo.search_posts.return_value = ([(post, 0.5)], None, 1)

@@ -42,7 +42,7 @@
               required
               autocomplete="email"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+            >
           </div>
 
           <div>
@@ -56,7 +56,7 @@
               required
               autocomplete="username"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+            >
           </div>
 
           <div>
@@ -69,7 +69,7 @@
               type="text"
               required
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+            >
           </div>
 
           <div>
@@ -84,7 +84,7 @@
               minlength="12"
               autocomplete="new-password"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+            >
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ $t('auth.passwordHint') }}
             </p>
@@ -100,7 +100,7 @@
               type="text"
               readonly
               class="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-            />
+            >
           </div>
 
           <button

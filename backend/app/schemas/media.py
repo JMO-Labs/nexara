@@ -14,7 +14,6 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-
 MediaStatus = Literal["processing", "ready", "error"]
 """@brief Allowed media processing status values."""
 

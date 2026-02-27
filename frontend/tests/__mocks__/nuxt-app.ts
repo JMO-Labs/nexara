@@ -28,5 +28,5 @@ export const useRouter = () => ({
   currentRoute: { value: useRoute() },
 })
 
-export const defineNuxtRouteMiddleware = (fn: Function) => fn
+export const defineNuxtRouteMiddleware = (fn: (...args: unknown[]) => unknown) => fn
 export const definePageMeta = (_meta: Record<string, unknown>) => { /* no-op in tests */ }

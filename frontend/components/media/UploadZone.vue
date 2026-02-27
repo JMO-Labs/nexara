@@ -108,7 +108,7 @@ function onDrop(event: DragEvent): void {
       :src="previewUrl"
       alt="Upload preview"
       class="mb-3 h-24 w-24 rounded object-cover"
-    />
+    >
 
     <p class="text-sm text-muted-foreground">
       {{ uploading ? t('common.uploading', { progress }) : t('common.dragOrClick') }}
@@ -121,7 +121,7 @@ function onDrop(event: DragEvent): void {
       :disabled="uploading"
       :aria-label="$t('common.upload')"
       @change="onFileSelect"
-    />
+    >
 
     <div
       v-if="uploading"

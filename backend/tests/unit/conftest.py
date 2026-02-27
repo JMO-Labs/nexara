@@ -16,7 +16,6 @@ from fastapi import FastAPI
 
 from app.core.config import Settings, get_settings
 
-
 _TEST_SETTINGS = Settings(
     SECRET_KEY="test-unit-secret",
     JWT_ALGORITHM="HS256",

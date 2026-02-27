@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.schemas.branding import BrandingUpdate
-
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 ADMIN_USER_ID = uuid.uuid4()

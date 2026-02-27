@@ -76,10 +76,10 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'toggle-mobile-nav'): void
-  (e: 'toggle-dark-mode'): void
-  (e: 'open-search'): void
-  (e: 'toggle-notifications'): void
+  'toggle-mobile-nav': []
+  'toggle-dark-mode': []
+  'open-search': []
+  'toggle-notifications': []
 }>()
 
 /** @brief First character of the user's display name for avatar fallback. */

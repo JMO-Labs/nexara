@@ -52,7 +52,7 @@ class TestAcquireBeatLock:
         with pytest.raises(psycopg2.OperationalError):
             acquire_beat_lock("postgresql://bad:bad@nowhere/db")
 
-    def test_lock_id_is_0xBEA7(self):
+    def test_lock_id_is_0x_bea7(self):
         assert BEAT_LOCK_ID == 0xBEA7
 
     def test_lock_id_is_integer(self):

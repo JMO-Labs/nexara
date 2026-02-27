@@ -9,12 +9,12 @@ using mocked dependencies (AsyncMock for repos/storage).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AppError, AuthorizationError, NotFoundError
+from app.core.exceptions import AppError, AuthorizationError
 from app.services.storage.quota import QuotaExceededError
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -49,7 +49,7 @@ def _make_media(
     media.alt_text = None
     media.width = 800
     media.height = 600
-    media.created_at = datetime.now(timezone.utc)
+    media.created_at = datetime.now(UTC)
     return media
 
 
@@ -207,8 +207,8 @@ class TestGetMetadata:
         mock_storage = AsyncMock()
         mock_user_repo = AsyncMock()
 
-        with patch("app.services.media_service.MediaResponse") as MockResponse:
-            MockResponse.model_validate.return_value = MagicMock()
+        with patch("app.services.media_service.MediaResponse") as mock_resp:
+            mock_resp.model_validate.return_value = MagicMock()
             service = MediaService(
                 media_repo=mock_repo,
                 storage_backend=mock_storage,
@@ -219,7 +219,7 @@ class TestGetMetadata:
             result = await service.get_metadata(mock_media.id)
 
         mock_repo.get.assert_awaited_once_with(mock_media.id)
-        MockResponse.model_validate.assert_called_once_with(mock_media)
+        mock_resp.model_validate.assert_called_once_with(mock_media)
         assert result is not None
 
 

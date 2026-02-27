@@ -58,8 +58,8 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'confirm'): void
-  (e: 'cancel'): void
+  confirm: []
+  cancel: []
 }>()
 
 const dialogRef = ref<HTMLElement | null>(null)

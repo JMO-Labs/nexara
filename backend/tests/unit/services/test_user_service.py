@@ -108,7 +108,7 @@ class TestUpdateProfile:
         updated_user = _make_user(display_name="New Name")
         svc._user_repo.update.return_value = updated_user
 
-        result = await svc.update_profile(user, {"display_name": "New Name"})
+        await svc.update_profile(user, {"display_name": "New Name"})
         svc._user_repo.update.assert_called_once()
         call_args = svc._user_repo.update.call_args
         assert "display_name" in call_args[0][1]
@@ -118,7 +118,9 @@ class TestUpdateProfile:
         user = _make_user()
         svc = _make_service()
 
-        result = await svc.update_profile(user, {"role": "admin", "email": "hack@evil.com"})
+        result = await svc.update_profile(
+            user, {"role": "admin", "email": "hack@evil.com"},
+        )
         svc._user_repo.update.assert_not_called()
         assert result.id == user.id
 
@@ -127,7 +129,7 @@ class TestUpdateProfile:
         user = _make_user()
         svc = _make_service()
 
-        result = await svc.update_profile(user, {"display_name": None})
+        await svc.update_profile(user, {"display_name": None})
         svc._user_repo.update.assert_not_called()
 
 
@@ -174,7 +176,7 @@ class TestChangeEmail:
         updated = _make_user(email="new@example.com")
         svc._user_repo.update.return_value = updated
 
-        result = await svc.change_email(user, "new@example.com", "current-pass1")
+        await svc.change_email(user, "new@example.com", "current-pass1")
         svc._user_repo.update.assert_called_once()
 
     @pytest.mark.asyncio

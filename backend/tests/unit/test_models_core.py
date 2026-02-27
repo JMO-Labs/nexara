@@ -6,8 +6,6 @@ These tests inspect SQLAlchemy metadata — no database connection required.
 Written BEFORE model implementation per TDD workflow.
 """
 
-import pytest
-from sqlalchemy import inspect
 
 import app.models  # noqa: F401 — register all models with Base.metadata
 from app.db.base import Base

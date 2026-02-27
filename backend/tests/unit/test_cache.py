@@ -8,8 +8,6 @@ without requiring a running Valkey instance.
 
 from unittest.mock import AsyncMock
 
-import pytest
-
 from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
 
 
@@ -40,10 +38,9 @@ class TestCacheGet:
         assert result is None
 
     async def test_returns_none_on_timeout(self):
-        import asyncio
 
         client = AsyncMock()
-        client.get.side_effect = asyncio.TimeoutError()
+        client.get.side_effect = TimeoutError()
 
         result = await cache_get(client, "user:1:profile")
         assert result is None
@@ -77,10 +74,9 @@ class TestCacheSet:
         assert result is False
 
     async def test_returns_false_on_timeout(self):
-        import asyncio
 
         client = AsyncMock()
-        client.setex.side_effect = asyncio.TimeoutError()
+        client.setex.side_effect = TimeoutError()
 
         result = await cache_set(client, "user:1:profile", '{"name": "alice"}')
         assert result is False
@@ -114,10 +110,9 @@ class TestCacheDelete:
         assert result is False
 
     async def test_returns_false_on_timeout(self):
-        import asyncio
 
         client = AsyncMock()
-        client.delete.side_effect = asyncio.TimeoutError()
+        client.delete.side_effect = TimeoutError()
 
         result = await cache_delete(client, "user:1:profile")
         assert result is False

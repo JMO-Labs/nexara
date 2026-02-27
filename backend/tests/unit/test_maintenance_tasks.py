@@ -15,7 +15,10 @@ class TestRefreshPrometheusGauges:
     """@brief Verify Prometheus gauge refresh task."""
 
     def test_task_name(self):
-        assert refresh_prometheus_gauges.name == "app.tasks.maintenance_tasks.refresh_prometheus_gauges"
+        assert (
+            refresh_prometheus_gauges.name
+            == "app.tasks.maintenance_tasks.refresh_prometheus_gauges"
+        )
 
     def test_queue_is_maintenance(self):
         assert refresh_prometheus_gauges.queue == "maintenance"
@@ -29,7 +32,10 @@ class TestRecalculateStorageQuotas:
     """@brief Verify storage quota recalculation task."""
 
     def test_task_name(self):
-        assert recalculate_storage_quotas.name == "app.tasks.maintenance_tasks.recalculate_storage_quotas"
+        assert (
+            recalculate_storage_quotas.name
+            == "app.tasks.maintenance_tasks.recalculate_storage_quotas"
+        )
 
     def test_returns_status(self):
         result = recalculate_storage_quotas()

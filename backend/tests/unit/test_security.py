@@ -3,7 +3,6 @@
 @brief Unit tests for JWT creation/validation, password hashing, TOTP, and token utilities.
 """
 
-import os
 import uuid
 from pathlib import Path
 

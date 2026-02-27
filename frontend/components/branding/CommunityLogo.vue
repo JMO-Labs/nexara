@@ -43,7 +43,7 @@ const showText = computed(() => !logoUrl.value)
     :width="props.size"
     :height="props.size"
     class="object-contain"
-  />
+  >
   <span
     v-else
     class="font-bold text-lg truncate"

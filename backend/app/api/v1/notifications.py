@@ -12,6 +12,7 @@ import uuid
 
 import structlog
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
@@ -23,7 +24,6 @@ from app.schemas.common import MessageResponse
 from app.schemas.notification import NotificationList, UnreadCountResponse
 from app.services.notification_service import NotificationService
 from app.services.realtime.pubsub import publish_to_user
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
 

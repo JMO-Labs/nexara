@@ -108,7 +108,9 @@ class AuthService:
             invite = None
 
         if await self._password_svc.check_hibp(password):
-            raise ConflictError(message=_("This password has appeared in a data breach and cannot be used"))
+            raise ConflictError(
+                message=_("This password has appeared in a data breach"),
+            )
 
         if await self._user_repo.email_exists(email):
             raise ConflictError(message=_("Email is already registered"))

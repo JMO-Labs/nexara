@@ -6,10 +6,7 @@ Tests verify connection pool creation, DB index routing, health check logic,
 pool lifecycle management, and graceful degradation.
 """
 
-import asyncio
-from unittest.mock import AsyncMock, patch
-
-import pytest
+from unittest.mock import AsyncMock
 
 from app.core.config import Settings
 
@@ -85,7 +82,7 @@ class TestValkeyPoolRegistry:
         mod._pools.clear()
 
     def test_get_pool_creates_on_first_call(self):
-        from app.core.valkey import get_pool, _pools
+        from app.core.valkey import _pools, get_pool
 
         settings = Settings(SECRET_KEY="test", REDIS_URL="redis://localhost:6379")
         pool = get_pool(settings, db=0)
@@ -109,7 +106,7 @@ class TestValkeyPoolRegistry:
         assert broker is not cache
 
     async def test_close_pools_clears_registry(self):
-        from app.core.valkey import get_pool, close_pools, _pools
+        from app.core.valkey import _pools, close_pools, get_pool
 
         settings = Settings(SECRET_KEY="test", REDIS_URL="redis://localhost:6379")
         get_pool(settings, db=0)
@@ -121,7 +118,7 @@ class TestValkeyPoolRegistry:
 
     async def test_close_pools_handles_errors_gracefully(self):
         """@brief close_pools should not raise even if aclose fails."""
-        from app.core.valkey import close_pools, _pools
+        from app.core.valkey import _pools, close_pools
 
         mock_pool = AsyncMock()
         mock_pool.aclose.side_effect = ConnectionError("already closed")
@@ -157,7 +154,7 @@ class TestValkeyHealthCheck:
         from app.core.valkey import check_valkey_health
 
         mock_redis = AsyncMock()
-        mock_redis.ping.side_effect = asyncio.TimeoutError()
+        mock_redis.ping.side_effect = TimeoutError()
 
         result = await check_valkey_health(mock_redis)
         assert result is False
@@ -187,7 +184,7 @@ class TestValkeyModuleExports:
         assert hasattr(valkey, "get_valkey_url")
 
     def test_module_exports_db_constants(self):
-        from app.core.valkey import DB_BROKER, DB_PUBSUB, DB_CACHE
+        from app.core.valkey import DB_BROKER, DB_CACHE, DB_PUBSUB
         assert DB_BROKER == 0
         assert DB_PUBSUB == 1
         assert DB_CACHE == 2

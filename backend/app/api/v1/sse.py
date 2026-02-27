@@ -106,7 +106,7 @@ async def _event_generator(
                     data=message.get("payload", message),
                     event_id=event_id,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": heartbeat\n\n"
 
     except asyncio.CancelledError:

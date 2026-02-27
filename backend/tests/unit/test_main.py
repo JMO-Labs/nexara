@@ -3,7 +3,6 @@
 @brief Unit tests for the FastAPI application factory and router setup.
 """
 
-from starlette.testclient import TestClient
 
 from app.main import app, create_app
 

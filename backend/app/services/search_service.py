@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING
 
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import (
-    SearchResultItem,
     SearchResponse,
+    SearchResultItem,
     SearchTypeResults,
 )
 

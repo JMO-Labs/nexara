@@ -14,6 +14,11 @@ from app.db.base import Base
 from app.models.user import COMMUNITY_DEFAULT
 
 
+def _bool_col(default: str = "true"):
+    """@brief Shorthand for a non-nullable Boolean column with a server default."""
+    return mapped_column(Boolean, nullable=False, server_default=default)
+
+
 class UserSettings(Base):
     """
     @brief One-to-one companion to User storing all preference columns.
@@ -36,51 +41,51 @@ class UserSettings(Base):
     )
 
     # --- Notification preferences (type x channel) ---
-    notif_mention_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_mention_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_mention_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_comment_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_comment_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_comment_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_reaction_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_reaction_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_reaction_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_new_post_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_new_post_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_new_post_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_event_reminder_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_event_reminder_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_event_reminder_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_event_rsvp_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_event_rsvp_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_event_rsvp_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_gallery_activity_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_gallery_activity_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_gallery_activity_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_dm_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_dm_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_dm_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_prompt_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_prompt_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_prompt_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_prompt_summary_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_prompt_summary_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_prompt_summary_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_birthday_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_birthday_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_birthday_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_system_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_system_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_system_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_poll_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_poll_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_poll_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    notif_invite_accepted_inapp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_invite_accepted_push: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    notif_invite_accepted_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    notif_mention_inapp: Mapped[bool] = _bool_col()
+    notif_mention_push: Mapped[bool] = _bool_col()
+    notif_mention_email: Mapped[bool] = _bool_col()
+    notif_comment_inapp: Mapped[bool] = _bool_col()
+    notif_comment_push: Mapped[bool] = _bool_col()
+    notif_comment_email: Mapped[bool] = _bool_col()
+    notif_reaction_inapp: Mapped[bool] = _bool_col()
+    notif_reaction_push: Mapped[bool] = _bool_col()
+    notif_reaction_email: Mapped[bool] = _bool_col("false")
+    notif_new_post_inapp: Mapped[bool] = _bool_col()
+    notif_new_post_push: Mapped[bool] = _bool_col("false")
+    notif_new_post_email: Mapped[bool] = _bool_col("false")
+    notif_event_reminder_inapp: Mapped[bool] = _bool_col()
+    notif_event_reminder_push: Mapped[bool] = _bool_col()
+    notif_event_reminder_email: Mapped[bool] = _bool_col()
+    notif_event_rsvp_inapp: Mapped[bool] = _bool_col()
+    notif_event_rsvp_push: Mapped[bool] = _bool_col("false")
+    notif_event_rsvp_email: Mapped[bool] = _bool_col("false")
+    notif_gallery_activity_inapp: Mapped[bool] = _bool_col()
+    notif_gallery_activity_push: Mapped[bool] = _bool_col("false")
+    notif_gallery_activity_email: Mapped[bool] = _bool_col("false")
+    notif_dm_inapp: Mapped[bool] = _bool_col()
+    notif_dm_push: Mapped[bool] = _bool_col()
+    notif_dm_email: Mapped[bool] = _bool_col()
+    notif_prompt_inapp: Mapped[bool] = _bool_col()
+    notif_prompt_push: Mapped[bool] = _bool_col()
+    notif_prompt_email: Mapped[bool] = _bool_col("false")
+    notif_prompt_summary_inapp: Mapped[bool] = _bool_col()
+    notif_prompt_summary_push: Mapped[bool] = _bool_col("false")
+    notif_prompt_summary_email: Mapped[bool] = _bool_col("false")
+    notif_birthday_inapp: Mapped[bool] = _bool_col()
+    notif_birthday_push: Mapped[bool] = _bool_col("false")
+    notif_birthday_email: Mapped[bool] = _bool_col("false")
+    notif_system_inapp: Mapped[bool] = _bool_col()
+    notif_system_push: Mapped[bool] = _bool_col()
+    notif_system_email: Mapped[bool] = _bool_col()
+    notif_poll_inapp: Mapped[bool] = _bool_col()
+    notif_poll_push: Mapped[bool] = _bool_col("false")
+    notif_poll_email: Mapped[bool] = _bool_col("false")
+    notif_invite_accepted_inapp: Mapped[bool] = _bool_col()
+    notif_invite_accepted_push: Mapped[bool] = _bool_col()
+    notif_invite_accepted_email: Mapped[bool] = _bool_col("false")
 
     # Email digest
-    email_digest_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    email_digest_enabled: Mapped[bool] = _bool_col("false")
     email_digest_hour: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="8")
 
     # Global mute
@@ -88,10 +93,12 @@ class UserSettings(Base):
     mute_all_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     # Privacy
-    profile_visible_to: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
+    profile_visible_to: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="community",
+    )
     show_online_status: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     show_last_seen: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    show_birthday_year: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    show_birthday_year: Mapped[bool] = _bool_col("false")
     show_birthday_to: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     allow_sassybot: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
 

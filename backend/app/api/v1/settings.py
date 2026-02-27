@@ -12,9 +12,8 @@ import uuid
 
 import structlog
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db

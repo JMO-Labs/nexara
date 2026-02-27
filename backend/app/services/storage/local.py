@@ -10,7 +10,6 @@ characters of the key filename are used as a two-level directory prefix:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import aiofiles

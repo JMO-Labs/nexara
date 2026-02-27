@@ -23,7 +23,7 @@ config.global.mocks = {
 
 /* Provide Nuxt auto-import stubs globally */
 ;(globalThis as Record<string, unknown>).definePageMeta = (_meta: Record<string, unknown>) => { /* no-op */ }
-;(globalThis as Record<string, unknown>).defineNuxtRouteMiddleware = (fn: Function) => fn
+;(globalThis as Record<string, unknown>).defineNuxtRouteMiddleware = (fn: (...args: unknown[]) => unknown) => fn
 ;(globalThis as Record<string, unknown>).navigateTo = (to: unknown, _opts?: unknown) => to
 ;(globalThis as Record<string, unknown>).useRoute = () => ({ path: '/', params: {}, query: {}, fullPath: '/' })
 ;(globalThis as Record<string, unknown>).useRouter = () => ({ push: vi.fn(), replace: vi.fn() })
@@ -34,8 +34,8 @@ if (typeof globalThis.localStorage === 'undefined') {
   globalThis.localStorage = {
     getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => { store[key] = value },
-    removeItem: (key: string) => { delete store[key] },
-    clear: () => { Object.keys(store).forEach(k => delete store[k]) },
+    removeItem: (key: string) => { Reflect.deleteProperty(store, key) },
+    clear: () => { Object.keys(store).forEach(k => Reflect.deleteProperty(store, k)) },
     get length() { return Object.keys(store).length },
     key: (index: number) => Object.keys(store)[index] ?? null,
   }

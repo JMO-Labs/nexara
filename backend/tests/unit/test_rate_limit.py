@@ -18,6 +18,7 @@ class TestRateLimitConfig:
 
     def test_key_func_is_remote_address(self):
         from slowapi.util import get_remote_address
+
         from app.core.rate_limit import limiter
         assert limiter._key_func is get_remote_address
 

@@ -6,8 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount  } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminInvites from '~/pages/app/admin/invites.vue'
 

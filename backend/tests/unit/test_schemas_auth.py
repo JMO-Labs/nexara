@@ -7,7 +7,7 @@ Ensures all request/response models enforce their documented constraints.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -21,8 +21,8 @@ from app.schemas.auth import (
     OIDCCallbackParams,
     PasswordResetConfirmPayload,
     PasswordResetRequestPayload,
-    RegisterRequest,
     RefreshResponse,
+    RegisterRequest,
     TokenResponse,
     TwoFactorEnrollResponse,
     TwoFactorLoginRequest,
@@ -195,7 +195,7 @@ class TestInviteSchemas:
             InviteCreateRequest(email="a@b.com", role="superuser")
 
     def test_response_from_attributes(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         resp = InviteResponse(
             id=uuid4(),
             email="a@b.com",

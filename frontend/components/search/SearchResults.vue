@@ -50,7 +50,7 @@ import type { SearchResultItem } from '~/types/api'
 import { timeAgo } from '~/utils/date'
 import { useI18n } from 'vue-i18n'
 
-const props = defineProps<{
+defineProps<{
   /** @brief List of search result items to render. */
   items: SearchResultItem[]
   /** @brief Active tab: all, posts, users, events. */

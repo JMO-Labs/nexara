@@ -3,7 +3,6 @@
 @brief Unit tests for Prometheus custom application metrics.
 """
 
-from prometheus_client import CollectorRegistry
 
 from app.core.metrics import (
     celery_queue_depth,

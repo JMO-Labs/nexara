@@ -40,7 +40,7 @@
         :height="media.height || undefined"
         class="rounded-lg object-cover w-full"
         loading="lazy"
-      />
+      >
     </div>
 
     <!-- Reactions -->

@@ -35,7 +35,7 @@
                 type="email"
                 required
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
+              >
             </div>
 
             <button
@@ -83,7 +83,7 @@
                 minlength="12"
                 autocomplete="new-password"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
+              >
             </div>
 
             <button

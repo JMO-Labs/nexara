@@ -7,8 +7,6 @@ All API errors must return ``{ "error": { "code": ..., "message": ..., "details"
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 
