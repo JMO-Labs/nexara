@@ -54,7 +54,10 @@ class LocalStorageBackend:
             raise StorageError(f"Storage key filename too short: {filename}")
 
         shard = f"{filename[:2]}/{filename[2:4]}"
-        return self.base.joinpath(*prefix_dirs, shard, filename)
+        resolved = self.base.joinpath(*prefix_dirs, shard, filename).resolve()
+        if not str(resolved).startswith(str(self.base.resolve())):
+            raise StorageError(f"Invalid storage key: path traversal detected in {key!r}")
+        return resolved
 
     async def put(self, key: str, data: bytes, content_type: str) -> None:
         """@brief Write file bytes to disk, creating parent directories as needed."""
