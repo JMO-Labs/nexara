@@ -64,16 +64,25 @@ class Settings(BaseSettings):
     # --- Auth / JWT ---
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
-    JWT_ALGORITHM: str = "HS256"
+    JWT_ALGORITHM: str = "RS256"
+    JWT_PRIVATE_KEY_PATH: str = "/data/jwt_private.pem"
+    JWT_PUBLIC_KEY_PATH: str = "/data/jwt_public.pem"
+    PASSWORD_MIN_LENGTH: int = 12
+    HIBP_CHECK_ENABLED: bool = True
+    TWO_FA_ISSUER: str = "Nexara"
 
     # --- OIDC ---
     OIDC_ISSUER: str = ""
     OIDC_CLIENT_ID: str = ""
     OIDC_CLIENT_SECRET: str = ""
+    OIDC_ADMIN_GROUP: str = "nexara-admin"
+    OIDC_MEMBER_GROUP: str = "nexara-member"
+    OIDC_SCOPES: str = "openid profile email groups"
 
     # --- Registration ---
     ENABLE_REGISTRATION: bool = True
     REQUIRE_INVITE: bool = False
+    INVITE_EXPIRE_DAYS: int = 7
 
     # --- Community ---
     COMMUNITY_ID: str = "00000000-0000-0000-0000-000000000001"
