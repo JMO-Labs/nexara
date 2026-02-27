@@ -31,7 +31,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.metrics import router as metrics_router
 from app.api.v1.health import router as health_router
-from app.api.v1.router import api_v1_router
+from app.api.v1.router import api_v1_router, ws_api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
@@ -71,8 +71,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     _setup_instrumentator(app, settings)
 
+    from app.services.realtime.pubsub import start_subscriber, stop_subscriber
+
+    await start_subscriber()
+    logger.info("realtime_pubsub_subscriber_started")
+
     yield
 
+    await stop_subscriber()
     await close_pools()
     await engine.dispose()
     logger.info("app_shutdown_complete")
@@ -142,7 +148,14 @@ def _register_routers(app: FastAPI) -> None:
     """@brief Mount all API routers on the application."""
     app.include_router(health_router, tags=["health"])
     app.include_router(api_v1_router)
+    app.include_router(ws_api_router)
     app.include_router(metrics_router)
+
+    @app.get("/.well-known/jwks.json", tags=["auth"])
+    async def jwks_root():
+        """@brief Root-level JWKS endpoint for external JWT verification."""
+        from app.core.security import get_jwks
+        return get_jwks()
 
 
 def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]

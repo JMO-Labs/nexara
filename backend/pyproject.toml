@@ -8,50 +8,39 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "python-multipart>=0.0.18",
-
     # Database
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30.0",
     "alembic>=1.14.0",
-
     # Configuration
     "pydantic-settings>=2.7.0",
-
     # Cache / Pub-Sub (Valkey via redis protocol)
     "redis[hiredis]>=5.2.0",
-
     # Storage
     "aiofiles>=24.1.0",
     "aioboto3>=13.3.0",
-
     # Task queue
     "celery[redis]>=5.4.0",
-
     # Logging
     "structlog>=24.4.0",
-
     # Image processing
     "pillow>=11.0.0",
-
     # HTTP client
     "httpx>=0.28.0",
-
     # i18n
     "babel>=2.16.0",
-
     # Auth / Security
     "bcrypt>=4.2.0",
     "python-jose[cryptography]>=3.3.0",
-
     # Rate limiting
     "slowapi>=0.1.9",
-
     # Prometheus metrics
     "prometheus-client>=0.21.0",
     "prometheus-fastapi-instrumentator>=7.0.0",
-
     # Beat advisory lock (sync Postgres driver)
     "psycopg2-binary>=2.9.10",
+    "pyotp>=2.9.0",
+    "email-validator>=2.3.0",
 ]
 
 [project.optional-dependencies]
