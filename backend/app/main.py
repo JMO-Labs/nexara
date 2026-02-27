@@ -49,6 +49,28 @@ from app.db.session import engine
 logger = structlog.get_logger(__name__)
 
 
+def _configure_email_validator() -> None:
+    """
+    @brief Allow non-deliverable email domains (e.g. .local) in development.
+
+    In production the default strict validation applies, rejecting
+    domains that cannot receive mail.  In development we also remove
+    ``local`` from the special-use blocklist so that LAN hostnames
+    like ``user@mybox.local`` pass validation.
+    """
+    settings = get_settings()
+    if settings.APP_ENV != "production":
+        import email_validator
+
+        email_validator.TEST_ENVIRONMENT = True
+        blocked = email_validator.SPECIAL_USE_DOMAIN_NAMES
+        if isinstance(blocked, list) and "local" in blocked:
+            blocked.remove("local")
+
+
+_configure_email_validator()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """

@@ -4,13 +4,23 @@
 #
 # Build context: repository root (set in docker-compose.yml)
 #
-# Stage 1 (python-builder): Install Python dependencies with uv
-# Stage 2 (runtime):        Alpine with Nginx, supervisord, Valkey, ffmpeg
-#
-# The frontend build stage will be added when the frontend is implemented.
+# Stage 1 (frontend-builder): Install Node deps, build Nuxt static output
+# Stage 2 (python-builder):   Install Python dependencies with uv
+# Stage 3 (runtime):          Alpine with Nginx, supervisord, Valkey, ffmpeg
 # =============================================================================
 
-# ── Stage 1: Build Python dependencies ──────────────────────────────────────
+# ── Stage 1: Build Frontend ──────────────────────────────────────────────────
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /build
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci --ignore-scripts
+
+COPY frontend/ ./
+RUN npm run generate
+
+# ── Stage 2: Build Python dependencies ──────────────────────────────────────
 FROM python:3.12-alpine AS python-builder
 
 WORKDIR /build
@@ -42,6 +52,9 @@ WORKDIR /app
 COPY --from=python-builder /usr/local/lib/python3.12/site-packages \
      /usr/local/lib/python3.12/site-packages
 COPY --from=python-builder /usr/local/bin /usr/local/bin
+
+# Frontend static output from builder stage
+COPY --from=frontend-builder /build/.output/public /usr/share/nginx/html
 
 # Backend source
 COPY backend/app/ ./app/

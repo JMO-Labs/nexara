@@ -1,0 +1,36 @@
+/**
+ * @file main.css
+ * @brief Global Tailwind CSS entry point with custom properties for branding.
+ *
+ * CSS custom properties defined on :root serve as defaults. The useBranding()
+ * composable overwrites them at runtime from the community branding API.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-dark: #2563eb;
+    --color-accent: #8b5cf6;
+    --color-surface-light: #ffffff;
+    --color-surface-dark: #1f2937;
+    --color-text-light: #111827;
+    --color-text-dark: #f9fafb;
+    --font-family: 'Inter', sans-serif;
+    --font-family-mono: 'JetBrains Mono', monospace;
+    --radius-base: 0.5rem;
+  }
+
+  body {
+    font-family: var(--font-family);
+    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+
+  /* Ensure smooth transitions for dark mode */
+  html.dark {
+    color-scheme: dark;
+  }
+}
