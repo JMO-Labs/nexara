@@ -137,9 +137,7 @@ class ConnectionManager:
         @return Total number of connections the message was sent to.
         """
         async with self._lock:
-            all_conns = [
-                (uid, list(conns)) for uid, conns in self._connections.items()
-            ]
+            all_conns = [(uid, list(conns)) for uid, conns in self._connections.items()]
 
         sent = 0
         for _uid, conns in all_conns:

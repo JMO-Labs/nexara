@@ -29,7 +29,9 @@ class Event(Base):
     __tablename__ = "events"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -50,12 +52,14 @@ class Event(Base):
     is_all_day: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     recurrence_rule: Mapped[str | None] = mapped_column(Text)
     recurrence_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("events.id"),
+        UUID(as_uuid=True),
+        ForeignKey("events.id"),
     )
     ical_uid: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("subgroups.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("subgroups.id", ondelete="SET NULL"),
     )
     source_subscription_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -74,10 +78,14 @@ class Event(Base):
         ),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -94,7 +102,9 @@ class EventAttendance(Base):
     __tablename__ = "event_attendance"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -103,15 +113,21 @@ class EventAttendance(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     event_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("events.id", ondelete="CASCADE"),
+        nullable=False,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="attending")
     note: Mapped[str | None] = mapped_column(Text)
     responded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -126,7 +142,9 @@ class CalendarSubscription(Base):
     __tablename__ = "calendar_subscriptions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -135,7 +153,9 @@ class CalendarSubscription(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     color: Mapped[str] = mapped_column(Text, nullable=False, server_default="#4285f4")
@@ -146,9 +166,9 @@ class CalendarSubscription(Base):
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
-    __table_args__ = (
-        Index("cal_subs_user_idx", "user_id"),
-    )
+    __table_args__ = (Index("cal_subs_user_idx", "user_id"),)

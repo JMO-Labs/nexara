@@ -26,14 +26,12 @@ celery_app.conf.update(
     # ── Broker & result backend ───────────────────────────────────────
     broker_url=settings.celery_broker_url,
     result_backend=settings.celery_broker_url,
-
     # ── Serialization ─────────────────────────────────────────────────
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
-
     # ── Task routing ──────────────────────────────────────────────────
     task_routes={
         "app.tasks.email_tasks.*": {"queue": "email"},
@@ -42,19 +40,15 @@ celery_app.conf.update(
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
     },
-
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     task_reject_on_worker_lost=True,
-
     # ── Result TTL ────────────────────────────────────────────────────
     result_expires=3600,
-
     # ── Time limits (overridable per task) ────────────────────────────
     task_soft_time_limit=60,
     task_time_limit=120,
-
     # ── Beat schedule ─────────────────────────────────────────────────
     beat_schedule={
         "refresh-prometheus-gauges": {

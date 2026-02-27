@@ -117,7 +117,9 @@ async def list_users(
     """@brief List community members with cursor-based pagination."""
     svc = UserService(db, settings)
     users, next_cursor = await svc.list_users(
-        user.community_id, limit=limit, cursor=cursor,
+        user.community_id,
+        limit=limit,
+        cursor=cursor,
     )
     return PaginatedResponse(
         items=[UserResponse.model_validate(u) for u in users],

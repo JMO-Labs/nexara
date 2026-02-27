@@ -49,8 +49,13 @@ class TestOutboundTypes:
 
     def test_all_types_present(self):
         expected = {
-            "auth_ok", "auth_error", "pong", "notification",
-            "feed_update", "presence", "typing",
+            "auth_ok",
+            "auth_error",
+            "pong",
+            "notification",
+            "feed_update",
+            "presence",
+            "typing",
         }
         actual = {t.value for t in OutboundType}
         assert expected == actual

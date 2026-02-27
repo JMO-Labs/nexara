@@ -60,18 +60,26 @@ class TestSearch:
     @pytest.mark.asyncio
     async def test_returns_results_grouped_by_type(self, mock_user, mock_repo):
         """search should return results grouped by content type."""
-        post = type("Post", (), {
-            "id": uuid.uuid4(),
-            "content": "Test post content",
-            "created_at": datetime.now(UTC),
-        })()
-        user_result = type("User", (), {
-            "id": uuid.uuid4(),
-            "display_name": "Alice",
-            "username": "alice",
-            "bio": "Developer",
-            "created_at": datetime.now(UTC),
-        })()
+        post = type(
+            "Post",
+            (),
+            {
+                "id": uuid.uuid4(),
+                "content": "Test post content",
+                "created_at": datetime.now(UTC),
+            },
+        )()
+        user_result = type(
+            "User",
+            (),
+            {
+                "id": uuid.uuid4(),
+                "display_name": "Alice",
+                "username": "alice",
+                "bio": "Developer",
+                "created_at": datetime.now(UTC),
+            },
+        )()
 
         mock_repo.search_posts.return_value = ([(post, 0.5)], None, 1)
         mock_repo.search_users.return_value = ([(user_result, 0.3)], None, 1)

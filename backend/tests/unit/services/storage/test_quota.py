@@ -45,7 +45,8 @@ class TestCheckQuota:
     @pytest.mark.asyncio
     async def test_allows_upload_exactly_at_limit(self):
         session = _mock_session_with_user(
-            storage_used=TEN_GB - 1000, storage_quota=TEN_GB,
+            storage_used=TEN_GB - 1000,
+            storage_quota=TEN_GB,
         )
         user_id = uuid.uuid4()
         await check_quota(session, user_id, upload_size=1000)
@@ -53,7 +54,8 @@ class TestCheckQuota:
     @pytest.mark.asyncio
     async def test_rejects_upload_exceeding_quota(self):
         session = _mock_session_with_user(
-            storage_used=TEN_GB - 500, storage_quota=TEN_GB,
+            storage_used=TEN_GB - 500,
+            storage_quota=TEN_GB,
         )
         user_id = uuid.uuid4()
         with pytest.raises(QuotaExceededError):
@@ -62,7 +64,8 @@ class TestCheckQuota:
     @pytest.mark.asyncio
     async def test_rejects_upload_when_already_full(self):
         session = _mock_session_with_user(
-            storage_used=TEN_GB, storage_quota=TEN_GB,
+            storage_used=TEN_GB,
+            storage_quota=TEN_GB,
         )
         user_id = uuid.uuid4()
         with pytest.raises(QuotaExceededError):

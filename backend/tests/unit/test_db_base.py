@@ -3,7 +3,6 @@
 @brief Unit tests for the SQLAlchemy base model and mixins.
 """
 
-
 from sqlalchemy import inspect
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin

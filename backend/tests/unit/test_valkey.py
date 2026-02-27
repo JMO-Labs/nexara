@@ -165,26 +165,32 @@ class TestValkeyModuleExports:
 
     def test_module_exports_create_pool(self):
         from app.core import valkey
+
         assert hasattr(valkey, "create_pool")
 
     def test_module_exports_get_pool(self):
         from app.core import valkey
+
         assert hasattr(valkey, "get_pool")
 
     def test_module_exports_close_pools(self):
         from app.core import valkey
+
         assert hasattr(valkey, "close_pools")
 
     def test_module_exports_check_health(self):
         from app.core import valkey
+
         assert hasattr(valkey, "check_valkey_health")
 
     def test_module_exports_get_url(self):
         from app.core import valkey
+
         assert hasattr(valkey, "get_valkey_url")
 
     def test_module_exports_db_constants(self):
         from app.core.valkey import DB_BROKER, DB_CACHE, DB_PUBSUB
+
         assert DB_BROKER == 0
         assert DB_PUBSUB == 1
         assert DB_CACHE == 2

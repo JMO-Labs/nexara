@@ -161,7 +161,9 @@ class TestGetUserById:
 
         current_user = _mock_user()
         target_user = _mock_user(
-            id=uuid.uuid4(), username="alice", display_name="Alice",
+            id=uuid.uuid4(),
+            username="alice",
+            display_name="Alice",
         )
 
         async def _override_user():

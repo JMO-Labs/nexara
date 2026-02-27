@@ -186,6 +186,7 @@ def _register_routers(app: FastAPI) -> None:
     async def jwks_root():
         """@brief Root-level JWKS endpoint for external JWT verification."""
         from app.core.security import get_jwks
+
         return get_jwks()
 
 

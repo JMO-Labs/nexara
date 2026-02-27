@@ -3,8 +3,6 @@
 @brief Unit tests for the generic base repository.
 """
 
-
-
 from app.repositories.base import BaseRepository
 
 

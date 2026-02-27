@@ -5,6 +5,7 @@ Revises: 0001
 Create Date: 2026-02-26 18:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 from alembic import op
@@ -26,9 +27,7 @@ def upgrade() -> None:
         "coalesce(bio, ''))"
         ") STORED;"
     )
-    op.execute(
-        "CREATE INDEX users_search_fts_idx ON users USING GIN (search_fts);"
-    )
+    op.execute("CREATE INDEX users_search_fts_idx ON users USING GIN (search_fts);")
 
     # --- Events: search_fts (title + description + location) ---
     op.execute(
@@ -40,9 +39,7 @@ def upgrade() -> None:
         "coalesce(location, ''))"
         ") STORED;"
     )
-    op.execute(
-        "CREATE INDEX events_search_fts_idx ON events USING GIN (search_fts);"
-    )
+    op.execute("CREATE INDEX events_search_fts_idx ON events USING GIN (search_fts);")
 
     # --- Galleries: search_fts (title + description) ---
     op.execute(
@@ -53,9 +50,7 @@ def upgrade() -> None:
         "coalesce(description, ''))"
         ") STORED;"
     )
-    op.execute(
-        "CREATE INDEX galleries_search_fts_idx ON galleries USING GIN (search_fts);"
-    )
+    op.execute("CREATE INDEX galleries_search_fts_idx ON galleries USING GIN (search_fts);")
 
     # --- Subgroups: search_fts (name + description) ---
     op.execute(
@@ -66,9 +61,7 @@ def upgrade() -> None:
         "coalesce(description, ''))"
         ") STORED;"
     )
-    op.execute(
-        "CREATE INDEX subgroups_search_fts_idx ON subgroups USING GIN (search_fts);"
-    )
+    op.execute("CREATE INDEX subgroups_search_fts_idx ON subgroups USING GIN (search_fts);")
 
     # --- Unique constraint on community_branding.community_id ---
     op.create_unique_constraint(

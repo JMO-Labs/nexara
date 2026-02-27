@@ -235,7 +235,10 @@ class TestListUsers:
         users, cursor = await service.list_users(search="test", limit=10)
 
         mock_user_repo.list_by_community_search.assert_awaited_once_with(
-            COMMUNITY_ID, search="test", limit=10, cursor=None,
+            COMMUNITY_ID,
+            search="test",
+            limit=10,
+            cursor=None,
         )
         assert len(users) == 1
         assert cursor is None

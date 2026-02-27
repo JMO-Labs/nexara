@@ -31,7 +31,8 @@ def _make_user(**overrides) -> MagicMock:
     user = MagicMock()
     user.id = overrides.get("id", uuid.uuid4())
     user.community_id = overrides.get(
-        "community_id", uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        "community_id",
+        uuid.UUID("00000000-0000-0000-0000-000000000001"),
     )
     user.email = overrides.get("email", "user@example.com")
     user.username = overrides.get("username", "testuser")
@@ -72,6 +73,7 @@ class TestGetUser:
         svc._user_repo.get_by_id.return_value = None
 
         from app.core.exceptions import NotFoundError
+
         with pytest.raises(NotFoundError, match="not found"):
             await svc.get_user(uuid.uuid4())
 
@@ -94,6 +96,7 @@ class TestGetUserByUsername:
         svc._user_repo.find_by_username.return_value = None
 
         from app.core.exceptions import NotFoundError
+
         with pytest.raises(NotFoundError):
             await svc.get_user_by_username("nonexistent")
 
@@ -119,7 +122,8 @@ class TestUpdateProfile:
         svc = _make_service()
 
         result = await svc.update_profile(
-            user, {"role": "admin", "email": "hack@evil.com"},
+            user,
+            {"role": "admin", "email": "hack@evil.com"},
         )
         svc._user_repo.update.assert_not_called()
         assert result.id == user.id
@@ -152,6 +156,7 @@ class TestChangePassword:
         svc = _make_service()
 
         from app.core.exceptions import AuthenticationError
+
         with pytest.raises(AuthenticationError, match="incorrect"):
             await svc.change_password(user, "wrong-password1", "new-password-123")
 
@@ -161,6 +166,7 @@ class TestChangePassword:
         svc = _make_service()
 
         from app.core.exceptions import AuthenticationError
+
         with pytest.raises(AuthenticationError, match="external"):
             await svc.change_password(user, "anything1234", "new-password-123")
 
@@ -186,6 +192,7 @@ class TestChangeEmail:
         svc._user_repo.email_exists.return_value = True
 
         from app.core.exceptions import ConflictError
+
         with pytest.raises(ConflictError, match="already registered"):
             await svc.change_email(user, "taken@example.com", "current-pass1")
 
@@ -195,6 +202,7 @@ class TestChangeEmail:
         svc = _make_service()
 
         from app.core.exceptions import AuthenticationError
+
         with pytest.raises(AuthenticationError, match="Invalid password"):
             await svc.change_email(user, "new@example.com", "wrong-password1")
 

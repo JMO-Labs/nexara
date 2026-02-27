@@ -87,7 +87,9 @@ class UserService:
         @return Tuple of (users, next_cursor).
         """
         return await self._user_repo.list_by_community(
-            community_id, limit=limit, cursor=cursor,
+            community_id,
+            limit=limit,
+            cursor=cursor,
         )
 
     async def update_profile(self, user: User, data: dict) -> User:
@@ -154,7 +156,8 @@ class UserService:
             raise ConflictError(message=_("Email is already registered"))
 
         updated = await self._user_repo.update(
-            user, {"email": new_email, "email_verified": False},
+            user,
+            {"email": new_email, "email_verified": False},
         )
         logger.info("email_changed", user_id=str(user.id))
         return updated

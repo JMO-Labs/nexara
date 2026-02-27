@@ -29,10 +29,18 @@ class TestGalleryModel:
     def test_required_columns(self):
         cols = _get_columns("galleries")
         expected = {
-            "id", "community_id", "owner_id", "title",
-            "visibility", "contribution_policy", "item_count",
-            "is_featured", "is_default", "is_event_gallery",
-            "created_at", "updated_at",
+            "id",
+            "community_id",
+            "owner_id",
+            "title",
+            "visibility",
+            "contribution_policy",
+            "item_count",
+            "is_featured",
+            "is_default",
+            "is_event_gallery",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(cols)
 
@@ -70,8 +78,14 @@ class TestPromptModel:
     def test_required_columns(self):
         cols = _get_columns("prompts")
         expected = {
-            "id", "community_id", "title", "body", "source",
-            "is_enabled", "frequency_type", "created_at",
+            "id",
+            "community_id",
+            "title",
+            "body",
+            "source",
+            "is_enabled",
+            "frequency_type",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -85,8 +99,14 @@ class TestPromptPostModel:
     def test_required_columns(self):
         cols = _get_columns("prompt_posts")
         expected = {
-            "id", "community_id", "prompt_id", "post_id",
-            "fired_at", "expires_at", "response_count", "is_finalised",
+            "id",
+            "community_id",
+            "prompt_id",
+            "post_id",
+            "fired_at",
+            "expires_at",
+            "response_count",
+            "is_finalised",
         }
         assert expected.issubset(cols)
 
@@ -196,8 +216,14 @@ class TestContentReportModel:
     def test_required_columns(self):
         cols = _get_columns("content_reports")
         expected = {
-            "id", "reporter_id", "target_type", "target_id",
-            "reason", "status", "community_id", "created_at",
+            "id",
+            "reporter_id",
+            "target_type",
+            "target_id",
+            "reason",
+            "status",
+            "community_id",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -223,8 +249,13 @@ class TestCommunityBrandingModel:
     def test_branding_columns(self):
         cols = _get_columns("community_branding")
         expected = {
-            "id", "community_id", "community_name", "tagline",
-            "color_primary", "font_family", "updated_at",
+            "id",
+            "community_id",
+            "community_name",
+            "tagline",
+            "color_primary",
+            "font_family",
+            "updated_at",
         }
         assert expected.issubset(cols)
 
@@ -238,8 +269,13 @@ class TestAuditLogModel:
     def test_required_columns(self):
         cols = _get_columns("audit_log")
         expected = {
-            "id", "actor_id", "action", "target_type",
-            "target_id", "metadata", "created_at",
+            "id",
+            "actor_id",
+            "action",
+            "target_type",
+            "target_id",
+            "metadata",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -248,18 +284,43 @@ class TestAllTablesRegistered:
     """@brief Verify all Phase 1 tables are registered in Base.metadata."""
 
     EXPECTED_TABLES = {
-        "communities", "users", "user_settings", "refresh_tokens",
-        "user_backup_codes", "invites", "posts", "comments", "reactions",
-        "post_media", "media", "events", "event_attendance",
-        "calendar_subscriptions", "subgroups", "subgroup_members",
-        "chat_channels", "chat_messages", "notifications",
-        "push_subscriptions", "galleries", "gallery_items",
-        "gallery_collaborators", "prompts", "prompt_posts",
-        "link_previews", "post_link_previews",
-        "chat_message_link_previews", "retention_policies",
-        "storage_snapshots", "storage_alerts", "interest_categories",
-        "user_interests", "content_reports", "user_blocks",
-        "community_branding", "audit_log",
+        "communities",
+        "users",
+        "user_settings",
+        "refresh_tokens",
+        "user_backup_codes",
+        "invites",
+        "posts",
+        "comments",
+        "reactions",
+        "post_media",
+        "media",
+        "events",
+        "event_attendance",
+        "calendar_subscriptions",
+        "subgroups",
+        "subgroup_members",
+        "chat_channels",
+        "chat_messages",
+        "notifications",
+        "push_subscriptions",
+        "galleries",
+        "gallery_items",
+        "gallery_collaborators",
+        "prompts",
+        "prompt_posts",
+        "link_previews",
+        "post_link_previews",
+        "chat_message_link_previews",
+        "retention_policies",
+        "storage_snapshots",
+        "storage_alerts",
+        "interest_categories",
+        "user_interests",
+        "content_reports",
+        "user_blocks",
+        "community_branding",
+        "audit_log",
     }
 
     def test_all_tables_present(self):

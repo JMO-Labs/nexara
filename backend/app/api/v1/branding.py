@@ -75,8 +75,10 @@ async def update_branding(
     repo = BrandingRepository(db)
     audit_repo = AuditRepository(db)
     service = BrandingService(
-        repo=repo, cache_client=cache_client,
-        community_id=community_id, audit_repo=audit_repo,
+        repo=repo,
+        cache_client=cache_client,
+        community_id=community_id,
+        audit_repo=audit_repo,
     )
     return await service.update_branding(
         user_id=admin.id,

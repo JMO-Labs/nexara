@@ -70,6 +70,7 @@ class TestCreateInvite:
 
         class FakeInvite:
             """Simple object to satisfy Pydantic from_attributes validation."""
+
             pass
 
         mock_invite = FakeInvite()

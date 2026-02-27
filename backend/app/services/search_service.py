@@ -114,24 +114,26 @@ class SearchService:
             return SearchResponse(
                 query=query,
                 results={
-                    t: SearchTypeResults(items=[], total=0, next_cursor=None)
-                    for t in content_types
+                    t: SearchTypeResults(items=[], total=0, next_cursor=None) for t in content_types
                 },
             )
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
-            tasks.append(("posts", self._repo.search_posts(
-                query_ts, self._community_id, user.id, cursor, limit
-            )))
+            tasks.append(
+                (
+                    "posts",
+                    self._repo.search_posts(query_ts, self._community_id, user.id, cursor, limit),
+                )
+            )
         if "users" in content_types:
-            tasks.append(("users", self._repo.search_users(
-                query_ts, self._community_id, cursor, limit
-            )))
+            tasks.append(
+                ("users", self._repo.search_users(query_ts, self._community_id, cursor, limit))
+            )
         if "events" in content_types:
-            tasks.append(("events", self._repo.search_events(
-                query_ts, self._community_id, cursor, limit
-            )))
+            tasks.append(
+                ("events", self._repo.search_events(query_ts, self._community_id, cursor, limit))
+            )
 
         coros = [t[1] for t in tasks]
         type_names = [t[0] for t in tasks]

@@ -6,7 +6,6 @@ These tests inspect SQLAlchemy metadata — no database connection required.
 Written BEFORE model implementation per TDD workflow.
 """
 
-
 import app.models  # noqa: F401 — register all models with Base.metadata
 from app.db.base import Base
 
@@ -48,8 +47,14 @@ class TestUserModel:
     def test_identity_columns(self):
         cols = _get_columns("users")
         expected = {
-            "id", "community_id", "uri", "email", "username",
-            "display_name", "password_hash", "role",
+            "id",
+            "community_id",
+            "uri",
+            "email",
+            "username",
+            "display_name",
+            "password_hash",
+            "role",
         }
         assert expected.issubset(cols)
 
@@ -61,8 +66,11 @@ class TestUserModel:
     def test_security_columns(self):
         cols = _get_columns("users")
         expected = {
-            "is_active", "email_verified", "totp_secret",
-            "totp_enabled", "oidc_sub",
+            "is_active",
+            "email_verified",
+            "totp_secret",
+            "totp_enabled",
+            "oidc_sub",
         }
         assert expected.issubset(cols)
 
@@ -80,9 +88,7 @@ class TestUserModel:
 
     def test_community_id_fk(self):
         table = _get_table("users")
-        fk_targets = {
-            str(fk.column) for col in table.columns for fk in col.foreign_keys
-        }
+        fk_targets = {str(fk.column) for col in table.columns for fk in col.foreign_keys}
         assert "communities.id" in fk_targets
 
 
@@ -120,8 +126,13 @@ class TestRefreshTokenModel:
     def test_required_columns(self):
         cols = _get_columns("refresh_tokens")
         expected = {
-            "id", "user_id", "token_hash", "family_id",
-            "expires_at", "revoked_at", "created_at",
+            "id",
+            "user_id",
+            "token_hash",
+            "family_id",
+            "expires_at",
+            "revoked_at",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -146,7 +157,15 @@ class TestInviteModel:
     def test_required_columns(self):
         cols = _get_columns("invites")
         expected = {
-            "id", "community_id", "email", "role", "token_hash",
-            "created_by", "used_by", "expires_at", "used_at", "created_at",
+            "id",
+            "community_id",
+            "email",
+            "role",
+            "token_hash",
+            "created_by",
+            "used_by",
+            "expires_at",
+            "used_at",
+            "created_at",
         }
         assert expected.issubset(cols)

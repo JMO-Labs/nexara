@@ -35,10 +35,12 @@ class TestAuthenticate:
         user_id = uuid.uuid4()
         token = create_access_token(user_id, settings=settings)
 
-        auth_msg = json.dumps({
-            "type": "auth",
-            "payload": {"token": token},
-        })
+        auth_msg = json.dumps(
+            {
+                "type": "auth",
+                "payload": {"token": token},
+            }
+        )
 
         ws = AsyncMock()
         ws.receive_text = AsyncMock(return_value=auth_msg)

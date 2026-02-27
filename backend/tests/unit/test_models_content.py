@@ -28,9 +28,16 @@ class TestPostModel:
     def test_required_columns(self):
         cols = _get_columns("posts")
         expected = {
-            "id", "community_id", "uri", "author_id", "content",
-            "visibility", "is_pinned", "deleted_at",
-            "created_at", "updated_at",
+            "id",
+            "community_id",
+            "uri",
+            "author_id",
+            "content",
+            "visibility",
+            "is_pinned",
+            "deleted_at",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(cols)
 
@@ -52,8 +59,13 @@ class TestCommentModel:
     def test_required_columns(self):
         cols = _get_columns("comments")
         expected = {
-            "id", "community_id", "post_id", "author_id",
-            "parent_id", "content", "created_at",
+            "id",
+            "community_id",
+            "post_id",
+            "author_id",
+            "parent_id",
+            "content",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -67,8 +79,13 @@ class TestReactionModel:
     def test_required_columns(self):
         cols = _get_columns("reactions")
         expected = {
-            "id", "community_id", "user_id", "target_type",
-            "target_id", "emoji", "created_at",
+            "id",
+            "community_id",
+            "user_id",
+            "target_type",
+            "target_id",
+            "emoji",
+            "created_at",
         }
         assert expected.issubset(cols)
 
@@ -82,9 +99,16 @@ class TestMediaModel:
     def test_required_columns(self):
         cols = _get_columns("media")
         expected = {
-            "id", "community_id", "uploader_id", "filename",
-            "content_type", "storage_key", "thumbnail_key",
-            "size_bytes", "status", "created_at",
+            "id",
+            "community_id",
+            "uploader_id",
+            "filename",
+            "content_type",
+            "storage_key",
+            "thumbnail_key",
+            "size_bytes",
+            "status",
+            "created_at",
         }
         assert expected.issubset(cols)
 

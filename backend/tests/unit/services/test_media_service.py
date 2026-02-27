@@ -69,9 +69,11 @@ class TestUpload:
         mock_media.storage_key = "originals/abc-123.jpg"
         mock_repo.create.return_value = mock_media
 
-        with patch("app.services.media_service.check_quota", new_callable=AsyncMock), \
-             patch("app.services.media_service.increment_storage_used", new_callable=AsyncMock), \
-             patch("app.services.media_service.generate_thumbnail"):
+        with (
+            patch("app.services.media_service.check_quota", new_callable=AsyncMock),
+            patch("app.services.media_service.increment_storage_used", new_callable=AsyncMock),
+            patch("app.services.media_service.generate_thumbnail"),
+        ):
             service = MediaService(
                 media_repo=mock_repo,
                 storage_backend=mock_storage,

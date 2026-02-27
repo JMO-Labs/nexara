@@ -19,7 +19,9 @@ class LinkPreview(Base):
     __tablename__ = "link_previews"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     url: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     url_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
@@ -30,7 +32,9 @@ class LinkPreview(Base):
     provider_type: Mapped[str | None] = mapped_column(Text)
     provider_id: Mapped[str | None] = mapped_column(Text)
     fetched_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     fetch_error: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")

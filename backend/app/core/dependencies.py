@@ -156,7 +156,5 @@ async def get_optional_user(
     except (ValueError, KeyError, TypeError):
         return None
 
-    result = await db.execute(
-        select(User).where(User.id == user_id, User.deleted_at.is_(None))
-    )
+    result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
     return result.scalar_one_or_none()

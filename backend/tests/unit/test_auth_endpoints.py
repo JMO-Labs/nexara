@@ -77,12 +77,15 @@ class TestRegisterEndpoint:
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post("/api/v1/auth/register", json={
-                    "email": "new@example.com",
-                    "username": "newuser",
-                    "password": "strong-pass-12",
-                    "display_name": "New User",
-                })
+                resp = await client.post(
+                    "/api/v1/auth/register",
+                    json={
+                        "email": "new@example.com",
+                        "username": "newuser",
+                        "password": "strong-pass-12",
+                        "display_name": "New User",
+                    },
+                )
 
             assert resp.status_code == 201
             data = resp.json()
@@ -93,12 +96,15 @@ class TestRegisterEndpoint:
     async def test_register_validation_error(self, test_app):
         transport = ASGITransport(app=test_app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/v1/auth/register", json={
-                "email": "not-valid",
-                "username": "ab",
-                "password": "short",
-                "display_name": "",
-            })
+            resp = await client.post(
+                "/api/v1/auth/register",
+                json={
+                    "email": "not-valid",
+                    "username": "ab",
+                    "password": "short",
+                    "display_name": "",
+                },
+            )
 
         assert resp.status_code == 422
 
@@ -122,10 +128,13 @@ class TestLoginEndpoint:
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post("/api/v1/auth/login", json={
-                    "email": "user@example.com",
-                    "password": "valid-password1",
-                })
+                resp = await client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "email": "user@example.com",
+                        "password": "valid-password1",
+                    },
+                )
 
             assert resp.status_code == 200
             data = resp.json()
@@ -145,10 +154,13 @@ class TestLoginEndpoint:
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post("/api/v1/auth/login", json={
-                    "email": "user@example.com",
-                    "password": "valid-password1",
-                })
+                resp = await client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "email": "user@example.com",
+                        "password": "valid-password1",
+                    },
+                )
 
             assert resp.status_code == 200
             data = resp.json()
@@ -165,10 +177,13 @@ class TestLoginEndpoint:
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post("/api/v1/auth/login", json={
-                    "email": "user@example.com",
-                    "password": "wrong-password",
-                })
+                resp = await client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "email": "user@example.com",
+                        "password": "wrong-password",
+                    },
+                )
 
             assert resp.status_code == 401
 

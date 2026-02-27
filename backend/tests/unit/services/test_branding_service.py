@@ -42,18 +42,22 @@ class TestGetBranding:
 
         mock_repo = AsyncMock()
         mock_cache = AsyncMock()
-        cached_data = json.dumps({
-            "community_name": "Cached",
-            "tagline": None,
-            "color_primary": "#3b82f6",
-            "color_primary_dark": "#2563eb",
-            "logo_light_url": None,
-            "logo_dark_url": None,
-        })
+        cached_data = json.dumps(
+            {
+                "community_name": "Cached",
+                "tagline": None,
+                "color_primary": "#3b82f6",
+                "color_primary_dark": "#2563eb",
+                "logo_light_url": None,
+                "logo_dark_url": None,
+            }
+        )
         mock_cache.get.return_value = cached_data
 
         service = BrandingService(
-            repo=mock_repo, cache_client=mock_cache, community_id=COMMUNITY_ID,
+            repo=mock_repo,
+            cache_client=mock_cache,
+            community_id=COMMUNITY_ID,
         )
         result = await service.get_branding()
 
@@ -75,13 +79,17 @@ class TestUpdateBranding:
         mock_audit_repo = AsyncMock()
 
         service = BrandingService(
-            repo=mock_repo, cache_client=mock_cache,
-            community_id=COMMUNITY_ID, audit_repo=mock_audit_repo,
+            repo=mock_repo,
+            cache_client=mock_cache,
+            community_id=COMMUNITY_ID,
+            audit_repo=mock_audit_repo,
         )
 
         update = BrandingUpdate(community_name="Updated")
         await service.update_branding(
-            user_id=ADMIN_USER_ID, data=update, ip_address="127.0.0.1",
+            user_id=ADMIN_USER_ID,
+            data=update,
+            ip_address="127.0.0.1",
         )
 
         mock_cache.delete.assert_awaited_once()
@@ -97,13 +105,17 @@ class TestUpdateBranding:
         mock_audit_repo = AsyncMock()
 
         service = BrandingService(
-            repo=mock_repo, cache_client=mock_cache,
-            community_id=COMMUNITY_ID, audit_repo=mock_audit_repo,
+            repo=mock_repo,
+            cache_client=mock_cache,
+            community_id=COMMUNITY_ID,
+            audit_repo=mock_audit_repo,
         )
 
         update = BrandingUpdate(community_name="Updated")
         await service.update_branding(
-            user_id=ADMIN_USER_ID, data=update, ip_address="127.0.0.1",
+            user_id=ADMIN_USER_ID,
+            data=update,
+            ip_address="127.0.0.1",
         )
 
         mock_audit_repo.append.assert_awaited_once()

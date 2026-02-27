@@ -91,7 +91,8 @@ class TestUpdateProfile:
 
         service = SettingsService(mock_settings_repo, mock_user_repo, COMMUNITY_ID)
         result = await service.update_profile(
-            USER_ID, ProfileUpdate(display_name="New Name"),
+            USER_ID,
+            ProfileUpdate(display_name="New Name"),
         )
 
         assert "display_name" in result
@@ -141,7 +142,8 @@ class TestUpdateNotificationPreferences:
 
         service = SettingsService(mock_settings_repo, mock_user_repo, COMMUNITY_ID)
         result = await service.update_notification_preferences(
-            USER_ID, NotificationPreferences(notif_mention_email=False),
+            USER_ID,
+            NotificationPreferences(notif_mention_email=False),
         )
 
         assert result.notif_mention_email is False

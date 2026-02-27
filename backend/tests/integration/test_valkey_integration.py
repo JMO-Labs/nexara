@@ -81,9 +81,7 @@ class TestValkeyHealthCheckIntegration:
 class TestDatabaseIsolation:
     """@brief Verify that logical databases are isolated from each other."""
 
-    async def test_write_to_db0_not_visible_in_db2(
-        self, broker_client: Redis, cache_client: Redis
-    ):
+    async def test_write_to_db0_not_visible_in_db2(self, broker_client: Redis, cache_client: Redis):
         key = f"{TEST_KEY_PREFIX}isolation"
         await broker_client.set(key, "broker-value")
 
@@ -92,9 +90,7 @@ class TestDatabaseIsolation:
 
         await broker_client.delete(key)
 
-    async def test_write_to_db2_not_visible_in_db1(
-        self, cache_client: Redis, pubsub_client: Redis
-    ):
+    async def test_write_to_db2_not_visible_in_db1(self, cache_client: Redis, pubsub_client: Redis):
         key = f"{TEST_KEY_PREFIX}isolation2"
         await cache_client.set(key, "cache-value")
 

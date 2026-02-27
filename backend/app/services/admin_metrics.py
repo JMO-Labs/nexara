@@ -112,16 +112,24 @@ async def get_metrics(
     posts_total_result = await session.execute(posts_total_stmt)
     posts_total = posts_total_result.scalar_one() or 0
 
-    posts_7d_stmt = select(func.count()).select_from(Post).where(
-        Post.community_id == community_id,
-        Post.deleted_at.is_(None),
-        Post.created_at >= seven_days_ago,
+    posts_7d_stmt = (
+        select(func.count())
+        .select_from(Post)
+        .where(
+            Post.community_id == community_id,
+            Post.deleted_at.is_(None),
+            Post.created_at >= seven_days_ago,
+        )
     )
     posts_7d_result = await session.execute(posts_7d_stmt)
     posts_last_7d = posts_7d_result.scalar_one() or 0
 
-    media_count_stmt = select(func.count()).select_from(Media).where(
-        Media.community_id == community_id,
+    media_count_stmt = (
+        select(func.count())
+        .select_from(Media)
+        .where(
+            Media.community_id == community_id,
+        )
     )
     media_count_result = await session.execute(media_count_stmt)
     media_files = media_count_result.scalar_one() or 0

@@ -68,9 +68,13 @@ class OIDCService:
 
         state = secrets.token_urlsafe(32)
         code_verifier = secrets.token_urlsafe(64)
-        code_challenge = urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode()).digest(),
-        ).decode().rstrip("=")
+        code_challenge = (
+            urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode()).digest(),
+            )
+            .decode()
+            .rstrip("=")
+        )
 
         params = {
             "response_type": "code",

@@ -55,7 +55,9 @@ class TestNotifyInApp:
         mock_notif_repo.create.return_value = notif
 
         service = NotificationService(
-            mock_notif_repo, mock_settings_repo, COMMUNITY_ID,
+            mock_notif_repo,
+            mock_settings_repo,
+            COMMUNITY_ID,
         )
         result = await service.notify(USER_ID, "mention", {"message": "Hello"})
 
@@ -74,7 +76,9 @@ class TestNotifyInApp:
         mock_settings_repo.get_or_create.return_value = _make_settings(inapp=False)
 
         service = NotificationService(
-            mock_notif_repo, mock_settings_repo, COMMUNITY_ID,
+            mock_notif_repo,
+            mock_settings_repo,
+            COMMUNITY_ID,
         )
         with patch("app.tasks.notification_tasks.send_email_notification") as mock_task:
             mock_task.delay = MagicMock()
@@ -93,7 +97,9 @@ class TestNotifyEmail:
         mock_notif_repo = AsyncMock()
         mock_settings_repo = AsyncMock()
         mock_settings_repo.get_or_create.return_value = _make_settings(
-            inapp=True, email=True, mute_all=False,
+            inapp=True,
+            email=True,
+            mute_all=False,
         )
         notif = Notification(
             id=uuid.uuid4(),
@@ -105,7 +111,9 @@ class TestNotifyEmail:
         mock_notif_repo.create.return_value = notif
 
         service = NotificationService(
-            mock_notif_repo, mock_settings_repo, COMMUNITY_ID,
+            mock_notif_repo,
+            mock_settings_repo,
+            COMMUNITY_ID,
         )
         with patch("app.tasks.notification_tasks.send_email_notification") as mock_task:
             mock_task.delay = MagicMock()
@@ -123,7 +131,9 @@ class TestNotifyEmail:
         mock_notif_repo = AsyncMock()
         mock_settings_repo = AsyncMock()
         mock_settings_repo.get_or_create.return_value = _make_settings(
-            inapp=True, email=True, mute_all=True,
+            inapp=True,
+            email=True,
+            mute_all=True,
         )
         notif = Notification(
             id=uuid.uuid4(),
@@ -135,7 +145,9 @@ class TestNotifyEmail:
         mock_notif_repo.create.return_value = notif
 
         service = NotificationService(
-            mock_notif_repo, mock_settings_repo, COMMUNITY_ID,
+            mock_notif_repo,
+            mock_settings_repo,
+            COMMUNITY_ID,
         )
         with patch("app.tasks.notification_tasks.send_email_notification") as mock_task:
             mock_task.delay = MagicMock()

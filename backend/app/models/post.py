@@ -32,7 +32,9 @@ class Post(Base):
     __tablename__ = "posts"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -53,7 +55,8 @@ class Post(Base):
     )
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("subgroups.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("subgroups.id", ondelete="SET NULL"),
     )
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_prompt_post: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
@@ -69,10 +72,14 @@ class Post(Base):
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -90,7 +97,9 @@ class Comment(Base):
     __tablename__ = "comments"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -99,18 +108,24 @@ class Comment(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     post_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("posts.id", ondelete="CASCADE"),
+        nullable=False,
     )
     author_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("comments.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        ForeignKey("comments.id", ondelete="CASCADE"),
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -125,7 +140,9 @@ class Reaction(Base):
     __tablename__ = "reactions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -134,13 +151,17 @@ class Reaction(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     target_type: Mapped[str] = mapped_column(Text, nullable=False)
     target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     emoji: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -155,9 +176,13 @@ class PostMedia(Base):
     __tablename__ = "post_media"
 
     post_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True,
+        UUID(as_uuid=True),
+        ForeignKey("posts.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     media_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("media.id", ondelete="CASCADE"), primary_key=True,
+        UUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")

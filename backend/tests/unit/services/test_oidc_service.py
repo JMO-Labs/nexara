@@ -68,6 +68,7 @@ class TestBuildAuthorizeUrl:
         svc = _make_service(settings=settings)
 
         from app.core.exceptions import AuthenticationError
+
         with pytest.raises(AuthenticationError, match="not configured"):
             svc.build_authorize_url()
 
@@ -90,6 +91,7 @@ class TestMapGroupsToRole:
     def test_no_matching_group_raises(self):
         svc = _make_service()
         from app.core.exceptions import AuthenticationError
+
         with pytest.raises(AuthenticationError, match="authorized group"):
             svc._map_groups_to_role(["unrelated-group"])
 
@@ -209,7 +211,8 @@ class TestHandleCallback:
             await svc.handle_callback("auth-code", "code-verifier")
 
         svc._user_repo.update.assert_any_call(
-            existing_user, {"oidc_sub": "oidc-sub-456", "role": "member"},
+            existing_user,
+            {"oidc_sub": "oidc-sub-456", "role": "member"},
         )
 
     @pytest.mark.asyncio
@@ -228,5 +231,6 @@ class TestHandleCallback:
             ),
         ):
             from app.core.exceptions import AuthenticationError
+
             with pytest.raises(AuthenticationError, match="missing subject"):
                 await svc.handle_callback("code", "verifier")

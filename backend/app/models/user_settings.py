@@ -94,7 +94,9 @@ class UserSettings(Base):
 
     # Privacy
     profile_visible_to: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="community",
+        Text,
+        nullable=False,
+        server_default="community",
     )
     show_online_status: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     show_last_seen: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
@@ -112,8 +114,12 @@ class UserSettings(Base):
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )

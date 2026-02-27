@@ -78,9 +78,7 @@ class TestS3Get:
             result = await backend.get("originals/test.jpg")
 
         assert result == b"file-bytes"
-        mock_s3.get_object.assert_called_once_with(
-            Bucket="nexara-test", Key="originals/test.jpg"
-        )
+        mock_s3.get_object.assert_called_once_with(Bucket="nexara-test", Key="originals/test.jpg")
 
     async def test_raises_not_found_on_no_such_key(self, backend):
         mock_s3 = AsyncMock()

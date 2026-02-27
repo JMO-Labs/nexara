@@ -149,13 +149,12 @@ class AdminService:
         @param ip IP address of the request.
         @raises NotFoundError If the target user is not found.
         """
-        target = await self._user_repo.get_by_id_include_deleted(
-            target_user_id, self._community_id
-        )
+        target = await self._user_repo.get_by_id_include_deleted(target_user_id, self._community_id)
         if not target:
             raise NotFoundError(message=_("User not found"))
         await self._user_repo.update(
-            target, {"deleted_at": None, "is_active": True},
+            target,
+            {"deleted_at": None, "is_active": True},
         )
         await self._audit_repo.append(
             actor_id=admin_user.id,

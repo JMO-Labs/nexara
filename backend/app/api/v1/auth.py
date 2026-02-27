@@ -132,6 +132,7 @@ async def refresh(
     """@brief Rotate the refresh token and issue a new access token."""
     if not refresh_token:
         from app.core.exceptions import AuthenticationError
+
         raise AuthenticationError(message=_("Refresh token missing"))
 
     svc = AuthService(db, settings)
@@ -257,6 +258,7 @@ async def oidc_login(
     response.set_cookie("oidc_state", state, max_age=600, httponly=True, samesite="lax")
     response.set_cookie("oidc_verifier", verifier, max_age=600, httponly=True, samesite="lax")
     from starlette.responses import RedirectResponse
+
     return RedirectResponse(url=url, status_code=302)
 
 

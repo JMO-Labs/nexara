@@ -60,6 +60,7 @@ def test_app() -> FastAPI:
         patch("app.main.get_settings", _test_settings),
     ):
         from app.main import create_app
+
         app = create_app()
         app.state.limiter = memory_limiter
         app.dependency_overrides[get_settings] = _test_settings

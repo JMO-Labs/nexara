@@ -62,30 +62,45 @@ class TestRegisterRequest:
     def test_short_password_rejected(self):
         with pytest.raises(ValidationError):
             RegisterRequest(
-                email="a@b.com", username="user1", password="short", display_name="D",
+                email="a@b.com",
+                username="user1",
+                password="short",
+                display_name="D",
             )
 
     def test_short_username_rejected(self):
         with pytest.raises(ValidationError):
             RegisterRequest(
-                email="a@b.com", username="ab", password="a" * 12, display_name="D",
+                email="a@b.com",
+                username="ab",
+                password="a" * 12,
+                display_name="D",
             )
 
     def test_long_username_rejected(self):
         with pytest.raises(ValidationError):
             RegisterRequest(
-                email="a@b.com", username="a" * 31, password="a" * 12, display_name="D",
+                email="a@b.com",
+                username="a" * 31,
+                password="a" * 12,
+                display_name="D",
             )
 
     def test_username_special_chars_rejected(self):
         with pytest.raises(ValidationError):
             RegisterRequest(
-                email="a@b.com", username="user@name", password="a" * 12, display_name="D",
+                email="a@b.com",
+                username="user@name",
+                password="a" * 12,
+                display_name="D",
             )
 
     def test_invite_token_optional(self):
         req = RegisterRequest(
-            email="a@b.com", username="user1", password="a" * 12, display_name="D",
+            email="a@b.com",
+            username="user1",
+            password="a" * 12,
+            display_name="D",
         )
         assert req.invite_token is None
 

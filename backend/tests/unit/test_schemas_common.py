@@ -16,9 +16,7 @@ class TestErrorResponse:
     """@brief Verify error envelope serialization."""
 
     def test_minimal_error(self):
-        resp = ErrorResponse(
-            error=ErrorDetail(code="NOT_FOUND", message="Not found")
-        )
+        resp = ErrorResponse(error=ErrorDetail(code="NOT_FOUND", message="Not found"))
         data = resp.model_dump()
         assert data["error"]["code"] == "NOT_FOUND"
         assert data["error"]["message"] == "Not found"

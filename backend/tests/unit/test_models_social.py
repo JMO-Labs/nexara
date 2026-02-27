@@ -28,9 +28,17 @@ class TestSubgroupModel:
     def test_required_columns(self):
         cols = _get_columns("subgroups")
         expected = {
-            "id", "community_id", "name", "slug", "description",
-            "is_private", "join_policy", "created_by",
-            "archived_at", "created_at", "updated_at",
+            "id",
+            "community_id",
+            "name",
+            "slug",
+            "description",
+            "is_private",
+            "join_policy",
+            "created_by",
+            "archived_at",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(cols)
 
@@ -68,10 +76,18 @@ class TestEventModel:
     def test_required_columns(self):
         cols = _get_columns("events")
         expected = {
-            "id", "community_id", "author_id", "title",
-            "starts_at", "ends_at", "is_all_day",
-            "recurrence_rule", "ical_uid", "visibility",
-            "created_at", "updated_at",
+            "id",
+            "community_id",
+            "author_id",
+            "title",
+            "starts_at",
+            "ends_at",
+            "is_all_day",
+            "recurrence_rule",
+            "ical_uid",
+            "visibility",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(cols)
 
@@ -97,8 +113,13 @@ class TestCalendarSubscriptionModel:
     def test_required_columns(self):
         cols = _get_columns("calendar_subscriptions")
         expected = {
-            "id", "community_id", "user_id", "name",
-            "source_type", "sync_enabled", "created_at",
+            "id",
+            "community_id",
+            "user_id",
+            "name",
+            "source_type",
+            "sync_enabled",
+            "created_at",
         }
         assert expected.issubset(cols)
 

@@ -36,7 +36,9 @@ class InterestCategory(Base):
     plugin_key: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="100")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
 
@@ -46,28 +48,41 @@ class UserInterest(Base):
     __tablename__ = "user_interests"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     category_slug: Mapped[str] = mapped_column(
-        Text, ForeignKey("interest_categories.slug"), nullable=False,
+        Text,
+        ForeignKey("interest_categories.slug"),
+        nullable=False,
     )
     value: Mapped[str] = mapped_column(Text, nullable=False)
     value_metadata: Mapped[dict | None] = mapped_column(JSONB)
     source: Mapped[str] = mapped_column(Text, nullable=False, server_default="prompt")
     confidence: Mapped[Decimal] = mapped_column(
-        Numeric(3, 2), nullable=False, server_default="1.00",
+        Numeric(3, 2),
+        nullable=False,
+        server_default="1.00",
     )
     source_prompt_post_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("prompt_posts.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("prompt_posts.id", ondelete="SET NULL"),
     )
     last_confirmed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (

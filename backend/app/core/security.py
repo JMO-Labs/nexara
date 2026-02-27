@@ -61,10 +61,14 @@ def _load_or_generate_rsa_keys(settings: Settings) -> tuple[str, str]:
         serialization.PrivateFormat.PKCS8,
         serialization.NoEncryption(),
     ).decode()
-    _public_key = key.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode()
+    _public_key = (
+        key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
 
     priv_path.parent.mkdir(parents=True, exist_ok=True)
     priv_path.write_text(_private_key)
@@ -101,7 +105,8 @@ def hash_password(plain: str) -> str:
     @return Bcrypt hash string.
     """
     return bcrypt.hashpw(
-        plain.encode("utf-8"), bcrypt.gensalt(rounds=12),
+        plain.encode("utf-8"),
+        bcrypt.gensalt(rounds=12),
     ).decode("utf-8")
 
 
@@ -188,7 +193,9 @@ def decode_token(
     s = settings or get_settings()
     try:
         payload = jwt.decode(
-            token, _get_verification_key(s), algorithms=[s.JWT_ALGORITHM],
+            token,
+            _get_verification_key(s),
+            algorithms=[s.JWT_ALGORITHM],
         )
     except JWTError as exc:
         raise ValueError(_("Invalid or expired token")) from exc
@@ -268,10 +275,7 @@ def generate_backup_codes(count: int = 10) -> list[str]:
     @return List of 8-character alphanumeric codes.
     """
     alphabet = string.ascii_uppercase + string.digits
-    return [
-        "".join(secrets.choice(alphabet) for _ in range(8))
-        for _ in range(count)
-    ]
+    return ["".join(secrets.choice(alphabet) for _ in range(8)) for _ in range(count)]
 
 
 # ── JWKS ──────────────────────────────────────────────────────────────────

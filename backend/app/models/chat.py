@@ -20,7 +20,9 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -29,7 +31,8 @@ class ChatMessage(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     author_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     content_fts = mapped_column(
@@ -38,7 +41,9 @@ class ChatMessage(Base):
     )
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (

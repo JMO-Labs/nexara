@@ -35,7 +35,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -76,7 +78,9 @@ class User(Base):
     # Storage
     storage_used: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
     storage_quota: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, server_default="10737418240",
+        BigInteger,
+        nullable=False,
+        server_default="10737418240",
     )
 
     # Full-text search
@@ -94,10 +98,14 @@ class User(Base):
     # Timestamps
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

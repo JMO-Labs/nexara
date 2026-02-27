@@ -31,7 +31,8 @@ class TestAcquireBeatLock:
         mock_connect.assert_called_once_with("postgresql://user:pass@localhost/db")
         mock_conn.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with(
-            "SELECT pg_advisory_lock(%s)", (BEAT_LOCK_ID,),
+            "SELECT pg_advisory_lock(%s)",
+            (BEAT_LOCK_ID,),
         )
 
     @patch("app.tasks.beat_lock.psycopg2.connect")
@@ -47,6 +48,7 @@ class TestAcquireBeatLock:
     @patch("app.tasks.beat_lock.psycopg2.connect")
     def test_connection_failure_raises(self, mock_connect):
         import psycopg2
+
         mock_connect.side_effect = psycopg2.OperationalError("connection refused")
 
         with pytest.raises(psycopg2.OperationalError):

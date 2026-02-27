@@ -3,7 +3,6 @@
 @brief Unit tests for the FastAPI application factory and router setup.
 """
 
-
 from app.main import app, create_app
 
 
@@ -18,6 +17,7 @@ class TestAppFactory:
 
     def test_create_app_returns_fastapi(self):
         from fastapi import FastAPI
+
         new_app = create_app()
         assert isinstance(new_app, FastAPI)
 

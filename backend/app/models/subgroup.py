@@ -20,7 +20,9 @@ class Subgroup(Base):
     __tablename__ = "subgroups"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -35,23 +37,26 @@ class Subgroup(Base):
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     join_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="open")
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     search_fts = mapped_column(
         TSVECTOR,
         Computed(
-            "to_tsvector('english', "
-            "coalesce(name, '') || ' ' || "
-            "coalesce(description, ''))",
+            "to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, ''))",
             persisted=True,
         ),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -84,15 +89,16 @@ class SubgroupMember(Base):
     )
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default="member")
     invited_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
     )
     joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
-    __table_args__ = (
-        Index("subgroup_members_user_idx", "user_id"),
-    )
+    __table_args__ = (Index("subgroup_members_user_idx", "user_id"),)
 
 
 class ChatChannel(Base):
@@ -101,7 +107,9 @@ class ChatChannel(Base):
     __tablename__ = "chat_channels"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -112,8 +120,11 @@ class ChatChannel(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     channel_type: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("subgroups.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        ForeignKey("subgroups.id", ondelete="CASCADE"),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )

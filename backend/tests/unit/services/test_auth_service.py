@@ -37,7 +37,8 @@ def _make_user(**overrides):
     user = MagicMock()
     user.id = overrides.get("id", uuid.uuid4())
     user.community_id = overrides.get(
-        "community_id", uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        "community_id",
+        uuid.UUID("00000000-0000-0000-0000-000000000001"),
     )
     user.email = overrides.get("email", "test@example.com")
     user.username = overrides.get("username", "testuser")
@@ -126,7 +127,10 @@ class TestRegister:
 
         with pytest.raises(AuthorizationError, match="disabled"):
             await svc.register(
-                email="x@x.com", username="x", password="p" * 12, display_name="X",
+                email="x@x.com",
+                username="x",
+                password="p" * 12,
+                display_name="X",
             )
 
 

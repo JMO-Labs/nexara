@@ -28,10 +28,7 @@ class QuotaExceededError(Exception):
         self.used = used
         self.upload_size = upload_size
         quota_gb = quota / (1024**3)
-        super().__init__(
-            f"Upload of {upload_size} bytes would exceed "
-            f"your {quota_gb:.1f}GB quota"
-        )
+        super().__init__(f"Upload of {upload_size} bytes would exceed your {quota_gb:.1f}GB quota")
 
 
 async def check_quota(
@@ -84,10 +81,7 @@ async def increment_storage_used(
     @param size_bytes Size of the uploaded original in bytes.
     """
     await session.execute(
-        text(
-            "UPDATE users SET storage_used = storage_used + :size "
-            "WHERE id = :user_id"
-        ),
+        text("UPDATE users SET storage_used = storage_used + :size WHERE id = :user_id"),
         {"size": size_bytes, "user_id": user_id},
     )
     logger.debug(
@@ -114,9 +108,7 @@ async def decrement_storage_used(
     """
     await session.execute(
         text(
-            "UPDATE users "
-            "SET storage_used = GREATEST(storage_used - :size, 0) "
-            "WHERE id = :user_id"
+            "UPDATE users SET storage_used = GREATEST(storage_used - :size, 0) WHERE id = :user_id"
         ),
         {"size": size_bytes, "user_id": user_id},
     )
@@ -145,10 +137,7 @@ async def recalculate_storage_used(
     @return The recalculated usage in bytes.
     """
     result = await session.execute(
-        text(
-            "SELECT COALESCE(SUM(size_bytes), 0) "
-            "FROM media WHERE uploader_id = :user_id"
-        ),
+        text("SELECT COALESCE(SUM(size_bytes), 0) FROM media WHERE uploader_id = :user_id"),
         {"user_id": user_id},
     )
     actual_usage: int = result.scalar_one()

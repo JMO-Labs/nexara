@@ -34,13 +34,18 @@ class RetentionPolicy(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     retention_days: Mapped[int | None] = mapped_column(Integer)
     delete_media_files: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="false",
+        Boolean,
+        nullable=False,
+        server_default="false",
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
 
 
@@ -50,7 +55,9 @@ class StorageSnapshot(Base):
     __tablename__ = "storage_snapshots"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
     media_images_bytes: Mapped[int | None] = mapped_column(BigInteger)
@@ -64,12 +71,12 @@ class StorageSnapshot(Base):
     total_users: Mapped[int | None] = mapped_column(Integer)
     total_messages: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
-    __table_args__ = (
-        Index("storage_snapshots_date_idx", snapshot_date.desc()),
-    )
+    __table_args__ = (Index("storage_snapshots_date_idx", snapshot_date.desc()),)
 
 
 class StorageAlert(Base):
@@ -78,11 +85,15 @@ class StorageAlert(Base):
     __tablename__ = "storage_alerts"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     alert_type: Mapped[str] = mapped_column(Text, nullable=False)
     fired_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     disk_used_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))

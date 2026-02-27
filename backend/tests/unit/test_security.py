@@ -77,7 +77,9 @@ class TestAccessToken:
     def test_extra_claims_included(self, test_settings):
         user_id = uuid.uuid4()
         token = create_access_token(
-            user_id, extra_claims={"role": "admin"}, settings=test_settings,
+            user_id,
+            extra_claims={"role": "admin"},
+            settings=test_settings,
         )
         payload = decode_token(token, expected_type="access", settings=test_settings)
         assert payload["role"] == "admin"
@@ -96,7 +98,9 @@ class TestAccessToken:
 
         user_id = uuid.uuid4()
         token = create_access_token(
-            user_id, extra_claims={"role": "member"}, settings=rs256_settings,
+            user_id,
+            extra_claims={"role": "member"},
+            settings=rs256_settings,
         )
         payload = decode_token(token, expected_type="access", settings=rs256_settings)
         assert payload["sub"] == str(user_id)

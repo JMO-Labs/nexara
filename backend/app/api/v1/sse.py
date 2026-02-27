@@ -96,7 +96,8 @@ async def _event_generator(
         while True:
             try:
                 message = await asyncio.wait_for(
-                    conn.queue.get(), timeout=HEARTBEAT_INTERVAL_SECONDS,
+                    conn.queue.get(),
+                    timeout=HEARTBEAT_INTERVAL_SECONDS,
                 )
                 event_counter += 1
                 event_type = message.get("type", "notification")

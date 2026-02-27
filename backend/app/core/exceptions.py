@@ -145,9 +145,7 @@ async def _app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
     )
 
 
-async def _validation_error_handler(
-    _request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def _validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
     """@brief Reformat Pydantic validation errors into the standard envelope."""
     details = {}
     for err in exc.errors():

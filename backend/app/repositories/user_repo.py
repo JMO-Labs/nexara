@@ -73,11 +73,7 @@ class UserRepository(BaseRepository[User]):
 
         @param user_id UUID of the user to update.
         """
-        stmt = (
-            update(User)
-            .where(User.id == user_id)
-            .values(last_seen_at=datetime.now(UTC))
-        )
+        stmt = update(User).where(User.id == user_id).values(last_seen_at=datetime.now(UTC))
         await self._session.execute(stmt)
 
     async def update_totp(

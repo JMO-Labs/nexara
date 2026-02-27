@@ -179,7 +179,9 @@ class AuthService:
         """
         try:
             payload = decode_token(
-                two_factor_token, expected_type="2fa_pending", settings=self._settings,
+                two_factor_token,
+                expected_type="2fa_pending",
+                settings=self._settings,
             )
         except ValueError as exc:
             raise AuthenticationError(message=str(exc)) from exc
@@ -237,8 +239,10 @@ class AuthService:
             raise AuthenticationError(message=_("User not found or deactivated"))
 
         return await self._issue_tokens(
-            user, family_id=stored.family_id,
-            ip_address=ip_address, user_agent=user_agent,
+            user,
+            family_id=stored.family_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
         )
 
     async def logout(self, raw_refresh_token: str) -> None:
@@ -353,6 +357,7 @@ class AuthService:
             raise ConflictError(message=_("Invite has already been used"))
         if self._invite_repo.is_expired(invite):
             from app.core.exceptions import AppError
+
             raise AppError(code="GONE", message=_("Invite has expired"), status_code=410)
         return invite
 

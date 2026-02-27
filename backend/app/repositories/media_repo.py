@@ -139,9 +139,8 @@ class MediaRepository(BaseRepository[Media]):
         @param user_id UUID of the user.
         @return Total bytes used by the user's media.
         """
-        stmt = (
-            select(func.coalesce(func.sum(Media.size_bytes), 0))
-            .where(Media.uploader_id == user_id)
+        stmt = select(func.coalesce(func.sum(Media.size_bytes), 0)).where(
+            Media.uploader_id == user_id
         )
         result = await self._session.execute(stmt)
         return int(result.scalar_one())

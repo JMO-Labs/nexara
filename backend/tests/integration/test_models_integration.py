@@ -47,9 +47,7 @@ class TestUserCRUD:
         session.add(user)
         await session.flush()
 
-        result = await session.execute(
-            select(User).where(User.email == "test@nexara.dev")
-        )
+        result = await session.execute(select(User).where(User.email == "test@nexara.dev"))
         fetched = result.scalar_one()
         assert fetched.username == "testuser"
         assert fetched.display_name == "Test User"
@@ -80,9 +78,7 @@ class TestUserCRUD:
         session.add(user)
         await session.flush()
 
-        result = await session.execute(
-            select(User).where(User.username == "roleuser")
-        )
+        result = await session.execute(select(User).where(User.username == "roleuser"))
         assert result.scalar_one().role == "member"
 
 
@@ -133,8 +129,7 @@ class TestUpdatedAtTrigger:
 
         await session.execute(
             text(
-                "UPDATE users SET display_name = 'Updated Name' "
-                "WHERE email = 'trigger@nexara.dev'"
+                "UPDATE users SET display_name = 'Updated Name' WHERE email = 'trigger@nexara.dev'"
             )
         )
 
@@ -150,9 +145,7 @@ class TestSeedData:
 
     async def test_community_exists(self, session: AsyncSession):
         """@brief The default community should be seeded."""
-        result = await session.execute(
-            select(Community).where(Community.id == COMMUNITY_UUID)
-        )
+        result = await session.execute(select(Community).where(Community.id == COMMUNITY_UUID))
         community = result.scalar_one()
         assert community.name == "Nexara"
 

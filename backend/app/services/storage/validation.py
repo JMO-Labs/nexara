@@ -56,18 +56,14 @@ def _check_svg(header: bytes) -> bool:
     """@brief Return True if the header looks like SVG content."""
     stripped = header.lstrip()
     for marker in SVG_MARKERS:
-        if stripped[:len(marker)].lower() == marker.lower():
+        if stripped[: len(marker)].lower() == marker.lower():
             return True
     return False
 
 
 def _check_webp(header: bytes) -> bool:
     """@brief Return True if the header matches RIFF....WEBP."""
-    return (
-        len(header) >= 12
-        and header[:4] == WEBP_RIFF_HEADER
-        and header[8:12] == WEBP_MARKER
-    )
+    return len(header) >= 12 and header[:4] == WEBP_RIFF_HEADER and header[8:12] == WEBP_MARKER
 
 
 def _check_ftyp(header: bytes) -> tuple[bool, str]:

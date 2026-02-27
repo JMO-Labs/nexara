@@ -31,7 +31,9 @@ class Gallery(Base):
     __tablename__ = "galleries"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -40,24 +42,33 @@ class Gallery(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     cover_media_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("media.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="SET NULL"),
     )
     event_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("events.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("events.id", ondelete="SET NULL"),
     )
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("subgroups.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("subgroups.id", ondelete="SET NULL"),
     )
     visibility: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="community",
+        Text,
+        nullable=False,
+        server_default="community",
     )
     contribution_policy: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="owner_only",
+        Text,
+        nullable=False,
+        server_default="owner_only",
     )
     item_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
@@ -66,17 +77,19 @@ class Gallery(Base):
     search_fts = mapped_column(
         TSVECTOR,
         Computed(
-            "to_tsvector('english', "
-            "coalesce(title, '') || ' ' || "
-            "coalesce(description, ''))",
+            "to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))",
             persisted=True,
         ),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -93,12 +106,16 @@ class Gallery(Base):
         Index("galleries_subgroup_idx", "subgroup_id", postgresql_where=(subgroup_id.isnot(None))),
         Index("galleries_visibility_idx", "visibility", created_at.desc()),
         Index(
-            "galleries_default_user_idx", "owner_id",
-            unique=True, postgresql_where=(is_default.is_(True)),
+            "galleries_default_user_idx",
+            "owner_id",
+            unique=True,
+            postgresql_where=(is_default.is_(True)),
         ),
         Index(
-            "galleries_event_gallery_idx", "event_id",
-            unique=True, postgresql_where=(is_event_gallery.is_(True)),
+            "galleries_event_gallery_idx",
+            "event_id",
+            unique=True,
+            postgresql_where=(is_event_gallery.is_(True)),
         ),
         Index("galleries_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
@@ -110,7 +127,9 @@ class GalleryItem(Base):
     __tablename__ = "gallery_items"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(),
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -119,18 +138,26 @@ class GalleryItem(Base):
         server_default=COMMUNITY_DEFAULT,
     )
     gallery_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("galleries.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("galleries.id", ondelete="CASCADE"),
+        nullable=False,
     )
     media_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("media.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="CASCADE"),
+        nullable=False,
     )
     added_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=False,
     )
     caption: Mapped[str | None] = mapped_column(Text)
     position: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
@@ -146,14 +173,21 @@ class GalleryCollaborator(Base):
     __tablename__ = "gallery_collaborators"
 
     gallery_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("galleries.id", ondelete="CASCADE"), primary_key=True,
+        UUID(as_uuid=True),
+        ForeignKey("galleries.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True,
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     invited_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
     )
     invited_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )

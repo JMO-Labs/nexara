@@ -46,7 +46,10 @@ class TestGetCurrentUser:
 
         with pytest.raises(AuthenticationError):
             await get_current_user(
-                request=request, token="invalid.jwt.token", db=db, settings=settings,
+                request=request,
+                token="invalid.jwt.token",
+                db=db,
+                settings=settings,
             )
 
     @pytest.mark.asyncio
@@ -70,7 +73,10 @@ class TestGetCurrentUser:
         request = MagicMock()
 
         user = await get_current_user(
-            request=request, token=token, db=db, settings=settings,
+            request=request,
+            token=token,
+            db=db,
+            settings=settings,
         )
         assert user.id == user_id
 
@@ -91,7 +97,10 @@ class TestGetCurrentUser:
 
         with pytest.raises(AuthenticationError, match="not found"):
             await get_current_user(
-                request=request, token=token, db=db, settings=settings,
+                request=request,
+                token=token,
+                db=db,
+                settings=settings,
             )
 
 

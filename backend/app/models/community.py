@@ -32,8 +32,12 @@ class Community(Base):
         server_default=func.gen_random_uuid(),
     )
     name: Mapped[str] = mapped_column(
-        Text, nullable=False, server_default="Nexara",
+        Text,
+        nullable=False,
+        server_default="Nexara",
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False,
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
