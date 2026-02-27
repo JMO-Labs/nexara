@@ -9,6 +9,13 @@
 import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
 
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}))
+
+/* Stub useI18n globally for Nuxt auto-imported components */
+;(globalThis as Record<string, unknown>).useI18n = () => ({ t: (key: string) => key })
+
 /* Provide global $t mock for i18n in component tests */
 config.global.mocks = {
   $t: (key: string) => key,
