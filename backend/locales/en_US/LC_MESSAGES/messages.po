@@ -1,0 +1,86 @@
+# Nexara Backend — English (US) translations.
+# Copyright (C) 2026 Nexara Contributors
+# This file is distributed under the same license as the Nexara package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nexara 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-26 00:00+0000\n"
+"PO-Revision-Date: 2026-02-26 00:00+0000\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: app/core/exceptions.py
+msgid "An unexpected error occurred"
+msgstr "An unexpected error occurred"
+
+#: app/core/exceptions.py
+msgid "Invalid or expired credentials"
+msgstr "Invalid or expired credentials"
+
+#: app/core/exceptions.py
+msgid "Insufficient permissions"
+msgstr "Insufficient permissions"
+
+#: app/core/exceptions.py
+msgid "Resource not found"
+msgstr "Resource not found"
+
+#: app/core/exceptions.py
+msgid "Resource already exists"
+msgstr "Resource already exists"
+
+#: app/core/exceptions.py
+msgid "Too many requests — please try again later"
+msgstr "Too many requests — please try again later"
+
+#: app/core/exceptions.py
+msgid "Storage service unavailable"
+msgstr "Storage service unavailable"
+
+#: app/core/exceptions.py
+msgid "Request validation failed"
+msgstr "Request validation failed"
+
+#: app/core/security.py
+msgid "Invalid or expired token"
+msgstr "Invalid or expired token"
+
+#: app/core/security.py
+msgid "Invalid token type"
+msgstr "Invalid token type"
+
+#: app/core/security.py
+msgid "Token missing subject claim"
+msgstr "Token missing subject claim"
+
+#: app/core/dependencies.py
+msgid "Authentication required"
+msgstr "Authentication required"
+
+#: app/core/dependencies.py
+msgid "Invalid token payload"
+msgstr "Invalid token payload"
+
+#: app/core/dependencies.py
+msgid "Invalid user identifier"
+msgstr "Invalid user identifier"
+
+#: app/core/dependencies.py
+msgid "User not found or deactivated"
+msgstr "User not found or deactivated"
+
+#: app/core/dependencies.py
+msgid "This action requires one of the following roles: %(roles)s"
+msgstr "This action requires one of the following roles: %(roles)s"
+
+#: app/tasks/email_tasks.py
+msgid "SMTP not configured — email not sent"
+msgstr "SMTP not configured — email not sent"
+
+#: app/tasks/notification_tasks.py
+msgid "%(user)s commented on your post"
+msgstr "%(user)s commented on your post"
