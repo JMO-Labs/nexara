@@ -8,19 +8,10 @@
 
 lint:ruff:
   stage: lint
-  image: $PYTHON_IMAGE
-  extends:
-    - .cache:python-rw
-  before_script:
-    - pip install --quiet uv
-    - cd backend
-    - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
-    - source .venv/bin/activate
-    - cd "$CI_PROJECT_DIR"
+  image: ghcr.io/astral-sh/ruff:latest
   script:
     - echo "Running Ruff linter..."
-    - ruff check backend/ --output-format=gitlab
+    - ruff check backend/
     - echo "Checking Ruff formatting..."
     - ruff format --check backend/
   rules: !reference [.rules:backend-changes, rules]
