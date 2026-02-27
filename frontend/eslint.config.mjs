@@ -15,4 +15,10 @@ export default withNuxt(
       'vue/multi-word-component-names': 'off',
     },
   },
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 )
