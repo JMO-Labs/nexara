@@ -1,0 +1,129 @@
+"""
+@file auth.py
+@brief Pydantic schemas for authentication request/response payloads.
+
+Covers local login, registration, token refresh, 2FA enrollment/verification,
+OIDC callback, password reset, and invite management.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class LoginRequest(BaseModel):
+    """@brief Credentials for local email/password login."""
+
+    email: EmailStr
+    password: str = Field(..., min_length=1)
+
+
+class RegisterRequest(BaseModel):
+    """@brief Payload for new user registration."""
+
+    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_-]+$")
+    password: str = Field(..., min_length=12)
+    display_name: str = Field(..., min_length=1, max_length=100)
+    invite_token: str | None = None
+
+
+class TokenResponse(BaseModel):
+    """@brief Successful authentication response with access token."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(description="Token lifetime in seconds")
+
+
+class LoginResponse(BaseModel):
+    """
+    @brief Login result that may require 2FA completion.
+
+    When ``requires_2fa`` is True, the client must POST the TOTP code
+    along with the ``two_factor_token`` to ``/auth/2fa/verify``.
+    """
+
+    access_token: str | None = None
+    token_type: str = "bearer"
+    expires_in: int | None = None
+    requires_2fa: bool = False
+    two_factor_token: str | None = None
+
+
+class RefreshResponse(BaseModel):
+    """@brief New access token issued after refresh-token rotation."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
+class TwoFactorEnrollResponse(BaseModel):
+    """@brief Data returned when a user starts 2FA enrollment."""
+
+    secret: str = Field(description="Base32 TOTP secret for manual entry")
+    otpauth_uri: str = Field(description="otpauth:// URI for QR code generation")
+
+
+class TwoFactorVerifyRequest(BaseModel):
+    """@brief Payload to verify a TOTP code (enrollment or login)."""
+
+    code: str = Field(..., min_length=6, max_length=8, description="TOTP or backup code")
+
+
+class TwoFactorLoginRequest(BaseModel):
+    """@brief Payload to complete a 2FA-pending login."""
+
+    two_factor_token: str
+    code: str = Field(..., min_length=6, max_length=8)
+
+
+class TwoFactorVerifyResponse(BaseModel):
+    """@brief Response after successful 2FA enrollment verification."""
+
+    backup_codes: list[str] = Field(description="One-time recovery codes")
+
+
+class PasswordResetRequestPayload(BaseModel):
+    """@brief Request a password reset email."""
+
+    email: EmailStr
+
+
+class PasswordResetConfirmPayload(BaseModel):
+    """@brief Apply a new password with a valid reset token."""
+
+    token: str
+    new_password: str = Field(..., min_length=12)
+
+
+class OIDCCallbackParams(BaseModel):
+    """@brief Query parameters returned by the OIDC provider."""
+
+    code: str
+    state: str
+
+
+class InviteCreateRequest(BaseModel):
+    """@brief Admin request to create an invite."""
+
+    email: EmailStr
+    role: str = Field(default="member", pattern=r"^(admin|member|viewer)$")
+
+
+class InviteResponse(BaseModel):
+    """@brief Public representation of an invite."""
+
+    id: UUID
+    email: str
+    role: str
+    created_by: UUID
+    expires_at: datetime
+    used_at: datetime | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

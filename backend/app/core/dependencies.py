@@ -86,7 +86,11 @@ async def get_current_user(
         raise AuthenticationError(message=_("Invalid user identifier")) from exc
 
     result = await db.execute(
-        select(User).where(User.id == uid, User.deleted_at.is_(None))
+        select(User).where(
+            User.id == uid,
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
     )
     user = result.scalar_one_or_none()
 
