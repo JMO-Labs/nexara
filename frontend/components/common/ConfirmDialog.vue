@@ -10,7 +10,7 @@
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       :aria-label="title"
@@ -18,20 +18,20 @@
     >
       <div
         ref="dialogRef"
-        class="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
+        class="mx-4 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
         tabindex="-1"
       >
-        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h2>
-        <p class="mb-6 text-sm text-gray-600 dark:text-gray-300">{{ message }}</p>
+        <h2 class="mb-2 text-lg font-semibold text-card-foreground">{{ title }}</h2>
+        <p class="mb-6 text-sm text-muted-foreground">{{ message }}</p>
         <div class="flex justify-end gap-3">
           <button
-            class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            class="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             @click="$emit('cancel')"
           >
             {{ $t('common.cancel') }}
           </button>
           <button
-            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500"
+            class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus:ring-2 focus:ring-ring"
             @click="$emit('confirm')"
           >
             {{ $t('common.confirm') }}

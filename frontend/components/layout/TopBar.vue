@@ -1,59 +1,60 @@
 <!--
   @file components/layout/TopBar.vue
-  @brief Top navigation bar with search, notifications, and user menu.
+  @brief Top navigation bar with centered search trigger and action icons.
 
-  Displayed at the top of the authenticated app layout. Contains the
-  search input, notification bell, dark mode toggle, and user avatar menu.
+  The search input is a styled button that opens the SuperSearch modal.
+  Dark mode, notifications, and user avatar sit on the right.
+  Mobile hamburger remains on the left for the slide-out drawer.
 -->
 <template>
-  <header class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800">
-    <!-- Left: Mobile menu + Search -->
-    <div class="flex items-center gap-3">
-      <button
-        class="md:hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-        :aria-label="$t('a11y.openMenu')"
-        @click="$emit('toggle-sidebar')"
-      >
-        <span class="text-xl">&#9776;</span>
-      </button>
-      <div class="relative">
-        <input
-          type="search"
-          :placeholder="$t('common.search')"
-          :aria-label="$t('common.search')"
-          class="w-48 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white lg:w-80"
-        />
-      </div>
-    </div>
+  <header class="flex h-14 items-center gap-4 border-b border-border bg-background px-4">
+    <!-- Left: Mobile menu toggle -->
+    <button
+      class="md:hidden flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+      :aria-label="$t('a11y.openMenu')"
+      @click="$emit('toggle-mobile-nav')"
+    >
+      <Bars3Icon class="h-5 w-5" />
+    </button>
+
+    <!-- Center: Search trigger button -->
+    <button
+      class="mx-auto flex h-9 w-full max-w-md items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+      @click="$emit('open-search')"
+    >
+      <MagnifyingGlassIcon class="h-4 w-4 shrink-0" />
+      <span class="flex-1 text-left">{{ $t('common.search') }}</span>
+      <kbd class="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <span class="text-xs">&#8984;</span>K
+      </kbd>
+    </button>
 
     <!-- Right: Actions -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1">
       <!-- Dark mode toggle -->
       <button
-        class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         :aria-label="$t('a11y.toggleDarkMode')"
         @click="$emit('toggle-dark-mode')"
       >
-        <span v-if="darkMode">&#9788;</span>
-        <span v-else>&#9790;</span>
+        <SunIcon v-if="darkMode" class="h-5 w-5" />
+        <MoonIcon v-else class="h-5 w-5" />
       </button>
 
       <!-- Notifications -->
       <button
-        class="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         :aria-label="$t('a11y.notifications')"
       >
-        <span class="text-lg">&#128276;</span>
+        <BellIcon class="h-5 w-5" />
       </button>
 
-      <!-- User menu -->
+      <!-- User avatar -->
       <button
-        class="flex items-center gap-2 rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
         :aria-label="$t('a11y.userMenu')"
       >
-        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900 dark:text-primary-300">
-          {{ userInitial }}
-        </div>
+        {{ userInitial }}
       </button>
     </div>
   </header>
@@ -64,6 +65,13 @@
  * @brief TopBar component props and events.
  */
 import { computed } from 'vue'
+import {
+  Bars3Icon,
+  MagnifyingGlassIcon,
+  SunIcon,
+  MoonIcon,
+  BellIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps<{
   /** @brief Whether dark mode is currently active. */
@@ -73,8 +81,9 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'toggle-sidebar'): void
+  (e: 'toggle-mobile-nav'): void
   (e: 'toggle-dark-mode'): void
+  (e: 'open-search'): void
 }>()
 
 /** @brief First character of the user's display name for avatar fallback. */

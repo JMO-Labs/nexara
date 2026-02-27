@@ -17,7 +17,7 @@
       v-for="toast in toasts"
       :key="toast.id"
       :class="[
-        'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg transition-all duration-300',
+        'flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-lg transition-all duration-300',
         'min-w-[300px] max-w-[400px]',
         typeClasses[toast.type],
       ]"
@@ -56,18 +56,18 @@ const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
 /** @brief CSS classes per toast type. */
 const typeClasses: Record<string, string> = {
-  success: 'bg-green-50 text-green-800 dark:bg-green-900/80 dark:text-green-200',
-  error: 'bg-red-50 text-red-800 dark:bg-red-900/80 dark:text-red-200',
-  info: 'bg-blue-50 text-blue-800 dark:bg-blue-900/80 dark:text-blue-200',
-  warning: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-900/80 dark:text-yellow-200',
+  success: 'text-green-700 dark:text-green-400',
+  error: 'text-red-700 dark:text-red-400',
+  info: 'text-blue-700 dark:text-blue-400',
+  warning: 'text-yellow-700 dark:text-yellow-400',
 }
 
 /** @brief Icon per toast type. */
 const typeIcons: Record<string, string> = {
-  success: '✓',
-  error: '✕',
-  info: 'ℹ',
-  warning: '⚠',
+  success: '\u2713',
+  error: '\u2715',
+  info: '\u2139',
+  warning: '\u26A0',
 }
 
 function dismiss(id: string): void {

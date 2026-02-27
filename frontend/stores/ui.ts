@@ -3,8 +3,8 @@
  * @brief Pinia store for global UI state.
  *
  * Manages dark mode preference (with localStorage persistence and
- * system preference detection), sidebar open/close state, and
- * toast notification queue.
+ * system preference detection), search modal state, and toast
+ * notification queue.
  */
 
 import { ref } from 'vue'
@@ -18,8 +18,8 @@ export const useUiStore = defineStore('ui', () => {
   /** @brief Whether dark mode is active. */
   const darkMode = ref(false)
 
-  /** @brief Whether the desktop sidebar is expanded. */
-  const sidebarOpen = ref(true)
+  /** @brief Whether the search modal is open. */
+  const searchOpen = ref(false)
 
   /** @brief Stack of active toast notifications. */
   const toasts = ref<ToastItem[]>([])
@@ -57,9 +57,14 @@ export const useUiStore = defineStore('ui', () => {
     }
   }
 
-  /** @brief Toggle sidebar expanded/collapsed state. */
-  function toggleSidebar(): void {
-    sidebarOpen.value = !sidebarOpen.value
+  /** @brief Open the search modal. */
+  function openSearch(): void {
+    searchOpen.value = true
+  }
+
+  /** @brief Close the search modal. */
+  function closeSearch(): void {
+    searchOpen.value = false
   }
 
   /**
@@ -86,11 +91,12 @@ export const useUiStore = defineStore('ui', () => {
 
   return {
     darkMode,
-    sidebarOpen,
+    searchOpen,
     toasts,
     toggleDarkMode,
     initDarkMode,
-    toggleSidebar,
+    openSearch,
+    closeSearch,
     showToast,
     dismissToast,
   }

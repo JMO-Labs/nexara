@@ -3,11 +3,12 @@
   @brief Activity feed page — the main page after login.
 
   Displays the post composer and an infinite-scroll feed of posts.
-  New posts arrive in real-time via SSE feed_update events.
+  New posts arrive in real-time via SSE feed_update events. The layout
+  handles the 3-column grid; this page only provides feed content.
 -->
 <template>
-  <div class="mx-auto max-w-2xl space-y-4">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+  <div class="space-y-4">
+    <h1 class="text-2xl font-bold text-foreground">
       {{ $t('feed.title') }}
     </h1>
 
@@ -29,16 +30,16 @@
     <div class="py-4 text-center">
       <button
         v-if="feedStore.hasMore && !feedStore.loading"
-        class="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+        class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         @click="feedStore.fetchPosts()"
       >
         {{ $t('feed.loadMore') }}
       </button>
       <LoadingSpinner v-else-if="feedStore.loading" />
-      <p v-else-if="!feedStore.hasMore && feedStore.posts.length > 0" class="text-sm text-gray-500">
+      <p v-else-if="!feedStore.hasMore && feedStore.posts.length > 0" class="text-sm text-muted-foreground">
         {{ $t('feed.noMorePosts') }}
       </p>
-      <p v-else-if="!feedStore.loading && feedStore.posts.length === 0" class="text-sm text-gray-500">
+      <p v-else-if="!feedStore.loading && feedStore.posts.length === 0" class="text-sm text-muted-foreground">
         {{ $t('feed.emptyFeed') }}
       </p>
     </div>

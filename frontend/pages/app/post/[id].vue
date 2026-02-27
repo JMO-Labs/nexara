@@ -6,18 +6,18 @@
   allows adding new comments and reactions.
 -->
 <template>
-  <div class="mx-auto max-w-2xl space-y-4">
-    <a href="/app" class="text-sm text-primary-600 hover:underline dark:text-primary-400">
+  <div class="space-y-4">
+    <NuxtLink to="/app" class="text-sm text-primary hover:underline">
       &larr; {{ $t('feed.title') }}
-    </a>
+    </NuxtLink>
 
     <LoadingSpinner v-if="loading" size="lg" />
 
     <template v-if="post">
       <PostCard :post="post" @react="handleReaction" />
 
-      <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+      <div class="rounded-lg border border-border bg-card p-4">
+        <h2 class="mb-4 text-lg font-semibold text-card-foreground">
           {{ $t('feed.comments') }} ({{ post.comment_count }})
         </h2>
         <CommentThread
@@ -28,7 +28,7 @@
       </div>
     </template>
 
-    <div v-if="error" class="rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-300" role="alert">
+    <div v-if="error" class="rounded-lg bg-destructive/10 p-4 text-sm text-destructive" role="alert">
       {{ error }}
     </div>
   </div>

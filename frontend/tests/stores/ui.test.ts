@@ -2,8 +2,7 @@
  * @file tests/stores/ui.test.ts
  * @brief TDD tests for the UI Pinia store.
  *
- * Tests dark mode toggle, sidebar state, and toast notifications.
- * Written before the store implementation (TDD red phase).
+ * Tests dark mode toggle, search modal state, and toast notifications.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -21,7 +20,7 @@ describe('ui store', () => {
     const store = useUiStore()
 
     expect(store.darkMode).toBe(false)
-    expect(store.sidebarOpen).toBe(true)
+    expect(store.searchOpen).toBe(false)
     expect(store.toasts).toEqual([])
   })
 
@@ -72,14 +71,19 @@ describe('ui store', () => {
     expect(store.darkMode).toBe(true)
   })
 
-  it('toggleSidebar() flips the sidebar state', () => {
+  it('openSearch() sets searchOpen to true', () => {
     const store = useUiStore()
 
-    store.toggleSidebar()
-    expect(store.sidebarOpen).toBe(false)
+    store.openSearch()
+    expect(store.searchOpen).toBe(true)
+  })
 
-    store.toggleSidebar()
-    expect(store.sidebarOpen).toBe(true)
+  it('closeSearch() sets searchOpen to false', () => {
+    const store = useUiStore()
+
+    store.openSearch()
+    store.closeSearch()
+    expect(store.searchOpen).toBe(false)
   })
 
   it('showToast() adds a toast notification', () => {

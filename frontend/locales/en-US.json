@@ -121,6 +121,19 @@
     "yes": "Yes",
     "no": "No"
   },
+  "search": {
+    "placeholder": "Search...",
+    "hint": "Quick actions",
+    "noResults": "No results found.",
+    "recent": "Recent"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "upcoming": "Upcoming Events",
+    "noEvents": "No upcoming events",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
+  },
   "toast": {
     "success": "Success",
     "error": "Error",

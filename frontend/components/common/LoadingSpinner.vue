@@ -13,8 +13,8 @@
   >
     <div
       :class="[
-        'animate-spin rounded-full border-2 border-gray-200 dark:border-gray-600',
-        'border-t-primary-600 dark:border-t-primary-400',
+        'animate-spin rounded-full border-2 border-muted',
+        'border-t-primary',
         sizeClasses,
       ]"
     />

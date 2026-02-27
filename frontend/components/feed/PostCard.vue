@@ -3,21 +3,21 @@
   @brief Post display card with content, media, reactions, and comments.
 
   Renders a single post in the activity feed. Content is Markdown-rendered
-  and sanitized. Emits `react` for reaction toggles.
+  and sanitized. Uses the shadcn-inspired card token system.
 -->
 <template>
-  <article class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <article class="rounded-lg border border-border bg-card p-4 shadow-sm">
     <!-- Author header -->
     <div class="mb-3 flex items-center gap-3">
       <div
-        class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900 dark:text-primary-300"
+        class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
         :aria-label="post.author.display_name"
       >
         {{ post.author.display_name.charAt(0).toUpperCase() }}
       </div>
       <div>
-        <p class="font-semibold text-gray-900 dark:text-white">{{ post.author.display_name }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400">@{{ post.author.username }} &middot; {{ timeAgo(post.created_at) }}</p>
+        <p class="font-semibold text-card-foreground">{{ post.author.display_name }}</p>
+        <p class="text-xs text-muted-foreground">@{{ post.author.username }} &middot; {{ timeAgo(post.created_at) }}</p>
       </div>
     </div>
 
@@ -51,7 +51,7 @@
     />
 
     <!-- Comment count -->
-    <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+    <div class="mt-2 text-sm text-muted-foreground">
       <span>{{ post.comment_count }} {{ $t('feed.comments') }}</span>
     </div>
   </article>

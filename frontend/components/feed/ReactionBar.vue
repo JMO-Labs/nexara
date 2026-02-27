@@ -15,18 +15,18 @@
       :class="[
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm',
         'border transition-colors duration-150 cursor-pointer',
-        'hover:bg-gray-100 dark:hover:bg-gray-700',
-        'focus:outline-none focus:ring-2 focus:ring-primary-500',
+        'hover:bg-accent',
+        'focus:outline-none focus:ring-2 focus:ring-ring',
         reaction.reacted_by_me
-          ? 'reaction-active border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-          : 'border-gray-200 dark:border-gray-600',
+          ? 'reaction-active border-primary bg-primary/10'
+          : 'border-border',
       ]"
       :aria-label="`${reaction.emoji} ${reaction.count} reactions`"
       :aria-pressed="reaction.reacted_by_me"
       @click="$emit('react', postId, reaction.emoji)"
     >
       <span>{{ reaction.emoji }}</span>
-      <span class="text-xs font-medium text-gray-600 dark:text-gray-300">{{ reaction.count }}</span>
+      <span class="text-xs font-medium text-muted-foreground">{{ reaction.count }}</span>
     </button>
   </div>
 </template>

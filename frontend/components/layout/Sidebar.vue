@@ -1,82 +1,93 @@
 <!--
   @file components/layout/Sidebar.vue
-  @brief Desktop navigation sidebar.
+  @brief Minimal icon-rail sidebar for desktop navigation.
 
-  Displays the main navigation links for the authenticated app.
-  Collapses based on the UI store's sidebarOpen state. Hidden on
-  mobile where BottomNav takes over.
+  Always-collapsed vertical rail (w-14) with Heroicon nav items and
+  CSS tooltips on hover. Hidden on mobile where BottomNav takes over.
+  Uses NuxtLink for SPA routing with active-route highlighting.
 -->
 <template>
   <aside
-    :class="[
-      'hidden md:flex flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800',
-      'transition-all duration-200',
-      sidebarOpen ? 'w-64' : 'w-16',
-    ]"
+    class="hidden md:flex flex-col w-14 border-r border-border bg-background"
     role="navigation"
     :aria-label="$t('a11y.toggleSidebar')"
   >
-    <!-- Logo / Brand -->
-    <div class="flex h-16 items-center justify-center border-b border-gray-200 px-4 dark:border-gray-700">
-      <span v-if="sidebarOpen" class="text-lg font-bold text-primary-600 dark:text-primary-400">
-        {{ $t('app.name') }}
-      </span>
-      <span v-else class="text-lg font-bold text-primary-600 dark:text-primary-400">N</span>
+    <!-- Logo -->
+    <div class="flex h-14 items-center justify-center border-b border-border">
+      <span class="text-lg font-bold text-primary">N</span>
     </div>
 
     <!-- Navigation links -->
-    <nav class="flex-1 space-y-1 p-2">
-      <a
+    <nav class="flex flex-1 flex-col items-center gap-1 py-3">
+      <NuxtLink
         v-for="item in navItems"
         :key="item.path"
-        :href="item.path"
-        :class="[
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-          'hover:bg-gray-100 dark:hover:bg-gray-700',
-          'focus:outline-none focus:ring-2 focus:ring-primary-500',
-          'text-gray-700 dark:text-gray-200',
-        ]"
+        :to="item.path"
+        class="nav-item group relative flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        :class="{ 'bg-accent text-accent-foreground': isActive(item.path) }"
         :aria-label="item.label"
       >
-        <span class="text-lg">{{ item.icon }}</span>
-        <span v-if="sidebarOpen">{{ item.label }}</span>
-      </a>
+        <component :is="item.icon" class="h-5 w-5" />
+
+        <!-- CSS tooltip -->
+        <span
+          class="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          {{ item.label }}
+        </span>
+      </NuxtLink>
     </nav>
 
-    <!-- Sidebar toggle -->
-    <div class="border-t border-gray-200 p-2 dark:border-gray-700">
-      <button
-        class="flex w-full items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-        :aria-label="$t('a11y.toggleSidebar')"
-        @click="$emit('toggle')"
+    <!-- Bottom section: Settings -->
+    <div class="flex flex-col items-center gap-1 border-t border-border py-3">
+      <NuxtLink
+        to="/app/settings"
+        class="nav-item group relative flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        :class="{ 'bg-accent text-accent-foreground': isActive('/app/settings') }"
+        :aria-label="$t('nav.settings')"
       >
-        <span>{{ sidebarOpen ? '&laquo;' : '&raquo;' }}</span>
-      </button>
+        <Cog6ToothIcon class="h-5 w-5" />
+        <span
+          class="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          {{ $t('nav.settings') }}
+        </span>
+      </NuxtLink>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 /**
- * @brief Sidebar component props, events, and navigation items.
+ * @brief Sidebar icon-rail with Heroicons and route-aware highlighting.
  */
+import {
+  NewspaperIcon,
+  CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
+  PhotoIcon,
+  UserGroupIcon,
+  Cog6ToothIcon,
+} from '@heroicons/vue/24/outline'
 
-defineProps<{
-  /** @brief Whether the sidebar is expanded. */
-  sidebarOpen: boolean
-}>()
-
-defineEmits<{
-  (e: 'toggle'): void
-}>()
-
-/** @brief Navigation items for the sidebar. */
+/** @brief Primary navigation items rendered in the rail. */
 const navItems = [
-  { path: '/app', icon: '📰', label: 'Feed' },
-  { path: '/app/events', icon: '📅', label: 'Events' },
-  { path: '/app/chat', icon: '💬', label: 'Chat' },
-  { path: '/app/media', icon: '🖼️', label: 'Media' },
-  { path: '/app/members', icon: '👥', label: 'Members' },
-  { path: '/app/settings', icon: '⚙️', label: 'Settings' },
+  { path: '/app', icon: NewspaperIcon, label: 'Feed' },
+  { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
+  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
+  { path: '/app/media', icon: PhotoIcon, label: 'Media' },
+  { path: '/app/members', icon: UserGroupIcon, label: 'Members' },
 ]
+
+const route = useRoute()
+
+/**
+ * @brief Determine if a nav item matches the current route.
+ * @param path - The nav item's target path.
+ * @returns true when the route exactly matches or starts with the path.
+ */
+function isActive(path: string): boolean {
+  if (path === '/app') return route.path === '/app'
+  return route.path.startsWith(path)
+}
 </script>

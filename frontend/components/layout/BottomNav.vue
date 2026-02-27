@@ -1,40 +1,61 @@
 <!--
   @file components/layout/BottomNav.vue
-  @brief Mobile bottom navigation bar.
+  @brief Mobile bottom navigation bar with Heroicons.
 
-  Displayed on mobile screens (md:hidden) as a fixed bottom bar.
-  Provides quick access to the main navigation items.
+  Fixed at the bottom on mobile screens (md:hidden). Provides quick
+  access to the main navigation items using NuxtLink for SPA routing.
 -->
 <template>
   <nav
-    class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-gray-200 bg-white py-2 md:hidden dark:border-gray-700 dark:bg-gray-800"
+    class="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-background py-1.5 md:hidden"
     role="navigation"
     :aria-label="$t('a11y.openMenu')"
   >
-    <a
+    <NuxtLink
       v-for="item in navItems"
       :key="item.path"
-      :href="item.path"
-      class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+      :to="item.path"
+      class="flex flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors"
+      :class="isActive(item.path)
+        ? 'text-primary'
+        : 'text-muted-foreground hover:text-foreground'"
       :aria-label="item.label"
     >
-      <span class="text-xl">{{ item.icon }}</span>
-      <span class="text-xs">{{ item.label }}</span>
-    </a>
+      <component :is="item.icon" class="h-5 w-5" />
+      <span class="text-[10px] font-medium">{{ item.label }}</span>
+    </NuxtLink>
   </nav>
 </template>
 
 <script setup lang="ts">
 /**
- * @brief BottomNav component with navigation items.
+ * @brief BottomNav component with Heroicons and route-aware highlighting.
  */
+import {
+  NewspaperIcon,
+  CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
+  PhotoIcon,
+  EllipsisHorizontalIcon,
+} from '@heroicons/vue/24/outline'
 
-/** @brief Subset of navigation items for the compact bottom bar. */
+const route = useRoute()
+
+/** @brief Navigation items for the compact bottom bar. */
 const navItems = [
-  { path: '/app', icon: '📰', label: 'Feed' },
-  { path: '/app/events', icon: '📅', label: 'Events' },
-  { path: '/app/chat', icon: '💬', label: 'Chat' },
-  { path: '/app/media', icon: '🖼️', label: 'Media' },
-  { path: '/app/settings', icon: '⚙️', label: 'More' },
+  { path: '/app', icon: NewspaperIcon, label: 'Feed' },
+  { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
+  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
+  { path: '/app/media', icon: PhotoIcon, label: 'Media' },
+  { path: '/app/settings', icon: EllipsisHorizontalIcon, label: 'More' },
 ]
+
+/**
+ * @brief Determine if a nav item matches the current route.
+ * @param path - The nav item's target path.
+ */
+function isActive(path: string): boolean {
+  if (path === '/app') return route.path === '/app'
+  return route.path.startsWith(path)
+}
 </script>

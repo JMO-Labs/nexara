@@ -1,10 +1,11 @@
 /**
  * @file tailwind.config.ts
- * @brief Tailwind CSS configuration with Flowbite plugin and custom theme tokens.
+ * @brief Tailwind CSS configuration with shadcn-inspired HSL design tokens.
  *
- * Uses the `class` strategy for dark mode to support manual toggle via
- * the useDarkMode composable. Extends the default theme with CSS custom
- * properties that are overridden at runtime by the branding API.
+ * Uses the `class` strategy for dark mode. Extends the default theme with
+ * HSL CSS custom properties defined in main.css so every Tailwind utility
+ * (bg-background, text-foreground, border-border, etc.) maps to the
+ * semantic token system.
  */
 
 import type { Config } from 'tailwindcss'
@@ -28,32 +29,48 @@ export default <Config>{
   theme: {
     extend: {
       colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: 'var(--color-primary, #3b82f6)',
-          600: 'var(--color-primary-dark, #2563eb)',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          500: 'var(--color-accent, #8b5cf6)',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
-        surface: {
-          light: 'var(--color-surface-light, #ffffff)',
-          dark: 'var(--color-surface-dark, #1f2937)',
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-      },
-      borderRadius: {
-        base: 'var(--radius-base, 0.5rem)',
       },
     },
   },

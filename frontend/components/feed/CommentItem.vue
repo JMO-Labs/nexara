@@ -9,16 +9,16 @@
 <template>
   <div class="flex gap-2">
     <div
-      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600 dark:bg-gray-600 dark:text-gray-300"
+      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground"
     >
       {{ comment.author.display_name.charAt(0).toUpperCase() }}
     </div>
     <div class="flex-1">
       <p class="text-sm">
-        <span class="font-semibold text-gray-900 dark:text-white">{{ comment.author.display_name }}</span>
-        <span class="ml-1 text-gray-600 dark:text-gray-300">{{ comment.content }}</span>
+        <span class="font-semibold text-foreground">{{ comment.author.display_name }}</span>
+        <span class="ml-1 text-muted-foreground">{{ comment.content }}</span>
       </p>
-      <p class="text-xs text-gray-400 dark:text-gray-500">{{ timeAgo(comment.created_at) }}</p>
+      <p class="text-xs text-muted-foreground/70">{{ timeAgo(comment.created_at) }}</p>
     </div>
   </div>
 </template>
