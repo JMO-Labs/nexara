@@ -33,9 +33,14 @@ export function authMiddleware(
 
   const isAppRoute = path.startsWith('/app')
   const isAuthRoute = path.startsWith('/auth')
+  const isAdminRoute = path.startsWith('/app/admin')
 
   if (isAppRoute && !isAuthenticated) {
     return { path: '/auth/login', query: { redirect: to.fullPath || path } }
+  }
+
+  if (isAdminRoute && isAuthenticated && authStore.user?.role !== 'admin') {
+    return { path: '/app' }
   }
 
   if (isAuthRoute && isAuthenticated) {

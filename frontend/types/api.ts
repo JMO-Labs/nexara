@@ -138,10 +138,150 @@ export interface ApiError {
   }
 }
 
+/**
+ * @brief User settings response from GET /settings/.
+ *
+ * Mirrors backend settings schema. Includes notification preferences
+ * and display preferences (theme, locale).
+ */
+export interface UserSettingsResponse {
+  notif_mention_inapp: boolean
+  notif_mention_email: boolean
+  notif_comment_inapp: boolean
+  notif_comment_email: boolean
+  notif_reaction_inapp: boolean
+  notif_reaction_email: boolean
+  notif_new_post_inapp: boolean
+  notif_new_post_email: boolean
+  notif_system_inapp: boolean
+  notif_system_email: boolean
+  notif_invite_accepted_inapp: boolean
+  notif_invite_accepted_email: boolean
+  mute_all_email: boolean
+  theme: string
+  locale: string
+}
+
+/**
+ * @brief Single notification from GET /notifications/.
+ *
+ * Mirrors backend NotificationResponse schema.
+ */
+export interface Notification {
+  id: string
+  user_id: string
+  type: string
+  payload: Record<string, unknown>
+  read_at: string | null
+  created_at: string
+}
+
+/**
+ * @brief Paginated notification list response.
+ *
+ * Mirrors backend NotificationList schema.
+ */
+export interface NotificationListResponse {
+  items: Notification[]
+  next_cursor: string | null
+  has_more: boolean
+}
+
+/** @brief Unread count from GET /notifications/unread-count. */
+export interface UnreadCountResponse {
+  count: number
+}
+
 /** @brief Toast notification item in UI store. */
 export interface ToastItem {
   id: string
   type: 'success' | 'error' | 'info' | 'warning'
   message: string
   duration?: number
+}
+
+/** @brief Single search result item. */
+export interface SearchResultItem {
+  id: string
+  type: 'posts' | 'users' | 'events'
+  title: string
+  snippet: string
+  created_at: string
+}
+
+/** @brief Paginated results for one content type. */
+export interface SearchTypeResults {
+  items: SearchResultItem[]
+  total: number
+  next_cursor: string | null
+}
+
+/** @brief Full search API response. */
+export interface SearchResponse {
+  query: string
+  results: Record<string, SearchTypeResults>
+}
+
+/** @brief Admin metrics response from GET /admin/metrics. */
+export interface AdminMetricsResponse {
+  total_users: number
+  active_users_30d: number
+  online_now: number
+  total_posts: number
+  posts_7d: number
+  media_files: number
+  storage_used_bytes: number
+  waf_blocks_total?: number
+}
+
+/** @brief Audit log entry from GET /admin/audit-log. */
+export interface AuditLogEntry {
+  id: string
+  actor_id: string | null
+  actor_display_name?: string | null
+  action: string
+  target_type: string | null
+  target_id: string | null
+  target_display?: string | null
+  ip_address: string | null
+  created_at: string
+}
+
+/** @brief Paginated audit log response. */
+export interface AuditLogResponse {
+  items: AuditLogEntry[]
+  next_cursor: string | null
+  has_more: boolean
+}
+
+/** @brief Admin user list item (extended User). */
+export interface AdminUserListItem extends User {
+  status?: 'active' | 'suspended'
+}
+
+/** @brief Paginated admin users response. */
+export interface AdminUsersResponse {
+  items: AdminUserListItem[]
+  total: number
+  cursor?: string | null
+  has_more?: boolean
+}
+
+/** @brief Invite list item from GET /admin/invites. */
+export interface InviteListItem {
+  id: string
+  email: string
+  role: string
+  created_at: string
+  expires_at: string
+  used_at: string | null
+  status: 'active' | 'used' | 'expired'
+}
+
+/** @brief Community settings from GET/PUT /admin/settings. */
+export interface AdminCommunitySettings {
+  enable_registration: boolean
+  require_invite: boolean
+  default_storage_quota_mb: number
+  waf_enabled: boolean
 }
