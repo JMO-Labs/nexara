@@ -206,31 +206,38 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         from app.models.moderation import UserBlock
 
-        author_col = None
-        for col_name in ("user_id", "author_id", "created_by"):
-            target = stmt.columns_clause_froms[0] if stmt.columns_clause_froms else object()
-            if hasattr(target, col_name):
-                author_col = col_name
+        entity_cls = None
+        for from_clause in stmt.froms:
+            mapper = getattr(from_clause, "entity_namespace", None)
+            if mapper is not None:
+                entity_cls = mapper
                 break
 
-        if author_col is None:
+        if entity_cls is None:
+            for col_info in stmt.column_descriptions:
+                entity_cls = col_info.get("entity")
+                if entity_cls is not None:
+                    break
+
+        if entity_cls is None:
             return stmt
 
-        model_table = stmt.froms[0] if stmt.froms else None
-        if model_table is None:
+        author_col_name = None
+        for candidate in ("user_id", "author_id", "created_by", "uploader_id"):
+            if hasattr(entity_cls, candidate):
+                author_col_name = candidate
+                break
+
+        if author_col_name is None:
             return stmt
 
-        author_column = model_table.c[author_col]
+        author_column = getattr(entity_cls, author_col_name)
 
-        blocked_by_viewer = (
-            select(UserBlock.blocked_id)
-            .where(UserBlock.blocker_id == viewer_id)
-            .correlate(model_table)
+        blocked_by_viewer = select(UserBlock.blocked_id).where(
+            UserBlock.blocker_id == viewer_id,
         )
-        blocked_viewer = (
-            select(UserBlock.blocker_id)
-            .where(UserBlock.blocked_id == viewer_id)
-            .correlate(model_table)
+        blocked_viewer = select(UserBlock.blocker_id).where(
+            UserBlock.blocked_id == viewer_id,
         )
 
         stmt = stmt.where(author_column.notin_(blocked_by_viewer))

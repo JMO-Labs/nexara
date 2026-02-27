@@ -139,3 +139,66 @@ class UserRepository(BaseRepository[User]):
         @return Tuple of (users, next_cursor).
         """
         return await self.list(community_id, limit=limit, cursor=cursor)
+
+    async def list_by_community_search(
+        self,
+        community_id: uuid.UUID,
+        *,
+        search: str | None = None,
+        limit: int = 20,
+        cursor: str | None = None,
+    ) -> tuple[list[User], str | None]:
+        """
+        @brief List users with optional search filter (username, display_name, email).
+
+        @param community_id Community scope.
+        @param search Optional search string (ILIKE on username, display_name, email).
+        @param limit Max items to return.
+        @param cursor Opaque cursor from previous page.
+        @return Tuple of (users, next_cursor).
+        """
+        from sqlalchemy import or_
+
+        stmt = self._base_query().where(User.community_id == community_id)
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    User.username.ilike(term),
+                    User.display_name.ilike(term),
+                    User.email.ilike(term),
+                ),
+            )
+        stmt = stmt.order_by(User.created_at.desc())
+        if cursor:
+            try:
+                cursor_id = uuid.UUID(cursor)
+                stmt = stmt.where(User.id < cursor_id)
+            except ValueError:
+                pass
+        stmt = stmt.limit(limit + 1)
+        result = await self._session.execute(stmt)
+        rows = list(result.scalars().all())
+        next_cursor: str | None = None
+        if len(rows) > limit:
+            rows = rows[:limit]
+            next_cursor = str(rows[-1].id)
+        return rows, next_cursor
+
+    async def get_by_id_include_deleted(
+        self, user_id: uuid.UUID, community_id: uuid.UUID | None = None
+    ) -> User | None:
+        """
+        @brief Fetch a user by ID including soft-deleted users.
+
+        Used by admin restore operations.
+
+        @param user_id UUID of the user.
+        @param community_id Optional community scope.
+        @return The User or None.
+        """
+        stmt = select(User).where(User.id == user_id)
+        if community_id is not None:
+            stmt = stmt.where(User.community_id == community_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
