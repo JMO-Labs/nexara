@@ -11,28 +11,31 @@
  * @brief CommunityLogo component.
  * @param size - Logo size in pixels (default 40).
  */
-import { computed } from 'vue'
-import { useBranding } from '~/composables/useBranding'
-import { useDarkMode } from '~/composables/useDarkMode'
+import { computed } from "vue";
+import { useBranding } from "~/composables/useBranding";
+import { useDarkMode } from "~/composables/useDarkMode";
 
-const props = withDefaults(defineProps<{
-  /** @brief Logo dimension in pixels. */
-  size?: number
-}>(), { size: 40 })
+const props = withDefaults(
+  defineProps<{
+    /** @brief Logo dimension in pixels. */
+    size?: number;
+  }>(),
+  { size: 40 },
+);
 
-const { branding } = useBranding()
-const { isDark } = useDarkMode()
+const { branding } = useBranding();
+const { isDark } = useDarkMode();
 
 /** @brief Resolved logo URL based on dark mode state. */
 const logoUrl = computed(() => {
   if (isDark.value && branding.value.logo_dark_url) {
-    return branding.value.logo_dark_url
+    return branding.value.logo_dark_url;
   }
-  return branding.value.logo_light_url
-})
+  return branding.value.logo_light_url;
+});
 
 /** @brief Whether to show the text fallback. */
-const showText = computed(() => !logoUrl.value)
+const showText = computed(() => !logoUrl.value);
 </script>
 
 <template>
@@ -43,7 +46,7 @@ const showText = computed(() => !logoUrl.value)
     :width="props.size"
     :height="props.size"
     class="object-contain"
-  >
+  />
   <span
     v-else
     class="font-bold text-lg truncate"

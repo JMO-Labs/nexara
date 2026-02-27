@@ -16,10 +16,10 @@
 definePageMeta({
   middleware: [
     function () {
-      return navigateTo('/app/settings/profile', { replace: true })
+      return navigateTo("/app/settings/profile", { replace: true });
     },
   ],
-})
+});
 </script>
 
 <template>

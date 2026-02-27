@@ -40,46 +40,46 @@
 /**
  * @brief AppToast component with auto-dismiss and styling per type.
  */
-import { watch, onUnmounted } from 'vue'
-import type { ToastItem } from '~/types/api'
+import { watch, onUnmounted } from "vue";
+import type { ToastItem } from "~/types/api";
 
 const props = defineProps<{
   /** @brief Active toast notifications. */
-  toasts: ToastItem[]
-}>()
+  toasts: ToastItem[];
+}>();
 
 const emit = defineEmits<{
-  (e: 'dismiss', id: string): void
-}>()
+  (e: "dismiss", id: string): void;
+}>();
 
-const timers = new Map<string, ReturnType<typeof setTimeout>>()
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** @brief CSS classes per toast type. */
 const typeClasses: Record<string, string> = {
-  success: 'text-green-700 dark:text-green-400',
-  error: 'text-red-700 dark:text-red-400',
-  info: 'text-blue-700 dark:text-blue-400',
-  warning: 'text-yellow-700 dark:text-yellow-400',
-}
+  success: "text-green-700 dark:text-green-400",
+  error: "text-red-700 dark:text-red-400",
+  info: "text-blue-700 dark:text-blue-400",
+  warning: "text-yellow-700 dark:text-yellow-400",
+};
 
 /** @brief Icon per toast type. */
 const typeIcons: Record<string, string> = {
-  success: '\u2713',
-  error: '\u2715',
-  info: '\u2139',
-  warning: '\u26A0',
-}
+  success: "\u2713",
+  error: "\u2715",
+  info: "\u2139",
+  warning: "\u26A0",
+};
 
 function dismiss(id: string): void {
-  clearTimer(id)
-  emit('dismiss', id)
+  clearTimer(id);
+  emit("dismiss", id);
 }
 
 function clearTimer(id: string): void {
-  const timer = timers.get(id)
+  const timer = timers.get(id);
   if (timer) {
-    clearTimeout(timer)
-    timers.delete(id)
+    clearTimeout(timer);
+    timers.delete(id);
   }
 }
 
@@ -88,15 +88,18 @@ watch(
   (newToasts) => {
     for (const toast of newToasts) {
       if (!timers.has(toast.id) && toast.duration) {
-        timers.set(toast.id, setTimeout(() => dismiss(toast.id), toast.duration))
+        timers.set(
+          toast.id,
+          setTimeout(() => dismiss(toast.id), toast.duration),
+        );
       }
     }
   },
   { deep: true, immediate: true },
-)
+);
 
 onUnmounted(() => {
-  timers.forEach(timer => clearTimeout(timer))
-  timers.clear()
-})
+  timers.forEach((timer) => clearTimeout(timer));
+  timers.clear();
+});
 </script>

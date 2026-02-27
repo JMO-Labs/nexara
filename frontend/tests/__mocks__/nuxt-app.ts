@@ -7,26 +7,30 @@
  * without a running Nuxt instance.
  */
 
-export const navigateTo = (path: string) => ({ path })
+export const navigateTo = (path: string) => ({ path });
 
 export const useRuntimeConfig = () => ({
   public: {
-    apiBaseUrl: '/api/v1',
+    apiBaseUrl: "/api/v1",
   },
-})
+});
 
 export const useRoute = () => ({
-  path: '/',
+  path: "/",
   params: {},
   query: {},
-  fullPath: '/',
-})
+  fullPath: "/",
+});
 
 export const useRouter = () => ({
   push: (path: string) => ({ path }),
   replace: (path: string) => ({ path }),
   currentRoute: { value: useRoute() },
-})
+});
 
-export const defineNuxtRouteMiddleware = (fn: (...args: unknown[]) => unknown) => fn
-export const definePageMeta = (_meta: Record<string, unknown>) => { /* no-op in tests */ }
+export const defineNuxtRouteMiddleware = (
+  fn: (...args: unknown[]) => unknown,
+) => fn;
+export const definePageMeta = (_meta: Record<string, unknown>) => {
+  /* no-op in tests */
+};

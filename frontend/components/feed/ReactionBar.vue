@@ -7,7 +7,11 @@
   to trigger optimistic updates in the feed store.
 -->
 <template>
-  <div class="flex flex-wrap items-center gap-1" role="group" :aria-label="$t('feed.reactions')">
+  <div
+    class="flex flex-wrap items-center gap-1"
+    role="group"
+    :aria-label="$t('feed.reactions')"
+  >
     <button
       v-for="reaction in reactions"
       :key="reaction.emoji"
@@ -26,7 +30,9 @@
       @click="$emit('react', postId, reaction.emoji)"
     >
       <span>{{ reaction.emoji }}</span>
-      <span class="text-xs font-medium text-muted-foreground">{{ reaction.count }}</span>
+      <span class="text-xs font-medium text-muted-foreground">{{
+        reaction.count
+      }}</span>
     </button>
   </div>
 </template>
@@ -35,17 +41,17 @@
 /**
  * @brief ReactionBar component props and events.
  */
-import type { Reaction } from '~/types/api'
+import type { Reaction } from "~/types/api";
 
 defineProps<{
   /** @brief List of reactions to display. */
-  reactions: Reaction[]
+  reactions: Reaction[];
   /** @brief ID of the post these reactions belong to. */
-  postId: string
-}>()
+  postId: string;
+}>();
 
 defineEmits<{
   /** @brief Emitted when a user clicks a reaction. */
-  (e: 'react', postId: string, emoji: string): void
-}>()
+  (e: "react", postId: string, emoji: string): void;
+}>();
 </script>

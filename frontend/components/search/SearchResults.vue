@@ -7,16 +7,8 @@
 -->
 <template>
   <div class="space-y-4">
-    <ul
-      v-if="items.length > 0"
-      class="divide-y divide-border"
-      role="list"
-    >
-      <li
-        v-for="item in items"
-        :key="`${item.type}-${item.id}`"
-        class="py-4"
-      >
+    <ul v-if="items.length > 0" class="divide-y divide-border" role="list">
+      <li v-for="item in items" :key="`${item.type}-${item.id}`" class="py-4">
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2">
             <span
@@ -24,20 +16,22 @@
             >
               {{ typeLabel(item.type) }}
             </span>
-            <span class="text-sm text-muted-foreground">{{ timeAgo(item.created_at) }}</span>
+            <span class="text-sm text-muted-foreground">{{
+              timeAgo(item.created_at)
+            }}</span>
           </div>
           <p class="font-medium text-foreground">{{ item.title }}</p>
-          <p v-if="item.snippet" class="text-sm text-muted-foreground line-clamp-2">
+          <p
+            v-if="item.snippet"
+            class="text-sm text-muted-foreground line-clamp-2"
+          >
             {{ item.snippet }}
           </p>
         </div>
       </li>
     </ul>
-    <p
-      v-else
-      class="py-8 text-center text-muted-foreground"
-    >
-      {{ $t('search.noResults') }}
+    <p v-else class="py-8 text-center text-muted-foreground">
+      {{ $t("search.noResults") }}
     </p>
   </div>
 </template>
@@ -46,28 +40,28 @@
 /**
  * @brief SearchResults list with type badges and empty state.
  */
-import type { SearchResultItem } from '~/types/api'
-import { timeAgo } from '~/utils/date'
-import { useI18n } from 'vue-i18n'
+import type { SearchResultItem } from "~/types/api";
+import { timeAgo } from "~/utils/date";
+import { useI18n } from "vue-i18n";
 
 defineProps<{
   /** @brief List of search result items to render. */
-  items: SearchResultItem[]
+  items: SearchResultItem[];
   /** @brief Active tab: all, posts, users, events. */
-  activeTab: string
-}>()
+  activeTab: string;
+}>();
 
-const { t: $t } = useI18n()
+const { t: $t } = useI18n();
 
 /**
  * @brief Map type key to display label.
  */
 function typeLabel(type: string): string {
   const map: Record<string, string> = {
-    posts: $t('search.posts'),
-    users: $t('search.people'),
-    events: $t('search.events'),
-  }
-  return map[type] ?? type
+    posts: $t("search.posts"),
+    users: $t("search.people"),
+    events: $t("search.events"),
+  };
+  return map[type] ?? type;
 }
 </script>

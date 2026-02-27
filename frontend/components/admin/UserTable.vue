@@ -10,35 +10,35 @@
     <table class="w-full min-w-[600px] text-left text-sm">
       <thead class="border-b border-border bg-muted/50">
         <tr>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.actor') }}</th>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.email') }}</th>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.role') }}</th>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.status') }}</th>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.created') }}</th>
-          <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.actions') }}</th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.actor") }}
+          </th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.email") }}
+          </th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.role") }}
+          </th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.status") }}
+          </th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.created") }}
+          </th>
+          <th class="px-4 py-3 font-medium text-foreground">
+            {{ $t("admin.actions") }}
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-if="loading"
-          class="border-b border-border"
-        >
-          <td
-            colspan="6"
-            class="px-4 py-8 text-center text-muted-foreground"
-          >
-            {{ $t('common.loading') }}
+        <tr v-if="loading" class="border-b border-border">
+          <td colspan="6" class="px-4 py-8 text-center text-muted-foreground">
+            {{ $t("common.loading") }}
           </td>
         </tr>
-        <tr
-          v-else-if="!users.length"
-          class="border-b border-border"
-        >
-          <td
-            colspan="6"
-            class="px-4 py-8 text-center text-muted-foreground"
-          >
-            {{ $t('admin.no_results') }}
+        <tr v-else-if="!users.length" class="border-b border-border">
+          <td colspan="6" class="px-4 py-8 text-center text-muted-foreground">
+            {{ $t("admin.no_results") }}
           </td>
         </tr>
         <tr
@@ -53,12 +53,12 @@
                 :src="u.avatar_url"
                 :alt="u.display_name"
                 class="h-8 w-8 rounded-full object-cover"
-              >
+              />
               <div
                 v-else
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"
               >
-                {{ (u.display_name || u.username || '?')[0].toUpperCase() }}
+                {{ (u.display_name || u.username || "?")[0].toUpperCase() }}
               </div>
               <span class="font-medium text-foreground">
                 {{ u.display_name || u.username }}
@@ -104,32 +104,44 @@
                 <button
                   type="button"
                   class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="emit('change-role', u); openDropdown = null"
+                  @click="
+                    emit('change-role', u);
+                    openDropdown = null;
+                  "
                 >
-                  {{ $t('admin.change_role') }}
+                  {{ $t("admin.change_role") }}
                 </button>
                 <button
                   v-if="u.status !== 'suspended'"
                   type="button"
                   class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="emit('suspend', u); openDropdown = null"
+                  @click="
+                    emit('suspend', u);
+                    openDropdown = null;
+                  "
                 >
-                  {{ $t('admin.suspend') }}
+                  {{ $t("admin.suspend") }}
                 </button>
                 <button
                   v-else
                   type="button"
                   class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="emit('restore', u); openDropdown = null"
+                  @click="
+                    emit('restore', u);
+                    openDropdown = null;
+                  "
                 >
-                  {{ $t('admin.restore') }}
+                  {{ $t("admin.restore") }}
                 </button>
                 <button
                   type="button"
                   class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-muted dark:text-red-400"
-                  @click="emit('delete', u); openDropdown = null"
+                  @click="
+                    emit('delete', u);
+                    openDropdown = null;
+                  "
                 >
-                  {{ $t('common.delete') }}
+                  {{ $t("common.delete") }}
                 </button>
               </div>
             </div>
@@ -144,76 +156,77 @@
 /**
  * @brief UserTable with role/status badges and action dropdown.
  */
-import { ref, onMounted, onUnmounted } from 'vue'
-import type { AdminUserListItem, UserRole } from '~/types/api'
+import { ref, onMounted, onUnmounted } from "vue";
+import type { AdminUserListItem, UserRole } from "~/types/api";
 
-const { t: $t } = useI18n()
+const { t: $t } = useI18n();
 
 defineProps<{
   /** @brief List of users to display. */
-  users: AdminUserListItem[]
+  users: AdminUserListItem[];
   /** @brief Whether data is loading. */
-  loading?: boolean
-}>()
+  loading?: boolean;
+}>();
 
 const emit = defineEmits<{
-  'change-role': [user: AdminUserListItem]
-  suspend: [user: AdminUserListItem]
-  restore: [user: AdminUserListItem]
-  delete: [user: AdminUserListItem]
-}>()
+  "change-role": [user: AdminUserListItem];
+  suspend: [user: AdminUserListItem];
+  restore: [user: AdminUserListItem];
+  delete: [user: AdminUserListItem];
+}>();
 
 /** @brief ID of user whose dropdown is open. */
-const openDropdown = ref<string | null>(null)
+const openDropdown = ref<string | null>(null);
 
 /** @brief Role badge color classes. */
 function roleBadgeClass(role: UserRole): string {
   const map: Record<UserRole, string> = {
-    admin: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-    member: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-    viewer: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  }
-  return map[role] ?? 'bg-gray-100 text-gray-800'
+    admin:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+    member: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    viewer: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+  };
+  return map[role] ?? "bg-gray-100 text-gray-800";
 }
 
 /** @brief Status badge color classes. */
 function statusBadgeClass(u: AdminUserListItem): string {
-  const status = u.status ?? 'active'
-  return status === 'suspended'
-    ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-    : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+  const status = u.status ?? "active";
+  return status === "suspended"
+    ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+    : "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
 }
 
 /** @brief Human-readable status. */
 function userStatus(u: AdminUserListItem): string {
-  return u.status === 'suspended' ? $t('admin.suspended') : $t('admin.active')
+  return u.status === "suspended" ? $t("admin.suspended") : $t("admin.active");
 }
 
 /** @brief Format created_at for display. */
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
-    return iso
+    return iso;
   }
 }
 
 function toggleDropdown(id: string): void {
-  openDropdown.value = openDropdown.value === id ? null : id
+  openDropdown.value = openDropdown.value === id ? null : id;
 }
 
 function handleClickOutside(): void {
-  openDropdown.value = null
+  openDropdown.value = null;
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener("click", handleClickOutside);
+});
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 </script>

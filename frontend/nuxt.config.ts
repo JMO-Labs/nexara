@@ -7,72 +7,75 @@
  */
 
 export default defineNuxtConfig({
-  compatibilityDate: '2025-01-01',
+  compatibilityDate: "2025-01-01",
 
   devtools: { enabled: true },
 
   /** @brief Hybrid rendering: static landing page, SPA for authenticated routes. */
   routeRules: {
-    '/': { prerender: true },
-    '/about': { prerender: true },
-    '/app/**': { ssr: false },
+    "/": { prerender: true },
+    "/about": { prerender: true },
+    "/app/**": { ssr: false },
   },
 
   /** @brief Nuxt modules in load order. */
   modules: [
-    '@nuxt/eslint',
-    '@nuxtjs/tailwindcss',
-    '@pinia/nuxt',
-    '@nuxtjs/i18n',
-    '@vueuse/nuxt',
-    '@vite-pwa/nuxt',
+    "@nuxt/eslint",
+    "@nuxtjs/tailwindcss",
+    "@pinia/nuxt",
+    "@nuxtjs/i18n",
+    "@vueuse/nuxt",
+    "@vite-pwa/nuxt",
   ],
 
   /** @brief Global CSS entry point (Tailwind directives + custom properties). */
-  css: ['~/assets/css/main.css'],
+  css: ["~/assets/css/main.css"],
 
   /** @brief Tailwind module configuration. */
   tailwindcss: {
-    configPath: '~/tailwind.config.ts',
+    configPath: "~/tailwind.config.ts",
   },
 
   /** @brief i18n configuration — en-US only for Phase 1. */
   i18n: {
-    locales: [{ code: 'en-US', file: 'en-US.json' }],
-    defaultLocale: 'en-US',
+    locales: [{ code: "en-US", file: "en-US.json" }],
+    defaultLocale: "en-US",
     lazy: true,
-    langDir: 'locales',
-    strategy: 'no_prefix',
+    langDir: "locales",
+    strategy: "no_prefix",
   },
 
   /** @brief PWA manifest and service worker configuration. */
   pwa: {
-    registerType: 'autoUpdate',
+    registerType: "autoUpdate",
     manifest: {
-      name: 'Nexara',
-      short_name: 'Nexara',
-      description: 'Self-hosted community platform',
-      theme_color: '#3b82f6',
-      background_color: '#ffffff',
-      display: 'standalone',
+      name: "Nexara",
+      short_name: "Nexara",
+      description: "Self-hosted community platform",
+      theme_color: "#3b82f6",
+      background_color: "#ffffff",
+      display: "standalone",
       icons: [
-        { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-        { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+        { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
         {
-          src: '/icons/icon-512x512-maskable.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'maskable',
+          src: "/icons/icon-512x512-maskable.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
         },
       ],
     },
     workbox: {
-      navigateFallback: '/app',
+      navigateFallback: "/app",
       runtimeCaching: [
         {
           urlPattern: /^https?:\/\/.*\/api\/.*/i,
-          handler: 'NetworkFirst',
-          options: { cacheName: 'api-cache', expiration: { maxEntries: 100, maxAgeSeconds: 300 } },
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "api-cache",
+            expiration: { maxEntries: 100, maxAgeSeconds: 300 },
+          },
         },
       ],
     },
@@ -81,7 +84,7 @@ export default defineNuxtConfig({
   /** @brief Runtime configuration exposed to the client. */
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api/v1',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api/v1",
     },
   },
 
@@ -99,10 +102,20 @@ export default defineNuxtConfig({
    */
   nitro: {
     devProxy: {
-      '/api': { target: 'http://localhost:8000/api', changeOrigin: true },
-      '/ws': { target: 'http://localhost:8000/ws', changeOrigin: true, ws: true },
-      '/.well-known': { target: 'http://localhost:8000/.well-known', changeOrigin: true },
-      '/healthz': { target: 'http://localhost:8000/healthz', changeOrigin: true },
+      "/api": { target: "http://localhost:8000/api", changeOrigin: true },
+      "/ws": {
+        target: "http://localhost:8000/ws",
+        changeOrigin: true,
+        ws: true,
+      },
+      "/.well-known": {
+        target: "http://localhost:8000/.well-known",
+        changeOrigin: true,
+      },
+      "/healthz": {
+        target: "http://localhost:8000/healthz",
+        changeOrigin: true,
+      },
     },
   },
-})
+});

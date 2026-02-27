@@ -6,70 +6,70 @@
  * localStorage persistence, and system preference detection.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useDarkMode } from '~/composables/useDarkMode'
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { setActivePinia, createPinia } from "pinia";
+import { useDarkMode } from "~/composables/useDarkMode";
 
-describe('useDarkMode', () => {
+describe("useDarkMode", () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    localStorage.clear()
-    document.documentElement.classList.remove('dark')
-    vi.restoreAllMocks()
-  })
+    setActivePinia(createPinia());
+    localStorage.clear();
+    document.documentElement.classList.remove("dark");
+    vi.restoreAllMocks();
+  });
 
-  it('toggles dark class on document element', () => {
-    const { toggle } = useDarkMode()
+  it("toggles dark class on document element", () => {
+    const { toggle } = useDarkMode();
 
-    toggle()
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    toggle();
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
 
-    toggle()
-    expect(document.documentElement.classList.contains('dark')).toBe(false)
-  })
+    toggle();
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
 
-  it('exposes reactive isDark state', () => {
-    const { isDark, toggle } = useDarkMode()
+  it("exposes reactive isDark state", () => {
+    const { isDark, toggle } = useDarkMode();
 
-    expect(isDark.value).toBe(false)
+    expect(isDark.value).toBe(false);
 
-    toggle()
-    expect(isDark.value).toBe(true)
-  })
+    toggle();
+    expect(isDark.value).toBe(true);
+  });
 
-  it('initializes from localStorage on creation', () => {
-    localStorage.setItem('nexara-dark-mode', 'true')
+  it("initializes from localStorage on creation", () => {
+    localStorage.setItem("nexara-dark-mode", "true");
 
-    const { isDark } = useDarkMode()
+    const { isDark } = useDarkMode();
 
-    expect(isDark.value).toBe(true)
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
-  })
+    expect(isDark.value).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
 
-  it('respects system preference when no saved preference', () => {
-    vi.spyOn(globalThis, 'matchMedia').mockReturnValue({
+  it("respects system preference when no saved preference", () => {
+    vi.spyOn(globalThis, "matchMedia").mockReturnValue({
       matches: true,
-      media: '(prefers-color-scheme: dark)',
+      media: "(prefers-color-scheme: dark)",
       onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
-    })
+    });
 
-    const { isDark } = useDarkMode()
+    const { isDark } = useDarkMode();
 
-    expect(isDark.value).toBe(true)
-  })
+    expect(isDark.value).toBe(true);
+  });
 
-  it('saves preference to localStorage on toggle', () => {
-    const { toggle } = useDarkMode()
+  it("saves preference to localStorage on toggle", () => {
+    const { toggle } = useDarkMode();
 
-    toggle()
-    expect(localStorage.getItem('nexara-dark-mode')).toBe('true')
+    toggle();
+    expect(localStorage.getItem("nexara-dark-mode")).toBe("true");
 
-    toggle()
-    expect(localStorage.getItem('nexara-dark-mode')).toBe('false')
-  })
-})
+    toggle();
+    expect(localStorage.getItem("nexara-dark-mode")).toBe("false");
+  });
+});

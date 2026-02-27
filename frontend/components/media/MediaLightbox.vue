@@ -13,44 +13,44 @@
  * @param startIndex - Index of the initially shown item.
  * @emits close - Emitted when the lightbox should be closed.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { PostMedia } from '~/types/api'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import type { PostMedia } from "~/types/api";
 
 const props = defineProps<{
   /** @brief Media items available for viewing. */
-  items: PostMedia[]
+  items: PostMedia[];
   /** @brief Index of the item to show first. */
-  startIndex: number
-}>()
+  startIndex: number;
+}>();
 
 const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: "close"): void;
+}>();
 
-const currentIndex = ref(props.startIndex)
+const currentIndex = ref(props.startIndex);
 
 /** @brief Currently displayed media item. */
-const current = computed(() => props.items[currentIndex.value])
+const current = computed(() => props.items[currentIndex.value]);
 
 /** @brief Navigate to the previous item. */
 function prev(): void {
-  if (currentIndex.value > 0) currentIndex.value--
+  if (currentIndex.value > 0) currentIndex.value--;
 }
 
 /** @brief Navigate to the next item. */
 function next(): void {
-  if (currentIndex.value < props.items.length - 1) currentIndex.value++
+  if (currentIndex.value < props.items.length - 1) currentIndex.value++;
 }
 
 /** @brief Handle keyboard events for navigation and close. */
 function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') emit('close')
-  if (e.key === 'ArrowLeft') prev()
-  if (e.key === 'ArrowRight') next()
+  if (e.key === "Escape") emit("close");
+  if (e.key === "ArrowLeft") prev();
+  if (e.key === "ArrowRight") next();
 }
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+onMounted(() => document.addEventListener("keydown", onKeydown));
+onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 </script>
 
 <template>
@@ -87,7 +87,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         :src="current.url"
         :alt="current.mime_type"
         class="max-h-[90vh] max-w-[90vw] object-contain"
-      >
+      />
 
       <!-- Next -->
       <button

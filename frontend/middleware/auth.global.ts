@@ -11,7 +11,7 @@
  * restore via the HttpOnly refresh cookie before blocking access.
  */
 
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore } from "~/stores/auth";
 
 /**
  * @brief Pure auth decision logic (no Nuxt dependency).
@@ -27,59 +27,59 @@ export function authMiddleware(
   to: { path: string; fullPath?: string },
   _from: { path: string },
 ): { path: string; query?: Record<string, string> } | undefined {
-  const authStore = useAuthStore()
-  const isAuthenticated = authStore.isAuthenticated
-  const path = to.path
+  const authStore = useAuthStore();
+  const isAuthenticated = authStore.isAuthenticated;
+  const path = to.path;
 
-  const isAppRoute = path.startsWith('/app')
-  const isAuthRoute = path.startsWith('/auth')
-  const isAdminRoute = path.startsWith('/app/admin')
+  const isAppRoute = path.startsWith("/app");
+  const isAuthRoute = path.startsWith("/auth");
+  const isAdminRoute = path.startsWith("/app/admin");
 
   if (isAppRoute && !isAuthenticated) {
-    return { path: '/auth/login', query: { redirect: to.fullPath || path } }
+    return { path: "/auth/login", query: { redirect: to.fullPath || path } };
   }
 
-  if (isAdminRoute && isAuthenticated && authStore.user?.role !== 'admin') {
-    return { path: '/app' }
+  if (isAdminRoute && isAuthenticated && authStore.user?.role !== "admin") {
+    return { path: "/app" };
   }
 
   if (isAuthRoute && isAuthenticated) {
-    return { path: '/app' }
+    return { path: "/app" };
   }
 
-  return undefined
+  return undefined;
 }
 
 /** @brief Tracks whether a session restore has already been attempted. */
-let sessionRestoreAttempted = false
+let sessionRestoreAttempted = false;
 
 /**
  * @brief Nuxt global middleware that wraps authMiddleware with proper
  *        navigation calls and a one-time silent session restore.
  */
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  if (import.meta.server) return
+  if (import.meta.server) return;
 
-  const authStore = useAuthStore()
+  const authStore = useAuthStore();
 
   if (!authStore.isAuthenticated && !sessionRestoreAttempted) {
-    sessionRestoreAttempted = true
+    sessionRestoreAttempted = true;
     try {
-      await authStore.refresh()
+      await authStore.refresh();
       if (authStore.accessToken) {
-        await authStore.fetchUser()
+        await authStore.fetchUser();
       }
     } catch {
       /* Refresh failed -- user is genuinely unauthenticated */
     }
   }
 
-  const result = authMiddleware(to, from)
+  const result = authMiddleware(to, from);
 
   if (result) {
     return navigateTo(
       { path: result.path, query: result.query },
       { replace: true, redirectCode: 302 },
-    )
+    );
   }
-})
+});

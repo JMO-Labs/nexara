@@ -29,7 +29,9 @@
         >
           <!-- Header -->
           <div class="flex h-14 items-center border-b border-border px-4">
-            <span class="text-lg font-bold text-primary">{{ $t('app.name') }}</span>
+            <span class="text-lg font-bold text-primary">{{
+              $t("app.name")
+            }}</span>
           </div>
 
           <!-- Nav links -->
@@ -41,7 +43,10 @@
               class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
               @click="$emit('close')"
             >
-              <component :is="item.icon" class="h-5 w-5 text-muted-foreground" />
+              <component
+                :is="item.icon"
+                class="h-5 w-5 text-muted-foreground"
+              />
               {{ $t(item.labelKey) }}
             </NuxtLink>
           </div>
@@ -63,36 +68,40 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
-} from '@heroicons/vue/24/outline'
-import { useAuthStore } from '~/stores/auth'
-import { computed } from 'vue'
+} from "@heroicons/vue/24/outline";
+import { useAuthStore } from "~/stores/auth";
+import { computed } from "vue";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
 defineProps<{
   /** @brief Whether the drawer is currently visible. */
-  open: boolean
-}>()
+  open: boolean;
+}>();
 
 defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: "close"): void;
+}>();
 
 /** @brief Navigation items shown in the mobile drawer. */
 const navItems = computed(() => {
   const items = [
-    { path: '/app', icon: NewspaperIcon, labelKey: 'nav.feed' },
-    { path: '/app/events', icon: CalendarDaysIcon, labelKey: 'nav.events' },
-    { path: '/app/chat', icon: ChatBubbleLeftRightIcon, labelKey: 'nav.chat' },
-    { path: '/app/media', icon: PhotoIcon, labelKey: 'nav.media' },
-    { path: '/app/members', icon: UserGroupIcon, labelKey: 'nav.members' },
-    { path: '/app/settings', icon: Cog6ToothIcon, labelKey: 'nav.settings' },
-  ]
-  if (authStore.user?.role === 'admin') {
-    items.splice(-1, 0, { path: '/app/admin', icon: ShieldCheckIcon, labelKey: 'nav.admin' })
+    { path: "/app", icon: NewspaperIcon, labelKey: "nav.feed" },
+    { path: "/app/events", icon: CalendarDaysIcon, labelKey: "nav.events" },
+    { path: "/app/chat", icon: ChatBubbleLeftRightIcon, labelKey: "nav.chat" },
+    { path: "/app/media", icon: PhotoIcon, labelKey: "nav.media" },
+    { path: "/app/members", icon: UserGroupIcon, labelKey: "nav.members" },
+    { path: "/app/settings", icon: Cog6ToothIcon, labelKey: "nav.settings" },
+  ];
+  if (authStore.user?.role === "admin") {
+    items.splice(-1, 0, {
+      path: "/app/admin",
+      icon: ShieldCheckIcon,
+      labelKey: "nav.admin",
+    });
   }
-  return items
-})
+  return items;
+});
 </script>
 
 <style scoped>

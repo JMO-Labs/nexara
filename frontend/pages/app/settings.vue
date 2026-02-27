@@ -9,7 +9,7 @@
 <template>
   <div class="space-y-6">
     <h1 class="text-2xl font-bold text-foreground">
-      {{ $t('settings.title') }}
+      {{ $t("settings.title") }}
     </h1>
 
     <!-- Tab navigation -->
@@ -41,13 +41,13 @@
  * @brief Settings layout with tab navigation and child route outlet.
  */
 const tabs = [
-  { path: '/app/settings/profile', label: 'settings.profile' },
-  { path: '/app/settings/account', label: 'settings.account' },
-  { path: '/app/settings/security', label: 'settings.security' },
-  { path: '/app/settings/notifications', label: 'settings.notifications' },
-]
+  { path: "/app/settings/profile", label: "settings.profile" },
+  { path: "/app/settings/account", label: "settings.account" },
+  { path: "/app/settings/security", label: "settings.security" },
+  { path: "/app/settings/notifications", label: "settings.notifications" },
+];
 
-const route = useRoute()
+const route = useRoute();
 
 /**
  * @brief Check if a tab path matches the current route.
@@ -55,6 +55,6 @@ const route = useRoute()
  * @returns true when the route matches.
  */
 function isActive(path: string): boolean {
-  return route.path === path
+  return route.path === path;
 }
 </script>

@@ -49,8 +49,12 @@
             :key="idx"
             :class="[
               'flex h-8 w-full items-center justify-center text-xs rounded-md transition-colors',
-              cell.isCurrentMonth ? 'text-card-foreground' : 'text-muted-foreground/40',
-              cell.isToday ? 'bg-primary text-primary-foreground font-bold' : 'hover:bg-accent',
+              cell.isCurrentMonth
+                ? 'text-card-foreground'
+                : 'text-muted-foreground/40',
+              cell.isToday
+                ? 'bg-primary text-primary-foreground font-bold'
+                : 'hover:bg-accent',
             ]"
           >
             {{ cell.day }}
@@ -61,11 +65,13 @@
       <!-- Upcoming events card -->
       <div class="rounded-lg border border-border bg-card p-4">
         <h3 class="mb-3 text-sm font-semibold text-card-foreground">
-          {{ $t('calendar.upcoming') }}
+          {{ $t("calendar.upcoming") }}
         </h3>
 
         <div v-if="upcomingEvents.length === 0" class="text-center py-4">
-          <p class="text-xs text-muted-foreground">{{ $t('calendar.noEvents') }}</p>
+          <p class="text-xs text-muted-foreground">
+            {{ $t("calendar.noEvents") }}
+          </p>
         </div>
 
         <div v-else class="space-y-3">
@@ -74,12 +80,21 @@
             :key="event.id"
             class="flex gap-3"
           >
-            <div class="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[40px]">
-              <span class="text-[10px] font-medium uppercase text-muted-foreground">{{ event.monthShort }}</span>
-              <span class="text-sm font-bold text-card-foreground">{{ event.dayNum }}</span>
+            <div
+              class="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[40px]"
+            >
+              <span
+                class="text-[10px] font-medium uppercase text-muted-foreground"
+                >{{ event.monthShort }}</span
+              >
+              <span class="text-sm font-bold text-card-foreground">{{
+                event.dayNum
+              }}</span>
             </div>
             <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-card-foreground">{{ event.title }}</p>
+              <p class="truncate text-sm font-medium text-card-foreground">
+                {{ event.title }}
+              </p>
               <p class="text-xs text-muted-foreground">{{ event.time }}</p>
             </div>
           </div>
@@ -93,89 +108,115 @@
 /**
  * @brief CalendarSidebar logic: month navigation and calendar grid generation.
  */
-import { ref, computed } from 'vue'
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
+import { ref, computed } from "vue";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/outline";
 
 /** @brief Currently viewed year and month. */
-const viewYear = ref(new Date().getFullYear())
-const viewMonth = ref(new Date().getMonth())
+const viewYear = ref(new Date().getFullYear());
+const viewMonth = ref(new Date().getMonth());
 
-const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const weekDays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 interface CalendarCell {
-  day: number
-  isCurrentMonth: boolean
-  isToday: boolean
+  day: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
 }
 
 /** @brief Formatted month/year label. */
 const monthLabel = computed(() => {
-  const date = new Date(viewYear.value, viewMonth.value, 1)
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-})
+  const date = new Date(viewYear.value, viewMonth.value, 1);
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+});
 
 /** @brief Generate the 6-week calendar grid for the viewed month. */
 const calendarCells = computed<CalendarCell[]>(() => {
-  const today = new Date()
-  const firstDay = new Date(viewYear.value, viewMonth.value, 1)
-  const startDow = firstDay.getDay()
-  const daysInMonth = new Date(viewYear.value, viewMonth.value + 1, 0).getDate()
-  const prevMonthDays = new Date(viewYear.value, viewMonth.value, 0).getDate()
+  const today = new Date();
+  const firstDay = new Date(viewYear.value, viewMonth.value, 1);
+  const startDow = firstDay.getDay();
+  const daysInMonth = new Date(
+    viewYear.value,
+    viewMonth.value + 1,
+    0,
+  ).getDate();
+  const prevMonthDays = new Date(viewYear.value, viewMonth.value, 0).getDate();
 
-  const cells: CalendarCell[] = []
+  const cells: CalendarCell[] = [];
 
   for (let i = startDow - 1; i >= 0; i--) {
-    cells.push({ day: prevMonthDays - i, isCurrentMonth: false, isToday: false })
+    cells.push({
+      day: prevMonthDays - i,
+      isCurrentMonth: false,
+      isToday: false,
+    });
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday =
       d === today.getDate() &&
       viewMonth.value === today.getMonth() &&
-      viewYear.value === today.getFullYear()
-    cells.push({ day: d, isCurrentMonth: true, isToday })
+      viewYear.value === today.getFullYear();
+    cells.push({ day: d, isCurrentMonth: true, isToday });
   }
 
-  const remaining = 42 - cells.length
+  const remaining = 42 - cells.length;
   for (let d = 1; d <= remaining; d++) {
-    cells.push({ day: d, isCurrentMonth: false, isToday: false })
+    cells.push({ day: d, isCurrentMonth: false, isToday: false });
   }
 
-  return cells
-})
+  return cells;
+});
 
 function prevMonth(): void {
   if (viewMonth.value === 0) {
-    viewMonth.value = 11
-    viewYear.value--
+    viewMonth.value = 11;
+    viewYear.value--;
   } else {
-    viewMonth.value--
+    viewMonth.value--;
   }
 }
 
 function nextMonth(): void {
   if (viewMonth.value === 11) {
-    viewMonth.value = 0
-    viewYear.value++
+    viewMonth.value = 0;
+    viewYear.value++;
   } else {
-    viewMonth.value++
+    viewMonth.value++;
   }
 }
 
 interface UpcomingEvent {
-  id: string
-  title: string
-  monthShort: string
-  dayNum: string
-  time: string
+  id: string;
+  title: string;
+  monthShort: string;
+  dayNum: string;
+  time: string;
 }
 
 /**
  * @brief Stub upcoming events. Replaced by API integration later.
  */
 const upcomingEvents = ref<UpcomingEvent[]>([
-  { id: '1', title: 'Community Standup', monthShort: 'Mar', dayNum: '03', time: '10:00 AM' },
-  { id: '2', title: 'Design Review', monthShort: 'Mar', dayNum: '07', time: '2:00 PM' },
-  { id: '3', title: 'Town Hall Meeting', monthShort: 'Mar', dayNum: '14', time: '6:00 PM' },
-])
+  {
+    id: "1",
+    title: "Community Standup",
+    monthShort: "Mar",
+    dayNum: "03",
+    time: "10:00 AM",
+  },
+  {
+    id: "2",
+    title: "Design Review",
+    monthShort: "Mar",
+    dayNum: "07",
+    time: "2:00 PM",
+  },
+  {
+    id: "3",
+    title: "Town Hall Meeting",
+    monthShort: "Mar",
+    dayNum: "14",
+    time: "6:00 PM",
+  },
+]);
 </script>

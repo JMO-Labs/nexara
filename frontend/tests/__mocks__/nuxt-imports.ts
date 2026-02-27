@@ -20,7 +20,7 @@ export {
   unref,
   isRef,
   shallowRef,
-} from 'vue'
+} from "vue";
 
-export { navigateTo, useRuntimeConfig, useRoute, useRouter } from './nuxt-app'
-export { useI18n } from 'vue-i18n'
+export { navigateTo, useRuntimeConfig, useRoute, useRouter } from "./nuxt-app";
+export { useI18n } from "vue-i18n";

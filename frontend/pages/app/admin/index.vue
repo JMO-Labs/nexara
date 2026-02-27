@@ -11,7 +11,7 @@
       v-if="authStore.user?.role !== 'admin'"
       class="rounded-lg border border-border bg-card p-6 text-center text-muted-foreground"
     >
-      {{ $t('common.loading') }}
+      {{ $t("common.loading") }}
     </div>
 
     <template v-else>
@@ -56,12 +56,9 @@
         <!-- Recent audit log -->
         <div class="rounded-lg border border-border bg-card p-4">
           <h2 class="mb-4 text-lg font-semibold text-foreground">
-            {{ $t('admin.recent_audit') }}
+            {{ $t("admin.recent_audit") }}
           </h2>
-          <AdminAuditLogTable
-            :entries="auditEntries"
-            :loading="auditLoading"
-          />
+          <AdminAuditLogTable :entries="auditEntries" :loading="auditLoading" />
         </div>
 
         <!-- WAF blocks summary -->
@@ -70,13 +67,13 @@
           class="rounded-lg border border-border bg-card p-4"
         >
           <h2 class="mb-4 text-lg font-semibold text-foreground">
-            {{ $t('admin.waf_blocks') }}
+            {{ $t("admin.waf_blocks") }}
           </h2>
           <p class="text-2xl font-bold text-foreground">
             {{ metrics.waf_blocks_total?.toLocaleString() ?? 0 }}
           </p>
           <p class="mt-1 text-sm text-muted-foreground">
-            {{ $t('admin.wafBlocksPeriod') }}
+            {{ $t("admin.wafBlocksPeriod") }}
           </p>
         </div>
       </div>
@@ -88,51 +85,52 @@
 /**
  * @brief Admin dashboard with metrics and audit log.
  */
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '~/stores/auth'
-import { useApi } from '~/composables/useApi'
-import type { AdminMetricsResponse, AuditLogEntry } from '~/types/api'
+import { ref, computed, onMounted } from "vue";
+import { useAuthStore } from "~/stores/auth";
+import { useApi } from "~/composables/useApi";
+import type { AdminMetricsResponse, AuditLogEntry } from "~/types/api";
 
-const authStore = useAuthStore()
-const api = useApi()
+const authStore = useAuthStore();
+const api = useApi();
 
-const metrics = ref<AdminMetricsResponse | null>(null)
-const auditEntries = ref<AuditLogEntry[]>([])
-const auditLoading = ref(false)
+const metrics = ref<AdminMetricsResponse | null>(null);
+const auditEntries = ref<AuditLogEntry[]>([]);
+const auditLoading = ref(false);
 
 const storageFormatted = computed(() => {
-  const bytes = metrics.value?.storage_used_bytes ?? 0
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-})
+  const bytes = metrics.value?.storage_used_bytes ?? 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+});
 
 async function fetchMetrics(): Promise<void> {
   try {
-    metrics.value = await api.get<AdminMetricsResponse>('/admin/metrics')
+    metrics.value = await api.get<AdminMetricsResponse>("/admin/metrics");
   } catch {
-    metrics.value = null
+    metrics.value = null;
   }
 }
 
 async function fetchAuditLog(): Promise<void> {
-  auditLoading.value = true
+  auditLoading.value = true;
   try {
     const res = await api.get<{ items: AuditLogEntry[] }>(
-      '/admin/audit-log?limit=5',
-    )
-    auditEntries.value = res?.items ?? []
+      "/admin/audit-log?limit=5",
+    );
+    auditEntries.value = res?.items ?? [];
   } catch {
-    auditEntries.value = []
+    auditEntries.value = [];
   } finally {
-    auditLoading.value = false
+    auditLoading.value = false;
   }
 }
 
 onMounted(async () => {
-  if (authStore.user?.role === 'admin') {
-    await Promise.all([fetchMetrics(), fetchAuditLog()])
+  if (authStore.user?.role === "admin") {
+    await Promise.all([fetchMetrics(), fetchAuditLog()]);
   }
-})
+});
 </script>

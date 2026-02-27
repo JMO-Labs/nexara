@@ -23,14 +23,14 @@
         class="text-sm text-muted-foreground transition-colors hover:text-foreground"
         :aria-label="$t('feed.attachMedia')"
       >
-        {{ $t('feed.attachMedia') }}
+        {{ $t("feed.attachMedia") }}
       </button>
       <button
         type="submit"
         :disabled="!content.trim()"
         class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {{ $t('feed.submit') }}
+        {{ $t("feed.submit") }}
       </button>
     </div>
   </form>
@@ -40,19 +40,19 @@
 /**
  * @brief PostComposer component state and event handling.
  */
-import { ref } from 'vue'
+import { ref } from "vue";
 
-const content = ref('')
+const content = ref("");
 
 const emit = defineEmits<{
   /** @brief Emitted with content and media IDs when the form is submitted. */
-  (e: 'submit', payload: { content: string; mediaIds: string[] }): void
-}>()
+  (e: "submit", payload: { content: string; mediaIds: string[] }): void;
+}>();
 
 /** @brief Submit the post and clear the form. */
 function handleSubmit(): void {
-  if (!content.value.trim()) return
-  emit('submit', { content: content.value, mediaIds: [] })
-  content.value = ''
+  if (!content.value.trim()) return;
+  emit("submit", { content: content.value, mediaIds: [] });
+  content.value = "";
 }
 </script>

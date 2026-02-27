@@ -7,7 +7,9 @@
   Mobile hamburger remains on the left for the slide-out drawer.
 -->
 <template>
-  <header class="flex h-14 items-center gap-4 border-b border-border bg-background px-4">
+  <header
+    class="flex h-14 items-center gap-4 border-b border-border bg-background px-4"
+  >
     <!-- Left: Mobile menu toggle -->
     <button
       class="md:hidden flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -23,8 +25,10 @@
       @click="$emit('open-search')"
     >
       <MagnifyingGlassIcon class="h-4 w-4 shrink-0" />
-      <span class="flex-1 text-left">{{ $t('common.search') }}</span>
-      <kbd class="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+      <span class="flex-1 text-left">{{ $t("common.search") }}</span>
+      <kbd
+        class="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground"
+      >
         <span class="text-xs">&#8984;</span>K
       </kbd>
     </button>
@@ -59,29 +63,31 @@
 /**
  * @brief TopBar component props and events.
  */
-import { computed } from 'vue'
+import { computed } from "vue";
 import {
   Bars3Icon,
   MagnifyingGlassIcon,
   SunIcon,
   MoonIcon,
-} from '@heroicons/vue/24/outline'
-import NotificationBell from '~/components/notifications/NotificationBell.vue'
+} from "@heroicons/vue/24/outline";
+import NotificationBell from "~/components/notifications/NotificationBell.vue";
 
 const props = defineProps<{
   /** @brief Whether dark mode is currently active. */
-  darkMode: boolean
+  darkMode: boolean;
   /** @brief Display name of the current user. */
-  userName: string
-}>()
+  userName: string;
+}>();
 
 defineEmits<{
-  'toggle-mobile-nav': []
-  'toggle-dark-mode': []
-  'open-search': []
-  'toggle-notifications': []
-}>()
+  "toggle-mobile-nav": [];
+  "toggle-dark-mode": [];
+  "open-search": [];
+  "toggle-notifications": [];
+}>();
 
 /** @brief First character of the user's display name for avatar fallback. */
-const userInitial = computed(() => props.userName?.charAt(0)?.toUpperCase() || '?')
+const userInitial = computed(
+  () => props.userName?.charAt(0)?.toUpperCase() || "?",
+);
 </script>

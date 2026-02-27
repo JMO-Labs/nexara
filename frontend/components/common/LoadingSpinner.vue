@@ -18,7 +18,7 @@
         sizeClasses,
       ]"
     />
-    <span class="sr-only">{{ $t('common.loading') }}</span>
+    <span class="sr-only">{{ $t("common.loading") }}</span>
   </div>
 </template>
 
@@ -26,15 +26,18 @@
 /**
  * @brief LoadingSpinner component with configurable size.
  */
-import { computed } from 'vue'
+import { computed } from "vue";
 
-const props = withDefaults(defineProps<{
-  /** @brief Spinner size variant. */
-  size?: 'sm' | 'md' | 'lg'
-}>(), { size: 'md' })
+const props = withDefaults(
+  defineProps<{
+    /** @brief Spinner size variant. */
+    size?: "sm" | "md" | "lg";
+  }>(),
+  { size: "md" },
+);
 
 const sizeClasses = computed(() => {
-  const sizes = { sm: 'h-4 w-4', md: 'h-8 w-8', lg: 'h-12 w-12' }
-  return sizes[props.size]
-})
+  const sizes = { sm: "h-4 w-4", md: "h-8 w-8", lg: "h-12 w-12" };
+  return sizes[props.size];
+});
 </script>

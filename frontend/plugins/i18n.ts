@@ -12,4 +12,4 @@ export default defineNuxtPlugin((_nuxtApp) => {
   /* Module-level i18n configuration is in nuxt.config.ts.
    * This plugin is a hook point for future runtime locale switching
    * or locale-dependent initialization (e.g., date-fns locale). */
-})
+});

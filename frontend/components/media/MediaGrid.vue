@@ -12,16 +12,16 @@
  * @param items - Array of media objects with thumbnail_url and alt_text.
  * @emits open - Emitted with the index of the clicked thumbnail.
  */
-import type { PostMedia } from '~/types/api'
+import type { PostMedia } from "~/types/api";
 
 defineProps<{
   /** @brief Media items to display as thumbnails. */
-  items: PostMedia[]
-}>()
+  items: PostMedia[];
+}>();
 
 const emit = defineEmits<{
-  (e: 'open', index: number): void
-}>()
+  (e: "open", index: number): void;
+}>();
 </script>
 
 <template>
@@ -47,7 +47,7 @@ const emit = defineEmits<{
         :alt="item.mime_type"
         class="h-full w-full object-cover"
         loading="lazy"
-      >
+      />
       <span
         v-if="index === 3 && items.length > 4"
         class="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-bold text-white"

@@ -8,7 +8,7 @@
 <template>
   <div class="space-y-6">
     <h1 class="text-2xl font-bold text-foreground">
-      {{ $t('common.search') }}
+      {{ $t("common.search") }}
     </h1>
 
     <SearchBar v-model="queryInput" />
@@ -36,10 +36,7 @@
       </ul>
 
       <!-- Results -->
-      <SearchResults
-        :items="displayItems"
-        :active-tab="activeTab"
-      />
+      <SearchResults :items="displayItems" :active-tab="activeTab" />
 
       <!-- Load more -->
       <div v-if="hasMore && displayItems.length > 0" class="text-center">
@@ -48,13 +45,16 @@
           :disabled="loading"
           @click="loadMore"
         >
-          {{ loading ? $t('common.loading') : $t('search.loadMore') }}
+          {{ loading ? $t("common.loading") : $t("search.loadMore") }}
         </button>
       </div>
     </template>
 
-    <p v-else-if="queryFromRoute && queryFromRoute.length < 2" class="text-muted-foreground">
-      {{ $t('search.noResults') }}
+    <p
+      v-else-if="queryFromRoute && queryFromRoute.length < 2"
+      class="text-muted-foreground"
+    >
+      {{ $t("search.noResults") }}
     </p>
   </div>
 </template>
@@ -63,108 +63,112 @@
 /**
  * @brief Search page with tabs and cursor pagination.
  */
-import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { useApi } from '~/composables/useApi'
-import SearchBar from '~/components/search/SearchBar.vue'
-import SearchResults from '~/components/search/SearchResults.vue'
-import type { SearchResponse, SearchResultItem } from '~/types/api'
+import { ref, computed, watch } from "vue";
+import { useRoute } from "vue-router";
+import { useApi } from "~/composables/useApi";
+import SearchBar from "~/components/search/SearchBar.vue";
+import SearchResults from "~/components/search/SearchResults.vue";
+import type { SearchResponse, SearchResultItem } from "~/types/api";
 
-const route = useRoute()
-const api = useApi()
+const route = useRoute();
+const api = useApi();
 
-const queryInput = ref('')
-const activeTab = ref('all')
-const loading = ref(false)
-const searchData = ref<SearchResponse | null>(null)
-const cursors = ref<Record<string, string | null>>({})
+const queryInput = ref("");
+const activeTab = ref("all");
+const loading = ref(false);
+const searchData = ref<SearchResponse | null>(null);
+const cursors = ref<Record<string, string | null>>({});
 
 const tabs = [
-  { id: 'all', label: 'search.all' },
-  { id: 'posts', label: 'search.posts' },
-  { id: 'people', label: 'search.people' },
-  { id: 'events', label: 'search.events' },
-]
+  { id: "all", label: "search.all" },
+  { id: "posts", label: "search.posts" },
+  { id: "people", label: "search.people" },
+  { id: "events", label: "search.events" },
+];
 
-const queryFromRoute = computed(() => (route.query.q as string) || '')
+const queryFromRoute = computed(() => (route.query.q as string) || "");
 
 const displayItems = computed((): SearchResultItem[] => {
-  if (!searchData.value) return []
-  if (activeTab.value === 'all') {
-    const items: SearchResultItem[] = []
-    const order = ['posts', 'users', 'events']
+  if (!searchData.value) return [];
+  if (activeTab.value === "all") {
+    const items: SearchResultItem[] = [];
+    const order = ["posts", "users", "events"];
     for (const t of order) {
-      const r = searchData.value.results[t]
-      if (r) items.push(...r.items)
+      const r = searchData.value.results[t];
+      if (r) items.push(...r.items);
     }
-    return items
+    return items;
   }
-  const key = activeTab.value === 'people' ? 'users' : activeTab.value
-  return searchData.value.results[key]?.items ?? []
-})
+  const key = activeTab.value === "people" ? "users" : activeTab.value;
+  return searchData.value.results[key]?.items ?? [];
+});
 
 const hasMore = computed(() => {
-  if (!searchData.value) return false
-  if (activeTab.value === 'all') {
-    return Object.values(searchData.value.results).some((r) => r.next_cursor != null)
+  if (!searchData.value) return false;
+  if (activeTab.value === "all") {
+    return Object.values(searchData.value.results).some(
+      (r) => r.next_cursor != null,
+    );
   }
-  const key = activeTab.value === 'people' ? 'users' : activeTab.value
-  return (searchData.value.results[key]?.next_cursor ?? null) != null
-})
+  const key = activeTab.value === "people" ? "users" : activeTab.value;
+  return (searchData.value.results[key]?.next_cursor ?? null) != null;
+});
 
 async function fetchSearch(cursor: string | null = null): Promise<void> {
-  const q = queryFromRoute.value
-  if (!q || q.length < 2) return
+  const q = queryFromRoute.value;
+  if (!q || q.length < 2) return;
 
-  loading.value = true
+  loading.value = true;
   try {
-    const types = 'posts,users,events'
-    const params = new URLSearchParams({ q, types, limit: '20' })
-    if (cursor) params.set('cursor', cursor)
-    const data = await api.get<SearchResponse>(`/search?${params}`)
+    const types = "posts,users,events";
+    const params = new URLSearchParams({ q, types, limit: "20" });
+    if (cursor) params.set("cursor", cursor);
+    const data = await api.get<SearchResponse>(`/search?${params}`);
     if (cursor) {
-      if (!searchData.value) searchData.value = data
+      if (!searchData.value) searchData.value = data;
       else {
         for (const [k, v] of Object.entries(data.results)) {
-          const existing = searchData.value.results[k]
+          const existing = searchData.value.results[k];
           if (existing) {
-            existing.items.push(...v.items)
-            existing.total = v.total
-            existing.next_cursor = v.next_cursor
+            existing.items.push(...v.items);
+            existing.total = v.total;
+            existing.next_cursor = v.next_cursor;
           } else {
-            searchData.value.results[k] = v
+            searchData.value.results[k] = v;
           }
         }
       }
     } else {
-      searchData.value = data
+      searchData.value = data;
     }
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function loadMore(): void {
-  const key = activeTab.value === 'people' ? 'users' : activeTab.value
-  let next: string | null = null
-  if (activeTab.value === 'all') {
-    next = Object.values(searchData.value?.results ?? {}).find((r) => r.next_cursor)?.next_cursor ?? null
+  const key = activeTab.value === "people" ? "users" : activeTab.value;
+  let next: string | null = null;
+  if (activeTab.value === "all") {
+    next =
+      Object.values(searchData.value?.results ?? {}).find((r) => r.next_cursor)
+        ?.next_cursor ?? null;
   } else {
-    next = searchData.value?.results[key]?.next_cursor ?? null
+    next = searchData.value?.results[key]?.next_cursor ?? null;
   }
-  if (next) fetchSearch(next)
+  if (next) fetchSearch(next);
 }
 
 watch(
   () => route.query.q,
   (q) => {
-    queryInput.value = q || ''
+    queryInput.value = q || "";
     if (q && q.length >= 2) {
-      searchData.value = null
-      cursors.value = {}
-      fetchSearch()
+      searchData.value = null;
+      cursors.value = {};
+      fetchSearch();
     }
   },
   { immediate: true },
-)
+);
 </script>

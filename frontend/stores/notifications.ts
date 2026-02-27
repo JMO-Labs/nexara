@@ -6,24 +6,24 @@
  * Uses useApi() for all HTTP calls to /notifications/ endpoints.
  */
 
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
-import { useApi } from '~/composables/useApi'
+import { ref } from "vue";
+import { defineStore } from "pinia";
+import { useApi } from "~/composables/useApi";
 import type {
   Notification,
   NotificationListResponse,
   UnreadCountResponse,
-} from '~/types/api'
+} from "~/types/api";
 
-export const useNotificationsStore = defineStore('notifications', () => {
+export const useNotificationsStore = defineStore("notifications", () => {
   /** @brief List of notifications from the API. */
-  const notifications = ref<Notification[]>([])
+  const notifications = ref<Notification[]>([]);
 
   /** @brief Unread notification count for badge display. */
-  const unreadCount = ref(0)
+  const unreadCount = ref(0);
 
   /** @brief Whether a fetch operation is in progress. */
-  const loading = ref(false)
+  const loading = ref(false);
 
   /**
    * @brief Fetch notifications from GET /notifications/.
@@ -31,18 +31,20 @@ export const useNotificationsStore = defineStore('notifications', () => {
    * @throws Error if the request fails.
    */
   async function fetchNotifications(cursor?: string | null): Promise<void> {
-    loading.value = true
+    loading.value = true;
     try {
-      const api = useApi()
-      const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
-      const data = await api.get<NotificationListResponse>(`/notifications/${params}`)
+      const api = useApi();
+      const params = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+      const data = await api.get<NotificationListResponse>(
+        `/notifications/${params}`,
+      );
       if (cursor) {
-        notifications.value = [...notifications.value, ...data.items]
+        notifications.value = [...notifications.value, ...data.items];
       } else {
-        notifications.value = data.items
+        notifications.value = data.items;
       }
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
@@ -51,9 +53,11 @@ export const useNotificationsStore = defineStore('notifications', () => {
    * @throws Error if the request fails.
    */
   async function fetchUnreadCount(): Promise<void> {
-    const api = useApi()
-    const data = await api.get<UnreadCountResponse>('/notifications/unread-count')
-    unreadCount.value = data.count
+    const api = useApi();
+    const data = await api.get<UnreadCountResponse>(
+      "/notifications/unread-count",
+    );
+    unreadCount.value = data.count;
   }
 
   /**
@@ -62,12 +66,12 @@ export const useNotificationsStore = defineStore('notifications', () => {
    * @throws Error if the request fails.
    */
   async function markRead(id: string): Promise<void> {
-    const api = useApi()
-    await api.post(`/notifications/${id}/read`)
-    const n = notifications.value.find((x) => x.id === id)
+    const api = useApi();
+    await api.post(`/notifications/${id}/read`);
+    const n = notifications.value.find((x) => x.id === id);
     if (n && !n.read_at) {
-      n.read_at = new Date().toISOString()
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
+      n.read_at = new Date().toISOString();
+      unreadCount.value = Math.max(0, unreadCount.value - 1);
     }
   }
 
@@ -76,12 +80,12 @@ export const useNotificationsStore = defineStore('notifications', () => {
    * @throws Error if the request fails.
    */
   async function markAllRead(): Promise<void> {
-    const api = useApi()
-    await api.post('/notifications/read-all')
+    const api = useApi();
+    await api.post("/notifications/read-all");
     notifications.value.forEach((n) => {
-      if (!n.read_at) n.read_at = new Date().toISOString()
-    })
-    unreadCount.value = 0
+      if (!n.read_at) n.read_at = new Date().toISOString();
+    });
+    unreadCount.value = 0;
   }
 
   return {
@@ -92,5 +96,5 @@ export const useNotificationsStore = defineStore('notifications', () => {
     fetchUnreadCount,
     markRead,
     markAllRead,
-  }
-})
+  };
+});

@@ -11,9 +11,9 @@
 /**
  * @brief NotificationPanel component.
  */
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import {
   AtSymbolIcon,
   BellIcon,
@@ -21,9 +21,9 @@ import {
   HeartIcon,
   DocumentTextIcon,
   UserPlusIcon,
-} from '@heroicons/vue/24/outline'
-import { useNotificationsStore } from '~/stores/notifications'
-import type { Notification } from '~/types/api'
+} from "@heroicons/vue/24/outline";
+import { useNotificationsStore } from "~/stores/notifications";
+import type { Notification } from "~/types/api";
 
 const typeIcons: Record<string, typeof BellIcon> = {
   mention: AtSymbolIcon,
@@ -32,49 +32,49 @@ const typeIcons: Record<string, typeof BellIcon> = {
   new_post: DocumentTextIcon,
   system: BellIcon,
   invite_accepted: UserPlusIcon,
-}
+};
 
 defineProps<{
   /** @brief Whether the panel is visible. */
-  open: boolean
-}>()
+  open: boolean;
+}>();
 
 const emit = defineEmits<{
   /** @brief Emitted when the panel should close. */
-  close: []
-}>()
+  close: [];
+}>();
 
-const { t } = useI18n()
-const router = useRouter()
-const store = useNotificationsStore()
+const { t } = useI18n();
+const router = useRouter();
+const store = useNotificationsStore();
 
 /** @brief Notifications from the store. */
-const notifications = computed(() => store.notifications)
+const notifications = computed(() => store.notifications);
 
 /** @brief Whether the list is empty. */
-const isEmpty = computed(() => notifications.value.length === 0)
+const isEmpty = computed(() => notifications.value.length === 0);
 
 /**
  * @brief Format relative time (e.g. "2 min ago").
  */
 function formatRelative(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffMins < 1) return t('notifications.justNow')
-  if (diffMins < 60) return t('notifications.minutesAgo', { count: diffMins })
-  if (diffHours < 24) return t('notifications.hoursAgo', { count: diffHours })
-  return t('notifications.daysAgo', { count: diffDays })
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return t("notifications.justNow");
+  if (diffMins < 60) return t("notifications.minutesAgo", { count: diffMins });
+  if (diffHours < 24) return t("notifications.hoursAgo", { count: diffHours });
+  return t("notifications.daysAgo", { count: diffDays });
 }
 
 /**
  * @brief Get icon component for notification type.
  */
 function typeIcon(type: string): typeof BellIcon {
-  return typeIcons[type] ?? BellIcon
+  return typeIcons[type] ?? BellIcon;
 }
 
 /**
@@ -82,12 +82,12 @@ function typeIcon(type: string): typeof BellIcon {
  */
 async function onNotificationClick(n: Notification): Promise<void> {
   if (!n.read_at) {
-    await store.markRead(n.id)
+    await store.markRead(n.id);
   }
-  const link = n.payload?.link as string | undefined
-  emit('close')
+  const link = n.payload?.link as string | undefined;
+  emit("close");
   if (link) {
-    await router.push(link)
+    await router.push(link);
   }
 }
 
@@ -95,7 +95,7 @@ async function onNotificationClick(n: Notification): Promise<void> {
  * @brief Mark all as read.
  */
 async function onMarkAllRead(): Promise<void> {
-  await store.markAllRead()
+  await store.markAllRead();
 }
 </script>
 
@@ -107,18 +107,18 @@ async function onMarkAllRead(): Promise<void> {
     aria-label="Notifications"
   >
     <div class="flex items-center justify-between border-b px-4 py-2">
-      <h3 class="font-semibold">{{ t('notifications.title') }}</h3>
+      <h3 class="font-semibold">{{ t("notifications.title") }}</h3>
       <button
         v-if="!isEmpty && store.unreadCount > 0"
         type="button"
         class="text-sm text-primary hover:underline"
         @click="onMarkAllRead"
       >
-        {{ t('notifications.markAllRead') }}
+        {{ t("notifications.markAllRead") }}
       </button>
     </div>
     <div v-if="isEmpty" class="px-4 py-8 text-center text-muted-foreground">
-      {{ t('notifications.empty') }}
+      {{ t("notifications.empty") }}
     </div>
     <ul v-else class="divide-y">
       <li

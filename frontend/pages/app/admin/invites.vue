@@ -9,7 +9,7 @@
   <div class="space-y-6">
     <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="mb-4 text-lg font-semibold text-foreground">
-        {{ $t('admin.create_invite') }}
+        {{ $t("admin.create_invite") }}
       </h2>
       <form
         class="flex flex-wrap items-end gap-4"
@@ -20,7 +20,7 @@
             for="invite_email"
             class="mb-1 block text-sm font-medium text-foreground"
           >
-            {{ $t('admin.email') }}
+            {{ $t("admin.email") }}
           </label>
           <input
             id="invite_email"
@@ -28,14 +28,14 @@
             type="email"
             required
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          >
+          />
         </div>
         <div class="min-w-[120px]">
           <label
             for="invite_role"
             class="mb-1 block text-sm font-medium text-foreground"
           >
-            {{ $t('admin.role') }}
+            {{ $t("admin.role") }}
           </label>
           <select
             id="invite_role"
@@ -52,7 +52,7 @@
           :disabled="createLoading"
           class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {{ createLoading ? $t('common.loading') : $t('admin.create_invite') }}
+          {{ createLoading ? $t("common.loading") : $t("admin.create_invite") }}
         </button>
       </form>
     </div>
@@ -62,22 +62,38 @@
         <table class="w-full min-w-[500px] text-left text-sm">
           <thead class="border-b border-border bg-muted/50">
             <tr>
-              <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.email') }}</th>
-              <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.role') }}</th>
-              <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.status') }}</th>
-              <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.created') }}</th>
-              <th class="px-4 py-3 font-medium text-foreground">{{ $t('admin.actions') }}</th>
+              <th class="px-4 py-3 font-medium text-foreground">
+                {{ $t("admin.email") }}
+              </th>
+              <th class="px-4 py-3 font-medium text-foreground">
+                {{ $t("admin.role") }}
+              </th>
+              <th class="px-4 py-3 font-medium text-foreground">
+                {{ $t("admin.status") }}
+              </th>
+              <th class="px-4 py-3 font-medium text-foreground">
+                {{ $t("admin.created") }}
+              </th>
+              <th class="px-4 py-3 font-medium text-foreground">
+                {{ $t("admin.actions") }}
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="listLoading" class="border-b border-border">
-              <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
-                {{ $t('common.loading') }}
+              <td
+                colspan="5"
+                class="px-4 py-8 text-center text-muted-foreground"
+              >
+                {{ $t("common.loading") }}
               </td>
             </tr>
             <tr v-else-if="!invites.length" class="border-b border-border">
-              <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">
-                {{ $t('admin.no_results') }}
+              <td
+                colspan="5"
+                class="px-4 py-8 text-center text-muted-foreground"
+              >
+                {{ $t("admin.no_results") }}
               </td>
             </tr>
             <tr
@@ -109,7 +125,7 @@
                   class="text-sm text-red-600 hover:underline dark:text-red-400"
                   @click="handleRevoke(inv)"
                 >
-                  {{ $t('admin.revoke') }}
+                  {{ $t("admin.revoke") }}
                 </button>
                 <span v-else class="text-muted-foreground">—</span>
               </td>
@@ -125,108 +141,108 @@
 /**
  * @brief Admin invites page with create form and list.
  */
-import { ref, onMounted } from 'vue'
-import { useApi } from '~/composables/useApi'
-import { useUiStore } from '~/stores/ui'
-import type { InviteListItem } from '~/types/api'
+import { ref, onMounted } from "vue";
+import { useApi } from "~/composables/useApi";
+import { useUiStore } from "~/stores/ui";
+import type { InviteListItem } from "~/types/api";
 
+const api = useApi();
+const uiStore = useUiStore();
+const { t: $t } = useI18n();
 
-const api = useApi()
-const uiStore = useUiStore()
-const { t: $t } = useI18n()
-
-const createForm = ref({ email: '', role: 'member' })
-const createLoading = ref(false)
-const invites = ref<InviteListItem[]>([])
-const listLoading = ref(false)
+const createForm = ref({ email: "", role: "member" });
+const createLoading = ref(false);
+const invites = ref<InviteListItem[]>([]);
+const listLoading = ref(false);
 
 function statusClass(status: string): string {
   const map: Record<string, string> = {
-    active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-    used: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-    expired: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  }
-  return map[status] ?? 'bg-gray-100 text-gray-800'
+    active:
+      "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    used: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    expired: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+  };
+  return map[status] ?? "bg-gray-100 text-gray-800";
 }
 
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
-    return iso
+    return iso;
   }
 }
 
 interface RawInvite {
-  id: string
-  email: string
-  role: string
-  created_at: string
-  expires_at: string
-  used_at: string | null
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
 }
 
 function toInviteListItem(raw: RawInvite): InviteListItem {
-  const now = new Date().toISOString()
-  let status: 'active' | 'used' | 'expired' = 'active'
-  if (raw.used_at) status = 'used'
-  else if (raw.expires_at < now) status = 'expired'
-  return { ...raw, status }
+  const now = new Date().toISOString();
+  let status: "active" | "used" | "expired" = "active";
+  if (raw.used_at) status = "used";
+  else if (raw.expires_at < now) status = "expired";
+  return { ...raw, status };
 }
 
 async function fetchInvites(): Promise<void> {
-  listLoading.value = true
+  listLoading.value = true;
   try {
     const list = await api.get<RawInvite[] | { items: RawInvite[] }>(
-      '/admin/invites',
-    )
-    const raw = Array.isArray(list) ? list : (list?.items ?? [])
-    invites.value = raw.map(toInviteListItem)
+      "/admin/invites",
+    );
+    const raw = Array.isArray(list) ? list : (list?.items ?? []);
+    invites.value = raw.map(toInviteListItem);
   } catch {
-    invites.value = []
+    invites.value = [];
   } finally {
-    listLoading.value = false
+    listLoading.value = false;
   }
 }
 
 async function handleCreateInvite(): Promise<void> {
-  createLoading.value = true
+  createLoading.value = true;
   try {
-    await api.post('/admin/invites', {
+    await api.post("/admin/invites", {
       email: createForm.value.email,
       role: createForm.value.role,
-    })
-    uiStore.showToast({ type: 'success', message: $t('admin.inviteCreated') })
-    createForm.value = { email: '', role: 'member' }
-    await fetchInvites()
+    });
+    uiStore.showToast({ type: "success", message: $t("admin.inviteCreated") });
+    createForm.value = { email: "", role: "member" };
+    await fetchInvites();
   } catch (e) {
     uiStore.showToast({
-      type: 'error',
-      message: e instanceof Error ? e.message : $t('common.error'),
-    })
+      type: "error",
+      message: e instanceof Error ? e.message : $t("common.error"),
+    });
   } finally {
-    createLoading.value = false
+    createLoading.value = false;
   }
 }
 
 async function handleRevoke(inv: InviteListItem): Promise<void> {
   try {
-    await api.del(`/admin/invites/${inv.id}`)
-    uiStore.showToast({ type: 'success', message: $t('admin.inviteRevoked') })
-    await fetchInvites()
+    await api.del(`/admin/invites/${inv.id}`);
+    uiStore.showToast({ type: "success", message: $t("admin.inviteRevoked") });
+    await fetchInvites();
   } catch (e) {
     uiStore.showToast({
-      type: 'error',
-      message: e instanceof Error ? e.message : $t('common.error'),
-    })
+      type: "error",
+      message: e instanceof Error ? e.message : $t("common.error"),
+    });
   }
 }
 
 onMounted(() => {
-  fetchInvites()
-})
+  fetchInvites();
+});
 </script>

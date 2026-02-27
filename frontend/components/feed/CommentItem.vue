@@ -15,10 +15,14 @@
     </div>
     <div class="flex-1">
       <p class="text-sm">
-        <span class="font-semibold text-foreground">{{ comment.author.display_name }}</span>
+        <span class="font-semibold text-foreground">{{
+          comment.author.display_name
+        }}</span>
         <span class="ml-1 text-muted-foreground">{{ comment.content }}</span>
       </p>
-      <p class="text-xs text-muted-foreground/70">{{ timeAgo(comment.created_at) }}</p>
+      <p class="text-xs text-muted-foreground/70">
+        {{ timeAgo(comment.created_at) }}
+      </p>
     </div>
   </div>
 </template>
@@ -27,11 +31,11 @@
 /**
  * @brief CommentItem props.
  */
-import type { Comment } from '~/types/api'
-import { timeAgo } from '~/utils/date'
+import type { Comment } from "~/types/api";
+import { timeAgo } from "~/utils/date";
 
 defineProps<{
   /** @brief The comment to display. */
-  comment: Comment
-}>()
+  comment: Comment;
+}>();
 </script>

@@ -10,22 +10,22 @@
     <div class="space-y-4">
       <div>
         <label class="mb-1 block text-sm font-medium text-muted-foreground">
-          {{ $t('settings.email') }}
+          {{ $t("settings.email") }}
         </label>
         <p class="text-foreground">
-          {{ authStore.user?.email ?? '—' }}
+          {{ authStore.user?.email ?? "—" }}
         </p>
         <p class="mt-1 text-sm text-muted-foreground">
-          {{ $t('settings.changeEmail') }} {{ $t('common.comingSoon') }}
+          {{ $t("settings.changeEmail") }} {{ $t("common.comingSoon") }}
         </p>
       </div>
 
       <div>
         <label class="mb-1 block text-sm font-medium text-muted-foreground">
-          {{ $t('settings.username') }}
+          {{ $t("settings.username") }}
         </label>
         <p class="text-foreground">
-          {{ authStore.user?.username ?? '—' }}
+          {{ authStore.user?.username ?? "—" }}
         </p>
       </div>
     </div>
@@ -36,7 +36,7 @@
 /**
  * @brief Account settings with read-only email and username.
  */
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore } from "~/stores/auth";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 </script>

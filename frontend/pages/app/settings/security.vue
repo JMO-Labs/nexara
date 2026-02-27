@@ -10,28 +10,29 @@
     <!-- 2FA status -->
     <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="mb-2 text-lg font-medium text-foreground">
-        {{ $t('settings.twoFactorStatus') }}
+        {{ $t("settings.twoFactorStatus") }}
       </h2>
       <p class="text-muted-foreground">
-        {{ authStore.user?.totp_enabled ? $t('settings.twoFactorEnabled') : $t('settings.twoFactorDisabled') }}
+        {{
+          authStore.user?.totp_enabled
+            ? $t("settings.twoFactorEnabled")
+            : $t("settings.twoFactorDisabled")
+        }}
       </p>
     </div>
 
     <!-- Password change form -->
     <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="mb-4 text-lg font-medium text-foreground">
-        {{ $t('settings.changePassword') }}
+        {{ $t("settings.changePassword") }}
       </h2>
-      <form
-        class="space-y-4"
-        @submit.prevent="handlePasswordChange"
-      >
+      <form class="space-y-4" @submit.prevent="handlePasswordChange">
         <div>
           <label
             for="current_password"
             class="mb-1 block text-sm font-medium text-foreground"
           >
-            {{ $t('settings.currentPassword') }}
+            {{ $t("settings.currentPassword") }}
           </label>
           <input
             id="current_password"
@@ -40,7 +41,7 @@
             required
             autocomplete="current-password"
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          >
+          />
         </div>
 
         <div>
@@ -48,7 +49,7 @@
             for="new_password"
             class="mb-1 block text-sm font-medium text-foreground"
           >
-            {{ $t('settings.newPassword') }}
+            {{ $t("settings.newPassword") }}
           </label>
           <input
             id="new_password"
@@ -57,7 +58,7 @@
             required
             autocomplete="new-password"
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          >
+          />
         </div>
 
         <div>
@@ -65,7 +66,7 @@
             for="confirm_password"
             class="mb-1 block text-sm font-medium text-foreground"
           >
-            {{ $t('settings.confirmPassword') }}
+            {{ $t("settings.confirmPassword") }}
           </label>
           <input
             id="confirm_password"
@@ -74,7 +75,7 @@
             required
             autocomplete="new-password"
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          >
+          />
         </div>
 
         <button
@@ -82,7 +83,7 @@
           :disabled="loading"
           class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {{ loading ? $t('common.loading') : $t('settings.changePassword') }}
+          {{ loading ? $t("common.loading") : $t("settings.changePassword") }}
         </button>
       </form>
     </div>
@@ -93,44 +94,54 @@
 /**
  * @brief Security settings with 2FA status and password change.
  */
-import { ref } from 'vue'
-import { useAuthStore } from '~/stores/auth'
-import { useUiStore } from '~/stores/ui'
-import { useApi } from '~/composables/useApi'
+import { ref } from "vue";
+import { useAuthStore } from "~/stores/auth";
+import { useUiStore } from "~/stores/ui";
+import { useApi } from "~/composables/useApi";
 
-const authStore = useAuthStore()
-const uiStore = useUiStore()
-const api = useApi()
-const { t: $t } = useI18n()
+const authStore = useAuthStore();
+const uiStore = useUiStore();
+const api = useApi();
+const { t: $t } = useI18n();
 
-const loading = ref(false)
+const loading = ref(false);
 const passwordForm = ref({
-  current_password: '',
-  new_password: '',
-  confirm_password: '',
-})
+  current_password: "",
+  new_password: "",
+  confirm_password: "",
+});
 
 async function handlePasswordChange(): Promise<void> {
   if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
-    uiStore.showToast({ type: 'error', message: $t('settings.passwordMismatch') })
-    return
+    uiStore.showToast({
+      type: "error",
+      message: $t("settings.passwordMismatch"),
+    });
+    return;
   }
 
-  loading.value = true
+  loading.value = true;
   try {
-    await api.put('/settings/password', {
+    await api.put("/settings/password", {
       current_password: passwordForm.value.current_password,
       new_password: passwordForm.value.new_password,
-    })
-    uiStore.showToast({ type: 'success', message: $t('settings.passwordUpdated') })
-    passwordForm.value = { current_password: '', new_password: '', confirm_password: '' }
+    });
+    uiStore.showToast({
+      type: "success",
+      message: $t("settings.passwordUpdated"),
+    });
+    passwordForm.value = {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    };
   } catch (error) {
     uiStore.showToast({
-      type: 'error',
-      message: error instanceof Error ? error.message : $t('common.error'),
-    })
+      type: "error",
+      message: error instanceof Error ? error.message : $t("common.error"),
+    });
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>

@@ -16,9 +16,11 @@
       :key="item.path"
       :to="item.path"
       class="flex flex-col items-center gap-0.5 rounded-md px-3 py-1 transition-colors"
-      :class="isActive(item.path)
-        ? 'text-primary'
-        : 'text-muted-foreground hover:text-foreground'"
+      :class="
+        isActive(item.path)
+          ? 'text-primary'
+          : 'text-muted-foreground hover:text-foreground'
+      "
       :aria-label="$t(item.labelKey)"
     >
       <component :is="item.icon" class="h-5 w-5" />
@@ -37,25 +39,25 @@ import {
   ChatBubbleLeftRightIcon,
   PhotoIcon,
   EllipsisHorizontalIcon,
-} from '@heroicons/vue/24/outline'
+} from "@heroicons/vue/24/outline";
 
-const route = useRoute()
+const route = useRoute();
 
 /** @brief Navigation items for the compact bottom bar. */
 const navItems = [
-  { path: '/app', icon: NewspaperIcon, labelKey: 'nav.feed' },
-  { path: '/app/events', icon: CalendarDaysIcon, labelKey: 'nav.events' },
-  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, labelKey: 'nav.chat' },
-  { path: '/app/media', icon: PhotoIcon, labelKey: 'nav.media' },
-  { path: '/app/settings', icon: EllipsisHorizontalIcon, labelKey: 'nav.more' },
-]
+  { path: "/app", icon: NewspaperIcon, labelKey: "nav.feed" },
+  { path: "/app/events", icon: CalendarDaysIcon, labelKey: "nav.events" },
+  { path: "/app/chat", icon: ChatBubbleLeftRightIcon, labelKey: "nav.chat" },
+  { path: "/app/media", icon: PhotoIcon, labelKey: "nav.media" },
+  { path: "/app/settings", icon: EllipsisHorizontalIcon, labelKey: "nav.more" },
+];
 
 /**
  * @brief Determine if a nav item matches the current route.
  * @param path - The nav item's target path.
  */
 function isActive(path: string): boolean {
-  if (path === '/app') return route.path === '/app'
-  return route.path.startsWith(path)
+  if (path === "/app") return route.path === "/app";
+  return route.path.startsWith(path);
 }
 </script>

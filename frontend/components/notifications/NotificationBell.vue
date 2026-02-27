@@ -13,19 +13,19 @@
  * Reads unread count directly from the notifications store.
  * Fetches the count on mount so the badge is always current.
  */
-import { onMounted } from 'vue'
-import { useNotificationsStore } from '~/stores/notifications'
+import { onMounted } from "vue";
+import { useNotificationsStore } from "~/stores/notifications";
 
-const notifStore = useNotificationsStore()
+const notifStore = useNotificationsStore();
 
 defineEmits<{
   /** @brief Emitted when the bell is clicked to open the panel. */
-  toggle: []
-}>()
+  toggle: [];
+}>();
 
 onMounted(() => {
-  notifStore.fetchUnreadCount()
-})
+  notifStore.fetchUnreadCount();
+});
 </script>
 
 <template>
@@ -55,7 +55,7 @@ onMounted(() => {
       class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
       :aria-hidden="true"
     >
-      {{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}
+      {{ notifStore.unreadCount > 99 ? "99+" : notifStore.unreadCount }}
     </span>
   </button>
 </template>

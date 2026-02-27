@@ -9,14 +9,17 @@
 <template>
   <div class="space-y-4">
     <h1 class="text-2xl font-bold text-foreground">
-      {{ $t('feed.title') }}
+      {{ $t("feed.title") }}
     </h1>
 
     <!-- Post composer -->
     <PostComposer @submit="handleCreatePost" />
 
     <!-- Loading state -->
-    <LoadingSpinner v-if="feedStore.loading && feedStore.posts.length === 0" size="lg" />
+    <LoadingSpinner
+      v-if="feedStore.loading && feedStore.posts.length === 0"
+      size="lg"
+    />
 
     <!-- Feed -->
     <PostCard
@@ -33,14 +36,20 @@
         class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         @click="feedStore.fetchPosts()"
       >
-        {{ $t('feed.loadMore') }}
+        {{ $t("feed.loadMore") }}
       </button>
       <LoadingSpinner v-else-if="feedStore.loading" />
-      <p v-else-if="!feedStore.hasMore && feedStore.posts.length > 0" class="text-sm text-muted-foreground">
-        {{ $t('feed.noMorePosts') }}
+      <p
+        v-else-if="!feedStore.hasMore && feedStore.posts.length > 0"
+        class="text-sm text-muted-foreground"
+      >
+        {{ $t("feed.noMorePosts") }}
       </p>
-      <p v-else-if="!feedStore.loading && feedStore.posts.length === 0" class="text-sm text-muted-foreground">
-        {{ $t('feed.emptyFeed') }}
+      <p
+        v-else-if="!feedStore.loading && feedStore.posts.length === 0"
+        class="text-sm text-muted-foreground"
+      >
+        {{ $t("feed.emptyFeed") }}
       </p>
     </div>
   </div>
@@ -50,40 +59,43 @@
 /**
  * @brief Feed page setup with store integration and SSE real-time updates.
  */
-import { onMounted, onUnmounted } from 'vue'
-import { useFeedStore } from '~/stores/feed'
-import { useAuthStore } from '~/stores/auth'
-import { useSSE } from '~/composables/useSSE'
-import PostComposer from '~/components/feed/PostComposer.vue'
-import PostCard from '~/components/feed/PostCard.vue'
-import LoadingSpinner from '~/components/common/LoadingSpinner.vue'
-import type { Post } from '~/types/api'
+import { onMounted, onUnmounted } from "vue";
+import { useFeedStore } from "~/stores/feed";
+import { useAuthStore } from "~/stores/auth";
+import { useSSE } from "~/composables/useSSE";
+import PostComposer from "~/components/feed/PostComposer.vue";
+import PostCard from "~/components/feed/PostCard.vue";
+import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
+import type { Post } from "~/types/api";
 
-const feedStore = useFeedStore()
-const authStore = useAuthStore()
+const feedStore = useFeedStore();
+const authStore = useAuthStore();
 
 const { connect, disconnect } = useSSE((type, data) => {
-  if (type === 'feed_update' && data) {
-    feedStore.prependPost(data as Post)
+  if (type === "feed_update" && data) {
+    feedStore.prependPost(data as Post);
   }
-})
+});
 
-async function handleCreatePost(payload: { content: string; mediaIds: string[] }): Promise<void> {
-  await feedStore.createPost(payload.content, payload.mediaIds)
+async function handleCreatePost(payload: {
+  content: string;
+  mediaIds: string[];
+}): Promise<void> {
+  await feedStore.createPost(payload.content, payload.mediaIds);
 }
 
 function handleReaction(postId: string, emoji: string): void {
-  feedStore.addReaction(postId, emoji)
+  feedStore.addReaction(postId, emoji);
 }
 
 onMounted(async () => {
-  await feedStore.fetchPosts()
+  await feedStore.fetchPosts();
   if (authStore.isAuthenticated) {
-    connect()
+    connect();
   }
-})
+});
 
 onUnmounted(() => {
-  disconnect()
-})
+  disconnect();
+});
 </script>

@@ -14,13 +14,13 @@
         <thead>
           <tr class="border-b border-border">
             <th class="pb-3 pr-4 font-medium text-foreground">
-              {{ $t('settings.notifications') }}
+              {{ $t("settings.notifications") }}
             </th>
             <th class="px-4 pb-3 font-medium text-foreground">
-              {{ $t('settings.inApp') }}
+              {{ $t("settings.inApp") }}
             </th>
             <th class="px-4 pb-3 font-medium text-foreground">
-              {{ $t('settings.emailChannel') }}
+              {{ $t("settings.emailChannel") }}
             </th>
           </tr>
         </thead>
@@ -39,7 +39,7 @@
                 v-model="prefs[row.inappKey]"
                 type="checkbox"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              >
+              />
             </td>
             <td class="px-4 py-3">
               <input
@@ -48,12 +48,12 @@
                 type="checkbox"
                 :disabled="prefs.mute_all_email"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring disabled:opacity-50"
-              >
+              />
             </td>
           </tr>
           <tr class="border-b border-border last:border-0">
             <td class="py-3 pr-4 text-foreground">
-              {{ $t('settings.muteAllEmail') }}
+              {{ $t("settings.muteAllEmail") }}
             </td>
             <td class="px-4 py-3" />
             <td class="px-4 py-3">
@@ -62,7 +62,7 @@
                 v-model="prefs.mute_all_email"
                 type="checkbox"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              >
+              />
             </td>
           </tr>
         </tbody>
@@ -74,7 +74,7 @@
       :disabled="settingsStore.loading"
       @click="handleSave"
     >
-      {{ settingsStore.loading ? $t('common.loading') : $t('common.save') }}
+      {{ settingsStore.loading ? $t("common.loading") : $t("common.save") }}
     </button>
   </div>
 </template>
@@ -83,27 +83,52 @@
 /**
  * @brief Notification preferences matrix with save action.
  */
-import { reactive, onMounted, watch } from 'vue'
-import { useSettingsStore } from '~/stores/settings'
-import { useUiStore } from '~/stores/ui'
+import { reactive, onMounted, watch } from "vue";
+import { useSettingsStore } from "~/stores/settings";
+import { useUiStore } from "~/stores/ui";
 
-const settingsStore = useSettingsStore()
-const uiStore = useUiStore()
-const { t: $t } = useI18n()
+const settingsStore = useSettingsStore();
+const uiStore = useUiStore();
+const { t: $t } = useI18n();
 
 const notificationRows = [
-  { type: 'mention', label: 'settings.mention', inappKey: 'notif_mention_inapp', emailKey: 'notif_mention_email' },
-  { type: 'comment', label: 'settings.comment', inappKey: 'notif_comment_inapp', emailKey: 'notif_comment_email' },
-  { type: 'reaction', label: 'settings.reaction', inappKey: 'notif_reaction_inapp', emailKey: 'notif_reaction_email' },
-  { type: 'new_post', label: 'settings.newPost', inappKey: 'notif_new_post_inapp', emailKey: 'notif_new_post_email' },
-  { type: 'system', label: 'settings.system', inappKey: 'notif_system_inapp', emailKey: 'notif_system_email' },
   {
-    type: 'invite_accepted',
-    label: 'settings.inviteAccepted',
-    inappKey: 'notif_invite_accepted_inapp',
-    emailKey: 'notif_invite_accepted_email',
+    type: "mention",
+    label: "settings.mention",
+    inappKey: "notif_mention_inapp",
+    emailKey: "notif_mention_email",
   },
-]
+  {
+    type: "comment",
+    label: "settings.comment",
+    inappKey: "notif_comment_inapp",
+    emailKey: "notif_comment_email",
+  },
+  {
+    type: "reaction",
+    label: "settings.reaction",
+    inappKey: "notif_reaction_inapp",
+    emailKey: "notif_reaction_email",
+  },
+  {
+    type: "new_post",
+    label: "settings.newPost",
+    inappKey: "notif_new_post_inapp",
+    emailKey: "notif_new_post_email",
+  },
+  {
+    type: "system",
+    label: "settings.system",
+    inappKey: "notif_system_inapp",
+    emailKey: "notif_system_email",
+  },
+  {
+    type: "invite_accepted",
+    label: "settings.inviteAccepted",
+    inappKey: "notif_invite_accepted_inapp",
+    emailKey: "notif_invite_accepted_email",
+  },
+];
 
 const prefs = reactive<Record<string, boolean>>({
   notif_mention_inapp: false,
@@ -119,31 +144,31 @@ const prefs = reactive<Record<string, boolean>>({
   notif_invite_accepted_inapp: false,
   notif_invite_accepted_email: false,
   mute_all_email: false,
-})
+});
 
 onMounted(async () => {
-  await settingsStore.fetchSettings()
-  syncFromStore()
-})
+  await settingsStore.fetchSettings();
+  syncFromStore();
+});
 
-watch(() => settingsStore.settings, syncFromStore, { deep: true })
+watch(() => settingsStore.settings, syncFromStore, { deep: true });
 
 function syncFromStore(): void {
-  const s = settingsStore.settings
-  if (!s) return
-  prefs.notif_mention_inapp = s.notif_mention_inapp
-  prefs.notif_mention_email = s.notif_mention_email
-  prefs.notif_comment_inapp = s.notif_comment_inapp
-  prefs.notif_comment_email = s.notif_comment_email
-  prefs.notif_reaction_inapp = s.notif_reaction_inapp
-  prefs.notif_reaction_email = s.notif_reaction_email
-  prefs.notif_new_post_inapp = s.notif_new_post_inapp
-  prefs.notif_new_post_email = s.notif_new_post_email
-  prefs.notif_system_inapp = s.notif_system_inapp
-  prefs.notif_system_email = s.notif_system_email
-  prefs.notif_invite_accepted_inapp = s.notif_invite_accepted_inapp
-  prefs.notif_invite_accepted_email = s.notif_invite_accepted_email
-  prefs.mute_all_email = s.mute_all_email
+  const s = settingsStore.settings;
+  if (!s) return;
+  prefs.notif_mention_inapp = s.notif_mention_inapp;
+  prefs.notif_mention_email = s.notif_mention_email;
+  prefs.notif_comment_inapp = s.notif_comment_inapp;
+  prefs.notif_comment_email = s.notif_comment_email;
+  prefs.notif_reaction_inapp = s.notif_reaction_inapp;
+  prefs.notif_reaction_email = s.notif_reaction_email;
+  prefs.notif_new_post_inapp = s.notif_new_post_inapp;
+  prefs.notif_new_post_email = s.notif_new_post_email;
+  prefs.notif_system_inapp = s.notif_system_inapp;
+  prefs.notif_system_email = s.notif_system_email;
+  prefs.notif_invite_accepted_inapp = s.notif_invite_accepted_inapp;
+  prefs.notif_invite_accepted_email = s.notif_invite_accepted_email;
+  prefs.mute_all_email = s.mute_all_email;
 }
 
 async function handleSave(): Promise<void> {
@@ -162,13 +187,16 @@ async function handleSave(): Promise<void> {
       notif_invite_accepted_inapp: prefs.notif_invite_accepted_inapp,
       notif_invite_accepted_email: prefs.notif_invite_accepted_email,
       mute_all_email: prefs.mute_all_email,
-    })
-    uiStore.showToast({ type: 'success', message: $t('settings.notificationsSaved') })
+    });
+    uiStore.showToast({
+      type: "success",
+      message: $t("settings.notificationsSaved"),
+    });
   } catch (error) {
     uiStore.showToast({
-      type: 'error',
-      message: error instanceof Error ? error.message : $t('common.error'),
-    })
+      type: "error",
+      message: error instanceof Error ? error.message : $t("common.error"),
+    });
   }
 }
 </script>

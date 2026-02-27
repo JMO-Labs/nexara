@@ -16,7 +16,10 @@
         @keydown.escape="close"
       >
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-background/80 backdrop-blur-sm" aria-hidden="true" />
+        <div
+          class="fixed inset-0 bg-background/80 backdrop-blur-sm"
+          aria-hidden="true"
+        />
 
         <!-- Dialog -->
         <div
@@ -28,7 +31,9 @@
         >
           <!-- Search input -->
           <div class="flex items-center border-b border-border px-3">
-            <MagnifyingGlassIcon class="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            <MagnifyingGlassIcon
+              class="mr-2 h-4 w-4 shrink-0 text-muted-foreground"
+            />
             <input
               ref="inputRef"
               v-model="query"
@@ -38,7 +43,7 @@
               @keydown.down.prevent="navigateDown"
               @keydown.up.prevent="navigateUp"
               @keydown.enter.prevent="selectActive"
-            >
+            />
             <kbd
               class="ml-2 hidden sm:inline-flex h-5 items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
             >
@@ -53,7 +58,7 @@
                 v-if="filteredResults.length === 0"
                 class="py-6 text-center text-sm text-muted-foreground"
               >
-                {{ $t('search.noResults') }}
+                {{ $t("search.noResults") }}
               </p>
               <div v-else>
                 <div
@@ -61,7 +66,9 @@
                   :key="group.label"
                   class="mb-2"
                 >
-                  <p class="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  <p
+                    class="px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+                  >
                     {{ group.label }}
                   </p>
                   <button
@@ -76,7 +83,10 @@
                     @mouseenter="activeIndex = flatIndex(gi, ii)"
                     @click="navigateTo(item)"
                   >
-                    <component :is="item.icon" class="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <component
+                      :is="item.icon"
+                      class="h-4 w-4 shrink-0 text-muted-foreground"
+                    />
                     <span>{{ $t(item.labelKey) }}</span>
                   </button>
                 </div>
@@ -85,8 +95,10 @@
 
             <!-- Empty state: quick actions -->
             <template v-else>
-              <p class="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                {{ $t('search.hint') }}
+              <p
+                class="px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+              >
+                {{ $t("search.hint") }}
               </p>
               <button
                 v-for="(item, idx) in quickActions"
@@ -100,7 +112,10 @@
                 @mouseenter="activeIndex = idx"
                 @click="navigateTo(item)"
               >
-                <component :is="item.icon" class="h-4 w-4 shrink-0 text-muted-foreground" />
+                <component
+                  :is="item.icon"
+                  class="h-4 w-4 shrink-0 text-muted-foreground"
+                />
                 <span>{{ $t(item.labelKey) }}</span>
               </button>
             </template>
@@ -116,143 +131,174 @@
  * @brief SearchModal logic: keyboard shortcuts, result filtering,
  * keyboard navigation, and route-based closing.
  */
-import { ref, computed, watch, nextTick, type Component } from 'vue'
-import { useMagicKeys } from '@vueuse/core'
+import { ref, computed, watch, nextTick, type Component } from "vue";
+import { useMagicKeys } from "@vueuse/core";
 import {
   MagnifyingGlassIcon,
   NewspaperIcon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
   UserGroupIcon,
-} from '@heroicons/vue/24/outline'
+} from "@heroicons/vue/24/outline";
 
 interface SearchItem {
-  id: string
-  labelKey: string
-  icon: Component
-  path: string
-  groupKey: string
+  id: string;
+  labelKey: string;
+  icon: Component;
+  path: string;
+  groupKey: string;
 }
 
-const { t } = useI18n()
+const { t } = useI18n();
 
-const open = defineModel<boolean>('open', { default: false })
+const open = defineModel<boolean>("open", { default: false });
 
-const query = ref('')
-const activeIndex = ref(0)
-const inputRef = ref<HTMLInputElement | null>(null)
-const dialogRef = ref<HTMLElement | null>(null)
+const query = ref("");
+const activeIndex = ref(0);
+const inputRef = ref<HTMLInputElement | null>(null);
+const dialogRef = ref<HTMLElement | null>(null);
 
 /** @brief Quick-access navigation items shown when search is empty. */
 const quickActions: SearchItem[] = [
-  { id: 'feed', labelKey: 'nav.feed', icon: NewspaperIcon, path: '/app', groupKey: 'search.pages' },
-  { id: 'events', labelKey: 'nav.events', icon: CalendarDaysIcon, path: '/app/events', groupKey: 'search.pages' },
-  { id: 'chat', labelKey: 'nav.chat', icon: ChatBubbleLeftRightIcon, path: '/app/chat', groupKey: 'search.pages' },
-  { id: 'members', labelKey: 'nav.members', icon: UserGroupIcon, path: '/app/members', groupKey: 'search.pages' },
-]
+  {
+    id: "feed",
+    labelKey: "nav.feed",
+    icon: NewspaperIcon,
+    path: "/app",
+    groupKey: "search.pages",
+  },
+  {
+    id: "events",
+    labelKey: "nav.events",
+    icon: CalendarDaysIcon,
+    path: "/app/events",
+    groupKey: "search.pages",
+  },
+  {
+    id: "chat",
+    labelKey: "nav.chat",
+    icon: ChatBubbleLeftRightIcon,
+    path: "/app/chat",
+    groupKey: "search.pages",
+  },
+  {
+    id: "members",
+    labelKey: "nav.members",
+    icon: UserGroupIcon,
+    path: "/app/members",
+    groupKey: "search.pages",
+  },
+];
 
 /** @brief Stub search results filtered by query. Real API integration comes later. */
 const filteredResults = computed<SearchItem[]>(() => {
-  const q = query.value.toLowerCase().trim()
-  if (!q) return []
-  return quickActions.filter(item => t(item.labelKey).toLowerCase().includes(q))
-})
+  const q = query.value.toLowerCase().trim();
+  if (!q) return [];
+  return quickActions.filter((item) =>
+    t(item.labelKey).toLowerCase().includes(q),
+  );
+});
 
 /** @brief Group search results by their group key. */
 const groupedResults = computed(() => {
-  const groups: Record<string, { label: string; items: SearchItem[] }> = {}
+  const groups: Record<string, { label: string; items: SearchItem[] }> = {};
   for (const item of filteredResults.value) {
-    const key = item.groupKey
+    const key = item.groupKey;
     if (!groups[key]) {
-      groups[key] = { label: t(key), items: [] }
+      groups[key] = { label: t(key), items: [] };
     }
-    groups[key].items.push(item)
+    groups[key].items.push(item);
   }
-  return Object.values(groups)
-})
+  return Object.values(groups);
+});
 
 /** @brief Total count of visible items for keyboard navigation. */
 const totalItems = computed(() => {
-  if (query.value.trim()) return filteredResults.value.length
-  return quickActions.length
-})
+  if (query.value.trim()) return filteredResults.value.length;
+  return quickActions.length;
+});
 
 /**
  * @brief Convert a group index + item index into a flat index.
  */
 function flatIndex(groupIdx: number, itemIdx: number): number {
-  let count = 0
+  let count = 0;
   for (let g = 0; g < groupIdx; g++) {
-    count += groupedResults.value[g].items.length
+    count += groupedResults.value[g].items.length;
   }
-  return count + itemIdx
+  return count + itemIdx;
 }
 
 function navigateDown(): void {
-  if (activeIndex.value < totalItems.value - 1) activeIndex.value++
+  if (activeIndex.value < totalItems.value - 1) activeIndex.value++;
 }
 
 function navigateUp(): void {
-  if (activeIndex.value > 0) activeIndex.value--
+  if (activeIndex.value > 0) activeIndex.value--;
 }
 
-const router = useRouter()
+const router = useRouter();
 
 function selectActive(): void {
-  const items = query.value.trim() ? filteredResults.value : quickActions
-  const item = items[activeIndex.value]
-  if (item) navigateToItem(item)
+  const items = query.value.trim() ? filteredResults.value : quickActions;
+  const item = items[activeIndex.value];
+  if (item) navigateToItem(item);
 }
 
 function navigateTo(item: SearchItem): void {
-  navigateToItem(item)
+  navigateToItem(item);
 }
 
 function navigateToItem(item: SearchItem): void {
-  router.push(item.path)
-  close()
+  router.push(item.path);
+  close();
 }
 
 function close(): void {
-  open.value = false
+  open.value = false;
 }
 
 /** @brief Reset query and activeIndex when the modal opens; auto-focus input. */
 watch(open, async (isOpen) => {
   if (isOpen) {
-    query.value = ''
-    activeIndex.value = 0
-    await nextTick()
-    inputRef.value?.focus()
+    query.value = "";
+    activeIndex.value = 0;
+    await nextTick();
+    inputRef.value?.focus();
   }
-})
+});
 
 /** @brief Reset activeIndex when query changes. */
 watch(query, () => {
-  activeIndex.value = 0
-})
+  activeIndex.value = 0;
+});
 
 /** @brief Cmd+K / Ctrl+K global shortcut to toggle the modal. */
 const keys = useMagicKeys({
   passive: false,
   onEventFired(e) {
-    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) e.preventDefault()
+    if (e.key === "k" && (e.metaKey || e.ctrlKey)) e.preventDefault();
   },
-})
-watch([keys['Meta_K'], keys['Ctrl_K']], ([meta, ctrl]) => {
-  if (meta || ctrl) open.value = !open.value
-})
+});
+watch([keys["Meta_K"], keys["Ctrl_K"]], ([meta, ctrl]) => {
+  if (meta || ctrl) open.value = !open.value;
+});
 
 /** @brief Close modal on route change. */
-watch(() => router.currentRoute.value.path, () => {
-  if (open.value) close()
-})
+watch(
+  () => router.currentRoute.value.path,
+  () => {
+    if (open.value) close();
+  },
+);
 </script>
 
 <style scoped>
 .search-modal-enter-active,
 .search-modal-leave-active {
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .search-modal-enter-from,

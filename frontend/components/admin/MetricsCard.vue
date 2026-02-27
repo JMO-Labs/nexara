@@ -17,11 +17,7 @@
         <p class="mt-1 truncate text-2xl font-bold text-foreground">
           {{ formattedValue }}
         </p>
-        <p
-          v-if="trend"
-          class="mt-1 text-xs"
-          :class="trendClass"
-        >
+        <p v-if="trend" class="mt-1 text-xs" :class="trendClass">
           {{ trend }}
         </p>
       </div>
@@ -39,36 +35,36 @@
 /**
  * @brief MetricsCard props and computed formatting.
  */
-import { computed } from 'vue'
+import { computed } from "vue";
 
 const props = withDefaults(
   defineProps<{
     /** @brief Card title (metric name). */
-    title: string
+    title: string;
     /** @brief Metric value (string or number). */
-    value: string | number
+    value: string | number;
     /** @brief Optional emoji or icon character. */
-    icon?: string
+    icon?: string;
     /** @brief Optional trend text (e.g. "+12%"). */
-    trend?: string
+    trend?: string;
     /** @brief Whether trend is positive (green) or negative (red). */
-    trendPositive?: boolean
+    trendPositive?: boolean;
   }>(),
-  { icon: '', trend: '', trendPositive: true },
-)
+  { icon: "", trend: "", trendPositive: true },
+);
 
 /** @brief Formatted value for display. */
 const formattedValue = computed(() => {
-  if (typeof props.value === 'number') {
-    return props.value.toLocaleString()
+  if (typeof props.value === "number") {
+    return props.value.toLocaleString();
   }
-  return props.value
-})
+  return props.value;
+});
 
 /** @brief Tailwind class for trend text color. */
 const trendClass = computed(() =>
   props.trendPositive
-    ? 'text-green-600 dark:text-green-400'
-    : 'text-red-600 dark:text-red-400',
-)
+    ? "text-green-600 dark:text-green-400"
+    : "text-red-600 dark:text-red-400",
+);
 </script>

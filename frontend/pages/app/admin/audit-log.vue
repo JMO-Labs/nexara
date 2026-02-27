@@ -12,28 +12,22 @@
         v-model="actionFilter"
         class="max-w-[200px] rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
       >
-        <option value="">{{ $t('admin.allActions') }}</option>
-        <option value="branding">{{ $t('admin.filterBranding') }}</option>
-        <option value="user">{{ $t('admin.users') }}</option>
-        <option value="invite">{{ $t('admin.invites') }}</option>
-        <option value="settings">{{ $t('admin.settings') }}</option>
+        <option value="">{{ $t("admin.allActions") }}</option>
+        <option value="branding">{{ $t("admin.filterBranding") }}</option>
+        <option value="user">{{ $t("admin.users") }}</option>
+        <option value="invite">{{ $t("admin.invites") }}</option>
+        <option value="settings">{{ $t("admin.settings") }}</option>
       </select>
     </div>
 
-    <AdminAuditLogTable
-      :entries="entries"
-      :loading="loading"
-    />
+    <AdminAuditLogTable :entries="entries" :loading="loading" />
 
-    <div
-      v-if="hasMore && !loading"
-      class="flex justify-center"
-    >
+    <div v-if="hasMore && !loading" class="flex justify-center">
       <button
         class="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         @click="loadMore"
       >
-        {{ $t('feed.loadMore') }}
+        {{ $t("feed.loadMore") }}
       </button>
     </div>
   </div>
@@ -43,51 +37,51 @@
 /**
  * @brief Admin audit log page with filter and cursor pagination.
  */
-import { ref, watch, onMounted } from 'vue'
-import { useApi } from '~/composables/useApi'
-import type { AuditLogEntry, AuditLogResponse } from '~/types/api'
+import { ref, watch, onMounted } from "vue";
+import { useApi } from "~/composables/useApi";
+import type { AuditLogEntry, AuditLogResponse } from "~/types/api";
 
-const api = useApi()
+const api = useApi();
 
-const entries = ref<AuditLogEntry[]>([])
-const loading = ref(false)
-const actionFilter = ref('')
-const nextCursor = ref<string | null>(null)
-const hasMore = ref(false)
+const entries = ref<AuditLogEntry[]>([]);
+const loading = ref(false);
+const actionFilter = ref("");
+const nextCursor = ref<string | null>(null);
+const hasMore = ref(false);
 
 async function fetchEntries(append = false): Promise<void> {
-  loading.value = true
+  loading.value = true;
   try {
-    const params = new URLSearchParams()
-    params.set('limit', '20')
-    if (actionFilter.value) params.set('action', actionFilter.value)
-    if (append && nextCursor.value) params.set('cursor', nextCursor.value)
+    const params = new URLSearchParams();
+    params.set("limit", "20");
+    if (actionFilter.value) params.set("action", actionFilter.value);
+    if (append && nextCursor.value) params.set("cursor", nextCursor.value);
     const res = await api.get<AuditLogResponse>(
       `/admin/audit-log?${params.toString()}`,
-    )
-    const items = res?.items ?? []
-    if (!append) entries.value = items
-    else entries.value.push(...items)
-    nextCursor.value = res?.next_cursor ?? null
-    hasMore.value = res?.has_more ?? false
+    );
+    const items = res?.items ?? [];
+    if (!append) entries.value = items;
+    else entries.value.push(...items);
+    nextCursor.value = res?.next_cursor ?? null;
+    hasMore.value = res?.has_more ?? false;
   } catch {
-    if (!append) entries.value = []
-    hasMore.value = false
+    if (!append) entries.value = [];
+    hasMore.value = false;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function loadMore(): void {
-  fetchEntries(true)
+  fetchEntries(true);
 }
 
 watch(actionFilter, () => {
-  nextCursor.value = null
-  fetchEntries()
-})
+  nextCursor.value = null;
+  fetchEntries();
+});
 
 onMounted(() => {
-  fetchEntries()
-})
+  fetchEntries();
+});
 </script>

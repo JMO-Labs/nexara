@@ -7,8 +7,8 @@
  * way to render user-authored Markdown content.
  */
 
-import MarkdownIt from 'markdown-it'
-import DOMPurify from 'dompurify'
+import MarkdownIt from "markdown-it";
+import DOMPurify from "dompurify";
 
 /** @brief Configured markdown-it instance with sensible defaults. */
 const md = new MarkdownIt({
@@ -16,7 +16,7 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
   breaks: true,
-})
+});
 
 /**
  * @brief Render Markdown to sanitized HTML.
@@ -24,7 +24,7 @@ const md = new MarkdownIt({
  * @returns Sanitized HTML string safe for innerHTML.
  */
 export function renderMarkdown(source: string): string {
-  if (!source) return ''
-  const raw = md.render(source)
-  return DOMPurify.sanitize(raw)
+  if (!source) return "";
+  const raw = md.render(source);
+  return DOMPurify.sanitize(raw);
 }
