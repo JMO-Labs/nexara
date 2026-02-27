@@ -71,7 +71,7 @@ def create_pool(
     @return Configured :class:`redis.asyncio.Redis` client instance.
     """
     url = get_valkey_url(settings, db)
-    return Redis.from_url(
+    return Redis.from_url(  # type: ignore[no-any-return]
         url,
         max_connections=max_connections,
         decode_responses=decode_responses,
@@ -124,7 +124,7 @@ async def check_valkey_health(client: Redis) -> bool:
     @return True if PING succeeds, False otherwise.
     """
     try:
-        return await client.ping()
+        return bool(await client.ping())
     except Exception:
         logger.warning("valkey_health_check_failed", exc_info=True)
         return False

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,7 +125,7 @@ class InviteRepository:
 
         stmt = delete(Invite).where(Invite.id == invite_id)
         result = await self._session.execute(stmt)
-        return (result.rowcount or 0) > 0
+        return (cast(int, getattr(result, "rowcount", 0)) or 0) > 0
 
     def is_expired(self, invite: Invite) -> bool:
         """

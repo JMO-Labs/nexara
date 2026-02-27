@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from typing import Any
 
 import structlog
+from celery import Task
 
 from app.db.session import async_session_factory
 from app.models.user import User
@@ -24,7 +26,7 @@ logger = structlog.get_logger(__name__)
 async def _send_email_notification_async(
     user_id: uuid.UUID,
     notification_type: str,
-    payload: dict,
+    payload: dict[str, Any],
 ) -> dict[str, str]:
     """
     @brief Async implementation: fetch user, render template, send email.
@@ -65,13 +67,13 @@ async def _send_email_notification_async(
     return {"status": "sent" if sent else "skipped"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.notification_tasks.send_push_notification",
     max_retries=3,
     queue="notifications",
 )
-def send_push_notification(self, user_id: str, payload: dict) -> dict[str, str]:
+def send_push_notification(self: Task, user_id: str, payload: dict[str, Any]) -> dict[str, str]:
     """
     @brief Send a Web Push notification to all subscriptions for a user.
 
@@ -83,17 +85,17 @@ def send_push_notification(self, user_id: str, payload: dict) -> dict[str, str]:
     return {"status": "sent"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.notification_tasks.send_email_notification",
     max_retries=3,
     queue="notifications",
 )
 def send_email_notification(
-    self,
+    self: Task,
     user_id: str,
     notification_type: str,
-    payload: dict,
+    payload: dict[str, Any],
 ) -> dict[str, str]:
     """
     @brief Build an email from a Jinja2 template and send via SMTP.
@@ -125,7 +127,7 @@ def send_email_notification(
         raise self.retry(exc=exc)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.notification_tasks.dispatch_event_reminders",
     queue="notifications",
 )

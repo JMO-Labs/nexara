@@ -38,6 +38,7 @@ from app.core.security import (
     verify_totp,
 )
 from app.models.auth import UserBackupCode
+from app.models.invite import Invite
 from app.models.user import User
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.token_repo import TokenRepository
@@ -348,7 +349,7 @@ class AuthService:
             "requires_2fa": False,
         }
 
-    async def _validate_invite(self, raw_token: str):  # noqa: ANN201
+    async def _validate_invite(self, raw_token: str) -> Invite:
         """@brief Validate an invite token and return the Invite or raise."""
         invite = await self._invite_repo.find_by_token_hash(hash_token(raw_token))
         if not invite:

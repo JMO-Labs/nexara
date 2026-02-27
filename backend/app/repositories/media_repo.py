@@ -9,6 +9,7 @@ upload tracking, status updates, and user storage totals.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +32,7 @@ class MediaRepository(BaseRepository[Media]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 
-    async def create(
+    async def create(  # type: ignore[override]
         self,
         uploader_id: uuid.UUID,
         filename: str,
@@ -106,7 +107,7 @@ class MediaRepository(BaseRepository[Media]):
         media = await self.get(media_id)
         if media is None:
             return None
-        data: dict = {"status": status}
+        data: dict[str, Any] = {"status": status}
         if thumbnail_key is not None:
             data["thumbnail_key"] = thumbnail_key
         if width is not None:

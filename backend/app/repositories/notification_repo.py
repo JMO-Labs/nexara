@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,11 +30,11 @@ class NotificationRepository(BaseRepository[Notification]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 
-    async def create(
+    async def create(  # type: ignore[override]
         self,
         user_id: uuid.UUID,
         type: str,
-        payload: dict,
+        payload: dict[str, Any],
         community_id: uuid.UUID,
     ) -> Notification:
         """
@@ -157,4 +158,4 @@ class NotificationRepository(BaseRepository[Notification]):
         cutoff = datetime.now(UTC) - timedelta(days=days)
         stmt = delete(Notification).where(Notification.created_at < cutoff)
         result = await self._session.execute(stmt)
-        return result.rowcount or 0
+        return cast(int, getattr(result, "rowcount", 0)) or 0

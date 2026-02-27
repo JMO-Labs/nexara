@@ -36,36 +36,44 @@ _PROCESS_START_TIME: float = time.time()
 """@brief Process start time for uptime calculation."""
 
 
-def _gauge_value(gauge) -> int:
+def _gauge_value(gauge: object) -> int:
     """@brief Get value from an unlabeled Gauge."""
     try:
-        val = gauge._value.get()
-        return int(val) if val is not None else 0
+        val = getattr(gauge, "_value", None)
+        v = val.get() if val is not None else None
+        return int(v) if v is not None else 0
     except Exception:
         return 0
 
 
-def _gauge_total(gauge) -> int:
+def _gauge_total(gauge: object) -> int:
     """@brief Sum all label values from a labeled Gauge, or return single value."""
     try:
-        if hasattr(gauge, "_metrics") and gauge._metrics:
-            return int(sum(m._value.get() for m in gauge._metrics.values()))
+        metrics = getattr(gauge, "_metrics", None)
+        if metrics:
+            total = 0
+            for m in metrics.values():
+                v = getattr(m, "_value", None)
+                total += int(v.get()) if v is not None else 0
+            return total
         return _gauge_value(gauge)
     except Exception:
         return 0
 
 
-def _counter_by_label(counter) -> dict[str, int]:
+def _counter_by_label(counter: object) -> dict[str, int]:
     """@brief Extract per-label values from a labeled Counter."""
     result: dict[str, int] = {}
     if not hasattr(counter, "_metrics"):
         return result
-    for labels, child in counter._metrics.items():
+    for labels, child in getattr(counter, "_metrics", {}).items():
+        v = getattr(child, "_value", None)
+        val = int(v.get()) if v is not None else 0
         if isinstance(labels, tuple) and len(labels) == 1:
-            result[str(labels[0])] = int(child._value.get())
+            result[str(labels[0])] = val
         elif isinstance(labels, tuple):
             key = "_".join(str(label) for label in labels)
-            result[key] = int(child._value.get())
+            result[key] = val
     return result
 
 

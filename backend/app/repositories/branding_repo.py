@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +44,7 @@ class BrandingRepository(BaseRepository[CommunityBranding]):
     async def upsert(
         self,
         community_id: uuid.UUID,
-        data: dict,
+        data: dict[str, Any],
     ) -> CommunityBranding:
         """
         @brief Insert or update the branding row for a community.

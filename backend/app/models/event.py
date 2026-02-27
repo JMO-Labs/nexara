@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -66,7 +67,7 @@ class Event(Base):
         ForeignKey("calendar_subscriptions.id", ondelete="SET NULL"),
     )
     source_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    rsvp_labels: Mapped[dict | None] = mapped_column(JSONB)
+    rsvp_labels: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     search_fts = mapped_column(
         TSVECTOR,
         Computed(

@@ -76,7 +76,7 @@ async def get_online_count() -> int:
     settings = get_settings()
     pool = get_pool(settings, DB_PUBSUB)
     cutoff = time.time() - PRESENCE_TTL_SECONDS
-    return await pool.zcount(PRESENCE_KEY, cutoff, "+inf")
+    return int(await pool.zcount(PRESENCE_KEY, cutoff, "+inf"))
 
 
 async def is_online(user_id: UUID) -> bool:
@@ -91,7 +91,7 @@ async def is_online(user_id: UUID) -> bool:
     score = await pool.zscore(PRESENCE_KEY, str(user_id))
     if score is None:
         return False
-    return (time.time() - score) < PRESENCE_TTL_SECONDS
+    return bool((time.time() - float(score)) < PRESENCE_TTL_SECONDS)
 
 
 async def cleanup_stale() -> int:
@@ -105,7 +105,7 @@ async def cleanup_stale() -> int:
     settings = get_settings()
     pool = get_pool(settings, DB_PUBSUB)
     cutoff = time.time() - PRESENCE_TTL_SECONDS
-    removed = await pool.zremrangebyscore(PRESENCE_KEY, "-inf", cutoff)
+    removed = int(await pool.zremrangebyscore(PRESENCE_KEY, "-inf", cutoff))
 
     count = await get_online_count()
     users_online.set(count)

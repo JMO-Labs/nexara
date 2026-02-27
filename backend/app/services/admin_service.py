@@ -9,6 +9,7 @@ Metrics aggregation is delegated to admin_metrics module.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -198,7 +199,7 @@ class AdminService:
         action_filter: str | None = None,
         limit: int = 20,
         cursor: str | None = None,
-    ) -> tuple[list, str | None]:
+    ) -> tuple[list[Any], str | None]:
         """
         @brief List audit log entries with optional filter.
 
@@ -240,7 +241,7 @@ class AdminService:
         @param ip IP address of the request.
         @return Current admin settings (unchanged).
         """
-        changes = data.model_dump(exclude_unset=True)
+        changes: dict[str, Any] = data.model_dump(exclude_unset=True)
         if changes:
             await self._audit_repo.append(
                 actor_id=admin_user.id,

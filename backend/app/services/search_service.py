@@ -137,7 +137,7 @@ class SearchService:
 
         coros = [t[1] for t in tasks]
         type_names = [t[0] for t in tasks]
-        raw_results = await asyncio.gather(*coros)
+        raw_results = await asyncio.gather(*coros)  # type: ignore[call-overload]
 
         results: dict[str, SearchTypeResults] = {}
         for name, (rows, next_cursor, total) in zip(type_names, raw_results):

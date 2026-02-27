@@ -12,6 +12,7 @@ import uuid
 
 import structlog
 from fastapi import APIRouter, Depends, Request
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -28,7 +29,9 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/branding", tags=["branding"])
 
 
-def _get_cache_client(settings: Settings = Depends(get_settings)):
+def _get_cache_client(
+    settings: Settings = Depends(get_settings),
+) -> Redis | None:
     """@brief Provide the Valkey cache client, or None if unavailable."""
     try:
         return get_pool(settings, DB_CACHE)
@@ -44,7 +47,7 @@ def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
 @router.get("/", response_model=BrandingResponse)
 async def get_branding(
     db: AsyncSession = Depends(get_db),
-    cache_client=Depends(_get_cache_client),
+    cache_client: Redis | None = Depends(_get_cache_client),
     community_id: uuid.UUID = Depends(_community_id),
 ) -> BrandingResponse:
     """
@@ -64,7 +67,7 @@ async def update_branding(
     request: Request,
     admin: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
-    cache_client=Depends(_get_cache_client),
+    cache_client: Redis | None = Depends(_get_cache_client),
     community_id: uuid.UUID = Depends(_community_id),
 ) -> BrandingResponse:
     """

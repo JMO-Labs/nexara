@@ -8,6 +8,7 @@ Defines metrics, audit log, settings, and user management payloads.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -58,7 +59,7 @@ class AuditLogEntry(BaseModel):
     action: str
     target_type: str | None
     target_id: UUID | None
-    extra_data: dict | None
+    extra_data: dict[str, Any] | None
     ip_address: str | None
     created_at: datetime
 

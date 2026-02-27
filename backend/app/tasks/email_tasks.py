@@ -10,6 +10,7 @@ configured (``SMTP_HOST`` is empty), tasks become no-ops.
 from __future__ import annotations
 
 import structlog
+from celery import Task
 
 from app.core.config import get_settings
 from app.tasks.celery_app import celery_app
@@ -23,7 +24,7 @@ def _smtp_configured() -> bool:
     return bool(settings.SMTP_HOST)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.email_tasks.send_email",
     max_retries=3,
@@ -35,7 +36,7 @@ def _smtp_configured() -> bool:
     queue="email",
 )
 def send_email(
-    self,
+    self: Task,
     to: str,
     subject: str,
     html_body: str,
@@ -83,14 +84,14 @@ def send_email(
     return {"status": "sent"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.email_tasks.send_invite_email",
     max_retries=3,
     default_retry_delay=60,
     queue="email",
 )
-def send_invite_email(self, invite_id: str) -> dict[str, str]:
+def send_invite_email(self: Task, invite_id: str) -> dict[str, str]:
     """
     @brief Send a community invite email.
 
@@ -107,14 +108,14 @@ def send_invite_email(self, invite_id: str) -> dict[str, str]:
     return {"status": "sent"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.email_tasks.send_password_reset_email",
     max_retries=3,
     default_retry_delay=60,
     queue="email",
 )
-def send_password_reset_email(self, user_id: str, token: str) -> dict[str, str]:
+def send_password_reset_email(self: Task, user_id: str, token: str) -> dict[str, str]:
     """
     @brief Send a password reset link.
 

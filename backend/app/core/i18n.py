@@ -15,6 +15,7 @@ Usage::
 
 import gettext
 import os
+from collections.abc import Callable
 
 _locales_dir: str = os.path.join(os.path.dirname(__file__), "..", "..", "locales")
 """@brief Path to the ``locales/`` directory containing ``.mo`` files."""
@@ -27,5 +28,5 @@ _translation: gettext.NullTranslations = gettext.translation(
 )
 """@brief Active translation catalogue (falls back to passthrough)."""
 
-_: gettext.NullTranslations.gettext = _translation.gettext
+_: Callable[[str], str] = _translation.gettext
 """@brief Shorthand translator callable — ``_("some string")``."""

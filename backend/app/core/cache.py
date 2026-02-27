@@ -14,6 +14,8 @@ The cache-aside pattern is used throughout the application:
 
 from __future__ import annotations
 
+from typing import cast
+
 import structlog
 from redis.asyncio import Redis
 
@@ -35,7 +37,8 @@ async def cache_get(client: Redis, key: str) -> str | None:
     @return Cached value as string, or None.
     """
     try:
-        return await client.get(key)
+        result = await client.get(key)
+        return cast(str | None, result)
     except Exception:
         logger.warning("cache_get_failed", key=key, exc_info=True)
         return None

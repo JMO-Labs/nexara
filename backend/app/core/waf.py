@@ -22,6 +22,7 @@ from datetime import date
 
 import structlog
 from redis.asyncio import Redis
+from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -72,7 +73,7 @@ class WAFMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,  # type: ignore[override]
+        app: Starlette,
         settings: Settings,
         cache_client: Redis | None = None,
     ) -> None:

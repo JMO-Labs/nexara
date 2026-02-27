@@ -9,6 +9,8 @@ Uses ``aioboto3`` for fully async operations.
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import aioboto3
 import structlog
 from botocore.exceptions import ClientError
@@ -44,7 +46,7 @@ class S3StorageBackend:
         self._region = region
         self._session = aioboto3.Session()
 
-    def _client_kwargs(self) -> dict:
+    def _client_kwargs(self) -> dict[str, Any]:
         """@brief Build kwargs for the S3 client context manager."""
         return {
             "service_name": "s3",
@@ -73,7 +75,7 @@ class S3StorageBackend:
         try:
             async with self._session.client(**self._client_kwargs()) as s3:
                 response = await s3.get_object(Bucket=self._bucket, Key=key)
-                return await response["Body"].read()
+                return cast(bytes, await response["Body"].read())
         except ClientError as exc:
             if exc.response["Error"]["Code"] == "NoSuchKey":
                 raise StorageKeyNotFoundError(key) from exc
@@ -104,7 +106,7 @@ class S3StorageBackend:
         try:
             async with self._session.client(**self._client_kwargs()) as s3:
                 response = await s3.head_object(Bucket=self._bucket, Key=key)
-                return response["ContentLength"]
+                return int(response["ContentLength"])
         except ClientError as exc:
             if exc.response["Error"]["Code"] == "404":
                 raise StorageKeyNotFoundError(key) from exc

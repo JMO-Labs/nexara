@@ -9,7 +9,7 @@ authenticated user, and role-based authorization guards.
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
@@ -100,7 +100,7 @@ async def get_current_user(
     return user
 
 
-def require_role(*roles: str) -> Callable:
+def require_role(*roles: str) -> Callable[..., Any]:
     """
     @brief Factory that returns a dependency enforcing role membership.
 

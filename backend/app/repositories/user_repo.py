@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,7 +91,7 @@ class UserRepository(BaseRepository[User]):
         @param totp_secret New TOTP secret (or None to clear).
         @param totp_enabled Whether TOTP is active.
         """
-        values: dict = {}
+        values: dict[str, Any] = {}
         if totp_secret is not None:
             values["totp_secret"] = totp_secret
         if totp_enabled is not None:

@@ -11,8 +11,9 @@ characters of the key filename are used as a two-level directory prefix:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
-import aiofiles
+import aiofiles  # type: ignore[import-untyped]
 import structlog
 
 from app.services.storage.base import StorageError, StorageKeyNotFoundError
@@ -76,7 +77,7 @@ class LocalStorageBackend:
             raise StorageKeyNotFoundError(key)
         try:
             async with aiofiles.open(path, "rb") as f:
-                return await f.read()
+                return cast(bytes, await f.read())
         except OSError as exc:
             raise StorageError(f"Failed to read key {key}: {exc}") from exc
 

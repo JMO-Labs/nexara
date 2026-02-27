@@ -165,10 +165,17 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
     except Exception:
         logger.warning("waf_cache_client_unavailable", exc_info=True)
 
-    app.add_middleware(WAFMiddleware, settings=settings, cache_client=cache_client)
+    app.add_middleware(
+        WAFMiddleware,
+        settings=settings,
+        cache_client=cache_client,  # type: ignore[arg-type]
+    )
     app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(CloudflareRealIPMiddleware, settings=settings)
+    app.add_middleware(
+        CloudflareRealIPMiddleware,
+        settings=settings,  # type: ignore[arg-type]
+    )
 
 
 def _register_routers(app: FastAPI) -> None:
@@ -183,7 +190,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(metrics_router)
 
     @app.get("/.well-known/jwks.json", tags=["auth"])
-    async def jwks_root():
+    async def jwks_root() -> dict[str, object]:
         """@brief Root-level JWKS endpoint for external JWT verification."""
         from app.core.security import get_jwks
 

@@ -12,6 +12,7 @@ import time
 import uuid
 
 import structlog
+from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
@@ -100,7 +101,7 @@ class CloudflareRealIPMiddleware(BaseHTTPMiddleware):
     Registered **before** the WAF and rate limiter in the middleware stack.
     """
 
-    def __init__(self, app, settings: Settings) -> None:  # type: ignore[override]
+    def __init__(self, app: Starlette, settings: Settings) -> None:
         super().__init__(app)
         self._enabled = settings.CF_ACCESS_ENABLED
 

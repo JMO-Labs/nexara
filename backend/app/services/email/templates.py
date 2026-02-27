@@ -8,6 +8,7 @@ Loads templates from backend/templates/email/ and injects community branding.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -38,7 +39,7 @@ class EmailTemplateRenderer:
     def render(
         self,
         template_name: str,
-        context: dict,
+        context: dict[str, Any],
         *,
         community_name: str = "Nexara",
         color_primary: str = "#3b82f6",

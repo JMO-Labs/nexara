@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from typing import Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,7 +93,7 @@ class UserService:
             cursor=cursor,
         )
 
-    async def update_profile(self, user: User, data: dict) -> User:
+    async def update_profile(self, user: User, data: dict[str, Any]) -> User:
         """
         @brief Update profile fields on the authenticated user.
 

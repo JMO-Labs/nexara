@@ -6,6 +6,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -63,7 +64,7 @@ class UserInterest(Base):
         nullable=False,
     )
     value: Mapped[str] = mapped_column(Text, nullable=False)
-    value_metadata: Mapped[dict | None] = mapped_column(JSONB)
+    value_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     source: Mapped[str] = mapped_column(Text, nullable=False, server_default="prompt")
     confidence: Mapped[Decimal] = mapped_column(
         Numeric(3, 2),

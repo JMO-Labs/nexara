@@ -13,7 +13,7 @@ import secrets
 import uuid
 from base64 import urlsafe_b64encode
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -176,7 +176,7 @@ class OIDCService:
         if resp.status_code != 200:
             logger.error("oidc_token_exchange_failed", status=resp.status_code, body=resp.text)
             raise AuthenticationError(message=_("OIDC token exchange failed"))
-        return resp.json()
+        return cast("dict[str, Any]", resp.json())
 
     async def _verify_id_token(self, id_token: str) -> dict[str, Any]:
         """
@@ -193,7 +193,7 @@ class OIDCService:
             claims = jose_jwt.get_unverified_claims(id_token)
         except Exception as exc:
             raise AuthenticationError(message=_("Invalid OIDC id_token")) from exc
-        return claims
+        return cast("dict[str, Any]", claims)
 
     def _callback_uri(self) -> str:
         """@brief Build the OIDC callback URI."""
@@ -225,9 +225,12 @@ class OIDCService:
             family_id=family_id,
             expires_at=expires,
         )
-        return {
-            "access_token": access,
-            "expires_in": s.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "raw_refresh_token": raw_refresh,
-            "requires_2fa": False,
-        }
+        return cast(
+            "dict[str, Any]",
+            {
+                "access_token": access,
+                "expires_in": s.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "raw_refresh_token": raw_refresh,
+                "requires_2fa": False,
+            },
+        )

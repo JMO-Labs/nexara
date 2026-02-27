@@ -9,6 +9,7 @@ settings, and audit log. All routes require admin role.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Query, Request
@@ -101,7 +102,7 @@ async def change_user_role(
     request: Request,
     user: User = Depends(require_role("admin")),
     service: AdminService = Depends(_build_service),
-) -> dict:
+) -> dict[str, Any]:
     """@brief Change a user's role."""
     await service.change_role(user, user_id, body.role, _client_ip(request))
     return {"message": _("Role updated")}
@@ -113,7 +114,7 @@ async def suspend_user(
     request: Request,
     user: User = Depends(require_role("admin")),
     service: AdminService = Depends(_build_service),
-) -> dict:
+) -> dict[str, Any]:
     """@brief Suspend (deactivate) a user."""
     await service.suspend_user(user, user_id, _client_ip(request))
     return {"message": _("User suspended")}
@@ -125,7 +126,7 @@ async def restore_user(
     request: Request,
     user: User = Depends(require_role("admin")),
     service: AdminService = Depends(_build_service),
-) -> dict:
+) -> dict[str, Any]:
     """@brief Restore a soft-deleted user."""
     await service.restore_user(user, user_id, _client_ip(request))
     return {"message": _("User restored")}

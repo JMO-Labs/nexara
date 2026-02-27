@@ -16,7 +16,7 @@ from app.tasks.celery_app import celery_app
 logger = structlog.get_logger(__name__)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.take_storage_snapshot",
     queue="maintenance",
 )
@@ -34,7 +34,7 @@ def take_storage_snapshot() -> dict[str, str]:
     return {"status": "completed"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_chat_messages",
     queue="maintenance",
 )
@@ -51,7 +51,7 @@ def age_chat_messages() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_notifications",
     queue="maintenance",
 )
@@ -68,7 +68,7 @@ def age_notifications() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.purge_soft_deleted_posts",
     queue="maintenance",
 )
@@ -86,7 +86,7 @@ def purge_soft_deleted_posts() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.purge_soft_deleted_users",
     queue="maintenance",
 )
@@ -103,7 +103,7 @@ def purge_soft_deleted_users() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.cleanup_expired_link_previews",
     queue="maintenance",
 )
@@ -121,7 +121,7 @@ def cleanup_expired_link_previews() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_audit_logs",
     queue="maintenance",
 )
@@ -137,7 +137,7 @@ def age_audit_logs() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_ai_usage_logs",
     queue="maintenance",
 )
@@ -151,7 +151,7 @@ def age_ai_usage_logs() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_post_media",
     queue="maintenance",
 )
@@ -168,7 +168,7 @@ def age_post_media() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.retention_tasks.age_posts",
     queue="maintenance",
 )

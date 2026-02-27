@@ -129,7 +129,7 @@ class StorageError(AppError):
         )
 
 
-def _error_body(code: str, message: str, details: dict[str, Any] | None = None) -> dict:
+def _error_body(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     """@brief Build the standard error envelope dict."""
     body: dict[str, Any] = {"error": {"code": code, "message": message}}
     if details:

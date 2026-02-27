@@ -26,7 +26,7 @@ from app.services.realtime.connection_manager import manager
 
 logger = structlog.get_logger(__name__)
 
-_subscriber_task: asyncio.Task | None = None
+_subscriber_task: asyncio.Task[None] | None = None
 
 
 async def publish(channel: str, message: dict[str, Any]) -> int:
@@ -42,7 +42,7 @@ async def publish(channel: str, message: dict[str, Any]) -> int:
     data = json.dumps(message)
     result = await pool.publish(channel, data)
     logger.debug("pubsub_published", channel=channel, receivers=result)
-    return result
+    return int(result)
 
 
 async def publish_to_user(user_id: UUID, message: dict[str, Any]) -> int:

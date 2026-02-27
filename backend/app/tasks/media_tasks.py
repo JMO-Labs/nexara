@@ -13,6 +13,7 @@ import io
 import uuid
 
 import structlog
+from celery import Task
 from PIL import Image, ImageOps
 
 from app.db.session import async_session_factory
@@ -107,7 +108,7 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
     return {"status": "processed"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.media_tasks.generate_thumbnail",
     max_retries=2,
@@ -115,7 +116,7 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
     time_limit=300,
     soft_time_limit=240,
 )
-def generate_thumbnail(self, media_id: str) -> dict[str, str]:
+def generate_thumbnail(self: Task, media_id: str) -> dict[str, str]:
     """
     @brief Generate a thumbnail for an uploaded image.
 
@@ -141,7 +142,7 @@ def generate_thumbnail(self, media_id: str) -> dict[str, str]:
         raise self.retry(exc=exc)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.media_tasks.transcode_video",
     max_retries=1,
@@ -149,7 +150,7 @@ def generate_thumbnail(self, media_id: str) -> dict[str, str]:
     time_limit=3600,
     soft_time_limit=3500,
 )
-def transcode_video(self, media_id: str) -> dict[str, str]:
+def transcode_video(self: Task, media_id: str) -> dict[str, str]:
     """
     @brief Transcode uploaded video to web-optimized H.264/AAC MP4.
 
@@ -163,7 +164,7 @@ def transcode_video(self, media_id: str) -> dict[str, str]:
     return {"status": "processed"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.media_tasks.delete_orphaned_media",
     queue="media",
 )

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -108,7 +109,7 @@ class TokenRepository:
             .values(revoked_at=now)
         )
         result = await self._session.execute(stmt)
-        return result.rowcount  # type: ignore[return-value]
+        return cast(int, getattr(result, "rowcount", 0))
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> int:
         """
@@ -127,7 +128,7 @@ class TokenRepository:
             .values(revoked_at=now)
         )
         result = await self._session.execute(stmt)
-        return result.rowcount  # type: ignore[return-value]
+        return cast(int, getattr(result, "rowcount", 0))
 
     async def cleanup_expired(self) -> int:
         """
@@ -142,4 +143,4 @@ class TokenRepository:
         now = datetime.now(UTC)
         stmt = delete(RefreshToken).where(RefreshToken.expires_at < now)
         result = await self._session.execute(stmt)
-        return result.rowcount  # type: ignore[return-value]
+        return cast(int, getattr(result, "rowcount", 0))

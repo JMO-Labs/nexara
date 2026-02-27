@@ -15,7 +15,7 @@ from app.tasks.celery_app import celery_app
 logger = structlog.get_logger(__name__)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.maintenance_tasks.refresh_prometheus_gauges",
     queue="maintenance",
 )
@@ -33,7 +33,7 @@ def refresh_prometheus_gauges() -> dict[str, str]:
     return {"status": "refreshed"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.maintenance_tasks.recalculate_storage_quotas",
     queue="maintenance",
 )
@@ -49,7 +49,7 @@ def recalculate_storage_quotas() -> dict[str, str]:
     return {"status": "recalculated"}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.maintenance_tasks.cleanup_expired_tokens",
     queue="maintenance",
 )
@@ -65,7 +65,7 @@ def cleanup_expired_tokens() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="app.tasks.maintenance_tasks.database_backup",
     queue="maintenance",
     time_limit=1800,

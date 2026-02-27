@@ -8,13 +8,13 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from app.db.base import Base
 from app.models.user import COMMUNITY_DEFAULT
 
 
-def _bool_col(default: str = "true"):
+def _bool_col(default: str = "true") -> MappedColumn[bool]:
     """@brief Shorthand for a non-nullable Boolean column with a server default."""
     return mapped_column(Boolean, nullable=False, server_default=default)
 

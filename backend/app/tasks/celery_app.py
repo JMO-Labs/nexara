@@ -9,6 +9,8 @@ Serves as the entry point for ``celery -A app.tasks.celery_app worker`` and
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 from celery import Celery, signals
 from celery.schedules import crontab
@@ -119,8 +121,8 @@ celery_app.conf.update(
 )
 
 
-@signals.worker_init.connect
-def _on_worker_init(**kwargs) -> None:  # type: ignore[no-untyped-def]
+@signals.worker_init.connect  # type: ignore[untyped-decorator]
+def _on_worker_init(**kwargs: object) -> None:
     """
     @brief Hook executed when a Celery worker starts.
 
@@ -133,20 +135,22 @@ def _on_worker_init(**kwargs) -> None:  # type: ignore[no-untyped-def]
     )
 
 
-@signals.task_prerun.connect
-def _on_task_prerun(task_id: str, task, **kwargs) -> None:  # type: ignore[no-untyped-def]
+@signals.task_prerun.connect  # type: ignore[untyped-decorator]
+def _on_task_prerun(task_id: str, task: Any, **kwargs: object) -> None:
     """@brief Log each task start for structured logging correlation."""
     logger.info("celery_task_started", task_id=task_id, task_name=task.name)
 
 
-@signals.task_postrun.connect
-def _on_task_postrun(task_id: str, task, retval, state, **kwargs) -> None:  # type: ignore[no-untyped-def]
+@signals.task_postrun.connect  # type: ignore[untyped-decorator]
+def _on_task_postrun(
+    task_id: str, task: Any, retval: object, state: object, **kwargs: object
+) -> None:
     """@brief Log each task completion with its result state."""
     logger.info("celery_task_finished", task_id=task_id, task_name=task.name, state=state)
 
 
-@signals.task_failure.connect
-def _on_task_failure(task_id: str, exception, **kwargs) -> None:  # type: ignore[no-untyped-def]
+@signals.task_failure.connect  # type: ignore[untyped-decorator]
+def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -> None:
     """@brief Log task failures for alerting and debugging."""
     logger.error(
         "celery_task_failed",

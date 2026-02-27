@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -26,7 +27,7 @@ class NotificationResponse(BaseModel):
     id: UUID
     user_id: UUID
     type: str
-    payload: dict
+    payload: dict[str, Any]
     read_at: datetime | None
     created_at: datetime
 

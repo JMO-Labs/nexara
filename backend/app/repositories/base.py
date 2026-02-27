@@ -47,7 +47,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    def _base_query(self) -> Select:
+    def _base_query(self) -> Select[Any]:
         """
         @brief Return the base ``SELECT`` statement for this model.
 
@@ -57,7 +57,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         stmt = select(self.model)
         if hasattr(self.model, "deleted_at"):
-            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[union-attr]
+            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
         return stmt
 
     async def get_by_id(
@@ -119,7 +119,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         next_cursor: str | None = None
         if len(rows) > limit:
             rows = rows[:limit]
-            next_cursor = str(rows[-1].id)  # type: ignore[attr-defined]
+            next_cursor = str(rows[-1].id)
 
         return rows, next_cursor
 
@@ -162,7 +162,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         if hasattr(entity, "deleted_at"):
             from datetime import UTC, datetime
 
-            entity.deleted_at = datetime.now(UTC)  # type: ignore[attr-defined]
+            setattr(entity, "deleted_at", datetime.now(UTC))
             await self._session.flush()
             return entity
         await self._session.delete(entity)
@@ -178,7 +178,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         stmt = select(func.count()).select_from(self.model)
         if hasattr(self.model, "deleted_at"):
-            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[union-attr]
+            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
         if community_id is not None and hasattr(self.model, "community_id"):
             stmt = stmt.where(self.model.community_id == community_id)  # type: ignore[attr-defined]
         result = await self._session.execute(stmt)
@@ -186,9 +186,9 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
 
     @staticmethod
     def apply_block_filter(
-        stmt: Select,
+        stmt: Select[Any],
         viewer_id: uuid.UUID,
-    ) -> Select:
+    ) -> Select[Any]:
         """
         @brief Exclude content from users that the viewer has blocked (or who blocked the viewer).
 

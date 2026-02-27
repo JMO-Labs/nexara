@@ -14,7 +14,7 @@ import secrets
 import string
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import bcrypt
@@ -148,7 +148,7 @@ def create_access_token(
     }
     if extra_claims:
         payload.update(extra_claims)
-    return jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM)
+    return str(jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM))
 
 
 def create_2fa_pending_token(
@@ -173,7 +173,7 @@ def create_2fa_pending_token(
         "iat": now,
         "type": "2fa_pending",
     }
-    return jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM)
+    return str(jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM))
 
 
 def decode_token(
@@ -204,7 +204,7 @@ def decode_token(
         raise ValueError(_("Invalid token type"))
     if "sub" not in payload:
         raise ValueError(_("Token missing subject claim"))
-    return payload
+    return cast(dict[str, Any], payload)
 
 
 # ── Opaque refresh tokens ────────────────────────────────────────────────
@@ -295,11 +295,17 @@ def get_jwks(settings: Settings | None = None) -> dict[str, Any]:
     if not s.JWT_ALGORITHM.startswith("RS"):
         return {"keys": []}
 
+    from cryptography.hazmat.primitives.asymmetric.rsa import (
+        RSAPublicKey,
+        RSAPublicNumbers,
+    )
     from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
     _, pub_pem = _load_or_generate_rsa_keys(s)
     pub_key = load_pem_public_key(pub_pem.encode())
-    numbers = pub_key.public_numbers()  # type: ignore[union-attr]
+    assert isinstance(pub_key, RSAPublicKey)
+    numbers = pub_key.public_numbers()
+    assert isinstance(numbers, RSAPublicNumbers)
 
     return {
         "keys": [
