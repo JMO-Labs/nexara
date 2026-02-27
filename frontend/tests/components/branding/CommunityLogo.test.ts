@@ -11,16 +11,20 @@ import { mount } from "@vue/test-utils";
 import { setActivePinia, createPinia } from "pinia";
 import CommunityLogo from "~/components/branding/CommunityLogo.vue";
 
-const brandingRef = ref({
-  community_name: "TestCommunity",
-  tagline: null,
-  color_primary: "#3b82f6",
-  color_primary_dark: "#2563eb",
-  logo_light_url: null as string | null,
-  logo_dark_url: null as string | null,
+const { brandingRef, isDarkRef } = vi.hoisted(() => {
+  const { ref } = require("vue") as typeof import("vue");
+  return {
+    brandingRef: ref({
+      community_name: "TestCommunity",
+      tagline: null as string | null,
+      color_primary: "#3b82f6",
+      color_primary_dark: "#2563eb",
+      logo_light_url: null as string | null,
+      logo_dark_url: null as string | null,
+    }),
+    isDarkRef: ref(false),
+  };
 });
-
-const isDarkRef = ref(false);
 
 vi.mock("~/composables/useBranding", () => ({
   useBranding: () => ({
@@ -28,12 +32,10 @@ vi.mock("~/composables/useBranding", () => ({
     loaded: readonly(ref(true)),
     fetchBranding: vi.fn(),
   }),
-  __branding: brandingRef,
 }));
 
 vi.mock("~/composables/useDarkMode", () => ({
   useDarkMode: () => ({ isDark: isDarkRef, toggle: vi.fn() }),
-  __isDark: isDarkRef,
 }));
 
 describe("CommunityLogo", () => {
