@@ -38,6 +38,20 @@ dependencies = [
 
     # i18n
     "babel>=2.16.0",
+
+    # Auth / Security
+    "bcrypt>=4.2.0",
+    "python-jose[cryptography]>=3.3.0",
+
+    # Rate limiting
+    "slowapi>=0.1.9",
+
+    # Prometheus metrics
+    "prometheus-client>=0.21.0",
+    "prometheus-fastapi-instrumentator>=7.0.0",
+
+    # Beat advisory lock (sync Postgres driver)
+    "psycopg2-binary>=2.9.10",
 ]
 
 [project.optional-dependencies]
