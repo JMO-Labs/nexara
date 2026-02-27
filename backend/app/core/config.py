@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     ENABLE_REGISTRATION: bool = True
     REQUIRE_INVITE: bool = False
     INVITE_EXPIRE_DAYS: int = 7
+    STORAGE_QUOTA_DEFAULT: int = 10737418240
 
     # --- Community ---
     COMMUNITY_ID: str = "00000000-0000-0000-0000-000000000001"
