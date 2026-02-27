@@ -6,22 +6,22 @@
  * Unauthenticated users are redirected to `/auth/login` with the
  * original path saved as a `redirect` query parameter.
  * Authenticated users visiting `/auth/*` are redirected to `/app`.
+ *
+ * On cold page loads (no token in memory) we attempt a silent session
+ * restore via the HttpOnly refresh cookie before blocking access.
  */
 
 import { useAuthStore } from '~/stores/auth'
 
-/** @brief Routes that do not require authentication. */
-const PUBLIC_PREFIXES = ['/', '/auth']
-
 /**
- * @brief Auth middleware function.
+ * @brief Pure auth decision logic (no Nuxt dependency).
  *
- * Exported separately for unit testing. In production this is registered
- * as a Nuxt global middleware via the file naming convention.
+ * Exported separately so unit tests can call it without mocking
+ * `navigateTo` or `defineNuxtRouteMiddleware`.
  *
- * @param to - Target route object.
+ * @param to  - Target route object.
  * @param _from - Source route object (unused).
- * @returns Navigation redirect or undefined to proceed.
+ * @returns A redirect descriptor or undefined to allow navigation.
  */
 export function authMiddleware(
   to: { path: string; fullPath?: string },
@@ -30,10 +30,6 @@ export function authMiddleware(
   const authStore = useAuthStore()
   const isAuthenticated = authStore.isAuthenticated
   const path = to.path
-
-  const isPublicRoute = path === '/'
-    || path.startsWith('/auth')
-    || PUBLIC_PREFIXES.some(prefix => prefix !== '/' && prefix !== '/auth' && path.startsWith(prefix))
 
   const isAppRoute = path.startsWith('/app')
   const isAuthRoute = path.startsWith('/auth')
@@ -49,11 +45,36 @@ export function authMiddleware(
   return undefined
 }
 
+/** @brief Tracks whether a session restore has already been attempted. */
+let sessionRestoreAttempted = false
+
 /**
- * @brief Nuxt route middleware definition.
- *
- * Wraps authMiddleware for Nuxt's defineNuxtRouteMiddleware convention.
+ * @brief Nuxt global middleware that wraps authMiddleware with proper
+ *        navigation calls and a one-time silent session restore.
  */
-export default function (to: { path: string; fullPath?: string }, from: { path: string }) {
-  return authMiddleware(to, from)
-}
+export default defineNuxtRouteMiddleware(async (to, from) => {
+  if (import.meta.server) return
+
+  const authStore = useAuthStore()
+
+  if (!authStore.isAuthenticated && !sessionRestoreAttempted) {
+    sessionRestoreAttempted = true
+    try {
+      await authStore.refresh()
+      if (authStore.accessToken) {
+        await authStore.fetchUser()
+      }
+    } catch {
+      /* Refresh failed -- user is genuinely unauthenticated */
+    }
+  }
+
+  const result = authMiddleware(to, from)
+
+  if (result) {
+    return navigateTo(
+      { path: result.path, query: result.query },
+      { replace: true, redirectCode: 302 },
+    )
+  }
+})

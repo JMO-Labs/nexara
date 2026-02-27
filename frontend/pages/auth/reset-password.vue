@@ -114,9 +114,8 @@ import { ref } from 'vue'
 
 definePageMeta({ layout: false })
 
-const resetToken = typeof window !== 'undefined'
-  ? new URLSearchParams(window.location.search).get('token')
-  : null
+const route = useRoute()
+const resetToken = (route.query.token as string) || null
 
 const email = ref('')
 const newPassword = ref('')

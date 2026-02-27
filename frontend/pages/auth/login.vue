@@ -101,6 +101,7 @@ import { useAuthStore } from '~/stores/auth'
 definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -114,12 +115,12 @@ async function handleLogin(): Promise<void> {
     await authStore.login({ email: email.value, password: password.value })
 
     if (authStore.requiresTwoFactor) {
-      window.location.href = '/auth/two-factor'
+      await navigateTo('/auth/two-factor')
       return
     }
 
-    const redirect = new URLSearchParams(window.location.search).get('redirect') || '/app'
-    window.location.href = redirect
+    const redirect = (route.query.redirect as string) || '/app'
+    await navigateTo(redirect, { replace: true })
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {

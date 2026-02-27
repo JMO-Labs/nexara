@@ -109,7 +109,7 @@ async function handleVerify(): Promise<void> {
   errorMessage.value = ''
   try {
     await authStore.verify2fa(totpCode.value)
-    window.location.href = '/app'
+    await navigateTo('/app', { replace: true })
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
@@ -122,7 +122,7 @@ async function handleBackupVerify(): Promise<void> {
   errorMessage.value = ''
   try {
     await authStore.verify2fa(backupCode.value, true)
-    window.location.href = '/app'
+    await navigateTo('/app', { replace: true })
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {

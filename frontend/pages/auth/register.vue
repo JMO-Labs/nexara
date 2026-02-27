@@ -133,10 +133,8 @@ import { useAuthStore } from '~/stores/auth'
 definePageMeta({ layout: false })
 
 const authStore = useAuthStore()
-
-const inviteToken = typeof window !== 'undefined'
-  ? new URLSearchParams(window.location.search).get('invite')
-  : null
+const route = useRoute()
+const inviteToken = (route.query.invite as string) || null
 
 const form = reactive({
   email: '',
@@ -171,7 +169,7 @@ async function handleRegister(): Promise<void> {
     })
 
     success.value = true
-    setTimeout(() => { window.location.href = '/app' }, 1500)
+    setTimeout(() => { navigateTo('/app', { replace: true }) }, 1500)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {

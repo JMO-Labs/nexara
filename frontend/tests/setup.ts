@@ -16,6 +16,10 @@ config.global.mocks = {
 
 /* Provide Nuxt auto-import stubs globally */
 ;(globalThis as Record<string, unknown>).definePageMeta = (_meta: Record<string, unknown>) => { /* no-op */ }
+;(globalThis as Record<string, unknown>).defineNuxtRouteMiddleware = (fn: Function) => fn
+;(globalThis as Record<string, unknown>).navigateTo = (to: unknown, _opts?: unknown) => to
+;(globalThis as Record<string, unknown>).useRoute = () => ({ path: '/', params: {}, query: {}, fullPath: '/' })
+;(globalThis as Record<string, unknown>).useRouter = () => ({ push: vi.fn(), replace: vi.fn() })
 
 /* Stub localStorage for happy-dom environments that don't fully implement it */
 if (typeof globalThis.localStorage === 'undefined') {
