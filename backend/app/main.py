@@ -56,6 +56,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     On startup: verify DB and Valkey connectivity, configure Prometheus.
     On shutdown: close connection pools cleanly.
+
+    @param app The FastAPI application instance.
     """
     settings = get_settings()
     setup_logging(
@@ -115,7 +117,10 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
     Starlette middleware wraps in reverse registration order, so the first
     middleware to process a request must be registered **last**.
     We register bottom-up so the execution order is top-down:
-      CF Real IP → Request ID → Logging → WAF → CORS → Rate Limit → Gzip → Security Headers
+      CF Real IP -> Request ID -> Logging -> WAF -> CORS -> Rate Limit -> Gzip -> Security Headers
+
+    @param app The FastAPI application instance.
+    @param settings Application settings.
     """
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1024)
@@ -145,7 +150,11 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
 
 
 def _register_routers(app: FastAPI) -> None:
-    """@brief Mount all API routers on the application."""
+    """
+    @brief Mount all API routers on the application.
+
+    @param app The FastAPI application instance.
+    """
     app.include_router(health_router, tags=["health"])
     app.include_router(api_v1_router)
     app.include_router(ws_api_router)
@@ -163,6 +172,9 @@ def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-un
     @brief Configure prometheus-fastapi-instrumentator for auto HTTP metrics.
 
     Only activates when ``ENABLE_METRICS=true``.
+
+    @param app The FastAPI application instance.
+    @param settings Application settings.
     """
     if not settings.ENABLE_METRICS:
         return

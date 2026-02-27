@@ -139,6 +139,11 @@ async def get_optional_user(
     @brief Return the authenticated user if a valid token is present, else None.
 
     Useful for endpoints that behave differently for logged-in vs anonymous users.
+
+    @param token Bearer token extracted from the ``Authorization`` header.
+    @param db Async database session.
+    @param settings Application settings.
+    @return The authenticated :class:`User` instance, or None if unauthenticated.
     """
     if token is None:
         return None

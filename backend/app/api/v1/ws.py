@@ -21,6 +21,7 @@ import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from app.core.i18n import _
 from app.core.security import decode_token
 from app.services.realtime.connection_manager import manager
 from app.services.realtime.presence import set_offline, set_online
@@ -82,7 +83,7 @@ async def _authenticate(ws: WebSocket) -> UUID | None:
         raw = await asyncio.wait_for(ws.receive_text(), timeout=AUTH_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
         logger.warning("ws_auth_timeout")
-        await _close_safe(ws, 4001, "Authentication timeout")
+        await _close_safe(ws, 4001, _("Authentication timeout"))
         return None
     except WebSocketDisconnect:
         return None
@@ -90,27 +91,27 @@ async def _authenticate(ws: WebSocket) -> UUID | None:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        await _close_safe(ws, 4002, "Invalid JSON")
+        await _close_safe(ws, 4002, _("Invalid JSON"))
         return None
 
     if data.get("type") != InboundType.AUTH:
-        await _close_safe(ws, 4001, "First message must be auth")
+        await _close_safe(ws, 4001, _("First message must be auth"))
         return None
 
     token = data.get("payload", {}).get("token")
     if not token:
-        error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": "Token missing"})
+        error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": _("Token missing")})
         await ws.send_text(error_msg)
-        await _close_safe(ws, 4001, "Token missing")
+        await _close_safe(ws, 4001, _("Token missing"))
         return None
 
     try:
         payload = decode_token(token, expected_type="access")
         user_id = UUID(payload["sub"])
     except (ValueError, KeyError) as exc:
-        error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": str(exc)})
+        error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": _("Invalid token")})
         await ws.send_text(error_msg)
-        await _close_safe(ws, 4001, "Invalid token")
+        await _close_safe(ws, 4001, _("Invalid token"))
         return None
 
     ok_msg = build_outbound(OutboundType.AUTH_OK, {"user_id": str(user_id)})

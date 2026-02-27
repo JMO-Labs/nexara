@@ -44,7 +44,12 @@ COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
 
 
 def _set_refresh_cookie(response: Response, raw_token: str) -> None:
-    """@brief Set the HttpOnly refresh token cookie on the response."""
+    """
+    @brief Set the HttpOnly refresh token cookie on the response.
+
+    @param response FastAPI response object.
+    @param raw_token Raw opaque refresh token.
+    """
     response.set_cookie(
         REFRESH_COOKIE,
         raw_token,
@@ -57,7 +62,11 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
 
 
 def _clear_refresh_cookie(response: Response) -> None:
-    """@brief Delete the refresh token cookie."""
+    """
+    @brief Delete the refresh token cookie.
+
+    @param response FastAPI response object.
+    """
     response.delete_cookie(REFRESH_COOKIE, path="/api/v1/auth")
 
 

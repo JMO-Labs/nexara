@@ -79,6 +79,12 @@ class AuthService:
         """
         @brief Register a new local user.
 
+        @param email User email address.
+        @param username Unique username.
+        @param password Plaintext password (will be hashed).
+        @param display_name Display name for the profile.
+        @param invite_token Optional invite token for pre-set role.
+        @param community_id Optional community UUID override.
         @return Dict with ``access_token``, ``expires_in``, and ``raw_refresh_token``.
         @raises ConflictError If email or username already exists.
         @raises AuthorizationError If registration is disabled or invite is required but missing.
@@ -130,6 +136,8 @@ class AuthService:
         """
         @brief Authenticate with email and password.
 
+        @param email User email address.
+        @param password Plaintext password.
         @return Dict with tokens, or ``requires_2fa=True`` with a pending token.
         @raises AuthenticationError On invalid credentials.
         """
@@ -158,6 +166,8 @@ class AuthService:
         """
         @brief Complete a 2FA-pending login by verifying the TOTP code.
 
+        @param two_factor_token Signed JWT issued during the ``login`` step.
+        @param code 6-digit TOTP code or 8-char backup code.
         @return Dict with access + refresh tokens.
         @raises AuthenticationError If the token or code is invalid.
         """
@@ -194,6 +204,9 @@ class AuthService:
         (i.e. the client is replaying an old token), the entire family is
         revoked as a security measure.
 
+        @param raw_refresh_token The opaque refresh token from the cookie.
+        @param ip_address Client IP for audit logging.
+        @param user_agent Client User-Agent for audit logging.
         @return Dict with new tokens.
         @raises AuthenticationError On invalid, expired, or replayed token.
         """
@@ -370,6 +383,10 @@ class AuthService:
         """
         @brief Create an access token + opaque refresh token pair.
 
+        @param user The authenticated user ORM instance.
+        @param family_id Optional token family UUID (for rotation chains).
+        @param ip_address Client IP for audit logging.
+        @param user_agent Client User-Agent for audit logging.
         @return Dict with token data and raw_refresh_token.
         """
         access = create_access_token(

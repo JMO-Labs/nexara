@@ -14,6 +14,16 @@ import sys
 import structlog
 
 
+def _add_service_name(
+    logger: structlog.types.WrappedLogger,
+    method_name: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
+    """@brief Inject a ``service`` key into every log event for aggregation."""
+    event_dict.setdefault("service", "nexara-backend")
+    return event_dict
+
+
 def setup_logging(log_level: str = "INFO", json_output: bool = True) -> None:
     """
     @brief Configure structlog and stdlib logging.
@@ -23,6 +33,7 @@ def setup_logging(log_level: str = "INFO", json_output: bool = True) -> None:
     """
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
+        _add_service_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
