@@ -6,6 +6,8 @@ All settings are loaded from environment variables (with optional .env file supp
 Pydantic BaseSettings handles validation, type coercion, and defaults.
 """
 
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +28,8 @@ class Settings(BaseSettings):
 
     # --- Application ---
     APP_NAME: str = "Nexara"
+    APP_VERSION: str = "0.1.0"
+    APP_ENV: str = "production"
     DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production"
     ALLOWED_ORIGINS: str = ""
@@ -57,6 +61,11 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
 
+    # --- Auth / JWT ---
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    JWT_ALGORITHM: str = "HS256"
+
     # --- OIDC ---
     OIDC_ISSUER: str = ""
     OIDC_CLIENT_ID: str = ""
@@ -68,6 +77,20 @@ class Settings(BaseSettings):
 
     # --- Community ---
     COMMUNITY_ID: str = "00000000-0000-0000-0000-000000000001"
+
+    # --- WAF ---
+    WAF_ENABLED: bool = True
+
+    # --- Metrics ---
+    ENABLE_METRICS: bool = True
+
+    # --- Cloudflare Access ---
+    CF_ACCESS_ENABLED: bool = False
+    CF_ACCESS_TEAM_DOMAIN: str = ""
+
+    # --- Rate Limiting ---
+    RATE_LIMIT_DEFAULT: str = "60/minute"
+    RATE_LIMIT_AUTH: str = "10/minute"
 
     @property
     def allowed_origins_list(self) -> list[str]:
@@ -91,7 +114,13 @@ class Settings(BaseSettings):
         """@brief Cache connection URL (Valkey DB 2)."""
         return f"{self.REDIS_URL}/2"
 
+    @property
+    def sync_database_url(self) -> str:
+        """@brief Synchronous DB URL for Celery Beat advisory lock (psycopg2)."""
+        return self.DATABASE_URL.replace("+asyncpg", "")
 
+
+@lru_cache
 def get_settings() -> Settings:
     """
     @brief Factory function for Settings.
