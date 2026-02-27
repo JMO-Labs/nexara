@@ -42,12 +42,7 @@
       </button>
 
       <!-- Notifications -->
-      <button
-        class="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-        :aria-label="$t('a11y.notifications')"
-      >
-        <BellIcon class="h-5 w-5" />
-      </button>
+      <NotificationBell @toggle="$emit('toggle-notifications')" />
 
       <!-- User avatar -->
       <button
@@ -70,8 +65,8 @@ import {
   MagnifyingGlassIcon,
   SunIcon,
   MoonIcon,
-  BellIcon,
 } from '@heroicons/vue/24/outline'
+import NotificationBell from '~/components/notifications/NotificationBell.vue'
 
 const props = defineProps<{
   /** @brief Whether dark mode is currently active. */
@@ -84,6 +79,7 @@ defineEmits<{
   (e: 'toggle-mobile-nav'): void
   (e: 'toggle-dark-mode'): void
   (e: 'open-search'): void
+  (e: 'toggle-notifications'): void
 }>()
 
 /** @brief First character of the user's display name for avatar fallback. */

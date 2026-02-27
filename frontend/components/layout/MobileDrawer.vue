@@ -62,7 +62,12 @@ import {
   PhotoIcon,
   UserGroupIcon,
   Cog6ToothIcon,
+  ShieldCheckIcon,
 } from '@heroicons/vue/24/outline'
+import { useAuthStore } from '~/stores/auth'
+import { computed } from 'vue'
+
+const authStore = useAuthStore()
 
 defineProps<{
   /** @brief Whether the drawer is currently visible. */
@@ -74,14 +79,20 @@ defineEmits<{
 }>()
 
 /** @brief Navigation items shown in the mobile drawer. */
-const navItems = [
-  { path: '/app', icon: NewspaperIcon, label: 'Feed' },
-  { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
-  { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
-  { path: '/app/media', icon: PhotoIcon, label: 'Media' },
-  { path: '/app/members', icon: UserGroupIcon, label: 'Members' },
-  { path: '/app/settings', icon: Cog6ToothIcon, label: 'Settings' },
-]
+const navItems = computed(() => {
+  const items = [
+    { path: '/app', icon: NewspaperIcon, label: 'Feed' },
+    { path: '/app/events', icon: CalendarDaysIcon, label: 'Events' },
+    { path: '/app/chat', icon: ChatBubbleLeftRightIcon, label: 'Chat' },
+    { path: '/app/media', icon: PhotoIcon, label: 'Media' },
+    { path: '/app/members', icon: UserGroupIcon, label: 'Members' },
+    { path: '/app/settings', icon: Cog6ToothIcon, label: 'Settings' },
+  ]
+  if (authStore.user?.role === 'admin') {
+    items.splice(-1, 0, { path: '/app/admin', icon: ShieldCheckIcon, label: 'Admin' })
+  }
+  return items
+})
 </script>
 
 <style scoped>
