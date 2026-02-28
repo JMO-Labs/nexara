@@ -1,9 +1,11 @@
 """
 @file search_service.py
-@brief Business logic for full-text search across posts, users, and events.
+@brief Business logic for full-text search across posts, users, events, and comments.
 
-Sanitizes user input for tsquery, executes parallel searches by type,
-and aggregates results into the SearchResponse schema.
+Delegates query parsing to PostgreSQL's websearch_to_tsquery (via the repository),
+executes parallel searches by type, and aggregates results into the SearchResponse
+schema.  Prefix matching is provided via to_tsquery with the :* operator so that
+partial words (e.g. "app") match stemmed lexemes (e.g. "appl" from "apple").
 """
 
 from __future__ import annotations
@@ -22,6 +24,27 @@ from app.schemas.search import (
 
 if TYPE_CHECKING:
     from app.models.user import User
+
+_UNSAFE_CHARS = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def build_prefix_tsquery(raw: str) -> str:
+    """
+    @brief Build a PostgreSQL tsquery string with prefix matching on every term.
+
+    Each word is suffixed with :* so ``to_tsquery('english', ...)`` performs
+    prefix matching against the GIN index.  Words shorter than 2 characters
+    are dropped to avoid overly broad matches.
+
+    @param raw  Raw user input (may contain special chars).
+    @return     tsquery string like ``"hello:* & world:*"``, or ``""``
+                if no usable words remain.
+    """
+    cleaned = _UNSAFE_CHARS.sub(" ", raw)
+    words = [w for w in cleaned.split() if len(w) >= 2]
+    if not words:
+        return ""
+    return " & ".join(f"{w}:*" for w in words)
 
 
 def _snippet(content: str | None, max_len: int = 150) -> str:
@@ -44,6 +67,10 @@ class SearchService:
     """
     @brief Service layer for unified search across content types.
 
+    Raw user queries are passed directly to the repository layer, which
+    uses PostgreSQL websearch_to_tsquery for robust parsing of user input
+    including quoted phrases, stop words, hyphens, and operators.
+
     @param search_repo SearchRepository instance.
     @param community_id UUID of the community scope.
     """
@@ -55,41 +82,6 @@ class SearchService:
     ) -> None:
         self._repo = search_repo
         self._community_id = community_id
-
-    @staticmethod
-    def to_safe_tsquery(raw_input: str) -> str:
-        """
-        @brief Sanitize user input for PostgreSQL tsquery.
-
-        Strips special chars that break tsquery (parentheses, &, |, !, :).
-        Converts spaces to & (AND). Handles quoted phrases with <-> (proximity).
-        Returns empty string if nothing remains after sanitization.
-
-        @param raw_input Raw search string from the user.
-        @return Safe tsquery string or empty string.
-        """
-        raw = (raw_input or "").strip()
-        if not raw:
-            return ""
-
-        quoted = re.findall(r'"([^"]+)"', raw)
-        rest = re.sub(r'"[^"]*"', " ", raw)
-        rest = re.sub(r"[()&|!:*'\"]", " ", rest)
-        words = [w for w in rest.split() if len(w) >= 2]
-        for w in words:
-            if not w.replace("_", "").isalnum():
-                words = [x for x in words if x != w]
-
-        parts: list[str] = []
-        for phrase in quoted:
-            phrase_words = [w for w in phrase.split() if len(w) >= 2]
-            if phrase_words:
-                parts.append(" <-> ".join(phrase_words))
-        if words:
-            parts.append(" & ".join(words))
-
-        result = " & ".join(parts).strip()
-        return result if result else ""
 
     async def search(
         self,
@@ -104,13 +96,13 @@ class SearchService:
 
         @param query Raw search query (min 2 chars, validated by API).
         @param user Current authenticated user (for block filter).
-        @param content_types Requested types: posts, users, events.
+        @param content_types Requested types: posts, users, events, comments.
         @param cursor Pagination cursor.
         @param limit Max items per type.
         @return SearchResponse with results grouped by type.
         """
-        query_ts = self.to_safe_tsquery(query)
-        if not query_ts:
+        q = (query or "").strip()
+        if not q:
             return SearchResponse(
                 query=query,
                 results={
@@ -118,21 +110,62 @@ class SearchService:
                 },
             )
 
+        prefix_q = build_prefix_tsquery(q)
+
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
             tasks.append(
                 (
                     "posts",
-                    self._repo.search_posts(query_ts, self._community_id, user.id, cursor, limit),
+                    self._repo.search_posts(
+                        q,
+                        prefix_q,
+                        self._community_id,
+                        user.id,
+                        cursor,
+                        limit,
+                    ),
                 )
             )
         if "users" in content_types:
             tasks.append(
-                ("users", self._repo.search_users(query_ts, self._community_id, cursor, limit))
+                (
+                    "users",
+                    self._repo.search_users(
+                        q,
+                        prefix_q,
+                        self._community_id,
+                        cursor,
+                        limit,
+                    ),
+                )
             )
         if "events" in content_types:
             tasks.append(
-                ("events", self._repo.search_events(query_ts, self._community_id, cursor, limit))
+                (
+                    "events",
+                    self._repo.search_events(
+                        q,
+                        prefix_q,
+                        self._community_id,
+                        cursor,
+                        limit,
+                    ),
+                )
+            )
+        if "comments" in content_types:
+            tasks.append(
+                (
+                    "comments",
+                    self._repo.search_comments(
+                        q,
+                        prefix_q,
+                        self._community_id,
+                        user.id,
+                        cursor,
+                        limit,
+                    ),
+                )
             )
 
         coros = [t[1] for t in tasks]
@@ -141,39 +174,63 @@ class SearchService:
 
         results: dict[str, SearchTypeResults] = {}
         for name, (rows, next_cursor, total) in zip(type_names, raw_results):
-            if name == "posts":
-                items = [
-                    SearchResultItem(
-                        id=p.id,
-                        type="posts",
-                        title=_snippet(p.content, 80),
-                        snippet=_snippet(p.content),
-                        created_at=p.created_at,
-                    )
-                    for p, _ in rows
-                ]
-            elif name == "users":
-                items = [
-                    SearchResultItem(
-                        id=u.id,
-                        type="users",
-                        title=u.display_name or u.username,
-                        snippet=_snippet(u.bio),
-                        created_at=u.created_at,
-                    )
-                    for u, _ in rows
-                ]
-            else:
-                items = [
-                    SearchResultItem(
-                        id=e.id,
-                        type="events",
-                        title=e.title,
-                        snippet=_snippet(e.description),
-                        created_at=e.created_at,
-                    )
-                    for e, _ in rows
-                ]
+            items = self._format_results(name, rows)
             results[name] = SearchTypeResults(items=items, total=total, next_cursor=next_cursor)
 
         return SearchResponse(query=query, results=results)
+
+    @staticmethod
+    def _format_results(
+        result_type: str, rows: list[tuple[object, float]]
+    ) -> list[SearchResultItem]:
+        """
+        @brief Convert raw DB rows into SearchResultItem list.
+
+        @param result_type Content type name (posts, users, events, comments).
+        @param rows List of (model, rank) tuples from the repository.
+        @return List of SearchResultItem.
+        """
+        items: list[SearchResultItem] = []
+        for entity, _rank in rows:
+            if result_type == "posts":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="posts",
+                        title=_snippet(entity.content, 80),
+                        snippet=_snippet(entity.content),
+                        created_at=entity.created_at,
+                    )
+                )
+            elif result_type == "users":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="users",
+                        title=entity.display_name or entity.username,
+                        snippet=_snippet(entity.bio),
+                        created_at=entity.created_at,
+                    )
+                )
+            elif result_type == "events":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="events",
+                        title=entity.title,
+                        snippet=_snippet(entity.description),
+                        created_at=entity.created_at,
+                    )
+                )
+            elif result_type == "comments":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="comments",
+                        title=_snippet(entity.content, 80),
+                        snippet=_snippet(entity.content),
+                        created_at=entity.created_at,
+                        parent_id=entity.post_id,
+                    )
+                )
+        return items
