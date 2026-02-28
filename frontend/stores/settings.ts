@@ -19,7 +19,7 @@ export interface ProfileUpdatePayload {
   bio?: string;
   location?: string;
   website_url?: string;
-  pronouns?: string;
+  title?: string;
 }
 
 /** @brief Notification preferences payload for PUT /settings/notifications. */
