@@ -23,7 +23,7 @@ services:
   nexara:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: deploy/docker/nexara.Dockerfile
     image: ghcr.io/com-nexara/nexara:latest
     restart: unless-stopped
     depends_on:

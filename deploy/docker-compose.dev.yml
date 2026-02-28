@@ -15,7 +15,7 @@ services:
   nexara:
     build:
       context: ..
-      dockerfile: backend/Dockerfile
+      dockerfile: deploy/docker/nexara.Dockerfile
       target: runtime
     volumes:
       - ../backend:/app/backend:ro
