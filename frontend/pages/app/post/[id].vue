@@ -20,11 +20,15 @@
         <h2 class="mb-4 text-lg font-semibold text-card-foreground">
           {{ $t("feed.comments") }} ({{ post.comment_count }})
         </h2>
-        <CommentThread
-          :comments="comments"
-          :post-id="post.id"
-          @add-comment="handleAddComment"
-        />
+        <div class="max-h-[32rem] overflow-y-auto">
+          <CommentThread
+            :comments="comments"
+            :post-id="post.id"
+            :show-load-more="hasMore"
+            @add-comment="handleAddComment"
+            @load-more="loadMore"
+          />
+        </div>
       </div>
     </template>
 
@@ -42,20 +46,43 @@
 /**
  * @brief Post detail page with comments loading.
  */
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
 import PostCard from "~/components/feed/PostCard.vue";
 import CommentThread from "~/components/feed/CommentThread.vue";
 import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
 import type { Post, Comment } from "~/types/api";
+import { buildCommentTree } from "~/utils/comments";
+
+/** @brief Paginated response shape for the comments endpoint. */
+interface PaginatedComments {
+  items: Comment[];
+  cursor: string | null;
+  has_more: boolean;
+}
 
 const props = defineProps<{ id: string }>();
 
 const api = useApi();
 const post = ref<Post | null>(null);
-const comments = ref<Comment[]>([]);
+const flatComments = ref<Comment[]>([]);
+const commentCursor = ref<string | null>(null);
+const hasMore = ref(false);
 const loading = ref(true);
 const error = ref("");
+
+/** @brief Flat comments nested into a tree for threaded display. */
+const comments = computed<Comment[]>(() => buildCommentTree(flatComments.value));
+
+/** @brief Resolved route ID for the post. */
+function resolveRouteId(): string {
+  return (
+    props.id ||
+    (typeof window !== "undefined"
+      ? window.location.pathname.split("/").pop() ?? ""
+      : "")
+  );
+}
 
 function handleReaction(_postId: string, emoji: string): void {
   if (!post.value) return;
@@ -81,8 +108,25 @@ async function handleAddComment(payload: {
         parent_id: payload.parentId,
       },
     );
-    comments.value.push(newComment);
+    flatComments.value.unshift(newComment);
     if (post.value) post.value.comment_count++;
+  } catch {
+    /* Toast handled by global error handler */
+  }
+}
+
+/** @brief Fetch next page of comments and append. */
+async function loadMore(): Promise<void> {
+  const routeId = resolveRouteId();
+  const params = new URLSearchParams();
+  if (commentCursor.value) params.set("cursor", commentCursor.value);
+  try {
+    const data = await api.get<PaginatedComments>(
+      `/posts/${routeId}/comments?${params}`,
+    );
+    flatComments.value.push(...data.items);
+    commentCursor.value = data.cursor;
+    hasMore.value = data.has_more;
   } catch {
     /* Toast handled by global error handler */
   }
@@ -90,13 +134,14 @@ async function handleAddComment(payload: {
 
 onMounted(async () => {
   try {
-    const routeId =
-      props.id ||
-      (typeof window !== "undefined"
-        ? window.location.pathname.split("/").pop()
-        : "");
+    const routeId = resolveRouteId();
     post.value = await api.get<Post>(`/posts/${routeId}`);
-    comments.value = await api.get<Comment[]>(`/posts/${routeId}/comments`);
+    const data = await api.get<PaginatedComments>(
+      `/posts/${routeId}/comments`,
+    );
+    flatComments.value = data.items;
+    commentCursor.value = data.cursor;
+    hasMore.value = data.has_more;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Failed to load post";
   } finally {

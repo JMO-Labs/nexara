@@ -13,7 +13,7 @@
     </h1>
 
     <!-- Post composer -->
-    <PostComposer @submit="handleCreatePost" />
+    <PostComposer />
 
     <!-- Loading state -->
     <LoadingSpinner
@@ -21,13 +21,15 @@
       size="lg"
     />
 
-    <!-- Feed -->
-    <PostCard
-      v-for="post in feedStore.posts"
-      :key="post.id"
-      :post="post"
-      @react="handleReaction"
-    />
+    <!-- Feed with entry animation for SSE live posts -->
+    <TransitionGroup name="feed-post" tag="div" class="space-y-4">
+      <PostCard
+        v-for="post in feedStore.posts"
+        :key="post.id"
+        :post="post"
+        @react="handleReaction"
+      />
+    </TransitionGroup>
 
     <!-- Load more / end of feed -->
     <div class="py-4 text-center">
@@ -57,32 +59,17 @@
 
 <script setup lang="ts">
 /**
- * @brief Feed page setup with store integration and SSE real-time updates.
+ * @brief Feed page setup with store integration.
+ *
+ * SSE real-time updates are handled at the layout level (default.vue).
  */
-import { onMounted, onUnmounted } from "vue";
+import { onMounted } from "vue";
 import { useFeedStore } from "~/stores/feed";
-import { useAuthStore } from "~/stores/auth";
-import { useSSE } from "~/composables/useSSE";
 import PostComposer from "~/components/feed/PostComposer.vue";
 import PostCard from "~/components/feed/PostCard.vue";
 import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
-import type { Post } from "~/types/api";
 
 const feedStore = useFeedStore();
-const authStore = useAuthStore();
-
-const { connect, disconnect } = useSSE((type, data) => {
-  if (type === "feed_update" && data) {
-    feedStore.prependPost(data as Post);
-  }
-});
-
-async function handleCreatePost(payload: {
-  content: string;
-  mediaIds: string[];
-}): Promise<void> {
-  await feedStore.createPost(payload.content, payload.mediaIds);
-}
 
 function handleReaction(postId: string, emoji: string): void {
   feedStore.addReaction(postId, emoji);
@@ -90,12 +77,20 @@ function handleReaction(postId: string, emoji: string): void {
 
 onMounted(async () => {
   await feedStore.fetchPosts();
-  if (authStore.isAuthenticated) {
-    connect();
-  }
-});
-
-onUnmounted(() => {
-  disconnect();
 });
 </script>
+
+<style scoped>
+.feed-post-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.feed-post-enter-from {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+
+.feed-post-move {
+  transition: transform 0.3s ease;
+}
+</style>

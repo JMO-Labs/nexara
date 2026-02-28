@@ -7,7 +7,7 @@
   based on the current route path.
 -->
 <template>
-  <div class="space-y-6">
+  <div class="flex min-h-[calc(100vh-12rem)] flex-col gap-6">
     <h1 class="text-2xl font-bold text-foreground">
       {{ $t("settings.title") }}
     </h1>
@@ -31,8 +31,10 @@
       </li>
     </ul>
 
-    <!-- Child route content -->
-    <NuxtPage />
+    <!-- Child route content — flex-1 so cards fill available space -->
+    <div class="flex flex-1 flex-col">
+      <NuxtPage />
+    </div>
   </div>
 </template>
 

@@ -82,6 +82,7 @@ const cursors = ref<Record<string, string | null>>({});
 const tabs = [
   { id: "all", label: "search.all" },
   { id: "posts", label: "search.posts" },
+  { id: "comments", label: "search.comments" },
   { id: "people", label: "search.people" },
   { id: "events", label: "search.events" },
 ];
@@ -92,7 +93,7 @@ const displayItems = computed((): SearchResultItem[] => {
   if (!searchData.value) return [];
   if (activeTab.value === "all") {
     const items: SearchResultItem[] = [];
-    const order = ["posts", "users", "events"];
+    const order = ["posts", "comments", "users", "events"];
     for (const t of order) {
       const r = searchData.value.results[t];
       if (r) items.push(...r.items);
@@ -120,7 +121,7 @@ async function fetchSearch(cursor: string | null = null): Promise<void> {
 
   loading.value = true;
   try {
-    const types = "posts,users,events";
+    const types = "posts,users,events,comments";
     const params = new URLSearchParams({ q, types, limit: "20" });
     if (cursor) params.set("cursor", cursor);
     const data = await api.get<SearchResponse>(`/search?${params}`);
