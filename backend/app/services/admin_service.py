@@ -9,6 +9,7 @@ Metrics aggregation is delegated to admin_metrics module.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -88,13 +89,14 @@ class AdminService:
         target = await self._user_repo.get_by_id(target_user_id, self._community_id)
         if not target:
             raise NotFoundError(message=_("User not found"))
+        old_role = target.role
         await self._user_repo.update(target, {"role": new_role})
         await self._audit_repo.append(
             actor_id=admin_user.id,
             action="admin.user.role_changed",
             target_type="user",
             target_id=target_user_id,
-            extra_data={"old_role": target.role, "new_role": new_role},
+            extra_data={"old_role": old_role, "new_role": new_role},
             ip_address=ip,
         )
         logger.info(
@@ -167,6 +169,41 @@ class AdminService:
         )
         logger.info(
             "admin_user_restored",
+            admin_id=str(admin_user.id),
+            target_id=str(target_user_id),
+        )
+
+    async def delete_user(
+        self,
+        admin_user: User,
+        target_user_id: uuid.UUID,
+        ip: str | None,
+    ) -> None:
+        """
+        @brief Soft-delete a user (set deleted_at and is_active=False) and log the action.
+
+        @param admin_user The admin performing the action.
+        @param target_user_id UUID of the user to delete.
+        @param ip IP address of the request.
+        @raises NotFoundError If the target user is not found.
+        """
+        target = await self._user_repo.get_by_id(target_user_id, self._community_id)
+        if not target:
+            raise NotFoundError(message=_("User not found"))
+        await self._user_repo.update(
+            target,
+            {"deleted_at": datetime.now(UTC), "is_active": False},
+        )
+        await self._audit_repo.append(
+            actor_id=admin_user.id,
+            action="admin.user.deleted",
+            target_type="user",
+            target_id=target_user_id,
+            extra_data=None,
+            ip_address=ip,
+        )
+        logger.info(
+            "admin_user_deleted",
             admin_id=str(admin_user.id),
             target_id=str(target_user_id),
         )

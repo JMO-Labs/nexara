@@ -91,3 +91,13 @@ async def mark_all_read(
     """@brief Mark all notifications as read for the current user."""
     count = await service.mark_all_read(user.id)
     return MessageResponse(message=_("Marked {count} as read").format(count=count))
+
+
+@router.delete("/", response_model=MessageResponse)
+async def clear_all_notifications(
+    user: User = Depends(get_current_user),
+    service: NotificationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Delete all notifications for the current user."""
+    count = await service.clear_all(user.id)
+    return MessageResponse(message=_("Cleared {count} notifications").format(count=count))
