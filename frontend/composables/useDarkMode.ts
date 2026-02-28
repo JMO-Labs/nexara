@@ -19,8 +19,12 @@ const STORAGE_KEY = "nexara-dark-mode";
 export function useDarkMode() {
   const isDark = ref(false);
 
-  /** Detect the initial state from storage or system preference. */
-  const saved = localStorage.getItem(STORAGE_KEY);
+  /**
+   * Detect the initial state from storage or system preference.
+   * @note Guard for SSR: localStorage is unavailable when window is undefined.
+   */
+  const saved =
+    typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
   if (saved !== null) {
     isDark.value = saved === "true";
   } else if (typeof window !== "undefined" && window.matchMedia) {
