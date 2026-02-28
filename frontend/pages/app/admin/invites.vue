@@ -28,7 +28,7 @@
             type="email"
             required
             class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-          />
+          >
         </div>
         <div class="min-w-[120px]">
           <label
@@ -202,22 +202,42 @@ async function fetchInvites(): Promise<void> {
     );
     const raw = Array.isArray(list) ? list : (list?.items ?? []);
     invites.value = raw.map(toInviteListItem);
-  } catch {
+  } catch (e) {
     invites.value = [];
+    uiStore.showToast({
+      type: "error",
+      message: e instanceof Error ? e.message : $t("common.error"),
+    });
   } finally {
     listLoading.value = false;
   }
 }
 
+interface CreateInviteResponse {
+  id: string;
+  email: string;
+  role: string;
+  raw_token: string;
+}
+
 async function handleCreateInvite(): Promise<void> {
   createLoading.value = true;
   try {
-    await api.post("/admin/invites", {
+    const res = await api.post<CreateInviteResponse>("/admin/invites", {
       email: createForm.value.email,
       role: createForm.value.role,
     });
     uiStore.showToast({ type: "success", message: $t("admin.inviteCreated") });
     createForm.value = { email: "", role: "member" };
+    if (res?.raw_token && typeof navigator?.clipboard?.writeText === "function") {
+      try {
+        const base = typeof window !== "undefined" ? window.location.origin : "";
+        const inviteUrl = `${base}/auth/register?invite=${encodeURIComponent(res.raw_token)}`;
+        await navigator.clipboard.writeText(inviteUrl);
+      } catch {
+        /* clipboard may fail in non-secure context */
+      }
+    }
     await fetchInvites();
   } catch (e) {
     uiStore.showToast({

@@ -46,9 +46,8 @@
           :value="storageFormatted"
         />
         <AdminMetricsCard
-          v-if="metrics?.waf_blocks_total !== undefined"
           :title="$t('admin.waf_blocks')"
-          :value="metrics.waf_blocks_total"
+          :value="metrics?.waf_blocks_total ?? 0"
         />
       </div>
 
@@ -62,15 +61,12 @@
         </div>
 
         <!-- WAF blocks summary -->
-        <div
-          v-if="metrics?.waf_blocks_total !== undefined"
-          class="rounded-lg border border-border bg-card p-4"
-        >
+        <div class="rounded-lg border border-border bg-card p-4">
           <h2 class="mb-4 text-lg font-semibold text-foreground">
             {{ $t("admin.waf_blocks") }}
           </h2>
           <p class="text-2xl font-bold text-foreground">
-            {{ metrics.waf_blocks_total?.toLocaleString() ?? 0 }}
+            {{ (metrics?.waf_blocks_total ?? 0).toLocaleString() }}
           </p>
           <p class="mt-1 text-sm text-muted-foreground">
             {{ $t("admin.wafBlocksPeriod") }}
@@ -88,7 +84,11 @@
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useApi } from "~/composables/useApi";
-import type { AdminMetricsResponse, AuditLogEntry } from "~/types/api";
+import type {
+  AdminMetricsApiResponse,
+  AdminMetricsResponse,
+  AuditLogEntry,
+} from "~/types/api";
 
 const authStore = useAuthStore();
 const api = useApi();
@@ -106,9 +106,24 @@ const storageFormatted = computed(() => {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 });
 
+/** @brief Map nested API response to flat AdminMetricsResponse for UI. */
+function mapMetricsResponse(raw: AdminMetricsApiResponse): AdminMetricsResponse {
+  return {
+    total_users: raw.community.users_total,
+    active_users_30d: raw.community.users_active_30d,
+    online_now: raw.community.users_online_now,
+    total_posts: raw.community.posts_total,
+    posts_7d: raw.community.posts_last_7d,
+    media_files: raw.community.media_files,
+    storage_used_bytes: raw.community.media_storage_bytes,
+    waf_blocks_total: raw.waf.blocks_today,
+  };
+}
+
 async function fetchMetrics(): Promise<void> {
   try {
-    metrics.value = await api.get<AdminMetricsResponse>("/admin/metrics");
+    const raw = await api.get<AdminMetricsApiResponse>("/admin/metrics");
+    metrics.value = mapMetricsResponse(raw);
   } catch {
     metrics.value = null;
   }

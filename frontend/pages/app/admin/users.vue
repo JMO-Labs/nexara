@@ -16,7 +16,7 @@
         :placeholder="$t('common.search')"
         class="max-w-xs rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
         @input="debouncedSearch"
-      />
+      >
     </div>
 
     <AdminUserTable
@@ -72,7 +72,7 @@ async function fetchUsers(): Promise<void> {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    if (searchQuery.value) params.set("q", searchQuery.value);
+    if (searchQuery.value) params.set("search", searchQuery.value);
     if (cursor.value) params.set("cursor", cursor.value);
     params.set("limit", "20");
     const res = await api.get<AdminUsersResponse>(
@@ -81,7 +81,7 @@ async function fetchUsers(): Promise<void> {
     const items = res?.items ?? [];
     if (!cursor.value) users.value = items;
     else users.value.push(...items);
-    cursor.value = res?.cursor ?? null;
+    cursor.value = res?.next_cursor ?? res?.cursor ?? null;
     hasMore.value = res?.has_more ?? false;
   } catch {
     users.value = [];
@@ -95,8 +95,10 @@ function loadMore(): void {
   if (cursor.value) fetchUsers();
 }
 
-async function handleChangeRole(user: AdminUserListItem): Promise<void> {
-  const role = prompt($t("admin.change_role") + ": admin, member, viewer");
+async function handleChangeRole(
+  user: AdminUserListItem,
+  role: string,
+): Promise<void> {
   if (!role || !["admin", "member", "viewer"].includes(role)) return;
   try {
     await api.put(`/admin/users/${user.id}/role`, { role });
