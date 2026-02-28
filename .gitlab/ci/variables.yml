@@ -10,7 +10,7 @@
 variables:
   # ── Container images ──────────────────────────────────────────────
   PYTHON_IMAGE: "python:3.12-alpine"
-  NODE_IMAGE: "node:22-alpine"
+  NODE_IMAGE: "node:25-alpine3.22"
   KANIKO_IMAGE: "gcr.io/kaniko-project/executor:v1.23.2-debug"
   TRIVY_IMAGE: "aquasec/trivy:latest"
   GITLEAKS_IMAGE: "zricethezav/gitleaks:latest"
@@ -22,7 +22,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
   # ── Node.js ──────────────────────────────────────────────────────
-  NODE_VERSION: "22"
+  NODE_VERSION: "25"
   NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.cache/npm"
 
   # ── PostgreSQL test service ──────────────────────────────────────
