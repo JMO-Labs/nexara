@@ -148,6 +148,17 @@ class NotificationRepository(BaseRepository[Notification]):
         await self._session.flush()
         return len(notifications)
 
+    async def delete_all_for_user(self, user_id: uuid.UUID) -> int:
+        """
+        @brief Delete all notifications for a user (clear all).
+
+        @param user_id Recipient user UUID.
+        @return Number of rows deleted.
+        """
+        stmt = delete(Notification).where(Notification.user_id == user_id)
+        result = await self._session.execute(stmt)
+        return cast(int, getattr(result, "rowcount", 0)) or 0
+
     async def delete_old(self, days: int) -> int:
         """
         @brief Delete notifications older than the given number of days.

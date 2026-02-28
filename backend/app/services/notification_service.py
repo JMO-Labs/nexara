@@ -175,3 +175,7 @@ class NotificationService:
     async def mark_all_read(self, user_id: uuid.UUID) -> int:
         """@brief Mark all notifications as read for a user."""
         return await self._notification_repo.mark_all_read(user_id)
+
+    async def clear_all(self, user_id: uuid.UUID) -> int:
+        """@brief Delete all notifications for a user."""
+        return await self._notification_repo.delete_all_for_user(user_id)

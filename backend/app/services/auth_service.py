@@ -41,8 +41,10 @@ from app.models.auth import UserBackupCode
 from app.models.invite import Invite
 from app.models.user import User
 from app.repositories.invite_repo import InviteRepository
+from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
 logger = structlog.get_logger(__name__)
@@ -54,19 +56,24 @@ class AuthService:
 
     @param session Async DB session (one per request).
     @param settings App settings (injectable for tests).
+    @param notification_service Optional service for invite_accepted notifications.
     """
 
     def __init__(
         self,
         session: AsyncSession,
         settings: Settings | None = None,
+        *,
+        notification_service: NotificationService | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
         self._user_repo = UserRepository(session)
         self._token_repo = TokenRepository(session)
         self._invite_repo = InviteRepository(session)
+        self._settings_repo = SettingsRepository(session)
         self._password_svc = PasswordService(session, self._settings)
+        self._notification_service = notification_service
 
     async def register(
         self,
@@ -128,8 +135,21 @@ class AuthService:
         )
         user = await self._user_repo.create(user)
 
+        await self._settings_repo.get_or_create(user.id, user.community_id)
+
         if invite:
             await self._invite_repo.mark_used(invite.id, user.id)
+            if self._notification_service:
+                # Notify invite creator that someone registered with their invite.
+                await self._notification_service.notify(
+                    user_id=invite.created_by,
+                    type="invite_accepted",
+                    payload={
+                        "message": _("%(user)s registered using your invite")
+                        % {"user": user.display_name},
+                    },
+                    actor_id=user.id,
+                )
 
         logger.info("user_registered", user_id=str(user.id), email=email)
         return await self._issue_tokens(user)

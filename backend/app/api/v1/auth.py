@@ -19,7 +19,10 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.core.security import get_jwks
 from app.models.user import User
+from app.repositories.notification_repo import NotificationRepository
+from app.repositories.settings_repo import SettingsRepository
 from app.schemas.auth import (
+    AuthConfigResponse,
     LoginRequest,
     LoginResponse,
     PasswordResetConfirmPayload,
@@ -32,6 +35,8 @@ from app.schemas.auth import (
 )
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
+from app.services.notification_service import NotificationService
+from app.services.realtime.pubsub import publish_to_user
 
 logger = structlog.get_logger(__name__)
 
@@ -68,6 +73,24 @@ def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(REFRESH_COOKIE, path="/api/v1/auth")
 
 
+# ── Public config ────────────────────────────────────────────────────────
+
+
+@router.get("/config", response_model=AuthConfigResponse)
+async def get_auth_config(settings: Settings = Depends(get_settings)) -> AuthConfigResponse:
+    """
+    @brief Return public auth configuration for the login page.
+
+    No authentication required. Used by the frontend to conditionally
+    show OIDC SSO button and registration link.
+    """
+    oidc_enabled = bool(settings.OIDC_CLIENT_ID and settings.OIDC_CLIENT_ID.strip())
+    return AuthConfigResponse(
+        oidc_enabled=oidc_enabled,
+        registration_enabled=settings.ENABLE_REGISTRATION,
+    )
+
+
 # ── Registration & Login ─────────────────────────────────────────────────
 
 
@@ -79,7 +102,15 @@ async def register(
     settings: Settings = Depends(get_settings),
 ) -> Any:
     """@brief Create a new user account via local registration."""
-    svc = AuthService(db, settings)
+    import uuid as _uuid
+
+    notification_svc = NotificationService(
+        notification_repo=NotificationRepository(db),
+        settings_repo=SettingsRepository(db),
+        community_id=_uuid.UUID(settings.COMMUNITY_ID),
+        pubsub_publisher=publish_to_user,
+    )
+    svc = AuthService(db, settings, notification_service=notification_svc)
     result = await svc.register(
         email=body.email,
         username=body.username,

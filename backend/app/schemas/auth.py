@@ -108,6 +108,13 @@ class OIDCCallbackParams(BaseModel):
     state: str
 
 
+class AuthConfigResponse(BaseModel):
+    """@brief Public auth configuration exposed to the frontend."""
+
+    oidc_enabled: bool
+    registration_enabled: bool
+
+
 class InviteCreateRequest(BaseModel):
     """@brief Admin request to create an invite."""
 
