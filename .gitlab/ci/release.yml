@@ -33,6 +33,9 @@ release:
       REGISTRY_URL="${CI_REGISTRY_IMAGE}/nexara:${VERSION}"
       PAGES_URL="${CI_PAGES_URL}"
 
+      # Export VERSION so the release block can reference it via dotenv
+      echo "RELEASE_VERSION=${VERSION}" > release.env
+
       # Build release description
       DESCRIPTION="## Release v${VERSION}"
       DESCRIPTION="${DESCRIPTION}\n\n### Container Image"
@@ -55,16 +58,19 @@ release:
 
       echo -e "$DESCRIPTION" > release_description.md
       cat release_description.md
+  artifacts:
+    reports:
+      dotenv: release.env
   release:
     tag_name: $CI_COMMIT_TAG
     name: "Nexara $CI_COMMIT_TAG"
     description: ./release_description.md
     assets:
       links:
-        - name: "Container Image (${CI_COMMIT_TAG})"
-          url: "https://${CI_REGISTRY_IMAGE}/nexara:${CI_COMMIT_TAG#v}"
+        - name: "Container Image ($CI_COMMIT_TAG)"
+          url: "https://$CI_REGISTRY_IMAGE/nexara:$RELEASE_VERSION"
           link_type: image
         - name: "Documentation"
-          url: "${CI_PAGES_URL}"
+          url: "$CI_PAGES_URL"
           link_type: other
   rules: !reference [.rules:tag-only, rules]
