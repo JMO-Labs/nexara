@@ -35,15 +35,19 @@ const mockAdminUser: User = {
   last_seen_at: null,
 };
 
-const mockMetrics = {
-  total_users: 42,
-  active_users_30d: 15,
-  online_now: 3,
-  total_posts: 120,
-  posts_7d: 8,
-  media_files: 45,
-  storage_used_bytes: 1073741824,
-  waf_blocks_total: 5,
+/** @brief Nested API response from GET /admin/metrics. */
+const mockMetricsApiResponse = {
+  community: {
+    users_total: 42,
+    users_active_30d: 15,
+    users_online_now: 3,
+    posts_total: 120,
+    posts_last_7d: 8,
+    media_files: 45,
+    media_storage_bytes: 1073741824,
+  },
+  system: { version: "0.1.0", uptime_seconds: 3600 },
+  waf: { blocks_today: 5, blocks_by_reason: {} },
 };
 
 const mockGet = vi.fn();
@@ -59,7 +63,7 @@ describe("Admin dashboard", () => {
     const authStore = useAuthStore();
     authStore.user = { ...mockAdminUser };
     mockGet
-      .mockResolvedValueOnce(mockMetrics)
+      .mockResolvedValueOnce(mockMetricsApiResponse)
       .mockResolvedValueOnce({ items: [] });
   });
 

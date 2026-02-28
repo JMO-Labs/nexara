@@ -2,7 +2,7 @@
  * @file tests/pages/settings/profile.test.ts
  * @brief Tests for the profile settings tab.
  *
- * Verifies form render (display_name, bio, location, website_url, pronouns)
+ * Verifies form render (display_name, bio, location, website_url, title)
  * and submit behavior calling settingsStore.updateProfile with success toast.
  */
 
@@ -22,7 +22,7 @@ const mockUser: User = {
   email_verified: true,
   avatar_url: null,
   bio: "Hello world",
-  pronouns: "she/her",
+  title: "Dr.",
   location: "NYC",
   website_url: "https://example.com",
   birthday: null,
@@ -52,14 +52,14 @@ describe("Profile settings", () => {
     authStore.user = { ...mockUser };
   });
 
-  it("renders form fields for display_name, bio, location, website_url, pronouns", () => {
+  it("renders form fields for display_name, bio, location, website_url, title", () => {
     const wrapper = mount(ProfileSettings);
 
     expect(wrapper.find("#display_name").exists()).toBe(true);
     expect(wrapper.find("#bio").exists()).toBe(true);
     expect(wrapper.find("#location").exists()).toBe(true);
     expect(wrapper.find("#website_url").exists()).toBe(true);
-    expect(wrapper.find("#pronouns").exists()).toBe(true);
+    expect(wrapper.find("#title").exists()).toBe(true);
   });
 
   it("prefills form from auth store user", async () => {
@@ -78,8 +78,8 @@ describe("Profile settings", () => {
     expect(
       (wrapper.find("#website_url").element as HTMLInputElement).value,
     ).toBe("https://example.com");
-    expect((wrapper.find("#pronouns").element as HTMLInputElement).value).toBe(
-      "she/her",
+    expect((wrapper.find("#title").element as HTMLInputElement).value).toBe(
+      "Dr.",
     );
   });
 
