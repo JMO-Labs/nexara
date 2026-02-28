@@ -10,7 +10,7 @@
 # =============================================================================
 
 # ── Stage 1: Build Frontend ──────────────────────────────────────────────────
-FROM node:22-alpine AS frontend-builder
+FROM node:25-alpine3.22 AS frontend-builder
 
 WORKDIR /build
 

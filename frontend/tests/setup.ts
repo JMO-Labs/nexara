@@ -47,26 +47,34 @@ config.global.mocks = {
   replace: vi.fn(),
 });
 
-/* Stub localStorage for happy-dom environments that don't fully implement it */
-if (typeof globalThis.localStorage === "undefined") {
-  const store: Record<string, string> = {};
-  globalThis.localStorage = {
-    getItem: (key: string) => store[key] ?? null,
+/*
+ * Always replace localStorage with a complete in-memory implementation.
+ * happy-dom provides a partial localStorage that omits clear() when no
+ * --localstorage-file path is configured, causing tests to fail.
+ */
+const _localStore: Record<string, string> = {};
+Object.defineProperty(globalThis, "localStorage", {
+  value: {
+    getItem: (key: string) => _localStore[key] ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = value;
+      _localStore[key] = value;
     },
     removeItem: (key: string) => {
-      Reflect.deleteProperty(store, key);
+      Reflect.deleteProperty(_localStore, key);
     },
     clear: () => {
-      Object.keys(store).forEach((k) => Reflect.deleteProperty(store, k));
+      Object.keys(_localStore).forEach((k) =>
+        Reflect.deleteProperty(_localStore, k),
+      );
     },
     get length() {
-      return Object.keys(store).length;
+      return Object.keys(_localStore).length;
     },
-    key: (index: number) => Object.keys(store)[index] ?? null,
-  };
-}
+    key: (index: number) => Object.keys(_localStore)[index] ?? null,
+  } satisfies Storage,
+  writable: true,
+  configurable: true,
+});
 
 /* Provide a minimal matchMedia stub */
 if (typeof globalThis.matchMedia === "undefined") {
