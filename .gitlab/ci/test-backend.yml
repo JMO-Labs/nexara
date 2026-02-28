@@ -57,7 +57,7 @@ test:backend:integration:
   variables:
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_TLS_CERTDIR: "/certs"
-    DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}"
+    DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@docker:5432/${POSTGRES_DB}"
   before_script:
     - apk add --no-cache python3 py3-pip gcc musl-dev libffi-dev postgresql16-client
     - pip install --quiet uv --break-system-packages
@@ -74,7 +74,7 @@ test:backend:integration:
     - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
     - |
       TRIES=0; MAX_TRIES=30
-      until pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
+      until pg_isready -h docker -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
         TRIES=$((TRIES + 1))
         if [ "$TRIES" -ge "$MAX_TRIES" ]; then
           echo "PostgreSQL not available after ${MAX_TRIES}s — aborting"
