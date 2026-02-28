@@ -6,6 +6,7 @@ Verifies that models can be inserted, queried, and that DB-level features
 (FKs, triggers, views, soft-delete) work correctly.
 """
 
+import os
 import uuid
 
 import pytest
@@ -16,7 +17,10 @@ import app.models  # noqa: F401
 from app.models.community import Community
 from app.models.user import User
 
-TEST_DB_URL = "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
+TEST_DB_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test",
+)
 COMMUNITY_UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 

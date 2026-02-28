@@ -2,11 +2,13 @@
 @file test_valkey_integration.py
 @brief Integration tests for Valkey connection helpers and cache against a live instance.
 
-Requires a running Valkey/Redis on localhost:6379.
+Requires a running Valkey/Redis instance. The REDIS_URL environment variable controls
+the connection (defaults to redis://localhost:6379 for local runs).
 Run with: pytest tests/integration/test_valkey_integration.py -v
 """
 
 import asyncio
+import os
 
 import pytest
 from redis.asyncio import Redis
@@ -21,9 +23,11 @@ from app.core.valkey import (
     create_pool,
 )
 
+_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+
 TEST_SETTINGS = Settings(
     SECRET_KEY="integration-test",
-    REDIS_URL="redis://localhost:6379",
+    REDIS_URL=_redis_url,
 )
 
 TEST_KEY_PREFIX = "nexara:test:"

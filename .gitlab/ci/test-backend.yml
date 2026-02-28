@@ -58,6 +58,7 @@ test:backend:integration:
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_TLS_CERTDIR: "/certs"
     DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@docker:5432/${POSTGRES_DB}"
+    REDIS_URL: "redis://docker:6379"
   before_script:
     - apk add --no-cache python3 py3-pip gcc musl-dev libffi-dev postgresql16-client
     - pip install --quiet uv --break-system-packages
@@ -69,6 +70,10 @@ test:backend:integration:
       -e POSTGRES_HOST_AUTH_METHOD=trust
       -p 5432:5432
       postgres:16-alpine
+    - docker run -d
+      --name valkey
+      -p 6379:6379
+      valkey/valkey:8-alpine
     - cd backend
     - uv venv .venv --clear
     - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
@@ -82,13 +87,17 @@ test:backend:integration:
         fi
         sleep 1
       done
+    - |
+      echo "Running Alembic migrations..."
+      DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@docker:5432/${POSTGRES_DB}" \
+        .venv/bin/alembic upgrade head
   script:
     - >-
       .venv/bin/pytest tests/integration/
       --junitxml=report-integration.xml
       -v
   after_script:
-    - docker rm -f postgres || true
+    - docker rm -f postgres valkey || true
   artifacts:
     when: always
     paths:
