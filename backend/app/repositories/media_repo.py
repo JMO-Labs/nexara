@@ -59,7 +59,7 @@ class MediaRepository(BaseRepository[Media]):
             content_type=content_type,
             storage_key=storage_key,
             size_bytes=size_bytes,
-            status="processing",
+            status="ready",
         )
         return await super().create(media)
 

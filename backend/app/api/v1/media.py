@@ -86,15 +86,15 @@ async def get_media_metadata(
 @router.get("/{media_id}/file")
 async def get_media_file(
     media_id: uuid.UUID,
-    user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> StreamingResponse:
     """
     @brief Serve the original file with Cache-Control headers.
 
-    Returns the raw file bytes with appropriate content type.
+    Public endpoint — auth is enforced at upload/post level, not on serving.
+    Consistent with the thumbnail endpoint.
     """
-    content, content_type = await service.get_file(media_id, user)
+    content, content_type = await service.get_file_public(media_id)
     return StreamingResponse(
         iter([content]),
         media_type=content_type,

@@ -152,13 +152,28 @@ class MediaService:
         user: User,
     ) -> tuple[bytes, str]:
         """
-        @brief Retrieve the original file content and content type.
+        @brief Retrieve the original file content and content type (authenticated).
 
         @param media_id UUID of the media.
         @param user Requesting user (for access control).
         @return Tuple of (content bytes, content_type).
         @raises NotFoundError If media does not exist.
-        @raises StorageKeyNotFoundError If file is missing in storage.
+        """
+        return await self.get_file_public(media_id)
+
+    async def get_file_public(
+        self,
+        media_id: uuid.UUID,
+    ) -> tuple[bytes, str]:
+        """
+        @brief Retrieve the original file content without auth.
+
+        Used by img/video tags that cannot send Bearer tokens.
+        Access control is enforced at the post/upload level.
+
+        @param media_id UUID of the media.
+        @return Tuple of (content bytes, content_type).
+        @raises NotFoundError If media does not exist.
         """
         from app.core.exceptions import NotFoundError
 

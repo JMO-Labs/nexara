@@ -23,7 +23,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user_sse, get_db
 from app.models.user import User
 from app.services.realtime.connection_manager import SSEConnection, manager
 from app.services.realtime.presence import set_offline, set_online
@@ -40,7 +40,7 @@ HEARTBEAT_INTERVAL_SECONDS = 15
 @router.get("/notifications/stream")
 async def notification_stream(
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_sse),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:
