@@ -1,15 +1,16 @@
 <!--
   @file components/media/UploadZone.vue
-  @brief Drag-and-drop file upload zone with progress and preview.
+  @brief Drag-and-drop file upload zone with multi-file support.
 
-  Supports file picker and drag-drop. Validates file type and size
-  on the client side before uploading via POST /api/v1/media/upload.
+  Supports file picker and drag-drop for multiple files. Validates file
+  type and size on the client side before uploading each file via
+  POST /api/v1/media/upload.
 -->
 
 <script setup lang="ts">
 /**
- * @brief UploadZone component.
- * @emits upload - Emitted with the uploaded media response data.
+ * @brief UploadZone component with multi-file support.
+ * @emits upload - Emitted per file with the uploaded media response data.
  * @emits error - Emitted with an error message string.
  */
 import { ref } from "vue";
@@ -30,7 +31,6 @@ const emit = defineEmits<{
 const dragging = ref(false);
 const uploading = ref(false);
 const progress = ref(0);
-const previewUrl = ref<string | null>(null);
 const authStore = useAuthStore();
 
 /** @brief Validate a file before upload. */
@@ -45,55 +45,73 @@ function validate(file: File): string | null {
 }
 
 /** @brief Upload a single file to the media endpoint. */
-async function uploadFile(file: File): Promise<void> {
+async function uploadSingleFile(file: File): Promise<void> {
   const error = validate(file);
   if (error) {
     emit("error", error);
     return;
   }
 
-  previewUrl.value = URL.createObjectURL(file);
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/v1/media/upload", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${authStore.accessToken}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response
+      .json()
+      .catch(() => ({ error: { message: "Upload failed" } }));
+    throw new Error(err?.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  data._localPreviewUrl = URL.createObjectURL(file);
+  emit("upload", data);
+}
+
+/**
+ * @brief Process a FileList, uploading each valid file sequentially.
+ * @param files The FileList from input or drag-drop.
+ */
+async function processFiles(files: FileList): Promise<void> {
+  if (files.length === 0) return;
+
   uploading.value = true;
   progress.value = 0;
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/v1/media/upload", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${authStore.accessToken}` },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const err = await response
-        .json()
-        .catch(() => ({ error: { message: "Upload failed" } }));
-      throw new Error(err?.error?.message || `HTTP ${response.status}`);
+  let completed = 0;
+  for (const file of Array.from(files)) {
+    try {
+      await uploadSingleFile(file);
+    } catch (err) {
+      emit("error", err instanceof Error ? err.message : "Upload failed");
     }
+    completed++;
+    progress.value = Math.round((completed / files.length) * 100);
+  }
 
-    progress.value = 100;
-    const data = await response.json();
-    emit("upload", data);
-  } catch (err) {
-    emit("error", err instanceof Error ? err.message : "Upload failed");
-  } finally {
-    uploading.value = false;
+  uploading.value = false;
+}
+
+/** @brief Handle file input change (supports multiple files). */
+function onFileSelect(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    processFiles(input.files);
   }
 }
 
-/** @brief Handle file input change. */
-function onFileSelect(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  if (input.files?.[0]) uploadFile(input.files[0]);
-}
-
-/** @brief Handle drag-and-drop. */
+/** @brief Handle drag-and-drop (supports multiple files). */
 function onDrop(event: DragEvent): void {
   dragging.value = false;
-  const file = event.dataTransfer?.files?.[0];
-  if (file) uploadFile(file);
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    processFiles(files);
+  }
 }
 </script>
 
@@ -109,13 +127,6 @@ function onDrop(event: DragEvent): void {
     @dragleave="dragging = false"
     @drop.prevent="onDrop"
   >
-    <img
-      v-if="previewUrl"
-      :src="previewUrl"
-      alt="Upload preview"
-      class="mb-3 h-24 w-24 rounded object-cover"
-    />
-
     <p class="text-sm text-muted-foreground">
       {{
         uploading
@@ -126,12 +137,13 @@ function onDrop(event: DragEvent): void {
 
     <input
       type="file"
+      multiple
       accept="image/jpeg,image/png,image/gif,image/webp"
       class="absolute inset-0 cursor-pointer opacity-0"
       :disabled="uploading"
       :aria-label="$t('common.upload')"
       @change="onFileSelect"
-    />
+    >
 
     <div v-if="uploading" class="mt-2 h-1.5 w-full rounded-full bg-muted">
       <div
