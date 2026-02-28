@@ -4,14 +4,14 @@
 
   Each notification shows type icon, message from payload.message, relative time.
   Click marks as read and navigates to payload.link. Includes "Mark all as read"
-  button and empty state.
+  button and empty state. Fetches notifications when opened. Closes on click-outside.
 -->
 
 <script setup lang="ts">
 /**
  * @brief NotificationPanel component.
  */
-import { computed } from "vue";
+import { computed, watch, ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
@@ -34,7 +34,7 @@ const typeIcons: Record<string, typeof BellIcon> = {
   invite_accepted: UserPlusIcon,
 };
 
-defineProps<{
+const props = defineProps<{
   /** @brief Whether the panel is visible. */
   open: boolean;
 }>();
@@ -47,6 +47,27 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const router = useRouter();
 const store = useNotificationsStore();
+
+/** @brief Template ref for click-outside detection. */
+const panelRef = ref<HTMLElement | null>(null);
+
+/** @brief Fetch notifications when panel opens. */
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) store.fetchNotifications();
+  },
+);
+
+/** @brief Close panel when clicking outside. */
+function onClickOutside(event: MouseEvent): void {
+  if (panelRef.value && !panelRef.value.contains(event.target as Node)) {
+    emit("close");
+  }
+}
+
+onMounted(() => document.addEventListener("mousedown", onClickOutside));
+onBeforeUnmount(() => document.removeEventListener("mousedown", onClickOutside));
 
 /** @brief Notifications from the store. */
 const notifications = computed(() => store.notifications);
@@ -97,25 +118,43 @@ async function onNotificationClick(n: Notification): Promise<void> {
 async function onMarkAllRead(): Promise<void> {
   await store.markAllRead();
 }
+
+/**
+ * @brief Clear all notifications.
+ */
+async function onClearAll(): Promise<void> {
+  await store.clearAll();
+}
 </script>
 
 <template>
   <div
     v-if="open"
+    ref="panelRef"
     class="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-y-auto rounded-lg border bg-background shadow-lg"
     role="dialog"
     aria-label="Notifications"
   >
     <div class="flex items-center justify-between border-b px-4 py-2">
       <h3 class="font-semibold">{{ t("notifications.title") }}</h3>
-      <button
-        v-if="!isEmpty && store.unreadCount > 0"
-        type="button"
-        class="text-sm text-primary hover:underline"
-        @click="onMarkAllRead"
-      >
-        {{ t("notifications.markAllRead") }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="!isEmpty && store.unreadCount > 0"
+          type="button"
+          class="text-sm text-primary hover:underline"
+          @click="onMarkAllRead"
+        >
+          {{ t("notifications.markAllRead") }}
+        </button>
+        <button
+          v-if="!isEmpty"
+          type="button"
+          class="text-sm text-destructive hover:underline"
+          @click="onClearAll"
+        >
+          {{ t("notifications.clearAll") }}
+        </button>
+      </div>
     </div>
     <div v-if="isEmpty" class="px-4 py-8 text-center text-muted-foreground">
       {{ t("notifications.empty") }}
