@@ -92,7 +92,7 @@ class Post(Base):
 
 
 class Comment(Base):
-    """@brief Threaded comments on posts."""
+    """@brief Threaded comments on posts with full-text search support."""
 
     __tablename__ = "comments"
 
@@ -121,6 +121,10 @@ class Comment(Base):
         ForeignKey("comments.id", ondelete="CASCADE"),
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_fts = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('english', content)", persisted=True),
+    )
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -131,6 +135,7 @@ class Comment(Base):
     __table_args__ = (
         Index("comments_post_idx", "post_id"),
         Index("comments_parent_idx", "parent_id"),
+        Index("comments_fts_idx", "content_fts", postgresql_using="gin"),
     )
 
 
