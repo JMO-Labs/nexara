@@ -14,7 +14,6 @@ export default defineNuxtConfig({
   /** @brief Hybrid rendering: static landing page, SPA for authenticated routes. */
   routeRules: {
     "/": { prerender: true },
-    "/about": { prerender: true },
     "/app/**": { ssr: false },
   },
 
