@@ -19,7 +19,7 @@ pages:
     - job: report:badges
       optional: true
       artifacts: true
-    - job: test:backend
+    - job: test:backend:unit
       optional: true
       artifacts: true
     - job: test:frontend

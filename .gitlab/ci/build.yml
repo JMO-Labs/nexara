@@ -16,7 +16,7 @@ build:docker:
     name: $KANIKO_IMAGE
     entrypoint: [""]
   needs:
-    - job: test:backend
+    - job: test:backend:unit
       optional: true
     - job: test:frontend
       optional: true

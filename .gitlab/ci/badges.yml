@@ -11,7 +11,7 @@ report:badges:
   stage: report
   image: $PYTHON_IMAGE
   needs:
-    - job: test:backend
+    - job: test:backend:unit
       optional: true
       artifacts: true
     - job: test:frontend
@@ -92,7 +92,7 @@ report:badges:
     - |
       # -- License badge --
       anybadge -l "license" -v "GPL-3.0" \
-        -f badges/license.svg --color="#blue"
+        -f badges/license.svg --color="blue"
 
     - |
       # -- Security badge (based on Bandit + Trivy results) --
