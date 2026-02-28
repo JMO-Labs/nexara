@@ -82,6 +82,28 @@ describe("CommentThread", () => {
     expect(wrapper.text()).toContain("Carol");
   });
 
+  it("emits add-comment with parentId when replying to a comment", async () => {
+    const wrapper = mount(CommentThread, {
+      props: { comments: mockComments, postId: "post-1" },
+    });
+
+    const replyBtn = wrapper.findAll('button').find(b => b.text() === 'feed.reply');
+    expect(replyBtn).toBeDefined();
+    await replyBtn!.trigger('click');
+
+    const replyInput = wrapper.find('[data-testid="reply-input"]');
+    expect(replyInput.exists()).toBe(true);
+    await replyInput.setValue('My nested reply');
+
+    const replyForm = wrapper.find('[data-testid="reply-form"]');
+    await replyForm.trigger('submit');
+
+    expect(wrapper.emitted('add-comment')).toBeTruthy();
+    expect(wrapper.emitted('add-comment')![0]).toEqual([
+      { postId: 'post-1', content: 'My nested reply', parentId: 'c1' },
+    ]);
+  });
+
   it("emits add-comment when reply is submitted", async () => {
     const wrapper = mount(CommentThread, {
       props: { comments: mockComments, postId: "post-1" },
