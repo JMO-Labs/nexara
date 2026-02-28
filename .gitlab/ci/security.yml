@@ -47,13 +47,10 @@ security:pip-audit:
   before_script:
     - pip install --quiet uv pip-audit
     - cd backend
-    - uv venv .venv
+    - uv venv .venv --clear
     - uv sync --frozen 2>/dev/null || uv sync
-    - source .venv/bin/activate
-    - cd "$CI_PROJECT_DIR"
   script:
     - echo "Running pip-audit dependency scan..."
-    - cd backend
     - pip-audit --format=json --output=pip-audit-report.json || true
     - pip-audit || true
     - echo "pip-audit scan complete."

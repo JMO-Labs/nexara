@@ -1,0 +1,41 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+backend/.venv
+*.egg-info
+
+# Tests (not needed in production image)
+backend/tests/
+backend/.pytest_cache/
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Plans and docs
+plans/
+docs/
+*.md
+!README.md
+
+# CI
+.gitlab/
+.github/
+
+# Node (will be copied explicitly in frontend build stage)
+node_modules/
+
+# Docker
+deploy/docker-compose*.yml
+deploy/.env*
+
+# Misc
+.mypy_cache/
+.ruff_cache/

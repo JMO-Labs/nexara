@@ -8,19 +8,12 @@
 
 lint:ruff:
   stage: lint
-  image: $PYTHON_IMAGE
-  extends:
-    - .cache:python-rw
+  image: python:3.12-alpine
   before_script:
-    - pip install --quiet uv
-    - cd backend
-    - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
-    - source .venv/bin/activate
-    - cd "$CI_PROJECT_DIR"
+    - pip install --quiet ruff
   script:
     - echo "Running Ruff linter..."
-    - ruff check backend/ --output-format=gitlab
+    - ruff check backend/
     - echo "Checking Ruff formatting..."
     - ruff format --check backend/
   rules: !reference [.rules:backend-changes, rules]
@@ -37,12 +30,10 @@ lint:mypy:
   before_script:
     - pip install --quiet uv
     - cd backend
-    - uv venv .venv
-    - uv sync --frozen 2>/dev/null || uv sync
-    - source .venv/bin/activate
-    - cd "$CI_PROJECT_DIR"
+    - uv venv .venv --clear
+    - uv sync --frozen --extra dev 2>/dev/null || uv sync --extra dev
   script:
     - echo "Running mypy type checking..."
-    - mypy backend/app/ --ignore-missing-imports
+    - .venv/bin/mypy app/ --ignore-missing-imports
   rules: !reference [.rules:backend-changes, rules]
   allow_failure: true

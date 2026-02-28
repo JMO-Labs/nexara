@@ -1,0 +1,36 @@
+# =============================================================================
+# Nexara — Development Docker Compose Override
+# =============================================================================
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Mounts source code as volumes for hot reload. In development, run
+# Uvicorn, Celery, and Valkey individually in terminals rather than
+# through supervisord for easier debugging.
+# =============================================================================
+
+services:
+
+  nexara:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+      target: runtime
+    volumes:
+      - ../backend:/app/backend:ro
+      - media:/data/media
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: "DEBUG"
+      DATABASE_URL: "postgresql+asyncpg://nexara:nexara@nexara-db:5432/nexara"
+      SECRET_KEY: "dev-secret-key-do-not-use-in-production"
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+      - "${METRICS_PORT:-9090}:9090"
+
+  nexara-db:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: nexara

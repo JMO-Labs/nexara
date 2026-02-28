@@ -1,0 +1,111 @@
+# =============================================================================
+# Nexara — Production Docker Compose
+# =============================================================================
+#
+# Two-container deployment:
+#   1. nexara     — App (Nginx + Uvicorn + Celery + Valkey, managed by supervisord)
+#   2. nexara-db  — PostgreSQL 18 (Alpine)
+#
+# Users provide their own reverse proxy (NPM, Caddy, Traefik, Cloudflare Tunnel)
+# for TLS termination. This compose file does NOT handle HTTPS.
+#
+# Quick start:
+#   cp .env.example .env
+#   # Edit .env — set SECRET_KEY and POSTGRES_PASSWORD at minimum
+#   docker compose up -d
+# =============================================================================
+
+name: nexara
+
+services:
+
+  # ── App Container ──────────────────────────────────────────────────────────
+  nexara:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: ghcr.io/com-nexara/nexara:latest
+    restart: unless-stopped
+    depends_on:
+      nexara-db:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+      - "${METRICS_PORT:-9090}:9090"
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://nexara:${POSTGRES_PASSWORD}@nexara-db:5432/nexara"
+      REDIS_URL: "redis://127.0.0.1:6379"
+      SECRET_KEY: "${SECRET_KEY}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      STORAGE_BACKEND: "${STORAGE_BACKEND:-local}"
+      LOCAL_STORAGE_PATH: "/data/media"
+      S3_ENDPOINT_URL: "${S3_ENDPOINT_URL:-}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY:-}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY:-}"
+      S3_BUCKET: "${S3_BUCKET:-nexara}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      OIDC_ISSUER: "${OIDC_ISSUER:-}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-}"
+      ENABLE_REGISTRATION: "${ENABLE_REGISTRATION:-true}"
+      REQUIRE_INVITE: "${REQUIRE_INVITE:-false}"
+      TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
+    volumes:
+      - media:/data/media
+    networks:
+      - nexara-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # --- GPU passthrough (uncomment the block matching your hardware) --------
+    #
+    # NVIDIA — requires nvidia-container-toolkit on the host:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu, video]
+    #     limits:
+    #       cpus: "2.0"
+    #
+    # Intel / AMD (VA-API) — expose the render device:
+    # devices:
+    #   - /dev/dri/renderD128:/dev/dri/renderD128
+
+  # ── Database Container ─────────────────────────────────────────────────────
+  nexara-db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexara
+      POSTGRES_USER: nexara
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexara-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexara"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  media:
+    driver: local
+
+networks:
+  nexara-net:
+    driver: bridge

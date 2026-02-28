@@ -18,7 +18,7 @@ lint:eslint:
   script:
     - echo "Running ESLint..."
     - cd frontend
-    - npx eslint . --format gitlab
+    - npx eslint .
   rules: !reference [.rules:frontend-changes, rules]
   allow_failure: false
 
