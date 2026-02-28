@@ -60,7 +60,7 @@ class TestUserModel:
 
     def test_profile_columns(self):
         cols = _get_columns("users")
-        expected = {"avatar_url", "bio", "pronouns", "location", "website_url", "birthday"}
+        expected = {"avatar_url", "bio", "title", "location", "website_url", "birthday"}
         assert expected.issubset(cols)
 
     def test_security_columns(self):
