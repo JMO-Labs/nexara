@@ -166,15 +166,15 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
         logger.warning("waf_cache_client_unavailable", exc_info=True)
 
     app.add_middleware(
-        WAFMiddleware,
+        WAFMiddleware,  # type: ignore[arg-type]
         settings=settings,
-        cache_client=cache_client,  # type: ignore[arg-type]
+        cache_client=cache_client,
     )
     app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
-        CloudflareRealIPMiddleware,
-        settings=settings,  # type: ignore[arg-type]
+        CloudflareRealIPMiddleware,  # type: ignore[arg-type]
+        settings=settings,
     )
 
 
