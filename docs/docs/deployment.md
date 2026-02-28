@@ -71,8 +71,12 @@ on unRAID. See the unRAID template XMLs in `deploy/unraid/`.
 
 ## Health Check
 
+The health endpoint is mounted at the **root** path, not under `/api/v1`:
+
 ```
 GET /healthz
 ```
 
-Returns HTTP 200 when all components are healthy, HTTP 503 otherwise.
+- **Path:** `/healthz` (not `/api/v1/healthz`)
+- **Response:** HTTP 200 when all components (DB, Valkey, storage) are healthy, HTTP 503 otherwise
+- In development, the Nuxt dev proxy forwards `/healthz` to the backend at `http://localhost:8000/healthz`

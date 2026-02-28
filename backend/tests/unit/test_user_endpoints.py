@@ -42,7 +42,7 @@ def _mock_user(**overrides) -> MagicMock:
     user.email_verified = True
     user.avatar_url = None
     user.bio = None
-    user.pronouns = None
+    user.title = None
     user.location = None
     user.website_url = None
     user.birthday = None

@@ -84,10 +84,16 @@ class TestCreateInvite:
         mock_invite.raw_token = "placeholder"
 
         try:
-            with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
+            with (
+                patch("app.api.v1.invites.InviteRepository") as mock_repo_cls,
+                patch("app.api.v1.invites.AuditRepository") as mock_audit_cls,
+            ):
                 mock_repo = AsyncMock()
                 mock_repo.create.return_value = mock_invite
                 mock_repo_cls.return_value = mock_repo
+
+                mock_audit = AsyncMock()
+                mock_audit_cls.return_value = mock_audit
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -100,6 +106,7 @@ class TestCreateInvite:
                 data = resp.json()
                 assert data["email"] == "new@example.com"
                 assert "raw_token" in data
+                mock_audit.append.assert_called_once()
         finally:
             test_app.dependency_overrides.clear()
 
@@ -144,7 +151,7 @@ class TestListInvites:
         try:
             with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
                 mock_repo = AsyncMock()
-                mock_repo.list_active.return_value = []
+                mock_repo.list_all.return_value = []
                 mock_repo_cls.return_value = mock_repo
 
                 transport = ASGITransport(app=test_app)
@@ -175,15 +182,25 @@ class TestDeleteInvite:
         invite_id = uuid.uuid4()
 
         try:
-            with patch("app.api.v1.invites.InviteRepository") as mock_repo_cls:
+            with (
+                patch("app.api.v1.invites.InviteRepository") as mock_repo_cls,
+                patch("app.api.v1.invites.AuditRepository") as mock_audit_cls,
+            ):
                 mock_repo = AsyncMock()
                 mock_repo.delete_invite.return_value = True
                 mock_repo_cls.return_value = mock_repo
+
+                mock_audit = AsyncMock()
+                mock_audit_cls.return_value = mock_audit
 
                 transport = ASGITransport(app=test_app)
                 async with AsyncClient(transport=transport, base_url="http://test") as client:
                     resp = await client.delete(f"/api/v1/admin/invites/{invite_id}")
 
                 assert resp.status_code == 200
+                mock_repo.delete_invite.assert_called_once_with(
+                    invite_id, community_id=admin.community_id
+                )
+                mock_audit.append.assert_called_once()
         finally:
             test_app.dependency_overrides.clear()

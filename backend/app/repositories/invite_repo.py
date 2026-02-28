@@ -114,16 +114,43 @@ class InviteRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def delete_invite(self, invite_id: uuid.UUID) -> bool:
+    async def list_all(
+        self,
+        community_id: uuid.UUID,
+        *,
+        limit: int = 50,
+    ) -> list[Invite]:
+        """
+        @brief List all invites for a community (active, used, expired).
+
+        @param community_id Community scope.
+        @param limit Max items to return.
+        @return List of Invite instances ordered by created_at desc.
+        """
+        stmt = (
+            select(Invite)
+            .where(Invite.community_id == community_id)
+            .order_by(Invite.created_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete_invite(
+        self, invite_id: uuid.UUID, *, community_id: uuid.UUID | None = None
+    ) -> bool:
         """
         @brief Hard-delete an invite (revoke before use).
 
         @param invite_id Primary key of the invite.
+        @param community_id If set, only delete if invite belongs to this community.
         @return True if a row was deleted.
         """
         from sqlalchemy import delete
 
         stmt = delete(Invite).where(Invite.id == invite_id)
+        if community_id is not None:
+            stmt = stmt.where(Invite.community_id == community_id)
         result = await self._session.execute(stmt)
         return (cast(int, getattr(result, "rowcount", 0)) or 0) > 0
 
