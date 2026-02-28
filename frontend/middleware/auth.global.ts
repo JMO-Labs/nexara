@@ -29,14 +29,14 @@ export function authMiddleware(
 ): { path: string; query?: Record<string, string> } | undefined {
   const authStore = useAuthStore();
   const isAuthenticated = authStore.isAuthenticated;
-  const path = to.path;
+  const pathLower = to.path.toLowerCase();
 
-  const isAppRoute = path.startsWith("/app");
-  const isAuthRoute = path.startsWith("/auth");
-  const isAdminRoute = path.startsWith("/app/admin");
+  const isAppRoute = pathLower.startsWith("/app");
+  const isAuthRoute = pathLower.startsWith("/auth");
+  const isAdminRoute = pathLower.startsWith("/app/admin");
 
   if (isAppRoute && !isAuthenticated) {
-    return { path: "/auth/login", query: { redirect: to.fullPath || path } };
+    return { path: "/auth/login", query: { redirect: to.fullPath || to.path } };
   }
 
   if (isAdminRoute && isAuthenticated && authStore.user?.role !== "admin") {

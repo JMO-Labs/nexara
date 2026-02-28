@@ -25,7 +25,6 @@
       <div class="relative">
         <TopBar
           :dark-mode="uiStore.darkMode"
-          :user-name="authStore.user?.display_name || ''"
           @toggle-mobile-nav="mobileNavOpen = !mobileNavOpen"
           @toggle-dark-mode="uiStore.toggleDarkMode()"
           @open-search="uiStore.openSearch()"
@@ -39,9 +38,9 @@
 
       <main id="main-content" class="flex-1 overflow-y-auto">
         <div class="flex gap-6 p-4 pb-20 md:p-6 md:pb-6">
-          <!-- Feed / page content column — grows to fill, content centered for readability -->
+          <!-- Page content column — width adapts by route (wider for settings/admin) -->
           <div class="min-w-0 flex-1">
-            <div class="mx-auto max-w-2xl">
+            <div class="mx-auto" :class="contentMaxWidth">
               <slot />
             </div>
           </div>
@@ -61,7 +60,7 @@
     <!-- Search modal -->
     <SearchModal v-model:open="uiStore.searchOpen" />
 
-    <!-- Toast notifications -->
+    <!-- Toast notifications (Teleported to body by AppToast) -->
     <AppToast :toasts="uiStore.toasts" @dismiss="uiStore.dismissToast" />
   </div>
 </template>
@@ -70,9 +69,13 @@
 /**
  * @brief Default layout setup with store initialization.
  */
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useUiStore } from "~/stores/ui";
+import { useFeedStore } from "~/stores/feed";
+import { useNotificationsStore } from "~/stores/notifications";
+import { useBranding } from "~/composables/useBranding";
+import { useSSE } from "~/composables/useSSE";
 import Sidebar from "~/components/layout/Sidebar.vue";
 import TopBar from "~/components/layout/TopBar.vue";
 import BottomNav from "~/components/layout/BottomNav.vue";
@@ -81,10 +84,34 @@ import SearchModal from "~/components/layout/SearchModal.vue";
 import MobileDrawer from "~/components/layout/MobileDrawer.vue";
 import AppToast from "~/components/common/AppToast.vue";
 import NotificationPanel from "~/components/notifications/NotificationPanel.vue";
+import type { Post, Notification } from "~/types/api";
+
+/** @brief SSE event payload for feed_update events from the backend. */
+interface FeedUpdatePayload {
+  event: string;
+  post: Post;
+}
 
 const authStore = useAuthStore();
 const uiStore = useUiStore();
+const feedStore = useFeedStore();
+const notificationsStore = useNotificationsStore();
+const { fetchBranding } = useBranding();
 const route = useRoute();
+
+const { connect: sseConnect, disconnect: sseDisconnect } = useSSE(
+  (type, data) => {
+    if (type === "feed_update" && data) {
+      const payload = data as FeedUpdatePayload;
+      if (payload.post) {
+        feedStore.prependPost(payload.post);
+      }
+    }
+    if (type === "notification" && data) {
+      notificationsStore.handleIncoming(data as Notification);
+    }
+  },
+);
 
 /** @brief Whether the mobile navigation drawer is open. */
 const mobileNavOpen = ref(false);
@@ -100,7 +127,26 @@ const showCalendar = computed(() => {
   );
 });
 
+/** @brief Max-width class — wider for settings and admin pages, narrow for feed. */
+const contentMaxWidth = computed(() => {
+  if (
+    route.path.startsWith("/app/settings") ||
+    route.path.startsWith("/app/admin")
+  ) {
+    return "max-w-4xl";
+  }
+  return "max-w-2xl";
+});
+
 onMounted(() => {
   uiStore.initDarkMode();
+  fetchBranding();
+  if (authStore.isAuthenticated) {
+    sseConnect();
+  }
+});
+
+onUnmounted(() => {
+  sseDisconnect();
 });
 </script>
