@@ -2,7 +2,7 @@
  * @file tests/components/notifications/NotificationPanel.test.ts
  * @brief TDD tests for the NotificationPanel component.
  *
- * Verifies notification list rendering.
+ * Verifies notification list rendering, fetch on open, mark-all-read, and behavior.
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -14,6 +14,13 @@ import type { Notification } from "~/types/api";
 
 vi.mock("vue-router", () => ({
   useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("~/composables/useApi", () => ({
+  useApi: () => ({
+    get: vi.fn().mockResolvedValue({ items: [] }),
+    post: vi.fn().mockResolvedValue({}),
+  }),
 }));
 
 const mockNotifications: Notification[] = [
@@ -52,5 +59,37 @@ describe("NotificationPanel", () => {
     expect(items).toHaveLength(2);
     expect(items[0].text()).toContain("Alice mentioned you");
     expect(items[1].text()).toContain("New comment on your post");
+  });
+
+  it("calls fetchNotifications when panel opens", async () => {
+    const store = useNotificationsStore();
+    const fetchSpy = vi.spyOn(store, "fetchNotifications").mockResolvedValue();
+
+    const wrapper = mount(NotificationPanel, {
+      props: { open: false },
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await wrapper.setProps({ open: true });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls markAllRead when mark all button clicked", async () => {
+    const store = useNotificationsStore();
+    store.notifications = mockNotifications;
+    store.unreadCount = 1;
+    const markAllSpy = vi.spyOn(store, "markAllRead").mockResolvedValue();
+
+    const wrapper = mount(NotificationPanel, {
+      props: { open: true },
+    });
+
+    const markAllBtn = wrapper.find("button");
+    expect(markAllBtn.exists()).toBe(true);
+    await markAllBtn.trigger("click");
+
+    expect(markAllSpy).toHaveBeenCalledTimes(1);
   });
 });

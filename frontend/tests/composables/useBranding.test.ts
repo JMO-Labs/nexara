@@ -13,6 +13,7 @@ describe("useBranding", () => {
     vi.restoreAllMocks();
     document.documentElement.style.removeProperty("--color-primary");
     document.documentElement.style.removeProperty("--color-primary-dark");
+    document.documentElement.style.removeProperty("--primary");
   });
 
   it("injects CSS variables from fetched branding data", async () => {
@@ -40,6 +41,30 @@ describe("useBranding", () => {
     expect(
       document.documentElement.style.getPropertyValue("--color-primary-dark"),
     ).toBe("#cc4400");
+  });
+
+  it("injects --primary CSS variable in HSL format", async () => {
+    const mockBranding = {
+      community_name: "TestCommunity",
+      tagline: null,
+      color_primary: "#ff5500",
+      color_primary_dark: "#cc4400",
+      logo_light_url: null,
+      logo_dark_url: null,
+    };
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockBranding,
+    } as Response);
+
+    const { fetchBranding } = useBranding();
+    await fetchBranding();
+
+    const primaryValue =
+      document.documentElement.style.getPropertyValue("--primary");
+    expect(primaryValue).toMatch(/^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%$/);
+    expect(primaryValue).not.toContain("#");
   });
 
   it("falls back to defaults on fetch failure", async () => {
