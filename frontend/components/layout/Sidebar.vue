@@ -38,7 +38,7 @@
       </NuxtLink>
     </nav>
 
-    <!-- Bottom section: Settings -->
+    <!-- Bottom section: Settings & Logout -->
     <div class="flex flex-col items-center gap-1 border-t border-border py-3">
       <NuxtLink
         to="/app/settings"
@@ -55,6 +55,19 @@
           {{ $t("nav.settings") }}
         </span>
       </NuxtLink>
+
+      <button
+        class="nav-item group relative flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        :aria-label="$t('nav.logout')"
+        @click="handleLogout"
+      >
+        <ArrowRightStartOnRectangleIcon class="h-5 w-5" />
+        <span
+          class="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          {{ $t("nav.logout") }}
+        </span>
+      </button>
     </div>
   </aside>
 </template>
@@ -71,11 +84,21 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
+  ArrowRightStartOnRectangleIcon,
 } from "@heroicons/vue/24/outline";
 import { useAuthStore } from "~/stores/auth";
 import { computed } from "vue";
 
 const authStore = useAuthStore();
+const router = useRouter();
+
+/**
+ * @brief Log out the current user and redirect to login.
+ */
+async function handleLogout(): Promise<void> {
+  await authStore.logout();
+  await router.push("/auth/login");
+}
 
 /** @brief Primary navigation items rendered in the rail. */
 const navItems = computed(() => {

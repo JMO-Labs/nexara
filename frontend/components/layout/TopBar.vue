@@ -48,13 +48,8 @@
       <!-- Notifications -->
       <NotificationBell @toggle="$emit('toggle-notifications')" />
 
-      <!-- User avatar -->
-      <button
-        class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
-        :aria-label="$t('a11y.userMenu')"
-      >
-        {{ userInitial }}
-      </button>
+      <!-- User menu dropdown -->
+      <UserMenu />
     </div>
   </header>
 </template>
@@ -63,7 +58,6 @@
 /**
  * @brief TopBar component props and events.
  */
-import { computed } from "vue";
 import {
   Bars3Icon,
   MagnifyingGlassIcon,
@@ -71,12 +65,11 @@ import {
   MoonIcon,
 } from "@heroicons/vue/24/outline";
 import NotificationBell from "~/components/notifications/NotificationBell.vue";
+import UserMenu from "~/components/layout/UserMenu.vue";
 
-const props = defineProps<{
+defineProps<{
   /** @brief Whether dark mode is currently active. */
   darkMode: boolean;
-  /** @brief Display name of the current user. */
-  userName: string;
 }>();
 
 defineEmits<{
@@ -85,9 +78,4 @@ defineEmits<{
   "open-search": [];
   "toggle-notifications": [];
 }>();
-
-/** @brief First character of the user's display name for avatar fallback. */
-const userInitial = computed(
-  () => props.userName?.charAt(0)?.toUpperCase() || "?",
-);
 </script>
