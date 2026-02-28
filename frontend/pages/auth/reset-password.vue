@@ -13,7 +13,7 @@
         <!-- Step 1: Request reset -->
         <template v-if="!resetToken">
           <h1
-            class="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white"
+            class="mb-6 text-center text-2xl font-bold text-foreground"
           >
             {{ $t("auth.resetPassword") }}
           </h1>
@@ -30,7 +30,7 @@
             <div>
               <label
                 for="reset-email"
-                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                class="mb-1 block text-sm font-medium text-foreground"
               >
                 {{ $t("auth.email") }}
               </label>
@@ -39,14 +39,14 @@
                 v-model="email"
                 type="email"
                 required
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
+                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+              >
             </div>
 
             <button
               type="submit"
               :disabled="loading"
-              class="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+              class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {{ $t("auth.sendResetLink") }}
             </button>
@@ -56,14 +56,14 @@
         <!-- Step 2: Set new password -->
         <template v-else>
           <h1
-            class="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white"
+            class="mb-6 text-center text-2xl font-bold text-foreground"
           >
             {{ $t("auth.setNewPassword") }}
           </h1>
 
           <div
             v-if="errorMessage"
-            class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-300"
+            class="mb-4 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
             role="alert"
           >
             {{ errorMessage }}
@@ -85,7 +85,7 @@
             <div>
               <label
                 for="new-password"
-                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                class="mb-1 block text-sm font-medium text-foreground"
               >
                 {{ $t("auth.newPassword") }}
               </label>
@@ -96,24 +96,24 @@
                 required
                 minlength="12"
                 autocomplete="new-password"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              />
+                class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+              >
             </div>
 
             <button
               type="submit"
               :disabled="loading"
-              class="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+              class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {{ $t("auth.setNewPassword") }}
             </button>
           </form>
         </template>
 
-        <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-6 text-center text-sm text-muted-foreground">
           <a
             href="/auth/login"
-            class="text-primary-600 hover:underline dark:text-primary-400"
+            class="text-primary hover:underline"
           >
             {{ $t("auth.login") }}
           </a>

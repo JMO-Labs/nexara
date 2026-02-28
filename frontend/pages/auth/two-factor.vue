@@ -10,17 +10,17 @@
     <div class="flex min-h-screen items-center justify-center px-4">
       <div class="w-full max-w-md">
         <h1
-          class="mb-2 text-center text-2xl font-bold text-gray-900 dark:text-white"
+          class="mb-2 text-center text-2xl font-bold text-foreground"
         >
           {{ $t("auth.twoFactor.title") }}
         </h1>
-        <p class="mb-6 text-center text-sm text-gray-600 dark:text-gray-300">
+        <p class="mb-6 text-center text-sm text-muted-foreground">
           {{ $t("auth.twoFactor.enterCode") }}
         </p>
 
         <div
           v-if="errorMessage"
-          class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-300"
+          class="mb-4 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
           role="alert"
         >
           {{ errorMessage }}
@@ -35,7 +35,7 @@
           <div>
             <label
               for="totp-code"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.twoFactor.code") }}
             </label>
@@ -48,15 +48,15 @@
               maxlength="6"
               required
               autocomplete="one-time-code"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-center text-lg tracking-widest focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-center text-lg tracking-widest text-foreground focus:ring-2 focus:ring-ring"
               :placeholder="'000000'"
-            />
+            >
           </div>
 
           <button
             type="submit"
             :disabled="loading || totpCode.length !== 6"
-            class="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+            class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {{ $t("auth.twoFactor.verify") }}
           </button>
@@ -67,7 +67,7 @@
           <div>
             <label
               for="backup-code"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.twoFactor.backupCode") }}
             </label>
@@ -76,21 +76,21 @@
               v-model="backupCode"
               type="text"
               required
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+            >
           </div>
 
           <button
             type="submit"
             :disabled="loading || !backupCode.trim()"
-            class="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+            class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {{ $t("auth.twoFactor.verify") }}
           </button>
         </form>
 
         <button
-          class="mt-4 w-full text-center text-sm text-primary-600 hover:underline dark:text-primary-400"
+          class="mt-4 w-full text-center text-sm text-primary hover:underline"
           @click="showBackupInput = !showBackupInput"
         >
           {{

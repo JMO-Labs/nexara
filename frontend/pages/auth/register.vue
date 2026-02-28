@@ -11,14 +11,14 @@
     <div class="flex min-h-screen items-center justify-center px-4">
       <div class="w-full max-w-md">
         <h1
-          class="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white"
+          class="mb-6 text-center text-2xl font-bold text-foreground"
         >
           {{ $t("auth.register") }}
         </h1>
 
         <div
           v-if="errorMessage"
-          class="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/50 dark:text-red-300"
+          class="mb-4 rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
           role="alert"
         >
           {{ errorMessage }}
@@ -36,7 +36,7 @@
           <div>
             <label
               for="reg-email"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.email") }}
             </label>
@@ -46,14 +46,14 @@
               type="email"
               required
               autocomplete="email"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+            >
           </div>
 
           <div>
             <label
               for="reg-username"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.username") }}
             </label>
@@ -63,14 +63,14 @@
               type="text"
               required
               autocomplete="username"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+            >
           </div>
 
           <div>
             <label
               for="reg-display-name"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.displayName") }}
             </label>
@@ -79,14 +79,14 @@
               v-model="form.display_name"
               type="text"
               required
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+            >
           </div>
 
           <div>
             <label
               for="reg-password"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.password") }}
             </label>
@@ -97,9 +97,9 @@
               required
               minlength="12"
               autocomplete="new-password"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            />
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+            >
+            <p class="mt-1 text-xs text-muted-foreground">
               {{ $t("auth.passwordHint") }}
             </p>
           </div>
@@ -107,7 +107,7 @@
           <div v-if="inviteToken">
             <label
               for="reg-invite"
-              class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="mb-1 block text-sm font-medium text-foreground"
             >
               {{ $t("auth.inviteToken") }}
             </label>
@@ -116,24 +116,24 @@
               :value="inviteToken"
               type="text"
               readonly
-              class="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-            />
+              class="w-full rounded-lg border border-input bg-muted px-3 py-2 text-muted-foreground"
+            >
           </div>
 
           <button
             type="submit"
             :disabled="loading"
-            class="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+            class="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-ring disabled:opacity-50"
           >
             {{ loading ? $t("common.loading") : $t("auth.register") }}
           </button>
         </form>
 
-        <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-6 text-center text-sm text-muted-foreground">
           {{ $t("auth.haveAccount") }}
           <a
             href="/auth/login"
-            class="text-primary-600 hover:underline dark:text-primary-400"
+            class="text-primary hover:underline"
           >
             {{ $t("auth.login") }}
           </a>
