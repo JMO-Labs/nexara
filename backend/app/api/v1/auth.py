@@ -36,7 +36,7 @@ from app.schemas.auth import (
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
 from app.services.notification_service import NotificationService
-from app.services.realtime.pubsub import publish_to_user
+from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -108,7 +108,7 @@ async def register(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=_uuid.UUID(settings.COMMUNITY_ID),
-        pubsub_publisher=publish_to_user,
+        event_bus=event_bus,
     )
     svc = AuthService(db, settings, notification_service=notification_svc)
     result = await svc.register(

@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions import AuthorizationError, NotFoundError
+from app.services.realtime.events import EventType, FeedEvent
 from tests.unit.services.conftest import (
     ADMIN_ID,
     AUTHOR_ID,
@@ -98,46 +99,33 @@ class TestCreatePost:
         media_attacher.assert_awaited_once_with(post.id, media_ids, user)
 
     @pytest.mark.asyncio
-    async def test_create_post_publishes_feed_update(
-        self, service_with_publisher, post_repo, feed_publisher
+    async def test_create_post_emits_event(
+        self, service_with_event_bus, post_repo, mock_event_bus,
     ):
-        """create_post() calls feed_publisher with feed_update message."""
+        """create_post() emits a post_created event via EventBus."""
         user = _make_user()
         post = _make_post()
         enriched = {"id": str(post.id), "content": "Hi"}
         post_repo.create_post.return_value = post
         post_repo.get_post_detail.return_value = enriched
-        await service_with_publisher.create_post(user, "Hello")
-        feed_publisher.assert_awaited_once()
-        call_args = feed_publisher.call_args[0]
-        assert call_args[0] == COMMUNITY_ID
-        assert call_args[1]["type"] == "feed_update"
-        assert call_args[1]["payload"]["event"] == "created"
-        assert call_args[1]["payload"]["post"] == enriched
+        await service_with_event_bus.create_post(user, "Hello")
+        mock_event_bus.emit.assert_awaited_once()
+        event = mock_event_bus.emit.call_args[0][0]
+        assert event.type == EventType.FEED_UPDATE
+        assert event.payload["event"] == FeedEvent.POST_CREATED
+        assert event.payload["post"] == enriched
 
     @pytest.mark.asyncio
-    async def test_create_post_detects_mentions(self, service, post_repo):
-        """create_post() calls notify for mentioned users."""
+    async def test_create_post_delegates_mention_notifications(self, service, post_repo):
+        """create_post() delegates mention detection to notification_service.notify_mentions."""
         user = _make_user()
         post = _make_post()
         post_repo.create_post.return_value = post
         post_repo.get_post_detail.return_value = {}
-        mentioned = MagicMock()
-        mentioned.id = uuid.uuid4()
-        mentioned.username = "bob"
-        result_mock = MagicMock()
-        result_mock.scalars.return_value.all.return_value = [mentioned]
-        post_repo._session = MagicMock()
-        post_repo._session.execute = AsyncMock(return_value=result_mock)
-        with patch(
-            "app.services.post_service.NotificationService.detect_mentions",
-            return_value=["bob"],
-        ):
-            await service.create_post(user, "Hey @bob!")
-        service._notification.notify.assert_awaited()
-        call_kwargs = service._notification.notify.call_args[1]
-        assert call_kwargs["user_id"] == mentioned.id
-        assert call_kwargs["type"] == "mention"
+        await service.create_post(user, "Hey @bob!")
+        service._notification.notify_mentions.assert_awaited_once_with(
+            "Hey @bob!", user, post.id, post_repo._session,
+        )
 
 
 class TestDeletePost:
@@ -203,6 +191,32 @@ class TestAddComment:
         with pytest.raises(NotFoundError):
             await service.add_comment(POST_ID, user, "Hi")
 
+    @pytest.mark.asyncio
+    async def test_add_comment_emits_event(
+        self, service_with_event_bus, post_repo, comment_repo, mock_event_bus,
+    ):
+        """add_comment() emits a comment_created event via EventBus."""
+        user = _make_user(user_id=VIEWER_ID)
+        post = _make_post(author_id=AUTHOR_ID)
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.content = "Great!"
+        comment.parent_id = None
+        comment.created_at = MagicMock()
+        comment.created_at.isoformat.return_value = "2026-02-28T10:00:00"
+        post_repo.get_by_id.return_value = post
+        comment_repo.create_comment.return_value = comment
+
+        await service_with_event_bus.add_comment(POST_ID, user, "Great!")
+
+        mock_event_bus.emit.assert_awaited()
+        event = mock_event_bus.emit.call_args[0][0]
+        assert event.type == EventType.FEED_UPDATE
+        assert event.payload["event"] == FeedEvent.COMMENT_CREATED
+        assert event.payload["post_id"] == str(POST_ID)
+        assert event.payload["user_id"] == str(VIEWER_ID)
+        assert event.payload["comment"]["content"] == "Great!"
+
 
 class TestToggleReaction:
     """@brief Tests for toggle_reaction()."""
@@ -214,9 +228,9 @@ class TestToggleReaction:
         post = _make_post()
         post_repo.get_by_id.return_value = post
         reaction_repo.toggle.return_value = ("added", 1)
-        result = await service.toggle_reaction(POST_ID, user, "👍")
+        result = await service.toggle_reaction(POST_ID, user, "\U0001f44d")
         assert result.action == "added"
-        assert result.emoji == "👍"
+        assert result.emoji == "\U0001f44d"
         assert result.count == 1
 
     @pytest.mark.asyncio
@@ -226,9 +240,9 @@ class TestToggleReaction:
         post = _make_post()
         post_repo.get_by_id.return_value = post
         reaction_repo.toggle.return_value = ("removed", 0)
-        result = await service.toggle_reaction(POST_ID, user, "👍")
+        result = await service.toggle_reaction(POST_ID, user, "\U0001f44d")
         assert result.action == "removed"
-        assert result.emoji == "👍"
+        assert result.emoji == "\U0001f44d"
         assert result.count == 0
 
     @pytest.mark.asyncio
@@ -238,9 +252,27 @@ class TestToggleReaction:
         post = _make_post(author_id=AUTHOR_ID)
         post_repo.get_by_id.return_value = post
         reaction_repo.toggle.return_value = ("added", 1)
-        await service.toggle_reaction(POST_ID, user, "👍")
+        await service.toggle_reaction(POST_ID, user, "\U0001f44d")
         service._notification.notify.assert_awaited_once()
         service._notification.reset_mock()
         reaction_repo.toggle.return_value = ("removed", 0)
-        await service.toggle_reaction(POST_ID, user, "👍")
+        await service.toggle_reaction(POST_ID, user, "\U0001f44d")
         service._notification.notify.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_toggle_reaction_emits_event(
+        self, service_with_event_bus, post_repo, reaction_repo, mock_event_bus,
+    ):
+        """toggle_reaction() emits a reaction_toggled event via EventBus."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.get_by_id.return_value = post
+        reaction_repo.toggle.return_value = ("added", 1)
+        await service_with_event_bus.toggle_reaction(POST_ID, user, "\U0001f44d")
+        mock_event_bus.emit.assert_awaited()
+        event = mock_event_bus.emit.call_args[0][0]
+        assert event.type == EventType.FEED_UPDATE
+        assert event.payload["event"] == FeedEvent.REACTION_TOGGLED
+        assert event.payload["emoji"] == "\U0001f44d"
+        assert event.payload["count"] == 1
+        assert event.payload["action"] == "added"

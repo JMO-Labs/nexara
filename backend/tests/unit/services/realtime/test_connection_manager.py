@@ -126,6 +126,67 @@ class TestSendToUser:
         good.send_json.assert_called_once()
 
 
+class TestSendToCommunity:
+    """@brief Verify community-scoped message delivery."""
+
+    @pytest.mark.asyncio
+    async def test_send_to_community_reaches_members(self, manager):
+        cid = uuid.uuid4()
+        c1, c2 = _mock_conn(), _mock_conn()
+        uid1, uid2 = uuid.uuid4(), uuid.uuid4()
+        await manager.connect(c1, uid1, community_id=cid)
+        await manager.connect(c2, uid2, community_id=cid)
+
+        sent = await manager.send_to_community(cid, {"type": "feed_update"})
+
+        assert sent == 2
+        c1.send_json.assert_called_once()
+        c2.send_json.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_to_community_excludes_other_communities(self, manager):
+        cid_a, cid_b = uuid.uuid4(), uuid.uuid4()
+        c_a, c_b = _mock_conn(), _mock_conn()
+        await manager.connect(c_a, uuid.uuid4(), community_id=cid_a)
+        await manager.connect(c_b, uuid.uuid4(), community_id=cid_b)
+
+        sent = await manager.send_to_community(cid_a, {"type": "test"})
+
+        assert sent == 1
+        c_a.send_json.assert_called_once()
+        c_b.send_json.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_to_community_includes_unscoped_users(self, manager):
+        """Users connected without community_id receive all community messages."""
+        cid = uuid.uuid4()
+        c_scoped = _mock_conn()
+        c_unscoped = _mock_conn()
+        await manager.connect(c_scoped, uuid.uuid4(), community_id=cid)
+        await manager.connect(c_unscoped, uuid.uuid4())
+
+        sent = await manager.send_to_community(cid, {"type": "test"})
+
+        assert sent == 2
+        c_scoped.send_json.assert_called_once()
+        c_unscoped.send_json.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_disconnect_cleans_up_community_mapping(self, manager):
+        cid = uuid.uuid4()
+        uid = uuid.uuid4()
+        conn = _mock_conn()
+        await manager.connect(conn, uid, community_id=cid)
+        await manager.disconnect(conn, uid)
+
+        assert uid not in manager._user_community
+
+    @pytest.mark.asyncio
+    async def test_send_to_community_empty(self, manager):
+        sent = await manager.send_to_community(uuid.uuid4(), {"type": "test"})
+        assert sent == 0
+
+
 class TestBroadcast:
     """@brief Verify broadcast to all connected users."""
 

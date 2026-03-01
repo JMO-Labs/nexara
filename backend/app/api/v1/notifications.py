@@ -23,7 +23,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.notification import NotificationList, UnreadCountResponse
 from app.services.notification_service import NotificationService
-from app.services.realtime.pubsub import publish_to_user
+from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -44,7 +44,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
-        pubsub_publisher=publish_to_user,
+        event_bus=event_bus,
     )
 
 

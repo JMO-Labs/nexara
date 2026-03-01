@@ -12,8 +12,10 @@ import pytest
 
 from app.models.post import Post
 from app.models.user import User
-from app.repositories.post_repo import CommentRepository, PostRepository, ReactionRepository
+from app.repositories.comment_repo import CommentRepository, ReactionRepository
+from app.repositories.post_repo import PostRepository
 from app.services.post_service import PostService
+from app.services.realtime.event_bus import EventBus
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 AUTHOR_ID = uuid.uuid4()
@@ -49,7 +51,9 @@ def _make_post(author_id: uuid.UUID = AUTHOR_ID) -> Post:
 @pytest.fixture
 def post_repo():
     """@brief Mock PostRepository."""
-    return AsyncMock(spec=PostRepository)
+    repo = AsyncMock(spec=PostRepository)
+    repo._session = AsyncMock()
+    return repo
 
 
 @pytest.fixture
@@ -71,9 +75,9 @@ def notification_svc():
 
 
 @pytest.fixture
-def feed_publisher():
-    """@brief Mock feed_publisher coroutine."""
-    return AsyncMock(return_value=1)
+def mock_event_bus():
+    """@brief Mock EventBus for testing event emission."""
+    return AsyncMock(spec=EventBus)
 
 
 @pytest.fixture
@@ -95,9 +99,9 @@ def service(post_repo, comment_repo, reaction_repo, notification_svc):
 
 
 @pytest.fixture
-def service_with_publisher(service, feed_publisher):
-    """@brief PostService with feed_publisher injected."""
-    service._feed_publisher = feed_publisher
+def service_with_event_bus(service, mock_event_bus):
+    """@brief PostService with EventBus injected."""
+    service._event_bus = mock_event_bus
     return service
 
 

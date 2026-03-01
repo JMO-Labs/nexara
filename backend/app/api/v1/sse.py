@@ -14,6 +14,7 @@ Clients reconnect with ``Last-Event-ID`` to receive missed events.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Any
 from uuid import UUID
 
@@ -53,9 +54,10 @@ async def notification_stream(
     """
     sse_conn = SSEConnection(user.id)
     last_event_id = request.headers.get("Last-Event-ID")
+    community_id = uuid.UUID(settings.COMMUNITY_ID)
 
     return StreamingResponse(
-        _event_generator(sse_conn, user.id, last_event_id),
+        _event_generator(sse_conn, user.id, last_event_id, community_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -69,6 +71,7 @@ async def _event_generator(
     conn: SSEConnection,
     user_id: UUID,
     last_event_id: str | None,
+    community_id: UUID | None = None,
 ) -> Any:
     """
     @brief Async generator that yields SSE-formatted strings.
@@ -79,8 +82,9 @@ async def _event_generator(
     @param conn SSE connection wrapper with a message queue.
     @param user_id Authenticated user UUID.
     @param last_event_id Client's Last-Event-ID for missed-event recovery.
+    @param community_id Community UUID for scoped broadcasts.
     """
-    await manager.connect(conn, user_id, is_sse=True)
+    await manager.connect(conn, user_id, community_id=community_id, is_sse=True)
     await set_online(user_id)
 
     event_counter = 0
@@ -92,6 +96,13 @@ async def _event_generator(
                 user_id=str(user_id),
                 last_event_id=last_event_id,
             )
+
+        yield f"retry: 5000\n:{' ' * 2048}\n\n"
+        yield build_sse_event(
+            event="connected",
+            data={"user_id": str(user_id)},
+            event_id="0",
+        )
 
         while True:
             try:

@@ -1,0 +1,210 @@
+"""
+@file events.py
+@brief Typed event definitions for the real-time pub/sub system.
+
+Provides a single source of truth for all SSE/WebSocket event types,
+routing targets, and event builder functions.  Services emit events
+via the :class:`EventBus` using these builders instead of constructing
+raw dicts.
+
+Usage::
+
+    from app.services.realtime.events import post_created, CommunityTarget
+
+    await event_bus.emit(post_created(community_id, enriched_post))
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class EventType(StrEnum):
+    """@brief Top-level SSE event type names (wire format)."""
+
+    FEED_UPDATE = "feed_update"
+    NOTIFICATION = "notification"
+    TYPING = "typing"
+    PRESENCE = "presence"
+
+
+class FeedEvent(StrEnum):
+    """@brief Sub-event discriminator within ``feed_update`` payloads."""
+
+    POST_CREATED = "created"
+    COMMENT_CREATED = "comment_created"
+    REACTION_TOGGLED = "reaction_toggled"
+
+
+# ── Routing targets ──────────────────────────────────────────────────────
+
+
+class EventTarget(BaseModel):
+    """@brief Base class for event routing targets."""
+
+
+class UserTarget(EventTarget):
+    """
+    @brief Route to a specific user's connections.
+
+    @param user_id UUID of the target user.
+    """
+
+    user_id: UUID
+
+
+class CommunityTarget(EventTarget):
+    """
+    @brief Route to all users in a community.
+
+    @param community_id UUID of the target community.
+    """
+
+    community_id: UUID
+
+
+# ── Event envelope ───────────────────────────────────────────────────────
+
+
+class RealtimeEvent(BaseModel):
+    """
+    @brief Immutable envelope carrying a typed event with routing info.
+
+    @param type Top-level SSE event type.
+    @param target Routing target (user or community).
+    @param payload JSON-serializable data sent to clients.
+    """
+
+    type: EventType
+    target: EventTarget
+    payload: dict[str, Any]
+
+
+# ── Builder functions ────────────────────────────────────────────────────
+
+
+def post_created(community_id: UUID, post: dict[str, Any]) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a newly created post.
+
+    @param community_id Community to broadcast to.
+    @param post Enriched post dict.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=CommunityTarget(community_id=community_id),
+        payload={"event": FeedEvent.POST_CREATED, "post": post},
+    )
+
+
+def comment_created(
+    community_id: UUID,
+    post_id: UUID,
+    comment: dict[str, Any],
+    user_id: UUID,
+) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a new comment.
+
+    @param community_id Community to broadcast to.
+    @param post_id ID of the parent post.
+    @param comment Serialized comment dict.
+    @param user_id Author of the comment.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=CommunityTarget(community_id=community_id),
+        payload={
+            "event": FeedEvent.COMMENT_CREATED,
+            "post_id": str(post_id),
+            "comment": comment,
+            "user_id": str(user_id),
+        },
+    )
+
+
+def reaction_toggled(
+    community_id: UUID,
+    post_id: UUID,
+    target_type: str,
+    target_id: UUID,
+    emoji: str,
+    count: int,
+    action: str,
+    user_id: UUID,
+) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a reaction toggle.
+
+    @param community_id Community to broadcast to.
+    @param post_id ID of the parent post.
+    @param target_type "post" or "comment".
+    @param target_id ID of the reacted entity.
+    @param emoji Emoji string.
+    @param count Updated reaction count.
+    @param action "added" or "removed".
+    @param user_id User who toggled the reaction.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=CommunityTarget(community_id=community_id),
+        payload={
+            "event": FeedEvent.REACTION_TOGGLED,
+            "post_id": str(post_id),
+            "target_type": target_type,
+            "target_id": str(target_id),
+            "emoji": emoji,
+            "count": count,
+            "action": action,
+            "user_id": str(user_id),
+        },
+    )
+
+
+def user_notification(
+    user_id: UUID,
+    notification_id: UUID,
+    notification_type: str,
+    payload: dict[str, Any],
+    created_at: str,
+) -> RealtimeEvent:
+    """
+    @brief Build a notification event targeted at a single user.
+
+    @param user_id Recipient user UUID.
+    @param notification_id DB notification ID.
+    @param notification_type Notification category (mention, comment, etc.).
+    @param payload Notification content.
+    @param created_at ISO 8601 timestamp.
+    """
+    return RealtimeEvent(
+        type=EventType.NOTIFICATION,
+        target=UserTarget(user_id=user_id),
+        payload={
+            "id": str(notification_id),
+            "type": notification_type,
+            "payload": payload,
+            "created_at": created_at,
+        },
+    )
+
+
+def typing_indicator(
+    community_id: UUID,
+    user_id: UUID,
+) -> RealtimeEvent:
+    """
+    @brief Build a typing indicator event for a community.
+
+    @param community_id Community to broadcast to.
+    @param user_id User who is typing.
+    """
+    return RealtimeEvent(
+        type=EventType.TYPING,
+        target=CommunityTarget(community_id=community_id),
+        payload={"user_id": str(user_id)},
+    )

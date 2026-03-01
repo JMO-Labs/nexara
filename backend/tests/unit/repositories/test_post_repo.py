@@ -13,7 +13,8 @@ import pytest
 
 from app.models.post import Comment, Post, Reaction
 from app.models.user import User
-from app.repositories.post_repo import CommentRepository, PostRepository, ReactionRepository
+from app.repositories.comment_repo import CommentRepository, ReactionRepository
+from app.repositories.post_repo import PostRepository
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 AUTHOR_ID, POST_ID, VIEWER_ID = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
@@ -227,7 +228,7 @@ class TestCommentRepository:
 
     @pytest.mark.asyncio
     async def test_list_for_post_returns_comment_dicts(self):
-        """list_for_post should return list of comment dicts."""
+        """list_for_post should return list of comment dicts with reactions."""
         session = _make_session()
         comment = MagicMock(spec=Comment)
         comment.id, comment.content, comment.parent_id = uuid.uuid4(), "Hi", None
@@ -239,15 +240,18 @@ class TestCommentRepository:
             "Charlie",
             None,
         )
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(comment, user)]
-        session.execute = AsyncMock(return_value=mock_result)
+        comments_result = MagicMock()
+        comments_result.all.return_value = [(comment, user)]
+        reactions_result = MagicMock()
+        reactions_result.all.return_value = []
+        session.execute = AsyncMock(side_effect=[comments_result, reactions_result])
 
         repo = CommentRepository(session)
         comments, next_cursor = await repo.list_for_post(POST_ID)
 
         assert len(comments) == 1
         assert comments[0]["author"]["username"] == "charlie"
+        assert comments[0]["reactions"] == []
         assert next_cursor is None
 
     @pytest.mark.asyncio

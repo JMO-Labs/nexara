@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import re
 import uuid
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.user import User
+    from app.services.realtime.event_bus import EventBus
 
 from app.models.notification import Notification
 from app.repositories.notification_repo import NotificationRepository
@@ -47,8 +52,8 @@ class NotificationService:
 
     @param notification_repo NotificationRepository instance.
     @param settings_repo SettingsRepository instance.
-    @param pubsub_publisher Optional coroutine (user_id, message) -> int.
     @param community_id Community scope.
+    @param event_bus Optional EventBus for real-time SSE delivery.
     """
 
     def __init__(
@@ -57,12 +62,12 @@ class NotificationService:
         settings_repo: SettingsRepository,
         community_id: uuid.UUID,
         *,
-        pubsub_publisher: Callable[[uuid.UUID, dict[str, Any]], Awaitable[int]] | None = None,
+        event_bus: "EventBus | None" = None,
     ) -> None:
         self._notification_repo = notification_repo
         self._settings_repo = settings_repo
         self._community_id = community_id
-        self._pubsub = pubsub_publisher
+        self._event_bus = event_bus
 
     async def notify(
         self,
@@ -98,17 +103,18 @@ class NotificationService:
             notification = await self._notification_repo.create(
                 user_id, type, payload, self._community_id
             )
-            if self._pubsub:
-                msg = {
-                    "type": "notification",
-                    "payload": {
-                        "id": str(notification.id),
-                        "type": type,
-                        "payload": payload,
-                        "created_at": notification.created_at.isoformat(),
-                    },
-                }
-                await self._pubsub(user_id, msg)
+            if self._event_bus:
+                from app.services.realtime import events
+
+                await self._event_bus.emit(
+                    events.user_notification(
+                        user_id=user_id,
+                        notification_id=notification.id,
+                        notification_type=type,
+                        payload=payload,
+                        created_at=notification.created_at.isoformat(),
+                    ),
+                )
 
         if email_enabled and not mute_email:
             from app.tasks.notification_tasks import send_email_notification
@@ -175,6 +181,47 @@ class NotificationService:
     async def mark_all_read(self, user_id: uuid.UUID) -> int:
         """@brief Mark all notifications as read for a user."""
         return await self._notification_repo.mark_all_read(user_id)
+
+    async def notify_mentions(
+        self,
+        content: str,
+        actor: "User",
+        post_id: uuid.UUID,
+        session: "AsyncSession",
+    ) -> None:
+        """@brief Send mention notifications for @username references in content.
+        @param content Text containing potential @mentions.
+        @param actor User who authored the content.
+        @param post_id Post UUID for the notification link.
+        @param session Async DB session for user lookup.
+        """
+        usernames = self.detect_mentions(content)
+        if not usernames:
+            return
+
+        from sqlalchemy import select as sa_select
+
+        from app.core.i18n import _
+        from app.models.user import User as UserModel
+
+        stmt = sa_select(UserModel).where(
+            UserModel.username.in_(usernames),
+            UserModel.deleted_at.is_(None),
+        )
+        result = await session.execute(stmt)
+        for mentioned in result.scalars().all():
+            if mentioned.id == actor.id:
+                continue
+            await self.notify(
+                user_id=mentioned.id,
+                type="mention",
+                payload={
+                    "post_id": str(post_id),
+                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
+                    "link": f"/app/post/{post_id}",
+                },
+                actor_id=actor.id,
+            )
 
     async def clear_all(self, user_id: uuid.UUID) -> int:
         """@brief Delete all notifications for a user."""

@@ -20,14 +20,15 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
-from app.repositories.post_repo import CommentRepository, PostRepository, ReactionRepository
+from app.repositories.comment_repo import CommentRepository, ReactionRepository
+from app.repositories.post_repo import PostRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.post import CommentCreate, PostCreate, PostUpdate, ReactionResponse, ReactionToggle
 from app.services.media_service import MediaService
 from app.services.notification_service import NotificationService
 from app.services.post_service import PostService
-from app.services.realtime.pubsub import publish_to_community, publish_to_user
+from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -67,7 +68,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
-        pubsub_publisher=publish_to_user,
+        event_bus=event_bus,
     )
     media_svc = _build_media_service(db, community_id, settings)
 
@@ -77,7 +78,7 @@ def _build_service(
         reaction_repo=ReactionRepository(db),
         notification_service=notification_svc,
         community_id=community_id,
-        feed_publisher=publish_to_community,
+        event_bus=event_bus,
         media_attacher=media_svc.attach_to_post,
     )
 
@@ -182,6 +183,28 @@ async def toggle_reaction(
     """@brief Toggle a reaction on a post (add or remove)."""
     return await service.toggle_reaction(
         post_id=post_id,
+        user=user,
+        emoji=body.emoji,
+    )
+
+
+@router.post("/{post_id}/comments/{comment_id}/reactions", response_model=ReactionResponse)
+async def toggle_comment_reaction(
+    post_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    body: ReactionToggle,
+    user: User = Depends(get_current_user),
+    service: PostService = Depends(_build_service),
+) -> ReactionResponse:
+    """
+    @brief Toggle a reaction on a comment (add or remove).
+
+    Validates the comment exists and belongs to the post.
+    Sends notification to comment author when reaction is added.
+    """
+    return await service.toggle_comment_reaction(
+        post_id=post_id,
+        comment_id=comment_id,
         user=user,
         emoji=body.emoji,
     )
