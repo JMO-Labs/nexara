@@ -181,8 +181,8 @@ class ConnectionManager:
                     targets.append((uid, list(conns)))
 
         sent = 0
-        for _uid, conns in targets:
-            for conn in conns:
+        for _uid, target_conns in targets:
+            for conn in target_conns:
                 try:
                     await conn.send_json(message)
                     sent += 1

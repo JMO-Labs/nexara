@@ -243,7 +243,7 @@ class PostService:
             self._post_repo._session,
         )
 
-        comment_dict = {
+        comment_dict: dict[str, Any] = {
             "id": str(comment.id),
             "content": comment.content,
             "author": {
