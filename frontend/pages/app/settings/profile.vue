@@ -2,11 +2,11 @@
   @file pages/app/settings/profile.vue
   @brief Profile editing tab in settings.
 
-  Form fields: display_name, bio, location, website_url, pronouns.
+  Form fields: display_name, bio, location, website_url, title.
   Submit calls settingsStore.updateProfile() and shows success toast.
 -->
 <template>
-  <div class="rounded-lg border border-border bg-card p-6">
+  <div class="flex-1 rounded-lg border border-border bg-card p-6">
     <form class="space-y-4" @submit.prevent="handleSubmit">
       <div>
         <label
@@ -67,15 +67,16 @@
 
       <div>
         <label
-          for="pronouns"
+          for="title"
           class="mb-1 block text-sm font-medium text-foreground"
         >
-          {{ $t("settings.pronouns") }}
+          {{ $t("settings.titleField") }}
         </label>
         <input
-          id="pronouns"
-          v-model="form.pronouns"
+          id="title"
+          v-model="form.title"
           type="text"
+          placeholder="Dr., Mr., Mrs., etc."
           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
         />
       </div>
@@ -95,7 +96,7 @@
 /**
  * @brief Profile form with auth store sync and success toast.
  */
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useSettingsStore } from "~/stores/settings";
 import { useAuthStore } from "~/stores/auth";
 import { useUiStore } from "~/stores/ui";
@@ -110,10 +111,11 @@ const form = ref({
   bio: "",
   location: "",
   website_url: "",
-  pronouns: "",
+  title: "",
 });
 
-onMounted(() => {
+/** @brief Sync form from auth store user. */
+function syncFromUser(): void {
   const u = authStore.user;
   if (u) {
     form.value = {
@@ -121,10 +123,15 @@ onMounted(() => {
       bio: u.bio ?? "",
       location: u.location ?? "",
       website_url: u.website_url ?? "",
-      pronouns: u.pronouns ?? "",
+      title: u.title ?? "",
     };
   }
-});
+}
+
+onMounted(syncFromUser);
+
+/** @brief Keep form in sync when user changes (e.g. after save or tab switch). */
+watch(() => authStore.user, syncFromUser, { deep: true });
 
 async function handleSubmit(): Promise<void> {
   try {
@@ -133,7 +140,7 @@ async function handleSubmit(): Promise<void> {
       bio: form.value.bio,
       location: form.value.location,
       website_url: form.value.website_url,
-      pronouns: form.value.pronouns,
+      title: form.value.title,
     });
     uiStore.showToast({
       type: "success",

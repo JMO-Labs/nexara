@@ -2,7 +2,7 @@
  * @file tests/pages/admin/users.test.ts
  * @brief Tests for the admin users page.
  *
- * Verifies user table with role badges and role change action.
+ * Verifies user table with role dropdown, status badges, suspend/restore.
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -74,10 +74,6 @@ describe("Admin users", () => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
     mockGet.mockResolvedValue({ items: mockUsers, has_more: false });
-    vi.stubGlobal(
-      "prompt",
-      vi.fn(() => "member"),
-    );
   });
 
   it("renders user table with role badges", async () => {
@@ -95,6 +91,22 @@ describe("Admin users", () => {
     expect(wrapper.text()).toContain("member");
   });
 
+  it("renders role dropdown with admin/member/viewer options", async () => {
+    const wrapper = mount(AdminUsers, {
+      global: { components: { AdminUserTable } },
+    });
+    await flushPromises();
+
+    const userTable = wrapper.findComponent(AdminUserTable);
+    expect(userTable.exists()).toBe(true);
+    const selects = userTable.findAll("select");
+    expect(selects.length).toBeGreaterThanOrEqual(1);
+    const firstSelect = selects[0];
+    const options = firstSelect.findAll("option");
+    const values = options.map((o) => o.attributes("value"));
+    expect(values).toEqual(["admin", "member", "viewer"]);
+  });
+
   it("role change action triggers API call", async () => {
     mockPut.mockResolvedValue({});
     mockGet.mockResolvedValue({ items: mockUsers, has_more: false });
@@ -105,12 +117,41 @@ describe("Admin users", () => {
 
     const userTable = wrapper.findComponent(AdminUserTable);
     expect(userTable.exists()).toBe(true);
-    await userTable.vm.$emit("change-role", mockUsers[0]);
+    await userTable.vm.$emit("change-role", mockUsers[0], "member");
     await flushPromises();
 
     expect(mockPut).toHaveBeenCalledWith(
       "/admin/users/1/role",
       expect.objectContaining({ role: "member" }),
     );
+  });
+
+  it("shows Restore button for suspended users", async () => {
+    const suspendedUser: AdminUserListItem = {
+      ...mockUsers[0],
+      id: "3",
+      email: "suspended@example.com",
+      username: "suspended",
+      display_name: "Suspended User",
+      status: "suspended",
+    };
+    mockGet.mockResolvedValue({
+      items: [suspendedUser],
+      has_more: false,
+    });
+    const wrapper = mount(AdminUsers, {
+      global: { components: { AdminUserTable } },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const userTable = wrapper.findComponent(AdminUserTable);
+    expect(userTable.exists()).toBe(true);
+    const menuButton = userTable.find('button[aria-haspopup="true"]');
+    await menuButton.trigger("click");
+    await flushPromises();
+
+    expect(document.body.textContent).toMatch(/admin\.restore|Restore/);
+    wrapper.unmount();
   });
 });

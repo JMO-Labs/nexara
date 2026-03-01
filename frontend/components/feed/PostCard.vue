@@ -1,13 +1,9 @@
-<!--
-  @file components/feed/PostCard.vue
-  @brief Post display card with content, media, reactions, and comments.
-
-  Renders a single post in the activity feed. Content is Markdown-rendered
-  and sanitized. Uses the shadcn-inspired card token system.
--->
+<!-- @file components/feed/PostCard.vue @brief Post card with content, media, reactions, comments, edit/delete. -->
 <template>
-  <article class="rounded-lg border border-border bg-card p-4 shadow-sm">
-    <!-- Author header -->
+  <article
+    class="group cursor-pointer rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:bg-card/80"
+    @click="navigateToPost"
+  >
     <div class="mb-3 flex items-center gap-3">
       <div
         class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
@@ -15,65 +11,190 @@
       >
         {{ post.author.display_name.charAt(0).toUpperCase() }}
       </div>
-      <div>
+      <div class="min-w-0 flex-1">
         <p class="font-semibold text-card-foreground">
           {{ post.author.display_name }}
         </p>
         <p class="text-xs text-muted-foreground">
-          @{{ post.author.username }} &middot; {{ timeAgo(post.created_at) }}
+          @{{ post.author.username }} &middot;
+          <NuxtLink
+            :to="`/app/post/${post.id}`"
+            data-testid="post-detail-link"
+            class="hover:underline"
+          >
+            {{ timeAgo(post.created_at) }}
+          </NuxtLink>
         </p>
+      </div>
+
+      <!-- Actions menu (author or admin only) -->
+      <PostActions
+        v-if="canManage"
+        @edit="startEditing"
+        @delete="confirmDelete"
+      />
+    </div>
+
+    <!-- Inline edit mode -->
+    <div v-if="editing" class="mb-3">
+      <textarea
+        ref="editTextarea"
+        v-model="editContent"
+        class="w-full resize-none rounded-md border border-input bg-muted p-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+        rows="4"
+      />
+      <div class="mt-2 flex items-center justify-end gap-2">
+        <button
+          class="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent"
+          @click="cancelEditing"
+        >
+          {{ $t("common.cancel") }}
+        </button>
+        <button
+          :disabled="saving || !editContent.trim()"
+          class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          @click="saveEdit"
+        >
+          {{ saving ? $t("common.loading") : $t("common.save") }}
+        </button>
       </div>
     </div>
 
     <!-- Post content (Markdown rendered) -->
     <div
+      v-else
       data-testid="post-content"
       class="prose prose-sm max-w-none dark:prose-invert mb-3"
       v-html="renderedContent"
     />
 
     <!-- Media grid -->
-    <div
-      v-if="post.media.length"
-      class="mb-3 grid gap-2"
-      :class="mediaGridClass"
-    >
-      <img
-        v-for="media in post.media"
-        :key="media.id"
-        data-testid="media-thumbnail"
-        :src="media.thumbnail_url || media.url"
-        :alt="$t('feed.attachMedia')"
-        :width="media.width || undefined"
-        :height="media.height || undefined"
-        class="rounded-lg object-cover w-full"
-        loading="lazy"
-      />
+    <div v-if="post.media.length" class="mb-1">
+      <MediaGrid :items="post.media" @open="openLightbox" />
     </div>
+
+    <!-- Full-size media lightbox -->
+    <MediaLightbox
+      v-if="lightboxOpen"
+      :items="post.media"
+      :start-index="lightboxIndex"
+      @close="lightboxOpen = false"
+      @react="handleMediaReact"
+    />
 
     <!-- Reactions -->
     <ReactionBar
       :reactions="post.reactions"
-      :post-id="post.id"
-      @react="(postId: string, emoji: string) => $emit('react', postId, emoji)"
+      target-type="post"
+      :target-id="post.id"
+      @react="
+        (targetType: string, targetId: string, emoji: string) =>
+          $emit('react', targetId, emoji)
+      "
     />
 
-    <!-- Comment count -->
-    <div class="mt-2 text-sm text-muted-foreground">
-      <span>{{ post.comment_count }} {{ $t("feed.comments") }}</span>
+    <!-- Always-visible comment input -->
+    <CommentInput
+      class="mt-2"
+      :placeholder="$t('feed.addComment')"
+      :submit-label="$t('feed.submitComment')"
+      @submit="handleAddCommentFromInput"
+      @react="(emoji: string) => handleReactPost({ postId: post.id, emoji })"
+    />
+
+    <!-- Comment toggle (only when comments exist) -->
+    <button
+      v-if="post.comment_count > 0"
+      class="mt-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      @click="toggleComments"
+    >
+      <span v-if="!commentsOpen">
+        {{ post.comment_count }} {{ $t("feed.comments") }}
+      </span>
+      <span v-else>
+        {{ $t("common.close") }}
+        ({{ post.comment_count }} {{ $t("feed.comments") }})
+      </span>
+    </button>
+
+    <!-- Expanding comment drawer -->
+    <div v-if="commentsOpen" class="mt-3 border-t border-border pt-3">
+      <LoadingSpinner v-if="loadingComments" />
+      <template v-else>
+        <!-- Expanded mode: scrollable container with all loaded comments -->
+        <div
+          v-if="expanded"
+          ref="scrollContainer"
+          class="max-h-96 overflow-y-auto rounded-md"
+        >
+          <CommentThread
+            :comments="allLoadedComments"
+            :post-id="post.id"
+            :show-load-more="hasMorePages"
+            @add-comment="handleAddComment"
+            @load-more="loadMoreComments"
+            @react-comment="handleReactComment"
+          />
+        </div>
+
+        <!-- Preview mode: latest 3 comments -->
+        <CommentThread
+          v-else
+          :comments="previewComments"
+          :post-id="post.id"
+          @add-comment="handleAddComment"
+          @react-comment="handleReactComment"
+        />
+
+        <div class="mt-2 flex justify-center">
+          <button
+            v-if="!expanded && hasMoreComments"
+            class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            @click="expandComments"
+          >
+            {{ $t("feed.showAllComments", { count: post.comment_count }) }}
+          </button>
+          <button
+            v-else-if="expanded"
+            class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            @click="expanded = false"
+          >
+            {{ $t("feed.showLess") }}
+          </button>
+        </div>
+      </template>
     </div>
+
+    <DeleteConfirmDialog
+      :visible="showDeleteConfirm"
+      :deleting="deleting"
+      @confirm="executeDelete"
+      @cancel="showDeleteConfirm = false"
+    />
   </article>
 </template>
 
 <script setup lang="ts">
 /**
- * @brief PostCard component props, events, and computed state.
+ * @brief PostCard component with inline editing and delete confirmation.
  */
-import { computed } from "vue";
-import type { Post } from "~/types/api";
+import { ref, computed, nextTick } from "vue";
+import { useRouter } from "vue-router";
+import type { Post, Comment } from "~/types/api";
 import { renderMarkdown } from "~/utils/markdown";
 import { timeAgo } from "~/utils/date";
+import { useAuthStore } from "~/stores/auth";
+import { useFeedStore } from "~/stores/feed";
+import { useUiStore } from "~/stores/ui";
 import ReactionBar from "~/components/feed/ReactionBar.vue";
+import PostActions from "~/components/feed/PostActions.vue";
+import CommentThread from "~/components/feed/CommentThread.vue";
+import CommentInput from "~/components/feed/CommentInput.vue";
+import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
+import MediaGrid from "~/components/media/MediaGrid.vue";
+import MediaLightbox from "~/components/media/MediaLightbox.vue";
+import DeleteConfirmDialog from "~/components/feed/DeleteConfirmDialog.vue";
+import { buildCommentTree } from "~/utils/comments";
 
 const props = defineProps<{
   /** @brief The post to render. */
@@ -84,14 +205,234 @@ defineEmits<{
   (e: "react", postId: string, emoji: string): void;
 }>();
 
+const router = useRouter();
+const authStore = useAuthStore();
+const feedStore = useFeedStore();
+const uiStore = useUiStore();
+
+/** @brief Interactive element tags that should not trigger post navigation. */
+const INTERACTIVE_TAGS = new Set([
+  "A",
+  "BUTTON",
+  "INPUT",
+  "TEXTAREA",
+  "SELECT",
+]);
+
+/**
+ * @brief Navigate to the post detail page on card click.
+ *
+ * Skips navigation when the click originates from an interactive
+ * element (link, button, input, etc.) or when in editing/comments mode.
+ */
+function navigateToPost(event: MouseEvent): void {
+  let el = event.target as HTMLElement | null;
+  while (el && el !== event.currentTarget) {
+    if (
+      INTERACTIVE_TAGS.has(el.tagName) ||
+      el.getAttribute("role") === "button"
+    )
+      return;
+    el = el.parentElement;
+  }
+  if (editing.value || commentsOpen.value) return;
+  router.push(`/app/post/${props.post.id}`);
+}
+
+/** @brief Whether the current user can edit/delete this post. */
+const canManage = computed(() => {
+  const userId = authStore.user?.id;
+  const role = authStore.user?.role;
+  return userId === props.post.author.id || role === "admin";
+});
+
 /** @brief Markdown content rendered to sanitized HTML. */
 const renderedContent = computed(() => renderMarkdown(props.post.content));
 
-/** @brief CSS grid class based on number of media attachments. */
-const mediaGridClass = computed(() => {
-  const count = props.post.media.length;
-  if (count === 1) return "grid-cols-1";
-  if (count === 2) return "grid-cols-2";
-  return "grid-cols-2 sm:grid-cols-3";
-});
+/** @brief Whether the media lightbox overlay is open. */
+const lightboxOpen = ref(false);
+
+/** @brief Index of the media item to show first in the lightbox. */
+const lightboxIndex = ref(0);
+
+const editing = ref(false);
+const editContent = ref("");
+const saving = ref(false);
+const editTextarea = ref<HTMLTextAreaElement | null>(null);
+
+const showDeleteConfirm = ref(false);
+const deleting = ref(false);
+
+const commentsOpen = ref(false);
+const loadingComments = ref(false);
+const expanded = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
+
+/** @brief Maximum comments shown in preview mode. */
+const COMMENT_PREVIEW_LIMIT = 3;
+
+/** @brief Paginated comment entry for this post from the store. */
+const commentEntry = computed(() => feedStore.commentsByPost[props.post.id]);
+
+/** @brief All loaded comments nested into a tree (newest first). */
+const allLoadedComments = computed<Comment[]>(() =>
+  buildCommentTree(commentEntry.value?.items ?? []),
+);
+
+/** @brief First N top-level comments for the collapsed preview. */
+const previewComments = computed<Comment[]>(() =>
+  allLoadedComments.value.slice(0, COMMENT_PREVIEW_LIMIT),
+);
+
+/** @brief Whether there are more comments than the preview shows. */
+const hasMoreComments = computed(
+  () => props.post.comment_count > COMMENT_PREVIEW_LIMIT,
+);
+
+/** @brief Whether more pages can be fetched from the server. */
+const hasMorePages = computed(() => commentEntry.value?.hasMore ?? false);
+
+/** @brief Show an error toast from a caught exception. */
+function toastError(err: unknown, fallback: string): void {
+  uiStore.showToast({
+    type: "error",
+    message: err instanceof Error ? err.message : fallback,
+  });
+}
+
+async function toggleComments(): Promise<void> {
+  commentsOpen.value = !commentsOpen.value;
+  expanded.value = false;
+  if (commentsOpen.value && allLoadedComments.value.length === 0) {
+    loadingComments.value = true;
+    try {
+      await feedStore.fetchComments(props.post.id, true);
+    } catch (err) {
+      toastError(err, "Failed to load comments");
+    } finally {
+      loadingComments.value = false;
+    }
+  }
+}
+
+/** @brief Switch from preview to expanded mode. */
+function expandComments(): void {
+  expanded.value = true;
+}
+
+async function loadMoreComments(): Promise<void> {
+  try {
+    await feedStore.fetchComments(props.post.id);
+  } catch (err) {
+    toastError(err, "Failed to load comments");
+  }
+}
+
+/**
+ * @brief Handle text submit from the always-visible CommentInput on the card.
+ * @param text Trimmed comment content.
+ */
+async function handleAddCommentFromInput(text: string): Promise<void> {
+  try {
+    await feedStore.addComment(props.post.id, text, null);
+  } catch (err) {
+    toastError(err, "Failed to add comment");
+  }
+}
+
+async function handleAddComment(payload: {
+  postId: string;
+  content: string;
+  parentId: string | null;
+}): Promise<void> {
+  try {
+    await feedStore.addComment(
+      payload.postId,
+      payload.content,
+      payload.parentId,
+    );
+  } catch (err) {
+    toastError(err, "Failed to add comment");
+  }
+}
+
+async function handleReactComment(payload: {
+  postId: string;
+  commentId: string;
+  emoji: string;
+}): Promise<void> {
+  try {
+    await feedStore.addCommentReaction(
+      payload.postId,
+      payload.commentId,
+      payload.emoji,
+    );
+  } catch (err) {
+    toastError(err, "Failed to add reaction");
+  }
+}
+
+async function handleReactPost(payload: {
+  postId: string;
+  emoji: string;
+}): Promise<void> {
+  try {
+    await feedStore.addReaction(payload.postId, payload.emoji);
+  } catch (err) {
+    toastError(err, "Failed to add reaction");
+  }
+}
+
+/** @brief Handle media reaction (placeholder until API supports media reactions). */
+function handleMediaReact(
+  _targetType: string,
+  _targetId: string,
+  _emoji: string,
+): void {}
+
+function startEditing(): void {
+  editContent.value = props.post.content;
+  editing.value = true;
+  nextTick(() => editTextarea.value?.focus());
+}
+
+function cancelEditing(): void {
+  editing.value = false;
+  editContent.value = "";
+}
+
+async function saveEdit(): Promise<void> {
+  if (!editContent.value.trim()) return;
+  saving.value = true;
+  try {
+    await feedStore.editPost(props.post.id, editContent.value);
+    editing.value = false;
+  } catch (err) {
+    toastError(err, "Failed to save");
+  } finally {
+    saving.value = false;
+  }
+}
+
+/** @brief Open the media lightbox at the given index. */
+function openLightbox(index: number): void {
+  lightboxIndex.value = index;
+  lightboxOpen.value = true;
+}
+
+function confirmDelete(): void {
+  showDeleteConfirm.value = true;
+}
+
+async function executeDelete(): Promise<void> {
+  deleting.value = true;
+  try {
+    await feedStore.deletePost(props.post.id);
+    showDeleteConfirm.value = false;
+  } catch (err) {
+    toastError(err, "Failed to delete");
+  } finally {
+    deleting.value = false;
+  }
+}
 </script>

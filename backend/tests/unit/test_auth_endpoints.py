@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.core.security import hash_password
 
 
@@ -45,7 +45,7 @@ def _mock_user(**overrides) -> MagicMock:
     user.email_verified = True
     user.avatar_url = None
     user.bio = None
-    user.pronouns = None
+    user.title = None
     user.location = None
     user.website_url = None
     user.birthday = None
@@ -56,6 +56,50 @@ def _mock_user(**overrides) -> MagicMock:
     user.last_seen_at = None
     user.deleted_at = None
     return user
+
+
+class TestAuthConfigEndpoint:
+    """@brief GET /api/v1/auth/config tests."""
+
+    @pytest.mark.asyncio
+    async def test_config_oidc_disabled_when_client_id_empty(self, test_app):
+        """When OIDC_CLIENT_ID is not set, oidc_enabled is False."""
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/v1/auth/config")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["oidc_enabled"] is False
+        assert "registration_enabled" in data
+
+    @pytest.mark.asyncio
+    async def test_config_oidc_enabled_when_client_id_set(self, test_app):
+        """When OIDC_CLIENT_ID is set, oidc_enabled is True."""
+        oidc_settings = Settings(
+            SECRET_KEY="test-auth-endpoints",
+            JWT_ALGORITHM="HS256",
+            WAF_ENABLED=False,
+            ENABLE_METRICS=False,
+            OIDC_CLIENT_ID="my-oidc-client",
+            OIDC_CLIENT_SECRET="secret",
+        )
+
+        def _oidc_settings():
+            return oidc_settings
+
+        test_app.dependency_overrides[get_settings] = _oidc_settings
+        try:
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get("/api/v1/auth/config")
+
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["oidc_enabled"] is True
+            assert data["registration_enabled"] is True
+        finally:
+            test_app.dependency_overrides.pop(get_settings, None)
 
 
 class TestRegisterEndpoint:

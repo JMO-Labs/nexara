@@ -8,7 +8,7 @@
   calls settingsStore.updateNotificationPreferences().
 -->
 <template>
-  <div class="rounded-lg border border-border bg-card p-6">
+  <div class="flex-1 rounded-lg border border-border bg-card p-6">
     <div class="overflow-x-auto">
       <table class="w-full min-w-[400px] text-left text-sm">
         <thead>

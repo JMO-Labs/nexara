@@ -51,9 +51,10 @@
           </td>
           <td class="px-4 py-3">
             <span
-              class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-foreground"
+              class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+              :class="actionBadgeClass(e.action)"
             >
-              {{ e.action }}
+              {{ actionLabel(e.action) }}
             </span>
           </td>
           <td class="px-4 py-3 text-muted-foreground">
@@ -74,7 +75,47 @@
  */
 import type { AuditLogEntry } from "~/types/api";
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+
+/** @brief Badge color classes keyed by action prefix. */
+const ACTION_STYLES: Record<string, string> = {
+  "admin.user.suspended":
+    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  "admin.user.deleted":
+    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  "admin.user.restored":
+    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  "admin.user.role_changed":
+    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  "admin.settings":
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  branding:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+  invite: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400",
+};
+
+/**
+ * @brief Resolve a human-readable label for an audit action key.
+ * @param action Raw action key from backend (e.g. "admin.user.role_changed").
+ */
+function actionLabel(action: string): string {
+  const key = `admin.auditActions.${action}`;
+  return te(key)
+    ? t(key)
+    : (action.split(".").pop()?.replace(/_/g, " ") ?? action);
+}
+
+/**
+ * @brief Return Tailwind badge classes for the given action.
+ * @param action Raw action key from backend.
+ */
+function actionBadgeClass(action: string): string {
+  if (ACTION_STYLES[action]) return ACTION_STYLES[action];
+  for (const prefix of Object.keys(ACTION_STYLES)) {
+    if (action.startsWith(prefix)) return ACTION_STYLES[prefix];
+  }
+  return "bg-muted text-foreground";
+}
 
 defineProps<{
   /** @brief List of audit log entries. */

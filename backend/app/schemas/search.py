@@ -32,13 +32,14 @@ class SearchRequest(BaseModel):
 
 class SearchResultItem(BaseModel):
     """
-    @brief Single search result item across posts, users, or events.
+    @brief Single search result item across posts, users, events, or comments.
 
     @param id UUID of the entity.
-    @param type Content type: "posts", "users", or "events".
+    @param type Content type: "posts", "users", "events", or "comments".
     @param title Display title (post snippet, display_name, event title).
     @param snippet Excerpt or summary for preview.
     @param created_at When the entity was created.
+    @param parent_id Optional parent entity UUID (e.g. post_id for comments).
     """
 
     id: UUID
@@ -46,6 +47,7 @@ class SearchResultItem(BaseModel):
     title: str
     snippet: str
     created_at: datetime
+    parent_id: UUID | None = None
 
     model_config = {"from_attributes": True}
 

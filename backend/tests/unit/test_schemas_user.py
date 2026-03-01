@@ -43,7 +43,7 @@ class TestUserResponse:
             display_name="Bob",
             avatar_url="https://example.com/avatar.png",
             bio="Hello!",
-            pronouns="he/him",
+            title="Dr.",
             location="NYC",
             website_url="https://bob.dev",
             role="admin",

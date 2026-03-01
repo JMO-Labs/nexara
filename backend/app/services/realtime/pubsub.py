@@ -89,7 +89,12 @@ async def _handle_message(channel: str, data: str) -> None:
         await manager.send_to_user(uid, message)
 
     elif channel.startswith("community:"):
-        await manager.broadcast(message)
+        community_id_str = channel.split(":", 1)[1]
+        try:
+            cid = UUID(community_id_str)
+        except ValueError:
+            return
+        await manager.send_to_community(cid, message)
 
     elif channel == "presence":
         await manager.broadcast(message)

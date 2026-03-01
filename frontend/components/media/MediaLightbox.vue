@@ -12,9 +12,11 @@
  * @param items - Array of media objects.
  * @param startIndex - Index of the initially shown item.
  * @emits close - Emitted when the lightbox should be closed.
+ * @emits react - Emitted when user reacts to media (targetType, targetId, emoji).
  */
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { PostMedia } from "~/types/api";
+import ReactionBar from "~/components/feed/ReactionBar.vue";
 
 const props = defineProps<{
   /** @brief Media items available for viewing. */
@@ -25,7 +27,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "close"): void;
+  /** @brief Emitted when user reacts to media. */
+  (e: "react", targetType: string, targetId: string, emoji: string): void;
 }>();
+
+/**
+ * @brief Forward reaction from ReactionBar to parent.
+ * @param targetType - Entity type (always "media" here).
+ * @param targetId - Media ID.
+ * @param emoji - Selected emoji.
+ */
+function onReact(targetType: string, targetId: string, emoji: string): void {
+  emit("react", targetType, targetId, emoji);
+}
 
 const currentIndex = ref(props.startIndex);
 
@@ -56,7 +70,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 <template>
   <Teleport to="body">
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      class="group fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       role="dialog"
       aria-modal="true"
       :aria-label="`Media ${currentIndex + 1} of ${items.length}`"
@@ -98,6 +112,16 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       >
         &rarr;
       </button>
+
+      <!-- Reaction bar (above counter) -->
+      <div v-if="current" class="absolute bottom-12 left-1/2 -translate-x-1/2">
+        <ReactionBar
+          :reactions="[]"
+          target-type="media"
+          :target-id="current.id"
+          @react="onReact"
+        />
+      </div>
 
       <!-- Counter -->
       <span class="absolute bottom-4 text-sm text-white/70">

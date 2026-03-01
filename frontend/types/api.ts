@@ -24,7 +24,7 @@ export interface User {
   email_verified: boolean;
   avatar_url: string | null;
   bio: string | null;
-  pronouns: string | null;
+  title: string | null;
   location: string | null;
   website_url: string | null;
   birthday: string | null;
@@ -107,6 +107,7 @@ export interface Comment {
   author: PostAuthor;
   parent_id: string | null;
   created_at: string;
+  reactions: Reaction[];
   replies?: Comment[];
 }
 
@@ -203,10 +204,12 @@ export interface ToastItem {
 /** @brief Single search result item. */
 export interface SearchResultItem {
   id: string;
-  type: "posts" | "users" | "events";
+  type: "posts" | "users" | "events" | "comments";
   title: string;
   snippet: string;
   created_at: string;
+  /** @brief Parent entity ID (e.g. post_id for comment results). */
+  parent_id?: string | null;
 }
 
 /** @brief Paginated results for one content type. */
@@ -222,7 +225,7 @@ export interface SearchResponse {
   results: Record<string, SearchTypeResults>;
 }
 
-/** @brief Admin metrics response from GET /admin/metrics. */
+/** @brief Admin metrics response from GET /admin/metrics (flat, for UI). */
 export interface AdminMetricsResponse {
   total_users: number;
   active_users_30d: number;
@@ -232,6 +235,25 @@ export interface AdminMetricsResponse {
   media_files: number;
   storage_used_bytes: number;
   waf_blocks_total?: number;
+}
+
+/**
+ * @brief Raw metrics API response (nested structure from backend).
+ *
+ * Backend returns { community, system, waf }; map to AdminMetricsResponse in UI.
+ */
+export interface AdminMetricsApiResponse {
+  community: {
+    users_total: number;
+    users_active_30d: number;
+    users_online_now: number;
+    posts_total: number;
+    posts_last_7d: number;
+    media_files: number;
+    media_storage_bytes: number;
+  };
+  system: Record<string, unknown>;
+  waf: { blocks_today: number; blocks_by_reason: Record<string, number> };
 }
 
 /** @brief Audit log entry from GET /admin/audit-log. */

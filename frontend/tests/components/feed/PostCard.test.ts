@@ -3,12 +3,14 @@
  * @brief TDD tests for the PostCard component.
  *
  * Verifies Markdown rendering, media thumbnail display, reaction counts,
- * author info, and accessibility attributes.
+ * author info, post navigation link, and accessibility attributes.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
+import { setActivePinia, createPinia } from "pinia";
 import PostCard from "~/components/feed/PostCard.vue";
+import MediaGrid from "~/components/media/MediaGrid.vue";
 import type { Post } from "~/types/api";
 
 const basePost: Post = {
@@ -32,7 +34,7 @@ const basePost: Post = {
 
 describe("PostCard", () => {
   beforeEach(() => {
-    /* fresh state per test */
+    setActivePinia(createPinia());
   });
 
   it("renders post content as Markdown HTML", () => {
@@ -80,10 +82,10 @@ describe("PostCard", () => {
     };
 
     const wrapper = mount(PostCard, { props: { post: postWithMedia } });
-    const img = wrapper.find('[data-testid="media-thumbnail"]');
+    const grid = wrapper.findComponent(MediaGrid);
 
-    expect(img.exists()).toBe(true);
-    expect(img.attributes("src")).toBe("/media/photo_thumb.webp");
+    expect(grid.exists()).toBe(true);
+    expect(grid.props("items")).toEqual(postWithMedia.media);
   });
 
   it("shows comment count", () => {
@@ -106,5 +108,29 @@ describe("PostCard", () => {
     const wrapper = mount(PostCard, { props: { post: basePost } });
 
     expect(wrapper.find("article").exists()).toBe(true);
+  });
+
+  it("renders a link to the post detail page", () => {
+    const wrapper = mount(PostCard, { props: { post: basePost } });
+    const link = wrapper.find('[data-testid="post-detail-link"]');
+
+    expect(link.exists()).toBe(true);
+    expect(link.attributes("to") || link.attributes("href")).toContain(
+      "/app/post/post-1",
+    );
+  });
+
+  it("has group class on article for hover reactions", () => {
+    const wrapper = mount(PostCard, { props: { post: basePost } });
+
+    expect(wrapper.find("article").classes()).toContain("group");
+  });
+
+  it("does not show quick-reaction presets in display-only reaction bar", () => {
+    const wrapper = mount(PostCard, { props: { post: basePost } });
+
+    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(
+      false,
+    );
   });
 });

@@ -6,7 +6,7 @@
   password change form (current_password, new_password, confirm).
 -->
 <template>
-  <div class="space-y-6">
+  <div class="flex flex-1 flex-col space-y-6">
     <!-- 2FA status -->
     <div class="rounded-lg border border-border bg-card p-6">
       <h2 class="mb-2 text-lg font-medium text-foreground">
@@ -22,7 +22,7 @@
     </div>
 
     <!-- Password change form -->
-    <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex-1 rounded-lg border border-border bg-card p-6">
       <h2 class="mb-4 text-lg font-medium text-foreground">
         {{ $t("settings.changePassword") }}
       </h2>
@@ -122,7 +122,7 @@ async function handlePasswordChange(): Promise<void> {
 
   loading.value = true;
   try {
-    await api.put("/settings/password", {
+    await api.post("/users/me/password", {
       current_password: passwordForm.value.current_password,
       new_password: passwordForm.value.new_password,
     });

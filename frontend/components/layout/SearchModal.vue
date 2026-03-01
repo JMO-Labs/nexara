@@ -3,8 +3,9 @@
   @brief SuperSearch command palette modal (Cmd+K / Ctrl+K).
 
   Provides a centered overlay dialog with a search input, keyboard
-  navigation for results, and stub sections (Recent, Posts, Members,
-  Events). Closes on Escape, click-outside, or route navigation.
+  navigation, and live API-backed search results for posts, comments,
+  users, and events. Shows quick-action page links when the input is
+  empty. Closes on Escape, click-outside, or route navigation.
 -->
 <template>
   <Teleport to="body">
@@ -12,13 +13,12 @@
       <div
         v-if="open"
         class="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-        @click.self="close"
-        @keydown.escape="close"
       >
-        <!-- Backdrop -->
+        <!-- Backdrop — click anywhere on it to dismiss -->
         <div
           class="fixed inset-0 bg-background/80 backdrop-blur-sm"
           aria-hidden="true"
+          @click="close"
         />
 
         <!-- Dialog -->
@@ -53,71 +53,102 @@
 
           <!-- Results area -->
           <div class="max-h-72 overflow-y-auto p-2">
-            <template v-if="query.trim()">
+            <!-- API search results -->
+            <template v-if="query.trim().length >= 2">
+              <div
+                v-if="loading"
+                class="py-6 text-center text-sm text-muted-foreground"
+              >
+                {{ $t("common.loading") }}
+              </div>
               <p
-                v-if="filteredResults.length === 0"
+                v-else-if="displayItems.length === 0"
                 class="py-6 text-center text-sm text-muted-foreground"
               >
                 {{ $t("search.noResults") }}
               </p>
               <div v-else>
-                <div
-                  v-for="(group, gi) in groupedResults"
-                  :key="group.label"
-                  class="mb-2"
+                <button
+                  v-for="(item, idx) in displayItems"
+                  :key="`${item.type}-${item.id}`"
+                  :class="[
+                    'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors text-left',
+                    idx === activeIndex
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-popover-foreground hover:bg-accent/50',
+                  ]"
+                  @mouseenter="activeIndex = idx"
+                  @click="navigateToResult(item)"
                 >
-                  <p
-                    class="px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+                  <component
+                    :is="typeIcon(item.type)"
+                    class="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate font-medium">{{ item.title }}</p>
+                    <p
+                      v-if="item.snippet && item.snippet !== item.title"
+                      class="truncate text-xs text-muted-foreground"
+                    >
+                      {{ item.snippet }}
+                    </p>
+                  </div>
+                  <span
+                    class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground"
                   >
-                    {{ group.label }}
-                  </p>
-                  <button
-                    v-for="(item, ii) in group.items"
-                    :key="item.id"
-                    :class="[
-                      'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors',
-                      flatIndex(gi, ii) === activeIndex
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-popover-foreground hover:bg-accent/50',
-                    ]"
-                    @mouseenter="activeIndex = flatIndex(gi, ii)"
-                    @click="navigateTo(item)"
-                  >
-                    <component
-                      :is="item.icon"
-                      class="h-4 w-4 shrink-0 text-muted-foreground"
-                    />
-                    <span>{{ $t(item.labelKey) }}</span>
-                  </button>
-                </div>
+                    {{ $t(typeToI18nKey(item.type)) }}
+                  </span>
+                </button>
+
+                <!-- Link to full search page -->
+                <button
+                  :class="[
+                    'flex w-full items-center justify-center gap-2 rounded-md px-2 py-2 text-sm transition-colors mt-1',
+                    displayItems.length === activeIndex
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-accent/50',
+                  ]"
+                  @mouseenter="activeIndex = displayItems.length"
+                  @click="goToFullSearch"
+                >
+                  {{ $t("search.loadMore") }}
+                </button>
               </div>
             </template>
 
-            <!-- Empty state: quick actions -->
+            <!-- Quick actions for short/empty query -->
             <template v-else>
               <p
-                class="px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+                v-if="query.trim().length > 0 && query.trim().length < 2"
+                class="py-6 text-center text-sm text-muted-foreground"
               >
-                {{ $t("search.hint") }}
+                {{ $t("search.noResults") }}
               </p>
-              <button
-                v-for="(item, idx) in quickActions"
-                :key="item.id"
-                :class="[
-                  'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors',
-                  idx === activeIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-popover-foreground hover:bg-accent/50',
-                ]"
-                @mouseenter="activeIndex = idx"
-                @click="navigateTo(item)"
-              >
-                <component
-                  :is="item.icon"
-                  class="h-4 w-4 shrink-0 text-muted-foreground"
-                />
-                <span>{{ $t(item.labelKey) }}</span>
-              </button>
+              <template v-else>
+                <p
+                  class="px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+                >
+                  {{ $t("search.hint") }}
+                </p>
+                <button
+                  v-for="(item, idx) in quickActions"
+                  :key="item.id"
+                  :class="[
+                    'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors',
+                    idx === activeIndex
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-popover-foreground hover:bg-accent/50',
+                  ]"
+                  @mouseenter="activeIndex = idx"
+                  @click="navigateToPage(item)"
+                >
+                  <component
+                    :is="item.icon"
+                    class="h-4 w-4 shrink-0 text-muted-foreground"
+                  />
+                  <span>{{ $t(item.labelKey) }}</span>
+                </button>
+              </template>
             </template>
           </div>
         </div>
@@ -128,106 +159,134 @@
 
 <script setup lang="ts">
 /**
- * @brief SearchModal logic: keyboard shortcuts, result filtering,
- * keyboard navigation, and route-based closing.
+ * @brief SearchModal logic: debounced API search, keyboard shortcuts,
+ * keyboard navigation, quick actions, and route-based closing.
  */
 import { ref, computed, watch, nextTick, type Component } from "vue";
-import { useMagicKeys } from "@vueuse/core";
+import { useMagicKeys, watchDebounced } from "@vueuse/core";
 import {
   MagnifyingGlassIcon,
   NewspaperIcon,
   CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
   UserGroupIcon,
+  ChatBubbleBottomCenterTextIcon,
 } from "@heroicons/vue/24/outline";
+import { useApi } from "~/composables/useApi";
+import type { SearchResponse, SearchResultItem } from "~/types/api";
 
-interface SearchItem {
+interface QuickAction {
   id: string;
   labelKey: string;
   icon: Component;
   path: string;
-  groupKey: string;
 }
 
-const { t } = useI18n();
+const api = useApi();
 
 const open = defineModel<boolean>("open", { default: false });
 
 const query = ref("");
 const activeIndex = ref(0);
+const loading = ref(false);
+const searchData = ref<SearchResponse | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const dialogRef = ref<HTMLElement | null>(null);
 
-/** @brief Quick-access navigation items shown when search is empty. */
-const quickActions: SearchItem[] = [
+/** @brief Quick-access navigation items shown when search input is empty. */
+const quickActions: QuickAction[] = [
   {
     id: "feed",
     labelKey: "nav.feed",
     icon: NewspaperIcon,
     path: "/app",
-    groupKey: "search.pages",
   },
   {
     id: "events",
     labelKey: "nav.events",
     icon: CalendarDaysIcon,
     path: "/app/events",
-    groupKey: "search.pages",
   },
   {
     id: "chat",
     labelKey: "nav.chat",
     icon: ChatBubbleLeftRightIcon,
     path: "/app/chat",
-    groupKey: "search.pages",
   },
   {
     id: "members",
     labelKey: "nav.members",
     icon: UserGroupIcon,
     path: "/app/members",
-    groupKey: "search.pages",
   },
 ];
 
-/** @brief Stub search results filtered by query. Real API integration comes later. */
-const filteredResults = computed<SearchItem[]>(() => {
-  const q = query.value.toLowerCase().trim();
-  if (!q) return [];
-  return quickActions.filter((item) =>
-    t(item.labelKey).toLowerCase().includes(q),
-  );
-});
-
-/** @brief Group search results by their group key. */
-const groupedResults = computed(() => {
-  const groups: Record<string, { label: string; items: SearchItem[] }> = {};
-  for (const item of filteredResults.value) {
-    const key = item.groupKey;
-    if (!groups[key]) {
-      groups[key] = { label: t(key), items: [] };
-    }
-    groups[key].items.push(item);
-  }
-  return Object.values(groups);
-});
-
-/** @brief Total count of visible items for keyboard navigation. */
-const totalItems = computed(() => {
-  if (query.value.trim()) return filteredResults.value.length;
-  return quickActions.length;
-});
-
 /**
- * @brief Convert a group index + item index into a flat index.
+ * @brief Flat list of search result items from all content types.
+ *
+ * Ordered: posts, comments, users, events (most relevant first).
  */
-function flatIndex(groupIdx: number, itemIdx: number): number {
-  let count = 0;
-  for (let g = 0; g < groupIdx; g++) {
-    count += groupedResults.value[g].items.length;
+const displayItems = computed((): SearchResultItem[] => {
+  if (!searchData.value) return [];
+  const items: SearchResultItem[] = [];
+  for (const t of ["posts", "comments", "users", "events"]) {
+    const r = searchData.value.results[t];
+    if (r) items.push(...r.items);
   }
-  return count + itemIdx;
+  return items.slice(0, 8);
+});
+
+/** @brief Map content type to an icon component. */
+function typeIcon(type: string): Component {
+  const map: Record<string, Component> = {
+    posts: NewspaperIcon,
+    comments: ChatBubbleBottomCenterTextIcon,
+    users: UserGroupIcon,
+    events: CalendarDaysIcon,
+  };
+  return map[type] ?? MagnifyingGlassIcon;
 }
+
+/** @brief Map content type to i18n key for display label. */
+function typeToI18nKey(type: string): string {
+  const map: Record<string, string> = {
+    posts: "search.posts",
+    comments: "search.comments",
+    users: "search.people",
+    events: "search.events",
+  };
+  return map[type] ?? `search.${type}`;
+}
+
+/** @brief Navigate to a search result item. */
+function navigateToResult(item: SearchResultItem): void {
+  let path = "#";
+  if (item.type === "posts") path = `/app/post/${item.id}`;
+  else if (item.type === "comments" && item.parent_id)
+    path = `/app/post/${item.parent_id}`;
+  router.push(path);
+  close();
+}
+
+/** @brief Navigate to a quick-action page link. */
+function navigateToPage(item: QuickAction): void {
+  router.push(item.path);
+  close();
+}
+
+/** @brief Navigate to the full search results page. */
+function goToFullSearch(): void {
+  router.push({ path: "/app/search", query: { q: query.value.trim() } });
+  close();
+}
+
+/** @brief Total count of navigable items for keyboard nav. */
+const totalItems = computed(() => {
+  if (query.value.trim().length >= 2) {
+    return displayItems.value.length > 0 ? displayItems.value.length + 1 : 0;
+  }
+  return query.value.trim().length === 0 ? quickActions.length : 0;
+});
 
 function navigateDown(): void {
   if (activeIndex.value < totalItems.value - 1) activeIndex.value++;
@@ -240,36 +299,61 @@ function navigateUp(): void {
 const router = useRouter();
 
 function selectActive(): void {
-  const items = query.value.trim() ? filteredResults.value : quickActions;
-  const item = items[activeIndex.value];
-  if (item) navigateToItem(item);
-}
-
-function navigateTo(item: SearchItem): void {
-  navigateToItem(item);
-}
-
-function navigateToItem(item: SearchItem): void {
-  router.push(item.path);
-  close();
+  if (query.value.trim().length >= 2) {
+    if (activeIndex.value === displayItems.value.length) {
+      goToFullSearch();
+    } else {
+      const item = displayItems.value[activeIndex.value];
+      if (item) navigateToResult(item);
+    }
+  } else if (query.value.trim().length === 0) {
+    const item = quickActions[activeIndex.value];
+    if (item) navigateToPage(item);
+  }
 }
 
 function close(): void {
   open.value = false;
 }
 
-/** @brief Reset query and activeIndex when the modal opens; auto-focus input. */
+/** @brief Fetch search results from the backend API. */
+async function fetchSearch(): Promise<void> {
+  const q = query.value.trim();
+  if (q.length < 2) {
+    searchData.value = null;
+    return;
+  }
+  loading.value = true;
+  try {
+    const params = new URLSearchParams({
+      q,
+      types: "posts,users,events,comments",
+      limit: "8",
+    });
+    searchData.value = await api.get<SearchResponse>(`/search?${params}`);
+  } catch {
+    searchData.value = null;
+  } finally {
+    loading.value = false;
+  }
+}
+
+/** @brief Debounced watch on query to avoid excessive API calls (300ms). */
+watchDebounced(query, fetchSearch, { debounce: 300 });
+
+/** @brief Reset query and state when the modal opens; auto-focus input. */
 watch(open, async (isOpen) => {
   if (isOpen) {
     query.value = "";
     activeIndex.value = 0;
+    searchData.value = null;
     await nextTick();
     inputRef.value?.focus();
   }
 });
 
-/** @brief Reset activeIndex when query changes. */
-watch(query, () => {
+/** @brief Reset activeIndex when results change. */
+watch([query, displayItems], () => {
   activeIndex.value = 0;
 });
 
@@ -278,6 +362,10 @@ const keys = useMagicKeys({
   passive: false,
   onEventFired(e) {
     if (e.key === "k" && (e.metaKey || e.ctrlKey)) e.preventDefault();
+    if (e.key === "Escape" && e.type === "keydown" && open.value) {
+      e.preventDefault();
+      close();
+    }
   },
 });
 watch([keys["Meta_K"], keys["Ctrl_K"]], ([meta, ctrl]) => {

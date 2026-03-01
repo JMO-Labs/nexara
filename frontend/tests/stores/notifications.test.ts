@@ -46,4 +46,39 @@ describe("notifications store", () => {
     expect(mockPost).toHaveBeenCalledWith("/notifications/n1/read");
     expect(store.unreadCount).toBe(2);
   });
+
+  it("handleIncoming() prepends notification and increments unread", () => {
+    const store = useNotificationsStore();
+    store.unreadCount = 1;
+
+    store.handleIncoming({
+      id: "n-new",
+      user_id: "u1",
+      type: "comment",
+      payload: { link: "/app/post/123" },
+      read_at: null,
+      created_at: "2026-02-28T10:00:00Z",
+    });
+
+    expect(store.notifications).toHaveLength(1);
+    expect(store.notifications[0].id).toBe("n-new");
+    expect(store.unreadCount).toBe(2);
+  });
+
+  it("handleIncoming() deduplicates by id", () => {
+    const store = useNotificationsStore();
+    const notif = {
+      id: "n-dup",
+      user_id: "u1",
+      type: "mention" as const,
+      payload: {},
+      read_at: null,
+      created_at: "2026-02-28T10:00:00Z",
+    };
+    store.notifications = [notif];
+
+    store.handleIncoming(notif);
+
+    expect(store.notifications).toHaveLength(1);
+  });
 });

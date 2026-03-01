@@ -4,6 +4,7 @@
 
 Thread-safe via asyncio locks.  Used by both the WebSocket endpoint and
 the pub/sub subscriber to route messages to the correct connections.
+Supports community-scoped broadcast for multi-community deployments.
 """
 
 from __future__ import annotations
@@ -50,28 +51,41 @@ class ConnectionManager:
     @brief Central registry of active realtime connections.
 
     Maintains a per-user set of :class:`Sendable` connections (WebSocket
-    or SSE).  All mutations are guarded by an asyncio lock to prevent
-    race conditions during concurrent connect/disconnect.
+    or SSE).  Also tracks which community each user belongs to, enabling
+    community-scoped broadcasts.  All mutations are guarded by an asyncio
+    lock to prevent race conditions during concurrent connect/disconnect.
     """
 
     def __init__(self) -> None:
         self._connections: dict[UUID, set[Sendable]] = {}
+        self._user_community: dict[UUID, UUID] = {}
         self._lock = asyncio.Lock()
         self._ws_count = 0
         self._sse_count = 0
 
-    async def connect(self, conn: Sendable, user_id: UUID, *, is_sse: bool = False) -> None:
+    async def connect(
+        self,
+        conn: Sendable,
+        user_id: UUID,
+        *,
+        community_id: UUID | None = None,
+        is_sse: bool = False,
+    ) -> None:
         """
         @brief Register a new connection for a user.
 
         @param conn The WebSocket or SSEConnection instance.
         @param user_id UUID of the authenticated user.
+        @param community_id Optional community the user belongs to.
         @param is_sse Whether this is an SSE connection (for gauge tracking).
         """
         async with self._lock:
             if user_id not in self._connections:
                 self._connections[user_id] = set()
             self._connections[user_id].add(conn)
+
+            if community_id is not None:
+                self._user_community[user_id] = community_id
 
             if is_sse:
                 self._sse_count += 1
@@ -80,11 +94,20 @@ class ConnectionManager:
                 self._ws_count += 1
                 ws_connections_active.set(self._ws_count)
 
-        logger.debug("connection_added", user_id=str(user_id), is_sse=is_sse)
+        logger.debug(
+            "connection_added",
+            user_id=str(user_id),
+            community_id=str(community_id) if community_id else None,
+            is_sse=is_sse,
+        )
 
-    async def disconnect(self, conn: Sendable, user_id: UUID, *, is_sse: bool = False) -> None:
+    async def disconnect(
+        self, conn: Sendable, user_id: UUID, *, is_sse: bool = False,
+    ) -> None:
         """
         @brief Remove a connection from tracking.
+
+        Cleans up community mapping when a user's last connection closes.
 
         @param conn The connection to remove.
         @param user_id UUID of the user.
@@ -96,6 +119,7 @@ class ConnectionManager:
                 conns.discard(conn)
                 if not conns:
                     del self._connections[user_id]
+                    self._user_community.pop(user_id, None)
 
             if is_sse:
                 self._sse_count = max(0, self._sse_count - 1)
@@ -129,6 +153,37 @@ class ConnectionManager:
                 logger.debug("send_failed", user_id=str(user_id), exc_info=True)
         return sent
 
+    async def send_to_community(
+        self, community_id: UUID, message: dict[str, Any],
+    ) -> int:
+        """
+        @brief Send a message to all users in a specific community.
+
+        Only delivers to users whose connection registered with
+        a matching ``community_id``.  Falls back to :meth:`broadcast`
+        semantics for users that connected without a community.
+
+        @param community_id Target community UUID.
+        @param message JSON-serializable message dict.
+        @return Total number of connections the message was sent to.
+        """
+        async with self._lock:
+            targets: list[tuple[UUID, list[Sendable]]] = []
+            for uid, conns in self._connections.items():
+                user_cid = self._user_community.get(uid)
+                if user_cid is None or user_cid == community_id:
+                    targets.append((uid, list(conns)))
+
+        sent = 0
+        for _uid, conns in targets:
+            for conn in conns:
+                try:
+                    await conn.send_json(message)
+                    sent += 1
+                except Exception:
+                    pass
+        return sent
+
     async def broadcast(self, message: dict[str, Any]) -> int:
         """
         @brief Send a message to all connected users.
@@ -137,7 +192,10 @@ class ConnectionManager:
         @return Total number of connections the message was sent to.
         """
         async with self._lock:
-            all_conns = [(uid, list(conns)) for uid, conns in self._connections.items()]
+            all_conns = [
+                (uid, list(conns))
+                for uid, conns in self._connections.items()
+            ]
 
         sent = 0
         for _uid, conns in all_conns:

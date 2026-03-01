@@ -60,8 +60,6 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
                 media_id=str(media_id),
                 error=str(exc),
             )
-            await repo.update_status(media_id, "error")
-            await session.commit()
             return {"status": "error"}
 
         try:
@@ -78,8 +76,6 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
                 media_id=str(media_id),
                 error=str(exc),
             )
-            await repo.update_status(media_id, "error")
-            await session.commit()
             return {"status": "error"}
 
         thumbnail_key = f"thumbnails/{media_id}.webp"
@@ -91,8 +87,6 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
                 media_id=str(media_id),
                 error=str(exc),
             )
-            await repo.update_status(media_id, "error")
-            await session.commit()
             return {"status": "error"}
 
         await repo.update_status(

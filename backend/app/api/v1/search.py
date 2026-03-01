@@ -1,8 +1,8 @@
 """
 @file search.py
-@brief Search API endpoint — full-text search across posts, users, events.
+@brief Search API endpoint — full-text search across posts, users, events, and comments.
 
-GET /api/v1/search/?q=...&types=posts,users,events&cursor=...&limit=20
+GET /api/v1/search/?q=...&types=posts,users,events,comments&cursor=...&limit=20
 Requires authentication. Returns 422 for empty or too-short query.
 """
 
@@ -42,31 +42,37 @@ def _build_service(
     )
 
 
+"""@brief All valid search content types."""
+_ALL_TYPES = ["posts", "users", "events", "comments"]
+_VALID_TYPES = set(_ALL_TYPES)
+
+
 def _parse_types(types_str: str | None) -> list[str]:
     """
     @brief Parse comma-separated types string into list.
 
-    @param types_str Raw types param (e.g. "posts,users,events").
+    @param types_str Raw types param (e.g. "posts,users,events,comments").
     @return List of valid type names; defaults to all if empty.
     """
     if not types_str or not types_str.strip():
-        return ["posts", "users", "events"]
+        return _ALL_TYPES
     raw = [t.strip().lower() for t in types_str.split(",")]
-    valid = {"posts", "users", "events"}
-    return [t for t in raw if t in valid] or ["posts", "users", "events"]
+    return [t for t in raw if t in _VALID_TYPES] or _ALL_TYPES
 
 
 @router.get("", response_model=SearchResponse)
 async def search(
     q: str = Query(..., description="Search query (min 2 characters)"),
-    types: str | None = Query(default=None, description="Comma-separated: posts,users,events"),
+    types: str | None = Query(
+        default=None, description="Comma-separated: posts,users,events,comments"
+    ),
     cursor: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     user: User = Depends(get_current_user),
     service: SearchService = Depends(_build_service),
 ) -> SearchResponse:
     """
-    @brief Full-text search across posts, users, and events.
+    @brief Full-text search across posts, users, events, and comments.
 
     Query must be at least 2 characters. Returns 422 for empty or
     too-short query. Results are grouped by content type.

@@ -127,7 +127,7 @@ export const useAuthStore = defineStore("auth", () => {
       body.two_factor_token = twoFactorToken.value;
     }
 
-    const response = await fetch(`${API_BASE}/auth/2fa/verify-login`, {
+    const response = await fetch(`${API_BASE}/auth/2fa/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

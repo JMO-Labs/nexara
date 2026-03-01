@@ -97,6 +97,51 @@ class TestGetMetrics:
         assert result.system.version == "0.1.0"
         assert isinstance(result.waf.blocks_by_reason, dict)
 
+    @pytest.mark.asyncio
+    async def test_get_metrics_returns_counts(self):
+        """get_metrics should return non-zero counts when data exists."""
+        expected = MetricsResponse(
+            community=CommunityMetrics(
+                users_total=42,
+                users_active_30d=15,
+                users_online_now=3,
+                posts_total=200,
+                posts_last_7d=50,
+                media_files=100,
+                media_storage_bytes=5242880,
+            ),
+            system=SystemMetrics(
+                version="0.1.0",
+                uptime_seconds=3600.0,
+                db_size_bytes=None,
+                valkey_memory_bytes=None,
+                celery_queue_depth=2,
+            ),
+            waf=WafMetrics(
+                blocks_today=7,
+                blocks_by_reason={"SQL_INJECTION": 5, "PATH_TRAVERSAL": 2},
+            ),
+        )
+        with patch(
+            "app.services.admin_service.get_metrics_impl",
+            new_callable=AsyncMock,
+            return_value=expected,
+        ):
+            service = AdminService(
+                session=MagicMock(),
+                user_repo=AsyncMock(),
+                audit_repo=AsyncMock(),
+                community_id=COMMUNITY_ID,
+                settings=_make_settings(),
+            )
+            result = await service.get_metrics()
+
+        assert result.community.users_total == 42
+        assert result.community.posts_total == 200
+        assert result.community.media_storage_bytes == 5242880
+        assert result.waf.blocks_today == 7
+        assert result.waf.blocks_by_reason["SQL_INJECTION"] == 5
+
 
 class TestChangeRole:
     """@brief Tests for AdminService.change_role()."""

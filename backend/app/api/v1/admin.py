@@ -24,12 +24,12 @@ from app.repositories.user_repo import UserRepository
 from app.schemas.admin import (
     AdminSettingsResponse,
     AdminSettingsUpdate,
+    AdminUserListItem,
     AuditLogEntry,
     MetricsResponse,
     UserRoleUpdate,
 )
-from app.schemas.common import PaginatedResponse
-from app.schemas.user import UserResponse
+from app.schemas.common import MessageResponse, PaginatedResponse
 from app.services.admin_service import AdminService
 
 logger = structlog.get_logger(__name__)
@@ -74,14 +74,33 @@ async def get_metrics(
     return await service.get_metrics()
 
 
-@router.get("/users", response_model=PaginatedResponse[UserResponse])
+def _user_to_admin_item(u: User) -> AdminUserListItem:
+    """@brief Convert User to AdminUserListItem with status from is_active."""
+    return AdminUserListItem(
+        id=u.id,
+        username=u.username,
+        display_name=u.display_name,
+        email=u.email,
+        avatar_url=u.avatar_url,
+        bio=u.bio,
+        title=u.title,
+        location=u.location,
+        website_url=u.website_url,
+        role=u.role,
+        created_at=u.created_at,
+        last_seen_at=u.last_seen_at,
+        status="suspended" if not u.is_active else "active",
+    )
+
+
+@router.get("/users", response_model=PaginatedResponse[AdminUserListItem])
 async def list_users(
     _user: User = Depends(require_role("admin")),
     service: AdminService = Depends(_build_service),
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = Query(None),
     search: str | None = Query(None),
-) -> PaginatedResponse[UserResponse]:
+) -> PaginatedResponse[AdminUserListItem]:
     """@brief List community users with optional search (admin only)."""
     users, next_cursor = await service.list_users(
         search=search,
@@ -89,7 +108,7 @@ async def list_users(
         cursor=cursor,
     )
     return PaginatedResponse(
-        items=[UserResponse.model_validate(u) for u in users],
+        items=[_user_to_admin_item(u) for u in users],
         next_cursor=next_cursor,
         has_more=next_cursor is not None,
     )
@@ -132,6 +151,18 @@ async def restore_user(
     return {"message": _("User restored")}
 
 
+@router.delete("/users/{user_id}", response_model=MessageResponse)
+async def delete_user(
+    user_id: uuid.UUID,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    service: AdminService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Soft-delete a user (set deleted_at and is_active=False)."""
+    await service.delete_user(user, user_id, _client_ip(request))
+    return MessageResponse(message=_("User deleted"))
+
+
 @router.get("/settings", response_model=AdminSettingsResponse)
 async def get_admin_settings(
     _user: User = Depends(require_role("admin")),
@@ -156,18 +187,44 @@ async def update_admin_settings(
 async def get_audit_log(
     _user: User = Depends(require_role("admin")),
     service: AdminService = Depends(_build_service),
+    db: AsyncSession = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = Query(None),
     action_filter: str | None = Query(None),
 ) -> PaginatedResponse[AuditLogEntry]:
-    """@brief List audit log entries with optional action filter."""
+    """@brief List audit log entries enriched with actor display names."""
+    from sqlalchemy import select
+
     entries, next_cursor = await service.list_audit_entries(
         action_filter=action_filter,
         limit=limit,
         cursor=cursor,
     )
+
+    actor_ids = {e.actor_id for e in entries if e.actor_id is not None}
+    target_user_ids = {
+        e.target_id for e in entries if e.target_id and e.target_type == "user"
+    }
+    all_ids = actor_ids | target_user_ids
+
+    display_map: dict[uuid.UUID, str] = {}
+    if all_ids:
+        result = await db.execute(
+            select(User.id, User.display_name).where(User.id.in_(all_ids))
+        )
+        display_map = {row.id: row.display_name for row in result}
+
+    items: list[AuditLogEntry] = []
+    for e in entries:
+        entry = AuditLogEntry.model_validate(e)
+        if e.actor_id and e.actor_id in display_map:
+            entry.actor_display_name = display_map[e.actor_id]
+        if e.target_id and e.target_type == "user" and e.target_id in display_map:
+            entry.target_display = display_map[e.target_id]
+        items.append(entry)
+
     return PaginatedResponse(
-        items=[AuditLogEntry.model_validate(e) for e in entries],
+        items=items,
         next_cursor=next_cursor,
         has_more=next_cursor is not None,
     )

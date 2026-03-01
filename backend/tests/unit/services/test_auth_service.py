@@ -59,6 +59,8 @@ def _make_service(session=None, settings=None):
     svc._user_repo = AsyncMock()
     svc._token_repo = AsyncMock()
     svc._invite_repo = AsyncMock()
+    svc._settings_repo = AsyncMock()
+    svc._settings_repo.get_or_create = AsyncMock(return_value=None)
     return svc
 
 
@@ -132,6 +134,28 @@ class TestRegister:
                 password="p" * 12,
                 display_name="X",
             )
+
+    @pytest.mark.asyncio
+    async def test_register_creates_profile(self):
+        """@brief Register creates UserSettings (profile) alongside the user."""
+        svc = _make_service()
+        svc._user_repo.email_exists.return_value = False
+        svc._user_repo.username_exists.return_value = False
+
+        created = _make_user()
+        svc._user_repo.create.return_value = created
+
+        await svc.register(
+            email="new@example.com",
+            username="newuser",
+            password="strong-password123",
+            display_name="New User",
+        )
+
+        svc._settings_repo.get_or_create.assert_called_once_with(
+            created.id,
+            created.community_id,
+        )
 
 
 class TestLogin:

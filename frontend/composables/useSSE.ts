@@ -25,7 +25,19 @@ export function useSSE(onEvent: (type: string, data: unknown) => void) {
   let eventSource: EventSource | null = null;
   let lastEventId: string | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let disposed = false;
+
+  /**
+   * @brief True once the owning component unmounts.
+   * Permanently prevents reconnection attempts after teardown.
+   */
+  let unmounted = false;
+
+  /**
+   * @brief True while the caller has explicitly stopped the connection.
+   * Reset to false on the next `connect()` call so the caller can
+   * restart the connection after a logout/login cycle.
+   */
+  let stopped = false;
 
   /**
    * @brief Open the SSE connection.
@@ -36,7 +48,14 @@ export function useSSE(onEvent: (type: string, data: unknown) => void) {
    * for SSE endpoints.
    */
   function connect(): void {
-    if (disposed || !authStore.accessToken) return;
+    if (unmounted || !authStore.accessToken) return;
+
+    stopped = false;
+
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
 
     const params = new URLSearchParams({ token: authStore.accessToken });
     if (lastEventId) params.set("last_event_id", lastEventId);
@@ -85,26 +104,36 @@ export function useSSE(onEvent: (type: string, data: unknown) => void) {
     eventSource.onerror = () => {
       status.value = "error";
       eventSource?.close();
+      eventSource = null;
       scheduleReconnect();
     };
   }
 
-  /** @brief Reconnect after a brief delay. */
+  /** @brief Reconnect after a brief delay unless stopped or unmounted. */
   function scheduleReconnect(): void {
-    if (disposed) return;
+    if (stopped || unmounted) return;
     reconnectTimer = setTimeout(connect, 5000);
   }
 
-  /** @brief Close the connection and stop reconnecting. */
+  /**
+   * @brief Close the connection.
+   * Can be reopened later by calling `connect()` again.
+   */
   function disconnect(): void {
-    disposed = true;
-    if (reconnectTimer) clearTimeout(reconnectTimer);
+    stopped = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     eventSource?.close();
     eventSource = null;
     status.value = "closed";
   }
 
-  onUnmounted(disconnect);
+  onUnmounted(() => {
+    unmounted = true;
+    disconnect();
+  });
 
   return { status, connect, disconnect };
 }

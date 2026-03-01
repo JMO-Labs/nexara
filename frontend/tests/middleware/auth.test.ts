@@ -35,6 +35,18 @@ describe("auth middleware", () => {
     });
   });
 
+  it("redirects unauthenticated users for /APP (uppercase) to login", () => {
+    const to = makeRoute("/APP");
+    const from = makeRoute("/");
+
+    const result = authMiddleware(to, from);
+
+    expect(result).toEqual({
+      path: "/auth/login",
+      query: { redirect: "/APP" },
+    });
+  });
+
   it("redirects unauthenticated users for nested /app routes", () => {
     const to = makeRoute("/app/post/123");
     const from = makeRoute("/");

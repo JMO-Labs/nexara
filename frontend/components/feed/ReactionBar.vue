@@ -1,13 +1,15 @@
 <!--
   @file components/feed/ReactionBar.vue
-  @brief Emoji reaction display and toggle component.
+  @brief Display-only emoji reaction badges with counts.
 
-  Renders a row of reaction buttons with counts. Highlights reactions
-  the current user has selected. Emits a `react` event when clicked
-  to trigger optimistic updates in the feed store.
+  Shows existing reactions as compact pills with emoji and count.
+  Clicking a badge toggles the reaction (emits "react"). No inline
+  quick-react presets or picker — reaction input is handled by the
+  CommentInput plus-menu instead.
 -->
 <template>
   <div
+    v-if="reactions.length"
     class="flex flex-wrap items-center gap-1"
     role="group"
     :aria-label="$t('feed.reactions')"
@@ -27,7 +29,7 @@
       ]"
       :aria-label="`${reaction.emoji} ${reaction.count} reactions`"
       :aria-pressed="reaction.reacted_by_me"
-      @click="$emit('react', postId, reaction.emoji)"
+      @click.stop="$emit('react', targetType, targetId, reaction.emoji)"
     >
       <span>{{ reaction.emoji }}</span>
       <span class="text-xs font-medium text-muted-foreground">{{
@@ -39,19 +41,24 @@
 
 <script setup lang="ts">
 /**
- * @brief ReactionBar component props and events.
+ * @brief Display-only ReactionBar component props and events.
+ *
+ * Generic reaction badges supporting posts, comments, and media targets.
+ * Clicking an existing badge toggles the user's reaction via the react event.
  */
 import type { Reaction } from "~/types/api";
 
 defineProps<{
-  /** @brief List of reactions to display. */
+  /** @brief List of existing reactions to display. */
   reactions: Reaction[];
-  /** @brief ID of the post these reactions belong to. */
-  postId: string;
+  /** @brief Target entity type for the reaction. */
+  targetType: "post" | "comment" | "media";
+  /** @brief ID of the target entity. */
+  targetId: string;
 }>();
 
 defineEmits<{
-  /** @brief Emitted when a user clicks a reaction. */
-  (e: "react", postId: string, emoji: string): void;
+  /** @brief Emitted when a user clicks a reaction badge to toggle it. */
+  (e: "react", targetType: string, targetId: string, emoji: string): void;
 }>();
 </script>

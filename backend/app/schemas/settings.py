@@ -70,4 +70,4 @@ class ProfileUpdate(BaseModel):
     bio: str | None = Field(default=None, max_length=500)
     location: str | None = Field(default=None, max_length=100)
     website_url: str | None = Field(default=None, max_length=300)
-    pronouns: str | None = Field(default=None, max_length=50)
+    title: str | None = Field(default=None, max_length=50)

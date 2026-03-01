@@ -39,7 +39,7 @@ export default defineNuxtConfig({
   i18n: {
     locales: [{ code: "en-US", file: "en-US.json" }],
     defaultLocale: "en-US",
-    lazy: true,
+    lazy: false,
     langDir: "locales",
     strategy: "no_prefix",
   },
@@ -67,9 +67,10 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: "/app",
+      navigateFallbackDenylist: [/\/api\//],
       runtimeCaching: [
         {
-          urlPattern: /^https?:\/\/.*\/api\/.*/i,
+          urlPattern: /^https?:\/\/.*\/api\/(?!v1\/notifications\/stream).*/i,
           handler: "NetworkFirst",
           options: {
             cacheName: "api-cache",

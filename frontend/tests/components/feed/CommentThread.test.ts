@@ -2,8 +2,9 @@
  * @file tests/components/feed/CommentThread.test.ts
  * @brief TDD tests for the CommentThread component.
  *
- * Verifies rendering of nested comments, author info, and
- * reply input functionality.
+ * Verifies rendering of nested comments, author info, reply input,
+ * and comment reaction forwarding. The top-level comment input
+ * lives on PostCard; CommentThread only handles replies.
  */
 
 import { describe, it, expect } from "vitest";
@@ -23,6 +24,7 @@ const mockComments: Comment[] = [
     },
     parent_id: null,
     created_at: "2026-02-26T11:00:00Z",
+    reactions: [{ emoji: "👍", count: 1, reacted_by_me: false }],
     replies: [
       {
         id: "c2",
@@ -35,6 +37,7 @@ const mockComments: Comment[] = [
         },
         parent_id: "c1",
         created_at: "2026-02-26T11:05:00Z",
+        reactions: [],
         replies: [],
       },
     ],
@@ -50,6 +53,7 @@ const mockComments: Comment[] = [
     },
     parent_id: null,
     created_at: "2026-02-26T12:00:00Z",
+    reactions: [],
     replies: [],
   },
 ];
@@ -82,29 +86,45 @@ describe("CommentThread", () => {
     expect(wrapper.text()).toContain("Carol");
   });
 
-  it("emits add-comment when reply is submitted", async () => {
+  it("emits add-comment with parentId when replying to a comment", async () => {
     const wrapper = mount(CommentThread, {
       props: { comments: mockComments, postId: "post-1" },
     });
 
-    const input = wrapper.find('[data-testid="comment-input"]');
-    await input.setValue("My reply");
+    const replyBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text() === "feed.reply");
+    expect(replyBtn).toBeDefined();
+    await replyBtn!.trigger("click");
 
-    const form = wrapper.find('[data-testid="comment-form"]');
-    await form.trigger("submit");
+    const replyForm = wrapper.find('[data-testid="reply-form"]');
+    expect(replyForm.exists()).toBe(true);
+    const replyInput = replyForm.find('[data-testid="comment-input"]');
+    expect(replyInput.exists()).toBe(true);
+    await replyInput.setValue("My nested reply");
+
+    await replyForm.trigger("submit");
 
     expect(wrapper.emitted("add-comment")).toBeTruthy();
     expect(wrapper.emitted("add-comment")![0]).toEqual([
-      { postId: "post-1", content: "My reply", parentId: null },
+      { postId: "post-1", content: "My nested reply", parentId: "c1" },
     ]);
   });
 
-  it("renders empty state when no comments", () => {
+  it("does not render a bottom comment form (input lives on PostCard)", () => {
     const wrapper = mount(CommentThread, {
       props: { comments: [], postId: "post-1" },
     });
 
-    const input = wrapper.find('[data-testid="comment-input"]');
-    expect(input.exists()).toBe(true);
+    expect(wrapper.find('[data-testid="comment-form"]').exists()).toBe(false);
+  });
+
+  it("renders reaction bar on comments", () => {
+    const wrapper = mount(CommentThread, {
+      props: { comments: mockComments, postId: "post-1" },
+    });
+
+    const reactionBtns = wrapper.findAll('[data-testid="reaction-👍"]');
+    expect(reactionBtns.length).toBeGreaterThanOrEqual(1);
   });
 });

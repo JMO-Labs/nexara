@@ -24,7 +24,7 @@
         <div class="flex flex-wrap items-center justify-center gap-4">
           <a
             href="/auth/register"
-            class="rounded-lg bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            class="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {{ $t("landing.hero.getStarted") }}
           </a>
@@ -32,7 +32,7 @@
             href="https://github.com/com-nexara/nexara"
             target="_blank"
             rel="noopener noreferrer"
-            class="rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+            class="rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground hover:bg-accent"
           >
             {{ $t("landing.hero.viewOnGithub") }}
           </a>

@@ -48,6 +48,28 @@ class TestEventGenerator:
             assert heartbeat_received
 
     @pytest.mark.asyncio
+    async def test_yields_initial_connected_event(self):
+        """@brief The generator yields a padding flush then a connected event first."""
+        user_id = uuid.uuid4()
+        conn = SSEConnection(user_id)
+
+        with (
+            patch("app.api.v1.sse.manager") as mock_manager,
+            patch("app.api.v1.sse.set_online", new_callable=AsyncMock),
+            patch("app.api.v1.sse.set_offline", new_callable=AsyncMock),
+        ):
+            mock_manager.connect = AsyncMock()
+            mock_manager.disconnect = AsyncMock()
+
+            gen = _event_generator(conn, user_id, None)
+            flush = await gen.__anext__()
+            connected = await gen.__anext__()
+
+        assert "retry:" in flush
+        assert "event: connected" in connected
+        assert str(user_id) in connected
+
+    @pytest.mark.asyncio
     async def test_yields_message_from_queue(self):
         user_id = uuid.uuid4()
         conn = SSEConnection(user_id)
@@ -62,6 +84,8 @@ class TestEventGenerator:
             mock_manager.disconnect = AsyncMock()
 
             gen = _event_generator(conn, user_id, None)
+            await gen.__anext__()  # padding flush
+            await gen.__anext__()  # connected event
             event = await gen.__anext__()
 
         assert "event: notification" in event
@@ -82,6 +106,8 @@ class TestEventGenerator:
             mock_manager.disconnect = AsyncMock()
 
             gen = _event_generator(conn, user_id, None)
+            await gen.__anext__()  # padding flush
+            await gen.__anext__()  # connected event
             event = await gen.__anext__()
 
         assert "id: 1" in event

@@ -23,7 +23,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.notification import NotificationList, UnreadCountResponse
 from app.services.notification_service import NotificationService
-from app.services.realtime.pubsub import publish_to_user
+from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -44,7 +44,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
-        pubsub_publisher=publish_to_user,
+        event_bus=event_bus,
     )
 
 
@@ -91,3 +91,13 @@ async def mark_all_read(
     """@brief Mark all notifications as read for the current user."""
     count = await service.mark_all_read(user.id)
     return MessageResponse(message=_("Marked {count} as read").format(count=count))
+
+
+@router.delete("/", response_model=MessageResponse)
+async def clear_all_notifications(
+    user: User = Depends(get_current_user),
+    service: NotificationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Delete all notifications for the current user."""
+    count = await service.clear_all(user.id)
+    return MessageResponse(message=_("Cleared {count} notifications").format(count=count))

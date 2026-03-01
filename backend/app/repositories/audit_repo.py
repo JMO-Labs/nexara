@@ -9,6 +9,7 @@ Audit entries are never updated or deleted.  This repository provides
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -16,6 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
 from app.repositories.base import BaseRepository
+
+_CURSOR_SEP = "|"
+"""@brief Separator for cursor format: created_at_iso|uuid."""
 
 
 class AuditRepository(BaseRepository[AuditLog]):
@@ -89,9 +93,21 @@ class AuditRepository(BaseRepository[AuditLog]):
             stmt = stmt.where(AuditLog.actor_id == actor_filter)
         if cursor:
             try:
-                cursor_id = uuid.UUID(cursor)
-                stmt = stmt.where(AuditLog.id < cursor_id)
-            except ValueError:
+                if _CURSOR_SEP in cursor:
+                    parts = cursor.split(_CURSOR_SEP, 1)
+                    cursor_ts = datetime.fromisoformat(parts[0].replace("Z", "+00:00"))
+                    cursor_id = uuid.UUID(parts[1]) if len(parts) > 1 else None
+                    if cursor_id is not None:
+                        stmt = stmt.where(
+                            (AuditLog.created_at < cursor_ts)
+                            | ((AuditLog.created_at == cursor_ts) & (AuditLog.id < cursor_id))
+                        )
+                    else:
+                        stmt = stmt.where(AuditLog.created_at < cursor_ts)
+                else:
+                    cursor_uuid = uuid.UUID(cursor)
+                    stmt = stmt.where(AuditLog.id < cursor_uuid)
+            except (ValueError, TypeError):
                 pass
 
         stmt = stmt.limit(limit + 1)
@@ -101,6 +117,8 @@ class AuditRepository(BaseRepository[AuditLog]):
         next_cursor: str | None = None
         if len(rows) > limit:
             rows = rows[:limit]
-            next_cursor = str(rows[-1].id)
+            last = rows[-1]
+            created_iso = last.created_at.isoformat() if last.created_at else ""
+            next_cursor = f"{created_iso}{_CURSOR_SEP}{last.id}"
 
         return rows, next_cursor

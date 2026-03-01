@@ -50,6 +50,17 @@
               {{ $t(item.labelKey) }}
             </NuxtLink>
           </div>
+
+          <!-- Logout -->
+          <div class="border-t border-border p-3">
+            <button
+              class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+              @click="handleLogout"
+            >
+              <ArrowRightStartOnRectangleIcon class="h-5 w-5" />
+              {{ $t("nav.logout") }}
+            </button>
+          </div>
         </nav>
       </div>
     </Transition>
@@ -68,19 +79,30 @@ import {
   UserGroupIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
+  ArrowRightStartOnRectangleIcon,
 } from "@heroicons/vue/24/outline";
 import { useAuthStore } from "~/stores/auth";
 import { computed } from "vue";
 
 const authStore = useAuthStore();
+const router = useRouter();
+
+const emit = defineEmits<{
+  (e: "close"): void;
+}>();
+
+/**
+ * @brief Log out the current user, close drawer, and redirect to login.
+ */
+async function handleLogout(): Promise<void> {
+  emit("close");
+  await authStore.logout();
+  await router.push("/auth/login");
+}
 
 defineProps<{
   /** @brief Whether the drawer is currently visible. */
   open: boolean;
-}>();
-
-defineEmits<{
-  (e: "close"): void;
 }>();
 
 /** @brief Navigation items shown in the mobile drawer. */

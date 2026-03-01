@@ -2,8 +2,9 @@
   @file components/admin/UserTable.vue
   @brief Admin user management table.
 
-  Displays users with avatar, name, email, role badge, status, and actions.
-  Emits change-role, suspend, restore, delete for row actions.
+  Displays users with avatar, name, email, role select dropdown, status badge,
+  and action dropdown. Role column uses <select> with admin/member/viewer.
+  Action dropdown is teleported to body to escape overflow-x-auto clipping.
 -->
 <template>
   <div class="overflow-x-auto rounded-lg border border-border">
@@ -67,12 +68,17 @@
           </td>
           <td class="px-4 py-3 text-muted-foreground">{{ u.email }}</td>
           <td class="px-4 py-3">
-            <span
-              class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-              :class="roleBadgeClass(u.role)"
+            <select
+              :value="u.role"
+              class="rounded border border-input bg-background px-2 py-1 text-sm text-foreground focus:ring-2 focus:ring-ring"
+              @change="
+                onRoleChange(u, ($event.target as HTMLSelectElement).value)
+              "
             >
-              {{ u.role }}
-            </span>
+              <option value="admin">admin</option>
+              <option value="member">member</option>
+              <option value="viewer">viewer</option>
+            </select>
           </td>
           <td class="px-4 py-3">
             <span
@@ -86,82 +92,72 @@
             {{ formatDate(u.created_at) }}
           </td>
           <td class="px-4 py-3">
-            <div class="relative">
-              <button
-                type="button"
-                class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-haspopup="true"
-                aria-expanded="openDropdown === u.id"
-                @click.stop="toggleDropdown(u.id)"
-              >
-                <span aria-hidden="true">⋮</span>
-              </button>
-              <div
-                v-if="openDropdown === u.id"
-                class="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-border bg-card py-1 shadow-lg"
-                @click.stop
-              >
-                <button
-                  type="button"
-                  class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="
-                    emit('change-role', u);
-                    openDropdown = null;
-                  "
-                >
-                  {{ $t("admin.change_role") }}
-                </button>
-                <button
-                  v-if="u.status !== 'suspended'"
-                  type="button"
-                  class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="
-                    emit('suspend', u);
-                    openDropdown = null;
-                  "
-                >
-                  {{ $t("admin.suspend") }}
-                </button>
-                <button
-                  v-else
-                  type="button"
-                  class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                  @click="
-                    emit('restore', u);
-                    openDropdown = null;
-                  "
-                >
-                  {{ $t("admin.restore") }}
-                </button>
-                <button
-                  type="button"
-                  class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-muted dark:text-red-400"
-                  @click="
-                    emit('delete', u);
-                    openDropdown = null;
-                  "
-                >
-                  {{ $t("common.delete") }}
-                </button>
-              </div>
-            </div>
+            <button
+              :ref="(el) => setTriggerRef(u.id, el as HTMLElement | null)"
+              type="button"
+              class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-haspopup="true"
+              :aria-expanded="openDropdown === u.id"
+              @click.stop="toggleDropdown(u.id)"
+            >
+              <span aria-hidden="true">&#x22EE;</span>
+            </button>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
+
+  <!-- Action dropdown teleported to body to escape overflow clipping -->
+  <Teleport to="body">
+    <div
+      v-if="openDropdown !== null"
+      class="fixed inset-0 z-[9998]"
+      @click="openDropdown = null"
+    />
+    <div
+      v-if="openDropdown !== null"
+      class="fixed z-[9999] min-w-[140px] rounded-lg border border-border bg-popover py-1 shadow-xl"
+      :style="dropdownStyle"
+      @click.stop
+    >
+      <button
+        v-if="activeUser?.status !== 'suspended'"
+        type="button"
+        class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
+        @click="handleAction('suspend')"
+      >
+        {{ $t("admin.suspend") }}
+      </button>
+      <button
+        v-else
+        type="button"
+        class="block w-full px-4 py-2 text-left text-sm hover:bg-muted"
+        @click="handleAction('restore')"
+      >
+        {{ $t("admin.restore") }}
+      </button>
+      <button
+        type="button"
+        class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-muted dark:text-red-400"
+        @click="handleAction('delete')"
+      >
+        {{ $t("common.delete") }}
+      </button>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 /**
- * @brief UserTable with role/status badges and action dropdown.
+ * @brief UserTable with role/status badges and teleported action dropdown.
  */
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onUnmounted } from "vue";
 import type { AdminUserListItem, UserRole } from "~/types/api";
 
 const { t: $t } = useI18n();
 
-defineProps<{
+const props = defineProps<{
   /** @brief List of users to display. */
   users: AdminUserListItem[];
   /** @brief Whether data is loading. */
@@ -169,7 +165,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "change-role": [user: AdminUserListItem];
+  "change-role": [user: AdminUserListItem, role: UserRole];
   suspend: [user: AdminUserListItem];
   restore: [user: AdminUserListItem];
   delete: [user: AdminUserListItem];
@@ -178,15 +174,67 @@ const emit = defineEmits<{
 /** @brief ID of user whose dropdown is open. */
 const openDropdown = ref<string | null>(null);
 
-/** @brief Role badge color classes. */
-function roleBadgeClass(role: UserRole): string {
-  const map: Record<UserRole, string> = {
-    admin:
-      "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-    member: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-    viewer: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-  };
-  return map[role] ?? "bg-gray-100 text-gray-800";
+/** @brief Map of user IDs to their trigger button elements. */
+const triggerRefs = new Map<string, HTMLElement>();
+
+/** @brief Absolute position for the teleported dropdown. */
+const dropdownPos = ref({ top: 0, left: 0 });
+
+/** @brief The user whose action dropdown is currently open. */
+const activeUser = computed(() =>
+  openDropdown.value
+    ? props.users.find((u) => u.id === openDropdown.value)
+    : null,
+);
+
+/** @brief CSS style object positioning the dropdown near the trigger button. */
+const dropdownStyle = computed(() => ({
+  top: `${dropdownPos.value.top}px`,
+  left: `${dropdownPos.value.left}px`,
+}));
+
+/** @brief Store a reference to a trigger button element by user ID. */
+function setTriggerRef(id: string, el: HTMLElement | null): void {
+  if (el) {
+    triggerRefs.set(id, el);
+  } else {
+    triggerRefs.delete(id);
+  }
+}
+
+/** @brief Toggle the action dropdown and compute its position. */
+function toggleDropdown(id: string): void {
+  if (openDropdown.value === id) {
+    openDropdown.value = null;
+    return;
+  }
+  const trigger = triggerRefs.get(id);
+  if (trigger) {
+    const rect = trigger.getBoundingClientRect();
+    dropdownPos.value = {
+      top: rect.bottom + 4,
+      left: Math.max(rect.right - 140, 8),
+    };
+  }
+  openDropdown.value = id;
+}
+
+/** @brief Dispatch an action for the active user and close the dropdown. */
+function handleAction(action: "suspend" | "restore" | "delete"): void {
+  if (!activeUser.value) return;
+  emit(action, activeUser.value);
+  openDropdown.value = null;
+}
+
+/** @brief Emit change-role when role select changes. */
+function onRoleChange(user: AdminUserListItem, newRole: string): void {
+  if (
+    newRole &&
+    (newRole === "admin" || newRole === "member" || newRole === "viewer") &&
+    newRole !== user.role
+  ) {
+    emit("change-role", user, newRole as UserRole);
+  }
 }
 
 /** @brief Status badge color classes. */
@@ -215,18 +263,7 @@ function formatDate(iso: string): string {
   }
 }
 
-function toggleDropdown(id: string): void {
-  openDropdown.value = openDropdown.value === id ? null : id;
-}
-
-function handleClickOutside(): void {
-  openDropdown.value = null;
-}
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-});
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
+  triggerRefs.clear();
 });
 </script>

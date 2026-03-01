@@ -72,4 +72,13 @@ describe("useDarkMode", () => {
     toggle();
     expect(localStorage.getItem("nexara-dark-mode")).toBe("false");
   });
+
+  it("does not throw when localStorage is unavailable (SSR)", () => {
+    const originalWindow = globalThis.window;
+    vi.stubGlobal("window", undefined);
+
+    expect(() => useDarkMode()).not.toThrow();
+
+    vi.stubGlobal("window", originalWindow);
+  });
 });

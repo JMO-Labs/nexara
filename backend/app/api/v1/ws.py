@@ -142,14 +142,14 @@ async def _message_loop(ws: WebSocket, user_id: UUID) -> None:
             await set_online(user_id)
 
         elif msg_type == InboundType.TYPING:
-            from app.services.realtime.pubsub import publish_to_community
+            from app.services.realtime import events
+            from app.services.realtime.event_bus import event_bus
 
-            await publish_to_community(
-                UUID("00000000-0000-0000-0000-000000000001"),
-                {
-                    "type": OutboundType.TYPING,
-                    "payload": {"user_id": str(user_id)},
-                },
+            await event_bus.emit(
+                events.typing_indicator(
+                    community_id=UUID("00000000-0000-0000-0000-000000000001"),
+                    user_id=user_id,
+                ),
             )
         else:
             logger.debug("ws_unknown_message_type", type=msg_type, user_id=str(user_id))

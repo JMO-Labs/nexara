@@ -130,6 +130,59 @@ def require_role(*roles: str) -> Callable[..., Any]:
     return _checker
 
 
+async def get_current_user_sse(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    """
+    @brief SSE-compatible auth that falls back to a ``token`` query parameter.
+
+    ``EventSource`` cannot set custom headers, so the frontend passes
+    the JWT as ``?token=<jwt>``.  This dependency checks the
+    ``Authorization`` header first, then the query string.
+
+    @param request The incoming request.
+    @param token Bearer token from the ``Authorization`` header (may be None).
+    @param db Async database session.
+    @param settings Application settings.
+    @return The authenticated :class:`User` ORM instance.
+    @raises AuthenticationError If no valid token is found.
+    """
+    resolved_token = token or request.query_params.get("token")
+    if resolved_token is None:
+        raise AuthenticationError(message=_("Authentication required"))
+
+    from app.models.user import User
+
+    try:
+        payload = decode_token(resolved_token, expected_type="access", settings=settings)
+    except ValueError as exc:
+        raise AuthenticationError(message=str(exc)) from exc
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise AuthenticationError(message=_("Invalid token payload"))
+
+    try:
+        uid = UUID(user_id)
+    except (ValueError, TypeError) as exc:
+        raise AuthenticationError(message=_("Invalid user identifier")) from exc
+
+    result = await db.execute(
+        select(User).where(
+            User.id == uid,
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise AuthenticationError(message=_("User not found or deactivated"))
+    return user
+
+
 async def get_optional_user(
     token: str | None = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),

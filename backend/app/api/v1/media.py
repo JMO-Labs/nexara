@@ -18,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
+from app.repositories.comment_repo import ReactionRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
+from app.schemas.post import ReactionResponse, ReactionToggle
 from app.services.media_service import MediaService
 from app.services.storage.factory import get_storage_backend
 
@@ -86,15 +88,15 @@ async def get_media_metadata(
 @router.get("/{media_id}/file")
 async def get_media_file(
     media_id: uuid.UUID,
-    user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> StreamingResponse:
     """
     @brief Serve the original file with Cache-Control headers.
 
-    Returns the raw file bytes with appropriate content type.
+    Public endpoint — auth is enforced at upload/post level, not on serving.
+    Consistent with the thumbnail endpoint.
     """
-    content, content_type = await service.get_file(media_id, user)
+    content, content_type = await service.get_file_public(media_id)
     return StreamingResponse(
         iter([content]),
         media_type=content_type,
@@ -134,3 +136,29 @@ async def delete_media(
 ) -> None:
     """@brief Delete media (owner only). Decrements user quota."""
     await service.delete(media_id, user)
+
+
+@router.post("/{media_id}/reactions", response_model=ReactionResponse)
+async def toggle_media_reaction(
+    media_id: uuid.UUID,
+    body: ReactionToggle,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: MediaService = Depends(_build_service),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> ReactionResponse:
+    """
+    @brief Toggle a reaction on media (add or remove).
+
+    Validates media exists. Uses ReactionRepository.toggle with target_type="media".
+    """
+    await service.get_metadata(media_id)
+    reaction_repo = ReactionRepository(db)
+    action, count = await reaction_repo.toggle(
+        user_id=user.id,
+        target_type="media",
+        target_id=media_id,
+        emoji=body.emoji,
+        community_id=community_id,
+    )
+    return ReactionResponse(action=action, emoji=body.emoji, count=count)

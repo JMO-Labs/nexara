@@ -9,6 +9,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import { useApi } from "~/composables/useApi";
+import { useEventBus } from "~/composables/useEventBus";
+import { SSE_EVENT } from "~/types/events";
 import type {
   Notification,
   NotificationListResponse,
@@ -88,6 +90,34 @@ export const useNotificationsStore = defineStore("notifications", () => {
     unreadCount.value = 0;
   }
 
+  /**
+   * @brief Delete all notifications via DELETE /notifications/.
+   * @throws Error if the request fails.
+   */
+  async function clearAll(): Promise<void> {
+    const api = useApi();
+    await api.del("/notifications/");
+    notifications.value = [];
+    unreadCount.value = 0;
+  }
+
+  /**
+   * @brief Handle an incoming SSE notification event.
+   *
+   * Prepends the notification to the list and increments unread count.
+   * @param data - Raw notification payload from SSE.
+   */
+  function handleIncoming(data: Notification): void {
+    if (notifications.value.some((n) => n.id === data.id)) return;
+    notifications.value.unshift(data);
+    if (!data.read_at) {
+      unreadCount.value++;
+    }
+  }
+
+  const { on } = useEventBus();
+  on(SSE_EVENT.NOTIFICATION, (data) => handleIncoming(data as Notification));
+
   return {
     notifications,
     unreadCount,
@@ -96,5 +126,7 @@ export const useNotificationsStore = defineStore("notifications", () => {
     fetchUnreadCount,
     markRead,
     markAllRead,
+    clearAll,
+    handleIncoming,
   };
 });
