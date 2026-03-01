@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import re
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import (
@@ -181,7 +181,7 @@ class SearchService:
 
     @staticmethod
     def _format_results(
-        result_type: str, rows: list[tuple[object, float]]
+        result_type: str, rows: list[tuple[Any, float]]
     ) -> list[SearchResultItem]:
         """
         @brief Convert raw DB rows into SearchResultItem list.

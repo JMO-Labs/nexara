@@ -11,9 +11,11 @@ Applies soft-delete and block filters where applicable.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import bindparam, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.expression import ColumnElement
 
 from app.models.event import Event
 from app.models.post import Comment, Post
@@ -21,7 +23,7 @@ from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
-def _websearch_tsquery():
+def _websearch_tsquery() -> ColumnElement[Any]:
     """
     @brief Build a websearch_to_tsquery expression bound to parameter 'q'.
 
@@ -32,7 +34,7 @@ def _websearch_tsquery():
     return func.websearch_to_tsquery("english", bindparam("q"))
 
 
-def _prefix_tsquery():
+def _prefix_tsquery() -> ColumnElement[Any]:
     """
     @brief Build a to_tsquery expression bound to parameter 'q_prefix'.
 
@@ -42,7 +44,9 @@ def _prefix_tsquery():
     return func.to_tsquery("english", bindparam("q_prefix"))
 
 
-def _fts_expressions(fts_col, prefix_query: str | None):
+def _fts_expressions(
+    fts_col: Any, prefix_query: str | None
+) -> tuple[Any, Any, dict[str, str]]:
     """
     @brief Build FTS match expression, rank expression, and bind-param dict.
 

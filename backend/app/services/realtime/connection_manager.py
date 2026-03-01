@@ -102,7 +102,11 @@ class ConnectionManager:
         )
 
     async def disconnect(
-        self, conn: Sendable, user_id: UUID, *, is_sse: bool = False,
+        self,
+        conn: Sendable,
+        user_id: UUID,
+        *,
+        is_sse: bool = False,
     ) -> None:
         """
         @brief Remove a connection from tracking.
@@ -154,7 +158,9 @@ class ConnectionManager:
         return sent
 
     async def send_to_community(
-        self, community_id: UUID, message: dict[str, Any],
+        self,
+        community_id: UUID,
+        message: dict[str, Any],
     ) -> int:
         """
         @brief Send a message to all users in a specific community.
@@ -175,8 +181,8 @@ class ConnectionManager:
                     targets.append((uid, list(conns)))
 
         sent = 0
-        for _uid, conns in targets:
-            for conn in conns:
+        for _uid, target_conns in targets:
+            for conn in target_conns:
                 try:
                     await conn.send_json(message)
                     sent += 1
@@ -192,10 +198,7 @@ class ConnectionManager:
         @return Total number of connections the message was sent to.
         """
         async with self._lock:
-            all_conns = [
-                (uid, list(conns))
-                for uid, conns in self._connections.items()
-            ]
+            all_conns = [(uid, list(conns)) for uid, conns in self._connections.items()]
 
         sent = 0
         for _uid, conns in all_conns:

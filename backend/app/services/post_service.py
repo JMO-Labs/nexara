@@ -40,10 +40,7 @@ class PostService:
         community_id: uuid.UUID,
         *,
         event_bus: EventBus | None = None,
-        media_attacher: Callable[
-            [uuid.UUID, list[uuid.UUID], User], Awaitable[None]
-        ]
-        | None = None,
+        media_attacher: Callable[[uuid.UUID, list[uuid.UUID], User], Awaitable[None]] | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -83,7 +80,9 @@ class PostService:
         @raises NotFoundError If post does not exist.
         """
         post = await self._post_repo.get_post_detail(
-            post_id, self._community_id, viewer_id,
+            post_id,
+            self._community_id,
+            viewer_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -106,11 +105,16 @@ class PostService:
             await self._media_attacher(post.id, media_ids, user)
 
         enriched = await self._post_repo.get_post_detail(
-            post.id, self._community_id, user.id,
+            post.id,
+            self._community_id,
+            user.id,
         )
 
         await self._notification.notify_mentions(
-            content, user, post.id, self._post_repo._session,
+            content,
+            user,
+            post.id,
+            self._post_repo._session,
         )
 
         if enriched and self._event_bus:
@@ -131,7 +135,8 @@ class PostService:
         @raises AuthorizationError If user is not the author.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -140,7 +145,9 @@ class PostService:
 
         await self._post_repo.update_content(post, content)
         enriched = await self._post_repo.get_post_detail(
-            post_id, self._community_id, user.id,
+            post_id,
+            self._community_id,
+            user.id,
         )
         return enriched or {}
 
@@ -153,7 +160,8 @@ class PostService:
         @raises NotFoundError If post does not exist.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -173,7 +181,8 @@ class PostService:
         @raises NotFoundError If post does not exist.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -200,7 +209,8 @@ class PostService:
         @raises NotFoundError If post or parent comment does not exist.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -219,14 +229,21 @@ class PostService:
         )
 
         await self._notify_comment_participants(
-            post, comment, user, post_id, parent_id,
+            post,
+            comment,
+            user,
+            post_id,
+            parent_id,
         )
 
         await self._notification.notify_mentions(
-            content, user, post_id, self._post_repo._session,
+            content,
+            user,
+            post_id,
+            self._post_repo._session,
         )
 
-        comment_dict = {
+        comment_dict: dict[str, Any] = {
             "id": str(comment.id),
             "content": comment.content,
             "author": {
@@ -244,7 +261,10 @@ class PostService:
         if self._event_bus:
             await self._event_bus.emit(
                 events.comment_created(
-                    self._community_id, post_id, comment_dict, user.id,
+                    self._community_id,
+                    post_id,
+                    comment_dict,
+                    user.id,
                 ),
             )
 
@@ -260,7 +280,8 @@ class PostService:
         @raises NotFoundError If post does not exist.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -280,15 +301,20 @@ class PostService:
                 payload={
                     "post_id": str(post_id),
                     "emoji": emoji,
-                    "message": _("%(user)s reacted to your post")
-                    % {"user": user.display_name},
+                    "message": _("%(user)s reacted to your post") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
                 },
                 actor_id=user.id,
             )
 
         await self._publish_reaction_event(
-            post_id, "post", post_id, emoji, count, action, user.id,
+            post_id,
+            "post",
+            post_id,
+            emoji,
+            count,
+            action,
+            user.id,
         )
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
@@ -304,7 +330,8 @@ class PostService:
         @raises NotFoundError If post or comment does not exist.
         """
         post = await self._post_repo.get_by_id(
-            post_id, community_id=self._community_id,
+            post_id,
+            community_id=self._community_id,
         )
         if not post:
             raise NotFoundError(_("Post not found"))
@@ -321,11 +348,7 @@ class PostService:
             community_id=self._community_id,
         )
 
-        if (
-            action == "added"
-            and comment.author_id
-            and comment.author_id != user.id
-        ):
+        if action == "added" and comment.author_id and comment.author_id != user.id:
             await self._notification.notify(
                 user_id=comment.author_id,
                 type="reaction",
@@ -333,15 +356,20 @@ class PostService:
                     "post_id": str(post_id),
                     "comment_id": str(comment_id),
                     "emoji": emoji,
-                    "message": _("%(user)s reacted to your comment")
-                    % {"user": user.display_name},
+                    "message": _("%(user)s reacted to your comment") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
                 },
                 actor_id=user.id,
             )
 
         await self._publish_reaction_event(
-            post_id, "comment", comment_id, emoji, count, action, user.id,
+            post_id,
+            "comment",
+            comment_id,
+            emoji,
+            count,
+            action,
+            user.id,
         )
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
@@ -394,8 +422,7 @@ class PostService:
                 type="comment",
                 payload={
                     **base_payload,
-                    "message": _("%(user)s commented on your post")
-                    % {"user": user.display_name},
+                    "message": _("%(user)s commented on your post") % {"user": user.display_name},
                 },
                 actor_id=user.id,
             )

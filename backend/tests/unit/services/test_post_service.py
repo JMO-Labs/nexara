@@ -100,7 +100,10 @@ class TestCreatePost:
 
     @pytest.mark.asyncio
     async def test_create_post_emits_event(
-        self, service_with_event_bus, post_repo, mock_event_bus,
+        self,
+        service_with_event_bus,
+        post_repo,
+        mock_event_bus,
     ):
         """create_post() emits a post_created event via EventBus."""
         user = _make_user()
@@ -124,7 +127,10 @@ class TestCreatePost:
         post_repo.get_post_detail.return_value = {}
         await service.create_post(user, "Hey @bob!")
         service._notification.notify_mentions.assert_awaited_once_with(
-            "Hey @bob!", user, post.id, post_repo._session,
+            "Hey @bob!",
+            user,
+            post.id,
+            post_repo._session,
         )
 
 
@@ -193,7 +199,11 @@ class TestAddComment:
 
     @pytest.mark.asyncio
     async def test_add_comment_emits_event(
-        self, service_with_event_bus, post_repo, comment_repo, mock_event_bus,
+        self,
+        service_with_event_bus,
+        post_repo,
+        comment_repo,
+        mock_event_bus,
     ):
         """add_comment() emits a comment_created event via EventBus."""
         user = _make_user(user_id=VIEWER_ID)
@@ -261,7 +271,11 @@ class TestToggleReaction:
 
     @pytest.mark.asyncio
     async def test_toggle_reaction_emits_event(
-        self, service_with_event_bus, post_repo, reaction_repo, mock_event_bus,
+        self,
+        service_with_event_bus,
+        post_repo,
+        reaction_repo,
+        mock_event_bus,
     ):
         """toggle_reaction() emits a reaction_toggled event via EventBus."""
         user = _make_user()

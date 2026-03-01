@@ -202,16 +202,12 @@ async def get_audit_log(
     )
 
     actor_ids = {e.actor_id for e in entries if e.actor_id is not None}
-    target_user_ids = {
-        e.target_id for e in entries if e.target_id and e.target_type == "user"
-    }
+    target_user_ids = {e.target_id for e in entries if e.target_id and e.target_type == "user"}
     all_ids = actor_ids | target_user_ids
 
     display_map: dict[uuid.UUID, str] = {}
     if all_ids:
-        result = await db.execute(
-            select(User.id, User.display_name).where(User.id.in_(all_ids))
-        )
+        result = await db.execute(select(User.id, User.display_name).where(User.id.in_(all_ids)))
         display_map = {row.id: row.display_name for row in result}
 
     items: list[AuditLogEntry] = []

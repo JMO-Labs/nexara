@@ -60,7 +60,8 @@ class EventBus:
 
         if isinstance(event.target, CommunityTarget):
             return await publish_to_community(
-                event.target.community_id, message,
+                event.target.community_id,
+                message,
             )
 
         logger.warning(
