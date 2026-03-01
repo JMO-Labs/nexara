@@ -37,11 +37,7 @@ const emit = defineEmits<{
  * @param targetId - Media ID.
  * @param emoji - Selected emoji.
  */
-function onReact(
-  targetType: string,
-  targetId: string,
-  emoji: string,
-): void {
+function onReact(targetType: string, targetId: string, emoji: string): void {
   emit("react", targetType, targetId, emoji);
 }
 
@@ -105,7 +101,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         :src="current.url"
         :alt="current.mime_type"
         class="max-h-[90vh] max-w-[90vw] object-contain"
-      >
+      />
 
       <!-- Next -->
       <button
@@ -118,10 +114,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       </button>
 
       <!-- Reaction bar (above counter) -->
-      <div
-        v-if="current"
-        class="absolute bottom-12 left-1/2 -translate-x-1/2"
-      >
+      <div v-if="current" class="absolute bottom-12 left-1/2 -translate-x-1/2">
         <ReactionBar
           :reactions="[]"
           target-type="media"

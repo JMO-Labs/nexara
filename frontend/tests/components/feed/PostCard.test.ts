@@ -129,6 +129,8 @@ describe("PostCard", () => {
   it("does not show quick-reaction presets in display-only reaction bar", () => {
     const wrapper = mount(PostCard, { props: { post: basePost } });
 
-    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(
+      false,
+    );
   });
 });

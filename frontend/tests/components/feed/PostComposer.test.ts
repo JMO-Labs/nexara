@@ -27,7 +27,7 @@ vi.mock("~/stores/feed", () => ({
 /** @brief Stub that emits upload when clicked (simulates successful upload). */
 const UploadZoneStub = defineComponent({
   template:
-    '<div data-testid="upload-stub" @click="$emit(\'upload\', { id: \'media-1\' })" />',
+    "<div data-testid=\"upload-stub\" @click=\"$emit('upload', { id: 'media-1' })\" />",
   emits: ["upload", "error"],
 });
 

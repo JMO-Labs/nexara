@@ -27,7 +27,9 @@ describe("CommentInput", () => {
     });
 
     expect(wrapper.find('[data-testid="comment-input"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="plus-menu-trigger"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="plus-menu-trigger"]').exists()).toBe(
+      true,
+    );
     expect(wrapper.find('[data-testid="comment-submit"]').exists()).toBe(true);
   });
 
@@ -94,7 +96,9 @@ describe("CommentInput", () => {
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
 
     expect(wrapper.find('[data-testid="plus-menu"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="plus-menu-reactions"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="plus-menu-reactions"]').exists()).toBe(
+      true,
+    );
     expect(wrapper.find('[data-testid="plus-menu-media"]').exists()).toBe(true);
   });
 
@@ -104,7 +108,9 @@ describe("CommentInput", () => {
     });
 
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="plus-menu-reactions"]').trigger("mouseenter");
+    await wrapper
+      .find('[data-testid="plus-menu-reactions"]')
+      .trigger("mouseenter");
 
     const submenu = wrapper.find('[data-testid="reactions-submenu"]');
     expect(submenu.exists()).toBe(true);
@@ -122,7 +128,9 @@ describe("CommentInput", () => {
     });
 
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="plus-menu-reactions"]').trigger("mouseenter");
+    await wrapper
+      .find('[data-testid="plus-menu-reactions"]')
+      .trigger("mouseenter");
     await wrapper.find('[data-testid="quick-react-👍"]').trigger("click");
 
     expect(wrapper.emitted("react")).toBeTruthy();
@@ -135,7 +143,9 @@ describe("CommentInput", () => {
     });
 
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="plus-menu-reactions"]').trigger("mouseenter");
+    await wrapper
+      .find('[data-testid="plus-menu-reactions"]')
+      .trigger("mouseenter");
     await wrapper.find('[data-testid="quick-react-❤️"]').trigger("click");
 
     expect(wrapper.find('[data-testid="plus-menu"]').exists()).toBe(false);
@@ -147,7 +157,9 @@ describe("CommentInput", () => {
     });
 
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="plus-menu-reactions"]').trigger("mouseenter");
+    await wrapper
+      .find('[data-testid="plus-menu-reactions"]')
+      .trigger("mouseenter");
     await wrapper.find('[data-testid="reactions-more"]').trigger("click");
 
     expect(wrapper.find('[data-testid="emoji-picker"]').exists()).toBe(true);
@@ -159,7 +171,9 @@ describe("CommentInput", () => {
     });
 
     await wrapper.find('[data-testid="plus-menu-trigger"]').trigger("click");
-    await wrapper.find('[data-testid="plus-menu-reactions"]').trigger("mouseenter");
+    await wrapper
+      .find('[data-testid="plus-menu-reactions"]')
+      .trigger("mouseenter");
     await wrapper.find('[data-testid="reactions-more"]').trigger("click");
 
     const emojiBtn = wrapper.find('[data-testid="emoji-grid"] button');

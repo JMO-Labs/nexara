@@ -20,10 +20,7 @@
     />
 
     <!-- Attached media thumbnail strip -->
-    <div
-      v-if="mediaItems.length > 0"
-      class="mt-2 flex flex-wrap gap-2"
-    >
+    <div v-if="mediaItems.length > 0" class="mt-2 flex flex-wrap gap-2">
       <div
         v-for="item in mediaItems"
         :key="item.id"
@@ -34,7 +31,7 @@
           :src="item.thumbnailUrl"
           alt=""
           class="h-full w-full object-cover"
-        >
+        />
         <div
           v-else
           class="flex h-full w-full items-center justify-center bg-muted text-xs text-muted-foreground"
@@ -71,7 +68,9 @@
           <span
             v-if="mediaItems.length > 0"
             class="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground"
-            :aria-label="$t('feed.mediaAttachedCount', { count: mediaItems.length })"
+            :aria-label="
+              $t('feed.mediaAttachedCount', { count: mediaItems.length })
+            "
           >
             {{ mediaItems.length }}
           </span>
@@ -178,7 +177,8 @@ async function handleDiscard(): Promise<void> {
   const items = [...mediaItems.value];
   const ids = items.map((m) => m.id);
   for (const m of items) {
-    if (m.thumbnailUrl?.startsWith("blob:")) URL.revokeObjectURL(m.thumbnailUrl);
+    if (m.thumbnailUrl?.startsWith("blob:"))
+      URL.revokeObjectURL(m.thumbnailUrl);
   }
   content.value = "";
   mediaItems.value = [];
@@ -216,7 +216,8 @@ async function handleSubmit(): Promise<void> {
       mediaItems.value.map((m) => m.id),
     );
     for (const m of mediaItems.value) {
-      if (m.thumbnailUrl?.startsWith("blob:")) URL.revokeObjectURL(m.thumbnailUrl);
+      if (m.thumbnailUrl?.startsWith("blob:"))
+        URL.revokeObjectURL(m.thumbnailUrl);
     }
     content.value = "";
     mediaItems.value = [];

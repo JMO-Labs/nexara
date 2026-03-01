@@ -7,11 +7,16 @@
   are offered a link back to the feed.
 -->
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+  <div
+    class="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center"
+  >
     <p class="mb-2 text-6xl font-bold text-primary" data-testid="error-code">
       {{ error?.statusCode || 500 }}
     </p>
-    <h1 class="mb-4 text-2xl font-semibold text-foreground" data-testid="error-title">
+    <h1
+      class="mb-4 text-2xl font-semibold text-foreground"
+      data-testid="error-title"
+    >
       {{ title }}
     </h1>
     <p class="mb-8 max-w-md text-muted-foreground" data-testid="error-message">

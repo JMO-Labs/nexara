@@ -74,9 +74,8 @@ const emit = defineEmits<{
 }>();
 
 /** @brief Injected handler for comment reactions from CommentThread. */
-const reactToComment = inject<(commentId: string, emoji: string) => void>(
-  "reactToComment",
-);
+const reactToComment =
+  inject<(commentId: string, emoji: string) => void>("reactToComment");
 
 /**
  * @brief Handle reaction from ReactionBar and forward to parent via inject.
@@ -84,11 +83,7 @@ const reactToComment = inject<(commentId: string, emoji: string) => void>(
  * @param targetId - Comment ID.
  * @param emoji - Selected emoji.
  */
-function onReact(
-  _targetType: string,
-  targetId: string,
-  emoji: string,
-): void {
+function onReact(_targetType: string, targetId: string, emoji: string): void {
   reactToComment?.(targetId, emoji);
 }
 </script>

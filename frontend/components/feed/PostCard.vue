@@ -87,7 +87,10 @@
       :reactions="post.reactions"
       target-type="post"
       :target-id="post.id"
-      @react="(targetType: string, targetId: string, emoji: string) => $emit('react', targetId, emoji)"
+      @react="
+        (targetType: string, targetId: string, emoji: string) =>
+          $emit('react', targetId, emoji)
+      "
     />
 
     <!-- Always-visible comment input -->
@@ -162,7 +165,12 @@
       </template>
     </div>
 
-    <DeleteConfirmDialog :visible="showDeleteConfirm" :deleting="deleting" @confirm="executeDelete" @cancel="showDeleteConfirm = false" />
+    <DeleteConfirmDialog
+      :visible="showDeleteConfirm"
+      :deleting="deleting"
+      @confirm="executeDelete"
+      @cancel="showDeleteConfirm = false"
+    />
   </article>
 </template>
 
@@ -203,7 +211,13 @@ const feedStore = useFeedStore();
 const uiStore = useUiStore();
 
 /** @brief Interactive element tags that should not trigger post navigation. */
-const INTERACTIVE_TAGS = new Set(["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT"]);
+const INTERACTIVE_TAGS = new Set([
+  "A",
+  "BUTTON",
+  "INPUT",
+  "TEXTAREA",
+  "SELECT",
+]);
 
 /**
  * @brief Navigate to the post detail page on card click.
@@ -214,7 +228,11 @@ const INTERACTIVE_TAGS = new Set(["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT"])
 function navigateToPost(event: MouseEvent): void {
   let el = event.target as HTMLElement | null;
   while (el && el !== event.currentTarget) {
-    if (INTERACTIVE_TAGS.has(el.tagName) || el.getAttribute("role") === "button") return;
+    if (
+      INTERACTIVE_TAGS.has(el.tagName) ||
+      el.getAttribute("role") === "button"
+    )
+      return;
     el = el.parentElement;
   }
   if (editing.value || commentsOpen.value) return;
@@ -267,7 +285,9 @@ const previewComments = computed<Comment[]>(() =>
 );
 
 /** @brief Whether there are more comments than the preview shows. */
-const hasMoreComments = computed(() => props.post.comment_count > COMMENT_PREVIEW_LIMIT);
+const hasMoreComments = computed(
+  () => props.post.comment_count > COMMENT_PREVIEW_LIMIT,
+);
 
 /** @brief Whether more pages can be fetched from the server. */
 const hasMorePages = computed(() => commentEntry.value?.hasMore ?? false);
@@ -301,8 +321,11 @@ function expandComments(): void {
 }
 
 async function loadMoreComments(): Promise<void> {
-  try { await feedStore.fetchComments(props.post.id); }
-  catch (err) { toastError(err, "Failed to load comments"); }
+  try {
+    await feedStore.fetchComments(props.post.id);
+  } catch (err) {
+    toastError(err, "Failed to load comments");
+  }
 }
 
 /**
@@ -310,33 +333,62 @@ async function loadMoreComments(): Promise<void> {
  * @param text Trimmed comment content.
  */
 async function handleAddCommentFromInput(text: string): Promise<void> {
-  try { await feedStore.addComment(props.post.id, text, null); }
-  catch (err) { toastError(err, "Failed to add comment"); }
+  try {
+    await feedStore.addComment(props.post.id, text, null);
+  } catch (err) {
+    toastError(err, "Failed to add comment");
+  }
 }
 
 async function handleAddComment(payload: {
-  postId: string; content: string; parentId: string | null;
+  postId: string;
+  content: string;
+  parentId: string | null;
 }): Promise<void> {
-  try { await feedStore.addComment(payload.postId, payload.content, payload.parentId); }
-  catch (err) { toastError(err, "Failed to add comment"); }
+  try {
+    await feedStore.addComment(
+      payload.postId,
+      payload.content,
+      payload.parentId,
+    );
+  } catch (err) {
+    toastError(err, "Failed to add comment");
+  }
 }
 
 async function handleReactComment(payload: {
-  postId: string; commentId: string; emoji: string;
+  postId: string;
+  commentId: string;
+  emoji: string;
 }): Promise<void> {
-  try { await feedStore.addCommentReaction(payload.postId, payload.commentId, payload.emoji); }
-  catch (err) { toastError(err, "Failed to add reaction"); }
+  try {
+    await feedStore.addCommentReaction(
+      payload.postId,
+      payload.commentId,
+      payload.emoji,
+    );
+  } catch (err) {
+    toastError(err, "Failed to add reaction");
+  }
 }
 
 async function handleReactPost(payload: {
-  postId: string; emoji: string;
+  postId: string;
+  emoji: string;
 }): Promise<void> {
-  try { await feedStore.addReaction(payload.postId, payload.emoji); }
-  catch (err) { toastError(err, "Failed to add reaction"); }
+  try {
+    await feedStore.addReaction(payload.postId, payload.emoji);
+  } catch (err) {
+    toastError(err, "Failed to add reaction");
+  }
 }
 
 /** @brief Handle media reaction (placeholder until API supports media reactions). */
-function handleMediaReact(_targetType: string, _targetId: string, _emoji: string): void {}
+function handleMediaReact(
+  _targetType: string,
+  _targetId: string,
+  _emoji: string,
+): void {}
 
 function startEditing(): void {
   editContent.value = props.post.content;
@@ -352,9 +404,14 @@ function cancelEditing(): void {
 async function saveEdit(): Promise<void> {
   if (!editContent.value.trim()) return;
   saving.value = true;
-  try { await feedStore.editPost(props.post.id, editContent.value); editing.value = false; }
-  catch (err) { toastError(err, "Failed to save"); }
-  finally { saving.value = false; }
+  try {
+    await feedStore.editPost(props.post.id, editContent.value);
+    editing.value = false;
+  } catch (err) {
+    toastError(err, "Failed to save");
+  } finally {
+    saving.value = false;
+  }
 }
 
 /** @brief Open the media lightbox at the given index. */
@@ -369,8 +426,13 @@ function confirmDelete(): void {
 
 async function executeDelete(): Promise<void> {
   deleting.value = true;
-  try { await feedStore.deletePost(props.post.id); showDeleteConfirm.value = false; }
-  catch (err) { toastError(err, "Failed to delete"); }
-  finally { deleting.value = false; }
+  try {
+    await feedStore.deletePost(props.post.id);
+    showDeleteConfirm.value = false;
+  } catch (err) {
+    toastError(err, "Failed to delete");
+  } finally {
+    deleting.value = false;
+  }
 }
 </script>

@@ -56,7 +56,7 @@ const isMulti = computed(() => props.items.length > 1);
         :alt="item.mime_type"
         class="h-full w-full object-cover"
         loading="lazy"
-      >
+      />
       <span
         v-if="index === 3 && items.length > 4"
         class="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-bold text-white"

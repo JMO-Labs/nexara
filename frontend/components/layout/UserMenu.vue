@@ -60,9 +60,7 @@
           role="menuitem"
           @click="handleLogout"
         >
-          <ArrowRightStartOnRectangleIcon
-            class="h-4 w-4"
-          />
+          <ArrowRightStartOnRectangleIcon class="h-4 w-4" />
           {{ $t("nav.logout") }}
         </button>
       </div>

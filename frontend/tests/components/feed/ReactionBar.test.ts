@@ -98,7 +98,9 @@ describe("ReactionBar", () => {
       },
     });
 
-    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(
+      false,
+    );
   });
 
   it("does not render emoji picker toggle", () => {
@@ -110,7 +112,9 @@ describe("ReactionBar", () => {
       },
     });
 
-    expect(wrapper.find('[data-testid="emoji-picker-toggle"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="emoji-picker-toggle"]').exists()).toBe(
+      false,
+    );
   });
 
   it("reaction badges have accessible labels", () => {
@@ -139,7 +143,11 @@ describe("ReactionBar", () => {
 
     await wrapper.find('[data-testid="reaction-😂"]').trigger("click");
 
-    expect(wrapper.emitted("react")![0]).toEqual(["comment", "comment-42", "😂"]);
+    expect(wrapper.emitted("react")![0]).toEqual([
+      "comment",
+      "comment-42",
+      "😂",
+    ]);
   });
 
   it("supports media targetType", async () => {

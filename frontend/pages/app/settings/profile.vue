@@ -20,7 +20,7 @@
           v-model="form.display_name"
           type="text"
           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-        >
+        />
       </div>
 
       <div>
@@ -47,7 +47,7 @@
           v-model="form.location"
           type="text"
           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-        >
+        />
       </div>
 
       <div>
@@ -62,7 +62,7 @@
           v-model="form.website_url"
           type="url"
           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-        >
+        />
       </div>
 
       <div>
@@ -78,7 +78,7 @@
           type="text"
           placeholder="Dr., Mr., Mrs., etc."
           class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-        >
+        />
       </div>
 
       <button

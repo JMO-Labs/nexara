@@ -12,9 +12,7 @@
       <div class="w-full max-w-md">
         <!-- Step 1: Request reset -->
         <template v-if="!resetToken">
-          <h1
-            class="mb-6 text-center text-2xl font-bold text-foreground"
-          >
+          <h1 class="mb-6 text-center text-2xl font-bold text-foreground">
             {{ $t("auth.resetPassword") }}
           </h1>
 
@@ -40,7 +38,7 @@
                 type="email"
                 required
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-              >
+              />
             </div>
 
             <button
@@ -55,9 +53,7 @@
 
         <!-- Step 2: Set new password -->
         <template v-else>
-          <h1
-            class="mb-6 text-center text-2xl font-bold text-foreground"
-          >
+          <h1 class="mb-6 text-center text-2xl font-bold text-foreground">
             {{ $t("auth.setNewPassword") }}
           </h1>
 
@@ -97,7 +93,7 @@
                 minlength="12"
                 autocomplete="new-password"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-              >
+              />
             </div>
 
             <button
@@ -111,10 +107,7 @@
         </template>
 
         <p class="mt-6 text-center text-sm text-muted-foreground">
-          <a
-            href="/auth/login"
-            class="text-primary hover:underline"
-          >
+          <a href="/auth/login" class="text-primary hover:underline">
             {{ $t("auth.login") }}
           </a>
         </p>

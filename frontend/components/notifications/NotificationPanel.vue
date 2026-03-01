@@ -67,7 +67,9 @@ function onClickOutside(event: MouseEvent): void {
 }
 
 onMounted(() => document.addEventListener("mousedown", onClickOutside));
-onBeforeUnmount(() => document.removeEventListener("mousedown", onClickOutside));
+onBeforeUnmount(() =>
+  document.removeEventListener("mousedown", onClickOutside),
+);
 
 /** @brief Notifications from the store. */
 const notifications = computed(() => store.notifications);

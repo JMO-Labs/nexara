@@ -75,7 +75,7 @@ function resolveRouteId(): string {
   return (
     props.id ||
     (typeof window !== "undefined"
-      ? window.location.pathname.split("/").pop() ?? ""
+      ? (window.location.pathname.split("/").pop() ?? "")
       : "")
   );
 }

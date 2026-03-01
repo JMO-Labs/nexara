@@ -107,7 +107,9 @@ const storageFormatted = computed(() => {
 });
 
 /** @brief Map nested API response to flat AdminMetricsResponse for UI. */
-function mapMetricsResponse(raw: AdminMetricsApiResponse): AdminMetricsResponse {
+function mapMetricsResponse(
+  raw: AdminMetricsApiResponse,
+): AdminMetricsResponse {
   return {
     total_users: raw.community.users_total,
     active_users_30d: raw.community.users_active_30d,

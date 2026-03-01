@@ -9,9 +9,7 @@
   <NuxtLayout name="public">
     <div class="flex min-h-screen items-center justify-center px-4">
       <div class="w-full max-w-md">
-        <h1
-          class="mb-2 text-center text-2xl font-bold text-foreground"
-        >
+        <h1 class="mb-2 text-center text-2xl font-bold text-foreground">
           {{ $t("auth.twoFactor.title") }}
         </h1>
         <p class="mb-6 text-center text-sm text-muted-foreground">
@@ -50,7 +48,7 @@
               autocomplete="one-time-code"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-center text-lg tracking-widest text-foreground focus:ring-2 focus:ring-ring"
               :placeholder="'000000'"
-            >
+            />
           </div>
 
           <button
@@ -77,7 +75,7 @@
               type="text"
               required
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            >
+            />
           </div>
 
           <button

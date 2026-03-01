@@ -45,7 +45,10 @@ export function useWebSocket(onMessage: (data: unknown) => void) {
 
     socket.onopen = () => {
       socket?.send(
-        JSON.stringify({ type: "auth", payload: { token: authStore.accessToken } }),
+        JSON.stringify({
+          type: "auth",
+          payload: { token: authStore.accessToken },
+        }),
       );
       status.value = "open";
       reconnectAttempt = 0;

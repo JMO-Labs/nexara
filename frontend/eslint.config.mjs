@@ -7,21 +7,21 @@
  */
 
 // @ts-check
-import withNuxt from './.nuxt/eslint.config.mjs'
+import withNuxt from "./.nuxt/eslint.config.mjs";
 
 export default withNuxt(
   {
-    ignores: ['env.d.ts'],
+    ignores: ["env.d.ts"],
   },
   {
     rules: {
-      'vue/multi-word-component-names': 'off',
+      "vue/multi-word-component-names": "off",
     },
   },
   {
-    files: ['tests/**/*.ts'],
+    files: ["tests/**/*.ts"],
     rules: {
-      '@typescript-eslint/no-require-imports': 'off',
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
-)
+);

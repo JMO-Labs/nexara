@@ -116,9 +116,7 @@ export const useNotificationsStore = defineStore("notifications", () => {
   }
 
   const { on } = useEventBus();
-  on(SSE_EVENT.NOTIFICATION, (data) =>
-    handleIncoming(data as Notification),
-  );
+  on(SSE_EVENT.NOTIFICATION, (data) => handleIncoming(data as Notification));
 
   return {
     notifications,

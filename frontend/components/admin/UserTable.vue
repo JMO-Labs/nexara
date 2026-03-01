@@ -54,7 +54,7 @@
                 :src="u.avatar_url"
                 :alt="u.display_name"
                 class="h-8 w-8 rounded-full object-cover"
-              >
+              />
               <div
                 v-else
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"
@@ -71,7 +71,9 @@
             <select
               :value="u.role"
               class="rounded border border-input bg-background px-2 py-1 text-sm text-foreground focus:ring-2 focus:ring-ring"
-              @change="onRoleChange(u, ($event.target as HTMLSelectElement).value)"
+              @change="
+                onRoleChange(u, ($event.target as HTMLSelectElement).value)
+              "
             >
               <option value="admin">admin</option>
               <option value="member">member</option>
@@ -180,7 +182,9 @@ const dropdownPos = ref({ top: 0, left: 0 });
 
 /** @brief The user whose action dropdown is currently open. */
 const activeUser = computed(() =>
-  openDropdown.value ? props.users.find((u) => u.id === openDropdown.value) : null,
+  openDropdown.value
+    ? props.users.find((u) => u.id === openDropdown.value)
+    : null,
 );
 
 /** @brief CSS style object positioning the dropdown near the trigger button. */

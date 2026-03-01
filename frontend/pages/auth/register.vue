@@ -10,9 +10,7 @@
   <NuxtLayout name="public">
     <div class="flex min-h-screen items-center justify-center px-4">
       <div class="w-full max-w-md">
-        <h1
-          class="mb-6 text-center text-2xl font-bold text-foreground"
-        >
+        <h1 class="mb-6 text-center text-2xl font-bold text-foreground">
           {{ $t("auth.register") }}
         </h1>
 
@@ -47,7 +45,7 @@
               required
               autocomplete="email"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            >
+            />
           </div>
 
           <div>
@@ -64,7 +62,7 @@
               required
               autocomplete="username"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            >
+            />
           </div>
 
           <div>
@@ -80,7 +78,7 @@
               type="text"
               required
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            >
+            />
           </div>
 
           <div>
@@ -98,7 +96,7 @@
               minlength="12"
               autocomplete="new-password"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            >
+            />
             <p class="mt-1 text-xs text-muted-foreground">
               {{ $t("auth.passwordHint") }}
             </p>
@@ -117,7 +115,7 @@
               type="text"
               readonly
               class="w-full rounded-lg border border-input bg-muted px-3 py-2 text-muted-foreground"
-            >
+            />
           </div>
 
           <button
@@ -131,10 +129,7 @@
 
         <p class="mt-6 text-center text-sm text-muted-foreground">
           {{ $t("auth.haveAccount") }}
-          <a
-            href="/auth/login"
-            class="text-primary hover:underline"
-          >
+          <a href="/auth/login" class="text-primary hover:underline">
             {{ $t("auth.login") }}
           </a>
         </p>

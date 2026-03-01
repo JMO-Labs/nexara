@@ -91,21 +91,23 @@ describe("CommentThread", () => {
       props: { comments: mockComments, postId: "post-1" },
     });
 
-    const replyBtn = wrapper.findAll('button').find(b => b.text() === 'feed.reply');
+    const replyBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text() === "feed.reply");
     expect(replyBtn).toBeDefined();
-    await replyBtn!.trigger('click');
+    await replyBtn!.trigger("click");
 
     const replyForm = wrapper.find('[data-testid="reply-form"]');
     expect(replyForm.exists()).toBe(true);
     const replyInput = replyForm.find('[data-testid="comment-input"]');
     expect(replyInput.exists()).toBe(true);
-    await replyInput.setValue('My nested reply');
+    await replyInput.setValue("My nested reply");
 
-    await replyForm.trigger('submit');
+    await replyForm.trigger("submit");
 
-    expect(wrapper.emitted('add-comment')).toBeTruthy();
-    expect(wrapper.emitted('add-comment')![0]).toEqual([
-      { postId: 'post-1', content: 'My nested reply', parentId: 'c1' },
+    expect(wrapper.emitted("add-comment")).toBeTruthy();
+    expect(wrapper.emitted("add-comment")![0]).toEqual([
+      { postId: "post-1", content: "My nested reply", parentId: "c1" },
     ]);
   });
 

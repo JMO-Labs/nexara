@@ -86,8 +86,10 @@ const props = withDefaults(
 const replyingToId = inject<Ref<string | null>>("replyingToId")!;
 const startReply = inject<(id: string) => void>("startReply")!;
 const cancelReply = inject<() => void>("cancelReply")!;
-const submitReply = inject<(parentId: string, text: string) => void>("submitReply")!;
-const reactToComment = inject<(commentId: string, emoji: string) => void>("reactToComment")!;
+const submitReply =
+  inject<(parentId: string, text: string) => void>("submitReply")!;
+const reactToComment =
+  inject<(commentId: string, emoji: string) => void>("reactToComment")!;
 
 /**
  * @brief Handle reply text submission from CommentInput.
@@ -95,5 +97,5 @@ const reactToComment = inject<(commentId: string, emoji: string) => void>("react
  */
 function handleReplySubmit(text: string): void {
   submitReply(props.comment.id, text);
-};
+}
 </script>

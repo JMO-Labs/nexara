@@ -241,7 +241,12 @@ describe("feed store", () => {
         {
           id: "comment-1",
           content: "Nice!",
-          author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+          author: {
+            id: "user-2",
+            username: "bob",
+            display_name: "Bob",
+            avatar_url: null,
+          },
           parent_id: null,
           created_at: "2026-02-26T10:00:00Z",
           reactions: [],
@@ -286,7 +291,9 @@ describe("feed store", () => {
 
     await store.addReaction("post-1", "👍");
 
-    expect(store.posts[0].reactions.find((r) => r.emoji === "👍")).toBeUndefined();
+    expect(
+      store.posts[0].reactions.find((r) => r.emoji === "👍"),
+    ).toBeUndefined();
   });
 
   it("applyReactionUpdate() updates post reactions from SSE", () => {
@@ -355,20 +362,31 @@ describe("feed store", () => {
       user_id: "other-user",
     });
 
-    expect(store.posts[0].reactions.find((r) => r.emoji === "👍")).toBeUndefined();
+    expect(
+      store.posts[0].reactions.find((r) => r.emoji === "👍"),
+    ).toBeUndefined();
   });
 
   it("applyCommentUpdate() adds top-level comment from SSE", () => {
     const store = useFeedStore();
     store.posts = [{ ...mockPost, comment_count: 2 }];
-    store.commentsByPost["post-1"] = { items: [], cursor: null, hasMore: false };
+    store.commentsByPost["post-1"] = {
+      items: [],
+      cursor: null,
+      hasMore: false,
+    };
 
     store.applyCommentUpdate({
       post_id: "post-1",
       comment: {
         id: "c-new",
         content: "hello",
-        author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+        author: {
+          id: "user-2",
+          username: "bob",
+          display_name: "Bob",
+          avatar_url: null,
+        },
         parent_id: null,
         created_at: "2026-02-28T10:00:00Z",
         reactions: [],
@@ -386,12 +404,21 @@ describe("feed store", () => {
     const ownComment = {
       id: "c-self",
       content: "my own",
-      author: { id: "user-1", username: "alice", display_name: "Alice", avatar_url: null },
+      author: {
+        id: "user-1",
+        username: "alice",
+        display_name: "Alice",
+        avatar_url: null,
+      },
       parent_id: null,
       created_at: "2026-02-28T10:00:00Z",
       reactions: [],
     };
-    store.commentsByPost["post-1"] = { items: [ownComment], cursor: null, hasMore: false };
+    store.commentsByPost["post-1"] = {
+      items: [ownComment],
+      cursor: null,
+      hasMore: false,
+    };
 
     store.applyCommentUpdate({
       post_id: "post-1",
@@ -410,7 +437,12 @@ describe("feed store", () => {
         {
           id: "c-parent",
           content: "parent",
-          author: { id: "user-1", username: "alice", display_name: "Alice", avatar_url: null },
+          author: {
+            id: "user-1",
+            username: "alice",
+            display_name: "Alice",
+            avatar_url: null,
+          },
           parent_id: null,
           created_at: "2026-02-28T10:00:00Z",
           reactions: [],
@@ -426,7 +458,12 @@ describe("feed store", () => {
       comment: {
         id: "c-reply",
         content: "reply",
-        author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+        author: {
+          id: "user-2",
+          username: "bob",
+          display_name: "Bob",
+          avatar_url: null,
+        },
         parent_id: "c-parent",
         created_at: "2026-02-28T10:01:00Z",
         reactions: [],
@@ -445,12 +482,21 @@ describe("feed store", () => {
     const existingComment = {
       id: "c-dup",
       content: "exists",
-      author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+      author: {
+        id: "user-2",
+        username: "bob",
+        display_name: "Bob",
+        avatar_url: null,
+      },
       parent_id: null,
       created_at: "2026-02-28T10:00:00Z",
       reactions: [],
     };
-    store.commentsByPost["post-1"] = { items: [existingComment], cursor: null, hasMore: false };
+    store.commentsByPost["post-1"] = {
+      items: [existingComment],
+      cursor: null,
+      hasMore: false,
+    };
 
     store.applyCommentUpdate({ post_id: "post-1", comment: existingComment });
 
@@ -464,7 +510,12 @@ describe("feed store", () => {
         {
           id: "comment-1",
           content: "Nice!",
-          author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+          author: {
+            id: "user-2",
+            username: "bob",
+            display_name: "Bob",
+            avatar_url: null,
+          },
           parent_id: null,
           created_at: "2026-02-26T10:00:00Z",
           reactions: [{ emoji: "👍", count: 2, reacted_by_me: false }],
@@ -495,7 +546,12 @@ describe("feed store", () => {
       comment: {
         id: "c-auto",
         content: "first SSE comment",
-        author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+        author: {
+          id: "user-2",
+          username: "bob",
+          display_name: "Bob",
+          avatar_url: null,
+        },
         parent_id: null,
         created_at: "2026-02-28T12:00:00Z",
         reactions: [],
@@ -538,7 +594,12 @@ describe("feed store", () => {
         {
           id: "comment-1",
           content: "Nice!",
-          author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+          author: {
+            id: "user-2",
+            username: "bob",
+            display_name: "Bob",
+            avatar_url: null,
+          },
           parent_id: null,
           created_at: "2026-02-26T10:00:00Z",
           reactions: [{ emoji: "❤️", count: 1, reacted_by_me: false }],
@@ -608,7 +669,12 @@ describe("feed store", () => {
         comment: {
           id: "c-live",
           content: "live comment",
-          author: { id: "user-2", username: "bob", display_name: "Bob", avatar_url: null },
+          author: {
+            id: "user-2",
+            username: "bob",
+            display_name: "Bob",
+            avatar_url: null,
+          },
           parent_id: null,
           created_at: "2026-02-28T10:00:00Z",
           reactions: [],
@@ -621,7 +687,12 @@ describe("feed store", () => {
 
     it("routes 'reaction_toggled' events to applyReactionUpdate", () => {
       const store = useFeedStore();
-      store.posts = [{ ...mockPost, reactions: [{ emoji: "👍", count: 1, reacted_by_me: false }] }];
+      store.posts = [
+        {
+          ...mockPost,
+          reactions: [{ emoji: "👍", count: 1, reacted_by_me: false }],
+        },
+      ];
 
       store.handleFeedEvent({
         event: "reaction_toggled",

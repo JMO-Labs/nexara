@@ -15,11 +15,7 @@
       aria-label="Notifications"
       aria-live="polite"
     >
-      <TransitionGroup
-        name="toast"
-        tag="div"
-        class="flex flex-col gap-2"
-      >
+      <TransitionGroup name="toast" tag="div" class="flex flex-col gap-2">
         <div
           v-for="toast in toasts"
           :key="toast.id"
@@ -30,7 +26,9 @@
           ]"
           role="alert"
         >
-          <span class="text-lg" aria-hidden="true">{{ typeIcons[toast.type] }}</span>
+          <span class="text-lg" aria-hidden="true">{{
+            typeIcons[toast.type]
+          }}</span>
           <p class="flex-1 text-sm font-medium">{{ toast.message }}</p>
           <button
             class="ml-2 text-current opacity-60 transition-opacity hover:opacity-100"
@@ -69,8 +67,7 @@ const typeBgClasses: Record<string, string> = {
     "border-green-300 bg-green-50/95 text-green-800 dark:border-green-700 dark:bg-green-950/95 dark:text-green-200",
   error:
     "border-red-300 bg-red-50/95 text-red-800 dark:border-red-700 dark:bg-red-950/95 dark:text-red-200",
-  info:
-    "border-blue-300 bg-blue-50/95 text-blue-800 dark:border-blue-700 dark:bg-blue-950/95 dark:text-blue-200",
+  info: "border-blue-300 bg-blue-50/95 text-blue-800 dark:border-blue-700 dark:bg-blue-950/95 dark:text-blue-200",
   warning:
     "border-yellow-300 bg-yellow-50/95 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950/95 dark:text-yellow-200",
 };

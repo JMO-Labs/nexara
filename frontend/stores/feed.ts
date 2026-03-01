@@ -152,7 +152,10 @@ export const useFeedStore = defineStore("feed", () => {
    * pagination cursor, and whether more pages exist.
    */
   const commentsByPost = reactive<
-    Record<string, { items: Comment[]; cursor: string | null; hasMore: boolean }>
+    Record<
+      string,
+      { items: Comment[]; cursor: string | null; hasMore: boolean }
+    >
   >({});
 
   /**
@@ -342,17 +345,15 @@ export const useFeedStore = defineStore("feed", () => {
    *
    * @param payload - SSE reaction_toggled event data.
    */
-  function applyReactionUpdate(
-    payload: {
-      post_id: string;
-      target_type: string;
-      target_id: string;
-      emoji: string;
-      count: number;
-      action: string;
-      user_id: string;
-    },
-  ): void {
+  function applyReactionUpdate(payload: {
+    post_id: string;
+    target_type: string;
+    target_id: string;
+    emoji: string;
+    count: number;
+    action: string;
+    user_id: string;
+  }): void {
     if (payload.target_type === "post") {
       const idx = posts.value.findIndex((p) => p.id === payload.post_id);
       if (idx === -1) return;
@@ -403,11 +404,13 @@ export const useFeedStore = defineStore("feed", () => {
    * Auto-initialises the commentsByPost entry when the first SSE comment
    * arrives before the user has expanded comments.
    */
-  function applyCommentUpdate(
-    payload: { post_id: string; comment: Comment },
-  ): void {
+  function applyCommentUpdate(payload: {
+    post_id: string;
+    comment: Comment;
+  }): void {
     const existing = commentsByPost[payload.post_id];
-    if (existing && existing.items.some((c) => c.id === payload.comment.id)) return;
+    if (existing && existing.items.some((c) => c.id === payload.comment.id))
+      return;
 
     const idx = posts.value.findIndex((p) => p.id === payload.post_id);
     if (idx !== -1) {
@@ -418,7 +421,11 @@ export const useFeedStore = defineStore("feed", () => {
     }
 
     if (!existing) {
-      commentsByPost[payload.post_id] = { items: [], cursor: null, hasMore: true };
+      commentsByPost[payload.post_id] = {
+        items: [],
+        cursor: null,
+        hasMore: true,
+      };
     }
 
     commentsByPost[payload.post_id].items.unshift(payload.comment);
