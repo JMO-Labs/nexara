@@ -44,9 +44,7 @@ def _prefix_tsquery() -> ColumnElement[Any]:
     return func.to_tsquery("english", bindparam("q_prefix"))
 
 
-def _fts_expressions(
-    fts_col: Any, prefix_query: str | None
-) -> tuple[Any, Any, dict[str, str]]:
+def _fts_expressions(fts_col: Any, prefix_query: str | None) -> tuple[Any, Any, dict[str, str]]:
     """
     @brief Build FTS match expression, rank expression, and bind-param dict.
 
