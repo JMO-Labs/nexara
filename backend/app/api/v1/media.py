@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
-from app.repositories.media_repo import MediaRepository
 from app.repositories.comment_repo import ReactionRepository
+from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
 from app.schemas.post import ReactionResponse, ReactionToggle

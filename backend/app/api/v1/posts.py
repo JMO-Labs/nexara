@@ -19,8 +19,8 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
-from app.repositories.notification_repo import NotificationRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
+from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse

@@ -58,9 +58,7 @@ defineProps<{
 }>();
 
 defineEmits<{
-  /** @brief Emitted when the user confirms the delete action. */
-  (e: "confirm"): void;
-  /** @brief Emitted when the user cancels (button or backdrop click). */
-  (e: "cancel"): void;
+  /** @brief Emitted when the user confirms or cancels the delete action. */
+  (e: "confirm" | "cancel"): void;
 }>();
 </script>

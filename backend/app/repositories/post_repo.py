@@ -14,7 +14,6 @@ from typing import Any
 
 import structlog
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.user import User

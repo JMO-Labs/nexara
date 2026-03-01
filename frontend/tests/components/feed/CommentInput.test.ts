@@ -13,7 +13,7 @@
  * - Accessibility attributes
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import CommentInput from "~/components/feed/CommentInput.vue";
 

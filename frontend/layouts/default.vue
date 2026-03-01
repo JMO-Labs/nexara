@@ -69,7 +69,7 @@
 /**
  * @brief Default layout setup with store initialization.
  */
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useUiStore } from "~/stores/ui";
 import { useFeedStore } from "~/stores/feed";

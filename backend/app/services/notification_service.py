@@ -62,7 +62,7 @@ class NotificationService:
         settings_repo: SettingsRepository,
         community_id: uuid.UUID,
         *,
-        event_bus: "EventBus | None" = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         self._notification_repo = notification_repo
         self._settings_repo = settings_repo
@@ -185,9 +185,9 @@ class NotificationService:
     async def notify_mentions(
         self,
         content: str,
-        actor: "User",
+        actor: User,
         post_id: uuid.UUID,
-        session: "AsyncSession",
+        session: AsyncSession,
     ) -> None:
         """@brief Send mention notifications for @username references in content.
         @param content Text containing potential @mentions.

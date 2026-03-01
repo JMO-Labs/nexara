@@ -153,10 +153,8 @@ withDefaults(
 );
 
 const emit = defineEmits<{
-  /** @brief Emitted when user submits text content. */
-  (e: "submit", text: string): void;
-  /** @brief Emitted when user selects a reaction emoji. */
-  (e: "react", emoji: string): void;
+  /** @brief Emitted when user submits text content or selects a reaction emoji. */
+  (e: "submit" | "react", value: string): void;
 }>();
 
 /** @brief Current text input value. */
