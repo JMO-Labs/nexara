@@ -69,13 +69,14 @@
 /**
  * @brief Default layout setup with store initialization.
  */
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
 import { useUiStore } from "~/stores/ui";
 import { useFeedStore } from "~/stores/feed";
 import { useNotificationsStore } from "~/stores/notifications";
 import { useBranding } from "~/composables/useBranding";
 import { useSSE } from "~/composables/useSSE";
+import { useEventBus } from "~/composables/useEventBus";
 import Sidebar from "~/components/layout/Sidebar.vue";
 import TopBar from "~/components/layout/TopBar.vue";
 import BottomNav from "~/components/layout/BottomNav.vue";
@@ -84,33 +85,17 @@ import SearchModal from "~/components/layout/SearchModal.vue";
 import MobileDrawer from "~/components/layout/MobileDrawer.vue";
 import AppToast from "~/components/common/AppToast.vue";
 import NotificationPanel from "~/components/notifications/NotificationPanel.vue";
-import type { Post, Notification } from "~/types/api";
-
-/** @brief SSE event payload for feed_update events from the backend. */
-interface FeedUpdatePayload {
-  event: string;
-  post: Post;
-}
 
 const authStore = useAuthStore();
 const uiStore = useUiStore();
-const feedStore = useFeedStore();
-const notificationsStore = useNotificationsStore();
+useFeedStore();
+useNotificationsStore();
 const { fetchBranding } = useBranding();
 const route = useRoute();
+const { dispatch } = useEventBus();
 
 const { connect: sseConnect, disconnect: sseDisconnect } = useSSE(
-  (type, data) => {
-    if (type === "feed_update" && data) {
-      const payload = data as FeedUpdatePayload;
-      if (payload.post) {
-        feedStore.prependPost(payload.post);
-      }
-    }
-    if (type === "notification" && data) {
-      notificationsStore.handleIncoming(data as Notification);
-    }
-  },
+  (type, data) => dispatch(type, data),
 );
 
 /** @brief Whether the mobile navigation drawer is open. */
@@ -138,15 +123,29 @@ const contentMaxWidth = computed(() => {
   return "max-w-2xl";
 });
 
+/**
+ * @brief Connect or disconnect SSE whenever auth state changes.
+ *
+ * Handles both the initial page load (where the auth middleware may
+ * restore the session asynchronously via refresh cookie) and
+ * subsequent login/logout transitions within the SPA.
+ */
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    if (authenticated) {
+      sseConnect();
+    } else {
+      sseDisconnect();
+    }
+  },
+);
+
 onMounted(() => {
   uiStore.initDarkMode();
   fetchBranding();
   if (authStore.isAuthenticated) {
     sseConnect();
   }
-});
-
-onUnmounted(() => {
-  sseDisconnect();
 });
 </script>

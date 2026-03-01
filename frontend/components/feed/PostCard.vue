@@ -1,18 +1,9 @@
-<!--
-  @file components/feed/PostCard.vue
-  @brief Post display card with content, media, reactions, comments, and owner controls.
-
-  Renders a single post in the activity feed. Content is Markdown-rendered
-  and sanitized. The post author (or admin) sees an actions menu with
-  edit and delete options. Inline editing replaces the content area with
-  a textarea.
--->
+<!-- @file components/feed/PostCard.vue @brief Post card with content, media, reactions, comments, edit/delete. -->
 <template>
   <article
-    class="cursor-pointer rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:bg-card/80"
+    class="group cursor-pointer rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:bg-card/80"
     @click="navigateToPost"
   >
-    <!-- Author header -->
     <div class="mb-3 flex items-center gap-3">
       <div
         class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
@@ -88,18 +79,30 @@
       :items="post.media"
       :start-index="lightboxIndex"
       @close="lightboxOpen = false"
+      @react="handleMediaReact"
     />
 
     <!-- Reactions -->
     <ReactionBar
       :reactions="post.reactions"
-      :post-id="post.id"
-      @react="(postId: string, emoji: string) => $emit('react', postId, emoji)"
+      target-type="post"
+      :target-id="post.id"
+      @react="(targetType: string, targetId: string, emoji: string) => $emit('react', targetId, emoji)"
     />
 
-    <!-- Comment toggle -->
+    <!-- Always-visible comment input -->
+    <CommentInput
+      class="mt-2"
+      :placeholder="$t('feed.addComment')"
+      :submit-label="$t('feed.submitComment')"
+      @submit="handleAddCommentFromInput"
+      @react="(emoji: string) => handleReactPost({ postId: post.id, emoji })"
+    />
+
+    <!-- Comment toggle (only when comments exist) -->
     <button
-      class="mt-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      v-if="post.comment_count > 0"
+      class="mt-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       @click="toggleComments"
     >
       <span v-if="!commentsOpen">
@@ -127,6 +130,7 @@
             :show-load-more="hasMorePages"
             @add-comment="handleAddComment"
             @load-more="loadMoreComments"
+            @react-comment="handleReactComment"
           />
         </div>
 
@@ -136,9 +140,9 @@
           :comments="previewComments"
           :post-id="post.id"
           @add-comment="handleAddComment"
+          @react-comment="handleReactComment"
         />
 
-        <!-- Expand / collapse controls -->
         <div class="mt-2 flex justify-center">
           <button
             v-if="!expanded && hasMoreComments"
@@ -158,41 +162,7 @@
       </template>
     </div>
 
-    <!-- Delete confirmation dialog -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-      >
-        <div
-          class="fixed inset-0 bg-background/80 backdrop-blur-sm"
-          @click="showDeleteConfirm = false"
-        />
-        <div
-          class="relative z-10 w-full max-w-sm rounded-lg border border-border bg-popover p-6 shadow-lg"
-          role="alertdialog"
-        >
-          <p class="mb-4 text-sm text-foreground">
-            {{ $t("feed.deleteConfirm") }}
-          </p>
-          <div class="flex justify-end gap-2">
-            <button
-              class="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent"
-              @click="showDeleteConfirm = false"
-            >
-              {{ $t("common.cancel") }}
-            </button>
-            <button
-              :disabled="deleting"
-              class="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
-              @click="executeDelete"
-            >
-              {{ deleting ? $t("common.loading") : $t("common.delete") }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <DeleteConfirmDialog :visible="showDeleteConfirm" :deleting="deleting" @confirm="executeDelete" @cancel="showDeleteConfirm = false" />
   </article>
 </template>
 
@@ -211,9 +181,11 @@ import { useUiStore } from "~/stores/ui";
 import ReactionBar from "~/components/feed/ReactionBar.vue";
 import PostActions from "~/components/feed/PostActions.vue";
 import CommentThread from "~/components/feed/CommentThread.vue";
+import CommentInput from "~/components/feed/CommentInput.vue";
 import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
 import MediaGrid from "~/components/media/MediaGrid.vue";
 import MediaLightbox from "~/components/media/MediaLightbox.vue";
+import DeleteConfirmDialog from "~/components/feed/DeleteConfirmDialog.vue";
 import { buildCommentTree } from "~/utils/comments";
 
 const props = defineProps<{
@@ -282,9 +254,7 @@ const scrollContainer = ref<HTMLElement | null>(null);
 const COMMENT_PREVIEW_LIMIT = 3;
 
 /** @brief Paginated comment entry for this post from the store. */
-const commentEntry = computed(
-  () => feedStore.commentsByPost[props.post.id],
-);
+const commentEntry = computed(() => feedStore.commentsByPost[props.post.id]);
 
 /** @brief All loaded comments nested into a tree (newest first). */
 const allLoadedComments = computed<Comment[]>(() =>
@@ -297,14 +267,18 @@ const previewComments = computed<Comment[]>(() =>
 );
 
 /** @brief Whether there are more comments than the preview shows. */
-const hasMoreComments = computed(
-  () => props.post.comment_count > COMMENT_PREVIEW_LIMIT,
-);
+const hasMoreComments = computed(() => props.post.comment_count > COMMENT_PREVIEW_LIMIT);
 
 /** @brief Whether more pages can be fetched from the server. */
-const hasMorePages = computed(
-  () => commentEntry.value?.hasMore ?? false,
-);
+const hasMorePages = computed(() => commentEntry.value?.hasMore ?? false);
+
+/** @brief Show an error toast from a caught exception. */
+function toastError(err: unknown, fallback: string): void {
+  uiStore.showToast({
+    type: "error",
+    message: err instanceof Error ? err.message : fallback,
+  });
+}
 
 async function toggleComments(): Promise<void> {
   commentsOpen.value = !commentsOpen.value;
@@ -314,10 +288,7 @@ async function toggleComments(): Promise<void> {
     try {
       await feedStore.fetchComments(props.post.id, true);
     } catch (err) {
-      uiStore.showToast({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to load comments",
-      });
+      toastError(err, "Failed to load comments");
     } finally {
       loadingComments.value = false;
     }
@@ -329,32 +300,43 @@ function expandComments(): void {
   expanded.value = true;
 }
 
-/** @brief Fetch the next page of older comments. */
 async function loadMoreComments(): Promise<void> {
-  try {
-    await feedStore.fetchComments(props.post.id);
-  } catch (err) {
-    uiStore.showToast({
-      type: "error",
-      message: err instanceof Error ? err.message : "Failed to load comments",
-    });
-  }
+  try { await feedStore.fetchComments(props.post.id); }
+  catch (err) { toastError(err, "Failed to load comments"); }
+}
+
+/**
+ * @brief Handle text submit from the always-visible CommentInput on the card.
+ * @param text Trimmed comment content.
+ */
+async function handleAddCommentFromInput(text: string): Promise<void> {
+  try { await feedStore.addComment(props.post.id, text, null); }
+  catch (err) { toastError(err, "Failed to add comment"); }
 }
 
 async function handleAddComment(payload: {
-  postId: string;
-  content: string;
-  parentId: string | null;
+  postId: string; content: string; parentId: string | null;
 }): Promise<void> {
-  try {
-    await feedStore.addComment(payload.postId, payload.content, payload.parentId);
-  } catch (err) {
-    uiStore.showToast({
-      type: "error",
-      message: err instanceof Error ? err.message : "Failed to add comment",
-    });
-  }
+  try { await feedStore.addComment(payload.postId, payload.content, payload.parentId); }
+  catch (err) { toastError(err, "Failed to add comment"); }
 }
+
+async function handleReactComment(payload: {
+  postId: string; commentId: string; emoji: string;
+}): Promise<void> {
+  try { await feedStore.addCommentReaction(payload.postId, payload.commentId, payload.emoji); }
+  catch (err) { toastError(err, "Failed to add reaction"); }
+}
+
+async function handleReactPost(payload: {
+  postId: string; emoji: string;
+}): Promise<void> {
+  try { await feedStore.addReaction(payload.postId, payload.emoji); }
+  catch (err) { toastError(err, "Failed to add reaction"); }
+}
+
+/** @brief Handle media reaction (placeholder until API supports media reactions). */
+function handleMediaReact(_targetType: string, _targetId: string, _emoji: string): void {}
 
 function startEditing(): void {
   editContent.value = props.post.content;
@@ -370,17 +352,9 @@ function cancelEditing(): void {
 async function saveEdit(): Promise<void> {
   if (!editContent.value.trim()) return;
   saving.value = true;
-  try {
-    await feedStore.editPost(props.post.id, editContent.value);
-    editing.value = false;
-  } catch (err) {
-    uiStore.showToast({
-      type: "error",
-      message: err instanceof Error ? err.message : "Failed to save",
-    });
-  } finally {
-    saving.value = false;
-  }
+  try { await feedStore.editPost(props.post.id, editContent.value); editing.value = false; }
+  catch (err) { toastError(err, "Failed to save"); }
+  finally { saving.value = false; }
 }
 
 /** @brief Open the media lightbox at the given index. */
@@ -395,16 +369,8 @@ function confirmDelete(): void {
 
 async function executeDelete(): Promise<void> {
   deleting.value = true;
-  try {
-    await feedStore.deletePost(props.post.id);
-    showDeleteConfirm.value = false;
-  } catch (err) {
-    uiStore.showToast({
-      type: "error",
-      message: err instanceof Error ? err.message : "Failed to delete",
-    });
-  } finally {
-    deleting.value = false;
-  }
+  try { await feedStore.deletePost(props.post.id); showDeleteConfirm.value = false; }
+  catch (err) { toastError(err, "Failed to delete"); }
+  finally { deleting.value = false; }
 }
 </script>

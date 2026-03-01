@@ -9,6 +9,8 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import { useApi } from "~/composables/useApi";
+import { useEventBus } from "~/composables/useEventBus";
+import { SSE_EVENT } from "~/types/events";
 import type {
   Notification,
   NotificationListResponse,
@@ -112,6 +114,11 @@ export const useNotificationsStore = defineStore("notifications", () => {
       unreadCount.value++;
     }
   }
+
+  const { on } = useEventBus();
+  on(SSE_EVENT.NOTIFICATION, (data) =>
+    handleIncoming(data as Notification),
+  );
 
   return {
     notifications,

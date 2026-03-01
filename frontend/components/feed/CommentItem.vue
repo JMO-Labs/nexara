@@ -28,6 +28,12 @@
         <span class="text-[11px] text-muted-foreground/60">
           {{ timeAgo(comment.created_at) }}
         </span>
+        <ReactionBar
+          :reactions="comment.reactions ?? []"
+          target-type="comment"
+          :target-id="comment.id"
+          @react="onReact"
+        />
         <button
           type="button"
           class="text-[11px] font-medium text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
@@ -43,9 +49,13 @@
 <script setup lang="ts">
 /**
  * @brief CommentItem props and events.
+ *
+ * Uses inject to get reactToComment from CommentThread for reaction handling.
  */
+import { inject } from "vue";
 import type { Comment } from "~/types/api";
 import { timeAgo } from "~/utils/date";
+import ReactionBar from "~/components/feed/ReactionBar.vue";
 
 withDefaults(
   defineProps<{
@@ -62,4 +72,23 @@ withDefaults(
 const emit = defineEmits<{
   (e: "reply", commentId: string): void;
 }>();
+
+/** @brief Injected handler for comment reactions from CommentThread. */
+const reactToComment = inject<(commentId: string, emoji: string) => void>(
+  "reactToComment",
+);
+
+/**
+ * @brief Handle reaction from ReactionBar and forward to parent via inject.
+ * @param _targetType - Entity type (always "comment" here).
+ * @param targetId - Comment ID.
+ * @param emoji - Selected emoji.
+ */
+function onReact(
+  _targetType: string,
+  targetId: string,
+  emoji: string,
+): void {
+  reactToComment?.(targetId, emoji);
+}
 </script>

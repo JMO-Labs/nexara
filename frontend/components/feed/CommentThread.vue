@@ -1,11 +1,11 @@
 <!--
   @file components/feed/CommentThread.vue
-  @brief Threaded comment display and reply input.
+  @brief Threaded comment display with reply state management.
 
   Renders a list of comments with unlimited nesting depth via the
   recursive CommentNode component. Provides reply state to all
   descendant nodes via provide/inject so only one reply form is
-  open at a time. Includes a new comment form at the bottom.
+  open at a time. The top-level comment input lives on PostCard.
 -->
 <template>
   <div class="space-y-1">
@@ -26,29 +26,6 @@
       :comment="comment"
       :depth="0"
     />
-
-    <!-- New comment form -->
-    <form
-      data-testid="comment-form"
-      class="mt-2 flex gap-2"
-      @submit.prevent="handleSubmit"
-    >
-      <input
-        v-model="newComment"
-        data-testid="comment-input"
-        type="text"
-        :placeholder="$t('feed.addComment')"
-        :aria-label="$t('feed.addComment')"
-        class="flex-1 rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
-      >
-      <button
-        type="submit"
-        :disabled="!newComment.trim()"
-        class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-      >
-        {{ $t("feed.submitComment") }}
-      </button>
-    </form>
   </div>
 </template>
 
@@ -76,49 +53,54 @@ const emit = defineEmits<{
     payload: { postId: string; content: string; parentId: string | null },
   ): void;
   (e: "load-more"): void;
+  (
+    e: "react-comment",
+    payload: { postId: string; commentId: string; emoji: string },
+  ): void;
 }>();
 
-const newComment = ref("");
 const replyingToId = ref<string | null>(null);
-const replyContent = ref("");
 
 /** @brief Start replying to a comment by id. */
 function startReply(commentId: string): void {
   replyingToId.value = commentId;
-  replyContent.value = "";
 }
 
 /** @brief Cancel the current reply. */
 function cancelReply(): void {
   replyingToId.value = null;
-  replyContent.value = "";
 }
 
-/** @brief Submit a reply to a specific comment. */
-function submitReply(parentId: string): void {
-  if (!replyContent.value.trim()) return;
+/**
+ * @brief Submit a reply to a specific comment.
+ * @param parentId Comment ID being replied to.
+ * @param text Reply text content from CommentInput.
+ */
+function submitReply(parentId: string, text: string): void {
   emit("add-comment", {
     postId: props.postId,
-    content: replyContent.value,
+    content: text,
     parentId,
   });
-  replyContent.value = "";
   replyingToId.value = null;
 }
 
-function handleSubmit(): void {
-  if (!newComment.value.trim()) return;
-  emit("add-comment", {
+/**
+ * @brief Handle a reaction on a comment and emit to parent.
+ * @param commentId - ID of the comment.
+ * @param emoji - Selected emoji.
+ */
+function reactToComment(commentId: string, emoji: string): void {
+  emit("react-comment", {
     postId: props.postId,
-    content: newComment.value,
-    parentId: null,
+    commentId,
+    emoji,
   });
-  newComment.value = "";
 }
 
 provide("replyingToId", replyingToId);
-provide("replyContent", replyContent);
 provide("startReply", startReply);
 provide("cancelReply", cancelReply);
 provide("submitReply", submitReply);
+provide("reactToComment", reactToComment);
 </script>

@@ -107,6 +107,7 @@ export interface Comment {
   author: PostAuthor;
   parent_id: string | null;
   created_at: string;
+  reactions: Reaction[];
   replies?: Comment[];
 }
 

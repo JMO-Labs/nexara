@@ -67,9 +67,10 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: "/app",
+      navigateFallbackDenylist: [/\/api\//],
       runtimeCaching: [
         {
-          urlPattern: /^https?:\/\/.*\/api\/.*/i,
+          urlPattern: /^https?:\/\/.*\/api\/(?!v1\/notifications\/stream).*/i,
           handler: "NetworkFirst",
           options: {
             cacheName: "api-cache",

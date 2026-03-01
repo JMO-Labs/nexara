@@ -3,7 +3,8 @@
   @brief Single post detail page with full comment thread.
 
   Displays a single post with its complete comment thread and
-  allows adding new comments and reactions.
+  allows adding new comments and reactions.  State is backed by
+  the feed store so SSE real-time updates are reflected immediately.
 -->
 <template>
   <div class="space-y-4">
@@ -27,6 +28,7 @@
             :show-load-more="hasMore"
             @add-comment="handleAddComment"
             @load-more="loadMore"
+            @react-comment="handleReactComment"
           />
         </div>
       </div>
@@ -44,35 +46,29 @@
 
 <script setup lang="ts">
 /**
- * @brief Post detail page with comments loading.
+ * @brief Post detail page wired to the feed store for SSE reactivity.
+ *
+ * Fetches the post and comments into the shared feed store on mount
+ * so that real-time SSE events (comments, reactions) update this page.
  */
 import { ref, computed, onMounted } from "vue";
 import { useApi } from "~/composables/useApi";
+import { useFeedStore } from "~/stores/feed";
+import { useUiStore } from "~/stores/ui";
 import PostCard from "~/components/feed/PostCard.vue";
 import CommentThread from "~/components/feed/CommentThread.vue";
 import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
 import type { Post, Comment } from "~/types/api";
 import { buildCommentTree } from "~/utils/comments";
 
-/** @brief Paginated response shape for the comments endpoint. */
-interface PaginatedComments {
-  items: Comment[];
-  cursor: string | null;
-  has_more: boolean;
-}
-
 const props = defineProps<{ id: string }>();
 
 const api = useApi();
-const post = ref<Post | null>(null);
-const flatComments = ref<Comment[]>([]);
-const commentCursor = ref<string | null>(null);
-const hasMore = ref(false);
+const feedStore = useFeedStore();
+const uiStore = useUiStore();
+
 const loading = ref(true);
 const error = ref("");
-
-/** @brief Flat comments nested into a tree for threaded display. */
-const comments = computed<Comment[]>(() => buildCommentTree(flatComments.value));
 
 /** @brief Resolved route ID for the post. */
 function resolveRouteId(): string {
@@ -84,14 +80,51 @@ function resolveRouteId(): string {
   );
 }
 
-function handleReaction(_postId: string, emoji: string): void {
-  if (!post.value) return;
-  const existing = post.value.reactions.find((r) => r.emoji === emoji);
-  if (existing) {
-    existing.reacted_by_me = !existing.reacted_by_me;
-    existing.count += existing.reacted_by_me ? 1 : -1;
-  } else {
-    post.value.reactions.push({ emoji, count: 1, reacted_by_me: true });
+/** @brief Post from the shared feed store (SSE-reactive). */
+const post = computed<Post | null>(
+  () => feedStore.posts.find((p) => p.id === resolveRouteId()) ?? null,
+);
+
+/** @brief Paginated comment entry from the feed store. */
+const commentEntry = computed(() => feedStore.commentsByPost[resolveRouteId()]);
+
+/** @brief Flat comments nested into a tree for threaded display. */
+const comments = computed<Comment[]>(() =>
+  buildCommentTree(commentEntry.value?.items ?? []),
+);
+
+/** @brief Whether more comment pages can be fetched from the server. */
+const hasMore = computed(() => commentEntry.value?.hasMore ?? false);
+
+/** @brief Show an error toast from a caught exception. */
+function toastError(err: unknown, fallback: string): void {
+  uiStore.showToast({
+    type: "error",
+    message: err instanceof Error ? err.message : fallback,
+  });
+}
+
+async function handleReaction(_postId: string, emoji: string): Promise<void> {
+  try {
+    await feedStore.addReaction(resolveRouteId(), emoji);
+  } catch (err) {
+    toastError(err, "Failed to react");
+  }
+}
+
+async function handleReactComment(payload: {
+  postId: string;
+  commentId: string;
+  emoji: string;
+}): Promise<void> {
+  try {
+    await feedStore.addCommentReaction(
+      payload.postId,
+      payload.commentId,
+      payload.emoji,
+    );
+  } catch (err) {
+    toastError(err, "Failed to add reaction");
   }
 }
 
@@ -101,47 +134,31 @@ async function handleAddComment(payload: {
   parentId: string | null;
 }): Promise<void> {
   try {
-    const newComment = await api.post<Comment>(
-      `/posts/${payload.postId}/comments`,
-      {
-        content: payload.content,
-        parent_id: payload.parentId,
-      },
+    await feedStore.addComment(
+      payload.postId,
+      payload.content,
+      payload.parentId,
     );
-    flatComments.value.unshift(newComment);
-    if (post.value) post.value.comment_count++;
-  } catch {
-    /* Toast handled by global error handler */
+  } catch (err) {
+    toastError(err, "Failed to add comment");
   }
 }
 
-/** @brief Fetch next page of comments and append. */
+/** @brief Fetch next page of comments via the feed store. */
 async function loadMore(): Promise<void> {
-  const routeId = resolveRouteId();
-  const params = new URLSearchParams();
-  if (commentCursor.value) params.set("cursor", commentCursor.value);
   try {
-    const data = await api.get<PaginatedComments>(
-      `/posts/${routeId}/comments?${params}`,
-    );
-    flatComments.value.push(...data.items);
-    commentCursor.value = data.cursor;
-    hasMore.value = data.has_more;
-  } catch {
-    /* Toast handled by global error handler */
+    await feedStore.fetchComments(resolveRouteId());
+  } catch (err) {
+    toastError(err, "Failed to load comments");
   }
 }
 
 onMounted(async () => {
   try {
-    const routeId = resolveRouteId();
-    post.value = await api.get<Post>(`/posts/${routeId}`);
-    const data = await api.get<PaginatedComments>(
-      `/posts/${routeId}/comments`,
-    );
-    flatComments.value = data.items;
-    commentCursor.value = data.cursor;
-    hasMore.value = data.has_more;
+    const id = resolveRouteId();
+    const postData = await api.get<Post>(`/posts/${id}`);
+    feedStore.upsertPost(postData);
+    await feedStore.fetchComments(id, true);
   } catch (e) {
     error.value = e instanceof Error ? e.message : "Failed to load post";
   } finally {

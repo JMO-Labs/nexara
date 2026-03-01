@@ -119,4 +119,16 @@ describe("PostCard", () => {
       "/app/post/post-1",
     );
   });
+
+  it("has group class on article for hover reactions", () => {
+    const wrapper = mount(PostCard, { props: { post: basePost } });
+
+    expect(wrapper.find("article").classes()).toContain("group");
+  });
+
+  it("does not show quick-reaction presets in display-only reaction bar", () => {
+    const wrapper = mount(PostCard, { props: { post: basePost } });
+
+    expect(wrapper.find('[data-testid="quick-reactions"]').exists()).toBe(false);
+  });
 });
