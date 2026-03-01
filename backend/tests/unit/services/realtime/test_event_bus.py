@@ -44,7 +44,8 @@ class TestEmitRouting:
 
         assert result == 1
         mock_publish.assert_awaited_once_with(
-            uid, {"type": "notification", "payload": {"message": "hello"}},
+            uid,
+            {"type": "notification", "payload": {"message": "hello"}},
         )
 
     @pytest.mark.asyncio
@@ -66,7 +67,8 @@ class TestEmitRouting:
 
         assert result == 3
         mock_publish.assert_awaited_once_with(
-            cid, {"type": "feed_update", "payload": {"event": "created", "post": {}}},
+            cid,
+            {"type": "feed_update", "payload": {"event": "created", "post": {}}},
         )
 
     @pytest.mark.asyncio
