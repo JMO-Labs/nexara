@@ -25,7 +25,8 @@ container-native, and scaleable to Kubernetes.
 - **Polls** -- Single, multiple-choice, yes/no, and photo polls with live results
 - **Search** -- Full-text search across all content via PostgreSQL FTS
 - **Notifications** -- In-app (SSE), push (Web Push), and email
-- **Admin Panel** -- User management, roles, audit log, community settings
+- **SSO/OAuth2** -- Multi-provider OIDC/OAuth2 with admin UI, PKCE, and group-to-role mapping
+- **Admin Panel** -- User management, roles, SSO providers, audit log, community settings
 - **PWA** -- Installable progressive web app with offline shell
 - **Plugin System** -- Extensible via backend hooks and frontend slots
 

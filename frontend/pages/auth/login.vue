@@ -1,10 +1,10 @@
 <!--
   @file pages/auth/login.vue
-  @brief Login page with local credentials and OIDC support.
+  @brief Login page with local credentials and multi-provider OAuth.
 
-  Provides an email/password form, OIDC SSO button, and links to
-  registration and password reset pages. On successful login, redirects
-  to the original requested page or the feed.
+  Provides an email/password form, OAuth provider buttons (from
+  oauth_providers config), and links to registration and password reset.
+  On successful login, redirects to the original requested page or /app.
 -->
 <template>
   <NuxtLayout name="public">
@@ -68,13 +68,31 @@
           </button>
         </form>
 
-        <!-- OIDC login (only when enabled by backend config) -->
-        <div v-if="authConfig?.oidc_enabled" class="mt-4">
+        <!-- OAuth providers -->
+        <div v-if="authConfig?.oauth_providers?.length" class="mt-4 space-y-2">
+          <div class="relative my-4">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border" />
+            </div>
+            <div class="relative flex justify-center text-xs uppercase">
+              <span class="bg-background px-2 text-muted-foreground">
+                {{ $t("auth.orContinueWith") }}
+              </span>
+            </div>
+          </div>
           <button
-            class="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-            @click="handleOidcLogin"
+            v-for="provider in authConfig.oauth_providers"
+            :key="provider.slug"
+            class="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent focus:ring-2 focus:ring-ring"
+            @click="handleOAuthLogin(provider.slug)"
           >
-            {{ $t("auth.loginWithOidc") }}
+            <img
+              v-if="provider.icon_url"
+              :src="provider.icon_url"
+              :alt="provider.display_name"
+              class="h-5 w-5"
+            />
+            {{ $t("auth.loginWith", { provider: provider.display_name }) }}
           </button>
         </div>
 
@@ -103,6 +121,7 @@
  */
 import { ref } from "vue";
 import { useAuthStore } from "~/stores/auth";
+import type { OAuthProviderInfo } from "~/types/api";
 
 definePageMeta({ layout: false });
 
@@ -113,10 +132,12 @@ const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
 
-/** @brief Public auth config from GET /api/v1/auth/config (oidc_enabled, registration_enabled). */
+/** @brief Public auth config from GET /api/v1/auth/config. */
 const authConfig = ref<{
   oidc_enabled: boolean;
   registration_enabled: boolean;
+  local_auth_enabled: boolean;
+  oauth_providers: OAuthProviderInfo[];
 } | null>(null);
 
 onMounted(async () => {
@@ -149,7 +170,8 @@ async function handleLogin(): Promise<void> {
   }
 }
 
-function handleOidcLogin(): void {
-  window.location.href = "/api/v1/auth/oidc/login";
+/** @brief Redirect to OAuth provider login. */
+function handleOAuthLogin(slug: string): void {
+  window.location.href = `/api/v1/oauth/${slug}/login`;
 }
 </script>

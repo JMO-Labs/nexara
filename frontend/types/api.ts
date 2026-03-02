@@ -307,3 +307,47 @@ export interface AdminCommunitySettings {
   default_storage_quota_mb: number;
   waf_enabled: boolean;
 }
+
+/** @brief OAuth provider info for login page buttons. */
+export interface OAuthProviderInfo {
+  slug: string;
+  display_name: string;
+  icon_url: string | null;
+}
+
+/** @brief Group mapping: IdP group name -> Nexara role. */
+export interface OAuthGroupMapping {
+  idp_group: string;
+  role: UserRole;
+}
+
+/**
+ * @brief OAuth provider config from admin API.
+ *
+ * Used for create/edit forms and provider list.
+ */
+export interface OAuthProviderResponse {
+  id: string;
+  provider_type: "oidc" | "oauth2";
+  display_name: string;
+  slug: string;
+  icon_url: string | null;
+  issuer_url: string | null;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint: string | null;
+  jwks_uri: string | null;
+  end_session_endpoint: string | null;
+  client_id: string;
+  group_mappings: Record<string, UserRole>;
+  default_role: UserRole;
+  group_claim: string;
+  scopes: string;
+  sub_claim: string;
+  email_claim: string;
+  name_claim: string;
+  avatar_claim: string;
+  auto_create_users: boolean;
+  enabled: boolean;
+  env_seeded?: boolean;
+}

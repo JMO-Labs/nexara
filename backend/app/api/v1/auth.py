@@ -8,6 +8,7 @@ No business logic lives here.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import structlog
@@ -15,7 +16,7 @@ from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, get_optional_user
 from app.core.i18n import _
 from app.core.security import get_jwks
 from app.models.user import User
@@ -25,6 +26,7 @@ from app.schemas.auth import (
     AuthConfigResponse,
     LoginRequest,
     LoginResponse,
+    LogoutResponse,
     PasswordResetConfirmPayload,
     PasswordResetRequestPayload,
     RegisterRequest,
@@ -46,19 +48,26 @@ REFRESH_COOKIE = "refresh_token"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
 
 
-def _set_refresh_cookie(response: Response, raw_token: str) -> None:
+def _should_secure_cookie(settings: Settings) -> bool:
+    """@brief Return True if cookies should use the Secure flag (origins are HTTPS)."""
+    origins = settings.allowed_origins_list
+    return all(o.startswith("https://") for o in origins) if origins else True
+
+
+def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) -> None:
     """
     @brief Set the HttpOnly refresh token cookie on the response.
 
     @param response FastAPI response object.
     @param raw_token Raw opaque refresh token.
+    @param settings Application settings (used to derive Secure flag).
     """
     response.set_cookie(
         REFRESH_COOKIE,
         raw_token,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=_should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )
@@ -77,17 +86,41 @@ def _clear_refresh_cookie(response: Response) -> None:
 
 
 @router.get("/config", response_model=AuthConfigResponse)
-async def get_auth_config(settings: Settings = Depends(get_settings)) -> AuthConfigResponse:
+async def get_auth_config(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AuthConfigResponse:
     """
     @brief Return public auth configuration for the login page.
 
     No authentication required. Used by the frontend to conditionally
-    show OIDC SSO button and registration link.
+    show OIDC SSO button, local login form, and registration link.
     """
-    oidc_enabled = bool(settings.OIDC_CLIENT_ID and settings.OIDC_CLIENT_ID.strip())
+    from app.schemas.auth import OAuthProviderListItem
+    from app.services.oauth.provider_manager import ProviderManager
+
+    oauth_providers: list[OAuthProviderListItem] = []
+    try:
+        community_id = uuid.UUID(settings.COMMUNITY_ID)
+        manager = ProviderManager(db)
+        providers = await manager.get_enabled_providers(community_id)
+        oauth_providers = [
+            OAuthProviderListItem(
+                slug=p.slug,
+                display_name=p.display_name,
+                icon_url=p.icon_url,
+            )
+            for p in providers
+        ]
+    except Exception:
+        logger.warning("oauth_providers_unavailable", exc_info=True)
+
+    oidc_enabled = len(oauth_providers) > 0
     return AuthConfigResponse(
         oidc_enabled=oidc_enabled,
         registration_enabled=settings.ENABLE_REGISTRATION,
+        local_auth_enabled=True,
+        oauth_providers=oauth_providers,
     )
 
 
@@ -118,7 +151,7 @@ async def register(
         display_name=body.display_name,
         invite_token=body.invite_token,
     )
-    _set_refresh_cookie(response, result["raw_refresh_token"])
+    _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],
         expires_in=result["expires_in"],
@@ -142,7 +175,7 @@ async def login(
             two_factor_token=result["two_factor_token"],
         )
 
-    _set_refresh_cookie(response, result["raw_refresh_token"])
+    _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],
         expires_in=result["expires_in"],
@@ -172,26 +205,52 @@ async def refresh(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    _set_refresh_cookie(response, result["raw_refresh_token"])
+    _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],
         expires_in=result["expires_in"],
     )
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post("/logout", response_model=LogoutResponse)
 async def logout(
     response: Response,
     refresh_token: str | None = Cookie(None, alias=REFRESH_COOKIE),
+    user: User | None = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Any:
-    """@brief Revoke the refresh token and clear the cookie."""
+    """
+    @brief Revoke the refresh token and clear the cookie.
+
+    If the user has an OAuth link to a provider with end_session_endpoint,
+    returns end_session_url for RP-initiated logout.
+    """
     if refresh_token:
         svc = AuthService(db, settings)
         await svc.logout(refresh_token)
     _clear_refresh_cookie(response)
-    return MessageResponse(message=_("Logged out successfully"))
+
+    end_session_url: str | None = None
+    if user:
+        from app.repositories.oauth_repo import (
+            OAuthProviderRepository,
+            UserOAuthLinkRepository,
+        )
+
+        link_repo = UserOAuthLinkRepository(db)
+        provider_repo = OAuthProviderRepository(db)
+        links = await link_repo.find_links_for_user(user.id)
+        for link in links:
+            provider = await provider_repo.get_by_id(link.provider_id, None)
+            if provider and provider.end_session_endpoint:
+                end_session_url = provider.end_session_endpoint
+                break
+
+    return LogoutResponse(
+        message=_("Logged out successfully"),
+        end_session_url=end_session_url,
+    )
 
 
 # ── Two-Factor Authentication ────────────────────────────────────────────
@@ -234,7 +293,7 @@ async def login_2fa(
         two_factor_token=body.two_factor_token,
         code=body.code,
     )
-    _set_refresh_cookie(response, result["raw_refresh_token"])
+    _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],
         expires_in=result["expires_in"],
@@ -272,57 +331,60 @@ async def confirm_password_reset(
     return MessageResponse(message=_("Password has been reset successfully"))
 
 
-# ── OIDC ─────────────────────────────────────────────────────────────────
+# ── OIDC (deprecated, redirects to multi-provider OAuth) ───────────────────
 
 
-@router.get("/oidc/login")
-async def oidc_login(
-    response: Response,
+@router.get("/oidc/login", deprecated=True)
+async def oidc_login_deprecated(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Any:
-    """@brief Redirect to the OIDC provider's authorization endpoint."""
-    from app.services.oidc_service import OIDCService
-
-    svc = OIDCService(db, settings)
-    url, state, verifier = svc.build_authorize_url()
-    response.set_cookie("oidc_state", state, max_age=600, httponly=True, samesite="lax")
-    response.set_cookie("oidc_verifier", verifier, max_age=600, httponly=True, samesite="lax")
+    """
+    @brief Deprecated — redirects to /oauth/{slug}/login for the default provider.
+    """
     from starlette.responses import RedirectResponse
 
-    return RedirectResponse(url=url, status_code=302)
+    from app.core.exceptions import AuthenticationError
+    from app.services.oauth.provider_manager import ProviderManager
+
+    manager = ProviderManager(db)
+    community_id = uuid.UUID(settings.COMMUNITY_ID)
+    providers = await manager.get_enabled_providers(community_id)
+
+    if not providers:
+        raise AuthenticationError(message=_("No OAuth providers configured"))
+
+    slug = providers[0].slug
+    return RedirectResponse(url=f"/api/v1/oauth/{slug}/login", status_code=307)
 
 
-@router.get("/oidc/callback", response_model=LoginResponse)
-async def oidc_callback(
+@router.get("/oidc/callback", deprecated=True)
+async def oidc_callback_deprecated(
     code: str,
     state: str,
-    response: Response,
-    oidc_state: str | None = Cookie(None),
-    oidc_verifier: str | None = Cookie(None),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    oidc_state: str | None = Cookie(None),
 ) -> Any:
-    """@brief Handle the OIDC provider callback after user authorization."""
-    import secrets
+    """
+    @brief Deprecated — redirects to /oauth/{slug}/callback for the default provider.
+    """
+    from starlette.responses import RedirectResponse
 
     from app.core.exceptions import AuthenticationError
-    from app.services.oidc_service import OIDCService
+    from app.services.oauth.provider_manager import ProviderManager
 
-    if not oidc_state or not secrets.compare_digest(oidc_state, state):
-        raise AuthenticationError(message=_("Invalid OIDC state"))
-    if not oidc_verifier:
-        raise AuthenticationError(message=_("Missing OIDC code verifier"))
+    manager = ProviderManager(db)
+    community_id = uuid.UUID(settings.COMMUNITY_ID)
+    providers = await manager.get_enabled_providers(community_id)
 
-    svc = OIDCService(db, settings)
-    result = await svc.handle_callback(code, oidc_verifier)
+    if not providers:
+        raise AuthenticationError(message=_("No OAuth providers configured"))
 
-    response.delete_cookie("oidc_state")
-    response.delete_cookie("oidc_verifier")
-    _set_refresh_cookie(response, result["raw_refresh_token"])
-    return LoginResponse(
-        access_token=result["access_token"],
-        expires_in=result["expires_in"],
+    slug = providers[0].slug
+    return RedirectResponse(
+        url=f"/api/v1/oauth/{slug}/callback?code={code}&state={state}",
+        status_code=307,
     )
 
 

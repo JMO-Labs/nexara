@@ -44,7 +44,7 @@ from app.core.middleware import (
 from app.core.rate_limit import limiter
 from app.core.valkey import DB_CACHE, close_pools, get_pool
 from app.core.waf import WAFMiddleware
-from app.db.session import engine
+from app.db.session import async_session_factory, engine
 
 logger = structlog.get_logger(__name__)
 
@@ -71,6 +71,28 @@ def _configure_email_validator() -> None:
 _configure_email_validator()
 
 
+async def _seed_oauth_from_env(settings) -> None:
+    """
+    @brief Seed OAuth provider from OIDC_* env vars on first startup.
+
+    If OIDC_ISSUER is set and no provider has been seeded yet,
+    creates a default OIDC provider for the community.
+    """
+    import uuid
+
+    if not settings.OIDC_ISSUER or not settings.OIDC_ISSUER.strip():
+        return
+    try:
+        from app.services.oauth.provider_manager import ProviderManager
+
+        async with async_session_factory() as session:
+            manager = ProviderManager(session)
+            await manager.seed_from_env(settings, uuid.UUID(settings.COMMUNITY_ID))
+            await session.commit()
+    except Exception:
+        logger.warning("oauth_seed_from_env_failed", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
@@ -93,7 +115,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env=settings.APP_ENV,
     )
 
-    _setup_instrumentator(app, settings)
+    await _seed_oauth_from_env(settings)
 
     from app.services.realtime.pubsub import start_subscriber, stop_subscriber
 
@@ -126,6 +148,7 @@ def create_app() -> FastAPI:
     )
 
     _register_middleware(app, settings)
+    _setup_instrumentator(app, settings)
     register_exception_handlers(app)
     _register_routers(app)
 
@@ -194,7 +217,11 @@ def _register_routers(app: FastAPI) -> None:
         """@brief Root-level JWKS endpoint for external JWT verification."""
         from app.core.security import get_jwks
 
-        return get_jwks()
+        try:
+            return get_jwks()
+        except (PermissionError, OSError):
+            logger.warning("jwks_key_unavailable", exc_info=True)
+            return {"keys": []}
 
 
 def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]
