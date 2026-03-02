@@ -2,8 +2,9 @@
 # @file .gitlab/ci/lint-backend.yml
 # @brief Backend linting jobs: Ruff (lint + format) and mypy (type checking).
 #
-# Both jobs use change-detection rules to skip when only frontend
-# files have been modified, conserving CI compute minutes.
+# Lint jobs use .rules:backend-lint which runs on MR pipelines (with
+# change detection), the default branch, tags, AND feature branch
+# pushes -- catching issues before an MR is created.
 ##
 
 lint:ruff:
@@ -16,7 +17,7 @@ lint:ruff:
     - ruff check backend/
     - echo "Checking Ruff formatting..."
     - ruff format --check backend/
-  rules: !reference [.rules:backend-changes, rules]
+  rules: !reference [.rules:backend-lint, rules]
   allow_failure: false
 
 lint:mypy:
@@ -35,5 +36,5 @@ lint:mypy:
   script:
     - echo "Running mypy type checking..."
     - .venv/bin/mypy app/ --ignore-missing-imports
-  rules: !reference [.rules:backend-changes, rules]
+  rules: !reference [.rules:backend-lint, rules]
   allow_failure: true

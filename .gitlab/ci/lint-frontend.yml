@@ -2,8 +2,9 @@
 # @file .gitlab/ci/lint-frontend.yml
 # @brief Frontend linting jobs: ESLint and Prettier format checking.
 #
-# Both jobs use change-detection rules to skip when only backend
-# files have been modified, conserving CI compute minutes.
+# Lint jobs use .rules:frontend-lint which runs on MR pipelines (with
+# change detection), the default branch, tags, AND feature branch
+# pushes -- catching issues before an MR is created.
 ##
 
 lint:eslint:
@@ -19,7 +20,7 @@ lint:eslint:
     - echo "Running ESLint..."
     - cd frontend
     - npx eslint .
-  rules: !reference [.rules:frontend-changes, rules]
+  rules: !reference [.rules:frontend-lint, rules]
   allow_failure: false
 
 lint:prettier:
@@ -38,5 +39,5 @@ lint:prettier:
     - echo "Checking Prettier formatting..."
     - cd frontend
     - npx prettier --check "**/*.{ts,vue,js,json,css,scss,md}"
-  rules: !reference [.rules:frontend-changes, rules]
+  rules: !reference [.rules:frontend-lint, rules]
   allow_failure: false
