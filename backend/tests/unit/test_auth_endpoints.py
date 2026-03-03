@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings
 from app.core.security import hash_password
 
 
@@ -62,34 +62,36 @@ class TestAuthConfigEndpoint:
     """@brief GET /api/v1/auth/config tests."""
 
     @pytest.mark.asyncio
-    async def test_config_oidc_disabled_when_client_id_empty(self, test_app):
-        """When OIDC_CLIENT_ID is not set, oidc_enabled is False."""
-        transport = ASGITransport(app=test_app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get("/api/v1/auth/config")
+    async def test_config_oidc_disabled_when_no_providers(self, test_app):
+        """When no OAuth providers exist, oidc_enabled is False."""
+        with patch("app.services.oauth.provider_manager.ProviderManager") as mock_manager_cls:
+            mock_manager = AsyncMock()
+            mock_manager.get_enabled_providers.return_value = []
+            mock_manager_cls.return_value = mock_manager
 
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["oidc_enabled"] is False
-        assert "registration_enabled" in data
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get("/api/v1/auth/config")
+
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["oidc_enabled"] is False
+            assert "registration_enabled" in data
+            assert data["oauth_providers"] == []
 
     @pytest.mark.asyncio
-    async def test_config_oidc_enabled_when_client_id_set(self, test_app):
-        """When OIDC_CLIENT_ID is set, oidc_enabled is True."""
-        oidc_settings = Settings(
-            SECRET_KEY="test-auth-endpoints",
-            JWT_ALGORITHM="HS256",
-            WAF_ENABLED=False,
-            ENABLE_METRICS=False,
-            OIDC_CLIENT_ID="my-oidc-client",
-            OIDC_CLIENT_SECRET="secret",
-        )
+    async def test_config_oidc_enabled_when_providers_exist(self, test_app):
+        """When OAuth providers exist, oidc_enabled is True."""
+        mock_provider = MagicMock()
+        mock_provider.slug = "oidc"
+        mock_provider.display_name = "OIDC"
+        mock_provider.icon_url = None
 
-        def _oidc_settings():
-            return oidc_settings
+        with patch("app.services.oauth.provider_manager.ProviderManager") as mock_manager_cls:
+            mock_manager = AsyncMock()
+            mock_manager.get_enabled_providers = AsyncMock(return_value=[mock_provider])
+            mock_manager_cls.return_value = mock_manager
 
-        test_app.dependency_overrides[get_settings] = _oidc_settings
-        try:
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get("/api/v1/auth/config")
@@ -98,8 +100,8 @@ class TestAuthConfigEndpoint:
             data = resp.json()
             assert data["oidc_enabled"] is True
             assert data["registration_enabled"] is True
-        finally:
-            test_app.dependency_overrides.pop(get_settings, None)
+            assert len(data["oauth_providers"]) == 1
+            assert data["oauth_providers"][0]["slug"] == "oidc"
 
 
 class TestRegisterEndpoint:

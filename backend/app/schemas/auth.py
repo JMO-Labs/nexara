@@ -108,11 +108,41 @@ class OIDCCallbackParams(BaseModel):
     state: str
 
 
+class OAuthProviderListItem(BaseModel):
+    """
+    @brief Minimal provider info for login page buttons.
+
+    slug, display_name, icon_url only.
+    """
+
+    slug: str
+    display_name: str
+    icon_url: str | None = None
+
+
 class AuthConfigResponse(BaseModel):
-    """@brief Public auth configuration exposed to the frontend."""
+    """
+    @brief Public auth configuration exposed to the frontend.
+
+    oidc_enabled is kept for backward compat (True if any OAuth providers).
+    """
 
     oidc_enabled: bool
     registration_enabled: bool
+    local_auth_enabled: bool = True
+    oauth_providers: list[OAuthProviderListItem] = []
+
+
+class LogoutResponse(BaseModel):
+    """
+    @brief Logout response with optional IdP end-session URL.
+
+    When the user has an OAuth link to a provider with end_session_endpoint,
+    the frontend should redirect to end_session_url for RP-initiated logout.
+    """
+
+    message: str
+    end_session_url: str | None = None
 
 
 class InviteCreateRequest(BaseModel):

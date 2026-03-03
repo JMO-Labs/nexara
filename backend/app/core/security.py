@@ -47,10 +47,13 @@ def _load_or_generate_rsa_keys(settings: Settings) -> tuple[str, str]:
     pub_path = Path(settings.JWT_PUBLIC_KEY_PATH)
 
     if priv_path.exists() and pub_path.exists():
-        _private_key = priv_path.read_text()
-        _public_key = pub_path.read_text()
-        logger.info("jwt_keys_loaded", private_key_path=str(priv_path))
-        return _private_key, _public_key
+        try:
+            _private_key = priv_path.read_text()
+            _public_key = pub_path.read_text()
+            logger.info("jwt_keys_loaded", private_key_path=str(priv_path))
+            return _private_key, _public_key
+        except PermissionError:
+            logger.warning("jwt_keys_unreadable", private_key_path=str(priv_path))
 
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
@@ -70,11 +73,17 @@ def _load_or_generate_rsa_keys(settings: Settings) -> tuple[str, str]:
         .decode()
     )
 
-    priv_path.parent.mkdir(parents=True, exist_ok=True)
-    priv_path.write_text(_private_key)
-    priv_path.chmod(0o600)
-    pub_path.write_text(_public_key)
-    logger.info("jwt_keys_generated", private_key_path=str(priv_path))
+    try:
+        priv_path.parent.mkdir(parents=True, exist_ok=True)
+        priv_path.write_text(_private_key)
+        priv_path.chmod(0o600)
+        pub_path.write_text(_public_key)
+        logger.info("jwt_keys_generated", private_key_path=str(priv_path))
+    except PermissionError:
+        logger.warning(
+            "jwt_keys_persist_failed_using_ephemeral",
+            private_key_path=str(priv_path),
+        )
     return _private_key, _public_key
 
 

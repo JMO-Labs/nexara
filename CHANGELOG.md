@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Phase 1.5 -- OAuth2/OIDC Multi-Provider
+
+Replaces single-provider OIDC with a DB-backed, multi-provider OAuth2/OIDC
+system. Admin-managed providers, Authlib token verification, and RP-initiated
+logout.
+
+### Added
+
+#### Frontend
+- Multi-provider OAuth login buttons on login page (dynamic from `/auth/config`)
+- OAuth callback page with exchange-code flow and error handling
+- Admin SSO provider management page (list, add, edit, delete, enable/disable)
+- Admin SSO provider form with OIDC auto-discovery, group-to-role mapping, and claim configuration
+- `useSsoProviderForm` composable for provider form state and actions
+- Linked accounts placeholder component in user settings
+- SSO tab in admin panel navigation
+- RP-initiated logout support in auth store (redirects to IdP end-session URL)
+- 30+ new i18n translation keys for OAuth/SSO UI
+
+#### Backend
+- Authlib dependency for OAuth2/OIDC flow and JWKS token verification
+- `OAuthProvider` model with DB-backed provider configuration
+- `UserOAuthLink` model for multi-provider user identity links
+- Alembic migration for `oauth_providers` and `user_oauth_links` tables
+- OAuth provider and user link repositories
+- Fernet encryption utility for client secrets at rest
+- OIDC auto-discovery service with SSRF protection
+- Group-to-role mapper with priority ordering (admin > member > viewer)
+- OAuth user provisioner for create, link, and update flows
+- Provider manager with in-memory caching and env-var seeding
+- Authlib-based OAuth flow (PKCE, authorize URL, code exchange)
+- JWKS token verifier with cached key sets
+- Pydantic schemas for provider CRUD, config, and exchange
+- Public OAuth routes: login redirect, callback, exchange code
+- Admin OAuth routes: provider CRUD, toggle, discover, test connection
+- Startup hook to seed default provider from `OIDC_*` env vars
+- Deprecated `/oidc/*` routes redirecting to `/oauth/{slug}/*`
+- RP-initiated logout endpoint returning `end_session_url`
+
+#### Types
+- `OAuthProviderInfo`, `OAuthGroupMapping`, `OAuthProviderResponse` TypeScript types
+
+### Security
+- PKCE for all OAuth authorization flows
+- SSRF protection on OIDC discovery (rejects private IPs and localhost)
+- Fernet encryption for OAuth client secrets stored in DB
+- Single-use exchange codes with 60s TTL in Valkey
+
 ## [0.1.0] - 2026-02-27
 
 ### Phase 1 -- Foundation and Core Experience

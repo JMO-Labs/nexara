@@ -178,17 +178,23 @@ export const useAuthStore = defineStore("auth", () => {
    * @brief Log out the current user.
    *
    * Calls the backend to revoke the refresh token cookie,
-   * then clears all local state.
+   * then clears all local state. If the backend returns
+   * end_session_url (RP-initiated logout), redirects to it.
    */
   async function logout(): Promise<void> {
+    let endSessionUrl: string | null = null;
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      const response = await fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         credentials: "include",
         headers: accessToken.value
           ? { Authorization: `Bearer ${accessToken.value}` }
           : {},
       });
+      if (response.ok) {
+        const data = await response.json();
+        endSessionUrl = data.end_session_url ?? null;
+      }
     } catch {
       /* Logout endpoint failure is non-critical */
     }
@@ -197,6 +203,10 @@ export const useAuthStore = defineStore("auth", () => {
     accessToken.value = null;
     requiresTwoFactor.value = false;
     twoFactorToken.value = null;
+
+    if (endSessionUrl) {
+      window.location.href = endSessionUrl;
+    }
   }
 
   /**

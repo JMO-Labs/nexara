@@ -46,6 +46,7 @@ const tabs = [
   { path: "/app/admin", label: "admin.dashboard" },
   { path: "/app/admin/users", label: "admin.users" },
   { path: "/app/admin/invites", label: "admin.invites" },
+  { path: "/app/admin/sso", label: "admin.sso" },
   { path: "/app/admin/settings", label: "admin.settings" },
   { path: "/app/admin/audit-log", label: "admin.audit_log" },
 ];
