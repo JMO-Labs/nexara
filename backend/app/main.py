@@ -32,7 +32,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.metrics import router as metrics_router
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_v1_router, ws_api_router
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import (
@@ -71,7 +71,7 @@ def _configure_email_validator() -> None:
 _configure_email_validator()
 
 
-async def _seed_oauth_from_env(settings) -> None:
+async def _seed_oauth_from_env(settings: Settings) -> None:
     """
     @brief Seed OAuth provider from OIDC_* env vars on first startup.
 

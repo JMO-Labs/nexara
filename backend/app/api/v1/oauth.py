@@ -11,11 +11,13 @@ from __future__ import annotations
 import json
 import secrets
 import uuid
+from typing import Any
 
 import httpx
 import structlog
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from fastapi.responses import RedirectResponse
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -45,7 +47,7 @@ REFRESH_COOKIE = "refresh_token"
 REFRESH_MAX_AGE = 30 * 24 * 3600
 
 
-def _get_valkey_client(settings: Settings):
+def _get_valkey_client(settings: Settings) -> Redis:
     """@brief Return Valkey client for cache DB (oauth exchange codes)."""
     return get_pool(settings, DB_CACHE)
 
@@ -76,10 +78,18 @@ def _set_oauth_cookies(
     provider_slug: str,
 ) -> None:
     """@brief Set OAuth state, verifier, and provider cookies."""
-    opts = {"max_age": COOKIE_MAX_AGE, "httponly": True, "samesite": "lax"}
-    response.set_cookie(OAUTH_STATE_COOKIE, state, **opts)
-    response.set_cookie(OAUTH_VERIFIER_COOKIE, verifier, **opts)
-    response.set_cookie(OAUTH_PROVIDER_COOKIE, provider_slug, **opts)
+    for name, value in (
+        (OAUTH_STATE_COOKIE, state),
+        (OAUTH_VERIFIER_COOKIE, verifier),
+        (OAUTH_PROVIDER_COOKIE, provider_slug),
+    ):
+        response.set_cookie(
+            name,
+            value,
+            max_age=COOKIE_MAX_AGE,
+            httponly=True,
+            samesite="lax",
+        )
 
 
 def _clear_oauth_cookies(response: Response) -> None:
@@ -159,7 +169,7 @@ async def oauth_callback(
         provider, code, oauth_verifier, redirect_uri, settings.SECRET_KEY
     )
 
-    claims: dict
+    claims: dict[str, Any]
     if provider.provider_type == "oidc" and token_data.get("id_token"):
         claims = await verify_id_token(token_data["id_token"], provider)
     elif provider.userinfo_endpoint and token_data.get("access_token"):

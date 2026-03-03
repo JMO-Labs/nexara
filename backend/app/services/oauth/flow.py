@@ -7,6 +7,7 @@ Builds authorize URLs and exchanges authorization codes for tokens.
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx
@@ -61,7 +62,7 @@ class OAuthFlow:
         code_verifier: str,
         redirect_uri: str,
         secret_key: str,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         @brief Exchange authorization code for tokens.
 
@@ -83,9 +84,12 @@ class OAuthFlow:
             "client_secret": client_secret,
             "code_verifier": code_verifier,
         }
+        token_url = provider.token_endpoint
+        if not token_url:
+            raise AuthenticationError(message="Provider has no token endpoint configured")
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                provider.token_endpoint,
+                token_url,
                 data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
@@ -94,4 +98,5 @@ class OAuthFlow:
                 message="OAuth token exchange failed",
                 details={"status": resp.status_code, "body": resp.text[:200]},
             )
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result

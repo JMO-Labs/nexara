@@ -21,12 +21,12 @@ from app.services.oauth.user_provisioner import OAuthAuthResult
 
 logger = structlog.get_logger(__name__)
 
-_JWKS_CACHE: dict[str, tuple[dict, float]] = {}
+_JWKS_CACHE: dict[str, tuple[dict[str, Any], float]] = {}
 """@brief Module-level JWKS cache: jwks_uri -> (jwks_dict, timestamp)."""
 _JWKS_TTL = 3600
 
 
-async def _fetch_jwks(jwks_uri: str) -> dict:
+async def _fetch_jwks(jwks_uri: str) -> dict[str, Any]:
     """
     @brief Fetch JWKS from URI (cached).
 
@@ -42,12 +42,12 @@ async def _fetch_jwks(jwks_uri: str) -> dict:
     async with httpx.AsyncClient() as client:
         resp = await client.get(jwks_uri)
         resp.raise_for_status()
-        jwks = resp.json()
+        jwks: dict[str, Any] = resp.json()
     _JWKS_CACHE[jwks_uri] = (jwks, now)
     return jwks
 
 
-async def verify_id_token(id_token: str, provider: OAuthProvider) -> dict:
+async def verify_id_token(id_token: str, provider: OAuthProvider) -> dict[str, Any]:
     """
     @brief Verify and decode an OIDC id_token.
 
@@ -64,15 +64,17 @@ async def verify_id_token(id_token: str, provider: OAuthProvider) -> dict:
             jwks_data = await _fetch_jwks(provider.jwks_uri)
             jwks = JsonWebKey.import_key_set(jwks_data)
             jwt = JsonWebToken(["RS256", "ES256"])
-            claims = jwt.decode(id_token, jwks)
-            if hasattr(claims, "validate"):
-                claims.validate()
-            return dict(claims) if not isinstance(claims, dict) else claims
+            raw_claims = jwt.decode(id_token, jwks)
+            if hasattr(raw_claims, "validate"):
+                raw_claims.validate()
+            decoded: dict[str, Any] = dict(raw_claims)
+            return decoded
         from authlib.jose import jwt as authlib_jwt
 
         logger.warning("oauth_id_token_no_jwks", provider_slug=getattr(provider, "slug", "?"))
-        claims = authlib_jwt.decode(id_token, options={"verify_signature": False})
-        return dict(claims)
+        raw_claims = authlib_jwt.decode(id_token, options={"verify_signature": False})
+        result: dict[str, Any] = dict(raw_claims)
+        return result
     except Exception as exc:
         raise AuthenticationError(
             message="Invalid OIDC id_token",
@@ -80,7 +82,7 @@ async def verify_id_token(id_token: str, provider: OAuthProvider) -> dict:
         ) from exc
 
 
-def extract_claims(claims: dict, provider: OAuthProvider) -> OAuthAuthResult:
+def extract_claims(claims: dict[str, Any], provider: OAuthProvider) -> OAuthAuthResult:
     """
     @brief Extract OAuthAuthResult from id_token claims using provider mapping.
 

@@ -56,10 +56,10 @@ class ProviderManager:
             if now - ts < CACHE_TTL:
                 return provider
             del _provider_cache[key]
-        provider = await self._provider_repo.find_by_slug(community_id, slug)
-        if provider:
-            _provider_cache[key] = (provider, now)
-        return provider
+        found = await self._provider_repo.find_by_slug(community_id, slug)
+        if found:
+            _provider_cache[key] = (found, now)
+        return found
 
     async def get_enabled_providers(
         self,

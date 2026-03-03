@@ -40,7 +40,7 @@ class UserOAuthLink(Base, UUIDPrimaryKeyMixin):
     sub: Mapped[str] = mapped_column(String(256), nullable=False)
     email_from_provider: Mapped[str | None] = mapped_column(String(256))
     avatar_url: Mapped[str | None] = mapped_column(Text)
-    raw_claims: Mapped[dict | None] = mapped_column(JSONB)
+    raw_claims: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     linked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

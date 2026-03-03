@@ -55,7 +55,9 @@ class OAuthProvider(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     userinfo_endpoint: Mapped[str | None] = mapped_column(Text)
     jwks_uri: Mapped[str | None] = mapped_column(Text)
     end_session_endpoint: Mapped[str | None] = mapped_column(Text)
-    group_mappings: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'"))
+    group_mappings: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'")
+    )
     default_role: Mapped[str] = mapped_column(String(32), server_default="member")
     group_claim: Mapped[str] = mapped_column(String(64), server_default="groups")
     avatar_claim: Mapped[str] = mapped_column(String(64), server_default="picture")

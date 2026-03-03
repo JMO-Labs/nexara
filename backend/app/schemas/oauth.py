@@ -97,7 +97,7 @@ class OAuthProviderResponse(BaseModel):
     userinfo_endpoint: str | None
     jwks_uri: str | None
     end_session_endpoint: str | None
-    group_mappings: dict
+    group_mappings: dict[str, str]
     default_role: str
     group_claim: str
     avatar_claim: str

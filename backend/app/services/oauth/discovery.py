@@ -47,7 +47,7 @@ def _is_disallowed_host(hostname: str) -> bool:
     return False
 
 
-async def discover_endpoints(issuer_url: str) -> dict:
+async def discover_endpoints(issuer_url: str) -> DiscoveryEndpoints:
     """
     @brief Fetch OIDC discovery document and return endpoint URLs.
 

@@ -35,7 +35,7 @@ class OAuthAuthResult:
     display_name: str | None = None
     avatar_url: str | None = None
     groups: list[str] = field(default_factory=list)
-    raw_claims: dict = field(default_factory=dict)
+    raw_claims: dict[str, object] = field(default_factory=dict)
 
 
 def _derive_username(name: str | None, email: str | None) -> str:
@@ -90,7 +90,7 @@ class UserProvisioner:
             user = await self._user_repo.get_by_id(link.user_id, self._community_id)
             if not user:
                 raise ValueError("OAuth link references missing user")
-            updates: dict = {}
+            updates: dict[str, object] = {}
             if user.role != role:
                 updates["role"] = role
             if auth_result.avatar_url is not None and user.avatar_url != auth_result.avatar_url:

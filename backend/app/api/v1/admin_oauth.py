@@ -30,7 +30,7 @@ from app.schemas.oauth import (
     OAuthProviderResponse,
     OAuthProviderUpdate,
 )
-from app.services.oauth.discovery import discover_endpoints
+from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints
 from app.services.oauth.provider_manager import ProviderManager
 
 logger = structlog.get_logger(__name__)
@@ -76,7 +76,7 @@ async def create_provider(
     fernet_key = derive_fernet_key(settings.SECRET_KEY)
     encrypted = encrypt_secret(body.client_secret, fernet_key)
 
-    endpoints = {}
+    endpoints: DiscoveryEndpoints = {}
     if body.provider_type == "oidc" and body.issuer:
         endpoints = await discover_endpoints(body.issuer.strip())
 
@@ -229,6 +229,6 @@ class OAuthDiscoverRequest(BaseModel):
 async def discover_issuer(
     body: OAuthDiscoverRequest,
     _user: User = Depends(require_role("admin")),
-) -> dict:
+) -> DiscoveryEndpoints:
     """@brief Run OIDC discovery for an issuer URL."""
     return await discover_endpoints(body.issuer.strip())
