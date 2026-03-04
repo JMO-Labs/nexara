@@ -37,7 +37,9 @@ class TestBuildAuthorizeUrl:
         """build_authorize_url includes code_challenge and S256 method."""
         flow = OAuthFlow()
         provider = _make_provider()
-        url, state, verifier = flow.build_authorize_url(provider, "https://app.example.com/callback")
+        url, state, verifier = flow.build_authorize_url(
+            provider, "https://app.example.com/callback"
+        )
         assert "code_challenge=" in url
         assert "code_challenge_method=S256" in url
 
@@ -45,7 +47,9 @@ class TestBuildAuthorizeUrl:
         """build_authorize_url returns state and verifier strings."""
         flow = OAuthFlow()
         provider = _make_provider()
-        url, state, verifier = flow.build_authorize_url(provider, "https://app.example.com/callback")
+        url, state, verifier = flow.build_authorize_url(
+            provider, "https://app.example.com/callback"
+        )
         assert isinstance(state, str) and len(state) > 0
         assert isinstance(verifier, str) and len(verifier) > 0
 
