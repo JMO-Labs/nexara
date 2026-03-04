@@ -45,7 +45,7 @@
                 :placeholder="f.placeholder"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground"
                 @input="f.key === 'display_name' && maybeSlugFromDisplayName()"
-              >
+              />
             </div>
           </div>
         </fieldset>
@@ -60,7 +60,7 @@
               type="url"
               :placeholder="$t('admin.issuerUrl')"
               class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-            >
+            />
             <button
               type="button"
               class="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
@@ -78,7 +78,7 @@
                 v-model="form[ep.key]"
                 type="url"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-              >
+              />
             </div>
           </div>
         </fieldset>
@@ -96,7 +96,7 @@
                 v-model="form[c.key]"
                 :type="c.type"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-              >
+              />
             </div>
           </div>
         </fieldset>
@@ -116,7 +116,7 @@
                 type="text"
                 class="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-foreground"
                 :placeholder="$t('admin.idpGroup')"
-              >
+              />
               <select
                 v-model="entry.role"
                 class="w-32 rounded-lg border border-input bg-background px-3 py-2 text-foreground"
@@ -163,7 +163,7 @@
                 v-model="form.group_claim"
                 type="text"
                 class="w-40 rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-              >
+              />
             </div>
           </div>
         </fieldset>
@@ -181,7 +181,7 @@
                 v-model="form.scopes"
                 type="text"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-              >
+              />
             </div>
             <div class="space-y-2">
               <div class="flex items-center gap-2">
@@ -190,7 +190,7 @@
                   v-model="form.auto_create_users"
                   type="checkbox"
                   class="h-4 w-4 rounded border-input text-primary"
-                >
+                />
                 <label for="auto_create" class="text-sm">
                   {{ $t("admin.autoCreateUsers") }}
                 </label>
@@ -201,7 +201,7 @@
                   v-model="form.enabled"
                   type="checkbox"
                   class="h-4 w-4 rounded border-input text-primary"
-                >
+                />
                 <label for="enabled" class="text-sm">
                   {{ $t("admin.enabled") }}
                 </label>
@@ -217,7 +217,7 @@
                 v-model="form[c.key]"
                 type="text"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground"
-              >
+              />
             </div>
           </div>
         </fieldset>

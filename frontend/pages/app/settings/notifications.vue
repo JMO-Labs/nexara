@@ -39,7 +39,7 @@
                 v-model="prefs[row.inappKey]"
                 type="checkbox"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              >
+              />
             </td>
             <td class="px-4 py-3">
               <input
@@ -48,7 +48,7 @@
                 type="checkbox"
                 :disabled="prefs.mute_all_email"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring disabled:opacity-50"
-              >
+              />
             </td>
           </tr>
           <tr class="border-b border-border last:border-0">
@@ -62,7 +62,7 @@
                 v-model="prefs.mute_all_email"
                 type="checkbox"
                 class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-              >
+              />
             </td>
           </tr>
         </tbody>

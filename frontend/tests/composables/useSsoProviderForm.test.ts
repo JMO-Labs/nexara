@@ -92,9 +92,8 @@ describe("useSsoProviderForm", () => {
 
   it("addGroupMapping adds entry to groupMappingsList", () => {
     const providerRef = ref<OAuthProviderResponse | null>(null);
-    const { groupMappingsList, addGroupMapping } = useSsoProviderForm(
-      providerRef,
-    );
+    const { groupMappingsList, addGroupMapping } =
+      useSsoProviderForm(providerRef);
 
     expect(groupMappingsList.value).toHaveLength(0);
 
