@@ -1,198 +1,191 @@
 """
 @file test_provider_manager.py
-@brief Tests for ProviderManager: caching, seeding, invalidation.
+@brief Unit tests for OAuth provider manager with caching and env seeding.
 """
-
-from __future__ import annotations
 
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.config import Settings
-from app.models.oauth_provider import OAuthProvider
+import app.services.oauth.provider_manager as pm
 from app.services.oauth.provider_manager import ProviderManager
 
 
-def _make_provider(
-    provider_id: uuid.UUID | None = None,
-    community_id: uuid.UUID | None = None,
-    slug: str = "oidc",
-) -> OAuthProvider:
-    """@brief Create a mock OAuthProvider."""
-    p = MagicMock(spec=OAuthProvider)
-    p.id = provider_id or uuid.uuid4()
-    p.community_id = community_id or uuid.UUID("00000000-0000-0000-0000-000000000001")
-    p.slug = slug
-    p.issuer = "https://idp.example.com"
-    return p
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear module-level provider cache between tests."""
+    pm._provider_cache.clear()
+    yield
+    pm._provider_cache.clear()
 
 
-class TestProviderManagerGetProvider:
-    """@brief get_provider returns provider from repo."""
+class TestGetProvider:
+    """@brief Tests for ProviderManager.get_provider."""
 
     @pytest.mark.asyncio
     async def test_returns_provider_from_repo(self):
-        """@brief get_provider(community_id, slug) returns provider from repo."""
-        community_id = uuid.uuid4()
-        provider = _make_provider(community_id=community_id, slug="google")
+        """get_provider returns provider from repo."""
+        mock_provider = MagicMock()
+        mock_provider.slug = "oidc"
+        mock_repo = AsyncMock()
+        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
+        mock_session = AsyncMock()
 
-        provider_repo = AsyncMock()
-        provider_repo.find_by_slug = AsyncMock(return_value=provider)
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            result = await manager.get_provider(community_id, "oidc")
 
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
-
-        result = await manager.get_provider(community_id, "google")
-
-        assert result == provider
-        provider_repo.find_by_slug.assert_called_once_with(community_id, "google")
-
-    @pytest.mark.asyncio
-    async def test_second_call_uses_cache(self):
-        """@brief Second get_provider call does not hit repo (cache hit)."""
-        community_id = uuid.uuid4()
-        provider = _make_provider(community_id=community_id, slug="oidc")
-
-        provider_repo = AsyncMock()
-        provider_repo.find_by_slug = AsyncMock(return_value=provider)
-
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
-
-        await manager.get_provider(community_id, "oidc")
-        await manager.get_provider(community_id, "oidc")
-
-        assert provider_repo.find_by_slug.call_count == 1
-
-
-class TestProviderManagerGetEnabledProviders:
-    """@brief get_enabled_providers returns list from repo."""
+        assert result is mock_provider
+        mock_repo.find_by_slug.assert_called_once_with(community_id, "oidc")
 
     @pytest.mark.asyncio
-    async def test_returns_list_from_repo(self):
-        """@brief get_enabled_providers(community_id) returns list from repo."""
-        community_id = uuid.uuid4()
-        providers = [_make_provider(community_id=community_id, slug="a")]
+    async def test_returns_cached_provider_on_second_call(self):
+        """get_provider returns cached provider on second call."""
+        mock_provider = MagicMock()
+        mock_provider.slug = "oidc"
+        mock_repo = AsyncMock()
+        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
+        mock_session = AsyncMock()
 
-        provider_repo = AsyncMock()
-        provider_repo.list_enabled = AsyncMock(return_value=providers)
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            first = await manager.get_provider(community_id, "oidc")
+            second = await manager.get_provider(community_id, "oidc")
 
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
-
-        result = await manager.get_enabled_providers(community_id)
-
-        assert result == providers
-        provider_repo.list_enabled.assert_called_once_with(community_id)
-
-
-class TestProviderManagerInvalidateCache:
-    """@brief invalidate_cache clears cache."""
+        assert first is second
+        mock_repo.find_by_slug.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_invalidate_clears_cache_next_get_hits_repo(self):
-        """@brief invalidate_cache() clears cache; next get_provider hits repo."""
-        community_id = uuid.uuid4()
-        provider = _make_provider(community_id=community_id, slug="oidc")
+    async def test_cache_expires_after_ttl(self):
+        """get_provider cache expires after TTL."""
+        mock_provider = MagicMock()
+        mock_provider.slug = "oidc"
+        mock_repo = AsyncMock()
+        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
+        mock_session = AsyncMock()
 
-        provider_repo = AsyncMock()
-        provider_repo.find_by_slug = AsyncMock(return_value=provider)
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            with patch.object(pm, "CACHE_TTL", 0):
+                manager = ProviderManager(mock_session)
+                community_id = uuid.uuid4()
+                await manager.get_provider(community_id, "oidc")
+                await manager.get_provider(community_id, "oidc")
 
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
-
-        await manager.get_provider(community_id, "oidc")
-        manager.invalidate_cache()
-        await manager.get_provider(community_id, "oidc")
-
-        assert provider_repo.find_by_slug.call_count == 2
+        assert mock_repo.find_by_slug.call_count == 2
 
 
-class TestProviderManagerSeedFromEnv:
-    """@brief seed_from_env creates provider when OIDC_ISSUER set."""
-
-    @pytest.mark.asyncio
-    async def test_creates_provider_when_issuer_set_and_no_seeded(self):
-        """@brief OIDC_ISSUER set, no seeded provider -> creates one."""
-        community_id = uuid.uuid4()
-        settings = Settings(
-            OIDC_ISSUER="https://idp.example.com",
-            OIDC_CLIENT_ID="client",
-            OIDC_CLIENT_SECRET="secret",
-            OIDC_SCOPES="openid profile email",
-        )
-
-        provider_repo = AsyncMock()
-        provider_repo.find_seeded = AsyncMock(return_value=None)
-        created_provider = _make_provider(community_id=community_id)
-        provider_repo.create = AsyncMock(return_value=created_provider)
-
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
-
-        with (
-            patch(
-                "app.services.oauth.provider_manager.discover_endpoints",
-                new_callable=AsyncMock,
-                return_value={
-                    "authorization_endpoint": "https://idp.example.com/authorize",
-                    "token_endpoint": "https://idp.example.com/token",
-                    "userinfo_endpoint": "https://idp.example.com/userinfo",
-                    "jwks_uri": "https://idp.example.com/jwks",
-                    "end_session_endpoint": None,
-                },
-            ),
-            patch("app.services.oauth.provider_manager.encrypt_secret", return_value="encrypted"),
-        ):
-            await manager.seed_from_env(settings, community_id)
-
-        provider_repo.find_seeded.assert_called_once_with(community_id)
-        provider_repo.create.assert_called_once()
+class TestGetEnabledProviders:
+    """@brief Tests for ProviderManager.get_enabled_providers."""
 
     @pytest.mark.asyncio
-    async def test_skips_when_seeded_exists(self):
-        """@brief Skips when find_seeded returns non-None."""
-        community_id = uuid.uuid4()
-        settings = Settings(
-            OIDC_ISSUER="https://idp.example.com",
-            OIDC_CLIENT_ID="client",
-            OIDC_CLIENT_SECRET="secret",
-        )
-        existing_seeded = _make_provider(community_id=community_id)
+    async def test_delegates_to_repo(self):
+        """get_enabled_providers delegates to repo."""
+        mock_providers = [MagicMock(), MagicMock()]
+        mock_repo = AsyncMock()
+        mock_repo.list_enabled = AsyncMock(return_value=mock_providers)
+        mock_session = AsyncMock()
 
-        provider_repo = AsyncMock()
-        provider_repo.find_seeded = AsyncMock(return_value=existing_seeded)
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            result = await manager.get_enabled_providers(community_id)
 
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
+        assert result == mock_providers
+        mock_repo.list_enabled.assert_called_once_with(community_id)
 
-        await manager.seed_from_env(settings, community_id)
 
-        provider_repo.find_seeded.assert_called_once_with(community_id)
-        provider_repo.create.assert_not_called()
+class TestInvalidateCache:
+    """@brief Tests for ProviderManager.invalidate_cache."""
 
     @pytest.mark.asyncio
-    async def test_skips_when_issuer_empty(self):
-        """@brief Skips when OIDC_ISSUER is empty."""
-        community_id = uuid.uuid4()
-        settings = Settings(OIDC_ISSUER="", OIDC_CLIENT_ID="", OIDC_CLIENT_SECRET="")
+    async def test_clears_module_cache(self):
+        """invalidate_cache clears the module cache."""
+        mock_provider = MagicMock()
+        mock_repo = AsyncMock()
+        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
+        mock_session = AsyncMock()
 
-        provider_repo = AsyncMock()
-        provider_repo.find_seeded = AsyncMock(return_value=None)
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            await manager.get_provider(community_id, "oidc")
+            assert len(pm._provider_cache) > 0
+            manager.invalidate_cache()
+            assert len(pm._provider_cache) == 0
 
-        session = AsyncMock()
-        manager = ProviderManager(session)
-        manager._provider_repo = provider_repo
 
-        await manager.seed_from_env(settings, community_id)
+class TestSeedFromEnv:
+    """@brief Tests for ProviderManager.seed_from_env."""
 
-        provider_repo.find_seeded.assert_not_called()
-        provider_repo.create.assert_not_called()
+    @pytest.mark.asyncio
+    async def test_skips_when_oidc_issuer_empty(self):
+        """seed_from_env skips when OIDC_ISSUER is empty."""
+        mock_settings = MagicMock()
+        mock_settings.OIDC_ISSUER = ""
+        mock_settings.SECRET_KEY = "secret"
+        mock_repo = AsyncMock()
+        mock_session = AsyncMock()
+
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            result = await manager.seed_from_env(mock_settings, community_id)
+
+        assert result is None
+        mock_repo.find_seeded.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_skips_when_provider_already_seeded(self):
+        """seed_from_env skips when provider already seeded."""
+        mock_settings = MagicMock()
+        mock_settings.OIDC_ISSUER = "https://idp.example.com"
+        mock_settings.SECRET_KEY = "secret"
+        mock_existing = MagicMock()
+        mock_repo = AsyncMock()
+        mock_repo.find_seeded = AsyncMock(return_value=mock_existing)
+        mock_session = AsyncMock()
+
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            manager = ProviderManager(mock_session)
+            community_id = uuid.uuid4()
+            result = await manager.seed_from_env(mock_settings, community_id)
+
+        assert result is None
+        mock_repo.find_seeded.assert_called_once_with(community_id)
+
+    @pytest.mark.asyncio
+    async def test_creates_provider_when_none_exists(self):
+        """seed_from_env creates provider when none exists."""
+        mock_settings = MagicMock()
+        mock_settings.OIDC_ISSUER = "https://idp.example.com"
+        mock_settings.SECRET_KEY = "secret"
+        mock_settings.OIDC_CLIENT_ID = "client"
+        mock_settings.OIDC_CLIENT_SECRET = "client-secret"
+        mock_settings.OIDC_SCOPES = "openid profile email"
+
+        mock_created = MagicMock()
+        mock_repo = AsyncMock()
+        mock_repo.find_seeded = AsyncMock(return_value=None)
+        mock_repo.create = AsyncMock(return_value=mock_created)
+        mock_session = AsyncMock()
+
+        endpoints = {
+            "authorization_endpoint": "https://idp.example.com/authorize",
+            "token_endpoint": "https://idp.example.com/token",
+            "userinfo_endpoint": "https://idp.example.com/userinfo",
+            "jwks_uri": "https://idp.example.com/jwks",
+        }
+
+        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
+            with patch.object(pm, "discover_endpoints", AsyncMock(return_value=endpoints)):
+                with patch.object(pm, "encrypt_secret", return_value="encrypted"):
+                    with patch.object(pm, "derive_fernet_key", return_value=b"key"):
+                        manager = ProviderManager(mock_session)
+                        community_id = uuid.uuid4()
+                        result = await manager.seed_from_env(mock_settings, community_id)
+
+        assert result is mock_created
+        mock_repo.create.assert_called_once()
