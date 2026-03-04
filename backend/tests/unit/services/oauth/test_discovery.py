@@ -10,7 +10,27 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.services.oauth.discovery import discover_endpoints
+from app.services.oauth.discovery import _is_disallowed_host, discover_endpoints
+
+
+class TestIsDisallowedHost:
+    """@brief Tests for _is_disallowed_host function."""
+
+    def test_rejects_localhost(self):
+        """_is_disallowed_host rejects localhost."""
+        assert _is_disallowed_host("localhost") is True
+
+    def test_rejects_127_0_0_1(self):
+        """_is_disallowed_host rejects 127.0.0.1."""
+        assert _is_disallowed_host("127.0.0.1") is True
+
+    def test_rejects_private_ip(self):
+        """_is_disallowed_host rejects private IP 10.0.0.1."""
+        assert _is_disallowed_host("10.0.0.1") is True
+
+    def test_allows_public_hostname(self):
+        """_is_disallowed_host allows public hostname idp.example.com."""
+        assert _is_disallowed_host("idp.example.com") is False
 
 
 class TestDiscoverEndpointsHappyPath:

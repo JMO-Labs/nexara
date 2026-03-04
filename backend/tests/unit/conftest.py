@@ -24,6 +24,7 @@ _TEST_SETTINGS = Settings(
     DEBUG=True,
     JWT_PRIVATE_KEY_PATH="/tmp/nexara_test_jwt_private.pem",
     JWT_PUBLIC_KEY_PATH="/tmp/nexara_test_jwt_public.pem",
+    ALLOWED_ORIGINS="http://localhost:3000",
 )
 
 
