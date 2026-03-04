@@ -85,10 +85,7 @@ describe("SsoProviderForm", () => {
     const wrapper = mount(SsoProviderForm);
 
     expect(wrapper.find('input[type="text"]').exists()).toBe(true);
-    const inputs = wrapper.findAll("input");
-    const displayNameInput = inputs.find(
-      (i) => i.attributes("placeholder") !== undefined || i.element.id === "",
-    );
+    expect(wrapper.findAll("input").length).toBeGreaterThan(0);
     expect(wrapper.text()).toContain("admin.displayName");
     expect(wrapper.text()).toContain("admin.clientId");
     expect(wrapper.find('input[type="password"]').exists()).toBe(true);

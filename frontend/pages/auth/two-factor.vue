@@ -48,7 +48,7 @@
               autocomplete="one-time-code"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-center text-lg tracking-widest text-foreground focus:ring-2 focus:ring-ring"
               :placeholder="'000000'"
-            />
+            >
           </div>
 
           <button
@@ -75,7 +75,7 @@
               type="text"
               required
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            />
+            >
           </div>
 
           <button

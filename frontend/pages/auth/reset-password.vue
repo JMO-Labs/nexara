@@ -38,7 +38,7 @@
                 type="email"
                 required
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-              />
+              >
             </div>
 
             <button
@@ -93,7 +93,7 @@
                 minlength="12"
                 autocomplete="new-password"
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-              />
+              >
             </div>
 
             <button

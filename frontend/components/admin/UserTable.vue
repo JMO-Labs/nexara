@@ -54,7 +54,7 @@
                 :src="u.avatar_url"
                 :alt="u.display_name"
                 class="h-8 w-8 rounded-full object-cover"
-              />
+              >
               <div
                 v-else
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"

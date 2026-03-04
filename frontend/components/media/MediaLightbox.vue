@@ -101,7 +101,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         :src="current.url"
         :alt="current.mime_type"
         class="max-h-[90vh] max-w-[90vw] object-contain"
-      />
+      >
 
       <!-- Next -->
       <button

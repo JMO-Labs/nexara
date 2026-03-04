@@ -25,7 +25,7 @@
       :placeholder="placeholder"
       :aria-label="placeholder"
       class="flex-1 rounded-md border border-input bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
-    />
+    >
 
     <!-- Plus button wrapper — positions all menus over the "+" -->
     <div class="relative">

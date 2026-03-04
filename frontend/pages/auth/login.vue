@@ -39,7 +39,7 @@
               required
               autocomplete="email"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            />
+            >
           </div>
 
           <div>
@@ -56,7 +56,7 @@
               required
               autocomplete="current-password"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
-            />
+            >
           </div>
 
           <button
@@ -91,7 +91,7 @@
               :src="provider.icon_url"
               :alt="provider.display_name"
               class="h-5 w-5"
-            />
+            >
             {{ $t("auth.loginWith", { provider: provider.display_name }) }}
           </button>
         </div>

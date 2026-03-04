@@ -143,7 +143,7 @@ function onDrop(event: DragEvent): void {
       :disabled="uploading"
       :aria-label="$t('common.upload')"
       @change="onFileSelect"
-    />
+    >
 
     <div v-if="uploading" class="mt-2 h-1.5 w-full rounded-full bg-muted">
       <div

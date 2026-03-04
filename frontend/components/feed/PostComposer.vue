@@ -31,7 +31,7 @@
           :src="item.thumbnailUrl"
           alt=""
           class="h-full w-full object-cover"
-        />
+        >
         <div
           v-else
           class="flex h-full w-full items-center justify-center bg-muted text-xs text-muted-foreground"
