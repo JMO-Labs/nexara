@@ -47,6 +47,7 @@ const tabs = [
   { path: "/app/settings/account", label: "settings.account" },
   { path: "/app/settings/security", label: "settings.security" },
   { path: "/app/settings/notifications", label: "settings.notifications" },
+  { path: "/app/settings/storage", label: "settings.storage" },
 ];
 
 const route = useRoute();

@@ -12,7 +12,7 @@ import uuid
 
 import structlog
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -21,6 +21,7 @@ from app.core.i18n import _
 from app.models.user import User
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
+from app.schemas.auth import SelfHostEmail
 from app.schemas.common import MessageResponse
 from app.schemas.settings import (
     NotificationPreferences,
@@ -85,7 +86,7 @@ async def update_profile(
 class EmailChangeRequest(BaseModel):
     """@brief Payload for initiating an email change."""
 
-    new_email: EmailStr
+    new_email: SelfHostEmail
 
 
 @router.put("/email", response_model=MessageResponse)

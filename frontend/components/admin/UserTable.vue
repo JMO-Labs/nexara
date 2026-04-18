@@ -222,7 +222,10 @@ function toggleDropdown(id: string): void {
 /** @brief Dispatch an action for the active user and close the dropdown. */
 function handleAction(action: "suspend" | "restore" | "delete"): void {
   if (!activeUser.value) return;
-  emit(action, activeUser.value);
+  const user = activeUser.value;
+  if (action === "suspend") emit("suspend", user);
+  else if (action === "restore") emit("restore", user);
+  else emit("delete", user);
   openDropdown.value = null;
 }
 

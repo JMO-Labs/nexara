@@ -11,7 +11,9 @@ from __future__ import annotations
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
+
+from app.schemas.auth import SelfHostEmail
 
 
 class UserResponse(BaseModel):
@@ -82,5 +84,5 @@ class PasswordChangeRequest(BaseModel):
 class EmailChangeRequest(BaseModel):
     """@brief Payload for changing the current user's email."""
 
-    new_email: EmailStr
+    new_email: SelfHostEmail
     password: str = Field(..., min_length=1, description="Current password for verification")
