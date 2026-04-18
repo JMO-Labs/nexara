@@ -20,8 +20,10 @@ from app.models.post import Post
 from app.models.user import User
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
+from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.notification_service import NotificationService
+from app.services.poll_service import PollService
 from app.services.realtime import events
 from app.services.realtime.event_bus import EventBus
 
@@ -41,6 +43,7 @@ class PostService:
         *,
         event_bus: EventBus | None = None,
         media_attacher: Callable[[uuid.UUID, list[uuid.UUID], User], Awaitable[None]] | None = None,
+        poll_service: PollService | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -49,6 +52,7 @@ class PostService:
         self._community_id = community_id
         self._event_bus = event_bus
         self._media_attacher = media_attacher
+        self._poll_service = poll_service
 
     async def list_feed(
         self,
@@ -93,8 +97,9 @@ class PostService:
         user: User,
         content: str,
         media_ids: list[uuid.UUID] | None = None,
+        poll: PollCreate | None = None,
     ) -> dict[str, Any]:
-        """@brief Create a new post, attach media, send notifications, and publish SSE."""
+        """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
         post = await self._post_repo.create_post(
             author_id=user.id,
             content=content,
@@ -103,6 +108,9 @@ class PostService:
 
         if media_ids and self._media_attacher:
             await self._media_attacher(post.id, media_ids, user)
+
+        if poll and self._poll_service:
+            await self._poll_service.create_poll(user.id, poll, post.id)
 
         enriched = await self._post_repo.get_post_detail(
             post.id,

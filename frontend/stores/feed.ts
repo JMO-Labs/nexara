@@ -12,7 +12,7 @@ import { defineStore } from "pinia";
 import { useApi } from "~/composables/useApi";
 import { useEventBus } from "~/composables/useEventBus";
 import { SSE_EVENT } from "~/types/events";
-import type { Post, Comment, PaginatedResponse } from "~/types/api";
+import type { Post, Comment, PaginatedResponse, PollCreate } from "~/types/api";
 
 export const useFeedStore = defineStore("feed", () => {
   /** @brief Ordered list of posts in the feed. */
@@ -58,12 +58,15 @@ export const useFeedStore = defineStore("feed", () => {
   async function createPost(
     content: string,
     mediaIds: string[],
+    poll?: PollCreate,
   ): Promise<void> {
     const api = useApi();
-    const newPost = await api.post<Post>("/posts", {
+    const body: Record<string, unknown> = {
       content,
       media_ids: mediaIds,
-    });
+    };
+    if (poll) body.poll = poll;
+    const newPost = await api.post<Post>("/posts", body);
     posts.value.unshift(newPost);
   }
 

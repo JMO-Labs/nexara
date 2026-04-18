@@ -12,6 +12,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.poll import PollCreate, PollResponse
+
 
 class PostAuthorResponse(BaseModel):
     """@brief Embedded author summary for post and comment responses."""
@@ -52,6 +54,7 @@ class PostResponse(BaseModel):
     content: str
     author: PostAuthorResponse
     media: list[PostMediaResponse] = Field(default_factory=list)
+    poll: PollResponse | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)
     comment_count: int = 0
     created_at: datetime
@@ -71,12 +74,13 @@ class PostCreate(BaseModel):
 
     content: str = Field("", max_length=10000)
     media_ids: list[UUID] = Field(default_factory=list, max_length=10)
+    poll: PollCreate | None = None
 
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:
-        """@brief Ensure the post has either text content or media attachments."""
-        if not self.content.strip() and not self.media_ids:
-            raise ValueError("Post must have content or at least one media attachment")
+        """@brief Ensure the post has content, media, or a poll."""
+        if not self.content.strip() and not self.media_ids and not self.poll:
+            raise ValueError("Post must have content, media, or a poll")
         return self
 
 

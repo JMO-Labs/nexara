@@ -15,6 +15,7 @@ from typing import Any
 import structlog
 from sqlalchemy import func, select
 
+from app.models.poll import Poll, PollOption, PollVote
 from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -259,6 +260,117 @@ class PostRepository(BaseRepository[Post]):
         comment_result = await self._session.execute(comment_stmt)
         comment_map = {pid: cnt for pid, cnt in comment_result.all()}
 
+        # Polls attached to posts
+        poll_stmt = select(Poll).where(Poll.post_id.in_(post_ids))
+        poll_result = await self._session.execute(poll_stmt)
+        polls = list(poll_result.scalars().all())
+        poll_by_post: dict[uuid.UUID, Poll] = {}
+        poll_ids: list[uuid.UUID] = []
+        for p in polls:
+            if p.post_id:
+                poll_by_post[p.post_id] = p
+                poll_ids.append(p.id)
+
+        poll_options_map: dict[uuid.UUID, list[PollOption]] = {}
+        poll_vote_counts: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
+        poll_user_votes: dict[uuid.UUID, list[str]] = {}
+        # voters per (poll_id, option_id) for non-anonymous polls
+        poll_voters: dict[tuple[uuid.UUID, uuid.UUID], list[dict[str, Any]]] = {}
+        if poll_ids:
+            opt_stmt = (
+                select(PollOption)
+                .where(PollOption.poll_id.in_(poll_ids))
+                .order_by(PollOption.position)
+            )
+            opt_result = await self._session.execute(opt_stmt)
+            for opt in opt_result.scalars().all():
+                poll_options_map.setdefault(opt.poll_id, []).append(opt)
+
+            vote_stmt = (
+                select(PollVote.poll_id, PollVote.option_id, func.count().label("cnt"))
+                .where(PollVote.poll_id.in_(poll_ids))
+                .group_by(PollVote.poll_id, PollVote.option_id)
+            )
+            vote_result = await self._session.execute(vote_stmt)
+            for pid, oid, cnt in vote_result.all():
+                poll_vote_counts.setdefault(pid, {})[oid] = cnt
+
+            if viewer_id:
+                uv_stmt = select(PollVote.poll_id, PollVote.option_id).where(
+                    PollVote.poll_id.in_(poll_ids), PollVote.user_id == viewer_id
+                )
+                uv_result = await self._session.execute(uv_stmt)
+                for pid, oid in uv_result.all():
+                    poll_user_votes.setdefault(pid, []).append(str(oid))
+
+            # Load voters for non-anonymous polls
+            non_anon_poll_ids = [p.id for p in polls if not p.is_anonymous]
+            if non_anon_poll_ids:
+                voters_stmt = (
+                    select(PollVote.poll_id, PollVote.option_id, User)
+                    .join(User, PollVote.user_id == User.id)
+                    .where(PollVote.poll_id.in_(non_anon_poll_ids))
+                )
+                voters_result = await self._session.execute(voters_stmt)
+                for pid, oid, voter in voters_result.all():
+                    poll_voters.setdefault((pid, oid), []).append(
+                        {
+                            "id": str(voter.id),
+                            "display_name": voter.display_name,
+                            "avatar_url": voter.avatar_url,
+                        }
+                    )
+
+        poll_map: dict[uuid.UUID, dict[str, Any]] = {}
+        for post_id_key, poll in poll_by_post.items():
+            opts = poll_options_map.get(poll.id, [])
+            counts = poll_vote_counts.get(poll.id, {})
+            total = sum(counts.values())
+            user_vote = poll_user_votes.get(poll.id)
+
+            # Apply result_visibility: hide counts when viewer shouldn't see them
+            show_results = False
+            if poll.result_visibility == "always":
+                show_results = True
+            elif poll.result_visibility == "after_vote" and user_vote:
+                show_results = True
+            elif poll.result_visibility == "after_expiry":
+                from datetime import UTC
+                from datetime import datetime as dt
+
+                is_expired = poll.expires_at is not None and poll.expires_at < dt.now(UTC)
+                show_results = poll.closed or is_expired
+
+            visible_counts = counts if show_results else {}
+            visible_total = total if show_results else 0
+
+            include_voters = show_results and not poll.is_anonymous
+
+            poll_map[post_id_key] = {
+                "id": str(poll.id),
+                "post_id": str(poll.post_id) if poll.post_id else None,
+                "poll_type": poll.poll_type,
+                "question": poll.question,
+                "options": [
+                    {
+                        "id": str(o.id),
+                        "label": o.label,
+                        "image_media_id": str(o.image_media_id) if o.image_media_id else None,
+                        "position": o.position,
+                        "vote_count": visible_counts.get(o.id, 0),
+                        "voters": poll_voters.get((poll.id, o.id), []) if include_voters else [],
+                    }
+                    for o in opts
+                ],
+                "is_anonymous": poll.is_anonymous,
+                "result_visibility": poll.result_visibility,
+                "expires_at": poll.expires_at.isoformat() if poll.expires_at else None,
+                "closed": poll.closed,
+                "total_votes": visible_total,
+                "user_vote": user_vote if show_results else None,
+                "created_at": poll.created_at.isoformat(),
+            }
+
         enriched: dict[uuid.UUID, dict[str, Any]] = {}
         for post, author in post_rows:
             enriched[post.id] = {
@@ -271,6 +383,7 @@ class PostRepository(BaseRepository[Post]):
                     "avatar_url": author.avatar_url,
                 },
                 "media": media_map.get(post.id, []),
+                "poll": poll_map.get(post.id),
                 "reactions": reaction_map.get(post.id, []),
                 "comment_count": comment_map.get(post.id, 0),
                 "created_at": post.created_at.isoformat(),

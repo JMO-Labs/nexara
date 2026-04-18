@@ -132,8 +132,11 @@ class TestPostRepositoryListFeed:
         mock_comments = MagicMock()
         mock_comments.all.return_value = [(POST_ID, 0), (post2.id, 0)]
 
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
         session.execute = AsyncMock(
-            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments]
+            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
         )
         repo = PostRepository(session)
         items, next_cursor = await repo.list_feed(COMMUNITY_ID, limit=2)
@@ -182,8 +185,11 @@ class TestPostRepositoryGetPostDetail:
         mock_comments = MagicMock()
         mock_comments.all.return_value = [(POST_ID, 0)]
 
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
         session.execute = AsyncMock(
-            side_effect=[mock_get, mock_posts, mock_empty, mock_empty, mock_comments]
+            side_effect=[mock_get, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
         )
         repo = PostRepository(session)
         result = await repo.get_post_detail(POST_ID, COMMUNITY_ID)

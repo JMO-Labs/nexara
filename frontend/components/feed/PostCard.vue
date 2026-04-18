@@ -82,6 +82,14 @@
       @react="handleMediaReact"
     />
 
+    <!-- Poll -->
+    <PollCard
+      v-if="post.poll"
+      :poll="post.poll"
+      class="mb-3"
+      @voted="handlePollVote"
+    />
+
     <!-- Reactions -->
     <ReactionBar
       :reactions="post.reactions"
@@ -193,6 +201,7 @@ import CommentInput from "~/components/feed/CommentInput.vue";
 import LoadingSpinner from "~/components/common/LoadingSpinner.vue";
 import MediaGrid from "~/components/media/MediaGrid.vue";
 import MediaLightbox from "~/components/media/MediaLightbox.vue";
+import PollCard from "~/components/feed/PollCard.vue";
 import DeleteConfirmDialog from "~/components/feed/DeleteConfirmDialog.vue";
 import { buildCommentTree } from "~/utils/comments";
 
@@ -380,6 +389,36 @@ async function handleReactPost(payload: {
     await feedStore.addReaction(payload.postId, payload.emoji);
   } catch (err) {
     toastError(err, "Failed to add reaction");
+  }
+}
+
+/** @brief Handle poll vote submission — updates local post with results. */
+async function handlePollVote(
+  pollId: string,
+  optionIds: string[],
+): Promise<void> {
+  try {
+    const api = (await import("~/composables/useApi")).useApi();
+    const results = await api.post<{
+      poll_id: string;
+      options: { id: string; vote_count: number }[];
+      total_votes: number;
+    }>(`/polls/${pollId}/vote`, { option_ids: optionIds });
+
+    // Update poll in local store with vote results
+    const idx = feedStore.posts.findIndex((p) => p.id === props.post.id);
+    if (idx !== -1 && feedStore.posts[idx].poll) {
+      const poll = { ...feedStore.posts[idx].poll! };
+      poll.total_votes = results.total_votes;
+      poll.user_vote = optionIds;
+      poll.options = poll.options.map((opt) => {
+        const updated = results.options.find((o) => o.id === opt.id);
+        return updated ? { ...opt, vote_count: updated.vote_count } : opt;
+      });
+      feedStore.posts[idx] = { ...feedStore.posts[idx], poll };
+    }
+  } catch (err) {
+    toastError(err, "Failed to submit vote");
   }
 }
 

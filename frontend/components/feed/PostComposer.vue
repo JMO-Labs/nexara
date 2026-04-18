@@ -56,25 +56,95 @@
         @error="onUploadError"
       />
     </div>
-    <div class="mt-2 flex items-center justify-between">
-      <div class="flex items-center gap-3">
+    <!-- Poll creator dialog -->
+    <div
+      v-if="showPollCreator"
+      class="mt-2 rounded-lg border border-border bg-muted/50 p-3"
+    >
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-sm font-medium text-foreground">
+          {{ $t("feed.poll.createPoll") }}
+        </span>
         <button
           type="button"
-          class="relative inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          :aria-label="$t('feed.attachMedia')"
-          @click="showUpload = !showUpload"
+          class="text-sm text-muted-foreground hover:text-foreground"
+          @click="removePoll"
         >
-          {{ $t("feed.attachMedia") }}
-          <span
-            v-if="mediaItems.length > 0"
-            class="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground"
-            :aria-label="
-              $t('feed.mediaAttachedCount', { count: mediaItems.length })
-            "
-          >
-            {{ mediaItems.length }}
-          </span>
+          &times;
         </button>
+      </div>
+      <PollCreator @create="onPollCreated" />
+    </div>
+
+    <!-- Attached poll summary badge -->
+    <div
+      v-if="pollData && !showPollCreator"
+      class="mt-2 flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm text-foreground"
+    >
+      <span>📊</span>
+      <span class="flex-1 truncate">{{ pollData.question }}</span>
+      <button
+        type="button"
+        class="text-muted-foreground hover:text-destructive"
+        :aria-label="$t('common.delete')"
+        @click="removePoll"
+      >
+        &times;
+      </button>
+    </div>
+
+    <div class="mt-2 flex items-center justify-between">
+      <div class="flex items-center gap-1">
+        <!-- Plus menu trigger -->
+        <div class="relative">
+          <button
+            type="button"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            aria-label="Attach"
+            @click.stop="plusMenuOpen = !plusMenuOpen"
+          >
+            +
+          </button>
+
+          <!-- Plus menu popover -->
+          <div
+            v-if="plusMenuOpen"
+            class="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 flex items-center gap-0.5 rounded-full border border-border bg-popover px-1 py-0.5 shadow-lg"
+            @click.stop
+          >
+            <!-- Media option -->
+            <button
+              type="button"
+              class="flex items-center justify-center rounded-md p-1.5 text-lg transition-colors hover:bg-accent"
+              :aria-label="$t('feed.attachMedia')"
+              :title="$t('feed.attachMedia')"
+              @click="toggleUpload"
+            >
+              📎
+            </button>
+
+            <!-- Poll option -->
+            <button
+              type="button"
+              class="flex items-center justify-center rounded-md p-1.5 text-lg transition-colors hover:bg-accent"
+              :aria-label="$t('feed.poll.createPoll')"
+              :title="$t('feed.poll.createPoll')"
+              @click="togglePollCreator"
+            >
+              📊
+            </button>
+          </div>
+        </div>
+
+        <!-- Media badge -->
+        <span
+          v-if="mediaItems.length > 0"
+          class="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground"
+          :aria-label="$t('feed.mediaAttachedCount', { count: mediaItems.length })"
+        >
+          {{ mediaItems.length }}
+        </span>
+
         <button
           v-if="isDirty"
           type="button"
@@ -86,7 +156,7 @@
       </div>
       <button
         type="submit"
-        :disabled="submitting || (!content.trim() && mediaItems.length === 0)"
+        :disabled="submitting || (!content.trim() && mediaItems.length === 0 && !pollData)"
         class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         {{ submitting ? $t("common.loading") : $t("feed.submit") }}
@@ -99,11 +169,13 @@
 /**
  * @brief PostComposer component — owns form state and submission lifecycle.
  */
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import UploadZone from "~/components/media/UploadZone.vue";
+import PollCreator from "~/components/feed/PollCreator.vue";
 import { useFeedStore } from "~/stores/feed";
 import { useUiStore } from "~/stores/ui";
 import { useAuthStore } from "~/stores/auth";
+import type { PollCreate } from "~/types/api";
 
 /** @brief Tracks an uploaded media item with preview info. */
 interface MediaItem {
@@ -124,16 +196,57 @@ const showUpload = ref(false);
 const submitting = ref(false);
 /** @brief Key used to force-remount UploadZone and clear its preview. */
 const uploadKey = ref(0);
+/** @brief Whether the plus menu popover is open. */
+const plusMenuOpen = ref(false);
+/** @brief Whether the poll creator form is visible. */
+const showPollCreator = ref(false);
+/** @brief Attached poll data (null if no poll). */
+const pollData = ref<PollCreate | null>(null);
 
 /** @brief True when the composer has unsaved content or media. */
 const isDirty = computed(
-  () => content.value.trim().length > 0 || mediaItems.value.length > 0,
+  () =>
+    content.value.trim().length > 0 ||
+    mediaItems.value.length > 0 ||
+    pollData.value !== null,
 );
 
 const emit = defineEmits<{
   /** @brief Emitted after a post is successfully created. */
   (e: "created"): void;
 }>();
+
+/** @brief Toggle the upload zone from the plus menu. */
+function toggleUpload(): void {
+  showUpload.value = !showUpload.value;
+  plusMenuOpen.value = false;
+}
+
+/** @brief Toggle the poll creator from the plus menu. */
+function togglePollCreator(): void {
+  showPollCreator.value = !showPollCreator.value;
+  plusMenuOpen.value = false;
+}
+
+/** @brief Handle poll creation from PollCreator. */
+function onPollCreated(data: PollCreate): void {
+  pollData.value = data;
+  showPollCreator.value = false;
+}
+
+/** @brief Remove attached poll. */
+function removePoll(): void {
+  pollData.value = null;
+  showPollCreator.value = false;
+}
+
+/** @brief Close plus menu on outside click. */
+function onDocumentClick(): void {
+  plusMenuOpen.value = false;
+}
+
+onMounted(() => document.addEventListener("click", onDocumentClick));
+onBeforeUnmount(() => document.removeEventListener("click", onDocumentClick));
 
 /** @brief Handle UploadZone upload event; add media item to the collection. */
 function onUploadComplete(data: Record<string, unknown>): void {
@@ -183,6 +296,8 @@ async function handleDiscard(): Promise<void> {
   content.value = "";
   mediaItems.value = [];
   showUpload.value = false;
+  showPollCreator.value = false;
+  pollData.value = null;
   uploadKey.value++;
 
   for (const id of ids) {
@@ -206,7 +321,8 @@ async function handleDiscard(): Promise<void> {
 async function handleSubmit(): Promise<void> {
   const hasContent = content.value.trim().length > 0;
   const hasMedia = mediaItems.value.length > 0;
-  if (!hasContent && !hasMedia) return;
+  const hasPoll = pollData.value !== null;
+  if (!hasContent && !hasMedia && !hasPoll) return;
 
   submitting.value = true;
   try {
@@ -214,6 +330,7 @@ async function handleSubmit(): Promise<void> {
     await feedStore.createPost(
       postContent,
       mediaItems.value.map((m) => m.id),
+      pollData.value ?? undefined,
     );
     for (const m of mediaItems.value) {
       if (m.thumbnailUrl?.startsWith("blob:"))
@@ -222,6 +339,8 @@ async function handleSubmit(): Promise<void> {
     content.value = "";
     mediaItems.value = [];
     showUpload.value = false;
+    showPollCreator.value = false;
+    pollData.value = null;
     uploadKey.value++;
     emit("created");
   } catch (err) {

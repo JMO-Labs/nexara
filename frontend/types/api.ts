@@ -117,6 +117,7 @@ export interface Post {
   content: string;
   author: PostAuthor;
   media: PostMedia[];
+  poll?: PollResponse | null;
   reactions: Reaction[];
   comment_count: number;
   created_at: string;
@@ -285,6 +286,7 @@ export interface AdminUserListItem extends User {
 export interface AdminUsersResponse {
   items: AdminUserListItem[];
   total: number;
+  next_cursor?: string | null;
   cursor?: string | null;
   has_more?: boolean;
 }
@@ -350,4 +352,177 @@ export interface OAuthProviderResponse {
   auto_create_users: boolean;
   enabled: boolean;
   env_seeded?: boolean;
+}
+
+/** @brief Single interest category. */
+export interface InterestCategory {
+  slug: string;
+  label: string;
+  description: string | null;
+  icon: string | null;
+  multi_value: boolean;
+  sort_order: number;
+}
+
+/** @brief User interest record. */
+export interface UserInterest {
+  id: string;
+  user_id: string;
+  category_slug: string;
+  value: string;
+  source: string;
+  confidence: number;
+  created_at: string;
+}
+
+/** @brief User interests with categories. */
+export interface UserInterestsResponse {
+  interests: UserInterest[];
+  categories: InterestCategory[];
+}
+
+/** @brief Interest analytics entry. */
+export interface InterestAnalytics {
+  category_slug: string;
+  value: string;
+  count: number;
+}
+
+/** @brief VAPID public key response. */
+export interface VAPIDPublicKeyResponse {
+  public_key: string;
+}
+
+/** @brief Push subscription response. */
+export interface PushSubscriptionResponse {
+  id: string;
+  endpoint: string;
+  user_agent: string | null;
+  created_at: string;
+}
+
+/** @brief Branding data from GET /branding/. */
+export interface BrandingResponse {
+  community_name: string;
+  tagline: string | null;
+  color_primary: string;
+  color_primary_dark: string;
+  logo_light_url: string | null;
+  logo_dark_url: string | null;
+  color_accent?: string;
+  color_surface_light?: string;
+  color_surface_dark?: string;
+  color_text_light?: string;
+  color_text_dark?: string;
+  font_family?: string;
+  font_family_mono?: string;
+  email_logo_media_id?: string | null;
+  email_footer_text?: string | null;
+  email_sender_name?: string | null;
+  landing_cta_text?: string | null;
+  landing_show_feature_list?: boolean;
+  pwa_icon_192_media_id?: string | null;
+  pwa_icon_512_media_id?: string | null;
+  about_short?: string | null;
+  custom_css?: string | null;
+  custom_css_enabled?: boolean;
+}
+
+/** @brief Contrast warning from PUT /branding/ response. */
+export interface ContrastWarning {
+  color1: string;
+  color2: string;
+  ratio: number;
+  passes_aa: boolean;
+  passes_aaa: boolean;
+}
+
+/** @brief Branding update response with contrast warnings. */
+export interface BrandingUpdateResponse {
+  branding: BrandingResponse;
+  contrast_warnings: ContrastWarning[];
+}
+
+/** @brief Branding form data for the admin editor. */
+export interface BrandingFormData {
+  community_name: string;
+  tagline: string | null;
+  color_primary: string;
+  color_primary_dark: string;
+  color_accent: string;
+  color_surface_light: string;
+  color_surface_dark: string;
+  color_text_light: string;
+  color_text_dark: string;
+  font_family: string;
+  font_family_mono: string;
+  landing_cta_text: string;
+}
+
+/** @brief Poll option for creation. */
+export interface PollOptionCreate {
+  label: string;
+  image_media_id?: string | null;
+}
+
+/** @brief Poll creation payload. */
+export interface PollCreate {
+  question: string;
+  poll_type: "single" | "multiple" | "yes_no" | "photo";
+  options: PollOptionCreate[];
+  expires_at?: string | null;
+  is_anonymous?: boolean;
+  result_visibility?: "after_vote" | "always" | "after_expiry";
+}
+
+/** @brief Lightweight voter summary on non-anonymous polls. */
+export interface PollVoter {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+/** @brief Poll option with vote count. */
+export interface PollOptionResponse {
+  id: string;
+  label: string;
+  image_media_id: string | null;
+  position: number;
+  vote_count: number;
+  voters: PollVoter[];
+}
+
+/** @brief Full poll with options. */
+export interface PollResponse {
+  id: string;
+  post_id: string | null;
+  poll_type: string;
+  question: string;
+  options: PollOptionResponse[];
+  is_anonymous: boolean;
+  result_visibility: string;
+  expires_at: string | null;
+  closed: boolean;
+  total_votes: number;
+  user_vote: string[] | null;
+  created_at: string;
+}
+
+/** @brief Poll results. */
+export interface PollResultsResponse {
+  poll_id: string;
+  options: PollOptionResponse[];
+  total_votes: number;
+}
+
+/** @brief Link preview metadata. */
+export interface LinkPreview {
+  id: string;
+  url: string;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+  site_name: string | null;
+  provider_type: string | null;
+  provider_id: string | null;
 }
