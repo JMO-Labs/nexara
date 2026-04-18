@@ -9,10 +9,11 @@ and serialization of media records.
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 MediaStatus = Literal["processing", "ready", "error"]
 """@brief Allowed media processing status values."""
@@ -33,8 +34,46 @@ class MediaResponse(BaseModel):
     size_bytes: int
     width: int | None = None
     height: int | None = None
+    duration_secs: float | None = None
     alt_text: str | None = None
     status: MediaStatus
     created_at: datetime
 
+    @field_validator("duration_secs", mode="before")
+    @classmethod
+    def _coerce_duration(cls, v: object) -> float | None:
+        if v is None:
+            return None
+        if isinstance(v, Decimal):
+            return float(v)
+        return v  # type: ignore[return-value]
+
     model_config = {"from_attributes": True}
+
+
+class MultipartInitRequest(BaseModel):
+    """@brief Request body for initiating a multipart upload."""
+
+    filename: str
+    content_type: str
+    total_size: int
+
+
+class MultipartInitResponse(BaseModel):
+    """@brief Response with upload ID and part size for multipart upload."""
+
+    upload_id: str
+    part_size: int
+
+
+class MultipartPartResponse(BaseModel):
+    """@brief Response for each uploaded part."""
+
+    part_number: int
+    etag: str
+
+
+class MultipartCompleteResponse(BaseModel):
+    """@brief Response after completing multipart upload."""
+
+    media_id: UUID
