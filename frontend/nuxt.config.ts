@@ -6,6 +6,7 @@
  * Tailwind CSS, Pinia, i18n, VueUse, PWA, and runtime API settings.
  */
 
+// @ts-expect-error defineNuxtConfig is a Nuxt auto-import
 export default defineNuxtConfig({
   compatibilityDate: "2025-01-01",
 
