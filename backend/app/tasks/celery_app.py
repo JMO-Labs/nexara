@@ -40,6 +40,7 @@ celery_app.conf.update(
         "app.tasks.media_tasks.*": {"queue": "media"},
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
+        "app.tasks.poll_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
     },
     # ── Reliability ───────────────────────────────────────────────────
@@ -55,6 +56,10 @@ celery_app.conf.update(
     beat_schedule={
         "refresh-prometheus-gauges": {
             "task": "app.tasks.maintenance_tasks.refresh_prometheus_gauges",
+            "schedule": 60.0,
+        },
+        "close-expired-polls": {
+            "task": "app.tasks.poll_tasks.close_expired_polls",
             "schedule": 60.0,
         },
         "cleanup-expired-tokens": {

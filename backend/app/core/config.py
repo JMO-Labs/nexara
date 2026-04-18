@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # --- Application ---
     APP_NAME: str = "Nexara"
+    APP_BASE_URL: str = "http://localhost:8000"
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "production"
     DEBUG: bool = False
@@ -51,6 +52,10 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = "nexara"
+
+    # --- VAPID (Web Push) ---
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
 
     # --- SMTP ---
     SMTP_HOST: str = ""
