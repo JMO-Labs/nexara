@@ -163,7 +163,7 @@ function loadMore(): void {
 watch(
   () => route.query.q,
   (q) => {
-    queryInput.value = q || "";
+    queryInput.value = (typeof q === "string" ? q : "") || "";
     if (q && q.length >= 2) {
       searchData.value = null;
       cursors.value = {};

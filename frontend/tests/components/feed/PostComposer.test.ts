@@ -49,7 +49,11 @@ describe("PostComposer", () => {
     await wrapper.find("form").trigger("submit");
     await flushPromises();
 
-    expect(mockCreatePost).toHaveBeenCalledWith("My new post content", []);
+    expect(mockCreatePost).toHaveBeenCalledWith(
+      "My new post content",
+      [],
+      undefined,
+    );
   });
 
   it("clears the textarea after successful submission", async () => {
@@ -94,6 +98,8 @@ describe("PostComposer", () => {
     const wrapper = mount(PostComposer, {
       global: { stubs: { UploadZone: UploadZoneStub } },
     });
+    // Open plus menu, click media option
+    await wrapper.find('[aria-label="Attach"]').trigger("click");
     await wrapper.find('[aria-label="feed.attachMedia"]').trigger("click");
     await wrapper.find('[data-testid="upload-stub"]').trigger("click");
 
@@ -105,18 +111,20 @@ describe("PostComposer", () => {
     const wrapper = mount(PostComposer, {
       global: { stubs: { UploadZone: UploadZoneStub } },
     });
+    await wrapper.find('[aria-label="Attach"]').trigger("click");
     await wrapper.find('[aria-label="feed.attachMedia"]').trigger("click");
     await wrapper.find('[data-testid="upload-stub"]').trigger("click");
     await wrapper.find("form").trigger("submit");
     await flushPromises();
 
-    expect(mockCreatePost).toHaveBeenCalledWith("", ["media-1"]);
+    expect(mockCreatePost).toHaveBeenCalledWith("", ["media-1"], undefined);
   });
 
   it("resets upload zone after successful submission", async () => {
     const wrapper = mount(PostComposer, {
       global: { stubs: { UploadZone: UploadZoneStub } },
     });
+    await wrapper.find('[aria-label="Attach"]').trigger("click");
     await wrapper.find('[aria-label="feed.attachMedia"]').trigger("click");
     await wrapper.find('[data-testid="upload-stub"]').trigger("click");
     await wrapper.find("textarea").setValue("Post with media");
