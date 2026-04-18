@@ -289,3 +289,5 @@ Thumbs.db
 # Plans (local planning documents, not part of the application source)
 # =============================================================================
 plans/
+
+*/node_modules/*
