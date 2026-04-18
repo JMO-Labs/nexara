@@ -9,6 +9,7 @@ and PWA manifest can consume branding data.  PUT requires admin role.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, Request
@@ -21,7 +22,7 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
-from app.schemas.branding import BrandingResponse, BrandingUpdate
+from app.schemas.branding import BrandingResponse, BrandingUpdate, BrandingUpdateResponse
 from app.services.branding_service import BrandingService
 
 logger = structlog.get_logger(__name__)
@@ -61,7 +62,25 @@ async def get_branding(
     return await service.get_branding()
 
 
-@router.put("/", response_model=BrandingResponse)
+@router.get("/manifest.json")
+async def get_pwa_manifest(
+    db: AsyncSession = Depends(get_db),
+    cache_client: Redis | None = Depends(_get_cache_client),
+    community_id: uuid.UUID = Depends(_community_id),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """
+    @brief Return PWA manifest (public, no auth required).
+
+    Used by browsers when installing the app as a PWA.
+    """
+    repo = BrandingRepository(db)
+    service = BrandingService(repo=repo, cache_client=cache_client, community_id=community_id)
+    branding = await service.get_branding()
+    return service.generate_pwa_manifest(branding, base_url=settings.APP_BASE_URL)
+
+
+@router.put("/", response_model=BrandingUpdateResponse)
 async def update_branding(
     data: BrandingUpdate,
     request: Request,
@@ -69,7 +88,7 @@ async def update_branding(
     db: AsyncSession = Depends(get_db),
     cache_client: Redis | None = Depends(_get_cache_client),
     community_id: uuid.UUID = Depends(_community_id),
-) -> BrandingResponse:
+) -> BrandingUpdateResponse:
     """
     @brief Update community branding fields (admin only).
 

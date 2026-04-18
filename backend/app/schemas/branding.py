@@ -9,12 +9,31 @@ Full palette customization ships in Phase 2.
 from __future__ import annotations
 
 import re
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 """@brief Regex for validating 6-digit hex color strings."""
+
+_COLOR_FIELDS = (
+    "color_primary",
+    "color_primary_dark",
+    "color_accent",
+    "color_surface_light",
+    "color_surface_dark",
+    "color_text_light",
+    "color_text_dark",
+)
+
+
+def _validate_hex(v: str | None) -> str | None:
+    """@brief Ensure color values are valid 6-digit hex strings."""
+    if v is not None and not _HEX_COLOR_RE.match(v):
+        msg = f"Invalid hex color: {v}. Must be #RRGGBB format."
+        raise ValueError(msg)
+    return v
 
 
 class BrandingResponse(BaseModel):
@@ -26,6 +45,24 @@ class BrandingResponse(BaseModel):
     color_primary_dark: str
     logo_light_url: str | None = None
     logo_dark_url: str | None = None
+    # Full palette
+    color_accent: str = "#8b5cf6"
+    color_surface_light: str = "#ffffff"
+    color_surface_dark: str = "#1f2937"
+    color_text_light: str = "#111827"
+    color_text_dark: str = "#f9fafb"
+    font_family: str = "Inter"
+    font_family_mono: str = "JetBrains Mono"
+    email_logo_media_id: UUID | None = None
+    email_footer_text: str | None = None
+    email_sender_name: str | None = None
+    landing_cta_text: str | None = "Join our community"
+    landing_show_feature_list: bool = True
+    pwa_icon_192_media_id: UUID | None = None
+    pwa_icon_512_media_id: UUID | None = None
+    about_short: str | None = None
+    custom_css: str | None = None
+    custom_css_enabled: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -43,12 +80,56 @@ class BrandingUpdate(BaseModel):
     color_primary_dark: str | None = None
     logo_light_media_id: UUID | None = None
     logo_dark_media_id: UUID | None = None
+    # Full palette
+    color_accent: str | None = None
+    color_surface_light: str | None = None
+    color_surface_dark: str | None = None
+    color_text_light: str | None = None
+    color_text_dark: str | None = None
+    font_family: str | None = None
+    font_family_mono: str | None = None
+    email_logo_media_id: UUID | None = None
+    email_footer_text: str | None = None
+    email_sender_name: str | None = None
+    landing_cta_text: str | None = None
+    landing_show_feature_list: bool | None = None
+    pwa_icon_192_media_id: UUID | None = None
+    pwa_icon_512_media_id: UUID | None = None
+    about_short: str | None = None
+    custom_css: str | None = None
+    custom_css_enabled: bool | None = None
 
-    @field_validator("color_primary", "color_primary_dark", mode="before")
+    @field_validator(*_COLOR_FIELDS, mode="before")
     @classmethod
     def validate_hex_color(cls, v: str | None) -> str | None:
         """@brief Ensure color values are valid 6-digit hex strings."""
-        if v is not None and not _HEX_COLOR_RE.match(v):
-            msg = f"Invalid hex color: {v}. Must be #RRGGBB format."
-            raise ValueError(msg)
-        return v
+        return _validate_hex(v)
+
+
+class ContrastWarning(BaseModel):
+    """@brief WCAG contrast warning for a color pair."""
+
+    color1: str
+    color2: str
+    ratio: float
+    passes_aa: bool
+    passes_aaa: bool
+
+
+class BrandingUpdateResponse(BaseModel):
+    """@brief Response for PUT /branding/ with contrast warnings."""
+
+    branding: BrandingResponse
+    contrast_warnings: list[ContrastWarning]
+
+
+class PwaManifest(BaseModel):
+    """@brief PWA web app manifest structure."""
+
+    name: str
+    short_name: str
+    theme_color: str
+    background_color: str
+    display: str
+    start_url: str
+    icons: list[dict[str, Any]]
