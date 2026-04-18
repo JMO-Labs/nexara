@@ -114,10 +114,10 @@ const showCalendar = computed(() => {
 
 /** @brief Max-width class — wider for settings and admin pages, narrow for feed. */
 const contentMaxWidth = computed(() => {
-  if (
-    route.path.startsWith("/app/settings") ||
-    route.path.startsWith("/app/admin")
-  ) {
+  if (route.path.startsWith("/app/admin")) {
+    return "max-w-7xl";
+  }
+  if (route.path.startsWith("/app/settings")) {
     return "max-w-4xl";
   }
   return "max-w-2xl";

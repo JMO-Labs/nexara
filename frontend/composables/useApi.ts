@@ -108,9 +108,13 @@ export function useApi() {
     });
   }
 
-  /** @brief DELETE request. */
-  async function del<T>(path: string): Promise<T> {
-    return request<T>(path, { method: "DELETE" });
+  /** @brief DELETE request with optional JSON body. */
+  async function del<T>(path: string, body?: unknown): Promise<T> {
+    return request<T>(path, {
+      method: "DELETE",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
   }
 
   return { get, post, put, del };

@@ -91,7 +91,14 @@
       "inviteRequired": "An invite code is required to register.",
       "usernameShort": "Username must be at least 3 characters.",
       "inviteInvalid": "This invite code is invalid or has expired.",
-      "sessionExpired": "Your session has expired. Please log in again."
+      "sessionExpired": "Your session has expired. Please log in again.",
+      "emailRequired": "Please enter an email address.",
+      "emailMissingAt": "Email address is missing the at sign (e.g. user at example.com).",
+      "emailMultipleAt": "Email address must contain only one at sign.",
+      "emailMissingLocal": "Please enter a name before the at sign.",
+      "emailMissingDomain": "Please enter a domain after the at sign (e.g. user at example.com).",
+      "emailInvalidDomain": "The domain part of the email address is not valid.",
+      "loginFailed": "Unable to log in. Please check your credentials and try again."
     }
   },
   "feed": {
@@ -120,7 +127,41 @@
     "mediaAttachedCount": "{count} attached",
     "discard": "Discard",
     "removeMedia": "Remove media",
-    "replyingTo": "Replying to {'@'}{username}"
+    "replyingTo": "Replying to {'@'}{username}",
+    "poll": {
+      "anonymous": "Anonymous poll",
+      "vote": "Vote",
+      "totalVotes": "{count} votes",
+      "results": "Results",
+      "question": "Question",
+      "addOption": "Add option",
+      "pollType": "Poll type",
+      "single": "Single choice",
+      "multiple": "Multiple choice",
+      "yesNo": "Yes/No",
+      "photo": "Photo poll",
+      "expiresAt": "Expires at",
+      "duration": "Duration",
+      "duration1h": "1 hour",
+      "duration6h": "6 hours",
+      "duration1d": "1 day",
+      "duration3d": "3 days",
+      "duration7d": "7 days",
+      "noExpiry": "No limit",
+      "custom": "Custom",
+      "resultVisibility": "Result visibility",
+      "afterVote": "After voting",
+      "always": "Always visible",
+      "afterExpiry": "When poll ends",
+      "createPoll": "Create poll",
+      "voteRecorded": "Your vote has been recorded. Results will be visible when the poll ends.",
+      "closed": "Poll closed",
+      "expired": "Poll expired",
+      "endsIn": "Ends in {time}",
+      "days": "{count}d",
+      "hours": "{count}h",
+      "minutes": "{count}m"
+    }
   },
   "common": {
     "loading": "Loading...",
@@ -178,6 +219,25 @@
     "notifications": "Notifications",
     "userMenu": "User menu"
   },
+  "profile": {
+    "interests": {
+      "category": "Category",
+      "value": "Value",
+      "valuePlaceholder": "e.g. Hiking",
+      "selectCategory": "Select category",
+      "add": "Add",
+      "remove": "Remove",
+      "empty": "No interests yet."
+    }
+  },
+  "magic-link": {
+    "title": "Sign in with magic link",
+    "success": "If an account exists, we've sent you a sign-in link.",
+    "send": "Send magic link",
+    "backToLogin": "Back to login",
+    "verifying": "Verifying...",
+    "tryAgain": "Try again"
+  },
   "settings": {
     "title": "Settings",
     "profile": "Profile",
@@ -214,10 +274,17 @@
     "muteAllEmail": "Mute all email",
     "linkedAccounts": "Linked Accounts",
     "linkedAccountsDescription": "Manage SSO providers linked to your account.",
-    "linkedAccountsPlaceholder": "Connected SSO providers will appear here when the API is available."
+    "linkedAccountsPlaceholder": "Connected SSO providers will appear here when the API is available.",
+    "storage": "Storage",
+    "storageUsed": "{used} of {quota} used",
+    "storageWarning": "You are using over 80% of your storage quota."
   },
   "notifications": {
     "title": "Notifications",
+    "pushTitle": "Enable push notifications",
+    "pushDescription": "Get notified when someone mentions you or comments on your posts, even when the app is closed.",
+    "pushEnable": "Enable",
+    "pushNotNow": "Not now",
     "markAllRead": "Mark all as read",
     "empty": "No notifications yet",
     "justNow": "Just now",
@@ -282,6 +349,23 @@
     "inviteRevoked": "Invite revoked",
     "settingsSaved": "Settings saved",
     "brandingDescription": "Customize community logo, colors, and display name.",
+    "contrastRatio": "Contrast",
+    "wcagAA": "WCAG AA",
+    "wcagFail": "Fails AA",
+    "fontPreview": "The quick brown fox jumps over the lazy dog.",
+    "colors": "Colors",
+    "colorPrimary": "Primary",
+    "colorPrimaryDark": "Primary Dark",
+    "colorAccent": "Accent",
+    "colorSurfaceLight": "Surface Light",
+    "colorSurfaceDark": "Surface Dark",
+    "colorTextLight": "Text Light",
+    "colorTextDark": "Text Dark",
+    "fonts": "Fonts",
+    "fontFamily": "Font Family",
+    "fontFamilyMono": "Monospace Font",
+    "contrastWarnings": "Contrast Warnings",
+    "preview": "Preview",
     "wafBlocksPeriod": "Total blocks in current period",
     "sso": "SSO Providers",
     "ssoDescription": "Configure OAuth2/OIDC providers for single sign-on.",
@@ -315,6 +399,13 @@
     "credentials": "Credentials",
     "roleMapping": "Role Mapping",
     "testConnection": "Test Connection",
+    "interests": {
+      "title": "Interest Analytics",
+      "empty": "No interest data yet.",
+      "category": "Category",
+      "value": "Value",
+      "count": "Count"
+    },
     "auditActions": {
       "admin.user.role_changed": "Role changed",
       "admin.user.suspended": "User suspended",

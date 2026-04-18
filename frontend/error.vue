@@ -38,7 +38,11 @@
  * @brief Error page logic with status-specific messaging.
  */
 import { computed } from "vue";
-import type { NuxtError } from "#app";
+interface NuxtError {
+  statusCode?: number;
+  statusMessage?: string;
+  message?: string;
+}
 
 const props = defineProps<{
   /** @brief The Nuxt error object. */
