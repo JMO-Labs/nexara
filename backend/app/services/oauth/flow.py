@@ -1,18 +1,16 @@
 """
 @file flow.py
-@brief OAuth2 authorization code flow with PKCE.
-
-Builds authorize URLs and exchanges authorization codes for tokens.
+@brief OAuth2 Authorization Code flow with PKCE.
 """
 
 from __future__ import annotations
 
-from typing import Any
-from urllib.parse import urlencode
+import hashlib
+import secrets
+from base64 import urlsafe_b64encode
+from typing import Any, cast
 
 import httpx
-from authlib.common.security import generate_token
-from authlib.oauth2.rfc7636 import create_s256_code_challenge
 
 from app.core.encryption import decrypt_secret, derive_fernet_key
 from app.core.exceptions import AuthenticationError
@@ -21,10 +19,9 @@ from app.models.oauth_provider import OAuthProvider
 
 class OAuthFlow:
     """
-    @brief OAuth2 authorization code flow with PKCE.
+    @brief OAuth2 Authorization Code flow with PKCE.
 
-    Stateless: build_authorize_url and exchange_code do not share state
-    except via the returned code_verifier passed to exchange_code.
+    Builds authorize URLs and exchanges authorization codes for tokens.
     """
 
     def build_authorize_url(
@@ -35,13 +32,17 @@ class OAuthFlow:
         """
         @brief Build the OAuth authorization URL with PKCE.
 
-        @param provider OAuth provider config.
-        @param redirect_uri Callback URL after user authorizes.
+        @param provider OAuth provider configuration.
+        @param redirect_uri Callback URL after authorization.
         @return Tuple of (authorize_url, state, code_verifier).
         """
-        state = generate_token(32)
-        code_verifier = generate_token(64)
-        code_challenge = create_s256_code_challenge(code_verifier)
+        state = secrets.token_urlsafe(32)
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = (
+            urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().rstrip("=")
+        )
+
+        auth_endpoint = provider.authorization_endpoint or ""
         params = {
             "response_type": "code",
             "client_id": provider.client_id,
@@ -51,52 +52,51 @@ class OAuthFlow:
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
-        qs = urlencode(params)
-        url = f"{provider.authorization_endpoint}?{qs}"
-        return url, state, code_verifier
+        qs = "&".join(f"{k}={v}" for k, v in params.items())
+        sep = "&" if "?" in auth_endpoint else "?"
+        authorize_url = f"{auth_endpoint}{sep}{qs}"
+
+        return authorize_url, state, code_verifier
 
     async def exchange_code(
         self,
         provider: OAuthProvider,
         code: str,
-        code_verifier: str,
+        verifier: str,
         redirect_uri: str,
-        secret_key: str,
+        secret_key: str | bytes,
     ) -> dict[str, Any]:
         """
         @brief Exchange authorization code for tokens.
 
-        @param provider OAuth provider config.
-        @param code Authorization code from IdP.
-        @param code_verifier PKCE code verifier from build_authorize_url.
-        @param redirect_uri Same redirect_uri used in authorize request.
-        @param secret_key Application secret for decrypting client_secret.
-        @return Token response dict (access_token, id_token, etc.).
-        @raises AuthenticationError On non-200 response.
+        @param provider OAuth provider configuration.
+        @param code Authorization code from callback.
+        @param verifier PKCE code verifier.
+        @param redirect_uri Same redirect_uri used in authorize.
+        @param secret_key Fernet key (bytes) or app secret (str) to decrypt client_secret.
+        @return Token response dict with access_token, id_token, etc.
         """
-        fernet_key = derive_fernet_key(secret_key)
-        client_secret = decrypt_secret(provider.client_secret_encrypted, fernet_key)
+        if not provider.token_endpoint:
+            raise AuthenticationError("no token endpoint")
+
+        key: bytes = derive_fernet_key(secret_key) if isinstance(secret_key, str) else secret_key
+        client_secret: str | None = None
+        if provider.client_secret_encrypted:
+            client_secret = decrypt_secret(provider.client_secret_encrypted, key)
+
+        token_endpoint = provider.token_endpoint
         data = {
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": redirect_uri,
             "client_id": provider.client_id,
-            "client_secret": client_secret,
-            "code_verifier": code_verifier,
+            "code_verifier": verifier,
         }
-        token_url = provider.token_endpoint
-        if not token_url:
-            raise AuthenticationError(message="Provider has no token endpoint configured")
+        if client_secret:
+            data["client_secret"] = client_secret
+
         async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                token_url,
-                data=data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-        if resp.status_code != 200:
-            raise AuthenticationError(
-                message="OAuth token exchange failed",
-                details={"status": resp.status_code, "body": resp.text[:200]},
-            )
-        result: dict[str, Any] = resp.json()
-        return result
+            resp = await client.post(token_endpoint, data=data)
+            if resp.status_code != 200:
+                raise AuthenticationError("token exchange failed")
+            return cast(dict[str, Any], resp.json())

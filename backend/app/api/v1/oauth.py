@@ -54,7 +54,7 @@ def _get_valkey_client(settings: Settings) -> Redis:
 
 def _should_secure_cookie(settings: Settings) -> bool:
     """@brief Return True if cookies should use the Secure flag (origins are HTTPS)."""
-    origins = settings.allowed_origins_list
+    origins = settings.allowed_origins_list or []
     return all(o.startswith("https://") for o in origins) if origins else True
 
 
@@ -185,7 +185,7 @@ async def oauth_callback(
 
     auth_result = extract_claims(claims, provider)
     role = map_groups_to_role(
-        auth_result.groups,
+        auth_result.groups or [],
         provider.group_mappings or {},
         provider.default_role or "member",
     )
