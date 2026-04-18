@@ -35,10 +35,16 @@
               <input
                 id="reset-email"
                 v-model="email"
-                type="email"
+                type="text"
+                inputmode="email"
                 required
                 class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+                :class="{ 'border-destructive': emailError }"
+                @blur="touchEmail"
               />
+              <p v-if="emailError" class="mt-1 text-xs text-destructive">
+                {{ emailError }}
+              </p>
             </div>
 
             <button
@@ -120,10 +126,12 @@
 /**
  * @brief Password reset page with two-step flow.
  */
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { validateEmail } from "~/utils/email";
 
 definePageMeta({ layout: false });
 
+const { t: $t } = useI18n();
 const route = useRoute();
 const resetToken = (route.query.token as string) || null;
 
@@ -133,8 +141,23 @@ const loading = ref(false);
 const errorMessage = ref("");
 const requestSent = ref(false);
 const passwordUpdated = ref(false);
+const emailTouched = ref(false);
+
+const emailError = computed(() => {
+  if (!emailTouched.value) return "";
+  const key = validateEmail(email.value);
+  return key ? $t(key) : "";
+});
+
+function touchEmail(): void {
+  emailTouched.value = true;
+}
 
 async function handleRequestReset(): Promise<void> {
+  emailTouched.value = true;
+  const emailKey = validateEmail(email.value);
+  if (emailKey) return;
+
   loading.value = true;
   try {
     await fetch("/api/v1/auth/password-reset/request", {

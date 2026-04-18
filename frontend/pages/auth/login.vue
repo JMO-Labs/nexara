@@ -35,11 +35,17 @@
             <input
               id="email"
               v-model="email"
-              type="email"
+              type="text"
+              inputmode="email"
               required
               autocomplete="email"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+              :class="{ 'border-destructive': emailError }"
+              @blur="touchEmail"
             />
+            <p v-if="emailError" class="mt-1 text-xs text-destructive">
+              {{ emailError }}
+            </p>
           </div>
 
           <div>
@@ -119,18 +125,31 @@
 /**
  * @brief Login page logic with auth store integration.
  */
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
+import { validateEmail } from "~/utils/email";
 import type { OAuthProviderInfo } from "~/types/api";
 
 definePageMeta({ layout: false });
 
+const { t: $t } = useI18n();
 const authStore = useAuthStore();
 const route = useRoute();
 const email = ref("");
 const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
+const emailTouched = ref(false);
+
+const emailError = computed(() => {
+  if (!emailTouched.value) return "";
+  const key = validateEmail(email.value);
+  return key ? $t(key) : "";
+});
+
+function touchEmail(): void {
+  emailTouched.value = true;
+}
 
 /** @brief Public auth config from GET /api/v1/auth/config. */
 const authConfig = ref<{
@@ -150,6 +169,13 @@ onMounted(async () => {
 });
 
 async function handleLogin(): Promise<void> {
+  emailTouched.value = true;
+  const emailKey = validateEmail(email.value);
+  if (emailKey) {
+    errorMessage.value = "";
+    return;
+  }
+
   loading.value = true;
   errorMessage.value = "";
 
@@ -164,7 +190,8 @@ async function handleLogin(): Promise<void> {
     const redirect = (route.query.redirect as string) || "/app";
     await navigateTo(redirect, { replace: true });
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? error.message : String(error);
+    errorMessage.value = msg || $t("auth.errors.loginFailed");
   } finally {
     loading.value = false;
   }

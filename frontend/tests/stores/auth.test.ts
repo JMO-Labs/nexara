@@ -20,7 +20,7 @@ const mockUser: User = {
   email_verified: true,
   avatar_url: null,
   bio: null,
-  pronouns: null,
+  title: null,
   location: null,
   website_url: null,
   birthday: null,

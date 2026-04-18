@@ -41,11 +41,17 @@
             <input
               id="reg-email"
               v-model="form.email"
-              type="email"
+              type="text"
+              inputmode="email"
               required
               autocomplete="email"
               class="w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground focus:ring-2 focus:ring-ring"
+              :class="{ 'border-destructive': emailError }"
+              @blur="touchEmail"
             />
+            <p v-if="emailError" class="mt-1 text-xs text-destructive">
+              {{ emailError }}
+            </p>
           </div>
 
           <div>
@@ -142,8 +148,9 @@
 /**
  * @brief Registration page with form handling via auth store.
  */
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import { useAuthStore } from "~/stores/auth";
+import { validateEmail } from "~/utils/email";
 
 const { t: $t } = useI18n();
 
@@ -163,11 +170,29 @@ const form = reactive({
 const loading = ref(false);
 const errorMessage = ref("");
 const success = ref(false);
+const emailTouched = ref(false);
+
+const emailError = computed(() => {
+  if (!emailTouched.value) return "";
+  const key = validateEmail(form.email);
+  return key ? $t(key) : "";
+});
+
+function touchEmail(): void {
+  emailTouched.value = true;
+}
 
 async function handleRegister(): Promise<void> {
   loading.value = true;
   errorMessage.value = "";
 
+  emailTouched.value = true;
+  const emailKey = validateEmail(form.email);
+  if (emailKey) {
+    errorMessage.value = "";
+    loading.value = false;
+    return;
+  }
   if (form.password.length < 12) {
     errorMessage.value = $t("auth.errors.weakPassword");
     loading.value = false;

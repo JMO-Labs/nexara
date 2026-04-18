@@ -9,22 +9,49 @@ OIDC callback, password reset, and invite management.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+
+# ---------------------------------------------------------------------------
+# Permissive email validator for self-hosted environments.
+#
+# Pydantic's EmailStr rejects non-standard TLDs (.local, .lan, .home,
+# .internal) that are common in homelab / self-hosted setups.  This
+# validator accepts any domain with at least one character after '@'.
+# ---------------------------------------------------------------------------
+def _validate_selfhost_email(value: str) -> str:
+    v = value.strip()
+    if not v or "@" not in v:
+        raise ValueError("A valid email address is required (must contain '@').")
+    local, _, domain = v.partition("@")
+    if not local:
+        raise ValueError("Email address is missing the part before '@'.")
+    if not domain:
+        raise ValueError("Email address is missing the domain after '@'.")
+    if domain.startswith(".") or domain.endswith("."):
+        raise ValueError("The domain part of the email address is not valid.")
+    if ".." in domain:
+        raise ValueError("The domain part of the email address is not valid.")
+    return v.lower()
+
+
+SelfHostEmail = Annotated[str, AfterValidator(_validate_selfhost_email)]
 
 
 class LoginRequest(BaseModel):
     """@brief Credentials for local email/password login."""
 
-    email: EmailStr
+    email: SelfHostEmail
     password: str = Field(..., min_length=1)
 
 
 class RegisterRequest(BaseModel):
     """@brief Payload for new user registration."""
 
-    email: EmailStr
+    email: SelfHostEmail
     username: str = Field(..., min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_-]+$")
     password: str = Field(..., min_length=12)
     display_name: str = Field(..., min_length=1, max_length=100)
@@ -88,10 +115,16 @@ class TwoFactorVerifyResponse(BaseModel):
     backup_codes: list[str] = Field(description="One-time recovery codes")
 
 
+class MagicLinkRequestPayload(BaseModel):
+    """@brief Request a magic link for passwordless login."""
+
+    email: SelfHostEmail
+
+
 class PasswordResetRequestPayload(BaseModel):
     """@brief Request a password reset email."""
 
-    email: EmailStr
+    email: SelfHostEmail
 
 
 class PasswordResetConfirmPayload(BaseModel):
@@ -148,7 +181,7 @@ class LogoutResponse(BaseModel):
 class InviteCreateRequest(BaseModel):
     """@brief Admin request to create an invite."""
 
-    email: EmailStr
+    email: SelfHostEmail
     role: str = Field(default="member", pattern=r"^(admin|member|viewer)$")
 
 

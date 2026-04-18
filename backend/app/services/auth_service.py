@@ -10,7 +10,7 @@ password-reset / HIBP checking in :mod:`app.services.password_service`.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -21,15 +21,12 @@ from app.core.exceptions import (
     AuthenticationError,
     AuthorizationError,
     ConflictError,
-    NotFoundError,
 )
 from app.core.i18n import _
 from app.core.security import (
     create_2fa_pending_token,
-    create_access_token,
     decode_token,
     generate_backup_codes,
-    generate_refresh_token,
     generate_totp_secret,
     get_totp_uri,
     hash_password,
@@ -38,12 +35,15 @@ from app.core.security import (
     verify_totp,
 )
 from app.models.auth import UserBackupCode
-from app.models.invite import Invite
 from app.models.user import User
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth.invite import validate_invite as _validate_invite_impl
+from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
+from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
+from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
@@ -107,10 +107,10 @@ class AuthService:
         if self._settings.REQUIRE_INVITE:
             if not invite_token:
                 raise AuthorizationError(message=_("An invite token is required to register"))
-            invite = await self._validate_invite(invite_token)
+            invite = await _validate_invite_impl(self._invite_repo, invite_token)
             role = invite.role
         elif invite_token:
-            invite = await self._validate_invite(invite_token)
+            invite = await _validate_invite_impl(self._invite_repo, invite_token)
             role = invite.role
         else:
             invite = None
@@ -326,6 +326,35 @@ class AuthService:
         """@brief Delegate to PasswordService.reset_password."""
         await self._password_svc.reset_password(token, new_password)
 
+    async def request_magic_link(self, email: str) -> None:
+        """
+        @brief Request a magic link for passwordless login.
+
+        Delegates to :mod:`app.services.auth.magic_link`.
+        """
+        await _request_magic_link_impl(
+            self._session,
+            self._user_repo,
+            self._settings,
+            email,
+        )
+
+    async def verify_magic_link(self, raw_token: str) -> dict[str, Any]:
+        """
+        @brief Verify a magic link token and issue JWT session.
+
+        @param raw_token The raw token from the magic link URL.
+        @return Dict with access_token, expires_in, raw_refresh_token.
+        @raises AuthenticationError If token is invalid, expired, or consumed.
+        """
+        user = await _verify_magic_link_impl(
+            self._session,
+            self._user_repo,
+            self._settings,
+            raw_token,
+        )
+        return await _issue_tokens_impl(self._token_repo, user, self._settings)
+
     # ── Helpers ───────────────────────────────────────────────────────────
 
     async def _issue_tokens(
@@ -336,51 +365,15 @@ class AuthService:
         ip_address: str | None = None,
         user_agent: str | None = None,
     ) -> dict[str, Any]:
-        """
-        @brief Create an access token + opaque refresh token pair.
-
-        @param user The authenticated user ORM instance.
-        @param family_id Optional token family UUID (for rotation chains).
-        @param ip_address Client IP for audit logging.
-        @param user_agent Client User-Agent for audit logging.
-        @return Dict with token data and raw_refresh_token.
-        """
-        access = create_access_token(
-            user.id,
-            extra_claims={"role": user.role, "community_id": str(user.community_id)},
-            settings=self._settings,
-        )
-        raw_refresh = generate_refresh_token()
-        fid = family_id or uuid.uuid4()
-        expires = datetime.now(UTC) + timedelta(days=self._settings.REFRESH_TOKEN_EXPIRE_DAYS)
-
-        await self._token_repo.create(
-            user_id=user.id,
-            token_hash=hash_token(raw_refresh),
-            family_id=fid,
-            expires_at=expires,
+        """@brief Delegate to :mod:`app.services.auth.token_utils`."""
+        return await _issue_tokens_impl(
+            self._token_repo,
+            user,
+            self._settings,
+            family_id=family_id,
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        return {
-            "access_token": access,
-            "expires_in": self._settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "raw_refresh_token": raw_refresh,
-            "requires_2fa": False,
-        }
-
-    async def _validate_invite(self, raw_token: str) -> Invite:
-        """@brief Validate an invite token and return the Invite or raise."""
-        invite = await self._invite_repo.find_by_token_hash(hash_token(raw_token))
-        if not invite:
-            raise NotFoundError(message=_("Invalid invite token"))
-        if self._invite_repo.is_used(invite):
-            raise ConflictError(message=_("Invite has already been used"))
-        if self._invite_repo.is_expired(invite):
-            from app.core.exceptions import AppError
-
-            raise AppError(code="GONE", message=_("Invite has expired"), status_code=410)
-        return invite
 
     async def _try_backup_code(self, user_id: uuid.UUID, code: str) -> bool:
         """@brief Attempt to consume a backup code.  Returns True on success."""
