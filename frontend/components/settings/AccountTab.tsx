@@ -43,19 +43,21 @@ export function AccountTab() {
             label="Email"
             description="Your account email address used for login and recovery."
           >
-            <FormControl error={!!formState.errors.email} fullWidth>
-              <FormLabel>Email Address</FormLabel>
-              <Input
-                type="email"
-                placeholder="name@example.com"
-                slotProps={{
-                  input: { autoComplete: 'email', ...register('email') },
-                }}
-              />
+            <Stack spacing={1} sx={{ width: '100%' }}>
+              <FormControl error={!!formState.errors.email}>
+                <FormLabel>Email Address</FormLabel>
+                <Input
+                  type="email"
+                  placeholder="name@example.com"
+                  slotProps={{
+                    input: { autoComplete: 'email', ...register('email') },
+                  }}
+                />
+              </FormControl>
               {formState.errors.email && (
                 <FormHelperText>{formState.errors.email.message}</FormHelperText>
               )}
-            </FormControl>
+            </Stack>
           </SettingsRow>
           <Stack sx={{ mt: 2 }}>
             <Button

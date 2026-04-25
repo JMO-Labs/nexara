@@ -48,34 +48,38 @@ export function AppearanceTab() {
           label="Theme"
           description="Choose between light, dark, or system preference."
         >
-          <FormControl fullWidth>
-            <FormLabel>Theme</FormLabel>
-            <Select
-              value={theme || 'system'}
-              onChange={(_e, newValue) => handleThemeChange(newValue || 'system')}
-              disabled={isPending}
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </Select>
-          </FormControl>
+          <Stack spacing={1} sx={{ width: '100%' }}>
+            <FormControl>
+              <FormLabel>Theme</FormLabel>
+              <Select
+                value={theme || 'system'}
+                onChange={(_e, newValue) => handleThemeChange(newValue || 'system')}
+                disabled={isPending}
+              >
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </Select>
+            </FormControl>
+          </Stack>
         </SettingsRow>
 
         <SettingsRow
           label="Language"
           description="Select your preferred language."
         >
-          <FormControl fullWidth>
-            <FormLabel>Language</FormLabel>
-            <Select
-              value={settings.locale || 'en-US'}
-              onChange={(_e, newValue) => handleLocaleChange(newValue || 'en-US')}
-              disabled={isPending}
-            >
-              <option value="en-US">English (US)</option>
-            </Select>
-          </FormControl>
+          <Stack spacing={1} sx={{ width: '100%' }}>
+            <FormControl>
+              <FormLabel>Language</FormLabel>
+              <Select
+                value={settings.locale || 'en-US'}
+                onChange={(_e, newValue) => handleLocaleChange(newValue || 'en-US')}
+                disabled={isPending}
+              >
+                <option value="en-US">English (US)</option>
+              </Select>
+            </FormControl>
+          </Stack>
         </SettingsRow>
       </Card>
     </Stack>
