@@ -15,6 +15,7 @@ import {
   rsvpEvent,
   unrsvpEvent,
   type CreateEventBody,
+  type EventItem,
 } from '@/lib/api/events';
 
 /** Round to start-of-hour so the query key is stable across renders. */
@@ -97,6 +98,27 @@ export function useRsvp(eventId: string) {
       return await rsvpEvent(eventId, status);
     },
     successKey: 'toasts.events.rsvp.saved',
-    onSuccess: () => invalidate(qc, eventId),
+    silentSuccess: true,
+    onMutate: async (status) => {
+      await qc.cancelQueries({ queryKey: qk.events.all() });
+      const prevEvent = qc.getQueryData<EventItem>(qk.events.detail(eventId));
+      qc.setQueryData<EventItem | undefined>(qk.events.detail(eventId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          user_rsvp: status ? { status } : null,
+        };
+      });
+      return { prevEvent };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevEvent) {
+        qc.setQueryData(qk.events.detail(eventId), ctx.prevEvent);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: qk.events.detail(eventId) });
+      qc.invalidateQueries({ queryKey: qk.events.all() });
+    },
   });
 }
