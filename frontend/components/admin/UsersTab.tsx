@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import {
   useAdminUsers,
-  useChangeUserRole,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
@@ -15,6 +14,7 @@ import Stack from '@mui/joy/Stack';
 import Input from '@mui/joy/Input';
 import Button from '@mui/joy/Button';
 import Select from '@mui/joy/Select';
+import Chip from '@mui/joy/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import Option from '@mui/joy/Option';
 import Table from '@mui/joy/Table';
@@ -31,13 +31,13 @@ export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
 
   const { data: usersPage, isLoading, error } = useAdminUsers({
     q: searchQuery || undefined,
     limit: 50,
   });
 
-  const changeRoleMutation = useChangeUserRole();
   const suspendMutation = useSuspendUser();
   const restoreMutation = useRestoreUser();
   const deleteMutation = useDeleteUser();
@@ -59,10 +59,6 @@ export function UsersTab() {
   }
 
   if (!usersPage) return null;
-
-  const handleRoleChange = (userId: string, role: string) => {
-    changeRoleMutation.mutate({ userId, role });
-  };
 
   const handleSuspend = (userId: string) => {
     suspendMutation.mutate(userId);
@@ -87,13 +83,23 @@ export function UsersTab() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={2}>
+      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
         <Input
           placeholder="Search by name or email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ flex: 1 }}
         />
+        <Select
+          value={density}
+          onChange={(_, val) => val && setDensity(val as 'comfortable' | 'compact')}
+          size="sm"
+          variant="soft"
+          sx={{ minWidth: 120 }}
+        >
+          <Option value="comfortable">Comfortable</Option>
+          <Option value="compact">Compact</Option>
+        </Select>
       </Stack>
 
       {usersPage.items.length === 0 ? (
@@ -106,8 +112,9 @@ export function UsersTab() {
             stripe="odd"
             hoverRow
             sx={{
-              '--TableCell-paddingX': '1rem',
-              '--TableCell-paddingY': '0.5rem',
+              '--TableCell-paddingX': density === 'compact' ? '0.75rem' : '1rem',
+              '--TableCell-paddingY': density === 'compact' ? '0.375rem' : '0.5rem',
+              fontSize: density === 'compact' ? '0.85rem' : 'inherit',
             }}
           >
             <thead>
@@ -123,36 +130,47 @@ export function UsersTab() {
               {usersPage.items.map((user) => (
                 <tr key={user.id}>
                   <td>
-                    <Typography level="body-sm">
+                    <Typography level={density === 'compact' ? 'body-xs' : 'body-sm'}>
                       {user.display_name || user.username}
                     </Typography>
                   </td>
                   <td>
-                    <Typography level="body-sm">{user.email}</Typography>
+                    <Typography level={density === 'compact' ? 'body-xs' : 'body-sm'}>
+                      {user.email}
+                    </Typography>
                   </td>
                   <td>
-                    <Select
-                      value={user.role}
-                      onChange={(_, val) =>
-                        val && handleRoleChange(user.id, val as string)
+                    <Chip
+                      size={density === 'compact' ? 'sm' : 'md'}
+                      color={
+                        user.role === 'admin'
+                          ? 'danger'
+                          : user.role === 'member'
+                            ? 'primary'
+                            : 'neutral'
                       }
-                      size="sm"
                       variant="soft"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Option value="admin">Admin</Option>
-                      <Option value="member">Member</Option>
-                      <Option value="viewer">Viewer</Option>
-                    </Select>
+                      {user.role === 'admin' && 'Admin'}
+                      {user.role === 'member' && 'Member'}
+                      {user.role === 'viewer' && 'Viewer'}
+                    </Chip>
                   </td>
                   <td>
-                    <Typography level="body-sm">{user.status}</Typography>
+                    <Typography
+                      level={density === 'compact' ? 'body-xs' : 'body-sm'}
+                      color={user.status === 'active' ? 'success' : 'warning'}
+                    >
+                      {user.status}
+                    </Typography>
                   </td>
                   <td>
-                    <Stack direction="row" spacing={0.5}>
+                    <Stack direction="row" spacing={0.25}>
                       {user.status === 'active' ? (
                         <IconButton
                           tooltip="Suspend user"
-                          size="sm"
+                          size={density === 'compact' ? 'sm' : 'md'}
                           variant="soft"
                           color="warning"
                           aria-label="Suspend user"
@@ -163,7 +181,7 @@ export function UsersTab() {
                       ) : (
                         <IconButton
                           tooltip="Restore user"
-                          size="sm"
+                          size={density === 'compact' ? 'sm' : 'md'}
                           variant="soft"
                           color="success"
                           aria-label="Restore user"
@@ -174,7 +192,7 @@ export function UsersTab() {
                       )}
                       <IconButton
                         tooltip="Delete user"
-                        size="sm"
+                        size={density === 'compact' ? 'sm' : 'md'}
                         variant="soft"
                         color="danger"
                         aria-label="Delete user"

@@ -100,7 +100,7 @@ describe('UsersTab', () => {
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
   });
 
-  it('should call changeUserRole when role is changed', async () => {
+  it('should render role as chip', () => {
     const mockUsers = {
       items: [
         {
@@ -113,7 +113,7 @@ describe('UsersTab', () => {
           title: null,
           location: null,
           website_url: null,
-          role: 'member',
+          role: 'admin',
           created_at: new Date(),
           last_seen_at: new Date(),
           status: 'active',
@@ -128,13 +128,6 @@ describe('UsersTab', () => {
       data: mockUsers,
     } as any);
 
-    const changeRoleMutation = {
-      mutate: vi.fn(),
-      isPending: false,
-    };
-    vi.mocked(useAdminModule.useChangeUserRole).mockReturnValue(
-      changeRoleMutation as any,
-    );
     vi.mocked(useAdminModule.useSuspendUser).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -150,15 +143,6 @@ describe('UsersTab', () => {
 
     render(<UsersTab />, { wrapper });
 
-    const roleSelect = screen.getByDisplayValue('member');
-    fireEvent.click(roleSelect);
-    fireEvent.click(screen.getByText('Admin'));
-
-    await waitFor(() => {
-      expect(changeRoleMutation.mutate).toHaveBeenCalledWith({
-        userId: 'user-1',
-        role: 'admin',
-      });
-    });
+    expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 });
