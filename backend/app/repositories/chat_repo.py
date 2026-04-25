@@ -165,6 +165,68 @@ class ChatChannelRepository(BaseRepository[ChatChannel]):
 
         return None
 
+    async def remove_dm_participant(
+        self,
+        channel_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> bool:
+        """
+        @brief Remove ``user_id`` from a DM channel's participant list.
+
+        Used to "delete" a DM thread for a single user. Returns True when
+        a row was removed. Other participants retain access until they
+        also leave.
+        """
+        from sqlalchemy import delete
+
+        stmt = (
+            delete(DirectMessageParticipant)
+            .where(
+                DirectMessageParticipant.channel_id == channel_id,
+                DirectMessageParticipant.user_id == user_id,
+            )
+        )
+        result = await self._session.execute(stmt)
+        await self._session.flush()
+        return (result.rowcount or 0) > 0
+
+    async def list_member_ids(
+        self,
+        channel: ChatChannel,
+        community_id: uuid.UUID,
+    ) -> list[uuid.UUID]:
+        """
+        @brief Return user UUIDs allowed to receive realtime frames for this channel.
+
+        Used by the chat service to fan out broadcasts via per-user pub/sub.
+        """
+        if channel.channel_type == "community":
+            stmt = select(User.id).where(
+                User.community_id == community_id,
+                User.is_active.is_(True),
+                User.deleted_at.is_(None),
+            )
+            result = await self._session.execute(stmt)
+            return [row[0] for row in result.all()]
+
+        if channel.channel_type == "subgroup":
+            from app.models.subgroup import SubgroupMember
+
+            stmt = select(SubgroupMember.user_id).where(
+                SubgroupMember.subgroup_id == channel.subgroup_id,
+            )
+            result = await self._session.execute(stmt)
+            return [row[0] for row in result.all()]
+
+        if channel.channel_type == "direct":
+            stmt = select(DirectMessageParticipant.user_id).where(
+                DirectMessageParticipant.channel_id == channel.id,
+            )
+            result = await self._session.execute(stmt)
+            return [row[0] for row in result.all()]
+
+        return []
+
     async def list_for_user(
         self,
         user_id: uuid.UUID,
@@ -304,6 +366,45 @@ class ChatChannelRepository(BaseRepository[ChatChannel]):
             ]
         )
         await self._session.flush()
+        return (channel, True)
+
+    async def get_or_create_subgroup(
+        self,
+        subgroup_id: uuid.UUID,
+        community_id: uuid.UUID,
+        name: str,
+    ) -> tuple[ChatChannel, bool]:
+        """
+        @brief Return (creating if absent) the chat channel for a subgroup.
+
+        @param subgroup_id Subgroup UUID.
+        @param community_id Community scope.
+        @param name Channel display name (typically the subgroup name).
+        @return ``(channel, created)`` tuple.
+        """
+        stmt = (
+            select(ChatChannel)
+            .where(
+                ChatChannel.community_id == community_id,
+                ChatChannel.channel_type == "subgroup",
+                ChatChannel.subgroup_id == subgroup_id,
+            )
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            return (existing, False)
+
+        channel = ChatChannel(
+            community_id=community_id,
+            name=name,
+            channel_type="subgroup",
+            subgroup_id=subgroup_id,
+        )
+        self._session.add(channel)
+        await self._session.flush()
+        await self._session.refresh(channel)
         return (channel, True)
 
 

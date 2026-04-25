@@ -68,6 +68,11 @@ class Event(Base):
     )
     source_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     rsvp_labels: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    contribution_slots: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[]",
+    )
     search_fts = mapped_column(
         TSVECTOR,
         Computed(

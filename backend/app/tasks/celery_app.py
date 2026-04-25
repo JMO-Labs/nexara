@@ -41,6 +41,9 @@ celery_app.conf.update(
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
+        "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
+        "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
+        "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
     },
     # ── Reliability ───────────────────────────────────────────────────
@@ -79,8 +82,20 @@ celery_app.conf.update(
             "schedule": crontab(hour="*/6"),
         },
         "dispatch-event-reminders": {
-            "task": "app.tasks.notification_tasks.dispatch_event_reminders",
+            "task": "app.tasks.event_tasks.dispatch_event_reminders",
             "schedule": crontab(minute="*/15"),
+        },
+        "sync-calendar-subscriptions": {
+            "task": "app.tasks.event_tasks.sync_subscriptions",
+            "schedule": crontab(minute="0"),
+        },
+        "fire-tradition-prompts": {
+            "task": "app.tasks.prompt_tasks.fire_prompts",
+            "schedule": crontab(hour="6", minute="0"),
+        },
+        "generate-prompt-summaries": {
+            "task": "app.tasks.prompt_tasks.generate_summaries",
+            "schedule": crontab(hour="7", minute="0"),
         },
         "storage-snapshot": {
             "task": "app.tasks.retention_tasks.take_storage_snapshot",

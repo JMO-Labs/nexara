@@ -15,10 +15,65 @@ from typing import Any
 
 import structlog
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember
 from app.models.user import User
 from app.repositories.base import BaseRepository
+
+# Maximum depth used when materializing parent/child chains to bound iteration
+# in the presence of unexpected cycles (the create/update path also rejects
+# them, but defense in depth is cheap).
+_MAX_HIERARCHY_DEPTH = 16
+
+
+async def expand_with_descendants(
+    session: AsyncSession,
+    seed_ids: list[uuid.UUID],
+) -> list[uuid.UUID]:
+    """
+    @brief Return ``seed_ids`` plus all descendant subgroup IDs.
+
+    BFS over ``parent_id`` edges. Used to translate "user is member of X"
+    into "user has inherited access to X and every descendant of X" for
+    parent → child cascade.
+    """
+    if not seed_ids:
+        return []
+    seen = set(seed_ids)
+    frontier: list[uuid.UUID] = list(seed_ids)
+    for _ in range(_MAX_HIERARCHY_DEPTH):
+        if not frontier:
+            break
+        stmt = select(Subgroup.id).where(Subgroup.parent_id.in_(frontier))
+        result = await session.execute(stmt)
+        new_ids = [r[0] for r in result.all() if r[0] not in seen]
+        seen.update(new_ids)
+        frontier = new_ids
+    return list(seen)
+
+
+def visible_subgroup_ids_subq(user_id: uuid.UUID) -> Any:
+    """
+    @brief SQL subquery yielding subgroup IDs visible to ``user_id`` via
+    direct membership or ancestor membership (parent → child cascade).
+
+    Implemented as a recursive CTE: seed from the user's direct
+    memberships, then walk down the ``parent_id`` edges to include every
+    descendant.
+    """
+    seed = (
+        select(SubgroupMember.subgroup_id.label("id"))
+        .where(SubgroupMember.user_id == user_id)
+        .cte("visible_subgroups", recursive=True)
+    )
+    child = aliased(Subgroup)
+    seed = seed.union_all(
+        select(child.id.label("id")).where(child.parent_id == seed.c.id),
+    )
+    return select(seed.c.id)
+
 
 logger = structlog.get_logger(__name__)
 
@@ -31,6 +86,30 @@ class SubgroupRepository(BaseRepository[Subgroup]):
     """
 
     model = Subgroup
+
+    async def get_ancestor_ids(
+        self,
+        subgroup_id: uuid.UUID,
+    ) -> list[uuid.UUID]:
+        """
+        @brief Walk the ``parent_id`` chain upward from ``subgroup_id``.
+
+        @return List of ancestor subgroup IDs, ordered nearest → root.
+                Excludes ``subgroup_id`` itself.
+        """
+        ids: list[uuid.UUID] = []
+        seen: set[uuid.UUID] = {subgroup_id}
+        current = subgroup_id
+        for _ in range(_MAX_HIERARCHY_DEPTH):
+            stmt = select(Subgroup.parent_id).where(Subgroup.id == current)
+            result = await self._session.execute(stmt)
+            parent_id = result.scalar_one_or_none()
+            if parent_id is None or parent_id in seen:
+                break
+            ids.append(parent_id)
+            seen.add(parent_id)
+            current = parent_id
+        return ids
 
     async def get_by_slug(
         self,
@@ -79,16 +158,14 @@ class SubgroupRepository(BaseRepository[Subgroup]):
             stmt = stmt.where(Subgroup.archived_at.is_(None))
 
         if not is_admin:
-            # User sees: public subgroups OR private subgroups they belong to.
-            member_subq = select(SubgroupMember.subgroup_id).where(
-                SubgroupMember.user_id == user_id,
-            )
+            # Public subgroups OR private subgroups the user has access to
+            # via direct membership or ancestor-membership cascade.
             from sqlalchemy import or_
 
             stmt = stmt.where(
                 or_(
                     Subgroup.is_private.is_(False),
-                    Subgroup.id.in_(member_subq),
+                    Subgroup.id.in_(visible_subgroup_ids_subq(user_id)),
                 )
             )
 
@@ -107,6 +184,7 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         is_private: bool,
         join_policy: str,
         created_by: uuid.UUID,
+        parent_id: uuid.UUID | None = None,
     ) -> Subgroup:
         """
         @brief Insert a new subgroup row.
@@ -122,6 +200,7 @@ class SubgroupRepository(BaseRepository[Subgroup]):
             is_private=is_private,
             join_policy=join_policy,
             created_by=created_by,
+            parent_id=parent_id,
         )
         return await self.create(subgroup)
 
@@ -138,6 +217,18 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         @return The updated instance.
         """
         return await self.update(subgroup, data)
+
+    async def hard_delete(self, subgroup: Subgroup) -> None:
+        """
+        @brief Permanently delete a subgroup row.
+
+        Cascades take care of members, chat channels, prompts, and pinned
+        rows; events / posts / galleries become orphaned to community
+        scope (their ``subgroup_id`` is ``SET NULL``). Children groups
+        also detach (``parent_id`` becomes NULL) rather than disappearing.
+        """
+        await self._session.delete(subgroup)
+        await self._session.flush()
 
     async def archive(self, subgroup: Subgroup) -> Subgroup:
         """

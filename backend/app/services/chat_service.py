@@ -147,6 +147,54 @@ class ChatService:
         )
         return channel
 
+    async def ensure_subgroup_channel(
+        self,
+        user: User,
+        subgroup_id: uuid.UUID,
+    ) -> ChatChannel:
+        """
+        @brief Return (creating if necessary) the chat channel for a subgroup.
+
+        Caller must be a member of the subgroup. Validates membership via
+        :class:`SubgroupMember` before touching the channel table.
+
+        @param user Requesting user.
+        @param subgroup_id Subgroup UUID.
+        @return The subgroup ChatChannel.
+        @raises AuthorizationError If user is not a subgroup member.
+        @raises NotFoundError If the subgroup does not exist.
+        """
+        from sqlalchemy import select as _select
+
+        from app.models.subgroup import Subgroup, SubgroupMember
+
+        session = self._channel_repo._session
+        sg = await session.execute(
+            _select(Subgroup).where(
+                Subgroup.id == subgroup_id,
+                Subgroup.community_id == self._community_id,
+            )
+        )
+        subgroup = sg.scalar_one_or_none()
+        if subgroup is None:
+            raise NotFoundError(_("Subgroup not found"))
+
+        membership = await session.execute(
+            _select(SubgroupMember).where(
+                SubgroupMember.subgroup_id == subgroup_id,
+                SubgroupMember.user_id == user.id,
+            )
+        )
+        if membership.scalar_one_or_none() is None:
+            raise AuthorizationError(_("Not a member of this subgroup"))
+
+        channel, _created = await self._channel_repo.get_or_create_subgroup(
+            subgroup_id,
+            self._community_id,
+            subgroup.name,
+        )
+        return channel
+
     async def list_dm_threads(self, user: User) -> list[dict[str, Any]]:
         """
         @brief Return every DM thread the user participates in.
@@ -207,7 +255,7 @@ class ChatService:
         )
         payload = serialize_message(message, user)
 
-        await self._broadcast(channel.id, "chat.message", payload)
+        await self._broadcast(channel.id, "chat.message", payload, channel=channel)
         await self._enqueue_link_previews(content, message.id)
 
         return payload
@@ -314,6 +362,28 @@ class ChatService:
             }
             await self._broadcast(deleted.channel_id, "chat.deleted", payload)
 
+    async def leave_dm(
+        self,
+        user: User,
+        channel_id: uuid.UUID,
+    ) -> None:
+        """
+        @brief Remove the calling user from a DM channel.
+
+        @param user Acting user.
+        @param channel_id DM channel UUID.
+        @raises NotFoundError If the channel is not a DM the user belongs to.
+        """
+        channel = await self._channel_repo.get_for_user(
+            channel_id,
+            user.id,
+            self._community_id,
+        )
+        if channel is None or channel.channel_type != "direct":
+            raise NotFoundError(_("Direct message thread not found"))
+
+        await self._channel_repo.remove_dm_participant(channel_id, user.id)
+
     # ── Internals ────────────────────────────────────────────────────
 
     async def _broadcast(
@@ -321,8 +391,19 @@ class ChatService:
         channel_id: uuid.UUID,
         type_: str,
         payload: dict[str, Any],
+        *,
+        channel: ChatChannel | None = None,
     ) -> int:
-        """@brief Publish a typed envelope to the chat pub/sub channel."""
+        """
+        @brief Publish a typed envelope to every member of the channel.
+
+        Fans out via per-user pub/sub (``user:{uid}``) so the realtime
+        subscriber, which psubscribes ``user:*``/``community:*``, routes
+        each frame to the correct WebSocket connections. Falls back to
+        the legacy ``chat:{channel_id}`` topic when the channel cannot
+        be resolved (preserves backwards-compat for any external
+        listener still using it).
+        """
         if self._broadcaster is None:
             from app.services.realtime.pubsub import publish as default_publish
 
@@ -331,7 +412,22 @@ class ChatService:
             publish = self._broadcaster
 
         message = {"type": type_, "payload": payload}
-        return await publish(channel_pubsub_name(channel_id), message)
+
+        ch = channel
+        if ch is None:
+            ch = await self._channel_repo.get(channel_id, self._community_id)
+        if ch is None:
+            return await publish(channel_pubsub_name(channel_id), message)
+
+        member_ids = await self._channel_repo.list_member_ids(
+            ch,
+            self._community_id,
+        )
+
+        total = 0
+        for uid in member_ids:
+            total += await publish(f"user:{uid}", message)
+        return total
 
     async def _enqueue_link_previews(
         self,

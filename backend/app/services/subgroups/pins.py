@@ -56,7 +56,9 @@ class SubgroupPinsMixin:
         @raises AuthorizationError If user lacks permission.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner", "moderator"})
+        await require_role(
+            self._member_repo, self._subgroup_repo, subgroup, user, {"owner", "moderator"}
+        )
 
         post = await self._post_repo.get_by_id(post_id, community_id=self._community_id)
         if post is None or post.subgroup_id != subgroup.id:
@@ -87,7 +89,9 @@ class SubgroupPinsMixin:
         @raises AuthorizationError If user lacks permission.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner", "moderator"})
+        await require_role(
+            self._member_repo, self._subgroup_repo, subgroup, user, {"owner", "moderator"}
+        )
 
         session = self._post_repo._session
         await session.execute(

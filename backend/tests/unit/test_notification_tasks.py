@@ -3,8 +3,8 @@
 @brief Unit tests for notification tasks.
 """
 
+from app.tasks.event_tasks import dispatch_event_reminders
 from app.tasks.notification_tasks import (
-    dispatch_event_reminders,
     send_email_notification,
     send_push_notification,
 )
@@ -43,9 +43,8 @@ class TestDispatchEventReminders:
 
     def test_task_name(self):
         assert (
-            dispatch_event_reminders.name == "app.tasks.notification_tasks.dispatch_event_reminders"
+            dispatch_event_reminders.name == "app.tasks.event_tasks.dispatch_event_reminders"
         )
 
-    def test_returns_count(self):
-        result = dispatch_event_reminders()
-        assert "reminders_sent" in result
+    def test_queue_is_notifications(self):
+        assert dispatch_event_reminders.queue == "notifications"

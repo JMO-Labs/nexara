@@ -139,6 +139,7 @@ class TestSendMessage:
         user = _make_user()
         channel = _make_channel()
         channel_repo.get_for_user.return_value = channel
+        channel_repo.list_member_ids.return_value = [user.id]
         message_repo.create_message.return_value = _make_message()
 
         result = await service.send_message(user, CHANNEL_ID, "hi world")
@@ -153,7 +154,7 @@ class TestSendMessage:
 
         broadcaster.assert_awaited_once()
         call_args = broadcaster.call_args[0]
-        assert call_args[0] == channel_pubsub_name(CHANNEL_ID)
+        assert call_args[0] == f"user:{user.id}"
         envelope = call_args[1]
         assert envelope["type"] == "chat.message"
         assert envelope["payload"]["content"] == "hello"
@@ -233,11 +234,15 @@ class TestEditMessage:
     """@brief Tests for edit_message()."""
 
     @pytest.mark.asyncio
-    async def test_edit_by_author(self, service, message_repo, broadcaster) -> None:
+    async def test_edit_by_author(
+        self, service, channel_repo, message_repo, broadcaster
+    ) -> None:
         """edit_message lets the author mutate content and broadcasts update."""
         user = _make_user()
         existing = _make_message(author_id=user.id, content="original")
         message_repo.get.return_value = existing
+        channel_repo.get.return_value = _make_channel()
+        channel_repo.list_member_ids.return_value = [user.id]
 
         async def fake_update(msg, new):
             msg.content = new
@@ -283,11 +288,15 @@ class TestDeleteMessage:
     """@brief Tests for delete_message()."""
 
     @pytest.mark.asyncio
-    async def test_delete_by_author(self, service, message_repo, broadcaster) -> None:
+    async def test_delete_by_author(
+        self, service, channel_repo, message_repo, broadcaster
+    ) -> None:
         """Author can delete their own message, broadcasts chat.deleted."""
         user = _make_user()
         existing = _make_message(author_id=user.id)
         message_repo.get.return_value = existing
+        channel_repo.get.return_value = _make_channel()
+        channel_repo.list_member_ids.return_value = [user.id]
 
         async def fake_delete(msg):
             msg.content = TOMBSTONE_CONTENT
@@ -303,11 +312,15 @@ class TestDeleteMessage:
         assert envelope["payload"]["deleted"] is True
 
     @pytest.mark.asyncio
-    async def test_delete_by_admin(self, service, message_repo, broadcaster) -> None:
+    async def test_delete_by_admin(
+        self, service, channel_repo, message_repo, broadcaster
+    ) -> None:
         """Admin can delete anybody's message."""
         admin = _make_user(user_id=ADMIN_ID, role="admin")
         existing = _make_message(author_id=OTHER_USER_ID)
         message_repo.get.return_value = existing
+        channel_repo.get.return_value = _make_channel()
+        channel_repo.list_member_ids.return_value = [admin.id]
 
         async def fake_delete(msg):
             msg.content = TOMBSTONE_CONTENT

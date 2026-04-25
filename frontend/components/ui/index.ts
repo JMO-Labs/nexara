@@ -8,6 +8,7 @@ export { Input, type InputProps } from './Input';
 export { Textarea, type TextareaProps } from './Textarea';
 export { Select, Option, type SelectProps } from './Select';
 export { Card, type CardProps } from './Card';
+export { SettingsRow, type SettingsRowProps } from './SettingsRow';
 export { Modal, type ModalProps } from './Modal';
 export { Drawer, type DrawerProps } from './Drawer';
 export { Tabs, TabList, Tab, TabPanel } from './Tabs';

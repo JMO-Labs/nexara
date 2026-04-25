@@ -1,0 +1,55 @@
+[
+  {
+    "title": "Weekly Highlight",
+    "body": "Share the highlight of your week — a moment, photo, or accomplishment you're proud of.",
+    "frequency_type": "weekly",
+    "trigger_weekday": 6,
+    "active_days": 7,
+    "scope": "community",
+    "notify_members": true,
+    "notification_body": "It's time for the weekly highlight!",
+    "generate_summary": true
+  },
+  {
+    "title": "Monthly Reflection",
+    "body": "Looking back at this month, what stands out? What are you grateful for?",
+    "frequency_type": "monthly",
+    "trigger_month_day": 1,
+    "active_days": 7,
+    "scope": "community",
+    "notify_members": true,
+    "generate_summary": true
+  },
+  {
+    "title": "New Year Reflection",
+    "body": "What was the best part of the past year? What are you looking forward to?",
+    "frequency_type": "annual_date",
+    "trigger_month": 1,
+    "trigger_day": 1,
+    "active_days": 14,
+    "scope": "community",
+    "notify_members": true,
+    "generate_summary": true
+  },
+  {
+    "title": "Gratitude Day",
+    "body": "Share what you're grateful for today.",
+    "frequency_type": "annual_date",
+    "trigger_month": 11,
+    "trigger_day": 26,
+    "active_days": 7,
+    "scope": "community",
+    "notify_members": true,
+    "generate_summary": true
+  },
+  {
+    "title": "Throwback Thursday",
+    "body": "Share a favourite memory or photo from the past.",
+    "frequency_type": "weekly",
+    "trigger_weekday": 3,
+    "active_days": 1,
+    "scope": "community",
+    "notify_members": false,
+    "generate_summary": false
+  }
+]

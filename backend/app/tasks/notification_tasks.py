@@ -125,19 +125,3 @@ def send_email_notification(
             error=str(exc),
         )
         raise self.retry(exc=exc)
-
-
-@celery_app.task(  # type: ignore[untyped-decorator]
-    name="app.tasks.notification_tasks.dispatch_event_reminders",
-    queue="notifications",
-)
-def dispatch_event_reminders() -> dict[str, int]:
-    """
-    @brief Find events starting in the next hour and dispatch reminder notifications.
-
-    Run every 15 minutes via Beat.
-
-    @return Dict with ``reminders_sent`` count.
-    """
-    logger.info("dispatch_event_reminders")
-    return {"reminders_sent": 0}

@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.core.exceptions import ConflictError
+from app.core.exceptions import AuthorizationError, ConflictError
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember
 from app.models.user import User
 from app.repositories.post_repo import PostRepository
@@ -298,6 +298,190 @@ class TestAdminVisibility:
         assert result is subgroup
         # Admin path should NOT consult membership for visibility.
         member_repo.get_membership.assert_not_awaited()
+
+
+class TestParentHierarchy:
+    """@brief Validate parent_id semantics on create/update."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_parent(self, service, subgroup_repo, member_repo):
+        """Create with valid parent stores parent_id on the new subgroup."""
+        owner = _make_user()
+        parent = _make_subgroup(slug="root")
+        parent.parent_id = None
+        subgroup_repo.get_by_slug.return_value = None
+        subgroup_repo.get_by_id.return_value = parent
+
+        created = _make_subgroup(slug="child")
+        created.parent_id = parent.id
+        subgroup_repo.create_subgroup.return_value = created
+
+        channel = MagicMock(spec=ChatChannel)
+        subgroup_repo.create_chat_channel.return_value = channel
+
+        await service.create_subgroup(
+            owner,
+            name="Child",
+            slug="child",
+            parent_id=parent.id,
+        )
+
+        subgroup_repo.create_subgroup.assert_awaited_once()
+        kwargs = subgroup_repo.create_subgroup.await_args.kwargs
+        assert kwargs["parent_id"] == parent.id
+
+    @pytest.mark.asyncio
+    async def test_create_with_unknown_parent_rejected(self, service, subgroup_repo, member_repo):
+        """Unknown parent_id raises NotFoundError before insert."""
+        from app.core.exceptions import NotFoundError
+
+        owner = _make_user()
+        subgroup_repo.get_by_slug.return_value = None
+        subgroup_repo.get_by_id.return_value = None
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                owner,
+                name="Child",
+                slug="child",
+                parent_id=uuid.uuid4(),
+            )
+
+        subgroup_repo.create_subgroup.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_self_parent_rejected_on_update(self, service, subgroup_repo, member_repo):
+        """Setting parent_id to self raises ConflictError."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="solo")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        with pytest.raises(ConflictError):
+            await service.update_subgroup("solo", owner, {"parent_id": subgroup.id})
+
+        subgroup_repo.update_fields.assert_not_awaited()
+
+
+class TestRoleInheritance:
+    """@brief Parent → child role/membership cascade via effective_membership."""
+
+    @pytest.mark.asyncio
+    async def test_ancestor_owner_grants_inherited_access(self, subgroup_repo, member_repo):
+        """Owner of parent has effective owner role on child with no direct membership."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        owner_m = MagicMock(spec=SubgroupMember)
+        owner_m.role = "owner"
+        # First call (direct on child) → None; second (ancestor parent) → owner.
+        member_repo.get_membership.side_effect = [None, owner_m]
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is owner_m
+
+    @pytest.mark.asyncio
+    async def test_direct_role_outranks_weaker_ancestor(self, subgroup_repo, member_repo):
+        """Direct owner beats ancestor moderator (highest rank wins)."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        direct = MagicMock(spec=SubgroupMember)
+        direct.role = "owner"
+        ancestor = MagicMock(spec=SubgroupMember)
+        ancestor.role = "moderator"
+        member_repo.get_membership.side_effect = [direct, ancestor]
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is direct
+
+    @pytest.mark.asyncio
+    async def test_no_membership_anywhere_returns_none(self, subgroup_repo, member_repo):
+        """No direct + no ancestor membership → effective is None."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        member_repo.get_membership.return_value = None
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is None
+
+
+class TestAddMember:
+    """@brief Direct add-member by owner/admin (bypasses join policy)."""
+
+    @pytest.mark.asyncio
+    async def test_owner_can_add_member(self, service, subgroup_repo, member_repo):
+        """Owner adds another user; repo.add_member is called."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        # First lookup: acting user's role; second: target's existing membership.
+        member_repo.get_membership.side_effect = [owner_membership, None]
+
+        created = MagicMock(spec=SubgroupMember)
+        member_repo.add_member.return_value = created
+
+        target_id = uuid.uuid4()
+        result = await service.add_member("family", target_id, "member", owner)
+
+        assert result is created
+        member_repo.add_member.assert_awaited_once()
+        kwargs = member_repo.add_member.await_args.kwargs
+        assert kwargs["user_id"] == target_id
+        assert kwargs["role"] == "member"
+        assert kwargs["invited_by"] == owner.id
+
+    @pytest.mark.asyncio
+    async def test_non_owner_rejected(self, service, subgroup_repo, member_repo):
+        """Member-role caller cannot add members."""
+        member = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        my_membership = MagicMock(spec=SubgroupMember)
+        my_membership.role = "member"
+        member_repo.get_membership.return_value = my_membership
+
+        with pytest.raises(AuthorizationError):
+            await service.add_member("family", uuid.uuid4(), "member", member)
+
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_duplicate_rejected(self, service, subgroup_repo, member_repo):
+        """Adding existing member raises ConflictError."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        existing_target = MagicMock(spec=SubgroupMember)
+        member_repo.get_membership.side_effect = [owner_membership, existing_target]
+
+        with pytest.raises(ConflictError):
+            await service.add_member("family", uuid.uuid4(), "member", owner)
+
+        member_repo.add_member.assert_not_awaited()
 
 
 class TestPinPost:

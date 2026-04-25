@@ -41,6 +41,11 @@ class Subgroup(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("subgroups.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     search_fts = mapped_column(
         TSVECTOR,
         Computed(
@@ -63,6 +68,7 @@ class Subgroup(Base):
         Index("subgroups_slug_idx", "slug"),
         Index("subgroups_active_idx", "archived_at", postgresql_where=(archived_at.is_(None))),
         Index("subgroups_search_fts_idx", "search_fts", postgresql_using="gin"),
+        Index("subgroups_parent_idx", "parent_id"),
     )
 
 

@@ -38,7 +38,7 @@ lint:prettier:
   script:
     - echo "Checking Prettier formatting..."
     - cd frontend
-    - npx prettier --check "**/*.{ts,vue,js,json,css,scss,md}"
+    - npx prettier --check "**/*.{ts,tsx,js,jsx,json,css,scss,md}"
   rules: !reference [.rules:frontend-lint, rules]
   allow_failure: false
 
@@ -55,8 +55,8 @@ lint:typecheck:
     - npm ci --prefer-offline --no-audit 2>/dev/null || npm install
     - cd "$CI_PROJECT_DIR"
   script:
-    - echo "Running Nuxt typecheck..."
+    - echo "Running Next typecheck..."
     - cd frontend
-    - npx nuxi typecheck
+    - npx tsc --noEmit
   rules: !reference [.rules:frontend-lint, rules]
   allow_failure: false

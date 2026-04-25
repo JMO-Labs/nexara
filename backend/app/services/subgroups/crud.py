@@ -34,6 +34,47 @@ class SubgroupCrudMixin:
     _member_repo: SubgroupMemberRepository
     _community_id: uuid.UUID
 
+    async def _validate_parent(
+        self,
+        parent_id: uuid.UUID | None,
+        *,
+        self_id: uuid.UUID | None = None,
+    ) -> None:
+        """
+        @brief Validate that ``parent_id`` is a valid parent subgroup.
+
+        Ensures the parent exists in the same community and is not the
+        subgroup itself nor an ancestor of itself (cycle check).
+
+        @param parent_id Candidate parent subgroup UUID (None is fine).
+        @param self_id Subgroup being created/updated, for cycle check.
+        @raises NotFoundError If parent not found in this community.
+        @raises ConflictError If parent_id == self_id or creates a cycle.
+        """
+        if parent_id is None:
+            return
+
+        if self_id is not None and parent_id == self_id:
+            raise ConflictError(message=_("A group cannot be its own parent"))
+
+        parent = await self._subgroup_repo.get_by_id(parent_id)
+        if parent is None or parent.community_id != self._community_id:
+            raise NotFoundError(message=_("Parent group not found"))
+
+        # Walk up the chain, breaking on root or cycle into self.
+        seen: set[uuid.UUID] = {parent_id}
+        cursor = parent
+        while cursor.parent_id is not None:
+            if self_id is not None and cursor.parent_id == self_id:
+                raise ConflictError(message=_("Parent assignment would create a cycle"))
+            if cursor.parent_id in seen:
+                break
+            seen.add(cursor.parent_id)
+            ancestor = await self._subgroup_repo.get_by_id(cursor.parent_id)
+            if ancestor is None:
+                break
+            cursor = ancestor
+
     async def create_subgroup(
         self,
         user: User,
@@ -44,6 +85,7 @@ class SubgroupCrudMixin:
         avatar_url: str | None = None,
         is_private: bool = False,
         join_policy: str = "open",
+        parent_id: uuid.UUID | None = None,
     ) -> tuple[Subgroup, ChatChannel]:
         """
         @brief Create a new subgroup.
@@ -65,6 +107,8 @@ class SubgroupCrudMixin:
         if existing is not None:
             raise ConflictError(message=_("A subgroup with this slug already exists"))
 
+        await self._validate_parent(parent_id)
+
         subgroup = await self._subgroup_repo.create_subgroup(
             community_id=self._community_id,
             name=name,
@@ -74,6 +118,7 @@ class SubgroupCrudMixin:
             is_private=is_private,
             join_policy=join_policy,
             created_by=user.id,
+            parent_id=parent_id,
         )
 
         await self._member_repo.add_member(
@@ -150,12 +195,37 @@ class SubgroupCrudMixin:
             is archived.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner", "moderator"})
+        await require_role(
+            self._member_repo, self._subgroup_repo, subgroup, user, {"owner", "moderator"}
+        )
 
         if subgroup.archived_at is not None and not is_admin(user):
             raise AuthorizationError(message=_("Archived subgroups are read-only"))
 
+        if "parent_id" in updates:
+            await self._validate_parent(updates["parent_id"], self_id=subgroup.id)
+
         return await self._subgroup_repo.update_fields(subgroup, updates)
+
+    async def hard_delete_subgroup(self, slug: str, user: User) -> None:
+        """
+        @brief Permanently delete a subgroup (community admin only).
+
+        Owners can only archive; permanent deletion is gated behind the
+        admin role to keep blast radius contained. Cascades and SET NULL
+        FKs handle dependent rows — see :meth:`SubgroupRepository.hard_delete`.
+
+        @param slug Subgroup slug.
+        @param user Requesting user (must be community admin).
+        @raises NotFoundError If subgroup not found.
+        @raises AuthorizationError If user is not an admin.
+        """
+        if not is_admin(user):
+            raise AuthorizationError(
+                message=_("Only administrators can permanently delete a group"),
+            )
+        subgroup = await self.get_subgroup(slug, user)
+        await self._subgroup_repo.hard_delete(subgroup)
 
     async def archive_subgroup(self, slug: str, user: User) -> Subgroup:
         """
@@ -168,5 +238,5 @@ class SubgroupCrudMixin:
         @raises AuthorizationError If user is not owner or admin.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner"})
+        await require_role(self._member_repo, self._subgroup_repo, subgroup, user, {"owner"})
         return await self._subgroup_repo.archive(subgroup)

@@ -39,6 +39,7 @@ class SubgroupCreate(BaseModel):
     avatar_url: str | None = Field(default=None, max_length=500)
     is_private: bool = False
     join_policy: str = Field(default="open", pattern=r"^(open|invite_only|admin_approval)$")
+    parent_id: UUID | None = None
 
 
 class SubgroupUpdate(BaseModel):
@@ -53,6 +54,7 @@ class SubgroupUpdate(BaseModel):
     avatar_url: str | None = Field(default=None, max_length=500)
     is_private: bool | None = None
     join_policy: str | None = Field(default=None, pattern=r"^(open|invite_only|admin_approval)$")
+    parent_id: UUID | None = None
 
 
 class SubgroupResponse(BaseModel):
@@ -68,6 +70,7 @@ class SubgroupResponse(BaseModel):
     is_private: bool
     join_policy: str
     created_by: UUID | None = None
+    parent_id: UUID | None = None
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
@@ -126,6 +129,18 @@ class RoleChangeRequest(BaseModel):
     """
 
     role: str = Field(pattern=r"^(owner|moderator|member)$")
+
+
+class AddMemberRequest(BaseModel):
+    """
+    @brief Request payload for adding a user to a subgroup directly.
+
+    @param user_id Target user's UUID.
+    @param role Initial role — defaults to ``member``.
+    """
+
+    user_id: UUID
+    role: str = Field(default="member", pattern=r"^(owner|moderator|member)$")
 
 
 class PinPostRequest(BaseModel):

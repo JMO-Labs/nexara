@@ -95,6 +95,31 @@ async def create_or_get_dm(
     return ChannelResponse.model_validate(channel)
 
 
+@router.post(
+    "/subgroup/{subgroup_id}",
+    response_model=ChannelResponse,
+    status_code=200,
+)
+async def ensure_subgroup_channel(
+    subgroup_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(_build_service),
+) -> ChannelResponse:
+    """@brief Return (creating when absent) the subgroup chat channel."""
+    channel = await service.ensure_subgroup_channel(user, subgroup_id)
+    return ChannelResponse.model_validate(channel)
+
+
+@router.delete("/dm/{channel_id}", status_code=204)
+async def delete_dm_thread(
+    channel_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(_build_service),
+) -> None:
+    """@brief Remove the calling user from a DM channel (hides it for them)."""
+    await service.leave_dm(user, channel_id)
+
+
 @router.get("/dm", response_model=list[DirectMessageThreadResponse])
 async def list_dm_threads(
     user: User = Depends(get_current_user),

@@ -19,6 +19,7 @@ from sqlalchemy.sql.expression import ColumnElement
 
 from app.models.event import Event
 from app.models.post import Comment, Post
+from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
@@ -261,6 +262,72 @@ class SearchRepository:
             select(func.count())
             .select_from(Event)
             .where(Event.community_id == community_id)
+            .where(match_expr)
+        )
+
+        result = await self._session.execute(
+            stmt.offset(offset).limit(limit + 1),
+            params,
+        )
+        rows = result.all()
+        count_result = await self._session.execute(count_stmt, params)
+        total = count_result.scalar_one()
+
+        next_cursor = str(offset + limit) if len(rows) > limit else None
+        if len(rows) > limit:
+            rows = rows[:limit]
+
+        return [(r[0], r[1]) for r in rows], next_cursor, total
+
+    async def search_subgroups(
+        self,
+        query: str,
+        prefix_query: str,
+        community_id: uuid.UUID,
+        viewer_id: uuid.UUID,
+        cursor: str | None,
+        limit: int,
+    ) -> tuple[list[tuple[Subgroup, float]], str | None, int]:
+        """
+        @brief Search subgroups by name/description using FTS.
+
+        Excludes archived. Private subgroups only included if viewer is a member.
+        """
+        if not query or not query.strip():
+            return [], None, 0
+
+        try:
+            offset = int(cursor) if cursor else 0
+        except ValueError:
+            offset = 0
+
+        match_expr, rank_expr, extra = _fts_expressions(
+            Subgroup.search_fts,
+            prefix_query,
+        )
+        params = {"q": query, **extra}
+
+        from app.repositories.subgroup_repo import visible_subgroup_ids_subq
+
+        visibility = (Subgroup.is_private.is_(False)) | (
+            Subgroup.id.in_(visible_subgroup_ids_subq(viewer_id))
+        )
+
+        stmt = (
+            select(Subgroup, rank_expr.label("rank"))
+            .where(Subgroup.community_id == community_id)
+            .where(Subgroup.archived_at.is_(None))
+            .where(visibility)
+            .where(match_expr)
+            .order_by(rank_expr.desc(), Subgroup.created_at.desc())
+        )
+
+        count_stmt = (
+            select(func.count())
+            .select_from(Subgroup)
+            .where(Subgroup.community_id == community_id)
+            .where(Subgroup.archived_at.is_(None))
+            .where(visibility)
             .where(match_expr)
         )
 

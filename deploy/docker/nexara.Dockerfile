@@ -4,9 +4,12 @@
 #
 # Build context: repository root (set in docker-compose.yml)
 #
-# Stage 1 (frontend-builder): Install Node deps, build Nuxt static output
+# Stage 1 (frontend-builder): Install Node deps, build Next.js standalone
 # Stage 2 (python-builder):   Install Python dependencies with uv
-# Stage 3 (runtime):          Alpine with Nginx, supervisord, Valkey, ffmpeg
+# Stage 3 (runtime):          Alpine with Nginx, supervisord, Valkey, Node, ffmpeg
+#
+# After the Nuxt → Next 16 cutover, the frontend is a Node-served standalone
+# Next app (port 3000 internally) proxied by Nginx alongside Uvicorn.
 # =============================================================================
 
 # ── Stage 1: Build Frontend ──────────────────────────────────────────────────
@@ -18,7 +21,7 @@ COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --ignore-scripts
 
 COPY frontend/ ./
-RUN npm run generate
+RUN npm run build
 
 # ── Stage 2: Build Python dependencies ──────────────────────────────────────
 FROM python:3.12-alpine AS python-builder
@@ -31,7 +34,7 @@ RUN apk add --no-cache gcc musl-dev libffi-dev postgresql-dev \
 COPY backend/pyproject.toml ./
 RUN uv pip install --system --no-cache -r pyproject.toml
 
-# ── Stage 2: Runtime ────────────────────────────────────────────────────────
+# ── Stage 3: Runtime ────────────────────────────────────────────────────────
 FROM python:3.12-alpine AS runtime
 
 RUN apk add --no-cache \
@@ -40,6 +43,7 @@ RUN apk add --no-cache \
     valkey \
     ffmpeg \
     libmagic \
+    nodejs \
     postgresql-client \
     wget \
     && rm -rf /var/cache/apk/*
@@ -53,8 +57,10 @@ COPY --from=python-builder /usr/local/lib/python3.12/site-packages \
      /usr/local/lib/python3.12/site-packages
 COPY --from=python-builder /usr/local/bin /usr/local/bin
 
-# Frontend static output from builder stage
-COPY --from=frontend-builder /build/.output/public /usr/share/nginx/html
+# Frontend (Next standalone): server + static + public assets
+COPY --from=frontend-builder --chown=nexara:nexara /build/.next/standalone /app/frontend
+COPY --from=frontend-builder --chown=nexara:nexara /build/.next/static /app/frontend/.next/static
+COPY --from=frontend-builder --chown=nexara:nexara /build/public /app/frontend/public
 
 # Backend source
 COPY backend/app/ ./app/
@@ -68,17 +74,10 @@ COPY deploy/supervisord/supervisord.conf /etc/supervisord.conf
 COPY deploy/supervisord/conf.d/ /etc/supervisor.d/
 COPY deploy/valkey/valkey.conf /etc/valkey/valkey.conf
 
-# Startup script
-COPY deploy/scripts/startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
-
-# Media storage volume + Nginx runtime dirs
-RUN mkdir -p /data/media /run/nginx /var/log/nginx \
-    && chown -R nexara:nexara /data/media /run/nginx
+# Runtime dirs
+RUN mkdir -p /run/nginx /data/media \
+    && chown -R nexara:nexara /data/media /app
 
 EXPOSE 8080 9090
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --spider -q http://127.0.0.1:8080/healthz || exit 1
-
-ENTRYPOINT ["/app/startup.sh"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf", "-n"]

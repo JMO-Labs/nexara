@@ -24,6 +24,7 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.schemas.common import MessageResponse
 from app.schemas.subgroup import (
+    AddMemberRequest,
     MembershipResponse,
     PinPostRequest,
     RoleChangeRequest,
@@ -115,6 +116,7 @@ async def create_subgroup(
         avatar_url=body.avatar_url,
         is_private=body.is_private,
         join_policy=body.join_policy,
+        parent_id=body.parent_id,
     )
     return await _detail_response(service, subgroup, user)
 
@@ -138,7 +140,9 @@ async def update_subgroup(
     service: SubgroupService = Depends(_build_service),
 ) -> SubgroupDetailResponse:
     """@brief Update a subgroup (owner/moderator/admin only)."""
-    updates = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    raw = body.model_dump(exclude_unset=True)
+    # Allow explicit ``parent_id: null`` to detach; strip None for everything else.
+    updates = {k: v for k, v in raw.items() if v is not None or k == "parent_id"}
     subgroup = await service.update_subgroup(slug, user, updates)
     return await _detail_response(service, subgroup, user)
 
@@ -152,6 +156,17 @@ async def archive_subgroup(
     """@brief Archive a subgroup (owner or admin only)."""
     await service.archive_subgroup(slug, user)
     return MessageResponse(message=_("Subgroup archived"))
+
+
+@router.delete("/{slug}/permanent", response_model=MessageResponse)
+async def hard_delete_subgroup(
+    slug: str,
+    user: User = Depends(get_current_user),
+    service: SubgroupService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Permanently delete a subgroup (community admin only)."""
+    await service.hard_delete_subgroup(slug, user)
+    return MessageResponse(message=_("Subgroup permanently deleted"))
 
 
 @router.post("/{slug}/join")
@@ -198,17 +213,65 @@ async def list_members(
     ]
 
 
+@router.post(
+    "/{slug}/members",
+    response_model=MembershipResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_member(
+    slug: str,
+    body: AddMemberRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    service: SubgroupService = Depends(_build_service),
+) -> MembershipResponse:
+    """@brief Add a user as a subgroup member (owner or admin only)."""
+    membership = await service.add_member(slug, body.user_id, body.role, user)
+    # Enrich with user fields so the frontend doesn't render an empty
+    # row until the next refetch.
+    from sqlalchemy import select as _select
+
+    target = (
+        await db.execute(_select(User).where(User.id == membership.user_id))
+    ).scalar_one_or_none()
+    return MembershipResponse(
+        subgroup_id=membership.subgroup_id,
+        user_id=membership.user_id,
+        role=membership.role,
+        invited_by=membership.invited_by,
+        joined_at=membership.joined_at,
+        username=target.username if target else None,
+        display_name=target.display_name if target else None,
+        avatar_url=target.avatar_url if target else None,
+    )
+
+
 @router.post("/{slug}/members/{target_user_id}/role", response_model=MembershipResponse)
 async def change_member_role(
     slug: str,
     target_user_id: uuid.UUID,
     body: RoleChangeRequest,
+    db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
     service: SubgroupService = Depends(_build_service),
 ) -> MembershipResponse:
     """@brief Change a member's role (owner or admin only)."""
     membership = await service.change_role(slug, target_user_id, body.role, user)
-    return MembershipResponse.model_validate(membership)
+    from sqlalchemy import select as _select
+
+    target = (
+        await db.execute(_select(User).where(User.id == membership.user_id))
+    ).scalar_one_or_none()
+    return MembershipResponse(
+        subgroup_id=membership.subgroup_id,
+        user_id=membership.user_id,
+        role=membership.role,
+        invited_by=membership.invited_by,
+        joined_at=membership.joined_at,
+        username=target.username if target else None,
+        display_name=target.display_name if target else None,
+        avatar_url=target.avatar_url if target else None,
+    )
 
 
 @router.delete("/{slug}/members/{target_user_id}", response_model=MessageResponse)

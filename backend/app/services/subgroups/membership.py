@@ -136,13 +136,57 @@ class SubgroupMembershipMixin:
         @raises AuthorizationError If user lacks permission.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner"})
+        await require_role(self._member_repo, self._subgroup_repo, subgroup, user, {"owner"})
 
         membership = await self._member_repo.get_membership(subgroup.id, target_user_id)
         if membership is None:
             raise NotFoundError(message=_("Membership not found"))
 
         return await self._member_repo.update_role(membership, role)
+
+    async def add_member(
+        self,
+        slug: str,
+        target_user_id: uuid.UUID,
+        role: str,
+        user: User,
+    ) -> SubgroupMember:
+        """
+        @brief Add an arbitrary user as a subgroup member (owner/admin only).
+
+        Bypasses the join policy — used by managers to bring a member
+        directly into the subgroup. Caller must be the subgroup owner or
+        a community admin. Moderators cannot add members.
+
+        @param slug Subgroup slug.
+        @param target_user_id User UUID to add.
+        @param role Initial role (one of ``member``, ``moderator``, ``owner``).
+        @param user Acting user.
+        @return The newly created SubgroupMember.
+        @raises NotFoundError If subgroup missing.
+        @raises ConflictError If target already a member.
+        @raises AuthorizationError If acting user lacks permission or role invalid.
+        """
+        if role not in {"member", "moderator", "owner"}:
+            raise AuthorizationError(message=_("Invalid role"))
+
+        subgroup = await self.get_subgroup(slug, user)
+        if subgroup.archived_at is not None:
+            raise AuthorizationError(message=_("This subgroup is archived"))
+
+        await require_role(self._member_repo, self._subgroup_repo, subgroup, user, {"owner"})
+
+        existing = await self._member_repo.get_membership(subgroup.id, target_user_id)
+        if existing is not None:
+            raise ConflictError(message=_("User is already a member of this subgroup"))
+
+        return await self._member_repo.add_member(
+            community_id=self._community_id,
+            subgroup_id=subgroup.id,
+            user_id=target_user_id,
+            role=role,
+            invited_by=user.id,
+        )
 
     async def remove_member(
         self,
@@ -160,7 +204,9 @@ class SubgroupMembershipMixin:
         @raises AuthorizationError If user lacks permission.
         """
         subgroup = await self.get_subgroup(slug, user)
-        await require_role(self._member_repo, subgroup, user, {"owner", "moderator"})
+        await require_role(
+            self._member_repo, self._subgroup_repo, subgroup, user, {"owner", "moderator"}
+        )
 
         membership = await self._member_repo.get_membership(subgroup.id, target_user_id)
         if membership is None:

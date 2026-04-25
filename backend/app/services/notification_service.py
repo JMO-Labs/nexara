@@ -33,6 +33,11 @@ NOTIFICATION_TYPES = (
     "new_post",
     "system",
     "invite_accepted",
+    "event_reminder",
+    "event_rsvp",
+    "gallery_activity",
+    "prompt",
+    "prompt_summary",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -43,6 +48,11 @@ PREF_MAP = {
     "new_post": ("notif_new_post_inapp", "notif_new_post_email"),
     "system": ("notif_system_inapp", "notif_system_email"),
     "invite_accepted": ("notif_invite_accepted_inapp", "notif_invite_accepted_email"),
+    "event_reminder": ("notif_event_reminder_inapp", "notif_event_reminder_email"),
+    "event_rsvp": ("notif_event_rsvp_inapp", "notif_event_rsvp_email"),
+    "gallery_activity": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
+    "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
+    "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
 }
 
 
