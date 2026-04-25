@@ -54,7 +54,9 @@ export function useUpload(): UploadState {
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       setError(err);
-      const msg = (e as any)?.body?.error?.message ?? t('toasts.errors.generic');
+      const msg =
+        ((e as unknown) as { body?: { error?: { message?: string } } })?.body?.error?.message ??
+        t('toasts.errors.generic');
       push({ variant: 'danger', message: msg });
       throw err;
     } finally {
