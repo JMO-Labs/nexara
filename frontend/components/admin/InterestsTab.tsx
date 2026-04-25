@@ -1,14 +1,14 @@
 'use client';
 /**
  * @file components/admin/InterestsTab.tsx
- * @brief Read-only interest analytics display.
+ * @brief Interest analytics display with chip-style categories.
  */
 import { useQuery } from '@tanstack/react-query';
 import { qk } from '@/lib/query-keys';
 import { getInterestAnalytics } from '@/lib/api/interests';
 import Stack from '@mui/joy/Stack';
 import Card from '@mui/joy/Card';
-import Table from '@mui/joy/Table';
+import Chip from '@mui/joy/Chip';
 import Typography from '@mui/joy/Typography';
 import CircularProgress from '@mui/joy/CircularProgress';
 import Alert from '@mui/joy/Alert';
@@ -44,43 +44,52 @@ export function InterestsTab() {
     );
   }
 
+  // Group by category
+  const grouped = analytics.reduce(
+    (acc, item) => {
+      if (!acc[item.category_slug]) acc[item.category_slug] = [];
+      acc[item.category_slug].push(item);
+      return acc;
+    },
+    {} as Record<string, typeof analytics>,
+  );
+
   return (
-    <Stack spacing={3}>
-      <Card variant="outlined">
-        <Table
-          stripe="odd"
-          hoverRow
-          sx={{
-            '--TableCell-paddingX': '1rem',
-            '--TableCell-paddingY': '0.5rem',
-          }}
-        >
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Value</th>
-              <th>Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {analytics.map((item, idx) => (
-              <tr key={`${item.category_slug}-${item.value}-${idx}`}>
-                <td>
-                  <Typography level="body-sm">
-                    {item.category_slug}
-                  </Typography>
-                </td>
-                <td>
-                  <Typography level="body-sm">{item.value}</Typography>
-                </td>
-                <td>
-                  <Typography level="body-sm">{item.count}</Typography>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card>
+    <Stack spacing={2}>
+      {Object.entries(grouped).map(([category, items]) => (
+        <Card key={category} variant="outlined">
+          <Stack spacing={1}>
+            <Typography level="title-sm" sx={{ textTransform: 'capitalize' }}>
+              {category}
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              flexWrap="wrap"
+              sx={{
+                gap: 1,
+              }}
+            >
+              {items
+                .sort((a, b) => b.count - a.count)
+                .map((item, idx) => (
+                  <Chip
+                    key={`${item.value}-${idx}`}
+                    variant="soft"
+                    size="md"
+                    endDecorator={
+                      <Typography level="body-xs" sx={{ ml: 0.5 }}>
+                        {item.count}
+                      </Typography>
+                    }
+                  >
+                    {item.value}
+                  </Chip>
+                ))}
+            </Stack>
+          </Stack>
+        </Card>
+      ))}
     </Stack>
   );
 }
