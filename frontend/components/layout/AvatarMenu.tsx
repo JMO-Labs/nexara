@@ -38,6 +38,7 @@ export function AvatarMenu() {
         slotProps={{
           root: {
             'aria-label': 'Account menu',
+            'aria-haspopup': 'menu',
             style: { background: 'transparent', border: 0, padding: 4, cursor: 'pointer' },
           },
         }}
