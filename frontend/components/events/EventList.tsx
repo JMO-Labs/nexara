@@ -1,7 +1,7 @@
 'use client';
 /**
  * @file components/events/EventList.tsx
- * @brief Vertical list of EventCards grouped by date header.
+ * @brief Vertical list of EventCards grouped by month with sticky headers.
  */
 import * as React from 'react';
 import Stack from '@mui/joy/Stack';
@@ -11,9 +11,14 @@ import { EventCard } from './EventCard';
 import { useUpcomingEvents } from '@/hooks/useEvents';
 import type { EventItem } from '@/lib/api/events';
 
-function dayKey(iso: string): string {
+function monthKey(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export function EventList() {
@@ -40,29 +45,41 @@ export function EventList() {
 
   const groups: Record<string, EventItem[]> = {};
   for (const ev of data.items) {
-    const k = dayKey(ev.starts_at);
+    const k = monthKey(ev.starts_at);
     (groups[k] ??= []).push(ev);
   }
 
   return (
-    <Stack spacing={3}>
-      {Object.entries(groups).map(([k, items]) => (
-        <Stack key={k} spacing={1.5}>
+    <Stack spacing={0} sx={{ display: 'flex', flexDirection: 'column' }}>
+      {Object.entries(groups).map(([month, items]) => (
+        <React.Fragment key={month}>
           <Typography
             level="title-sm"
+            component="h3"
             sx={{
-              fontFamily: 'var(--font-display)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              py: 1,
+              px: 2,
+              bgcolor: 'background.surface',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              fontWeight: 'bold',
               textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: 'text.tertiary',
+              fontSize: '0.875rem',
+              letterSpacing: '0.05em',
+              color: 'text.secondary',
             }}
           >
-            {k}
+            {month}
           </Typography>
-          {items.map((ev) => (
-            <EventCard key={ev.id} event={ev} />
-          ))}
-        </Stack>
+          <Stack spacing={1.5} sx={{ px: 2, py: 2 }}>
+            {items.map((ev) => (
+              <EventCard key={ev.id} event={ev} />
+            ))}
+          </Stack>
+        </React.Fragment>
       ))}
     </Stack>
   );
