@@ -67,12 +67,14 @@ describe('AppearanceTab', () => {
     render(<AppearanceTab />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/appearance/i)).toBeInTheDocument();
-    expect(screen.getByText(/theme/i)).toBeInTheDocument();
+    const labels = screen.getAllByText(/theme/i);
+    expect(labels.length).toBeGreaterThan(0);
   });
 
   it('renders language selector', () => {
     render(<AppearanceTab />, { wrapper: createWrapper() });
 
-    expect(screen.getByText(/language/i)).toBeInTheDocument();
+    const labels = screen.getAllByText(/language/i);
+    expect(labels.length).toBeGreaterThan(0);
   });
 });
