@@ -1,15 +1,14 @@
 'use client';
 /**
  * @file components/settings/NotificationsTab.tsx
- * @brief Notifications settings tab: grid of toggles per notif type × channel.
+ * @brief Notifications settings tab with two-column toggle grid.
  */
 import { useCallback, useState } from 'react';
 import Stack from '@mui/joy/Stack';
-import Table from '@mui/joy/Table';
 import Typography from '@mui/joy/Typography';
 import Switch from '@mui/joy/Switch';
-import FormLabel from '@mui/joy/FormLabel';
 import Skeleton from '@mui/joy/Skeleton';
+import { Card, SettingsRow } from '@/components/ui';
 import {
   useNotificationPrefs,
   useUpdateNotificationPrefs,
@@ -51,67 +50,63 @@ export function NotificationsTab() {
   ];
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ maxWidth: 800 }}>
       <PushSubscriptionRow />
-      <div>
-        <Typography level="h3">Notification Preferences</Typography>
-        <Typography level="body-sm" color="neutral">
-          Choose how you receive notifications.
+
+      <Card variant="outlined">
+        <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+          Notification Preferences
         </Typography>
-      </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <Table>
-          <thead>
-            <tr>
-              <th style={{ width: '150px' }}>Type</th>
-              <th style={{ width: '150px' }}>In-App</th>
-              <th style={{ width: '150px' }}>Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {notifTypes.map(({ key, label }) => (
-              <tr key={key}>
-                <td>{label}</td>
-                <td>
-                  <Switch
-                    checked={
-                      prefs[`notif_${key}_inapp` as keyof NotificationPreferences] as boolean
-                    }
-                    onChange={(e) =>
-                      handleToggle(
-                        `notif_${key}_inapp` as keyof NotificationPreferences,
-                        e.target.checked
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  <Switch
-                    checked={
-                      prefs[`notif_${key}_email` as keyof NotificationPreferences] as boolean
-                    }
-                    onChange={(e) =>
-                      handleToggle(
-                        `notif_${key}_email` as keyof NotificationPreferences,
-                        e.target.checked
-                      )
-                    }
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
+        {notifTypes.map(({ key, label }) => (
+          <SettingsRow
+            key={key}
+            label={label}
+            description="Receive notifications via these channels."
+          >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 0.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+                <Switch
+                  checked={
+                    prefs[`notif_${key}_inapp` as keyof NotificationPreferences] as boolean
+                  }
+                  onChange={(e) =>
+                    handleToggle(
+                      `notif_${key}_inapp` as keyof NotificationPreferences,
+                      e.target.checked
+                    )
+                  }
+                />
+                <Typography level="body-sm">In-App</Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+                <Switch
+                  checked={
+                    prefs[`notif_${key}_email` as keyof NotificationPreferences] as boolean
+                  }
+                  onChange={(e) =>
+                    handleToggle(
+                      `notif_${key}_email` as keyof NotificationPreferences,
+                      e.target.checked
+                    )
+                  }
+                />
+                <Typography level="body-sm">Email</Typography>
+              </Stack>
+            </Stack>
+          </SettingsRow>
+        ))}
 
-      <Stack direction="row" spacing={2} alignItems="center">
-        <FormLabel>Mute all email notifications</FormLabel>
-        <Switch
-          checked={prefs.mute_all_email}
-          onChange={(e) => handleToggle('mute_all_email', e.target.checked)}
-        />
-      </Stack>
+        <SettingsRow
+          label="Mute All Email"
+          description="Disable all email notifications at once."
+        >
+          <Switch
+            checked={prefs.mute_all_email}
+            onChange={(e) => handleToggle('mute_all_email', e.target.checked)}
+          />
+        </SettingsRow>
+      </Card>
     </Stack>
   );
 }
