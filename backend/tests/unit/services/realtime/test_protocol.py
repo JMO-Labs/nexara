@@ -56,6 +56,12 @@ class TestOutboundTypes:
             "feed_update",
             "presence",
             "typing",
+            "chat.message",
+            "chat.typing",
+            "chat.read",
+            "chat.updated",
+            "chat.deleted",
+            "chat.error",
         }
         actual = {t.value for t in OutboundType}
         assert expected == actual

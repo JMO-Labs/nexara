@@ -59,3 +59,27 @@ export interface PostCreatedPayload {
   event: typeof FEED_EVENT.POST_CREATED;
   post: import("~/types/api").Post;
 }
+
+/** @brief Chat WebSocket frame type names (wire format). */
+export const CHAT_EVENT = {
+  MESSAGE: "chat.message",
+  UPDATED: "chat.updated",
+  DELETED: "chat.deleted",
+  TYPING: "chat.typing",
+  READ: "chat.read",
+  ERROR: "chat.error",
+} as const;
+
+/** @brief Union of valid chat WS event type values. */
+export type ChatEventType = (typeof CHAT_EVENT)[keyof typeof CHAT_EVENT];
+
+/**
+ * @brief Generic envelope for chat WebSocket frames.
+ *
+ * Matches the backend realtime envelope `{type, payload, ts}`.
+ */
+export interface ChatWsFrame<T = unknown> {
+  type: ChatEventType | string;
+  payload: T;
+  ts?: string;
+}

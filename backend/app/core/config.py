@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     # --- Community ---
     COMMUNITY_ID: str = "00000000-0000-0000-0000-000000000001"
 
+    # --- Subgroups ---
+    MAX_SUBGROUP_MEMBERSHIPS_PER_USER: int = 5
+
     # --- WAF ---
     WAF_ENABLED: bool = True
 

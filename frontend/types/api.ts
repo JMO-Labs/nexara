@@ -526,3 +526,187 @@ export interface LinkPreview {
   provider_type: string | null;
   provider_id: string | null;
 }
+
+/** @brief Chat channel kind. */
+export type ChannelType = "community" | "subgroup" | "direct";
+
+/**
+ * @brief Chat channel from GET /chat/channels.
+ *
+ * Mirrors backend `ChannelResponse` schema.
+ */
+export interface ChatChannel {
+  id: string;
+  community_id: string;
+  name: string;
+  channel_type: ChannelType;
+  subgroup_id: string | null;
+  created_at: string;
+}
+
+/** @brief Lightweight author block embedded in a chat message. */
+export interface ChatMessageAuthor {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+/**
+ * @brief Single chat message payload.
+ *
+ * Both REST history items and WS `chat.message` / `chat.updated`
+ * frames use this shape. Deleted messages are tombstones with
+ * `deleted: true` and `content === "[deleted]"`.
+ */
+export interface ChatMessage {
+  id: string;
+  channel_id: string;
+  author: ChatMessageAuthor | null;
+  content: string;
+  edited_at: string | null;
+  deleted: boolean;
+  created_at: string;
+}
+
+/**
+ * @brief Cursor-paginated message history response.
+ *
+ * Mirrors backend `MessageHistoryResponse`. Items are returned
+ * newest-first; the `cursor` is an opaque base64 token for the
+ * next page of older messages.
+ */
+export interface MessageHistoryResponse {
+  items: ChatMessage[];
+  cursor: string | null;
+  has_more: boolean;
+}
+
+/**
+ * @brief DM thread summary from GET /chat/dm.
+ *
+ * Mirrors backend `DirectMessageThreadResponse`.
+ */
+export interface DirectMessageThread {
+  channel_id: string;
+  peer: ChatMessageAuthor;
+  created_at: string;
+}
+
+/** @brief Inbound chat frame types (client → server). */
+export type ChatInboundType = "chat.message" | "chat.typing" | "chat.read";
+
+/** @brief Outbound chat frame types (server → client). */
+export type ChatOutboundType =
+  | "chat.message"
+  | "chat.updated"
+  | "chat.deleted"
+  | "chat.typing"
+  | "chat.read"
+  | "chat.error";
+
+/** @brief Tombstone payload for deleted messages (chat.deleted). */
+export interface ChatDeletedPayload {
+  id: string;
+  channel_id: string;
+  deleted: true;
+  edited_at: string | null;
+}
+
+/** @brief Typing indicator payload (both directions). */
+export interface ChatTypingPayload {
+  channel_id: string;
+  user_id?: string;
+}
+
+/** @brief Read receipt payload. */
+export interface ChatReadPayload {
+  channel_id: string;
+  message_id: string;
+  user_id?: string;
+}
+
+/** @brief Error frame payload from the server. */
+export interface ChatErrorPayload {
+  code: string;
+  message: string;
+}
+
+/** @brief Subgroup join policy values. */
+export type JoinPolicy = "open" | "invite_only" | "admin_approval";
+
+/** @brief Role within a subgroup. */
+export type SubgroupRole = "owner" | "moderator" | "member";
+
+/**
+ * @brief Summary subgroup representation (list endpoints).
+ *
+ * Mirrors backend `SubgroupResponse`.
+ */
+export interface Subgroup {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  avatar_url: string | null;
+  is_private: boolean;
+  join_policy: JoinPolicy;
+  created_by: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * @brief Detailed subgroup with per-viewer state.
+ *
+ * Mirrors backend `SubgroupDetailResponse`.
+ */
+export interface SubgroupDetail extends Subgroup {
+  member_count: number;
+  my_role: SubgroupRole | null;
+  chat_channel_id: string | null;
+  pinned_post_id: string | null;
+}
+
+/**
+ * @brief Subgroup membership record with embedded user summary.
+ *
+ * Mirrors backend `MembershipResponse`.
+ */
+export interface Membership {
+  subgroup_id: string;
+  user_id: string;
+  role: SubgroupRole;
+  invited_by: string | null;
+  joined_at: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+/** @brief Payload for creating a subgroup. */
+export interface SubgroupCreatePayload {
+  name: string;
+  slug: string;
+  description?: string | null;
+  avatar_url?: string | null;
+  is_private?: boolean;
+  join_policy?: JoinPolicy;
+}
+
+/** @brief Partial update payload for a subgroup. */
+export interface SubgroupUpdatePayload {
+  name?: string;
+  description?: string | null;
+  avatar_url?: string | null;
+  is_private?: boolean;
+  join_policy?: JoinPolicy;
+}
+
+/** @brief Response from POST /subgroups/{slug}/join. */
+export interface JoinSubgroupResponse {
+  status: "joined" | "pending";
+  role?: SubgroupRole;
+  policy?: JoinPolicy;
+}

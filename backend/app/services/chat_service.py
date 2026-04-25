@@ -1,0 +1,386 @@
+"""
+@file chat_service.py
+@brief Business logic for chat channels, messages, and direct messaging.
+
+Coordinates the chat repositories with realtime publishing:
+  * ``send_message`` persists a :class:`ChatMessage`, publishes a
+    ``chat.message`` envelope to the ``chat:{channel_id}`` Valkey pub/sub
+    channel, and dispatches a Celery task for each URL detected in the
+    message body (link preview generation).
+  * ``edit_message`` / ``delete_message`` enforce author-only / admin
+    permission rules and broadcast ``chat.updated`` / ``chat.deleted``.
+  * ``create_or_get_dm`` returns the canonical DM channel for two users.
+  * ``get_history`` returns cursor-paginated message history with the
+    block filter applied.
+
+Rate limit: 30 msg/min/user via Valkey sliding-window counter.
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import TYPE_CHECKING, Any
+
+import structlog
+
+from app.core.exceptions import AuthorizationError, NotFoundError, RateLimitError
+from app.core.i18n import _
+from app.models.chat import ChatMessage
+from app.models.subgroup import ChatChannel
+from app.models.user import User
+from app.repositories.chat_repo import (
+    TOMBSTONE_CONTENT,
+    ChatChannelRepository,
+    ChatMessageRepository,
+)
+from app.services.link_preview_service import extract_urls
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
+
+logger = structlog.get_logger(__name__)
+
+CHAT_RATE_LIMIT_PER_MINUTE = 30
+"""@brief Maximum messages per user per 60-second window."""
+
+CHAT_PUBSUB_CHANNEL_PREFIX = "chat:"
+"""@brief Valkey pub/sub channel prefix for chat broadcasts."""
+
+
+def channel_pubsub_name(channel_id: uuid.UUID) -> str:
+    """@brief Return the Valkey pub/sub channel for a chat channel."""
+    return f"{CHAT_PUBSUB_CHANNEL_PREFIX}{channel_id}"
+
+
+def serialize_message(message: ChatMessage, author: User | None) -> dict[str, Any]:
+    """
+    @brief Build the wire-format dict for a chat message.
+
+    @param message The ChatMessage ORM instance.
+    @param author Optional author User (None when the user was deleted).
+    @return Dict ready for JSON serialization.
+    """
+    is_deleted = message.content == TOMBSTONE_CONTENT
+    return {
+        "id": str(message.id),
+        "channel_id": str(message.channel_id) if message.channel_id else None,
+        "author": (
+            {
+                "id": str(author.id),
+                "username": author.username,
+                "display_name": author.display_name,
+                "avatar_url": author.avatar_url,
+            }
+            if author is not None
+            else None
+        ),
+        "content": message.content,
+        "edited_at": message.edited_at.isoformat() if message.edited_at else None,
+        "deleted": is_deleted,
+        "created_at": message.created_at.isoformat(),
+    }
+
+
+class ChatService:
+    """
+    @brief Service layer for chat channels and message flow.
+
+    @param channel_repo ChatChannelRepository instance.
+    @param message_repo ChatMessageRepository instance.
+    @param community_id UUID of the active community.
+    @param rate_limiter Optional Valkey client for rate-limit counters.
+    @param broadcaster Optional async callable publishing a message to a
+        pub/sub channel (defaults to :func:`realtime.pubsub.publish`).
+    @param link_preview_enqueue Optional callable dispatching a Celery
+        task for URL scraping (defaults to the real Celery task).
+    """
+
+    def __init__(
+        self,
+        channel_repo: ChatChannelRepository,
+        message_repo: ChatMessageRepository,
+        community_id: uuid.UUID,
+        *,
+        rate_limiter: Redis | None = None,
+        broadcaster: Any = None,
+        link_preview_enqueue: Any = None,
+    ) -> None:
+        self._channel_repo = channel_repo
+        self._message_repo = message_repo
+        self._community_id = community_id
+        self._rate_limiter = rate_limiter
+        self._broadcaster = broadcaster
+        self._link_preview_enqueue = link_preview_enqueue
+
+    # ── Channel management ───────────────────────────────────────────
+
+    async def list_channels(self, user: User) -> list[ChatChannel]:
+        """
+        @brief Return every channel the given user is permitted to see.
+
+        @param user Requesting user.
+        @return List of ChatChannel rows.
+        """
+        return await self._channel_repo.list_for_user(user.id, self._community_id)
+
+    async def create_or_get_dm(
+        self,
+        user: User,
+        peer_id: uuid.UUID,
+    ) -> ChatChannel:
+        """
+        @brief Return (creating if necessary) the DM channel between two users.
+
+        @param user Requesting user.
+        @param peer_id Other user's UUID.
+        @return The DM ChatChannel.
+        @raises NotFoundError If the peer user is missing.
+        @raises AuthorizationError If attempting to DM oneself.
+        """
+        if peer_id == user.id:
+            raise AuthorizationError(_("Cannot DM yourself"))
+
+        channel, _created = await self._channel_repo.get_or_create_dm(
+            user.id,
+            peer_id,
+            self._community_id,
+        )
+        return channel
+
+    async def list_dm_threads(self, user: User) -> list[dict[str, Any]]:
+        """
+        @brief Return every DM thread the user participates in.
+
+        @param user Requesting user.
+        @return List of dicts ``{channel_id, peer, created_at}``.
+        """
+        rows = await self._channel_repo.list_dm_threads(user.id, self._community_id)
+        threads: list[dict[str, Any]] = []
+        for channel, peer in rows:
+            threads.append(
+                {
+                    "channel_id": str(channel.id),
+                    "peer": {
+                        "id": str(peer.id),
+                        "username": peer.username,
+                        "display_name": peer.display_name,
+                        "avatar_url": peer.avatar_url,
+                    },
+                    "created_at": channel.created_at.isoformat(),
+                }
+            )
+        return threads
+
+    # ── Message flow ─────────────────────────────────────────────────
+
+    async def send_message(
+        self,
+        user: User,
+        channel_id: uuid.UUID,
+        content: str,
+    ) -> dict[str, Any]:
+        """
+        @brief Persist a new chat message, broadcast it, enqueue link previews.
+
+        @param user Authoring user.
+        @param channel_id Target channel UUID.
+        @param content Message text.
+        @return Serialized message dict.
+        @raises NotFoundError If the channel is unknown or the user cannot post.
+        @raises RateLimitError If the user exceeded :data:`CHAT_RATE_LIMIT_PER_MINUTE`.
+        """
+        await self._enforce_rate_limit(user.id)
+
+        channel = await self._channel_repo.get_for_user(
+            channel_id,
+            user.id,
+            self._community_id,
+        )
+        if channel is None:
+            raise NotFoundError(_("Channel not found"))
+
+        message = await self._message_repo.create_message(
+            community_id=self._community_id,
+            channel_id=channel.id,
+            author_id=user.id,
+            content=content,
+        )
+        payload = serialize_message(message, user)
+
+        await self._broadcast(channel.id, "chat.message", payload)
+        await self._enqueue_link_previews(content, message.id)
+
+        return payload
+
+    async def get_history(
+        self,
+        user: User,
+        channel_id: uuid.UUID,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """
+        @brief Fetch a paginated page of channel history for the user.
+
+        @param user Requesting user.
+        @param channel_id Channel UUID.
+        @param cursor Opaque cursor (base64 ``created_at,id``).
+        @param limit Max rows to return (1-100).
+        @return ``{items, cursor, has_more}``.
+        @raises NotFoundError If the channel is unknown or inaccessible.
+        """
+        channel = await self._channel_repo.get_for_user(
+            channel_id,
+            user.id,
+            self._community_id,
+        )
+        if channel is None:
+            raise NotFoundError(_("Channel not found"))
+
+        rows, next_cursor = await self._message_repo.get_history_paginated(
+            channel.id,
+            self._community_id,
+            viewer_id=user.id,
+            cursor=cursor,
+            limit=limit,
+        )
+        items = [serialize_message(msg, author) for msg, author in rows]
+        return {
+            "items": items,
+            "cursor": next_cursor,
+            "has_more": next_cursor is not None,
+        }
+
+    async def edit_message(
+        self,
+        user: User,
+        message_id: uuid.UUID,
+        content: str,
+    ) -> dict[str, Any]:
+        """
+        @brief Edit a message the caller authored and broadcast the update.
+
+        @param user Acting user.
+        @param message_id Target message UUID.
+        @param content New content.
+        @return Serialized message dict.
+        @raises NotFoundError If the message is absent.
+        @raises AuthorizationError If the caller is not the author.
+        """
+        message = await self._message_repo.get(message_id, self._community_id)
+        if message is None:
+            raise NotFoundError(_("Message not found"))
+        if message.author_id != user.id:
+            raise AuthorizationError(_("You can only edit your own messages"))
+        if message.content == TOMBSTONE_CONTENT:
+            raise NotFoundError(_("Message has been deleted"))
+
+        updated = await self._message_repo.update_content(message, content)
+        payload = serialize_message(updated, user)
+        if updated.channel_id is not None:
+            await self._broadcast(updated.channel_id, "chat.updated", payload)
+        return payload
+
+    async def delete_message(
+        self,
+        user: User,
+        message_id: uuid.UUID,
+    ) -> None:
+        """
+        @brief Soft-delete a message (author or admin) and broadcast a tombstone.
+
+        @param user Acting user.
+        @param message_id Target message UUID.
+        @raises NotFoundError If the message is absent.
+        @raises AuthorizationError If the caller is neither author nor admin.
+        """
+        message = await self._message_repo.get(message_id, self._community_id)
+        if message is None:
+            raise NotFoundError(_("Message not found"))
+
+        is_author = message.author_id == user.id
+        is_admin = getattr(user, "role", "") == "admin"
+        if not (is_author or is_admin):
+            raise AuthorizationError(_("You can only delete your own messages"))
+
+        deleted = await self._message_repo.soft_delete_message(message)
+        if deleted.channel_id is not None:
+            payload = {
+                "id": str(deleted.id),
+                "channel_id": str(deleted.channel_id),
+                "deleted": True,
+                "edited_at": deleted.edited_at.isoformat() if deleted.edited_at else None,
+            }
+            await self._broadcast(deleted.channel_id, "chat.deleted", payload)
+
+    # ── Internals ────────────────────────────────────────────────────
+
+    async def _broadcast(
+        self,
+        channel_id: uuid.UUID,
+        type_: str,
+        payload: dict[str, Any],
+    ) -> int:
+        """@brief Publish a typed envelope to the chat pub/sub channel."""
+        if self._broadcaster is None:
+            from app.services.realtime.pubsub import publish as default_publish
+
+            publish = default_publish
+        else:
+            publish = self._broadcaster
+
+        message = {"type": type_, "payload": payload}
+        return await publish(channel_pubsub_name(channel_id), message)
+
+    async def _enqueue_link_previews(
+        self,
+        content: str,
+        message_id: uuid.UUID,
+    ) -> None:
+        """@brief Dispatch a Celery task per URL found in ``content``."""
+        urls = extract_urls(content)
+        if not urls:
+            return
+
+        if self._link_preview_enqueue is None:
+            try:
+                from app.tasks.link_preview_tasks import scrape_link_preview
+
+                enqueue = scrape_link_preview.delay
+            except Exception:
+                logger.warning("chat_link_preview_task_unavailable", exc_info=True)
+                return
+        else:
+            enqueue = self._link_preview_enqueue
+
+        for url in urls:
+            try:
+                enqueue(url, message_id=str(message_id))
+            except Exception:
+                logger.warning(
+                    "chat_link_preview_enqueue_failed",
+                    url=url,
+                    message_id=str(message_id),
+                    exc_info=True,
+                )
+
+    async def _enforce_rate_limit(self, user_id: uuid.UUID) -> None:
+        """
+        @brief Enforce 30 msg/min/user via Valkey ``INCR`` + ``EXPIRE``.
+
+        Silently passes when no Valkey client is configured (e.g. tests).
+        """
+        if self._rate_limiter is None:
+            return
+        key = f"rl:chat:send:{user_id}"
+        try:
+            count = await self._rate_limiter.incr(key)
+            if count == 1:
+                await self._rate_limiter.expire(key, 60)
+        except Exception:
+            logger.debug("chat_rate_limit_backend_unavailable", exc_info=True)
+            return
+
+        if count > CHAT_RATE_LIMIT_PER_MINUTE:
+            raise RateLimitError(_("Chat rate limit exceeded"))

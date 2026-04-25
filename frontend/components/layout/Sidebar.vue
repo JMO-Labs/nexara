@@ -82,6 +82,7 @@ import {
   ChatBubbleLeftRightIcon,
   PhotoIcon,
   UserGroupIcon,
+  UsersIcon,
   Cog6ToothIcon,
   ShieldCheckIcon,
   ArrowRightStartOnRectangleIcon,
@@ -134,6 +135,14 @@ const navItems = computed(() => {
       labelKey: "nav.members",
     },
   ];
+  if (authStore.isAuthenticated) {
+    items.push({
+      path: "/app/subgroups",
+      icon: UsersIcon,
+      label: "Subgroups",
+      labelKey: "nav.subgroups",
+    });
+  }
   if (authStore.user?.role === "admin") {
     items.push({
       path: "/app/admin",
