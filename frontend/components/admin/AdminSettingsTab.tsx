@@ -9,15 +9,13 @@ import {
   useUpdateAdminSettings,
 } from '@/hooks/useAdmin';
 import Stack from '@mui/joy/Stack';
-import Card from '@mui/joy/Card';
 import Button from '@mui/joy/Button';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
 import Switch from '@mui/joy/Switch';
 import Input from '@mui/joy/Input';
 import Typography from '@mui/joy/Typography';
 import CircularProgress from '@mui/joy/CircularProgress';
 import Alert from '@mui/joy/Alert';
+import { Card, SettingsRow } from '@/components/ui';
 
 export function AdminSettingsTab() {
   const [enableReg, setEnableReg] = useState(true);
@@ -74,50 +72,52 @@ export function AdminSettingsTab() {
   }
 
   return (
-    <Card variant="outlined" sx={{ maxWidth: 600 }}>
-      <form onSubmit={handleSubmit}>
-        <Stack spacing={3}>
-          <div>
-            <Typography level="h4">Registration & Access</Typography>
-          </div>
+    <form onSubmit={handleSubmit}>
+      <Stack spacing={3} sx={{ maxWidth: 800 }}>
+        {/* Registration & Access */}
+        <Card variant="outlined">
+          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+            Registration & Access
+          </Typography>
+          <Stack spacing={1.5}>
+            <SettingsRow
+              label="Enable Registration"
+              description="Allow new users to create accounts"
+            >
+              <Switch
+                checked={enableReg}
+                onChange={(e) => {
+                  setEnableReg(e.target.checked);
+                  handleChange();
+                }}
+                size="sm"
+              />
+            </SettingsRow>
+            <SettingsRow
+              label="Require Invite"
+              description="Users must have an invite code to join"
+            >
+              <Switch
+                checked={requireInvite}
+                onChange={(e) => {
+                  setRequireInvite(e.target.checked);
+                  handleChange();
+                }}
+                size="sm"
+              />
+            </SettingsRow>
+          </Stack>
+        </Card>
 
-          <FormControl>
-            <FormLabel>Enable Registration</FormLabel>
-            <Typography level="body-sm" textColor="text.tertiary" sx={{ mb: 1 }}>
-              Allow new users to create accounts
-            </Typography>
-            <Switch
-              checked={enableReg}
-              onChange={(e) => {
-                setEnableReg(e.target.checked);
-                handleChange();
-              }}
-            />
-          </FormControl>
-
-          <FormControl>
-            <FormLabel>Require Invite</FormLabel>
-            <Typography level="body-sm" textColor="text.tertiary" sx={{ mb: 1 }}>
-              Users must have an invite code to join
-            </Typography>
-            <Switch
-              checked={requireInvite}
-              onChange={(e) => {
-                setRequireInvite(e.target.checked);
-                handleChange();
-              }}
-            />
-          </FormControl>
-
-          <div>
-            <Typography level="h4">Storage & System</Typography>
-          </div>
-
-          <FormControl>
-            <FormLabel>Default Storage Quota (bytes)</FormLabel>
-            <Typography level="body-sm" textColor="text.tertiary" sx={{ mb: 1 }}>
-              Default media storage limit per user
-            </Typography>
+        {/* Storage & System */}
+        <Card variant="outlined">
+          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+            Storage & System
+          </Typography>
+          <SettingsRow
+            label="Default Storage Quota"
+            description="Maximum media storage limit per user (in bytes)"
+          >
             <Input
               type="number"
               value={storageQuota}
@@ -126,53 +126,59 @@ export function AdminSettingsTab() {
                 handleChange();
               }}
               slotProps={{ input: { min: 0 } }}
+              size="sm"
             />
-          </FormControl>
+          </SettingsRow>
+        </Card>
 
-          <div>
-            <Typography level="h4">Security</Typography>
-          </div>
-
-          <FormControl>
-            <FormLabel>Enable WAF</FormLabel>
-            <Typography level="body-sm" textColor="text.tertiary" sx={{ mb: 1 }}>
-              Web Application Firewall protection
-            </Typography>
+        {/* Security */}
+        <Card variant="outlined">
+          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+            Security
+          </Typography>
+          <SettingsRow
+            label="Enable WAF"
+            description="Web Application Firewall protection against common attacks"
+          >
             <Switch
               checked={wafEnabled}
               onChange={(e) => {
                 setWafEnabled(e.target.checked);
                 handleChange();
               }}
+              size="sm"
             />
-          </FormControl>
+          </SettingsRow>
+        </Card>
 
-          <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-            <Button
-              variant="soft"
-              color="neutral"
-              onClick={() => {
-                if (settings) {
-                  setEnableReg(settings.enable_registration);
-                  setRequireInvite(settings.require_invite);
-                  setStorageQuota(settings.storage_quota_default);
-                  setWafEnabled(settings.waf_enabled);
-                  setIsDirty(false);
-                }
-              }}
-            >
-              Reset
-            </Button>
-            <Button
-              type="submit"
-              disabled={!isDirty}
-              loading={updateMutation.isPending}
-            >
-              Save Changes
-            </Button>
-          </Stack>
+        {/* Actions */}
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="soft"
+            color="neutral"
+            onClick={() => {
+              if (settings) {
+                setEnableReg(settings.enable_registration);
+                setRequireInvite(settings.require_invite);
+                setStorageQuota(settings.storage_quota_default);
+                setWafEnabled(settings.waf_enabled);
+                setIsDirty(false);
+              }
+            }}
+            size="sm"
+          >
+            Reset
+          </Button>
+          <Button
+            type="submit"
+            disabled={!isDirty}
+            loading={updateMutation.isPending}
+            size="sm"
+          >
+            Save Changes
+          </Button>
         </Stack>
-      </form>
-    </Card>
+      </Stack>
+    </form>
   );
 }
