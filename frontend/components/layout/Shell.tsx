@@ -3,6 +3,7 @@
  * @file components/layout/Shell.tsx
  * @brief Authenticated app shell. Composes TopBar + Sidebar + main pane +
  *        MobileNav. Bootstraps the session and gates rendering on it.
+ *        Global ? listener opens keyboard shortcuts modal.
  */
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
@@ -11,21 +12,39 @@ import Box from '@mui/joy/Box';
 import CircularProgress from '@mui/joy/CircularProgress';
 import { useSession } from '@/stores/session';
 import { useSessionBootstrap } from '@/hooks/useSession';
+import { useModals } from '@/stores/modals';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { ModalRoot } from './ModalRoot';
+import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
 
 export function Shell({ children }: { children: ReactNode }) {
   useSessionBootstrap();
   const router = useRouter();
   const status = useSession((s) => s.status);
+  const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
     }
   }, [status, router]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      // Ignore if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setKeyboardShortcutsOpen(true);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [setKeyboardShortcutsOpen]);
 
   if (status === 'unauthenticated') return null;
 
@@ -81,6 +100,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <MobileNav />
       </Box>
       <ModalRoot />
+      <KeyboardShortcutsModal />
     </Box>
   );
 }

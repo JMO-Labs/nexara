@@ -12,6 +12,7 @@ import Dropdown from '@mui/joy/Dropdown';
 import ListDivider from '@mui/joy/ListDivider';
 import { Avatar } from '@/components/ui/Avatar';
 import { useSession } from '@/stores/session';
+import { useModals } from '@/stores/modals';
 import { logout as apiLogout } from '@/lib/api/auth';
 import { setAccessToken } from '@/lib/auth/session';
 
@@ -19,6 +20,7 @@ export function AvatarMenu() {
   const router = useRouter();
   const user = useSession((s) => s.user);
   const reset = useSession((s) => s.reset);
+  const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   const onLogout = async () => {
     try {
@@ -62,6 +64,10 @@ export function AvatarMenu() {
         </MenuItem>
         <MenuItem component={Link} href="/app/admin">
           Admin
+        </MenuItem>
+        <ListDivider />
+        <MenuItem onClick={() => setKeyboardShortcutsOpen(true)}>
+          Keyboard shortcuts
         </MenuItem>
         <ListDivider />
         <MenuItem color="danger" onClick={onLogout}>
