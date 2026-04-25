@@ -12,10 +12,10 @@ import {
   useDiscoverIssuer,
 } from '@/hooks/useAdminOauth';
 import Stack from '@mui/joy/Stack';
+import Grid from '@mui/joy/Grid';
 import Button from '@mui/joy/Button';
 import IconButton from '@mui/joy/IconButton';
 import Card from '@mui/joy/Card';
-import Table from '@mui/joy/Table';
 import Typography from '@mui/joy/Typography';
 import CircularProgress from '@mui/joy/CircularProgress';
 import Alert from '@mui/joy/Alert';
@@ -99,47 +99,33 @@ export function SsoTab() {
       </Stack>
 
       {providers && providers.length > 0 ? (
-        <Card variant="outlined">
-          <Table
-            stripe="odd"
-            hoverRow
-            sx={{
-              '--TableCell-paddingX': '1rem',
-              '--TableCell-paddingY': '0.5rem',
-            }}
-          >
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Slug</th>
-                <th>Enabled</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {providers.map((provider) => (
-                <tr key={provider.id}>
-                  <td>
-                    <Typography level="body-sm">
-                      {provider.display_name}
+        <Grid container spacing={2}>
+          {providers.map((provider) => (
+            <Grid key={provider.id} xs={12} md={6}>
+              <Card variant="outlined" sx={{ height: '100%' }}>
+                <Stack spacing={1.5}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <div>
+                      <Typography level="title-md">{provider.display_name}</Typography>
+                      <Typography level="body-xs" color="neutral">
+                        {provider.slug}
+                      </Typography>
+                    </div>
+                    <Typography level="body-xs" color="neutral">
+                      {provider.provider_type.toUpperCase()}
                     </Typography>
-                  </td>
-                  <td>
-                    <Typography level="body-sm">
-                      {provider.provider_type}
-                    </Typography>
-                  </td>
-                  <td>
-                    <Typography level="body-sm">{provider.slug}</Typography>
-                  </td>
-                  <td>
-                    <Switch
-                      checked={provider.enabled}
-                      onChange={() => toggleMutation.mutate(provider.id)}
-                    />
-                  </td>
-                  <td>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Switch
+                        checked={provider.enabled}
+                        onChange={() => toggleMutation.mutate(provider.id)}
+                        size="sm"
+                      />
+                      <Typography level="body-xs">
+                        {provider.enabled ? 'Enabled' : 'Disabled'}
+                      </Typography>
+                    </Stack>
                     <IconButton
                       size="sm"
                       variant="soft"
@@ -149,12 +135,12 @@ export function SsoTab() {
                     >
                       <TrashIcon width={16} height={16} />
                     </IconButton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </Card>
+                  </Stack>
+                </Stack>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       ) : (
         <Alert color="primary" variant="soft">
           No OAuth providers configured yet
