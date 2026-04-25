@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
-import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, PencilSquareIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useQueryClient } from '@tanstack/react-query';
 import { IconButton, EmptyState, Button } from '@/components/ui';
 import { useToasts } from '@/stores/toasts';
@@ -73,6 +73,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   const deleteDm = useDeleteDm();
   const [replyTo, setReplyTo] = React.useState<ChatMessage | null>(null);
   const [dmModalOpen, setDmModalOpen] = React.useState(false);
+  const [threadPaneOpen, setThreadPaneOpen] = React.useState(false);
 
   // Drop reply context when switching channels (state-during-render pattern).
   const [prevChannel, setPrevChannel] = React.useState<string | null>(activeId);
@@ -198,7 +199,10 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         flex: 1,
         minHeight: 0,
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '320px 1fr' },
+        gridTemplateColumns: {
+          xs: '1fr',
+          md: threadPaneOpen ? '320px 1fr 320px' : '320px 1fr',
+        },
         bgcolor: 'background.body',
         overflow: 'hidden',
       }}
@@ -302,6 +306,14 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             <Typography level="title-md" sx={{ flex: 1 }} noWrap>
               {resolveTitle(channels, dms, activeId)}
             </Typography>
+            <IconButton
+              aria-label={threadPaneOpen ? 'Close thread panel' : 'Open thread panel'}
+              onClick={() => setThreadPaneOpen(!threadPaneOpen)}
+              sx={{ display: { xs: 'none', md: 'flex' } }}
+              tooltip={threadPaneOpen ? 'Close details' : 'Open details'}
+            >
+              <ChevronRightIcon width={18} />
+            </IconButton>
           </Stack>
 
           <MessageList
@@ -348,6 +360,47 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             title="Select a conversation"
             description="Choose a channel or direct message from the list to start chatting."
           />
+        </Box>
+      )}
+
+      {/* Thread/Details Pane: 320px on desktop when open */}
+      {threadPaneOpen && activeId && showThread && (
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            flexDirection: 'column',
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.surface',
+            minHeight: 0,
+            minWidth: 0,
+          }}
+        >
+          <Stack
+            sx={{
+              px: 2,
+              py: 1.25,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.body',
+              flexShrink: 0,
+            }}
+          >
+            <Typography level="title-sm">Details</Typography>
+          </Stack>
+          <Stack
+            sx={{
+              flex: 1,
+              overflow: 'auto',
+              px: 2,
+              py: 2,
+              minHeight: 0,
+            }}
+          >
+            <Typography level="body-sm" color="neutral">
+              Thread details and conversation info will appear here.
+            </Typography>
+          </Stack>
         </Box>
       )}
 
