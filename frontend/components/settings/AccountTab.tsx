@@ -1,7 +1,7 @@
 'use client';
 /**
  * @file components/settings/AccountTab.tsx
- * @brief Account settings tab: email change form.
+ * @brief Account settings tab: email change form with two-column layout.
  */
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -12,8 +12,7 @@ import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import FormHelperText from '@mui/joy/FormHelperText';
 import Typography from '@mui/joy/Typography';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Card, SettingsRow, Input, Button } from '@/components/ui';
 import { useUpdateEmail } from '@/hooks/useSettings';
 
 const Schema = z.object({
@@ -22,7 +21,7 @@ const Schema = z.object({
 type FormData = z.infer<typeof Schema>;
 
 export function AccountTab() {
-  const [initialEmail] = useState(''); // Placeholder; normally from useMe()
+  const [initialEmail] = useState('');
   const { mutate, isPending } = useUpdateEmail();
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
@@ -34,29 +33,31 @@ export function AccountTab() {
   };
 
   return (
-    <Stack spacing={3}>
-      <div>
-        <Typography level="h3">Email Address</Typography>
-        <Typography level="body-sm" color="neutral">
-          Update your account email address.
+    <Stack spacing={3} sx={{ maxWidth: 800 }}>
+      <Card variant="outlined">
+        <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+          Email Address
         </Typography>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2}>
-          <FormControl error={!!formState.errors.email}>
-            <FormLabel>Email Address</FormLabel>
-            <Input
-              type="email"
-              slotProps={{
-                input: { autoComplete: 'email', ...register('email') },
-              }}
-            />
-            {formState.errors.email && (
-              <FormHelperText>{formState.errors.email.message}</FormHelperText>
-            )}
-          </FormControl>
-          <div>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <SettingsRow
+            label="Email"
+            description="Your account email address used for login and recovery."
+          >
+            <FormControl error={!!formState.errors.email} fullWidth>
+              <FormLabel>Email Address</FormLabel>
+              <Input
+                type="email"
+                placeholder="name@example.com"
+                slotProps={{
+                  input: { autoComplete: 'email', ...register('email') },
+                }}
+              />
+              {formState.errors.email && (
+                <FormHelperText>{formState.errors.email.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
+          <Stack sx={{ mt: 2 }}>
             <Button
               type="submit"
               loading={isPending}
@@ -64,9 +65,9 @@ export function AccountTab() {
             >
               Update Email
             </Button>
-          </div>
-        </Stack>
-      </form>
+          </Stack>
+        </form>
+      </Card>
     </Stack>
   );
 }
