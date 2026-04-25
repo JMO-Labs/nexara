@@ -1,7 +1,7 @@
 'use client';
 /**
  * @file components/settings/ProfileTab.tsx
- * @brief Profile settings tab: display name, bio, location, website, title.
+ * @brief Profile settings tab with two-column layout: display name, bio, location, website, title.
  */
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -12,9 +12,7 @@ import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
 import FormHelperText from '@mui/joy/FormHelperText';
 import Typography from '@mui/joy/Typography';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Button } from '@/components/ui/Button';
+import { Card, SettingsRow, Input, Textarea, Button } from '@/components/ui';
 import { useUpdateProfile } from '@/hooks/useSettings';
 
 const Schema = z.object({
@@ -45,83 +43,92 @@ export function ProfileTab() {
   };
 
   return (
-    <Stack spacing={3}>
-      <div>
-        <Typography level="h3">Profile Information</Typography>
-        <Typography level="body-sm" color="neutral">
-          Update your public profile information.
+    <Stack spacing={3} sx={{ maxWidth: 800 }}>
+      <Card variant="outlined">
+        <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
+          Profile Information
         </Typography>
-      </div>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <SettingsRow label="Display Name" description="How you appear to other members.">
+            <FormControl error={!!formState.errors.display_name} fullWidth>
+              <FormLabel>Display Name</FormLabel>
+              <Input
+                type="text"
+                slotProps={{
+                  input: { ...register('display_name') },
+                }}
+              />
+              {formState.errors.display_name && (
+                <FormHelperText>{formState.errors.display_name.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2}>
-          <FormControl error={!!formState.errors.display_name}>
-            <FormLabel>Display Name</FormLabel>
-            <Input
-              type="text"
-              slotProps={{
-                input: { ...register('display_name') },
-              }}
-            />
-            {formState.errors.display_name && (
-              <FormHelperText>{formState.errors.display_name.message}</FormHelperText>
-            )}
-          </FormControl>
+          <SettingsRow label="Bio" description="Tell us about yourself.">
+            <FormControl error={!!formState.errors.bio} fullWidth>
+              <FormLabel>Bio</FormLabel>
+              <Textarea
+                minRows={3}
+                placeholder="What's your story?"
+                slotProps={{
+                  textarea: { ...register('bio') },
+                }}
+              />
+              {formState.errors.bio && (
+                <FormHelperText>{formState.errors.bio.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
 
-          <FormControl error={!!formState.errors.bio}>
-            <FormLabel>Bio</FormLabel>
-            <Textarea
-              minRows={3}
-              slotProps={{
-                textarea: { ...register('bio') },
-              }}
-            />
-            {formState.errors.bio && (
-              <FormHelperText>{formState.errors.bio.message}</FormHelperText>
-            )}
-          </FormControl>
+          <SettingsRow label="Location" description="Your location (optional).">
+            <FormControl error={!!formState.errors.location} fullWidth>
+              <FormLabel>Location</FormLabel>
+              <Input
+                type="text"
+                placeholder="City, State"
+                slotProps={{
+                  input: { ...register('location') },
+                }}
+              />
+              {formState.errors.location && (
+                <FormHelperText>{formState.errors.location.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
 
-          <FormControl error={!!formState.errors.location}>
-            <FormLabel>Location</FormLabel>
-            <Input
-              type="text"
-              slotProps={{
-                input: { ...register('location') },
-              }}
-            />
-            {formState.errors.location && (
-              <FormHelperText>{formState.errors.location.message}</FormHelperText>
-            )}
-          </FormControl>
+          <SettingsRow label="Website" description="Link to your website.">
+            <FormControl error={!!formState.errors.website_url} fullWidth>
+              <FormLabel>Website</FormLabel>
+              <Input
+                type="url"
+                placeholder="https://example.com"
+                slotProps={{
+                  input: { ...register('website_url') },
+                }}
+              />
+              {formState.errors.website_url && (
+                <FormHelperText>{formState.errors.website_url.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
 
-          <FormControl error={!!formState.errors.website_url}>
-            <FormLabel>Website</FormLabel>
-            <Input
-              type="url"
-              placeholder="https://example.com"
-              slotProps={{
-                input: { ...register('website_url') },
-              }}
-            />
-            {formState.errors.website_url && (
-              <FormHelperText>{formState.errors.website_url.message}</FormHelperText>
-            )}
-          </FormControl>
+          <SettingsRow label="Title" description="Your professional title.">
+            <FormControl error={!!formState.errors.title} fullWidth>
+              <FormLabel>Title</FormLabel>
+              <Input
+                type="text"
+                placeholder="e.g., Designer"
+                slotProps={{
+                  input: { ...register('title') },
+                }}
+              />
+              {formState.errors.title && (
+                <FormHelperText>{formState.errors.title.message}</FormHelperText>
+              )}
+            </FormControl>
+          </SettingsRow>
 
-          <FormControl error={!!formState.errors.title}>
-            <FormLabel>Title</FormLabel>
-            <Input
-              type="text"
-              slotProps={{
-                input: { ...register('title') },
-              }}
-            />
-            {formState.errors.title && (
-              <FormHelperText>{formState.errors.title.message}</FormHelperText>
-            )}
-          </FormControl>
-
-          <div>
+          <Stack sx={{ mt: 2 }}>
             <Button
               type="submit"
               loading={isPending}
@@ -129,9 +136,9 @@ export function ProfileTab() {
             >
               Save Profile
             </Button>
-          </div>
-        </Stack>
-      </form>
+          </Stack>
+        </form>
+      </Card>
     </Stack>
   );
 }
