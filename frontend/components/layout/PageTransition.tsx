@@ -12,13 +12,14 @@ import type { ReactNode } from 'react';
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence initial={false}>
       <motion.div
         key={pathname}
         variants={pageVariants}
         initial="initial"
         animate="animate"
         exit="exit"
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
       >
         {children}
       </motion.div>

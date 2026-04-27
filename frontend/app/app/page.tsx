@@ -19,11 +19,11 @@ export default function AppHome() {
         gap: { xs: 2, lg: 3 },
         width: '100%',
         flex: 1,
-        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 420px' },
-        alignItems: 'start',
+        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 720px) minmax(0, 1fr)' },
+        alignItems: 'stretch',
       }}
     >
-      <Box sx={{ minWidth: 0, maxWidth: 720, justifySelf: { xs: 'stretch', lg: 'start' } }}>
+      <Box sx={{ minWidth: 0, width: '100%' }}>
         <FeedView
           heading={
             <Typography level="h2" sx={{ fontFamily: 'var(--font-display)' }}>
@@ -32,7 +32,7 @@ export default function AppHome() {
           }
         />
       </Box>
-      <Box sx={{ display: { xs: 'block', lg: 'block' } }}>
+      <Box sx={{ minWidth: 0, width: '100%' }}>
         <CalendarRail />
       </Box>
     </Box>

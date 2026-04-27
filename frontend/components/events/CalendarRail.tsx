@@ -40,7 +40,7 @@ export function CalendarRail() {
     .slice(0, 5);
 
   return (
-    <Card sx={{ p: 2, position: 'sticky', top: 16, alignSelf: 'flex-start' }}>
+    <Card sx={{ p: 2, position: 'sticky', top: 0, alignSelf: 'flex-start' }}>
       <Stack spacing={1.5}>
         <Stack direction="row" alignItems="baseline" justifyContent="space-between">
           <Typography level="title-md" sx={{ fontFamily: 'var(--font-display)' }}>

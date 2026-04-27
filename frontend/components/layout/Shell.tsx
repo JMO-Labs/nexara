@@ -83,7 +83,7 @@ export function Shell({ children }: { children: ReactNode }) {
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          minHeight: '100dvh',
+          height: '100dvh',
         }}
       >
         <TopBar />
@@ -92,6 +92,8 @@ export function Shell({ children }: { children: ReactNode }) {
           component="main"
           sx={{
             flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
             p: { xs: 2, md: 3 },
             width: '100%',
             display: 'flex',
