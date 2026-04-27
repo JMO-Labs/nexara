@@ -76,6 +76,7 @@ export function GlobalCommandPalette() {
         label: item.title,
         hint: item.snippet,
         group: item.type.charAt(0).toUpperCase() + item.type.slice(1),
+        external: true,
         onSelect: () => {
           router.push(href);
           setOpen(false);
@@ -89,6 +90,7 @@ export function GlobalCommandPalette() {
         id: 'no-results',
         label: 'No matches',
         group: 'Search',
+        external: true,
         onSelect: () => {},
       });
     }

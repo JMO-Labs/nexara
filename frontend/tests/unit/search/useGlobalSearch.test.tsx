@@ -37,6 +37,7 @@ describe('useGlobalSearch', () => {
       items: [],
       next_cursor: null,
       has_more: false,
+      totals: {},
     } as SearchResponse);
 
     const { result } = renderHook(() => useGlobalSearch('a'), {
@@ -52,6 +53,7 @@ describe('useGlobalSearch', () => {
       items: [],
       next_cursor: null,
       has_more: false,
+      totals: {},
     } as SearchResponse);
 
     const { result } = renderHook(() => useGlobalSearch('hello'), {
@@ -68,6 +70,7 @@ describe('useGlobalSearch', () => {
       items: [],
       next_cursor: null,
       has_more: false,
+      totals: {},
     } as SearchResponse);
 
     renderHook(() => useGlobalSearch('hello', 'posts'), {
@@ -84,6 +87,7 @@ describe('useGlobalSearch', () => {
       items: [],
       next_cursor: null,
       has_more: false,
+      totals: {},
     } as SearchResponse);
 
     const { result } = renderHook(() => useGlobalSearch('test', 'users'), {
@@ -109,6 +113,7 @@ describe('useGlobalSearch', () => {
       ],
       next_cursor: null,
       has_more: false,
+      totals: { posts: 1 },
     };
     (searchAll as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 

@@ -24,6 +24,8 @@ export type CommandItem = {
   hint?: string;
   group?: string;
   keywords?: string[];
+  /** When true, skip client-side substring filter (server already filtered). */
+  external?: boolean;
   onSelect: () => void;
 };
 
@@ -52,6 +54,7 @@ function PaletteContent({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((it) => {
+      if (it.external) return true;
       const hay = [it.label, it.hint, it.group, ...(it.keywords ?? [])]
         .filter(Boolean)
         .join(' ')
