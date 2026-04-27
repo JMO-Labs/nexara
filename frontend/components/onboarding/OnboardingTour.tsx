@@ -13,11 +13,7 @@ import { memberTour, adminTour } from '@/lib/onboarding/tours';
 import * as usersApi from '@/lib/api/users';
 
 const Joyride = dynamic(
-  // @ts-expect-error react-joyride types don't align with next/dynamic properly
-  async () => {
-    const mod = await import('react-joyride');
-    return mod;
-  },
+  () => import('react-joyride').then((mod) => mod.Joyride),
   { ssr: false }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as any;
