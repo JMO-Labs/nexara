@@ -12,6 +12,8 @@ import Tab from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
 import Stack from '@mui/joy/Stack';
 import Alert from '@mui/joy/Alert';
+import { AnimatePresence, motion } from 'framer-motion';
+import { tabPanelVariants } from '@/components/ui/motion';
 import { MetricsTab } from './MetricsTab';
 import { UsersTab } from './UsersTab';
 import { InvitesTab } from './InvitesTab';
@@ -87,17 +89,27 @@ export function AdminTabs() {
           ))}
         </TabList>
 
-        {TABS.map((tab) => (
-          <TabPanel key={tab.id} value={tab.id} sx={{ px: 0, py: 3 }}>
-            {tab.id === 'metrics' && <MetricsTab />}
-            {tab.id === 'users' && <UsersTab />}
-            {tab.id === 'invites' && <InvitesTab />}
-            {tab.id === 'sso' && <SsoTab />}
-            {tab.id === 'interests' && <InterestsTab />}
-            {tab.id === 'audit-log' && <AuditLogTab />}
-            {tab.id === 'settings' && <AdminSettingsTab />}
-          </TabPanel>
-        ))}
+        <AnimatePresence mode="wait">
+          {TABS.map((tab) => (
+            <TabPanel key={tab.id} value={tab.id} sx={{ px: 0, py: 3 }}>
+              <motion.div
+                key={`panel-${tab.id}`}
+                variants={tabPanelVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                {tab.id === 'metrics' && <MetricsTab />}
+                {tab.id === 'users' && <UsersTab />}
+                {tab.id === 'invites' && <InvitesTab />}
+                {tab.id === 'sso' && <SsoTab />}
+                {tab.id === 'interests' && <InterestsTab />}
+                {tab.id === 'audit-log' && <AuditLogTab />}
+                {tab.id === 'settings' && <AdminSettingsTab />}
+              </motion.div>
+            </TabPanel>
+          ))}
+        </AnimatePresence>
       </Tabs>
     </Stack>
   );

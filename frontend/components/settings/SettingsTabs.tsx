@@ -8,7 +8,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Sheet from '@mui/joy/Sheet';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/ui/Tabs';
+import { tabPanelVariants } from '@/components/ui/motion';
 import { AccountTab } from './AccountTab';
 import { ProfileTab } from './ProfileTab';
 import { NotificationsTab } from './NotificationsTab';
@@ -90,15 +92,25 @@ export function SettingsTabs() {
             ))}
           </TabList>
 
-          {TABS.map(({ id }) => (
-            <TabPanel key={id} value={id} sx={{ px: 0, py: 3 }}>
-              {id === 'account' && <AccountTab />}
-              {id === 'profile' && <ProfileTab />}
-              {id === 'notifications' && <NotificationsTab />}
-              {id === 'appearance' && <AppearanceTab />}
-              {id === 'storage' && <StorageTab />}
-            </TabPanel>
-          ))}
+          <AnimatePresence mode="wait">
+            {TABS.map(({ id }) => (
+              <TabPanel key={id} value={id} sx={{ px: 0, py: 3 }}>
+                <motion.div
+                  key={`panel-${id}`}
+                  variants={tabPanelVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  {id === 'account' && <AccountTab />}
+                  {id === 'profile' && <ProfileTab />}
+                  {id === 'notifications' && <NotificationsTab />}
+                  {id === 'appearance' && <AppearanceTab />}
+                  {id === 'storage' && <StorageTab />}
+                </motion.div>
+              </TabPanel>
+            ))}
+          </AnimatePresence>
         </Tabs>
       </Stack>
     </Sheet>
