@@ -117,6 +117,7 @@ export function PostComposer({ onPosted }: PostComposerProps) {
         borderColor: 'divider',
         backgroundColor: 'background.surface',
       }}
+      data-tour="composer"
     >
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <Avatar src={me.avatar_url ?? undefined} size="sm">

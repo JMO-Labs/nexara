@@ -42,7 +42,12 @@ export function Sidebar() {
       >
         Nexara
       </Typography>
-      <Stack spacing={0.25} component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+      <Stack
+        spacing={0.25}
+        component="ul"
+        sx={{ listStyle: 'none', m: 0, p: 0 }}
+        data-tour="sidebar-nav"
+      >
         {NAV_ITEMS.map((item) => {
           const active = pathname.startsWith(item.href);
           const { Icon } = item;

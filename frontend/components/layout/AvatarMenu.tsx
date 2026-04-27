@@ -59,10 +59,10 @@ export function AvatarMenu() {
           <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>{user?.email}</span>
         </MenuItem>
         <ListDivider />
-        <MenuItem component={Link} href="/app/settings">
+        <MenuItem component={Link} href="/app/settings" data-tour="settings">
           Settings
         </MenuItem>
-        <MenuItem component={Link} href="/app/admin">
+        <MenuItem component={Link} href="/app/admin" data-tour="admin-link">
           Admin
         </MenuItem>
         <ListDivider />

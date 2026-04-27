@@ -66,6 +66,15 @@ export function AdminTabs() {
               value={tab.id}
               component="a"
               href={`/app/admin?tab=${tab.id}`}
+              data-tour={
+                tab.id === 'invites'
+                  ? 'admin-invites'
+                  : tab.id === 'users'
+                    ? 'admin-users'
+                    : tab.id === 'sso'
+                      ? 'admin-sso'
+                      : undefined
+              }
               sx={{
                 '&[aria-selected="true"]': {
                   fontWeight: 'bold',

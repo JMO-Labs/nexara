@@ -50,6 +50,7 @@ export function TopBar() {
           type="button"
           onClick={() => openPalette(true)}
           aria-label="Open command palette"
+          data-tour="topbar-search"
           sx={{
             all: 'unset',
             cursor: 'pointer',

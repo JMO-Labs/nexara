@@ -633,5 +633,31 @@
     "admin": { "user": { "updated": "User updated", "deactivated": "User deactivated" }, "audit": { "exported": "Audit log exported" } },
     "auth": { "login": { "failed": "Login failed" }, "register": { "failed": "Registration failed" }, "reset": { "sent": "Reset email sent" } },
     "errors": { "generic": "Something went wrong", "network": "Network error", "unauthorized": "Not authorized" }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to {communityName}",
+      "subtitle": "Let's get you started with a quick tour",
+      "takeTour": "Take tour",
+      "skip": "Skip for now"
+    },
+    "tour": {
+      "search": "Use the search bar to find posts, members, events, and more across your community",
+      "nav": "Navigate between Feed, Events, Chat, Media, and Groups using the sidebar",
+      "composer": "Write and share updates, photos, and links with your community here",
+      "bell": "Stay updated with notifications about new posts, comments, events, and messages",
+      "settings": "Customize your profile, privacy settings, and notification preferences",
+      "admin": "Manage community settings and users",
+      "invites": "Send invites to add new members to your community",
+      "users": "View and manage community members",
+      "sso": "Configure single sign-on for your community"
+    },
+    "help": {
+      "title": "Help & Support",
+      "restart": "Restart tour",
+      "shortcuts": "Keyboard shortcuts",
+      "docs": "Documentation",
+      "support": "Contact support"
+    }
   }
 }

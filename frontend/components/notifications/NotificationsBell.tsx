@@ -87,6 +87,7 @@ export function NotificationsBell() {
             unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
           }
           onClick={() => setOpen(true)}
+          data-tour="bell"
         >
           <BellIcon aria-hidden width={20} height={20} />
         </IconButton>
