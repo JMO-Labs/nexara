@@ -7,6 +7,7 @@
 
 'use client';
 
+import * as React from 'react';
 import dynamic from 'next/dynamic';
 import { useSession } from '@/stores/session';
 import { memberTour, adminTour } from '@/lib/onboarding/tours';
@@ -18,29 +19,46 @@ const Joyride = dynamic(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as any;
 
+const TERMINAL = new Set(['finished', 'skipped', 'error']);
+
 export function OnboardingTour() {
   const user = useSession((s) => s.user);
+  const setUser = useSession((s) => s.setUser);
+  const [run, setRun] = React.useState<boolean>(false);
+  const [done, setDone] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (user && !user.tour_completed_at && !done) {
+      setRun(true);
+    } else {
+      setRun(false);
+    }
+  }, [user, done]);
 
   if (!user) return null;
+  if (done || user.tour_completed_at) return null;
 
-  // Determine tour visibility based on user state
-  const shouldRun = !user.tour_completed_at;
   const steps = user.is_admin ? adminTour : memberTour;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTourCallback = (data: any) => {
-    // Mark onboarding as complete when user finishes or skips
-    if (['finished', 'skipped'].includes(data.status)) {
-      void usersApi.completeOnboarding();
+    const status: string = data?.status ?? '';
+    const action: string = data?.action ?? '';
+    if (TERMINAL.has(status) || action === 'close' || action === 'reset') {
+      setRun(false);
+      setDone(true);
+      setUser({ ...user, tour_completed_at: new Date().toISOString() });
+      void usersApi.completeOnboarding().catch(() => undefined);
     }
   };
 
   return (
     <Joyride
       steps={steps}
-      run={shouldRun}
+      run={run}
       continuous
       showSkipButton
+      disableScrolling
       callback={handleTourCallback}
     />
   );

@@ -55,20 +55,38 @@ const ACTIONS: ActionLink[] = [
 
 export function WelcomeModal() {
   const user = useSession((s) => s.user);
+  const setUser = useSession((s) => s.setUser);
   const [isOpen, setIsOpen] = useState(true);
 
-  // Only show if user is authenticated and hasn't completed onboarding
   const shouldShow = !!user && !user.tour_completed_at;
+
+  const markComplete = async () => {
+    if (user) setUser({ ...user, tour_completed_at: new Date().toISOString() });
+    try {
+      await usersApi.completeOnboarding();
+    } catch {
+      /* ignore */
+    }
+  };
 
   const handleSkip = async () => {
     setIsOpen(false);
-    await usersApi.completeOnboarding();
+    await markComplete();
+  };
+
+  const handleTakeTour = () => {
+    setIsOpen(false);
+  };
+
+  const handleClose = async () => {
+    setIsOpen(false);
+    await markComplete();
   };
 
   if (!shouldShow) return null;
 
   return (
-    <Modal open={isOpen} onClose={() => setIsOpen(false)} sx={{ zIndex: 1300 }}>
+    <Modal open={isOpen} onClose={handleClose} sx={{ zIndex: 1300 }}>
       <Sheet
         variant="outlined"
         sx={{
@@ -137,7 +155,7 @@ export function WelcomeModal() {
             </Button>
             <Button
               fullWidth
-              onClick={() => setIsOpen(false)}
+              onClick={handleTakeTour}
             >
               Take tour
             </Button>
