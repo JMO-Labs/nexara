@@ -12,14 +12,15 @@ import { useSession } from '@/stores/session';
 import { memberTour, adminTour } from '@/lib/onboarding/tours';
 import * as usersApi from '@/lib/api/users';
 
-// @ts-expect-error react-joyride types don't align with next/dynamic properly
 const Joyride = dynamic(
+  // @ts-expect-error react-joyride types don't align with next/dynamic properly
   async () => {
     const mod = await import('react-joyride');
     return mod;
   },
   { ssr: false }
-);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as any;
 
 export function OnboardingTour() {
   const user = useSession((s) => s.user);
