@@ -359,6 +359,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           <EmptyState
             title="Select a conversation"
             description="Choose a channel or direct message from the list to start chatting."
+            action={<Button variant="solid" onClick={() => setDmModalOpen(true)}>Start conversation</Button>}
           />
         </Box>
       )}

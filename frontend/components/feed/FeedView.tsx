@@ -68,8 +68,9 @@ export function FeedView({ heading }: FeedViewProps) {
         />
       ) : posts.length === 0 ? (
         <EmptyState
-          title="It’s quiet here"
+          title="Quiet here"
           description="Be the first to share something with your community."
+          action={<Button onClick={() => router.push("/app")}>Go to feed</Button>}
         />
       ) : (
         <Stack spacing={2}>

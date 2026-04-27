@@ -5,7 +5,7 @@
  */
 import * as React from 'react';
 import Box from '@mui/joy/Box';
-import { EmptyState } from '@/components/ui';
+import { EmptyState, Button } from '@/components/ui';
 import { MediaCard } from './MediaCard';
 import type { MediaItem } from '@/lib/api/media';
 
@@ -20,6 +20,7 @@ export function MediaGrid({ items, onSelect }: MediaGridProps) {
       <EmptyState
         title="No uploads yet"
         description="Drop files above to upload your first media."
+        action={<Button variant="soft" onClick={() => window.scrollTo(0, 0)}>Back to upload</Button>}
       />
     );
   }

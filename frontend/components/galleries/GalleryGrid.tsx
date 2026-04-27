@@ -4,8 +4,9 @@
  * @brief Responsive grid of GalleryCards.
  */
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import Box from '@mui/joy/Box';
-import { Skeleton, EmptyState } from '@/components/ui';
+import { Skeleton, EmptyState, Button } from '@/components/ui';
 import { GalleryCard } from './GalleryCard';
 import { useGalleryList } from '@/hooks/useGalleries';
 
@@ -14,6 +15,7 @@ export interface GalleryGridProps {
 }
 
 export function GalleryGrid({ onSelect }: GalleryGridProps) {
+  const router = useRouter();
   const { data, isLoading, error } = useGalleryList();
 
   if (isLoading) {
@@ -31,9 +33,22 @@ export function GalleryGrid({ onSelect }: GalleryGridProps) {
       </Box>
     );
   }
-  if (error) return <EmptyState title="Couldn't load galleries" description={String(error)} />;
+  if (error)
+    return (
+      <EmptyState
+        title="Couldn't load galleries"
+        description={String(error)}
+        action={<Button variant="soft" onClick={() => router.refresh()}>Retry</Button>}
+      />
+    );
   if (!data || data.items.length === 0) {
-    return <EmptyState title="No galleries yet" description="Create one to share photos." />;
+    return (
+      <EmptyState
+        title="No galleries yet"
+        description="Create one to share photos."
+        action={<Button variant="solid" onClick={() => router.push('/app/media')}>Browse media</Button>}
+      />
+    );
   }
 
   return (

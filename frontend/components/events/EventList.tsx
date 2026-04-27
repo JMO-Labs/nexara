@@ -4,9 +4,10 @@
  * @brief Vertical list of EventCards grouped by month with sticky headers.
  */
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
-import { Skeleton, EmptyState } from '@/components/ui';
+import { Skeleton, EmptyState, Button } from '@/components/ui';
 import { EventCard } from './EventCard';
 import { useUpcomingEvents } from '@/hooks/useEvents';
 import type { EventItem } from '@/lib/api/events';
@@ -22,6 +23,7 @@ function dayLabel(iso: string): string {
 }
 
 export function EventList() {
+  const router = useRouter();
   const { data, isLoading, error } = useUpcomingEvents(60);
 
   if (isLoading) {
@@ -33,12 +35,20 @@ export function EventList() {
       </Stack>
     );
   }
-  if (error) return <EmptyState title="Couldn't load events" description={String(error)} />;
+  if (error)
+    return (
+      <EmptyState
+        title="Couldn't load events"
+        description={String(error)}
+        action={<Button variant="soft" onClick={() => router.refresh()}>Retry</Button>}
+      />
+    );
   if (!data || data.items.length === 0) {
     return (
       <EmptyState
         title="No upcoming events"
         description="Once events are scheduled they'll appear here."
+        action={<Button variant="solid" onClick={() => router.push('/app/events')}>View all events</Button>}
       />
     );
   }
