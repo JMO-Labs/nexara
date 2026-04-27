@@ -5,7 +5,7 @@
  *        recent notifications list. Stream-driven: SSE updates the count
  *        and prepends new items live.
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
@@ -15,6 +15,7 @@ import Badge from '@mui/joy/Badge';
 import Modal from '@mui/joy/Modal';
 import ModalClose from '@mui/joy/ModalClose';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { IconButton } from '@/components/ui/IconButton';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +35,11 @@ const LIST_KEY = ['notifications', 'list'] as const;
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  const [badgeKey, setBadgeKey] = useState(0);
+  const prevCountRef = useRef(0);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   const isAuthed = useSession((s) => s.status === 'authenticated');
   const qc = useQueryClient();
 
@@ -71,26 +77,50 @@ export function NotificationsBell() {
 
   const unread = count?.count ?? 0;
 
+  // Debounced pulse on count change
+  useEffect(() => {
+    if (unread > prevCountRef.current && unread > 0) {
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+      setPulse(true);
+      setBadgeKey((k) => k + 1);
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        setPulse(false);
+      }, 1000);
+    }
+    prevCountRef.current = unread;
+
+    return () => {
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    };
+  }, [unread]);
+
   return (
     <>
       <Badge
+        key={`badge-${badgeKey}`}
         badgeContent={unread > 99 ? '99+' : unread}
         color="danger"
         invisible={unread === 0}
         size="sm"
       >
-        <IconButton
-          tooltip="Notifications"
-          variant="plain"
-          color="neutral"
-          aria-label={
-            unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
-          }
-          onClick={() => setOpen(true)}
-          data-tour="bell"
+        <motion.div
+          animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
+          transition={{ duration: 0.35, ease: 'easeInOut' }}
         >
-          <BellIcon aria-hidden width={20} height={20} />
-        </IconButton>
+          <IconButton
+            tooltip="Notifications"
+            variant="plain"
+            color="neutral"
+            aria-label={
+              unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
+            }
+            onClick={() => setOpen(true)}
+            data-tour="bell"
+          >
+            <BellIcon aria-hidden width={20} height={20} />
+          </IconButton>
+        </motion.div>
       </Badge>
 
       <Modal open={open} onClose={() => setOpen(false)}>
