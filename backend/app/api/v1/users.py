@@ -70,6 +70,17 @@ async def change_password(
     return MessageResponse(message=_("Password updated successfully"))
 
 
+@router.patch("/me/onboarding", response_model=UserDetailResponse)
+async def complete_onboarding(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Any:
+    """@brief Mark the onboarding tour as completed for the authenticated user."""
+    svc = UserService(db, settings)
+    return await svc.complete_onboarding(user)
+
+
 @router.post("/me/email", response_model=UserDetailResponse)
 async def change_email(
     body: EmailChangeRequest,

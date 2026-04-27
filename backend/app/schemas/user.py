@@ -59,6 +59,7 @@ class UserDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_seen_at: datetime | None = None
+    tour_completed_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

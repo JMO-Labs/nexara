@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -172,6 +173,20 @@ class UserService:
         await self._user_repo.soft_delete(user)
         await self._token_repo.revoke_all_for_user(user.id)
         logger.info("account_deactivated", user_id=str(user.id))
+
+    async def complete_onboarding(self, user: User) -> User:
+        """
+        @brief Mark the onboarding tour as completed for the user.
+
+        @param user The current user.
+        @return The updated User.
+        """
+        updated = await self._user_repo.update(
+            user,
+            {"tour_completed_at": datetime.utcnow()},
+        )
+        logger.info("onboarding_completed", user_id=str(user.id))
+        return updated
 
     @staticmethod
     def get_avatar_url(user: User, size: int = 80) -> str:

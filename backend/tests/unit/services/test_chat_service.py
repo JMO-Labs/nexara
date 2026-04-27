@@ -23,7 +23,6 @@ from app.repositories.chat_repo import (
 from app.services.chat_service import (
     CHAT_RATE_LIMIT_PER_MINUTE,
     ChatService,
-    channel_pubsub_name,
     serialize_message,
 )
 
