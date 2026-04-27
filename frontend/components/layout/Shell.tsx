@@ -18,6 +18,7 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { ModalRoot } from './ModalRoot';
 import { KeyboardShortcutsModal } from '@/components/help/KeyboardShortcutsModal';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 export function Shell({ children }: { children: ReactNode }) {
   useSessionBootstrap();
@@ -101,6 +102,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </Box>
       <ModalRoot />
       <KeyboardShortcutsModal />
+      <OnboardingTour />
     </Box>
   );
 }

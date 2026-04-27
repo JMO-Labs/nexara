@@ -14,6 +14,7 @@ const SAMPLE = {
   avatar_url: null,
   role: 'member',
   is_active: true,
+  tour_completed_at: null,
 };
 
 describe('useSession', () => {
