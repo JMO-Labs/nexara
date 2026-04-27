@@ -6,7 +6,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/joy/Box';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton, EmptyState, Button } from '@/components/ui';
 import { GalleryCard } from './GalleryCard';
 import { useGalleryList } from '@/hooks/useGalleries';
@@ -19,21 +19,6 @@ export function GalleryGrid({ onSelect }: GalleryGridProps) {
   const router = useRouter();
   const { data, isLoading, error } = useGalleryList();
 
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
-        }}
-      >
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} height={220} />
-        ))}
-      </Box>
-    );
-  }
   if (error)
     return (
       <EmptyState
@@ -53,19 +38,51 @@ export function GalleryGrid({ onSelect }: GalleryGridProps) {
   }
 
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
-      }}
-    >
-      {data.items.map((g) => (
-        <motion.div key={g.id} layout>
-          <GalleryCard gallery={g} onSelect={onSelect} />
+    <AnimatePresence mode="wait">
+      {isLoading ? (
+        <motion.div
+          key="sk"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+            }}
+          >
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} height={220} />
+            ))}
+          </Box>
         </motion.div>
-      ))}
-    </Box>
+      ) : (
+        <motion.div
+          key="ct"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+            }}
+          >
+            {data.items.map((g) => (
+              <motion.div key={g.id} layout>
+                <GalleryCard gallery={g} onSelect={onSelect} />
+              </motion.div>
+            ))}
+          </Box>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

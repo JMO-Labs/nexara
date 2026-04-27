@@ -8,7 +8,7 @@ import * as React from 'react';
 import Stack from '@mui/joy/Stack';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Skeleton, EmptyState } from '@/components/ui';
 import type { ChatMessage } from '@/lib/api/chat';
@@ -81,13 +81,23 @@ export function MessageList({
     [hasMore, isFetchingMore, onLoadMore],
   );
 
-  if (isLoading) {
+  if (ordered.length === 0 && isLoading) {
     return (
-      <Stack spacing={1} p={2}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} height={48} />
-        ))}
-      </Stack>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="sk"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Stack spacing={1} p={2}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} height={48} />
+            ))}
+          </Stack>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -103,11 +113,19 @@ export function MessageList({
   }
 
   return (
-    <Box
-      ref={parentRef}
-      onScroll={onScroll}
-      sx={{ flex: 1, overflowY: 'auto', position: 'relative' }}
-    >
+    <AnimatePresence mode="wait">
+      <motion.div
+        key="ct"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        <Box
+          ref={parentRef}
+          onScroll={onScroll}
+          sx={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+        >
       {isFetchingMore && (
         <Typography
           level="body-xs"
@@ -159,6 +177,8 @@ export function MessageList({
           );
         })}
       </Box>
-    </Box>
+        </Box>
+      </motion.div>
+    </AnimatePresence>
   );
 }
