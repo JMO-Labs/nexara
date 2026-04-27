@@ -24,6 +24,11 @@ export interface NavItem {
   mobile?: boolean;
 }
 
+export function isNavActive(pathname: string, href: string): boolean {
+  if (href === '/app') return pathname === '/app';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: '/app', Icon: NewspaperIcon, mobile: true },
   { label: 'Chat', href: '/app/chat', Icon: ChatBubbleLeftRightIcon, mobile: true },

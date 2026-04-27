@@ -9,7 +9,7 @@ import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import Sheet from '@mui/joy/Sheet';
-import { NAV_ITEMS } from './navItems';
+import { NAV_ITEMS, isNavActive } from './navItems';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -49,7 +49,7 @@ export function Sidebar() {
         data-tour="sidebar-nav"
       >
         {NAV_ITEMS.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const active = isNavActive(pathname, item.href);
           const { Icon } = item;
           return (
             <Box component="li" key={item.href}>

@@ -12,7 +12,7 @@ import Sheet from '@mui/joy/Sheet';
 import Typography from '@mui/joy/Typography';
 import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { Drawer } from '@/components/ui/Drawer';
-import { NAV_ITEMS, type IconType, type NavItem } from './navItems';
+import { NAV_ITEMS, isNavActive, type IconType, type NavItem } from './navItems';
 
 const MOBILE = NAV_ITEMS.filter((i) => i.mobile);
 const OVERFLOW = NAV_ITEMS.filter((i) => !i.mobile);
@@ -87,7 +87,7 @@ export function MobileNav() {
               href={i.href}
               label={i.label}
               Icon={i.Icon}
-              active={pathname.startsWith(i.href)}
+              active={isNavActive(pathname, i.href)}
             />
           ))}
           <Box
