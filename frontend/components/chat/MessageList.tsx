@@ -90,6 +90,7 @@ export function MessageList({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
           <Stack spacing={1} p={2}>
             {Array.from({ length: 6 }).map((_, i) => (
@@ -103,7 +104,7 @@ export function MessageList({
 
   if (ordered.length === 0) {
     return (
-      <Box sx={{ flex: 1, display: 'flex' }}>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
         <EmptyState
           title="No messages yet"
           description="Send the first message to start the conversation."
@@ -120,11 +121,12 @@ export function MessageList({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15 }}
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
       >
         <Box
           ref={parentRef}
           onScroll={onScroll}
-          sx={{ flex: 1, overflowY: 'auto', position: 'relative' }}
+          sx={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}
         >
       {isFetchingMore && (
         <Typography

@@ -203,6 +203,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           xs: '1fr',
           md: threadPaneOpen ? '320px 1fr 320px' : '320px 1fr',
         },
+        gridTemplateRows: '1fr',
         bgcolor: 'background.body',
         overflow: 'hidden',
       }}
