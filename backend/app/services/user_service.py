@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -183,7 +183,7 @@ class UserService:
         """
         updated = await self._user_repo.update(
             user,
-            {"tour_completed_at": datetime.utcnow()},
+            {"tour_completed_at": datetime.now(UTC)},
         )
         logger.info("onboarding_completed", user_id=str(user.id))
         return updated

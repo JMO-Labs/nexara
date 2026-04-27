@@ -37,6 +37,11 @@ def _mock_user(**overrides) -> MagicMock:
     user.storage_quota = 10737418240
     user.email_verified = True
     user.last_seen_at = None
+    user.bio = ""
+    user.title = ""
+    user.location = ""
+    user.website_url = ""
+    user.birthday = None
     return user
 
 

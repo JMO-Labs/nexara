@@ -34,6 +34,14 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+def _build_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> UserService:
+    """@brief DI factory for UserService — overridable in tests."""
+    return UserService(db, settings)
+
+
 @router.get("/me", response_model=UserDetailResponse)
 async def get_current_user_profile(
     user: User = Depends(get_current_user),
@@ -73,11 +81,9 @@ async def change_password(
 @router.patch("/me/onboarding", response_model=UserDetailResponse)
 async def complete_onboarding(
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
+    svc: UserService = Depends(_build_service),
 ) -> Any:
     """@brief Mark the onboarding tour as completed for the authenticated user."""
-    svc = UserService(db, settings)
     return await svc.complete_onboarding(user)
 
 
