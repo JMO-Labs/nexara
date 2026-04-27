@@ -6,6 +6,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Box from '@mui/joy/Box';
+import { motion } from 'framer-motion';
 import { Skeleton, EmptyState, Button } from '@/components/ui';
 import { GalleryCard } from './GalleryCard';
 import { useGalleryList } from '@/hooks/useGalleries';
@@ -60,7 +61,9 @@ export function GalleryGrid({ onSelect }: GalleryGridProps) {
       }}
     >
       {data.items.map((g) => (
-        <GalleryCard key={g.id} gallery={g} onSelect={onSelect} />
+        <motion.div key={g.id} layout>
+          <GalleryCard gallery={g} onSelect={onSelect} />
+        </motion.div>
       ))}
     </Box>
   );

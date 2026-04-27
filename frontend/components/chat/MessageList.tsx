@@ -8,6 +8,7 @@ import * as React from 'react';
 import Stack from '@mui/joy/Stack';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
+import { motion } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Skeleton, EmptyState } from '@/components/ui';
 import type { ChatMessage } from '@/lib/api/chat';
@@ -141,13 +142,19 @@ export function MessageList({
                 transform: `translateY(${vi.start}px)`,
               }}
             >
-              <MessageItem
-                message={m}
-                compact={compact}
-                isSelf={Boolean(selfId && m.author?.id === selfId)}
-                onReply={onReply}
-                onSendDm={onSendDm}
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <MessageItem
+                  message={m}
+                  compact={compact}
+                  isSelf={Boolean(selfId && m.author?.id === selfId)}
+                  onReply={onReply}
+                  onSendDm={onSendDm}
+                />
+              </motion.div>
             </Box>
           );
         })}

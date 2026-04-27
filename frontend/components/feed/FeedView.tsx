@@ -7,6 +7,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button, EmptyState, Skeleton } from '@/components/ui';
 import { PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
@@ -62,7 +63,7 @@ export function FeedView({ heading }: FeedViewProps) {
         </Stack>
       ) : isError ? (
         <EmptyState
-          title="Couldn’t load the feed"
+          title="Couldn't load the feed"
           description={error instanceof Error ? error.message : 'Try again in a moment.'}
           action={<Button onClick={() => refetch()}>Retry</Button>}
         />
@@ -70,30 +71,40 @@ export function FeedView({ heading }: FeedViewProps) {
         <EmptyState
           title="Quiet here"
           description="Be the first to share something with your community."
-          action={<Button onClick={() => router.push("/app")}>Go to feed</Button>}
+          action={<Button onClick={() => router.push('/app')}>Go to feed</Button>}
         />
       ) : (
-        <Stack spacing={2}>
-          {posts.map((p) => (
-            <PostCard
-              key={p.id}
-              post={p}
-              truncateBody
-              onOpen={(id) => router.push(`/app/post/${id}`)}
-            />
-          ))}
-          <div ref={sentinelRef} aria-hidden style={{ height: 1 }} />
-          {isFetchingNextPage ? <Skeleton height={120} /> : null}
-          {!hasNextPage && posts.length > 0 ? (
-            <Typography
-              level="body-xs"
-              textColor="text.tertiary"
-              sx={{ textAlign: 'center', py: 2 }}
-            >
-              You’re all caught up.
-            </Typography>
-          ) : null}
-        </Stack>
+        <AnimatePresence>
+          <Stack spacing={2}>
+            {posts.map((p) => (
+              <motion.div
+                key={p.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                <PostCard
+                  post={p}
+                  truncateBody
+                  onOpen={(id) => router.push(`/app/post/${id}`)}
+                />
+              </motion.div>
+            ))}
+            <div ref={sentinelRef} aria-hidden style={{ height: 1 }} />
+            {isFetchingNextPage ? <Skeleton height={120} /> : null}
+            {!hasNextPage && posts.length > 0 ? (
+              <Typography
+                level="body-xs"
+                textColor="text.tertiary"
+                sx={{ textAlign: 'center', py: 2 }}
+              >
+                You&apos;re all caught up.
+              </Typography>
+            ) : null}
+          </Stack>
+        </AnimatePresence>
       )}
     </Stack>
   );
