@@ -157,6 +157,32 @@ class EventRepository(BaseRepository[Event]):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_with_offset_in_range(
+        self,
+        offset_minutes: int,
+        start: datetime,
+        end: datetime,
+    ) -> list[Event]:
+        """
+        @brief List events with a specific reminder offset.
+
+        Filters events whose reminder_offsets_minutes contains offset
+        and whose starts_at falls in [start, end].
+
+        @param offset_minutes The reminder offset to filter by (15, 60, or 1440).
+        @param start Window start (UTC).
+        @param end Window end (UTC).
+        @return Matching Event rows.
+        """
+        stmt = select(Event).where(
+            Event.reminder_offsets_minutes.contains([offset_minutes]),  # @> operator
+            Event.starts_at >= start,
+            Event.starts_at <= end,
+            Event.source_removed.is_(False),
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def list_subscriptions(
         self, community_id: uuid.UUID, user_id: uuid.UUID
     ) -> list[CalendarSubscription]:
@@ -205,5 +231,25 @@ class EventRepository(BaseRepository[Event]):
                 CalendarSubscription.last_synced_at < cutoff,
             ),
         )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_ended_in_window(self, start: datetime, end: datetime) -> list[Event]:
+        """@brief List events that ended between start and end (UTC)."""
+        stmt = select(Event).where(
+            Event.ends_at >= start,
+            Event.ends_at <= end,
+            Event.source_removed.is_(False),
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_attendees(
+        self, event_id: uuid.UUID, statuses: list[str] | None = None
+    ) -> list[uuid.UUID]:
+        """@brief Return list of user IDs attending an event with given statuses."""
+        stmt = select(EventAttendance.user_id).where(EventAttendance.event_id == event_id)
+        if statuses:
+            stmt = stmt.where(EventAttendance.status.in_(statuses))
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

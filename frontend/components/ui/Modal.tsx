@@ -38,6 +38,8 @@ export function Modal({
           borderRadius: 'lg',
           maxWidth: 560,
           width: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100dvh - 32px)',
+          overflowY: 'auto',
           ...sx,
         }}
         {...rest}

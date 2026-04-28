@@ -37,8 +37,12 @@ class EventCreate(BaseModel):
     recurrence_rule: str | None = Field(None, max_length=500)
     visibility: VisibilityType = "community"
     subgroup_id: UUID | None = None
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     rsvp_labels: dict[str, str] | None = None
     contribution_slots: list[ContributionSlot] = Field(default_factory=list)
+    reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
 
     @field_validator("ends_at")
     @classmethod
@@ -47,6 +51,15 @@ class EventCreate(BaseModel):
         if starts and v < starts:
             raise ValueError("ends_at must be on or after starts_at")
         return v
+
+    @field_validator("reminder_offsets_minutes")
+    @classmethod
+    def _validate_offsets(cls, v: list[int]) -> list[int]:
+        allowed = {15, 60, 1440}
+        if not v or any(x not in allowed for x in v):
+            msg = "reminder_offsets_minutes must be a non-empty subset of {15, 60, 1440}"
+            raise ValueError(msg)
+        return sorted(set(v))
 
 
 class EventUpdate(BaseModel):
@@ -61,8 +74,23 @@ class EventUpdate(BaseModel):
     recurrence_rule: str | None = Field(None, max_length=500)
     visibility: VisibilityType | None = None
     subgroup_id: UUID | None = None
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     rsvp_labels: dict[str, str] | None = None
     contribution_slots: list[ContributionSlot] | None = None
+    reminder_offsets_minutes: list[int] | None = None
+
+    @field_validator("reminder_offsets_minutes")
+    @classmethod
+    def _validate_offsets(cls, v: list[int] | None) -> list[int] | None:
+        if v is None:
+            return None
+        allowed = {15, 60, 1440}
+        if not v or any(x not in allowed for x in v):
+            msg = "reminder_offsets_minutes must be a non-empty subset of {15, 60, 1440}"
+            raise ValueError(msg)
+        return sorted(set(v))
 
 
 class RSVPRequest(BaseModel):
@@ -101,8 +129,13 @@ class EventResponse(BaseModel):
     ical_uid: str
     visibility: str
     subgroup_id: UUID | None
+    calendar_id: UUID | None = None
+    color: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     rsvp_labels: dict[str, str] | None
     contribution_slots: list[ContributionSlot] = Field(default_factory=list)
+    reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
     rsvp_counts: dict[str, int] = Field(default_factory=dict)
     user_rsvp: RSVPResponse | None = None
     created_at: datetime

@@ -36,6 +36,7 @@ NOTIFICATION_TYPES = (
     "event_reminder",
     "event_rsvp",
     "gallery_activity",
+    "gallery_reminder",
     "prompt",
     "prompt_summary",
 )
@@ -51,6 +52,7 @@ PREF_MAP = {
     "event_reminder": ("notif_event_reminder_inapp", "notif_event_reminder_email"),
     "event_rsvp": ("notif_event_rsvp_inapp", "notif_event_rsvp_email"),
     "gallery_activity": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
+    "gallery_reminder": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
 }

@@ -126,6 +126,7 @@ class PostRepository(BaseRepository[Post]):
         author_id: uuid.UUID,
         content: str,
         community_id: uuid.UUID,
+        reply_to_prompt_id: uuid.UUID | None = None,
     ) -> Post:
         """
         @brief Insert a new post row.
@@ -133,12 +134,14 @@ class PostRepository(BaseRepository[Post]):
         @param author_id Author UUID.
         @param content Markdown content.
         @param community_id Community scope.
+        @param reply_to_prompt_id Optional prompt post UUID for reply tracking.
         @return The created Post ORM instance.
         """
         post = Post(
             author_id=author_id,
             content=content,
             community_id=community_id,
+            reply_to_prompt_id=reply_to_prompt_id,
         )
         return await self.create(post)
 

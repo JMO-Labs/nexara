@@ -23,6 +23,7 @@ from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.poll_repo import PollRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.post import CommentCreate, PostCreate, PostUpdate, ReactionResponse, ReactionToggle
@@ -88,6 +89,7 @@ def _build_service(
         event_bus=event_bus,
         media_attacher=media_svc.attach_to_post,
         poll_service=poll_svc,
+        prompt_repo=PromptRepository(db),
     )
 
 
@@ -114,6 +116,7 @@ async def create_post(
         content=body.content,
         media_ids=body.media_ids,
         poll=body.poll,
+        reply_to_prompt_id=body.reply_to_prompt_id,
     )
 
 

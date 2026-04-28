@@ -42,7 +42,11 @@ export function EventRail({
     [events],
   );
 
-  const groups = React.useMemo(() => {
+  const groups = React.useMemo<[string, Date, EventItem[]][]>(() => {
+    if (selectedDay) {
+      const k = format(selectedDay, 'yyyy-MM-dd');
+      return sorted.length ? [[k, selectedDay, sorted]] : [];
+    }
     const map = new Map<string, EventItem[]>();
     for (const ev of sorted) {
       const k = dayKey(ev.starts_at);
@@ -50,8 +54,12 @@ export function EventRail({
       arr.push(ev);
       map.set(k, arr);
     }
-    return Array.from(map.entries());
-  }, [sorted]);
+    return Array.from(map.entries()).map(([k, items]) => [
+      k,
+      parseISO(items[0].starts_at),
+      items,
+    ]);
+  }, [sorted, selectedDay]);
 
   // Auto-scroll selected day group into view
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -71,8 +79,12 @@ export function EventRail({
       <Box sx={{ p: 2 }}>
         <EmptyState
           compact
-          title="Nothing this month"
-          description="Switch months or clear filters to see more events."
+          title={selectedDay ? `No events on ${format(selectedDay, 'MMM d')}` : 'Nothing this month'}
+          description={
+            selectedDay
+              ? 'Pick another day or clear the selection to see the full month.'
+              : 'Switch months or clear filters to see more events.'
+          }
         />
       </Box>
     );
@@ -89,8 +101,7 @@ export function EventRail({
         scrollbarGutter: 'stable',
       }}
     >
-      {groups.map(([key, items]) => {
-        const day = parseISO(items[0].starts_at);
+      {groups.map(([key, day, items]) => {
         const isSelectedDay =
           selectedDay && isSameDay(startOfDay(day), startOfDay(selectedDay));
         return (

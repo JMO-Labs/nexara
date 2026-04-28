@@ -11,6 +11,7 @@ import * as React from 'react';
 import Box from '@mui/joy/Box';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
+import Link from '@mui/joy/Link';
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import {
@@ -19,11 +20,23 @@ import {
   CalendarDaysIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import { IconButton } from '@/components/ui';
 import { RsvpInline } from './RsvpInline';
 import type { EventItem } from '@/lib/api/events';
+import { mapsUrlForCoords } from '@/lib/geo/openInMaps';
+import dynamic from 'next/dynamic';
 import { toneForEvent } from './eventColors';
+import { useDeleteEvent } from '@/hooks/useEvents';
+import { useSession } from '@/stores/session';
+
+const EventMiniMap = dynamic(
+  () => import('./EventMiniMap').then((m) => m.EventMiniMap),
+  { ssr: false, loading: () => null },
+);
 
 const COLLAPSED_HEIGHT = 280;
 const EXPANDED_VH = 0.82;
@@ -34,6 +47,7 @@ export interface EventDetailPanelProps {
   event: EventItem | null;
   subgroupNames: Map<string, string>;
   onClose: () => void;
+  onEdit?: (event: EventItem) => void;
 }
 
 function useContainerRect(ref: React.RefObject<HTMLElement | null>) {
@@ -79,6 +93,7 @@ export function EventDetailPanel({
   event,
   subgroupNames,
   onClose,
+  onEdit,
 }: EventDetailPanelProps) {
   const rect = useContainerRect(containerRef);
   const [expanded, setExpanded] = React.useState(false);
@@ -141,6 +156,7 @@ export function EventDetailPanel({
             event={event}
             subgroupNames={subgroupNames}
             onClose={onClose}
+            onEdit={onEdit}
             expanded={expanded}
             setExpanded={setExpanded}
             targetHeight={targetHeight}
@@ -159,6 +175,7 @@ const DrawerSurface = React.forwardRef<
     event: EventItem;
     subgroupNames: Map<string, string>;
     onClose: () => void;
+    onEdit?: (event: EventItem) => void;
     expanded: boolean;
     setExpanded: (v: boolean) => void;
     targetHeight: number;
@@ -170,6 +187,7 @@ const DrawerSurface = React.forwardRef<
     event,
     subgroupNames,
     onClose,
+    onEdit,
     expanded,
     setExpanded,
     targetHeight,
@@ -179,6 +197,13 @@ const DrawerSurface = React.forwardRef<
   ref,
 ) {
   const tone = toneForEvent(event, subgroupNames);
+  const me = useSession((s) => s.user);
+  const del = useDeleteEvent();
+  const canEdit = !!me && me.id === event.author_id;
+  const onDelete = () => {
+    if (!confirm('Delete this event?')) return;
+    del.mutate(event.id, { onSuccess: onClose });
+  };
   const heightMV = useMotionValue(targetHeight);
 
   React.useEffect(() => {
@@ -331,6 +356,28 @@ const DrawerSurface = React.forwardRef<
           </Typography>
         </Box>
         <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+          {canEdit && onEdit && (
+            <IconButton
+              size="sm"
+              variant="plain"
+              aria-label="Edit event"
+              onClick={() => onEdit(event)}
+            >
+              <PencilSquareIcon width={18} />
+            </IconButton>
+          )}
+          {canEdit && (
+            <IconButton
+              size="sm"
+              variant="plain"
+              color="danger"
+              aria-label="Delete event"
+              onClick={onDelete}
+              disabled={del.isPending}
+            >
+              <TrashIcon width={18} />
+            </IconButton>
+          )}
           <IconButton
             size="sm"
             variant="plain"
@@ -361,9 +408,30 @@ const DrawerSurface = React.forwardRef<
             <Stack direction="row" spacing={1} alignItems="center">
               <MapPinIcon width={16} />
               <Typography level="body-sm">{event.location}</Typography>
+              {event.latitude != null && event.longitude != null && (
+                <Link
+                  href={mapsUrlForCoords(event.latitude, event.longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  level="body-xs"
+                  endDecorator={<ArrowTopRightOnSquareIcon width={12} />}
+                  sx={{ ml: 0.5 }}
+                >
+                  Open in Google Maps
+                </Link>
+              )}
             </Stack>
           )}
         </Stack>
+        {event.latitude != null && event.longitude != null && (
+          <Box sx={{ mb: 2, maxWidth: 480 }}>
+            <EventMiniMap
+              lat={event.latitude}
+              lon={event.longitude}
+              height={180}
+            />
+          </Box>
+        )}
 
         {event.description && (
           <Typography

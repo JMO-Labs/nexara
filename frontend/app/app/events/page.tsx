@@ -3,8 +3,9 @@
  * @file app/app/events/page.tsx
  * @brief Events page. Three-zone editorial layout: large month calendar (left),
  *        sorted day-grouped event rail (right), and a slide-up detail panel
- *        (bottom). Subgroup filter chips switch the visible scope; all three
- *        zones stay in sync with the current month + selected event/day.
+ *        (bottom). Calendar source filter (multi-select grouped dropdown)
+ *        controls which calendars contribute events; all three zones stay
+ *        in sync with the current month + selected event/day.
  */
 import * as React from 'react';
 import Box from '@mui/joy/Box';
@@ -15,37 +16,54 @@ import { EventRail } from '@/components/events/EventRail';
 import { EventDetailPanel } from '@/components/events/EventDetailPanel';
 import {
   CalendarFilterBar,
-  type Scope,
+  type CalendarSourceId,
 } from '@/components/events/CalendarFilterBar';
 import { useEventsInRange } from '@/hooks/useEvents';
 import { useSubgroupList } from '@/hooks/useSubgroups';
+import { useCalendars } from '@/hooks/useCalendars';
 import type { EventItem } from '@/lib/api/events';
-
-function applyScope(events: EventItem[], scope: Scope): EventItem[] {
-  if (scope.kind === 'all') return events;
-  if (scope.kind === 'community') return events.filter((e) => e.visibility !== 'subgroup');
-  return events.filter(
-    (e) => e.visibility === 'subgroup' && e.subgroup_id === scope.id,
-  );
-}
 
 export default function EventsPage() {
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [editEvent, setEditEvent] = React.useState<EventItem | null>(null);
   const [month, setMonth] = React.useState(() => startOfMonth(new Date()));
-  const [scope, setScope] = React.useState<Scope>({ kind: 'all' });
-  const [selectedDay, setSelectedDay] = React.useState<Date | null>(null);
+  const [selectedDay, setSelectedDay] = React.useState<Date | null>(
+    () => startOfDay(new Date()),
+  );
   const [selectedEventId, setSelectedEventId] = React.useState<string | null>(null);
 
   const monthStart = React.useMemo(() => startOfMonth(month), [month]);
   const monthEnd = React.useMemo(() => endOfMonth(month), [month]);
   const { data, isLoading } = useEventsInRange(monthStart, monthEnd);
   const { data: subgroups } = useSubgroupList();
+  const { data: calendars } = useCalendars();
+
+  const calendarList = React.useMemo(() => calendars ?? [], [calendars]);
+
+  const [selectedSources, setSelectedSources] = React.useState<CalendarSourceId[]>([]);
+  const knownIdsRef = React.useRef<Set<string>>(new Set());
+
+  // Auto-include newly discovered calendars (default: all on).
+  React.useEffect(() => {
+    const known = knownIdsRef.current;
+    const currentIds = calendarList.map((c) => c.id);
+    const additions = currentIds.filter((id) => !known.has(id));
+    const removals = [...known].filter((id) => !currentIds.includes(id));
+    if (additions.length === 0 && removals.length === 0) return;
+    additions.forEach((id) => known.add(id));
+    removals.forEach((id) => known.delete(id));
+    setSelectedSources((prev) => {
+      const next = prev.filter((id) => !removals.includes(id));
+      for (const id of additions) if (!next.includes(id)) next.push(id);
+      return next;
+    });
+  }, [calendarList]);
 
   const allEvents = data?.items ?? [];
-  const filtered = React.useMemo(
-    () => applyScope(allEvents, scope),
-    [allEvents, scope],
-  );
+  const filtered = React.useMemo(() => {
+    const set = new Set(selectedSources);
+    return allEvents.filter((ev) => (ev.calendar_id ? set.has(ev.calendar_id) : true));
+  }, [allEvents, selectedSources]);
 
   const subgroupNames = React.useMemo(() => {
     const m = new Map<string, string>();
@@ -107,12 +125,12 @@ export default function EventsPage() {
       <CalendarFilterBar
         month={month}
         onMonthChange={setMonth}
-        scope={scope}
-        onScopeChange={(s) => {
-          setScope(s);
+        selected={selectedSources}
+        onSelectedChange={(ids) => {
+          setSelectedSources(ids);
           setSelectedEventId(null);
         }}
-        subgroups={subgroups ?? []}
+        calendars={calendarList}
         onCreate={() => setCreateOpen(true)}
       />
 
@@ -210,9 +228,15 @@ export default function EventsPage() {
         event={selectedEvent}
         subgroupNames={subgroupNames}
         onClose={() => setSelectedEventId(null)}
+        onEdit={(ev) => setEditEvent(ev)}
       />
 
       <EventCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EventCreateModal
+        open={!!editEvent}
+        event={editEvent}
+        onClose={() => setEditEvent(null)}
+      />
     </Box>
   );
 }

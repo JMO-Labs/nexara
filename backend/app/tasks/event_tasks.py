@@ -42,51 +42,54 @@ SYNC_INTERVAL = timedelta(hours=1)
 
 async def _dispatch_reminders_async() -> dict[str, int]:
     """
-    @brief Dispatch reminders for events starting in [now+lead-interval, now+lead].
+    @brief Dispatch reminders for events starting in configurable offset windows.
 
-    The window equals one Beat cadence so each reminder fires once per RSVP.
+    Loops over offsets {15, 60, 1440} minutes and dispatches reminders for events
+    with matching reminder_offsets_minutes.
     """
-    now = datetime.now(UTC)
-    window_end = now + timedelta(minutes=REMINDER_LEAD_MIN)
-    window_start = window_end - timedelta(minutes=REMINDER_INTERVAL_MIN)
+    window_min = 7  # half-window: ± 7 minutes around each offset
+    offsets = [15, 60, 1440]
 
     sent = 0
     async with async_session_factory() as session:
         repo = EventRepository(session)
-        events = await repo.list_upcoming_for_reminders(window_start, window_end)
-        if not events:
-            return {"reminders_sent": 0}
+        now = datetime.now(UTC)
 
-        for event in events:
-            notif = NotificationService(
-                notification_repo=NotificationRepository(session),
-                settings_repo=SettingsRepository(session),
-                community_id=event.community_id,
-            )
-            attendances = await repo.list_attendance(event.id)
-            recipients = {a.user_id for a in attendances if a.status in ("attending", "maybe")}
-            for user_id in recipients:
-                try:
-                    await notif.notify(
-                        user_id=user_id,
-                        type="event_reminder",
-                        payload={
-                            "event_id": str(event.id),
-                            "title": event.title,
-                            "starts_at": event.starts_at.isoformat(),
-                            "message": f"Reminder: {event.title} starts soon",
-                            "link": f"/app/events/{event.id}",
-                            "subject": f"Reminder: {event.title}",
-                        },
-                    )
-                    sent += 1
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "event_reminder_failed",
-                        event_id=str(event.id),
-                        user_id=str(user_id),
-                        error=str(exc),
-                    )
+        for offset in offsets:
+            window_start = now + timedelta(minutes=offset - window_min)
+            window_end = now + timedelta(minutes=offset + window_min)
+            events = await repo.list_with_offset_in_range(offset, window_start, window_end)
+
+            for event in events:
+                notif = NotificationService(
+                    notification_repo=NotificationRepository(session),
+                    settings_repo=SettingsRepository(session),
+                    community_id=event.community_id,
+                )
+                attendances = await repo.list_attendance(event.id)
+                recipients = {a.user_id for a in attendances if a.status in ("attending", "maybe")}
+                for user_id in recipients:
+                    try:
+                        await notif.notify(
+                            user_id=user_id,
+                            type="event_reminder",
+                            payload={
+                                "event_id": str(event.id),
+                                "title": event.title,
+                                "starts_at": event.starts_at.isoformat(),
+                                "message": f"Reminder: {event.title} starts soon",
+                                "link": f"/app/events/{event.id}",
+                                "subject": f"Reminder: {event.title}",
+                            },
+                        )
+                        sent += 1
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "event_reminder_failed",
+                            event_id=str(event.id),
+                            user_id=str(user_id),
+                            error=str(exc),
+                        )
         await session.commit()
     return {"reminders_sent": sent}
 

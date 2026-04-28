@@ -137,6 +137,14 @@ celery_app.conf.update(
             "task": "app.tasks.retention_tasks.age_posts",
             "schedule": crontab(day_of_week="sat", hour="4", minute="30"),
         },
+        "gallery-post-event-reminders": {
+            "task": "app.tasks.gallery_tasks.gallery_post_event_reminders",
+            "schedule": crontab(hour="9", minute="0"),
+        },
+        "gallery-batch-notifications": {
+            "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
+            "schedule": 60.0 * 60,
+        },
     },
 )
 

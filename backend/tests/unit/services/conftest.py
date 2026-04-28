@@ -14,6 +14,7 @@ from app.models.post import Post
 from app.models.user import User
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
 from app.services.post_service import PostService
 from app.services.realtime.event_bus import EventBus
 
@@ -69,6 +70,12 @@ def reaction_repo():
 
 
 @pytest.fixture
+def prompt_repo():
+    """@brief Mock PromptRepository."""
+    return AsyncMock(spec=PromptRepository)
+
+
+@pytest.fixture
 def notification_svc():
     """@brief Mock NotificationService."""
     return AsyncMock()
@@ -87,7 +94,7 @@ def media_attacher():
 
 
 @pytest.fixture
-def service(post_repo, comment_repo, reaction_repo, notification_svc):
+def service(post_repo, comment_repo, reaction_repo, notification_svc, prompt_repo):
     """@brief PostService with mocked dependencies."""
     return PostService(
         post_repo=post_repo,
@@ -95,6 +102,7 @@ def service(post_repo, comment_repo, reaction_repo, notification_svc):
         reaction_repo=reaction_repo,
         notification_service=notification_svc,
         community_id=COMMUNITY_ID,
+        prompt_repo=prompt_repo,
     )
 
 

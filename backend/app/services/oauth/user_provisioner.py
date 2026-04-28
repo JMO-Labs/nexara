@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
+from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
 from app.repositories.user_repo import UserRepository
 
@@ -166,4 +167,5 @@ class UserProvisioner:
             avatar_url=auth_result.avatar_url,
         )
         await self._link_repo.create(new_link)
+        await CalendarRepository(self._db).ensure_personal(self._community_id, user.id)
         return user

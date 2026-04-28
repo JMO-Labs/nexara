@@ -58,7 +58,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_calendar_tokens_user", table_name="calendar_tokens", if_exists=True)
     op.drop_table("calendar_tokens")
     op.drop_column("calendar_subscriptions", "sync_interval_minutes")
     op.drop_column("calendar_subscriptions", "shared_by_admin")

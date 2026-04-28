@@ -46,10 +46,33 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
+export function toneFromHex(hex: string, label = 'Custom'): EventTone {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // Perceived luminance for foreground choice on the solid swatch.
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return {
+    solid: hex,
+    soft: `rgba(${r},${g},${b},0.16)`,
+    onSolid: lum > 0.6 ? '#0f172a' : '#fff',
+    onSoft: hex,
+    label,
+  };
+}
+
 export function toneForEvent(
-  ev: Pick<EventItem, 'visibility' | 'subgroup_id'>,
+  ev: Pick<EventItem, 'visibility' | 'subgroup_id' | 'color'>,
   subgroupNames?: Map<string, string>,
 ): EventTone {
+  if (ev.color && /^#[0-9A-Fa-f]{6}$/.test(ev.color)) {
+    const baseLabel =
+      ev.visibility === 'subgroup' && ev.subgroup_id
+        ? (subgroupNames?.get(ev.subgroup_id) ?? 'Subgroup')
+        : 'Community';
+    return toneFromHex(ev.color, baseLabel);
+  }
   if (ev.visibility !== 'subgroup' || !ev.subgroup_id) {
     return { ...COMMUNITY, label: 'Community' };
   }
@@ -59,6 +82,19 @@ export function toneForEvent(
     label: subgroupNames?.get(ev.subgroup_id) ?? 'Subgroup',
   };
 }
+
+export const EVENT_COLOR_PRESETS: { value: string; name: string }[] = [
+  { value: '#1f6feb', name: 'Azure' },
+  { value: '#c2410c', name: 'Burnt orange' },
+  { value: '#15803d', name: 'Pine' },
+  { value: '#7c3aed', name: 'Violet' },
+  { value: '#be185d', name: 'Magenta' },
+  { value: '#0d9488', name: 'Teal' },
+  { value: '#a16207', name: 'Amber' },
+  { value: '#0b7285', name: 'Brand' },
+  { value: '#dc2626', name: 'Crimson' },
+  { value: '#374151', name: 'Slate' },
+];
 
 export function toneForSubgroupId(id: string | null): EventTone {
   if (!id) return { ...COMMUNITY, label: 'Community' };

@@ -83,7 +83,10 @@ class TestCreatePost:
         result = await service.create_post(user, "Hello world")
         assert result == enriched
         post_repo.create_post.assert_awaited_once_with(
-            author_id=user.id, content="Hello world", community_id=COMMUNITY_ID
+            author_id=user.id,
+            content="Hello world",
+            community_id=COMMUNITY_ID,
+            reply_to_prompt_id=None,
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
 
@@ -133,6 +136,16 @@ class TestCreatePost:
             post_repo._session,
         )
 
+    @pytest.mark.asyncio
+    async def test_reply_to_prompt_increments_count(self, service, post_repo, prompt_repo):
+        """create_post() with reply_to_prompt_id calls prompt_repo.increment_response_count."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {"id": str(post.id), "content": "reply"}
+        prompt_id = uuid.uuid4()
+        await service.create_post(user, "Great prompt!", reply_to_prompt_id=prompt_id)
+        prompt_repo.increment_response_count.assert_awaited_once_with(prompt_id)
 
 
 class TestDeletePost:

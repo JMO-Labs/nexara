@@ -27,7 +27,14 @@ import { toneForEvent, type EventTone } from './eventColors';
 
 const LANE_HEIGHT = 22;
 const HEADER_OFFSET = 34;
-const MAX_LANES_VISIBLE = 4;
+const CELL_MIN_HEIGHT = 104;
+const OVERFLOW_RESERVE = 18;
+// Lanes that can stack within a day cell without overflowing it vertically.
+// Bars rendered beyond this are hidden; per-day "+N more" badge stands in.
+const MAX_LANES_VISIBLE = Math.max(
+  1,
+  Math.floor((CELL_MIN_HEIGHT - HEADER_OFFSET - OVERFLOW_RESERVE) / LANE_HEIGHT),
+);
 
 interface Segment {
   event: EventItem;
@@ -169,7 +176,13 @@ export function MonthCalendarLarge({
       >
         {weeks.map((week, wi) => {
           const segs = weekSegments[wi];
-          const overflow = segs.filter((s) => s.lane >= MAX_LANES_VISIBLE);
+          // Per-day overflow count: how many segs cover this day at a hidden lane.
+          const overflowByDay = week.map(
+            (_d, di) =>
+              segs.filter(
+                (s) => s.lane >= MAX_LANES_VISIBLE && di >= s.col && di < s.col + s.span,
+              ).length,
+          );
 
           return (
             <Box
@@ -183,10 +196,11 @@ export function MonthCalendarLarge({
                 borderColor: 'divider',
               }}
             >
-              {week.map((day) => {
+              {week.map((day, di) => {
                 const inMonth = isSameMonth(day, month);
                 const today = isToday(day);
                 const selected = selectedDay && isSameDay(day, selectedDay);
+                const dayOverflow = overflowByDay[di];
                 return (
                   <Box
                     key={day.toISOString()}
@@ -259,6 +273,24 @@ export function MonthCalendarLarge({
                         </Typography>
                       ) : null}
                     </Stack>
+                    {dayOverflow > 0 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: 4,
+                          right: 4,
+                          bottom: 2,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: 'text.tertiary',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        +{dayOverflow} more
+                      </Box>
+                    )}
                   </Box>
                 );
               })}
@@ -279,6 +311,7 @@ export function MonthCalendarLarge({
                   .filter((s) => s.lane < MAX_LANES_VISIBLE)
                   .map((s, i) => {
                     const isSelected = selectedEventId === s.event.id;
+                    const solidFill = isSelected || s.event.is_all_day;
                     return (
                       <Box
                         key={`${s.event.id}-${i}`}
@@ -306,8 +339,8 @@ export function MonthCalendarLarge({
                           borderLeft: s.startsHere
                             ? `3px solid ${s.tone.solid}`
                             : `3px solid ${s.tone.solid}`,
-                          backgroundColor: isSelected ? s.tone.solid : s.tone.soft,
-                          color: isSelected ? s.tone.onSolid : s.tone.onSoft,
+                          backgroundColor: solidFill ? s.tone.solid : s.tone.soft,
+                          color: solidFill ? s.tone.onSolid : s.tone.onSoft,
                           fontSize: 12,
                           fontWeight: 600,
                           lineHeight: `${LANE_HEIGHT - 4}px`,
@@ -335,24 +368,6 @@ export function MonthCalendarLarge({
                       </Box>
                     );
                   })}
-                {overflow.length > 0 && (
-                  <Box
-                    sx={{
-                      gridColumn: '1 / span 7',
-                      gridRow: 1,
-                      transform: `translateY(${MAX_LANES_VISIBLE * LANE_HEIGHT}px)`,
-                      px: 1,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'text.tertiary',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    + {overflow.length} more
-                  </Box>
-                )}
               </Box>
             </Box>
           );

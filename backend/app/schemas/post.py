@@ -70,11 +70,13 @@ class PostCreate(BaseModel):
 
     @param content Markdown content (0-10000 characters).
     @param media_ids Optional list of previously uploaded media UUIDs to attach.
+    @param reply_to_prompt_id Optional prompt post UUID for reply tracking.
     """
 
     content: str = Field("", max_length=10000)
     media_ids: list[UUID] = Field(default_factory=list, max_length=10)
     poll: PollCreate | None = None
+    reply_to_prompt_id: UUID | None = None
 
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:

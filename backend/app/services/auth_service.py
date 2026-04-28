@@ -36,6 +36,7 @@ from app.core.security import (
 )
 from app.models.auth import UserBackupCode
 from app.models.user import User
+from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
@@ -136,6 +137,10 @@ class AuthService:
         user = await self._user_repo.create(user)
 
         await self._settings_repo.get_or_create(user.id, user.community_id)
+
+        # Seed personal calendar (idempotent — safe if a prior run partially completed).
+        calendar_repo = CalendarRepository(self._session)
+        await calendar_repo.ensure_personal(user.community_id, user.id)
 
         if invite:
             await self._invite_repo.mark_used(invite.id, user.id)

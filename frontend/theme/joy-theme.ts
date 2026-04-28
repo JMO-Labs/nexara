@@ -100,7 +100,7 @@ export const joyTheme = extendTheme({
           secondary: colors.fogDeep,
           tertiary: '#8A7F6F',
         },
-        divider: 'rgba(245, 239, 230, 0.10)',
+        divider: 'rgba(245, 239, 230, 0.18)',
         focusVisible: '#5FA0B5',
       },
     },
@@ -157,11 +157,35 @@ export const joyTheme = extendTheme({
   components: {
     JoyButton: {
       styleOverrides: {
-        root: ({ ownerState }) => ({
+        root: ({ ownerState, theme }) => ({
           borderRadius: radius.md,
           fontWeight: 500,
           letterSpacing: '0.005em',
           ...(ownerState.size === 'lg' && { paddingInline: '1.25rem' }),
+          // Dark mode: brighter borders/surfaces for outlined + soft variants
+          // so neutral controls stay readable on the ink-tinted background.
+          [theme.getColorSchemeSelector('dark')]: {
+            ...(ownerState.variant === 'outlined' &&
+              ownerState.color === 'neutral' && {
+                borderColor: 'var(--nx-palette-neutral-500)',
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': {
+                  backgroundColor: 'var(--nx-palette-neutral-300)',
+                  borderColor: 'var(--nx-palette-neutral-600)',
+                },
+              }),
+            ...(ownerState.variant === 'soft' &&
+              ownerState.color === 'neutral' && {
+                backgroundColor: 'var(--nx-palette-neutral-300)',
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': { backgroundColor: 'var(--nx-palette-neutral-400)' },
+              }),
+            ...(ownerState.variant === 'plain' &&
+              ownerState.color === 'neutral' && {
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': { backgroundColor: 'var(--nx-palette-neutral-300)' },
+              }),
+          },
         }),
       },
     },
@@ -176,10 +200,161 @@ export const joyTheme = extendTheme({
     },
     JoyInput: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           borderRadius: radius.sm,
           '--Input-focusedHighlight': colors.teal,
+          [theme.getColorSchemeSelector('dark')]: {
+            backgroundColor: 'var(--nx-palette-background-level1)',
+            borderColor: 'var(--nx-palette-neutral-400)',
+            color: 'var(--nx-palette-text-primary)',
+            '&:hover': { borderColor: 'var(--nx-palette-neutral-500)' },
+            '&::placeholder, & input::placeholder': {
+              color: 'var(--nx-palette-text-tertiary)',
+              opacity: 1,
+            },
+          },
+        }),
+      },
+    },
+    JoyTextarea: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: radius.sm,
+          '--Textarea-focusedHighlight': colors.teal,
+          [theme.getColorSchemeSelector('dark')]: {
+            backgroundColor: 'var(--nx-palette-background-level1)',
+            borderColor: 'var(--nx-palette-neutral-400)',
+            color: 'var(--nx-palette-text-primary)',
+            '&:hover': { borderColor: 'var(--nx-palette-neutral-500)' },
+            '& textarea::placeholder': {
+              color: 'var(--nx-palette-text-tertiary)',
+              opacity: 1,
+            },
+          },
+        }),
+      },
+    },
+    JoySelect: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: radius.sm,
+          [theme.getColorSchemeSelector('dark')]: {
+            backgroundColor: 'var(--nx-palette-background-level1)',
+            borderColor: 'var(--nx-palette-neutral-400)',
+            color: 'var(--nx-palette-text-primary)',
+            '&:hover': { borderColor: 'var(--nx-palette-neutral-500)' },
+          },
+        }),
+        listbox: {
+          backgroundColor: 'var(--joy-palette-background-popup)',
+          color: 'var(--joy-palette-text-primary)',
+          borderColor: 'var(--joy-palette-neutral-outlinedBorder)',
+          boxShadow: 'var(--joy-shadow-lg)',
         },
+      },
+    },
+    JoyAutocomplete: {
+      styleOverrides: {
+        listbox: {
+          backgroundColor: 'var(--joy-palette-background-popup)',
+          color: 'var(--joy-palette-text-primary)',
+          borderColor: 'var(--joy-palette-neutral-outlinedBorder)',
+          boxShadow: 'var(--joy-shadow-lg)',
+          '& li': {
+            color: 'var(--joy-palette-text-primary)',
+            cursor: 'pointer',
+            '&:hover, &.Mui-focused': {
+              backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
+            },
+            '&[aria-selected="true"]': {
+              backgroundColor: 'var(--joy-palette-neutral-softActiveBg)',
+            },
+          },
+        },
+      },
+    },
+    JoyMenu: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'var(--joy-palette-background-popup)',
+          color: 'var(--joy-palette-text-primary)',
+          borderColor: 'var(--joy-palette-neutral-outlinedBorder)',
+          boxShadow: 'var(--joy-shadow-lg)',
+        },
+      },
+    },
+    JoyOption: {
+      styleOverrides: {
+        root: {
+          color: 'var(--joy-palette-text-primary)',
+          '&:hover': {
+            backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
+          },
+          '&[aria-selected="true"]': {
+            backgroundColor: 'var(--joy-palette-neutral-softActiveBg)',
+            color: 'var(--joy-palette-text-primary)',
+          },
+        },
+      },
+    },
+    JoyIconButton: {
+      styleOverrides: {
+        root: ({ ownerState, theme }) => ({
+          [theme.getColorSchemeSelector('dark')]: {
+            ...(ownerState.variant === 'plain' &&
+              (ownerState.color === 'neutral' || !ownerState.color) && {
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': { backgroundColor: 'var(--nx-palette-neutral-300)' },
+              }),
+            ...(ownerState.variant === 'outlined' &&
+              (ownerState.color === 'neutral' || !ownerState.color) && {
+                borderColor: 'var(--nx-palette-neutral-500)',
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': {
+                  backgroundColor: 'var(--nx-palette-neutral-300)',
+                  borderColor: 'var(--nx-palette-neutral-600)',
+                },
+              }),
+            ...(ownerState.variant === 'soft' &&
+              (ownerState.color === 'neutral' || !ownerState.color) && {
+                backgroundColor: 'var(--nx-palette-neutral-300)',
+                color: 'var(--nx-palette-text-primary)',
+                '&:hover': { backgroundColor: 'var(--nx-palette-neutral-400)' },
+              }),
+          },
+        }),
+      },
+    },
+    JoyChip: {
+      styleOverrides: {
+        root: ({ ownerState, theme }) => ({
+          [theme.getColorSchemeSelector('dark')]: {
+            ...(ownerState.variant === 'outlined' &&
+              (ownerState.color === 'neutral' || !ownerState.color) && {
+                borderColor: 'var(--nx-palette-neutral-500)',
+                color: 'var(--nx-palette-text-primary)',
+                backgroundColor: 'var(--nx-palette-background-level1)',
+                '&:hover': {
+                  backgroundColor: 'var(--nx-palette-neutral-300)',
+                  borderColor: 'var(--nx-palette-neutral-600)',
+                },
+              }),
+            ...(ownerState.variant === 'soft' &&
+              (ownerState.color === 'neutral' || !ownerState.color) && {
+                backgroundColor: 'var(--nx-palette-neutral-300)',
+                color: 'var(--nx-palette-text-primary)',
+              }),
+          },
+        }),
+      },
+    },
+    JoyFormLabel: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          [theme.getColorSchemeSelector('dark')]: {
+            color: 'var(--nx-palette-text-secondary)',
+          },
+        }),
       },
     },
     JoyTypography: {

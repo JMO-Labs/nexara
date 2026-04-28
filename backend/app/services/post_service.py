@@ -20,6 +20,7 @@ from app.models.post import Post
 from app.models.user import User
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.notification_service import NotificationService
@@ -44,6 +45,7 @@ class PostService:
         event_bus: EventBus | None = None,
         media_attacher: Callable[[uuid.UUID, list[uuid.UUID], User], Awaitable[None]] | None = None,
         poll_service: PollService | None = None,
+        prompt_repo: PromptRepository | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -53,6 +55,7 @@ class PostService:
         self._event_bus = event_bus
         self._media_attacher = media_attacher
         self._poll_service = poll_service
+        self._prompt_repo = prompt_repo
 
     async def list_feed(
         self,
@@ -98,12 +101,15 @@ class PostService:
         content: str,
         media_ids: list[uuid.UUID] | None = None,
         poll: PollCreate | None = None,
+        *,
+        reply_to_prompt_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
         post = await self._post_repo.create_post(
             author_id=user.id,
             content=content,
             community_id=self._community_id,
+            reply_to_prompt_id=reply_to_prompt_id,
         )
 
         if media_ids and self._media_attacher:
@@ -111,6 +117,9 @@ class PostService:
 
         if poll and self._poll_service:
             await self._poll_service.create_poll(user.id, poll, post.id)
+
+        if reply_to_prompt_id and self._prompt_repo:
+            await self._prompt_repo.increment_response_count(reply_to_prompt_id)
 
         enriched = await self._post_repo.get_post_detail(
             post.id,

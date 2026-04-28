@@ -11,6 +11,7 @@ from sqlalchemy import (
     Boolean,
     Computed,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Text,
@@ -62,16 +63,28 @@ class Event(Base):
         UUID(as_uuid=True),
         ForeignKey("subgroups.id", ondelete="SET NULL"),
     )
+    calendar_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("calendars.id", ondelete="SET NULL"),
+    )
     source_subscription_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("calendar_subscriptions.id", ondelete="SET NULL"),
     )
     source_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    color: Mapped[str | None] = mapped_column(Text)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
     rsvp_labels: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     contribution_slots: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB,
         nullable=False,
         server_default="[]",
+    )
+    reminder_offsets_minutes: Mapped[list[int]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[60]",
     )
     search_fts = mapped_column(
         TSVECTOR,

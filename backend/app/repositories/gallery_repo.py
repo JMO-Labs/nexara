@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import and_, delete, func, literal, or_, select, update
@@ -255,3 +256,32 @@ class GalleryRepository(BaseRepository[Gallery]):
         )
         await self._session.execute(stmt)
         await self._session.flush()
+
+    async def list_with_recent_activity(
+        self, since: datetime, threshold: int = 5
+    ) -> list[tuple[Gallery, int]]:
+        """@brief Return galleries with ≥threshold new items since timestamp.
+
+        Returns list of tuples (Gallery, new_item_count) for galleries with recent activity.
+        """
+        stmt = (
+            select(Gallery, func.count(GalleryItem.id).label("item_count"))
+            .outerjoin(GalleryItem)
+            .where(
+                GalleryItem.created_at >= since,
+            )
+            .group_by(Gallery.id)
+            .having(func.count(GalleryItem.id) >= threshold)
+        )
+        result = await self._session.execute(stmt)
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def list_subscribers(self, gallery_id: uuid.UUID) -> list[uuid.UUID]:
+        """@brief Return list of subscriber IDs (collaborators + owner)."""
+        gallery = await self.get(gallery_id)
+        if not gallery:
+            return []
+        subscribers = [gallery.owner_id]
+        collaborators = await self.list_collaborators(gallery_id)
+        subscribers.extend([c.user_id for c in collaborators])
+        return list(set(subscribers))
