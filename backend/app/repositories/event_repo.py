@@ -186,12 +186,20 @@ class EventRepository(BaseRepository[Event]):
     async def list_subscriptions(
         self, community_id: uuid.UUID, user_id: uuid.UUID
     ) -> list[CalendarSubscription]:
-        """@brief List a user's calendar subscriptions."""
+        """@brief List a user's calendar subscriptions + admin-shared subscriptions.
+
+        Returns both:
+        1. Subscriptions owned by the user
+        2. Subscriptions created by admins with shared_by_admin=True
+        """
         stmt = (
             select(CalendarSubscription)
             .where(
                 CalendarSubscription.community_id == community_id,
-                CalendarSubscription.user_id == user_id,
+                or_(
+                    CalendarSubscription.user_id == user_id,
+                    CalendarSubscription.shared_by_admin.is_(True),
+                ),
             )
             .order_by(CalendarSubscription.created_at.desc())
         )

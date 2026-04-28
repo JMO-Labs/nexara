@@ -279,7 +279,8 @@ async def create_subscription(
     service: EventService = Depends(_build_service),
 ) -> CalendarSubscriptionResponse:
     """@brief Create an external calendar subscription."""
-    return await service.create_subscription(user.id, body)
+    is_admin = user.role == "admin"
+    return await service.create_subscription(user.id, body, is_admin=is_admin)
 
 
 @subs_router.get("", response_model=list[CalendarSubscriptionResponse])

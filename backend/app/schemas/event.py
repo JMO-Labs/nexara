@@ -174,6 +174,7 @@ class CalendarSubscriptionCreate(BaseModel):
     source_type: Literal["ical", "google"] = "ical"
     source_url: str = Field(..., min_length=1, max_length=2000)
     visibility: Literal["private", "community"] = "private"
+    shared_by_admin: bool = False
 
 
 class CalendarSubscriptionResponse(BaseModel):
@@ -188,6 +189,7 @@ class CalendarSubscriptionResponse(BaseModel):
     sync_enabled: bool
     last_synced_at: datetime | None
     sync_error: str | None
+    shared_by_admin: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -10,14 +10,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Skeleton, EmptyState, Button } from '@/components/ui';
 import { GalleryCard } from './GalleryCard';
 import { useGalleryList } from '@/hooks/useGalleries';
+import type { ListGalleriesParams } from '@/lib/api/galleries';
 
 export interface GalleryGridProps {
   onSelect: (id: string) => void;
+  params?: ListGalleriesParams;
 }
 
-export function GalleryGrid({ onSelect }: GalleryGridProps) {
+export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
   const router = useRouter();
-  const { data, isLoading, error } = useGalleryList();
+  const { data, isLoading, error } = useGalleryList(params);
 
   if (error)
     return (

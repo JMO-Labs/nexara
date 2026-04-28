@@ -1,7 +1,7 @@
 'use client';
 /**
  * @file app/app/galleries/page.tsx
- * @brief Galleries grid + drawer-style detail with lightbox.
+ * @brief Galleries grid + search + sort + featured row + drawer detail with lightbox.
  */
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,9 +11,12 @@ import Typography from '@mui/joy/Typography';
 import { Button, Drawer, EmptyState, Skeleton } from '@/components/ui';
 import { GalleryGrid } from '@/components/galleries/GalleryGrid';
 import { GalleryCreateModal } from '@/components/galleries/GalleryCreateModal';
+import { GallerySearchBar } from '@/components/galleries/GallerySearchBar';
+import { GallerySortSelect, type SortOption } from '@/components/galleries/GallerySortSelect';
 import { Lightbox } from '@/components/galleries/Lightbox';
-import { useGalleryDetail, useGalleryItems } from '@/hooks/useGalleries';
+import { useGalleryDetail, useGalleryItems, useGalleryList } from '@/hooks/useGalleries';
 import { API_BASE } from '@/lib/auth/session';
+import type { ListGalleriesParams } from '@/lib/api/galleries';
 
 export default function GalleriesPage() {
   const router = useRouter();
@@ -21,6 +24,8 @@ export default function GalleriesPage() {
   const galleryId = params.get('gallery');
   const itemIdx = params.get('item');
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [sort, setSort] = React.useState<SortOption>('recent');
 
   const setParam = (next: URLSearchParams) =>
     router.push(next.toString() ? `/app/galleries?${next}` : '/app/galleries');
@@ -52,6 +57,18 @@ export default function GalleriesPage() {
     setParam(next);
   };
 
+  const listParams: ListGalleriesParams = {
+    q: searchQuery || undefined,
+    sort: sort,
+  };
+
+  const featuredParams: ListGalleriesParams = {
+    featured: true,
+    sort: 'popular',
+  };
+
+  const { data: featuredData } = useGalleryList(featuredParams);
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: 'auto' }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
@@ -60,7 +77,79 @@ export default function GalleriesPage() {
         </Typography>
         <Button onClick={() => setCreateOpen(true)}>New gallery</Button>
       </Stack>
-      <GalleryGrid onSelect={select} />
+
+      <GallerySearchBar onSearch={setSearchQuery} />
+      <GallerySortSelect sort={sort} onSortChange={setSort} />
+
+      {/* Featured row */}
+      {featuredData && featuredData.items.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            level="body-xs"
+            sx={{
+              fontSize: '11px',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: 'text.tertiary',
+              mb: 2,
+            }}
+          >
+            Featured
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              overflowX: 'auto',
+              pb: 1,
+              '&::-webkit-scrollbar': {
+                height: 4,
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'var(--joy-palette-neutral-400)',
+                borderRadius: 2,
+              },
+            }}
+          >
+            {featuredData.items.map((g) => (
+              <Box
+                key={g.id}
+                sx={{
+                  flex: '0 0 320px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => select(g.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    select(g.id);
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    aspectRatio: '4/3',
+                    background: g.cover_media_id
+                      ? `url(${API_BASE}/api/v1/media/${g.cover_media_id}/thumbnail) center/cover`
+                      : 'var(--joy-palette-neutral-100)',
+                    borderRadius: 'md',
+                  }}
+                />
+                <Typography level="title-sm" sx={{ mt: 1 }} noWrap>
+                  {g.title}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      <GalleryGrid onSelect={select} params={listParams} />
       <GalleryDrawer galleryId={galleryId} onClose={closeDrawer} onOpenItem={openItem} />
       {galleryId && itemIdx !== null && (
         <LightboxConnected

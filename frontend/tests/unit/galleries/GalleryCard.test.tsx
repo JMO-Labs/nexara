@@ -39,6 +39,15 @@ describe('GalleryCard', () => {
     expect(screen.getByText(/7 items/)).toBeInTheDocument();
     expect(screen.getByText('Featured')).toBeInTheDocument();
   });
+  it('renders owner avatar and name at bottom', () => {
+    wrap(<GalleryCard gallery={g} onSelect={() => {}} />);
+    // Avatar is rendered (img with alt text or Avatar component)
+    const avatar = screen.getByTestId('gallery-card-owner-avatar');
+    expect(avatar).toBeInTheDocument();
+    // Owner name is visible
+    const ownerName = screen.getByText('u1');
+    expect(ownerName).toBeInTheDocument();
+  });
   it('fires onSelect on click', () => {
     const fn = vi.fn();
     wrap(<GalleryCard gallery={g} onSelect={fn} />);

@@ -667,8 +667,12 @@ class EventService:
     # ── Subscriptions ─────────────────────────────────────────────────
 
     async def create_subscription(
-        self, user_id: uuid.UUID, data: CalendarSubscriptionCreate
+        self, user_id: uuid.UUID, data: CalendarSubscriptionCreate, *, is_admin: bool = False
     ) -> CalendarSubscriptionResponse:
+        # Reject shared_by_admin=True if not admin
+        if data.shared_by_admin and not is_admin:
+            raise AuthorizationError(_("Only admins can create shared subscriptions"))
+
         # Enforce per-user subscription cap
         count = await self._repo.count_subscriptions_for(user_id)
         settings = get_settings()
@@ -686,6 +690,7 @@ class EventService:
             source_type=data.source_type,
             source_url=data.source_url,
             visibility=data.visibility,
+            shared_by_admin=data.shared_by_admin,
         )
         sub = await self._repo.create_subscription(sub)
         return CalendarSubscriptionResponse.model_validate(sub)

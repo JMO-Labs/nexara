@@ -14,12 +14,13 @@ import {
   listItems,
   removeItem,
   type CreateGalleryBody,
+  type ListGalleriesParams,
 } from '@/lib/api/galleries';
 
-export function useGalleryList() {
+export function useGalleryList(params?: ListGalleriesParams) {
   return useQuery({
-    queryKey: qk.galleries.list(),
-    queryFn: listGalleries,
+    queryKey: qk.galleries.list(params ?? {}),
+    queryFn: () => listGalleries(params),
     staleTime: 30_000,
   });
 }
