@@ -120,6 +120,9 @@ class PromptService:
             notification_body=data.notification_body,
             linked_event_id=data.linked_event_id,
             generate_summary=data.generate_summary,
+            prompt_type=data.prompt_type,
+            interest_category_slug=data.interest_category_slug,
+            interest_capture_hint=data.interest_capture_hint,
             created_by=user_id,
         )
         prompt = await self._repo.create(prompt)

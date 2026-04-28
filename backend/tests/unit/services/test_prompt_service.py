@@ -275,3 +275,29 @@ class TestCreatePrompt:
                     scope="subgroup",
                 ),
             )
+
+    @pytest.mark.asyncio
+    async def test_create_interest_capture_prompt(
+        self, service: PromptService, prompt_repo: AsyncMock
+    ) -> None:
+        def _fill_prompt(p: Prompt) -> Prompt:
+            p.id = uuid.uuid4()
+            p.is_enabled = True
+            p.created_at = datetime.now(UTC)
+            p.updated_at = datetime.now(UTC)
+            return p
+
+        prompt_repo.create.side_effect = _fill_prompt
+        payload = PromptCreate(
+            title="What do you cook?",
+            body="Share your favorite cooking experiences",
+            prompt_type="interest_capture",
+            interest_category_slug="cooking",
+            interest_capture_hint="Pick favorite cuisines",
+            frequency_type="annual_date",
+            trigger_month=12,
+            trigger_day=1,
+        )
+        prompt = await service.create_prompt(uuid.uuid4(), payload)
+        assert prompt.prompt_type == "interest_capture"
+        assert prompt.interest_category_slug == "cooking"

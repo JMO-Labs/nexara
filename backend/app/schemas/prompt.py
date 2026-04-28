@@ -9,7 +9,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 FrequencyType = Literal["annual_date", "weekly", "monthly", "one_time", "custom"]
 PromptScope = Literal["community", "subgroup"]
@@ -36,6 +36,15 @@ class PromptCreate(BaseModel):
     notification_body: str | None = Field(None, max_length=1000)
     linked_event_id: UUID | None = None
     generate_summary: bool = True
+    prompt_type: Literal["standard", "interest_capture"] = "standard"
+    interest_category_slug: str | None = None
+    interest_capture_hint: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_interest(self) -> PromptCreate:
+        if self.prompt_type == "interest_capture" and not self.interest_category_slug:
+            raise ValueError("interest_capture prompts require interest_category_slug")
+        return self
 
 
 class PromptUpdate(BaseModel):
@@ -81,6 +90,9 @@ class PromptResponse(BaseModel):
     notification_body: str | None
     linked_event_id: UUID | None
     generate_summary: bool
+    prompt_type: str
+    interest_category_slug: str | None
+    interest_capture_hint: str | None
     created_by: UUID | None
     created_at: datetime
     updated_at: datetime
