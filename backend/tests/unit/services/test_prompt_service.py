@@ -301,3 +301,60 @@ class TestCreatePrompt:
         prompt = await service.create_prompt(uuid.uuid4(), payload)
         assert prompt.prompt_type == "interest_capture"
         assert prompt.interest_category_slug == "cooking"
+
+
+class TestSeedBuiltinPrompts:
+    def test_seed_builtin_prompts_type_distribution(self) -> None:
+        """Test that seed includes 15 standard and 9 interest_capture prompts."""
+        import json
+        from pathlib import Path
+
+        path = (
+            Path(__file__).resolve().parents[4]
+            / "backend"
+            / "data"
+            / "builtin_prompts.json"
+        )
+        data = json.loads(path.read_text(encoding="utf-8"))
+
+        standard_count = sum(
+            1 for entry in data if entry.get("prompt_type", "standard") == "standard"
+        )
+        interest_count = sum(
+            1 for entry in data if entry.get("prompt_type") == "interest_capture"
+        )
+
+        assert len(data) == 24
+        assert standard_count == 15
+        assert interest_count == 9
+
+    def test_seed_builtin_prompts_entry_schema_valid(self) -> None:
+        """Test that all 24 entries have valid schema with required fields."""
+        import json
+        from pathlib import Path
+
+        path = (
+            Path(__file__).resolve().parents[4]
+            / "backend"
+            / "data"
+            / "builtin_prompts.json"
+        )
+        data = json.loads(path.read_text(encoding="utf-8"))
+
+        required_fields = {"title", "body", "frequency_type", "active_days", "scope"}
+        for entry in data:
+            # Check required fields present
+            assert required_fields.issubset(entry.keys()), f"Missing fields in {entry['title']}"
+            # Check prompt_type field
+            assert entry.get("prompt_type") in [
+                "standard",
+                "interest_capture",
+            ], f"Invalid prompt_type in {entry['title']}"
+            # Check interest_capture entries have category slug
+            if entry.get("prompt_type") == "interest_capture":
+                assert (
+                    entry.get("interest_category_slug") is not None
+                ), f"interest_category_slug missing in {entry['title']}"
+                assert (
+                    entry.get("interest_capture_hint") is not None
+                ), f"interest_capture_hint missing in {entry['title']}"
