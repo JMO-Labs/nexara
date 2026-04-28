@@ -13,11 +13,38 @@ from sqlalchemy import and_, delete, func, literal, or_, select, update
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.repositories.base import BaseRepository
 
+__all__ = ["GalleryRepository"]
+
 
 class GalleryRepository(BaseRepository[Gallery]):
     """@brief Async repo for gallery CRUD + items + collaborators."""
 
     model = Gallery
+
+    async def search(
+        self,
+        *,
+        q: str,
+        viewer_id: uuid.UUID,
+        community_id: uuid.UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Gallery]:
+        """@brief Full-text search on galleries using search_fts column."""
+        ts_query = func.plainto_tsquery("simple", q)
+        stmt = (
+            select(Gallery)
+            .where(
+                Gallery.community_id == community_id,
+                Gallery.search_fts.op("@@")(ts_query),
+            )
+            .order_by(func.ts_rank(Gallery.search_fts, ts_query).desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        stmt = self.apply_block_filter(stmt, viewer_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
 
     async def list_visible(
         self,

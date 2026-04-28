@@ -79,16 +79,25 @@ async def create_gallery(
 
 @router.get("", response_model=GalleryList)
 async def list_galleries(
+    q: str | None = None,
     owner_id: uuid.UUID | None = None,
     event_id: uuid.UUID | None = None,
     subgroup_id: uuid.UUID | None = None,
     featured_only: bool = False,
     cursor: str | None = None,
     limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
     service: GalleryService = Depends(_build_service),
 ) -> GalleryList:
-    """@brief Community gallery hub — galleries visible to the viewer."""
+    """@brief Community gallery hub — search or list galleries visible to the viewer."""
+    if q:
+        return await service.search(
+            q=q,
+            viewer_id=user.id,
+            limit=limit,
+            offset=offset,
+        )
     return await service.list_galleries(
         user.id,
         owner_id=owner_id,

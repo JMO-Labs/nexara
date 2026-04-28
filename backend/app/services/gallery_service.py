@@ -179,6 +179,33 @@ class GalleryService:
         await self._session.delete(gallery)
         await self._session.flush()
 
+    async def search(
+        self,
+        *,
+        q: str,
+        viewer_id: uuid.UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> GalleryList:
+        """@brief Search galleries by title and description, respecting visibility."""
+        rows = await self._repo.search(
+            q=q,
+            viewer_id=viewer_id,
+            community_id=self._community_id,
+            limit=limit,
+            offset=offset,
+        )
+        # Filter by visibility for each result
+        visible_rows = []
+        for gallery in rows:
+            if await self._can_view(gallery, viewer_id):
+                visible_rows.append(gallery)
+        return GalleryList(
+            items=[GalleryResponse.model_validate(r) for r in visible_rows],
+            next_cursor=None,
+            has_more=False,
+        )
+
     async def list_galleries(
         self,
         user_id: uuid.UUID,

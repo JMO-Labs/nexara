@@ -288,3 +288,20 @@ class TestBulkAdd:
             gallery.id, owner, GalleryItemBulkCreate(media_ids=ids)
         )
         assert len(result) == 3
+
+
+class TestSearch:
+    @pytest.mark.asyncio
+    async def test_search_filters_by_visibility(
+        self, service: GalleryService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        viewer = uuid.uuid4()
+        public_gallery = _make_gallery(visibility="community")
+        private_gallery_owned_by_other = _make_gallery(visibility="private")
+        repo.search.return_value = [public_gallery, private_gallery_owned_by_other]
+        repo.is_collaborator.return_value = False
+
+        results = await service.search(q="vacation", viewer_id=viewer)
+        result_ids = [r.id for r in results.items]
+        assert public_gallery.id in result_ids
+        assert private_gallery_owned_by_other.id not in result_ids
