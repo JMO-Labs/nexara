@@ -14,6 +14,7 @@ import { EventCreateModal } from '@/components/events/EventCreateModal';
 import { MonthCalendarLarge } from '@/components/events/MonthCalendarLarge';
 import { EventRail } from '@/components/events/EventRail';
 import { EventDetailPanel } from '@/components/events/EventDetailPanel';
+import { EventCountdown } from '@/components/events/EventCountdown';
 import {
   CalendarFilterBar,
   type CalendarSourceId,
@@ -85,6 +86,14 @@ export default function EventsPage() {
     () => filtered.find((e) => e.id === selectedEventId) ?? null,
     [filtered, selectedEventId],
   );
+
+  // Find next upcoming event for countdown
+  const nextEvent = React.useMemo(() => {
+    const now = new Date();
+    return filtered
+      .filter((e) => parseISO(e.starts_at) > now)
+      .sort((a, b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime())[0] ?? null;
+  }, [filtered]);
 
   // If month changes, drop selection that no longer exists
   React.useEffect(() => {
@@ -170,6 +179,7 @@ export default function EventsPage() {
             overflow: 'hidden',
           }}
         >
+          {nextEvent && <EventCountdown event={nextEvent} key={nextEvent.id} />}
           <Box
             sx={{
               px: 2,
