@@ -300,3 +300,41 @@ async def delete_subscription(
     """@brief Delete a calendar subscription."""
     await service.delete_subscription(sub_id, user.id)
     return MessageResponse(message=_("Subscription deleted"))
+
+
+@router.patch("/{event_id}/occurrences/{iso_start}", response_model=EventResponse)
+async def update_occurrence(
+    event_id: uuid.UUID,
+    iso_start: str,
+    scope: str = Query("this", regex="^(this|this_and_following|all)$"),
+    data: EventUpdate = None,
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> EventResponse:
+    """@brief Update a single occurrence of a recurring event.
+
+    @param event_id ID of the recurring event.
+    @param iso_start ISO 8601 datetime of the occurrence (e.g. '2026-05-08T18:00:00Z').
+    @param scope Update scope: 'this', 'this_and_following', or 'all'.
+    @param data Fields to update (title, description, etc.).
+    @return The modified or new event.
+    """
+    try:
+        occurrence_dt = datetime.fromisoformat(iso_start.replace("Z", "+00:00"))
+    except ValueError as exc:
+        from app.core.exceptions import AppError
+
+        raise AppError(
+            code="INVALID_ISO_START",
+            message=_("Invalid ISO 8601 datetime format"),
+            status_code=400,
+        ) from exc
+
+    payload = data.model_dump(exclude_unset=True) if data else {}
+    result = await service.update_occurrence(
+        event_id,
+        occurrence_dt,
+        scope,  # type: ignore[arg-type]
+        payload,
+    )
+    return await service._build_response(result, user_id=user.id)

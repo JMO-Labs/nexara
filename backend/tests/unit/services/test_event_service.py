@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -96,10 +96,12 @@ def calendar_service() -> AsyncMock:
 def service(
     repo: AsyncMock, session: AsyncMock, calendar_service: AsyncMock
 ) -> EventService:
+    user_id = uuid.uuid4()
     return EventService(
         event_repo=repo,
         community_id=COMMUNITY_ID,
         session=session,
+        actor_id=user_id,
         calendar_service=calendar_service,
     )
 
@@ -517,3 +519,157 @@ class TestIcalToken:
 
         with pytest.raises(AuthorizationError):
             await service.serve_ical_for_token(raw_token)
+
+
+class TestExceptionOccurrences:
+    """@brief Tests for RRULE exception occurrences (scope: this, this_and_following, all)."""
+
+    @pytest.mark.asyncio
+    async def test_exception_this_only(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Scope 'this' creates a child override for single occurrence."""
+        # Use service's actor_id as the organizer
+        parent = _make_event(
+            author_id=service._actor_id,
+            recurrence_rule="FREQ=WEEKLY;COUNT=4",
+        )
+        parent.recurrence_id = None
+        parent.original_start = None
+
+        occ = parent.starts_at + timedelta(days=7)
+        repo.get_by_id.return_value = parent
+
+        def _create_child(event_obj: Event) -> Event:
+            # The event_obj is already constructed; just return it with ID
+            event_obj.id = uuid.uuid4()
+            event_obj.created_at = datetime.now(UTC)
+            event_obj.updated_at = datetime.now(UTC)
+            return event_obj
+
+        repo.create.side_effect = _create_child
+
+        result = await service.update_occurrence(
+            parent.id, occ, "this", {"title": "Override"}
+        )
+
+        assert result.recurrence_id == parent.id
+        assert result.original_start == occ
+        assert result.title == "Override"
+        repo.get_by_id.assert_awaited_once_with(parent.id, community_id=COMMUNITY_ID)
+        repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_exception_this_and_following(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Scope 'this_and_following' truncates parent RRULE and creates new series."""
+        parent = _make_event(
+            author_id=service._actor_id,
+            recurrence_rule="FREQ=WEEKLY;COUNT=4",
+        )
+        parent.recurrence_id = None
+        parent.original_start = None
+        parent.starts_at = datetime(2026, 5, 1, 18, 0, tzinfo=UTC)
+
+        occ = parent.starts_at + timedelta(days=14)
+        repo.get_by_id.return_value = parent
+
+        updated_parent = MagicMock(spec=Event)
+        updated_parent.id = parent.id
+        updated_parent.recurrence_rule = "FREQ=WEEKLY;COUNT=2;UNTIL=20260508T175959Z"
+        updated_parent.starts_at = parent.starts_at
+        updated_parent.title = parent.title
+        updated_parent.author_id = service._actor_id
+
+        repo.update.return_value = updated_parent
+
+        def _create_new(event_obj: Event) -> Event:
+            event_obj.id = uuid.uuid4()
+            event_obj.created_at = datetime.now(UTC)
+            event_obj.updated_at = datetime.now(UTC)
+            return event_obj
+
+        repo.update.side_effect = lambda e, d: updated_parent
+        repo.create.side_effect = _create_new
+
+        result = await service.update_occurrence(
+            parent.id, occ, "this_and_following", {"title": "From now"}
+        )
+
+        assert result.title == "From now"
+        assert result.starts_at == occ
+        repo.get_by_id.assert_awaited_once()
+        repo.update.assert_awaited_once()
+        repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_exception_all(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Scope 'all' updates the parent event directly."""
+        parent = _make_event(
+            author_id=service._actor_id,
+            recurrence_rule="FREQ=WEEKLY;COUNT=4",
+        )
+        parent.recurrence_id = None
+        repo.get_by_id.return_value = parent
+
+        occ = parent.starts_at + timedelta(days=7)
+
+        updated = MagicMock(spec=Event)
+        updated.id = parent.id
+        updated.title = "Renamed"
+        updated.recurrence_rule = parent.recurrence_rule
+        updated.author_id = service._actor_id
+
+        repo.update.return_value = updated
+
+        result = await service.update_occurrence(
+            parent.id, occ, "all", {"title": "Renamed"}
+        )
+
+        assert result.id == parent.id
+        assert result.title == "Renamed"
+        repo.get_by_id.assert_awaited_once_with(parent.id, community_id=COMMUNITY_ID)
+        repo.update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_occurrence_not_recurring_raises(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Updating occurrence of non-recurring event raises NotFoundError."""
+        user_id = uuid.uuid4()
+        event = _make_event(author_id=user_id, recurrence_rule=None)
+        repo.get_by_id.return_value = event
+
+        with pytest.raises(NotFoundError):
+            await service.update_occurrence(
+                event.id,
+                event.starts_at,
+                "this",
+                {"title": "Override"},
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_occurrence_unauthorized_raises(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Non-organizer cannot update occurrence."""
+        organizer_id = uuid.uuid4()
+        other_user = uuid.uuid4()
+        parent = _make_event(
+            author_id=organizer_id,
+            recurrence_rule="FREQ=WEEKLY;COUNT=4",
+        )
+        repo.get_by_id.return_value = parent
+
+        occ = parent.starts_at + timedelta(days=7)
+
+        with pytest.raises(AuthorizationError):
+            await service.update_occurrence(
+                parent.id,
+                occ,
+                "this",
+                {"title": "Hacked"},
+            )

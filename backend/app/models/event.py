@@ -57,6 +57,7 @@ class Event(Base):
         UUID(as_uuid=True),
         ForeignKey("events.id"),
     )
+    original_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ical_uid: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
