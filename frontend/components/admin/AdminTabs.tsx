@@ -21,6 +21,7 @@ import { SsoTab } from './SsoTab';
 import { InterestsTab } from './InterestsTab';
 import { AuditLogTab } from './AuditLogTab';
 import { AdminSettingsTab } from './AdminSettingsTab';
+import { PromptsTab } from './PromptsTab';
 
 const TABS = [
   { id: 'metrics', label: 'Metrics' },
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'invites', label: 'Invites' },
   { id: 'sso', label: 'SSO' },
   { id: 'interests', label: 'Interests' },
+  { id: 'prompts', label: 'Prompts' },
   { id: 'audit-log', label: 'Audit Log' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -104,6 +106,7 @@ export function AdminTabs() {
                 {tab.id === 'invites' && <InvitesTab />}
                 {tab.id === 'sso' && <SsoTab />}
                 {tab.id === 'interests' && <InterestsTab />}
+                {tab.id === 'prompts' && <PromptsTab />}
                 {tab.id === 'audit-log' && <AuditLogTab />}
                 {tab.id === 'settings' && <AdminSettingsTab />}
               </motion.div>
