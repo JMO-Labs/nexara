@@ -16,10 +16,10 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import httpx
 import structlog
 from celery import Task
 
+from app.core.http_safe import UnsafeUrlError, safe_fetch
 from app.db.session import async_session_factory
 from app.repositories.event_repo import EventRepository
 from app.repositories.notification_repo import NotificationRepository
@@ -105,7 +105,7 @@ def dispatch_event_reminders() -> dict[str, int]:
 
 
 async def _sync_subscriptions_async() -> dict[str, Any]:
-    """@brief Pull-and-upsert iCal feeds for due subscriptions."""
+    """@brief Pull-and-upsert iCal feeds for due subscriptions with SSRF protection."""
     now = datetime.now(UTC)
     synced = 0
     failed = 0
@@ -119,10 +119,8 @@ async def _sync_subscriptions_async() -> dict[str, Any]:
             if sub.source_type != "ical" or not sub.source_url:
                 continue
             try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.get(sub.source_url)
-                    resp.raise_for_status()
-                    body = resp.content
+                # Use safe_fetch for SSRF protection
+                body = await safe_fetch(sub.source_url)
 
                 service = EventService(
                     event_repo=repo,
@@ -132,6 +130,14 @@ async def _sync_subscriptions_async() -> dict[str, Any]:
                 upserted = await service.sync_subscription(sub, body)
                 upserted_total += upserted
                 synced += 1
+            except UnsafeUrlError as exc:
+                logger.warning(
+                    "subscription_sync_unsafe_url",
+                    sub_id=str(sub.id),
+                    error=str(exc),
+                )
+                sub.sync_error = f"unsafe_url: {exc}"
+                failed += 1
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "subscription_sync_failed",

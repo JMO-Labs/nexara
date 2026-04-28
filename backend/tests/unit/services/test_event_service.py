@@ -343,6 +343,8 @@ class TestSubscriptions:
         sub.last_synced_at = None
         sub.sync_error = None
         sub.created_at = datetime.now(UTC)
+        # Mock count_subscriptions_for to return 0 (below limit)
+        repo.count_subscriptions_for.return_value = 0
         repo.create_subscription.return_value = sub
 
         result = await service.create_subscription(
@@ -673,3 +675,117 @@ class TestExceptionOccurrences:
                 "this",
                 {"title": "Hacked"},
             )
+
+
+class TestSubscriptionSyncConflict:
+    @pytest.mark.asyncio
+    async def test_locally_modified_events_preserved_on_sync(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Events with locally_modified=True should not be overwritten during sync."""
+        user_id = uuid.uuid4()
+        sub = MagicMock(spec=CalendarSubscription)
+        sub.id = uuid.uuid4()
+        sub.user_id = user_id
+        sub.community_id = COMMUNITY_ID
+
+        # Existing event with locally_modified=True
+        existing_event = _make_event()
+        existing_event.locally_modified = True
+        existing_event.ical_uid = "existing-uid@example.com"
+
+        repo.get_by_ical_uid.return_value = existing_event
+
+        # Simulated iCal content with a VEVENT matching the existing UID
+        ical_content = b"""BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:existing-uid@example.com
+DTSTART:20260601T140000Z
+DTEND:20260601T150000Z
+SUMMARY:Updated Title
+END:VEVENT
+END:VCALENDAR"""
+
+        # sync_subscription should recognize locally_modified and skip upsert
+        result = await service.sync_subscription(sub, ical_content)
+
+        # Since the event is locally modified, it should be skipped (0 upserted)
+        assert result == 0
+        repo.get_by_ical_uid.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_subscription_interval_enforced(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Subscriptions synced recently should be skipped by list_subscriptions_due."""
+        now = datetime.now(UTC)
+        recent_sync = now - timedelta(minutes=30)
+
+        # Create a subscription that was synced 30 minutes ago with 60-minute interval
+        sub = MagicMock(spec=CalendarSubscription)
+        sub.last_synced_at = recent_sync
+        sub.sync_interval_minutes = 60
+
+        # list_subscriptions_due should filter it out (30 min < 60 min interval)
+        repo.list_subscriptions_due.return_value = []
+
+        due = await repo.list_subscriptions_due(now, timedelta(minutes=60))
+        assert sub not in due
+
+
+class TestSubscriptionPerUserCap:
+    @pytest.mark.asyncio
+    async def test_create_subscription_enforces_per_user_cap(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Creating a subscription when user is at limit raises AppError with code subscription_limit."""
+        from app.core.config import Settings
+
+        user_id = uuid.uuid4()
+
+        # Mock repo.count_subscriptions_for to return limit (10)
+        repo.count_subscriptions_for.return_value = 10
+
+        data = CalendarSubscriptionCreate(
+            name="Another Feed",
+            source_type="ical",
+            source_url="https://example.com/feed.ics",
+        )
+
+        # Should raise AppError with code subscription_limit
+        with pytest.raises(AppError, match="subscription_limit|Subscription limit reached"):
+            await service.create_subscription(user_id, data)
+
+        repo.count_subscriptions_for.assert_awaited_once_with(user_id)
+
+    @pytest.mark.asyncio
+    async def test_create_subscription_succeeds_below_cap(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        """@brief Creating a subscription when below limit succeeds."""
+        user_id = uuid.uuid4()
+
+        # Mock repo.count_subscriptions_for to return 5 (below limit of 10)
+        repo.count_subscriptions_for.return_value = 5
+
+        # Mock the create_subscription method to return a proper subscription
+        created_sub = MagicMock(spec=CalendarSubscription)
+        created_sub.id = uuid.uuid4()
+        created_sub.name = "Another Feed"
+        created_sub.color = "#4285f4"
+        created_sub.source_type = "ical"
+        created_sub.source_url = "https://example.com/feed.ics"
+        created_sub.visibility = "private"
+        created_sub.sync_error = None
+        repo.create_subscription.return_value = created_sub
+
+        data = CalendarSubscriptionCreate(
+            name="Another Feed",
+            source_type="ical",
+            source_url="https://example.com/feed.ics",
+        )
+
+        result = await service.create_subscription(user_id, data)
+        assert result.name == "Another Feed"
+        repo.count_subscriptions_for.assert_awaited_once_with(user_id)

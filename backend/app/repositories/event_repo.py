@@ -253,3 +253,18 @@ class EventRepository(BaseRepository[Event]):
             stmt = stmt.where(EventAttendance.status.in_(statuses))
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_subscriptions_for(self, user_id: uuid.UUID) -> int:
+        """@brief Count active (non-deleted) subscriptions for a user."""
+        stmt = (
+            select(func.count())
+            .select_from(CalendarSubscription)
+            .where(
+                CalendarSubscription.user_id == user_id,
+            )
+        )
+        # Apply soft-delete filter if the model has deleted_at
+        if hasattr(CalendarSubscription, "deleted_at"):
+            stmt = stmt.where(getattr(CalendarSubscription, "deleted_at").is_(None))
+        result = await self._session.execute(stmt)
+        return result.scalar() or 0

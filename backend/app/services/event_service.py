@@ -17,6 +17,7 @@ from icalendar import Event as ICalEvent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
@@ -668,6 +669,15 @@ class EventService:
     async def create_subscription(
         self, user_id: uuid.UUID, data: CalendarSubscriptionCreate
     ) -> CalendarSubscriptionResponse:
+        # Enforce per-user subscription cap
+        count = await self._repo.count_subscriptions_for(user_id)
+        settings = get_settings()
+        if count >= settings.CALENDAR_SUBS_PER_USER_MAX:
+            raise AppError(
+                message="Subscription limit reached",
+                code="subscription_limit",
+            )
+
         sub = CalendarSubscription(
             community_id=self._community_id,
             user_id=user_id,
@@ -713,6 +723,9 @@ class EventService:
             if not uid:
                 continue
             existing = await self._repo.get_by_ical_uid(uid)
+            # Skip upsert if event has been locally modified by user
+            if existing is not None and existing.locally_modified:
+                continue
             rrule = component.get("rrule")  # type: ignore[no-untyped-call]
             data: dict[str, Any] = {
                 "title": str(component.get("summary") or ""),  # type: ignore[no-untyped-call]

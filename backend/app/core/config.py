@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     # --- Subgroups ---
     MAX_SUBGROUP_MEMBERSHIPS_PER_USER: int = 5
 
+    # --- Calendar subscriptions ---
+    CALENDAR_SUBS_PER_USER_MAX: int = 10
+
     # --- WAF ---
     WAF_ENABLED: bool = True
 
