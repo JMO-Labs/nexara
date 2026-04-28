@@ -109,6 +109,13 @@ class CollaboratorAdd(BaseModel):
     user_id: UUID
 
 
+class AdminGalleryUpdate(BaseModel):
+    """@brief Schema for admin moderation of galleries."""
+
+    featured: bool | None = None
+    visibility: GalleryVisibility | None = None
+
+
 class CollaboratorResponse(BaseModel):
     """@brief Gallery collaborator record."""
 

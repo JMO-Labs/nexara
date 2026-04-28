@@ -13,6 +13,7 @@ import pytest
 
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
+from app.repositories.audit_repo import AuditRepository
 from app.repositories.gallery_repo import GalleryRepository
 from app.schemas.gallery import (
     GalleryCreate,
@@ -65,6 +66,11 @@ def repo() -> AsyncMock:
 
 
 @pytest.fixture
+def audit_repo() -> AsyncMock:
+    return AsyncMock(spec=AuditRepository)
+
+
+@pytest.fixture
 def session() -> AsyncMock:
     s = AsyncMock()
     exec_result = MagicMock()
@@ -76,8 +82,10 @@ def session() -> AsyncMock:
 
 
 @pytest.fixture
-def service(repo: AsyncMock, session: AsyncMock) -> GalleryService:
-    return GalleryService(gallery_repo=repo, community_id=COMMUNITY_ID, session=session)
+def service(repo: AsyncMock, session: AsyncMock, audit_repo: AsyncMock) -> GalleryService:
+    svc = GalleryService(gallery_repo=repo, community_id=COMMUNITY_ID, session=session)
+    svc._audit_repo = audit_repo
+    return svc
 
 
 def _fill(g: Gallery) -> Gallery:
@@ -363,9 +371,7 @@ class TestFeaturedAndSort:
         # Mock return values - popular sort returns by item count DESC
         repo.list_visible.return_value = ([g2, g1], None)
 
-        result = await service.list_galleries(
-            viewer, featured_only=True, sort="popular"
-        )
+        result = await service.list_galleries(viewer, featured_only=True, sort="popular")
 
         # Verify repo was called with correct params
         repo.list_visible.assert_awaited_once()
@@ -377,3 +383,97 @@ class TestFeaturedAndSort:
         assert len(result.items) == 2
         assert result.items[0].item_count == 10
         assert result.items[1].item_count == 5
+
+
+class TestAdminModeration:
+    @pytest.mark.asyncio
+    async def test_admin_feature_writes_audit_log(
+        self, service: GalleryService, repo: AsyncMock, audit_repo: AsyncMock
+    ) -> None:
+        """Admin can feature a gallery and audit log is written."""
+        gallery = _make_gallery()
+        gallery.is_featured = False
+        admin_id = uuid.uuid4()
+        repo.get_by_id.return_value = gallery
+
+        def update_side_effect(g: Gallery, updates: dict) -> Gallery:
+            for key, value in updates.items():
+                setattr(g, key, value)
+            return g
+
+        repo.update.side_effect = update_side_effect
+
+        result = await service.admin_feature(gallery.id, featured=True, admin_id=admin_id)
+
+        repo.update.assert_awaited_once()
+        audit_repo.append.assert_awaited_once()
+        call_args = audit_repo.append.call_args
+        assert call_args[1]["action"] == "admin.gallery.featured"
+        assert call_args[1]["target_type"] == "gallery"
+        assert call_args[1]["target_id"] == gallery.id
+        assert call_args[1]["extra_data"]["featured"] is True
+        assert result.is_featured is True
+
+    @pytest.mark.asyncio
+    async def test_admin_force_visibility_writes_audit_log(
+        self, service: GalleryService, repo: AsyncMock, audit_repo: AsyncMock
+    ) -> None:
+        """Admin can force-change visibility and audit log is written."""
+        gallery = _make_gallery(visibility="community")
+        admin_id = uuid.uuid4()
+        repo.get_by_id.return_value = gallery
+
+        def update_side_effect(g: Gallery, updates: dict) -> Gallery:
+            for key, value in updates.items():
+                setattr(g, key, value)
+            return g
+
+        repo.update.side_effect = update_side_effect
+
+        result = await service.admin_force_visibility(
+            gallery.id, visibility="private", admin_id=admin_id
+        )
+
+        repo.update.assert_awaited_once()
+        audit_repo.append.assert_awaited_once()
+        call_args = audit_repo.append.call_args
+        assert call_args[1]["action"] == "admin.gallery.visibility_changed"
+        assert call_args[1]["target_type"] == "gallery"
+        assert call_args[1]["target_id"] == gallery.id
+        assert call_args[1]["extra_data"]["new_visibility"] == "private"
+        assert call_args[1]["extra_data"]["old_visibility"] == "community"
+        assert result.visibility == "private"
+
+    @pytest.mark.asyncio
+    async def test_admin_delete_writes_audit_log(
+        self, service: GalleryService, repo: AsyncMock, audit_repo: AsyncMock
+    ) -> None:
+        """Admin can delete a gallery and audit log is written."""
+        gallery = _make_gallery()
+        admin_id = uuid.uuid4()
+        repo.get_by_id.return_value = gallery
+
+        def update_side_effect(g: Gallery, updates: dict) -> Gallery:
+            for key, value in updates.items():
+                setattr(g, key, value)
+            return g
+
+        repo.update.side_effect = update_side_effect
+
+        await service.admin_delete(gallery.id, admin_id=admin_id)
+
+        repo.update.assert_awaited_once()
+        audit_repo.append.assert_awaited_once()
+        call_args = audit_repo.append.call_args
+        assert call_args[1]["action"] == "admin.gallery.deleted"
+        assert call_args[1]["target_type"] == "gallery"
+        assert call_args[1]["target_id"] == gallery.id
+
+    @pytest.mark.asyncio
+    async def test_admin_feature_gallery_not_found(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        """Admin feature raises NotFoundError if gallery not found."""
+        repo.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.admin_feature(uuid.uuid4(), featured=True, admin_id=uuid.uuid4())

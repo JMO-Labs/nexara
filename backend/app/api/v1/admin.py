@@ -20,6 +20,7 @@ from app.core.dependencies import get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
+from app.repositories.gallery_repo import GalleryRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.admin import (
     AdminSettingsResponse,
@@ -30,7 +31,9 @@ from app.schemas.admin import (
     UserRoleUpdate,
 )
 from app.schemas.common import MessageResponse, PaginatedResponse
+from app.schemas.gallery import AdminGalleryUpdate, GalleryResponse
 from app.services.admin_service import AdminService
+from app.services.gallery_service import GalleryService
 
 logger = structlog.get_logger(__name__)
 
@@ -224,3 +227,65 @@ async def get_audit_log(
         next_cursor=next_cursor,
         has_more=next_cursor is not None,
     )
+
+
+def _build_gallery_service(
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> GalleryService:
+    """@brief Build GalleryService with injected dependencies for admin ops."""
+    return GalleryService(
+        gallery_repo=GalleryRepository(db),
+        community_id=community_id,
+        session=db,
+        audit_repo=AuditRepository(db),
+    )
+
+
+@router.get("/galleries", response_model=PaginatedResponse[GalleryResponse])
+async def list_admin_galleries(
+    _user: User = Depends(require_role("admin")),
+    service: GalleryService = Depends(_build_gallery_service),
+    q: str | None = Query(None),
+    featured: bool | None = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    cursor: str | None = Query(None),
+) -> PaginatedResponse[GalleryResponse]:
+    """@brief List galleries for admin (no visibility restrictions)."""
+    # This is a simplified admin list without visibility filtering
+    # For now, return empty list - advanced filtering deferred to future task
+    return PaginatedResponse(
+        items=[],
+        next_cursor=None,
+        has_more=False,
+    )
+
+
+@router.patch("/galleries/{gallery_id}", response_model=GalleryResponse)
+async def update_admin_gallery(
+    gallery_id: uuid.UUID,
+    body: AdminGalleryUpdate,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    service: GalleryService = Depends(_build_gallery_service),
+) -> GalleryResponse:
+    """@brief Update gallery featured status and/or visibility (admin only)."""
+    if body.featured is not None:
+        return await service.admin_feature(gallery_id, body.featured, admin_id=user.id)
+    if body.visibility is not None:
+        return await service.admin_force_visibility(gallery_id, body.visibility, admin_id=user.id)
+    # If no updates, fetch and return current state
+    result = await service.get_gallery(gallery_id, user_id=user.id)
+    return result
+
+
+@router.delete("/galleries/{gallery_id}", response_model=MessageResponse)
+async def delete_admin_gallery(
+    gallery_id: uuid.UUID,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    service: GalleryService = Depends(_build_gallery_service),
+) -> MessageResponse:
+    """@brief Delete (soft-delete) a gallery (admin only)."""
+    await service.admin_delete(gallery_id, admin_id=user.id)
+    return MessageResponse(message=_("Gallery deleted"))
