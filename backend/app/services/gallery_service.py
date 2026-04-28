@@ -411,6 +411,41 @@ class GalleryService:
 
     # ── Auto-population hook ──────────────────────────────────────────
 
+    async def auto_add_to_event_gallery(
+        self,
+        post_id: uuid.UUID,
+        event_id: uuid.UUID,
+        media_ids: list[uuid.UUID],
+    ) -> list[GalleryItemResponse] | None:
+        """@brief Auto-add media from a post to its event's gallery.
+
+        Called after post creation if event_id and media_ids are present.
+        Returns list of added items, or None if no media to add.
+        """
+        if not media_ids:
+            return None
+        gallery = await self._repo.get_event_gallery(self._community_id, event_id)
+        if gallery is None:
+            return None
+        position = gallery.item_count
+        out: list[GalleryItemResponse] = []
+        for media_id in media_ids:
+            existing = await self._repo.get_item(gallery.id, media_id)
+            if existing is not None:
+                out.append(GalleryItemResponse.model_validate(existing))
+                continue
+            item = GalleryItem(
+                community_id=self._community_id,
+                gallery_id=gallery.id,
+                media_id=media_id,
+                added_by=gallery.owner_id,
+                position=position,
+            )
+            item = await self._repo.add_item(item)
+            position += 1
+            out.append(GalleryItemResponse.model_validate(item))
+        return out
+
     async def auto_add_to_default(
         self, user_id: uuid.UUID, media_id: uuid.UUID
     ) -> GalleryItemResponse | None:

@@ -290,6 +290,42 @@ class TestBulkAdd:
         assert len(result) == 3
 
 
+class TestAutoAddToEventGallery:
+    @pytest.mark.asyncio
+    async def test_auto_add_to_event_gallery(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        """auto_add_to_event_gallery() adds media to event gallery."""
+        post_id = uuid.uuid4()
+        event_id = uuid.uuid4()
+        gallery = _make_gallery(event_id=event_id, is_event_gallery=True)
+        repo.get_event_gallery.return_value = gallery
+        repo.get_item.return_value = None
+
+        def _fill_item(i: GalleryItem) -> GalleryItem:
+            i.id = uuid.uuid4()
+            i.created_at = datetime.now(UTC)
+            return i
+
+        repo.add_item.side_effect = _fill_item
+
+        media_ids = [uuid.uuid4(), uuid.uuid4()]
+        result = await service.auto_add_to_event_gallery(post_id, event_id, media_ids)
+        assert len(result) == 2
+        assert repo.add_item.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_auto_add_to_event_gallery_empty_media(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        """auto_add_to_event_gallery() with empty media_ids returns None."""
+        post_id = uuid.uuid4()
+        event_id = uuid.uuid4()
+        result = await service.auto_add_to_event_gallery(post_id, event_id, [])
+        repo.get_event_gallery.assert_not_awaited()
+        assert result is None
+
+
 class TestSearch:
     @pytest.mark.asyncio
     async def test_search_filters_by_visibility(

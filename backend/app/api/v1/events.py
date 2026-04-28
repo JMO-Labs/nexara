@@ -20,6 +20,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.event_repo import EventRepository
+from app.repositories.gallery_repo import GalleryRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
@@ -34,7 +35,13 @@ from app.schemas.event import (
     RSVPRequest,
     RSVPResponse,
 )
+from app.schemas.gallery import (
+    GalleryItemBulkCreate,
+    GalleryItemResponse,
+    GalleryResponse,
+)
 from app.services.event_service import EventService
+from app.services.gallery_service import GalleryService
 from app.services.notification_service import NotificationService
 from app.services.realtime.event_bus import event_bus
 
@@ -64,6 +71,18 @@ def _build_service(
         community_id=community_id,
         session=db,
         notification_service=notif,
+    )
+
+
+def _build_gallery_service(
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> GalleryService:
+    """@brief Build GalleryService with DB deps."""
+    return GalleryService(
+        gallery_repo=GalleryRepository(db),
+        community_id=community_id,
+        session=db,
     )
 
 
@@ -219,6 +238,33 @@ async def export_feed_ical(
         media_type="text/calendar",
         headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
     )
+
+
+# ── Event galleries ──────────────────────────────────────────────
+
+
+@router.get("/{event_id}/gallery", response_model=GalleryResponse)
+async def get_event_gallery(
+    event_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: GalleryService = Depends(_build_gallery_service),
+) -> GalleryResponse:
+    """@brief Get or create the auto-gallery for an event."""
+    result = await service.ensure_event_gallery(event_id, user.id, "Event Gallery")
+    return result
+
+
+@router.post("/{event_id}/gallery/contribute", response_model=list[GalleryItemResponse])
+async def contribute_to_event_gallery(
+    event_id: uuid.UUID,
+    body: GalleryItemBulkCreate,
+    user: User = Depends(get_current_user),
+    service: GalleryService = Depends(_build_gallery_service),
+) -> list[GalleryItemResponse]:
+    """@brief Add media items to an event's gallery."""
+    gallery = await service.ensure_event_gallery(event_id, user.id, "Event Gallery")
+    result = await service.bulk_add_items(gallery.id, user.id, body)
+    return result
 
 
 # ── Subscriptions ─────────────────────────────────────────────────

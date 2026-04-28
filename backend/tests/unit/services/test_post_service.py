@@ -134,6 +134,7 @@ class TestCreatePost:
         )
 
 
+
 class TestDeletePost:
     """@brief Tests for delete_post()."""
 
