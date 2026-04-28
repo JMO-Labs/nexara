@@ -23,7 +23,8 @@ import {
   startOfWeek,
 } from 'date-fns';
 import type { EventItem } from '@/lib/api/events';
-import { toneForEvent, type EventTone } from './eventColors';
+import { assignLanes, type Lane } from '@/lib/events/lanes';
+import { toneForEvent } from './eventColors';
 
 const LANE_HEIGHT = 22;
 const HEADER_OFFSET = 34;
@@ -35,16 +36,6 @@ const MAX_LANES_VISIBLE = Math.max(
   1,
   Math.floor((CELL_MIN_HEIGHT - HEADER_OFFSET - OVERFLOW_RESERVE) / LANE_HEIGHT),
 );
-
-interface Segment {
-  event: EventItem;
-  col: number;
-  span: number;
-  lane: number;
-  startsHere: boolean;
-  endsHere: boolean;
-  tone: EventTone;
-}
 
 function buildWeeks(month: Date): Date[][] {
   const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
@@ -62,54 +53,6 @@ function buildWeeks(month: Date): Date[][] {
   return weeks;
 }
 
-function overlaps(ev: EventItem, weekStart: Date, weekEnd: Date): boolean {
-  const s = startOfDay(parseISO(ev.starts_at));
-  const e = startOfDay(parseISO(ev.ends_at));
-  return s <= weekEnd && e >= weekStart;
-}
-
-function assignLanes(
-  events: EventItem[],
-  week: Date[],
-  subgroupNames: Map<string, string>,
-): Segment[] {
-  const ws = week[0];
-  const we = week[6];
-  const lanes: Date[] = [];
-  const segs: Segment[] = [];
-  const sorted = [...events]
-    .filter((e) => overlaps(e, ws, we))
-    .sort(
-      (a, b) =>
-        parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
-    );
-  for (const ev of sorted) {
-    const evStart = startOfDay(parseISO(ev.starts_at));
-    const evEnd = startOfDay(parseISO(ev.ends_at));
-    const segStart = evStart < ws ? ws : evStart;
-    const segEnd = evEnd > we ? we : evEnd;
-    const col = Math.round((segStart.getTime() - ws.getTime()) / 86400_000);
-    const span =
-      Math.round((segEnd.getTime() - segStart.getTime()) / 86400_000) + 1;
-    let lane = lanes.findIndex((d) => d < segStart);
-    if (lane === -1) {
-      lane = lanes.length;
-      lanes.push(segEnd);
-    } else {
-      lanes[lane] = segEnd;
-    }
-    segs.push({
-      event: ev,
-      col,
-      span,
-      lane,
-      startsHere: isSameDay(evStart, segStart),
-      endsHere: isSameDay(evEnd, segEnd),
-      tone: toneForEvent(ev, subgroupNames),
-    });
-  }
-  return segs;
-}
 
 export interface MonthCalendarLargeProps {
   events: EventItem[];
