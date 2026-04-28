@@ -1,34 +1,36 @@
-'use client';
+"use client";
 /**
  * @file components/settings/SettingsTabs.tsx
  * @brief Settings page with tabs: account, profile, notifications, appearance, storage.
  *        Deep-linkable via ?tab= query parameter.
  */
-import { useSearchParams, useRouter } from 'next/navigation';
-import Sheet from '@mui/joy/Sheet';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Tabs, TabList, Tab, TabPanel } from '@/components/ui/Tabs';
-import { tabPanelVariants } from '@/components/ui/motion';
-import { AccountTab } from './AccountTab';
-import { ProfileTab } from './ProfileTab';
-import { NotificationsTab } from './NotificationsTab';
-import { AppearanceTab } from './AppearanceTab';
-import { StorageTab } from './StorageTab';
+import { useSearchParams, useRouter } from "next/navigation";
+import Sheet from "@mui/joy/Sheet";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { AnimatePresence, motion } from "framer-motion";
+import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/Tabs";
+import { tabPanelVariants } from "@/components/ui/motion";
+import { AccountTab } from "./AccountTab";
+import { ProfileTab } from "./ProfileTab";
+import { NotificationsTab } from "./NotificationsTab";
+import { AppearanceTab } from "./AppearanceTab";
+import { CalendarSubscriptionsPanel } from "@/components/events/CalendarSubscriptionsPanel";
+import { StorageTab } from "./StorageTab";
 
 const TABS = [
-  { id: 'account', label: 'Account', icon: 'person' },
-  { id: 'profile', label: 'Profile', icon: 'edit' },
-  { id: 'notifications', label: 'Notifications', icon: 'notifications' },
-  { id: 'appearance', label: 'Appearance', icon: 'palette' },
-  { id: 'storage', label: 'Storage', icon: 'storage' },
+  { id: "account", label: "Account", icon: "person" },
+  { id: "profile", label: "Profile", icon: "edit" },
+  { id: "notifications", label: "Notifications", icon: "notifications" },
+  { id: "appearance", label: "Appearance", icon: "palette" },
+  { id: "calendar", label: "Calendar", icon: "calendar" },
+  { id: "storage", label: "Storage", icon: "storage" },
 ];
 
 export function SettingsTabs() {
   const router = useRouter();
   const params = useSearchParams();
-  const currentTab = params.get('tab') || 'account';
+  const currentTab = params.get("tab") || "account";
 
   const handleTabChange = (_: unknown, value: string | number | null) => {
     if (value) {
@@ -40,11 +42,11 @@ export function SettingsTabs() {
     <Sheet
       sx={{
         flex: 1,
-        width: '100%',
-        mx: 'auto',
+        width: "100%",
+        mx: "auto",
         px: { xs: 2, md: 6 },
         py: { xs: 2, md: 3 },
-        borderRadius: { xs: 'sm', md: 'md' },
+        borderRadius: { xs: "sm", md: "md" },
       }}
     >
       <Stack spacing={3}>
@@ -61,17 +63,17 @@ export function SettingsTabs() {
           value={currentTab}
           onChange={handleTabChange}
           sx={{
-            '--Tabs-gap': '0px',
-            '--Tab-minHeight': '48px',
+            "--Tabs-gap": "0px",
+            "--Tab-minHeight": "48px",
           }}
         >
           <TabList
             disableUnderline
             sx={{
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              display: 'flex',
-              overflow: 'auto',
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              display: "flex",
+              overflow: "auto",
             }}
           >
             {TABS.map(({ id, label }) => (
@@ -82,8 +84,8 @@ export function SettingsTabs() {
                   flexShrink: 0,
                   px: 2,
                   py: 1.5,
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  "&:hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
                   },
                 }}
               >
@@ -102,11 +104,12 @@ export function SettingsTabs() {
                   animate="animate"
                   exit="exit"
                 >
-                  {id === 'account' && <AccountTab />}
-                  {id === 'profile' && <ProfileTab />}
-                  {id === 'notifications' && <NotificationsTab />}
-                  {id === 'appearance' && <AppearanceTab />}
-                  {id === 'storage' && <StorageTab />}
+                  {id === "account" && <AccountTab />}
+                  {id === "profile" && <ProfileTab />}
+                  {id === "notifications" && <NotificationsTab />}
+                  {id === "appearance" && <AppearanceTab />}
+                  {id === "calendar" && <CalendarSubscriptionsPanel />}
+                  {id === "storage" && <StorageTab />}
                 </motion.div>
               </TabPanel>
             ))}

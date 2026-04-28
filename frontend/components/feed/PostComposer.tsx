@@ -5,10 +5,12 @@
  *        opens an editor; supports submit on Cmd/Ctrl+Enter.
  *        Polls and media attachment surfaced as toggles; payload pieces
  *        are attached as media_ids / poll on submit.
+ *        Supports reply-to-prompt with banner display and state management.
  */
 import * as React from 'react';
 import Stack from '@mui/joy/Stack';
 import Box from '@mui/joy/Box';
+import Alert from '@mui/joy/Alert';
 import Typography from '@mui/joy/Typography';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -24,9 +26,17 @@ import {
 
 export interface PostComposerProps {
   onPosted?: () => void;
+  replyToPromptId?: string;
+  replyToPromptTitle?: string;
+  onClearReplyPrompt?: () => void;
 }
 
-export function PostComposer({ onPosted }: PostComposerProps) {
+export function PostComposer({
+  onPosted,
+  replyToPromptId,
+  replyToPromptTitle,
+  onClearReplyPrompt,
+}: PostComposerProps) {
   const me = useSession((s) => s.user);
   const createMut = useCreatePost();
   const [expanded, setExpanded] = React.useState(false);
@@ -71,14 +81,18 @@ export function PostComposer({ onPosted }: PostComposerProps) {
     }
     setError(null);
     try {
-      await createMut.mutateAsync({ content: text });
+      const payload: { content: string; reply_to_prompt_id?: string } = { content: text };
+      if (replyToPromptId) {
+        payload.reply_to_prompt_id = replyToPromptId;
+      }
+      await createMut.mutateAsync(payload);
       editor.commands.clearContent();
       setExpanded(false);
       onPosted?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to post.');
     }
-  }, [editor, createMut, onPosted]);
+  }, [editor, createMut, onPosted, replyToPromptId]);
 
   if (!me) return null;
 
@@ -119,6 +133,45 @@ export function PostComposer({ onPosted }: PostComposerProps) {
       }}
       data-tour="composer"
     >
+      {/* Reply-to-prompt banner */}
+      {replyToPromptId && replyToPromptTitle && (
+        <Box
+          sx={{
+            mb: 1.5,
+            animation: 'fadeIn 0.3s ease-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0, transform: 'translateY(-4px)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
+            },
+          }}
+        >
+          <Alert
+            variant="soft"
+            color="primary"
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
+              <Typography level="body-sm">
+                <strong>Replying to:</strong> {replyToPromptTitle}
+              </Typography>
+            </Stack>
+            <IconButton
+              aria-label="Clear reply"
+              variant="plain"
+              size="sm"
+              onClick={onClearReplyPrompt}
+              sx={{ ml: 1 }}
+            >
+              <XMarkIcon width={16} />
+            </IconButton>
+          </Alert>
+        </Box>
+      )}
+
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <Avatar src={me.avatar_url ?? undefined} size="sm">
           {me.display_name.charAt(0)}
