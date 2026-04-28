@@ -56,10 +56,17 @@ class GalleryRepository(BaseRepository[Gallery]):
         event_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
         featured_only: bool = False,
+        sort: str = "recent",
         limit: int = 20,
         cursor: str | None = None,
     ) -> tuple[list[Gallery], str | None]:
-        """@brief List galleries visible to a viewer with optional filters."""
+        """@brief List galleries visible to a viewer with optional filters.
+
+        Sorting:
+        - recent: created_at DESC (default)
+        - popular: item_count DESC
+        - oldest: created_at ASC
+        """
         stmt = select(Gallery).where(Gallery.community_id == community_id)
 
         allowed = subgroup_ids or []
@@ -83,7 +90,16 @@ class GalleryRepository(BaseRepository[Gallery]):
             stmt = stmt.where(Gallery.is_featured.is_(True))
 
         stmt = self.apply_block_filter(stmt, viewer_id)
-        stmt = stmt.order_by(Gallery.updated_at.desc()).limit(limit + 1)
+
+        # Apply sort order
+        if sort == "popular":
+            stmt = stmt.order_by(Gallery.item_count.desc())
+        elif sort == "oldest":
+            stmt = stmt.order_by(Gallery.created_at.asc())
+        else:  # "recent" (default)
+            stmt = stmt.order_by(Gallery.created_at.desc())
+
+        stmt = stmt.limit(limit + 1)
 
         if cursor:
             try:

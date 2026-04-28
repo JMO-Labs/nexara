@@ -214,6 +214,7 @@ class GalleryService:
         event_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
         featured_only: bool = False,
+        sort: str = "recent",
         cursor: str | None = None,
         limit: int = 20,
     ) -> GalleryList:
@@ -226,6 +227,7 @@ class GalleryService:
             event_id=event_id,
             subgroup_id=subgroup_id,
             featured_only=featured_only,
+            sort=sort,
             limit=limit,
             cursor=cursor,
         )

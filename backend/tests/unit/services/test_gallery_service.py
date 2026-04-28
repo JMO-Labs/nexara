@@ -341,3 +341,39 @@ class TestSearch:
         result_ids = [r.id for r in results.items]
         assert public_gallery.id in result_ids
         assert private_gallery_owned_by_other.id not in result_ids
+
+
+class TestFeaturedAndSort:
+    @pytest.mark.asyncio
+    async def test_list_galleries_with_featured_and_sort(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        """Test that featured filter and sort parameters are passed through repo."""
+        viewer = uuid.uuid4()
+
+        # Create featured galleries with different item counts for sorting
+        g1 = _make_gallery(item_count=5)
+        g1.is_featured = True
+        g1.created_at = datetime.now(UTC)
+
+        g2 = _make_gallery(item_count=10)
+        g2.is_featured = True
+        g2.created_at = datetime.now(UTC)
+
+        # Mock return values - popular sort returns by item count DESC
+        repo.list_visible.return_value = ([g2, g1], None)
+
+        result = await service.list_galleries(
+            viewer, featured_only=True, sort="popular"
+        )
+
+        # Verify repo was called with correct params
+        repo.list_visible.assert_awaited_once()
+        call_kwargs = repo.list_visible.call_args[1]
+        assert call_kwargs.get("featured_only") is True
+        assert call_kwargs.get("sort") == "popular"
+
+        # Verify results are returned in correct order (by item count DESC)
+        assert len(result.items) == 2
+        assert result.items[0].item_count == 10
+        assert result.items[1].item_count == 5

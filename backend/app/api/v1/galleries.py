@@ -84,13 +84,17 @@ async def list_galleries(
     event_id: uuid.UUID | None = None,
     subgroup_id: uuid.UUID | None = None,
     featured_only: bool = False,
+    sort: str = "recent",
     cursor: str | None = None,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
     service: GalleryService = Depends(_build_service),
 ) -> GalleryList:
-    """@brief Community gallery hub — search or list galleries visible to the viewer."""
+    """@brief Community gallery hub — search or list galleries visible to the viewer.
+
+    Sort options: recent (default), popular (by item_count), oldest.
+    """
     if q:
         return await service.search(
             q=q,
@@ -104,6 +108,7 @@ async def list_galleries(
         event_id=event_id,
         subgroup_id=subgroup_id,
         featured_only=featured_only,
+        sort=sort,
         cursor=cursor,
         limit=limit,
     )
