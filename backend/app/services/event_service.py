@@ -20,6 +20,7 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
 from app.models.subgroup import SubgroupMember
+from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
@@ -34,6 +35,7 @@ from app.schemas.event import (
     RSVPRequest,
     RSVPResponse,
 )
+from app.services.calendar_service import CalendarService
 
 logger = structlog.get_logger(__name__)
 
@@ -57,11 +59,23 @@ class EventService:
         session: AsyncSession,
         *,
         notification_service: Any | None = None,
+        calendar_service: CalendarService | None = None,
+        token_repo: Any | None = None,
     ) -> None:
         self._repo = event_repo
         self._community_id = community_id
         self._session = session
         self._notifications = notification_service
+        self._calendars = calendar_service or CalendarService(
+            calendar_repo=CalendarRepository(session),
+            community_id=community_id,
+            session=session,
+        )
+        if token_repo is None:
+            from app.repositories.calendar_token_repo import CalendarTokenRepository
+
+            token_repo = CalendarTokenRepository(session)
+        self._token_repo = token_repo
 
     # ── Internal helpers ──────────────────────────────────────────────
 
@@ -145,8 +159,13 @@ class EventService:
             ical_uid=event.ical_uid,
             visibility=event.visibility,
             subgroup_id=event.subgroup_id,
+            calendar_id=event.calendar_id,
+            color=event.color,
+            latitude=event.latitude,
+            longitude=event.longitude,
             rsvp_labels=dict(event.rsvp_labels) if event.rsvp_labels else None,
             contribution_slots=slots,
+            reminder_offsets_minutes=event.reminder_offsets_minutes,
             rsvp_counts=rsvp_counts,
             user_rsvp=user_rsvp,
             created_at=event.created_at,
@@ -173,6 +192,12 @@ class EventService:
                 status_code=400,
             )
 
+        calendar_id = await self._calendars.derive_calendar_id(
+            user_id=user_id,
+            visibility=data.visibility,
+            subgroup_id=data.subgroup_id,
+        )
+
         event = Event(
             community_id=self._community_id,
             author_id=user_id,
@@ -186,8 +211,13 @@ class EventService:
             ical_uid=str(uuid.uuid4()) + "@nexara",
             visibility=data.visibility,
             subgroup_id=data.subgroup_id,
+            calendar_id=calendar_id,
+            color=data.color,
+            latitude=data.latitude,
+            longitude=data.longitude,
             rsvp_labels=data.rsvp_labels,
             contribution_slots=self._slots_to_dicts(data.contribution_slots),
+            reminder_offsets_minutes=data.reminder_offsets_minutes,
         )
         event = await self._repo.create(event)
         return await self._build_response(event, user_id=user_id)
@@ -462,6 +492,45 @@ class EventService:
         return self.to_ical([event])
 
     async def export_feed_ical(self, user_id: uuid.UUID) -> bytes:
+        now = datetime.now(UTC)
+        end = now + timedelta(days=365)
+        subgroup_ids = await self._user_subgroup_ids(user_id)
+        events = await self._repo.list_in_range(
+            self._community_id,
+            now - timedelta(days=30),
+            end,
+            viewer_id=user_id,
+            subgroup_ids=subgroup_ids,
+        )
+        return self.to_ical(events)
+
+    # ── iCal token issuance & serving ──────────────────────────────────
+
+    async def issue_ical_token(self, user_id: uuid.UUID) -> tuple[str, str]:
+        """@brief Issue a read-only iCal token for external subscription.
+
+        @param user_id User to issue token for.
+        @return Tuple of (raw_token, feed_url).
+        """
+        from app.core.config import get_settings
+
+        raw, _ = await self._token_repo.issue(user_id=user_id, scope="ical")
+        settings = get_settings()
+        url = f"{settings.APP_BASE_URL}/api/v1/calendars/feed.ics?token={raw}"
+        return raw, url
+
+    async def serve_ical_for_token(self, raw_token: str) -> bytes:
+        """@brief Retrieve and serve iCal feed for a read-only token.
+
+        @param raw_token Raw token string (e.g. from query param).
+        @return iCal bytes.
+        @raises AuthorizationError if token invalid or revoked.
+        """
+        token = await self._token_repo.verify(raw_token)
+        if token is None:
+            raise AuthorizationError(_("Invalid or revoked iCal token"))
+
+        user_id = token.user_id
         now = datetime.now(UTC)
         end = now + timedelta(days=365)
         subgroup_ids = await self._user_subgroup_ids(user_id)
