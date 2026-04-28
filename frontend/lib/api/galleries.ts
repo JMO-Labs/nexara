@@ -61,6 +61,7 @@ export interface ListGalleriesParams {
   q?: string;
   sort?: "recent" | "popular" | "oldest";
   featured?: boolean;
+  owner_id?: string;
 }
 
 export const listGalleries = (params?: ListGalleriesParams) => {
@@ -69,6 +70,7 @@ export const listGalleries = (params?: ListGalleriesParams) => {
   if (params?.sort) searchParams.append("sort", params.sort);
   if (params?.featured !== undefined)
     searchParams.append("featured", String(params.featured));
+  if (params?.owner_id) searchParams.append("owner_id", params.owner_id);
   const query = searchParams.toString();
   return apiGet<GalleryListResponse>(`${BASE}${query ? `?${query}` : ""}`);
 };
