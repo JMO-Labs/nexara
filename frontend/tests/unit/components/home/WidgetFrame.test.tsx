@@ -136,4 +136,20 @@ describe("WidgetFrame", () => {
       screen.queryByRole("button", { name: /remove widget/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("header row has no nested buttons (collapse + remove are siblings, not children of another button)", () => {
+    const onRemove = vi.fn();
+    wrap(
+      <WidgetFrame title="Widget" onRemove={onRemove}>
+        <p>Content</p>
+      </WidgetFrame>,
+    );
+    const buttons = screen.getAllByRole("button");
+    // Each button must NOT contain another button
+    for (const btn of buttons) {
+      expect(btn.querySelectorAll("button")).toHaveLength(0);
+    }
+    // We expect exactly 2 buttons: collapse toggle + remove
+    expect(buttons).toHaveLength(2);
+  });
 });

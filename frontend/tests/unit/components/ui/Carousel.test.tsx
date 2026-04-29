@@ -7,6 +7,12 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { CssVarsProvider } from "@mui/joy/styles";
 import joyTheme from "@/theme/joy-theme";
 
+// Mock framer-motion useReducedMotion so tests can control it
+vi.mock("framer-motion", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("framer-motion")>();
+  return { ...actual, useReducedMotion: vi.fn().mockReturnValue(false) };
+});
+
 // Mock embla-carousel-react before importing the component
 const mockScrollNext = vi.fn();
 const mockScrollPrev = vi.fn();
@@ -95,18 +101,35 @@ describe("Carousel", () => {
     expect(mockScrollPrev).toHaveBeenCalledOnce();
   });
 
-  it("does not start autoplay when prefers-reduced-motion is reduce", () => {
-    // Override matchMedia to report reduced motion
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(prefers-reduced-motion: reduce)",
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
+  it("renders nothing for empty slides array", () => {
+    const { container } = wrap(
+      <Carousel slides={[]} ariaLabel="Empty carousel" />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("hides arrows and dots for a single slide", () => {
+    mockScrollSnapList.mockReturnValue([0]);
+    wrap(
+      <Carousel
+        slides={[<div key="1">Only slide</div>]}
+        ariaLabel="Single slide carousel"
+        showArrows
+        showDots
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Previous slide" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Next slide" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+  });
+
+  it("does not start autoplay when prefers-reduced-motion is reduce", async () => {
+    const { useReducedMotion } = await import("framer-motion");
+    vi.mocked(useReducedMotion).mockReturnValue(true);
 
     vi.useFakeTimers();
     wrap(

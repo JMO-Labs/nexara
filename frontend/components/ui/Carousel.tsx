@@ -8,6 +8,7 @@
 import * as React from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { EmblaOptionsType } from "embla-carousel";
+import { useReducedMotion } from "framer-motion";
 
 export interface CarouselProps {
   /** Array of slide content. */
@@ -28,21 +29,6 @@ export interface CarouselProps {
   className?: string;
 }
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = React.useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  });
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return reduced;
-}
-
 export function Carousel({
   slides,
   slidesPerView = 1,
@@ -54,12 +40,12 @@ export function Carousel({
   showDots = true,
   className,
 }: CarouselProps) {
-  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotion = useReducedMotion();
 
-  const opts: EmblaOptionsType = {
-    loop,
-    dragFree: false,
-  };
+  const opts = React.useMemo<EmblaOptionsType>(
+    () => ({ loop, dragFree: false }),
+    [loop],
+  );
 
   const [emblaRef, emblaApi] = useEmblaCarousel(opts);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -77,11 +63,9 @@ export function Carousel({
 
   React.useEffect(() => {
     if (!emblaApi) return;
-    // Call onSelect outside the effect body to avoid setState-in-effect lint rule
     const init = () => onSelect();
     emblaApi.on("select", init);
     emblaApi.on("reInit", init);
-    // Initialize on mount
     const raf = requestAnimationFrame(() => onSelect());
     return () => {
       cancelAnimationFrame(raf);
@@ -90,18 +74,16 @@ export function Carousel({
     };
   }, [emblaApi, onSelect]);
 
-  // Autoplay — disabled under reduced motion
+  // Autoplay — disabled under reduced motion; embla handles loop natively
   React.useEffect(() => {
     if (!emblaApi || !autoplay || reducedMotion) return;
     const id = setInterval(() => {
       if (emblaApi.canScrollNext()) {
         emblaApi.scrollNext();
-      } else if (loop) {
-        emblaApi.scrollTo(0);
       }
     }, autoplayDelayMs);
     return () => clearInterval(id);
-  }, [emblaApi, autoplay, autoplayDelayMs, loop, reducedMotion]);
+  }, [emblaApi, autoplay, autoplayDelayMs, reducedMotion]);
 
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -112,12 +94,15 @@ export function Carousel({
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         emblaApi.scrollPrev();
-      } else if (e.key === "Escape") {
-        (e.currentTarget as HTMLElement).blur();
       }
     },
     [emblaApi],
   );
+
+  // Early-return for empty slides
+  if (slides.length === 0) return null;
+
+  const isSingle = slides.length === 1;
 
   // Determine per-slide width class based on slidesPerView
   const slideWidthClass =
@@ -153,8 +138,8 @@ export function Carousel({
         </div>
       </div>
 
-      {/* Arrows */}
-      {showArrows && (
+      {/* Arrows — hidden for single-slide carousels */}
+      {showArrows && !isSingle && (
         <>
           <button
             type="button"
@@ -193,8 +178,8 @@ export function Carousel({
         </>
       )}
 
-      {/* Dots */}
-      {showDots && snapCount > 1 && (
+      {/* Dots — hidden for single-slide carousels */}
+      {showDots && !isSingle && snapCount > 1 && (
         <div
           role="tablist"
           aria-label={`${ariaLabel} navigation`}

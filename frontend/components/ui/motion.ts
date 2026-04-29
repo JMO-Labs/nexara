@@ -3,8 +3,8 @@
  * @brief Motion primitives. Variants for page/modal/drawer/list-stagger.
  *        Spring config from theme tokens; reduced-motion respected via CSS.
  */
-import type { Variants, Transition } from 'framer-motion';
-import { motion as tokens } from '@/theme/tokens';
+import type { Variants, Transition } from "framer-motion";
+import { motion as tokens } from "@/theme/tokens";
 
 export const spring: Transition = tokens.spring;
 export const fast: Transition = tokens.fast;
@@ -22,13 +22,15 @@ export const modalVariants: Variants = {
   exit: { opacity: 0, scale: 0.98, y: 8, transition: fast },
 };
 
-export const drawerVariants = (side: 'left' | 'right' | 'bottom' = 'right'): Variants => {
-  const off = side === 'left' ? '-100%' : side === 'right' ? '100%' : '0';
-  const offY = side === 'bottom' ? '100%' : '0';
+export const drawerVariants = (
+  side: "left" | "right" | "bottom" = "right",
+): Variants => {
+  const off = side === "left" ? "-100%" : side === "right" ? "100%" : "0";
+  const offY = side === "bottom" ? "100%" : "0";
   return {
-    hidden: { x: side === 'bottom' ? 0 : off, y: offY, opacity: 1 },
+    hidden: { x: side === "bottom" ? 0 : off, y: offY, opacity: 1 },
     show: { x: 0, y: 0, transition: spring },
-    exit: { x: side === 'bottom' ? 0 : off, y: offY, transition: fast },
+    exit: { x: side === "bottom" ? 0 : off, y: offY, transition: fast },
   };
 };
 
@@ -51,12 +53,19 @@ export const pressScale = {
 
 export const pageVariants: Variants = {
   initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.15, ease: 'easeOut' } },
+  animate: { opacity: 1, transition: { duration: 0.15, ease: "easeOut" } },
   exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
+/** Transition token for collapse/expand height animations. */
+export const collapseTransition: import("framer-motion").Transition = fast;
+
 export const tabPanelVariants: Variants = {
   initial: { opacity: 0, y: 4 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.18, ease: 'easeOut' } },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.18, ease: "easeOut" },
+  },
   exit: { opacity: 0, y: -4, transition: { duration: 0.12 } },
 };

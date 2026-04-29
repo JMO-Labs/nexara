@@ -67,4 +67,28 @@ describe("WelcomeBanner", () => {
     expect(screen.getByText(/good evening/i)).toBeInTheDocument();
     vi.useRealTimers();
   });
+
+  it('displays "99+" for counts above 99 and keeps full count in aria-label', () => {
+    wrap(
+      <WelcomeBanner
+        {...defaultProps}
+        newPosts={9999}
+        upcomingEvents={100}
+        unreadNotifications={200}
+      />,
+    );
+    // Displayed text is capped
+    const chips = screen.getAllByRole("link");
+    const postsChip = chips.find((c) =>
+      c.getAttribute("aria-label")?.includes("9999 new posts"),
+    );
+    expect(postsChip).toBeTruthy();
+    expect(postsChip).toHaveTextContent("99+");
+    // Events chip
+    const eventsChip = chips.find((c) =>
+      c.getAttribute("aria-label")?.includes("100 upcoming events"),
+    );
+    expect(eventsChip).toBeTruthy();
+    expect(eventsChip).toHaveTextContent("99+");
+  });
 });

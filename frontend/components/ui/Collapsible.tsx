@@ -7,6 +7,7 @@
  */
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { collapseTransition } from "@/components/ui/motion";
 
 export interface CollapsibleProps {
   /** Controlled open state. */
@@ -17,12 +18,7 @@ export interface CollapsibleProps {
   header: React.ReactNode;
   children: React.ReactNode;
   headerProps?: { "aria-label"?: string };
-  /** Animation duration in ms. Default 200. */
-  motionDuration?: number;
 }
-
-/** Unique id counter for aria-controls pairing. */
-let idCounter = 0;
 
 export function Collapsible({
   open,
@@ -30,11 +26,11 @@ export function Collapsible({
   header,
   children,
   headerProps,
-  motionDuration = 200,
 }: CollapsibleProps) {
   const prefersReduced = useReducedMotion();
-  const [panelId] = React.useState(() => `collapsible-panel-${++idCounter}`);
-  const duration = prefersReduced ? 0 : motionDuration / 1000;
+  const reactId = React.useId();
+  const panelId = `collapsible-panel-${reactId}`;
+  const transition = prefersReduced ? { duration: 0 } : collapseTransition;
 
   return (
     <div>
@@ -58,9 +54,9 @@ export function Collapsible({
             animate={{
               height: "auto",
               overflow: "hidden",
-              transition: { duration },
+              transition,
             }}
-            exit={{ height: 0, overflow: "hidden", transition: { duration } }}
+            exit={{ height: 0, overflow: "hidden", transition }}
           >
             {children}
           </motion.div>

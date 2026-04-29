@@ -38,13 +38,14 @@ interface StatChipProps {
 }
 
 function StatChip({ count, label, href, ariaLabel }: StatChipProps) {
+  const displayed = count > 99 ? "99+" : String(count);
   return (
     <Link
       href={href}
       aria-label={ariaLabel}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
     >
-      <span className="font-bold">{count}</span>
+      <span className="font-bold">{displayed}</span>
       <span>{label}</span>
     </Link>
   );
