@@ -6,7 +6,8 @@
 import * as React from 'react';
 import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
-import { Card } from '@/components/ui';
+import Box from '@mui/joy/Box';
+import { Card, Markdown } from '@/components/ui';
 import { RsvpInline } from './RsvpInline';
 import type { EventItem } from '@/lib/api/events';
 
@@ -37,9 +38,9 @@ export function EventCard({ event }: EventCardProps) {
           <Typography level="body-sm">📍 {event.location}</Typography>
         )}
         {event.description && (
-          <Typography level="body-sm" sx={{ whiteSpace: 'pre-wrap' }}>
-            {event.description}
-          </Typography>
+          <Box sx={{ fontSize: '0.875rem' }}>
+            <Markdown content={event.description} size="sm" truncate clampLines={4} />
+          </Box>
         )}
         <RsvpInline
           eventId={event.id}

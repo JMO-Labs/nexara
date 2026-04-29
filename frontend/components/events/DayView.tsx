@@ -7,8 +7,9 @@
 import * as React from "react";
 import Box from "@mui/joy/Box";
 import Typography from "@mui/joy/Typography";
-import { format, getHours, parseISO } from "date-fns";
+import { format, isToday as isTodayFn, parseISO } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
+import { assignTimeLanes } from "@/lib/events/lanes";
 import { toneForEvent } from "./eventColors";
 
 const HOUR_HEIGHT = 48;
@@ -30,68 +31,43 @@ export function DayView({
   subgroupNames,
   onSelectEvent,
 }: DayViewProps) {
-  // Filter events for this day
-  const dayEvents = React.useMemo(() => {
+  // Split events into all-day and timed for this day
+  const { allDay, timed } = React.useMemo(() => {
     const dayStart = new Date(day);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(day);
     dayEnd.setHours(23, 59, 59, 999);
 
-    return events.filter((ev) => {
+    const allDay: EventItem[] = [];
+    const timed: EventItem[] = [];
+    for (const ev of events) {
       const evStart = parseISO(ev.starts_at);
       const evEnd = parseISO(ev.ends_at);
-      return evStart <= dayEnd && evEnd >= dayStart;
-    });
+      if (!(evStart <= dayEnd && evEnd >= dayStart)) continue;
+      // Treat as all-day if flagged or if it spans the entire visible day.
+      const spansFullDay =
+        evStart.getTime() <= dayStart.getTime() &&
+        evEnd.getTime() >= dayEnd.getTime();
+      if (ev.is_all_day || spansFullDay) allDay.push(ev);
+      else timed.push(ev);
+    }
+    return { allDay, timed };
   }, [day, events]);
 
-  // Assign lanes to events
-  const lanes = React.useMemo(() => {
-    const lanes: Date[] = [];
-    const segs: Array<{
-      event: EventItem;
-      lane: number;
-      topOffset: number;
-      height: number;
-      tone: ReturnType<typeof toneForEvent>;
-    }> = [];
+  const lanes = React.useMemo(
+    () => assignTimeLanes(timed, subgroupNames, HOUR_HEIGHT, LANE_HEIGHT, day),
+    [timed, subgroupNames, day],
+  );
 
-    const sorted = [...dayEvents].sort(
-      (a, b) =>
-        parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
-    );
-
-    for (const ev of sorted) {
-      const evStart = parseISO(ev.starts_at);
-      const evEnd = parseISO(ev.ends_at);
-
-      const startHour = getHours(evStart);
-      const startMin = evStart.getMinutes();
-      const topOffset = startHour * HOUR_HEIGHT + (startMin / 60) * HOUR_HEIGHT;
-
-      const endHour = getHours(evEnd);
-      const endMin = evEnd.getMinutes();
-      const endTime = endHour * HOUR_HEIGHT + (endMin / 60) * HOUR_HEIGHT;
-      const height = Math.max(LANE_HEIGHT, endTime - topOffset);
-
-      let lane = lanes.findIndex((d) => d < evStart);
-      if (lane === -1) {
-        lane = lanes.length;
-        lanes.push(evEnd);
-      } else {
-        lanes[lane] = evEnd;
-      }
-
-      segs.push({
-        event: ev,
-        lane,
-        topOffset,
-        height,
-        tone: toneForEvent(ev, subgroupNames),
-      });
-    }
-
-    return segs;
-  }, [dayEvents, subgroupNames]);
+  // Current-time indicator (only when day === today)
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const isToday = isTodayFn(day);
+  const nowOffset =
+    (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
 
   return (
     <Box
@@ -119,6 +95,74 @@ export function DayView({
           {format(day, "MMMM d, yyyy")}
         </Typography>
       </Box>
+
+      {/* All-day strip */}
+      {allDay.length > 0 && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "stretch",
+            gap: 0.5,
+            mb: 1,
+            pl: `${HOUR_LABEL_WIDTH}px`,
+            pr: 0.5,
+          }}
+        >
+          <Box
+            sx={{
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "text.tertiary",
+              alignSelf: "center",
+              position: "absolute",
+              left: 4,
+              width: HOUR_LABEL_WIDTH - 8,
+              textAlign: "right",
+            }}
+          >
+            All day
+          </Box>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, flex: 1 }}>
+            {allDay.map((ev) => {
+              const tone = toneForEvent(ev, subgroupNames);
+              const isSelected = selectedEventId === ev.id;
+              return (
+                <Box
+                  key={ev.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectEvent(ev)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectEvent(ev);
+                    }
+                  }}
+                  sx={{
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: "4px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    backgroundColor: isSelected ? tone.solid : tone.soft,
+                    color: isSelected ? tone.onSolid : tone.onSoft,
+                    cursor: "pointer",
+                    border: `1px solid ${isSelected ? tone.solid : "transparent"}`,
+                    "&:hover": {
+                      backgroundColor: tone.solid,
+                      color: tone.onSolid,
+                    },
+                  }}
+                >
+                  {ev.title}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
 
       {/* Timeline grid */}
       <Box
@@ -186,15 +230,46 @@ export function DayView({
             />
           ))}
 
+          {/* Current-time indicator */}
+          {isToday && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: nowOffset,
+                left: 0,
+                right: 0,
+                height: 0,
+                zIndex: 20,
+                pointerEvents: "none",
+                borderTop: "2px solid",
+                borderColor: "danger.solidBg",
+              }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: "danger.solidBg",
+                  top: "-5px",
+                  left: -4,
+                  boxShadow: "0 0 0 2px var(--joy-palette-background-surface)",
+                  animation: "pulse-now 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                  "@keyframes pulse-now": {
+                    "0%, 100%": { opacity: 1 },
+                    "50%": { opacity: 0.55 },
+                  },
+                }}
+              />
+            </Box>
+          )}
+
           {/* Event blocks */}
           {lanes.map((seg, idx) => {
             const isSelected = selectedEventId === seg.event.id;
-            const maxLanes = Math.max(
-              1,
-              lanes.filter((s) => s.lane <= seg.lane).length,
-            );
-            const laneWidth = Math.max(20, 100 / maxLanes);
-            const leftOffset = seg.lane * laneWidth;
+            const laneWidthPct = 100 / seg.cluster;
+            const leftPct = seg.lane * laneWidthPct;
 
             return (
               <Box
@@ -211,11 +286,11 @@ export function DayView({
                 sx={{
                   position: "absolute",
                   top: seg.topOffset,
-                  left: `${leftOffset}%`,
-                  width: `${laneWidth * 0.95}%`,
+                  left: `${leftPct}%`,
+                  width: `calc(${laneWidthPct}% - 4px)`,
                   height: seg.height,
-                  px: 0.5,
-                  py: 0.25,
+                  px: 0.75,
+                  py: 0.5,
                   boxSizing: "border-box",
                   backgroundColor: isSelected ? seg.tone.solid : seg.tone.soft,
                   color: isSelected ? seg.tone.onSolid : seg.tone.onSoft,
@@ -224,14 +299,13 @@ export function DayView({
                   fontWeight: 600,
                   lineHeight: 1.2,
                   overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
                   cursor: "pointer",
                   border: `1px solid ${isSelected ? seg.tone.solid : "transparent"}`,
                   transition: "all 120ms ease",
                   "&:hover": {
                     backgroundColor: seg.tone.solid,
                     color: seg.tone.onSolid,
+                    zIndex: 11,
                   },
                   "&:focus-visible": {
                     outline: "2px solid",
@@ -241,7 +315,33 @@ export function DayView({
                   zIndex: 10,
                 }}
               >
-                {seg.event.title}
+                <Typography
+                  level="body-xs"
+                  sx={{
+                    color: "inherit",
+                    fontWeight: 700,
+                    fontSize: 11,
+                    lineHeight: 1.15,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {seg.event.title}
+                </Typography>
+                {seg.height >= 32 && (
+                  <Typography
+                    level="body-xs"
+                    sx={{
+                      color: "inherit",
+                      opacity: 0.8,
+                      fontSize: 10,
+                      mt: "1px",
+                    }}
+                  >
+                    {format(parseISO(seg.event.starts_at), "h:mm a")}
+                  </Typography>
+                )}
               </Box>
             );
           })}

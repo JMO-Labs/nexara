@@ -62,6 +62,7 @@ export interface ListGalleriesParams {
   sort?: "recent" | "popular" | "oldest";
   featured?: boolean;
   owner_id?: string;
+  subgroup_id?: string;
 }
 
 export const listGalleries = (params?: ListGalleriesParams) => {
@@ -71,6 +72,7 @@ export const listGalleries = (params?: ListGalleriesParams) => {
   if (params?.featured !== undefined)
     searchParams.append("featured", String(params.featured));
   if (params?.owner_id) searchParams.append("owner_id", params.owner_id);
+  if (params?.subgroup_id) searchParams.append("subgroup_id", params.subgroup_id);
   const query = searchParams.toString();
   return apiGet<GalleryListResponse>(`${BASE}${query ? `?${query}` : ""}`);
 };

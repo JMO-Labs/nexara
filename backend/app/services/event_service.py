@@ -280,6 +280,7 @@ class EventService:
         *,
         cursor: str | None = None,
         limit: int = 100,
+        subgroup_id: uuid.UUID | None = None,
     ) -> EventList:
         subgroup_ids = await self._user_subgroup_ids(user_id)
         events = await self._repo.list_in_range(
@@ -288,6 +289,7 @@ class EventService:
             end,
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
+            subgroup_id=subgroup_id,
         )
         # Build responses including expanded occurrences for recurring events.
         responses: list[EventResponse] = []

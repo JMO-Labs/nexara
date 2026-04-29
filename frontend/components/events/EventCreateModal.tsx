@@ -193,6 +193,8 @@ export interface EventCreateModalProps {
   onClose: () => void;
   /** When provided, modal switches to edit mode. */
   event?: EventItem | null;
+  /** When provided in create mode (no event), pre-fills subgroup and visibility. */
+  defaultSubgroupId?: string | null;
 }
 
 const PAD = (n: number) => String(n).padStart(2, '0');
@@ -282,7 +284,7 @@ function timeLabel(value: string): string {
   return `${h12}:${PAD(m)} ${ampm}`;
 }
 
-export function EventCreateModal({ open, onClose, event }: EventCreateModalProps) {
+export function EventCreateModal({ open, onClose, event, defaultSubgroupId }: EventCreateModalProps) {
   const create = useCreateEvent();
   const update = useUpdateEvent(event?.id ?? '');
   const isEdit = !!event;
@@ -343,11 +345,11 @@ export function EventCreateModal({ open, onClose, event }: EventCreateModalProps
       setEndDate(today);
       setEndTime(DEFAULT_END_TIME);
       setAllDay(false);
-      setVisibility('community');
-      setSubgroupId(null);
+      setVisibility(defaultSubgroupId ? 'subgroup' : 'community');
+      setSubgroupId(defaultSubgroupId ?? null);
       setColor(null);
     }
-  }, [open, event]);
+  }, [open, event, defaultSubgroupId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -459,23 +461,25 @@ export function EventCreateModal({ open, onClose, event }: EventCreateModalProps
             </FormControl>
           )}
         </Stack>
-        <FormControl>
-          <FormLabel>Visibility</FormLabel>
-          <Select
-            value={visibility}
-            onChange={(_e, v) => {
-              const next = (v as 'community' | 'subgroup' | 'private') ?? 'community';
-              setVisibility(next);
-              if (next !== 'subgroup') setSubgroupId(null);
-            }}
-            slotProps={SELECT_SLOT_PROPS}
-          >
-            <Option value="community">Community</Option>
-            <Option value="subgroup">Group</Option>
-            <Option value="private">Personal</Option>
-          </Select>
-        </FormControl>
-        {visibility === 'subgroup' && (
+        {!defaultSubgroupId && (
+          <FormControl>
+            <FormLabel>Visibility</FormLabel>
+            <Select
+              value={visibility}
+              onChange={(_e, v) => {
+                const next = (v as 'community' | 'subgroup' | 'private') ?? 'community';
+                setVisibility(next);
+                if (next !== 'subgroup') setSubgroupId(null);
+              }}
+              slotProps={SELECT_SLOT_PROPS}
+            >
+              <Option value="community">Community</Option>
+              <Option value="subgroup">Group</Option>
+              <Option value="private">Personal</Option>
+            </Select>
+          </FormControl>
+        )}
+        {!defaultSubgroupId && visibility === 'subgroup' && (
           <FormControl required error={!subgroupId}>
             <FormLabel>Group</FormLabel>
             <Select

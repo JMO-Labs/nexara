@@ -8,6 +8,8 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
+import structlog
+
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models.interest import UserInterest
 from app.repositories.interest_repo import InterestCategoryRepository, InterestRepository
@@ -17,6 +19,8 @@ from app.schemas.interest import (
     InterestResponse,
     UserInterestsResponse,
 )
+
+logger = structlog.get_logger(__name__)
 
 
 class InterestService:
@@ -125,3 +129,28 @@ class InterestService:
         """
         categories = await self._category_repo.list_all()
         return [InterestCategoryResponse.model_validate(c) for c in categories]
+
+    async def suggest_for_user(
+        self,
+        user_id: uuid.UUID,
+        category_slug: str,
+        source_text: str,
+    ) -> None:
+        """
+        @brief Record an interest suggestion from a prompt reply (non-blocking).
+
+        Logs the suggestion event for later processing. This is a suggestion only,
+        not an auto-add to the user's interests.
+
+        TODO: Implement user_interest_suggestions table backing when available.
+
+        @param user_id User ID.
+        @param category_slug Interest category slug.
+        @param source_text The text that triggered the suggestion (e.g., prompt reply).
+        """
+        logger.info(
+            "interest.suggested",
+            user_id=str(user_id),
+            category_slug=category_slug,
+            source_text=source_text,
+        )

@@ -9,6 +9,7 @@ import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import { Card, Chip, Avatar } from '@/components/ui';
 import { API_BASE } from '@/lib/auth/session';
+import { MediaThumb } from './MediaThumb';
 import type { Gallery } from '@/lib/api/galleries';
 
 export interface GalleryCardProps {
@@ -17,9 +18,6 @@ export interface GalleryCardProps {
 }
 
 export function GalleryCard({ gallery, onSelect }: GalleryCardProps) {
-  const cover = gallery.cover_media_id
-    ? `${API_BASE}/api/v1/media/${gallery.cover_media_id}/thumbnail`
-    : null;
   return (
     <Card
       role="button"
@@ -36,11 +34,13 @@ export function GalleryCard({ gallery, onSelect }: GalleryCardProps) {
       <Box
         sx={{
           aspectRatio: '4/3',
-          background: cover ? `url(${cover}) center/cover` : 'var(--joy-palette-neutral-100)',
+          background: 'var(--joy-palette-neutral-100)',
           position: 'relative',
+          overflow: 'hidden',
         }}
-        aria-label={cover ? `${gallery.title} cover` : 'No cover image'}
+        aria-label={gallery.cover_media_id ? `${gallery.title} cover` : 'No cover image'}
       >
+        <MediaThumb mediaId={gallery.cover_media_id} alt={`${gallery.title} cover`} />
         {/* Owner info with gradient backdrop */}
         <Box
           sx={{

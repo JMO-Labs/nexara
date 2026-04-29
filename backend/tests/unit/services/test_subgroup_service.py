@@ -524,3 +524,237 @@ class TestPinPost:
         assert post.is_pinned is True
         # One UPDATE was issued to clear prior pins.
         session.execute.assert_awaited()
+
+
+class TestCoverMedia:
+    """@brief Cover media ID update and cross-community validation."""
+
+    @pytest.mark.asyncio
+    async def test_update_with_valid_cover_media_persists_value(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """(a) update with valid cover_media_id persists value."""
+        from app.models.media import Media
+
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup.cover_media_id = None
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        media_id = uuid.uuid4()
+        # Mock media in same community
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = COMMUNITY_ID
+        subgroup_repo.get_media_by_id.return_value = media
+
+        updated = _make_subgroup(slug="family")
+        updated.cover_media_id = media_id
+        subgroup_repo.update_fields.return_value = updated
+
+        result = await service.update_subgroup(
+            "family",
+            owner,
+            {"cover_media_id": media_id},
+        )
+
+        assert result.cover_media_id == media_id
+        subgroup_repo.update_fields.assert_awaited_once()
+        args = subgroup_repo.update_fields.await_args[0]
+        data_dict = args[1]
+        assert data_dict["cover_media_id"] == media_id
+
+    @pytest.mark.asyncio
+    async def test_cross_community_media_id_raises_error(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """(b) cross-community media_id raises error and does NOT persist."""
+        from app.core.exceptions import NotFoundError
+        from app.models.media import Media
+
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        media_id = uuid.uuid4()
+        # Mock media from different community
+        other_community_id = uuid.UUID("00000000-0000-0000-0000-000000000999")
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = other_community_id
+        subgroup_repo.get_media_by_id.return_value = media
+
+        with pytest.raises(NotFoundError):
+            await service.update_subgroup(
+                "family",
+                owner,
+                {"cover_media_id": media_id},
+            )
+
+        # Verify update was NOT called.
+        subgroup_repo.update_fields.assert_not_awaited()
+
+
+class TestCreateWithInitialOwner:
+    """@brief Initial owner assignment on create."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_initial_owner_assigns_owner_and_creator_moderator(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Designated initial_owner_id becomes owner, creator becomes moderator."""
+        creator = _make_user(user_id=uuid.UUID("00000000-0000-0000-0000-000000000010"))
+        owner_id = uuid.UUID("00000000-0000-0000-0000-000000000011")
+
+        subgroup_repo.get_by_slug.return_value = None
+        created = _make_subgroup(slug="family")
+        subgroup_repo.create_subgroup.return_value = created
+        subgroup_repo.create_chat_channel.return_value = MagicMock(spec=ChatChannel)
+
+        # Mock session to validate user exists in community
+        session = AsyncMock()
+        # Mock execute for user query (simulating User fetch)
+        user_result = MagicMock()
+        user_result.scalar_one_or_none.return_value = MagicMock(
+            spec=User, id=owner_id, community_id=COMMUNITY_ID
+        )
+        session.execute = AsyncMock(return_value=user_result)
+        subgroup_repo._session = session
+
+        await service.create_subgroup(
+            creator,
+            name="Family",
+            slug="family",
+            initial_owner_id=owner_id,
+        )
+
+        # Should add two members: owner_id as owner, creator as moderator
+        assert member_repo.add_member.await_count == 2
+
+        calls = member_repo.add_member.await_args_list
+        # First call: target user as owner
+        assert calls[0].kwargs["user_id"] == owner_id
+        assert calls[0].kwargs["role"] == "owner"
+        # Second call: creator as moderator
+        assert calls[1].kwargs["user_id"] == creator.id
+        assert calls[1].kwargs["role"] == "moderator"
+
+    @pytest.mark.asyncio
+    async def test_create_with_initial_owner_invalid_raises(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Non-existent initial_owner_id raises NotFoundError; subgroup not created."""
+        from app.core.exceptions import NotFoundError
+
+        creator = _make_user()
+        invalid_owner_id = uuid.uuid4()
+
+        subgroup_repo.get_by_slug.return_value = None
+
+        # Mock session for user query that returns None
+        session = AsyncMock()
+        user_result = MagicMock()
+        user_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=user_result)
+        subgroup_repo._session = session
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                creator,
+                name="Family",
+                slug="family",
+                initial_owner_id=invalid_owner_id,
+            )
+
+        # Verify subgroup was NOT created
+        subgroup_repo.create_subgroup.assert_not_awaited()
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_with_cover_media_id_persists(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """cover_media_id provided on create is persisted."""
+        from app.models.media import Media
+
+        creator = _make_user()
+        media_id = uuid.uuid4()
+
+        subgroup_repo.get_by_slug.return_value = None
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = COMMUNITY_ID
+        subgroup_repo.get_media_by_id.return_value = media
+
+        created = _make_subgroup(slug="family")
+        created.cover_media_id = media_id
+        subgroup_repo.create_subgroup.return_value = created
+        subgroup_repo.create_chat_channel.return_value = MagicMock(spec=ChatChannel)
+
+        subgroup, _channel = await service.create_subgroup(
+            creator,
+            name="Family",
+            slug="family",
+            cover_media_id=media_id,
+        )
+
+        assert subgroup.cover_media_id == media_id
+        subgroup_repo.create_subgroup.assert_awaited_once()
+        kwargs = subgroup_repo.create_subgroup.await_args.kwargs
+        assert kwargs["cover_media_id"] == media_id
+
+    @pytest.mark.asyncio
+    async def test_create_with_invalid_cover_media_id_raises(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Cross-community cover_media_id raises NotFoundError; subgroup not created."""
+        from app.core.exceptions import NotFoundError
+        from app.models.media import Media
+
+        creator = _make_user()
+        media_id = uuid.uuid4()
+        other_community_id = uuid.UUID("00000000-0000-0000-0000-000000000999")
+
+        subgroup_repo.get_by_slug.return_value = None
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = other_community_id
+        subgroup_repo.get_media_by_id.return_value = media
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                creator,
+                name="Family",
+                slug="family",
+                cover_media_id=media_id,
+            )
+
+        # Verify subgroup was NOT created
+        subgroup_repo.create_subgroup.assert_not_awaited()
+        member_repo.add_member.assert_not_awaited()

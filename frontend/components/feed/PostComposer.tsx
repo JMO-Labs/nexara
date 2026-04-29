@@ -35,6 +35,7 @@ export interface PostComposerProps {
   onClearReplyPrompt?: () => void;
   promptType?: "standard" | "interest_capture";
   interestCategorySlug?: string;
+  subgroupId?: string | null;
 }
 
 export function PostComposer({
@@ -44,6 +45,7 @@ export function PostComposer({
   onClearReplyPrompt,
   promptType = "standard",
   interestCategorySlug,
+  subgroupId,
 }: PostComposerProps) {
   const me = useSession((s) => s.user);
   const createMut = useCreatePost();
@@ -93,11 +95,18 @@ export function PostComposer({
     }
     setError(null);
     try {
-      const payload: { content: string; reply_to_prompt_id?: string } = {
+      const payload: {
+        content: string;
+        reply_to_prompt_id?: string;
+        subgroup_id?: string | null;
+      } = {
         content: text,
       };
       if (replyToPromptId) {
         payload.reply_to_prompt_id = replyToPromptId;
+      }
+      if (subgroupId) {
+        payload.subgroup_id = subgroupId;
       }
       await createMut.mutateAsync(payload);
       editor.commands.clearContent();
@@ -119,6 +128,7 @@ export function PostComposer({
     replyToPromptId,
     promptType,
     interestCategorySlug,
+    subgroupId,
   ]);
 
   if (!me) return null;

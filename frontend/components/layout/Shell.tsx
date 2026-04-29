@@ -51,21 +51,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   if (status === 'unauthenticated') return null;
 
-  if (status === 'idle' || status === 'loading') {
-    return (
-      <Box
-        sx={{
-          minHeight: '100dvh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        aria-busy
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const isBooting = status === 'idle' || status === 'loading';
 
   return (
     <Box
@@ -91,6 +77,7 @@ export function Shell({ children }: { children: ReactNode }) {
           id="main"
           component="main"
           sx={{
+            position: 'relative',
             flex: 1,
             minHeight: 0,
             overflow: 'auto',
@@ -99,16 +86,36 @@ export function Shell({ children }: { children: ReactNode }) {
             display: 'flex',
             flexDirection: 'column',
           }}
+          aria-busy={isBooting || undefined}
         >
           {children}
+          {isBooting && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--joy-palette-background-body)',
+                zIndex: 10,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
         </Box>
         <MobileNav />
       </Box>
-      <ModalRoot />
-      <KeyboardShortcutsModal />
-      <HelpButton />
-      <WelcomeModal />
-      <OnboardingTour />
+      {!isBooting && (
+        <>
+          <ModalRoot />
+          <KeyboardShortcutsModal />
+          <HelpButton />
+          <WelcomeModal />
+          <OnboardingTour />
+        </>
+      )}
     </Box>
   );
 }

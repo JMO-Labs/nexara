@@ -16,10 +16,11 @@ import {
   addDays,
 } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
-import { assignLanes } from "@/lib/events/lanes";
+import { assignTimeLanes, type TimeLane } from "@/lib/events/lanes";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
+const HOUR_LABEL_WIDTH = 50;
 
 export interface WeekViewProps {
   weekStart: Date;
@@ -42,10 +43,32 @@ export function WeekView({
     [weekStart],
   );
 
-  const lanes = React.useMemo(
-    () => assignLanes(events, week, subgroupNames),
-    [events, week, subgroupNames],
-  );
+  /** Per-day lane assignment — events grouped by their start day, then time-overlap lanes within each day. */
+  const lanesPerDay = React.useMemo(() => {
+    const out: Array<{ day: Date; lanes: TimeLane[] }> = [];
+    for (const day of week) {
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+      const dayEvents = events.filter((ev) => {
+        const s = parseISO(ev.starts_at);
+        const e = parseISO(ev.ends_at);
+        return s <= dayEnd && e >= dayStart;
+      });
+      out.push({
+        day,
+        lanes: assignTimeLanes(
+          dayEvents,
+          subgroupNames,
+          HOUR_HEIGHT,
+          LANE_HEIGHT,
+          dayStart,
+        ),
+      });
+    }
+    return out;
+  }, [events, week, subgroupNames]);
 
   const now = new Date();
   const currentHour = getHours(now);
@@ -65,12 +88,14 @@ export function WeekView({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
+          gridTemplateColumns: `${HOUR_LABEL_WIDTH}px repeat(7, 1fr)`,
           gap: 0,
           mb: 1,
           px: 0.5,
         }}
       >
+        <Box />
+
         {week.map((day) => {
           const today = isTodayFn(day);
           return (
@@ -107,7 +132,7 @@ export function WeekView({
         })}
       </Box>
 
-      {/* Scrollable timeline grid */}
+      {/* Scrollable timeline */}
       <Box
         sx={{
           flex: 1,
@@ -118,11 +143,44 @@ export function WeekView({
           borderRadius: "sm",
           backgroundColor: "background.surface",
           position: "relative",
+          display: "flex",
         }}
       >
-        {/* Hour rows grid */}
+        {/* Hour label gutter */}
         <Box
           sx={{
+            width: HOUR_LABEL_WIDTH,
+            flexShrink: 0,
+            borderRight: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          {Array.from({ length: 24 }).map((_, hour) => (
+            <Box
+              key={hour}
+              sx={{
+                height: HOUR_HEIGHT,
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "flex-end",
+                pr: 1,
+                pt: 0.25,
+                fontSize: 10,
+                color: "text.tertiary",
+                fontWeight: 600,
+                borderBottom: hour < 23 ? "1px solid" : "none",
+                borderColor: "divider",
+              }}
+            >
+              {hour === 0 ? "" : format(new Date().setHours(hour, 0), "h a")}
+            </Box>
+          ))}
+        </Box>
+
+        {/* Hour rows grid (7 day columns) */}
+        <Box
+          sx={{
+            flex: 1,
             display: "grid",
             gridTemplateColumns: "repeat(7, 1fr)",
             minHeight: `${24 * HOUR_HEIGHT}px`,
@@ -146,103 +204,71 @@ export function WeekView({
                       backgroundColor: "background.level1",
                     },
                   }}
-                >
-                  {hour === 0 && dayIdx === 0 && (
-                    <Typography
-                      level="body-xs"
-                      sx={{
-                        position: "absolute",
-                        left: 4,
-                        top: 2,
-                        fontSize: 10,
-                        color: "text.tertiary",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      {format(new Date().setHours(hour, 0), "h a")}
-                    </Typography>
-                  )}
-                </Box>
+                />
               ))}
             </React.Fragment>
           ))}
 
-          {/* Event blocks overlay */}
-          {lanes.map((lane, idx) => {
-            const eventStart = parseISO(lane.event.starts_at);
-            const startHour = getHours(eventStart);
-            const startMin = eventStart.getMinutes();
-            const topOffset =
-              startHour * HOUR_HEIGHT + (startMin / 60) * HOUR_HEIGHT;
-
-            const eventEnd = parseISO(lane.event.ends_at);
-            const endHour = getHours(eventEnd);
-            const endMin = eventEnd.getMinutes();
-            const endTime = endHour * HOUR_HEIGHT + (endMin / 60) * HOUR_HEIGHT;
-            const height = Math.max(LANE_HEIGHT, endTime - topOffset);
-
-            const dayIdx = week.findIndex((d) => {
-              const dStart = new Date(d);
-              dStart.setHours(0, 0, 0, 0);
-              const eStart = new Date(eventStart);
-              eStart.setHours(0, 0, 0, 0);
-              return dStart.getTime() === eStart.getTime();
+          {/* Event blocks overlay — per-day, lane-aware horizontal placement */}
+          {lanesPerDay.flatMap(({ lanes }, dayIdx) => {
+            const dayWidthPct = 100 / 7;
+            const dayLeftPct = dayIdx * dayWidthPct;
+            return lanes.map((seg, segIdx) => {
+              const isSelected = selectedEventId === seg.event.id;
+              const laneWidthPct = dayWidthPct / seg.cluster;
+              const leftPct = dayLeftPct + seg.lane * laneWidthPct;
+              return (
+                <Box
+                  key={`event-${seg.event.id}-${dayIdx}-${segIdx}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectEvent(seg.event)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectEvent(seg.event);
+                    }
+                  }}
+                  sx={{
+                    position: "absolute",
+                    left: `${leftPct}%`,
+                    width: `calc(${laneWidthPct}% - 2px)`,
+                    top: seg.topOffset,
+                    height: seg.height,
+                    zIndex: 10,
+                    px: 0.5,
+                    py: 0.25,
+                    boxSizing: "border-box",
+                    backgroundColor: isSelected
+                      ? seg.tone.solid
+                      : seg.tone.soft,
+                    color: isSelected ? seg.tone.onSolid : seg.tone.onSoft,
+                    borderRadius: "4px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    cursor: "pointer",
+                    border: `1px solid ${isSelected ? seg.tone.solid : "transparent"}`,
+                    transition: "all 120ms ease",
+                    "&:hover": {
+                      backgroundColor: seg.tone.solid,
+                      color: seg.tone.onSolid,
+                      zIndex: 11,
+                    },
+                    "&:focus-visible": {
+                      outline: "2px solid",
+                      outlineColor: seg.tone.solid,
+                      outlineOffset: "1px",
+                    },
+                  }}
+                >
+                  {seg.event.title}
+                </Box>
+              );
             });
-
-            if (dayIdx === -1) return null;
-
-            const isSelected = selectedEventId === lane.event.id;
-
-            return (
-              <Box
-                key={`event-${lane.event.id}-${idx}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectEvent(lane.event)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelectEvent(lane.event);
-                  }
-                }}
-                sx={{
-                  position: "absolute",
-                  left: `${(dayIdx * 100) / 7}%`,
-                  width: `${(100 / 7) * 0.95}%`,
-                  top: topOffset,
-                  height,
-                  zIndex: 10,
-                  px: 0.5,
-                  py: 0.25,
-                  boxSizing: "border-box",
-                  backgroundColor: isSelected
-                    ? lane.tone.solid
-                    : lane.tone.soft,
-                  color: isSelected ? lane.tone.onSolid : lane.tone.onSoft,
-                  borderRadius: "4px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  lineHeight: 1.2,
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "ellipsis",
-                  cursor: "pointer",
-                  border: `1px solid ${isSelected ? lane.tone.solid : "transparent"}`,
-                  transition: "all 120ms ease",
-                  "&:hover": {
-                    backgroundColor: lane.tone.solid,
-                    color: lane.tone.onSolid,
-                  },
-                  "&:focus-visible": {
-                    outline: "2px solid",
-                    outlineColor: lane.tone.solid,
-                    outlineOffset: "1px",
-                  },
-                }}
-              >
-                {lane.event.title}
-              </Box>
-            );
           })}
 
           {/* Current time indicator */}

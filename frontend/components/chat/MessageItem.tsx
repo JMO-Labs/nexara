@@ -18,7 +18,7 @@ import {
   ArrowUturnLeftIcon,
   ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
-import { Avatar, IconButton } from '@/components/ui';
+import { Avatar, IconButton, Markdown } from '@/components/ui';
 import type { ChatMessage } from '@/lib/api/chat';
 
 export interface MessageItemProps {
@@ -112,17 +112,18 @@ export function MessageItem({
             </Typography>
           </Stack>
         )}
-        <Typography
-          level="body-sm"
-          sx={{
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            color: deleted ? 'text.tertiary' : undefined,
-            fontStyle: deleted ? 'italic' : undefined,
-          }}
-        >
-          {message.content}
-        </Typography>
+        {deleted ? (
+          <Typography
+            level="body-sm"
+            sx={{ color: 'text.tertiary', fontStyle: 'italic' }}
+          >
+            {message.content}
+          </Typography>
+        ) : (
+          <Box sx={{ fontSize: '0.875rem' }}>
+            <Markdown content={message.content} size="sm" />
+          </Box>
+        )}
       </Stack>
 
       {hover && !deleted && onReply && (

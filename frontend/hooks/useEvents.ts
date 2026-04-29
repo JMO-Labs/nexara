@@ -16,6 +16,7 @@ import {
   unrsvpEvent,
   type CreateEventBody,
   type EventItem,
+  type ListEventsParams,
 } from '@/lib/api/events';
 
 /** Round to start-of-hour so the query key is stable across renders. */
@@ -25,24 +26,24 @@ function bucketHour(d: Date): Date {
   return r;
 }
 
-export function useUpcomingEvents(days = 30) {
+export function useUpcomingEvents(days = 30, subgroup_id?: string) {
   const now = bucketHour(new Date());
   const end = new Date(now.getTime() + days * 86400_000);
   const start = now.toISOString();
   const endIso = end.toISOString();
   return useQuery({
-    queryKey: qk.events.list({ from: start, to: endIso }),
-    queryFn: () => listEvents({ start, end: endIso, limit: 200 }),
+    queryKey: qk.events.list({ from: start, to: endIso, subgroup_id }),
+    queryFn: () => listEvents({ start, end: endIso, limit: 200, subgroup_id }),
     staleTime: 5 * 60_000,
   });
 }
 
-export function useEventsInRange(start: Date, end: Date) {
+export function useEventsInRange(start: Date, end: Date, subgroup_id?: string) {
   const startIso = start.toISOString();
   const endIso = end.toISOString();
   return useQuery({
-    queryKey: qk.events.list({ from: startIso, to: endIso }),
-    queryFn: () => listEvents({ start: startIso, end: endIso, limit: 500 }),
+    queryKey: qk.events.list({ from: startIso, to: endIso, subgroup_id }),
+    queryFn: () => listEvents({ start: startIso, end: endIso, limit: 500, subgroup_id }),
     staleTime: 5 * 60_000,
   });
 }

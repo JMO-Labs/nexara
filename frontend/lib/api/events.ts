@@ -60,13 +60,21 @@ export interface CreateEventBody {
 
 const BASE = "/api/v1/events";
 
+export interface ListEventsParams {
+  start?: string;
+  end?: string;
+  limit?: number;
+  subgroup_id?: string;
+}
+
 export const listEvents = (
-  params: { start?: string; end?: string; limit?: number } = {},
+  params: ListEventsParams = {},
 ) => {
   const qs = new URLSearchParams();
   if (params.start) qs.set("start", params.start);
   if (params.end) qs.set("end", params.end);
   qs.set("limit", String(params.limit ?? 100));
+  if (params.subgroup_id) qs.set("subgroup_id", params.subgroup_id);
   return apiGet<EventListResponse>(`${BASE}?${qs}`);
 };
 

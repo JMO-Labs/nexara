@@ -92,6 +92,17 @@ export function useEnsureSubgroupChannel() {
 }
 
 /**
+ * @brief Fetch or create a subgroup's channel via query (auto-fetches on mount).
+ */
+export function useSubgroupChannel(subgroupId: string) {
+  return useQuery({
+    queryKey: qk.chat.subgroupChannel(subgroupId),
+    queryFn: () => ensureSubgroupChannel(subgroupId),
+    staleTime: Infinity,
+  });
+}
+
+/**
  * @brief Acquire the singleton chat WS, expose status and a `send` helper.
  *        Ref-counted across components; the socket auto-disconnects when
  *        no consumers remain.

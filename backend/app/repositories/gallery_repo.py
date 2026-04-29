@@ -177,7 +177,7 @@ class GalleryRepository(BaseRepository[Gallery]):
         return result.scalar_one_or_none()
 
     async def add_item(self, item: GalleryItem) -> GalleryItem:
-        """@brief Insert a gallery item and bump gallery item_count."""
+        """@brief Insert a gallery item, bump item_count, set cover if missing."""
         self._session.add(item)
         await self._session.flush()
         await self._session.refresh(item)
@@ -185,6 +185,15 @@ class GalleryRepository(BaseRepository[Gallery]):
             update(Gallery)
             .where(Gallery.id == item.gallery_id)
             .values(item_count=Gallery.item_count + 1)
+        )
+        # Auto-set cover_media_id when gallery has no cover yet.
+        await self._session.execute(
+            update(Gallery)
+            .where(
+                Gallery.id == item.gallery_id,
+                Gallery.cover_media_id.is_(None),
+            )
+            .values(cover_media_id=item.media_id)
         )
         await self._session.flush()
         return item

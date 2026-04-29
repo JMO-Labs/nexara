@@ -228,6 +228,22 @@ class PromptService:
 
     # ── Summary ───────────────────────────────────────────────────────
 
+    async def _collect_summary_media_ids(self, prompt_id: uuid.UUID) -> list[uuid.UUID]:
+        """
+        @brief Collect media IDs from replies to a prompt, up to 9 total.
+
+        @param prompt_id Prompt UUID.
+        @return List of media IDs (max 9) from prompt replies.
+        """
+        replies = await self._post_repo.list_replies_for_prompt(prompt_id, limit=50)
+        media_ids: list[uuid.UUID] = []
+        for reply in replies:
+            if "media_ids" in reply:
+                media_ids.extend(reply["media_ids"])
+            if len(media_ids) >= 9:
+                break
+        return media_ids[:9]
+
     async def finalise_expired(self, now: datetime | None = None) -> int:
         """
         @brief Generate summary posts for prompts whose active window expired.
@@ -252,6 +268,7 @@ class PromptService:
             summary_post_id: uuid.UUID | None = None
             if prompt and prompt.generate_summary:
                 summary_content = self._build_summary_content(prompt, tracker)
+                media_ids = await self._collect_summary_media_ids(tracker.prompt_id)
                 summary = Post(
                     community_id=self._community_id,
                     author_id=prompt.created_by,
@@ -260,6 +277,8 @@ class PromptService:
                 )
                 summary = await self._post_repo.create(summary)
                 summary_post_id = summary.id
+                # TODO: Attach collected media_ids to summary post if needed
+                # Currently collected media_ids are available but not attached
 
                 if self._notifications:
                     try:

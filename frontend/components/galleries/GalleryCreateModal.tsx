@@ -13,14 +13,15 @@ import { useCreateGallery } from '@/hooks/useGalleries';
 export interface GalleryCreateModalProps {
   open: boolean;
   onClose: () => void;
+  defaultSubgroupId?: string | null;
 }
 
-export function GalleryCreateModal({ open, onClose }: GalleryCreateModalProps) {
+export function GalleryCreateModal({ open, onClose, defaultSubgroupId }: GalleryCreateModalProps) {
   const create = useCreateGallery();
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [visibility, setVisibility] = React.useState<'community' | 'subgroup' | 'private'>(
-    'community',
+    defaultSubgroupId ? 'subgroup' : 'community',
   );
 
   const submit = async (e: React.FormEvent) => {
@@ -29,10 +30,11 @@ export function GalleryCreateModal({ open, onClose }: GalleryCreateModalProps) {
       title,
       description: description || null,
       visibility,
+      ...(defaultSubgroupId && { subgroup_id: defaultSubgroupId }),
     });
     setTitle('');
     setDescription('');
-    setVisibility('community');
+    setVisibility(defaultSubgroupId ? 'subgroup' : 'community');
     onClose();
   };
 
@@ -51,19 +53,21 @@ export function GalleryCreateModal({ open, onClose }: GalleryCreateModalProps) {
             onChange={(e) => setDescription(e.target.value)}
           />
         </FormControl>
-        <FormControl>
-          <FormLabel>Visibility</FormLabel>
-          <Select
-            value={visibility}
-            onChange={(_e, v) =>
-              setVisibility((v as 'community' | 'subgroup' | 'private') ?? 'community')
-            }
-          >
-            <Option value="community">Community</Option>
-            <Option value="subgroup">Subgroup</Option>
-            <Option value="private">Private</Option>
-          </Select>
-        </FormControl>
+        {!defaultSubgroupId && (
+          <FormControl>
+            <FormLabel>Visibility</FormLabel>
+            <Select
+              value={visibility}
+              onChange={(_e, v) =>
+                setVisibility((v as 'community' | 'subgroup' | 'private') ?? 'community')
+              }
+            >
+              <Option value="community">Community</Option>
+              <Option value="subgroup">Subgroup</Option>
+              <Option value="private">Private</Option>
+            </Select>
+          </FormControl>
+        )}
         <Stack direction="row" spacing={1} justifyContent="flex-end">
           <Button variant="plain" color="neutral" type="button" onClick={onClose}>
             Cancel

@@ -7,6 +7,122 @@ import { isSameDay, parseISO, startOfDay } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent, type EventTone } from "@/components/events/eventColors";
 
+export interface TimeLane {
+  event: EventItem;
+  lane: number;
+  /** Total concurrent lanes in this event's overlap cluster (>=1). Use to compute width. */
+  cluster: number;
+  topOffset: number;
+  height: number;
+  tone: EventTone;
+}
+
+/**
+ * Time-based lane assignment for hourly views (Day / Week column).
+ * Sweep-line: events that overlap in time share a cluster; cluster.cluster is
+ * the max concurrent lane count so width = 1/cluster.
+ *
+ * @param events Already filtered to a single day's events (any order).
+ * @param subgroupNames Lookup for tone resolution.
+ * @param hourHeight Pixel height of one hour row.
+ * @param minHeight Minimum block height in px (short events).
+ */
+export function assignTimeLanes(
+  events: EventItem[],
+  subgroupNames: Map<string, string>,
+  hourHeight: number,
+  minHeight: number,
+  dayStart?: Date,
+): TimeLane[] {
+  if (events.length === 0) return [];
+  const sorted = [...events].sort(
+    (a, b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
+  );
+
+  type Item = {
+    ev: EventItem;
+    s: number;
+    e: number;
+    topOffset: number;
+    height: number;
+  };
+  const dayBaseMs = dayStart ? startOfDay(dayStart).getTime() : null;
+
+  const items: Item[] = sorted.map((ev) => {
+    const evStart = parseISO(ev.starts_at);
+    const evEnd = parseISO(ev.ends_at);
+    let startMin: number;
+    let endMin: number;
+    if (dayBaseMs !== null) {
+      const dayEndMs = dayBaseMs + 24 * 60 * 60_000;
+      const sMs = Math.max(evStart.getTime(), dayBaseMs);
+      const eMs = Math.min(evEnd.getTime(), dayEndMs);
+      startMin = (sMs - dayBaseMs) / 60_000;
+      endMin = (eMs - dayBaseMs) / 60_000;
+    } else {
+      startMin = evStart.getHours() * 60 + evStart.getMinutes();
+      endMin = evEnd.getHours() * 60 + evEnd.getMinutes();
+    }
+    const topOffset = (startMin / 60) * hourHeight;
+    const height = Math.max(minHeight, ((endMin - startMin) / 60) * hourHeight);
+    return { ev, s: startMin, e: endMin, topOffset, height };
+  });
+
+  // Greedy lane fill — assign each item to lowest-numbered lane whose last
+  // event ends at or before this item's start.
+  const laneEnds: number[] = [];
+  const laneOf = new Map<EventItem, number>();
+  for (const it of items) {
+    let lane = laneEnds.findIndex((end) => end <= it.s);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(it.e);
+    } else {
+      laneEnds[lane] = it.e;
+    }
+    laneOf.set(it.ev, lane);
+  }
+
+  // Cluster sizing — for each item, find max lanes among overlapping items
+  // (transitive: if A overlaps B and B overlaps C, all share cluster size).
+  // Build undirected overlap graph, BFS to find connected components.
+  const idx = new Map(items.map((it, i) => [it.ev, i] as const));
+  const adj: number[][] = items.map(() => []);
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      if (items[i].s < items[j].e && items[j].s < items[i].e) {
+        adj[i].push(j);
+        adj[j].push(i);
+      }
+    }
+  }
+  const compOf = new Array(items.length).fill(-1);
+  const compMaxLanes: number[] = [];
+  for (let i = 0; i < items.length; i++) {
+    if (compOf[i] !== -1) continue;
+    const compId = compMaxLanes.length;
+    let maxLane = 0;
+    const stack = [i];
+    while (stack.length) {
+      const k = stack.pop()!;
+      if (compOf[k] !== -1) continue;
+      compOf[k] = compId;
+      maxLane = Math.max(maxLane, laneOf.get(items[k].ev)!);
+      for (const n of adj[k]) if (compOf[n] === -1) stack.push(n);
+    }
+    compMaxLanes.push(maxLane + 1);
+  }
+
+  return items.map((it) => ({
+    event: it.ev,
+    lane: laneOf.get(it.ev)!,
+    cluster: compMaxLanes[compOf[idx.get(it.ev)!]],
+    topOffset: it.topOffset,
+    height: it.height,
+    tone: toneForEvent(it.ev, subgroupNames),
+  }));
+}
+
 export interface Lane {
   event: EventItem;
   col: number;

@@ -24,7 +24,7 @@ import {
   TrashIcon,
   ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
-import { IconButton } from '@/components/ui';
+import { IconButton, Markdown } from '@/components/ui';
 import { RsvpInline } from './RsvpInline';
 import type { EventItem } from '@/lib/api/events';
 import { mapsUrlForCoords } from '@/lib/geo/openInMaps';
@@ -434,17 +434,9 @@ const DrawerSurface = React.forwardRef<
         )}
 
         {event.description && (
-          <Typography
-            level="body-sm"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              color: 'text.secondary',
-              mb: 2,
-              maxWidth: '72ch',
-            }}
-          >
-            {event.description}
-          </Typography>
+          <Box sx={{ color: 'text.secondary', mb: 2, maxWidth: '72ch', fontSize: '0.875rem' }}>
+            <Markdown content={event.description} size="sm" />
+          </Box>
         )}
 
         <RsvpInline

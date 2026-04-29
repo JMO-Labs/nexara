@@ -8,7 +8,7 @@ import Stack from '@mui/joy/Stack';
 import Typography from '@mui/joy/Typography';
 import Box from '@mui/joy/Box';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Avatar, Button, Textarea, Skeleton } from '@/components/ui';
+import { Avatar, Button, Textarea, Skeleton, Markdown } from '@/components/ui';
 import { useComments, useCreateComment } from '@/hooks/usePosts';
 import type { Comment } from '@/lib/api/posts';
 
@@ -48,9 +48,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
           }}
         >
           <Typography level="title-sm">{comment.author.display_name}</Typography>
-          <Typography level="body-sm" sx={{ whiteSpace: 'pre-wrap' }}>
-            {comment.content}
-          </Typography>
+          <Markdown content={comment.content} size="sm" />
         </Box>
         <Stack direction="row" spacing={1.5} sx={{ mt: 0.5, ml: 1 }} alignItems="center">
           <Typography level="body-xs" textColor="text.tertiary">

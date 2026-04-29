@@ -45,6 +45,7 @@ class PostRepository(BaseRepository[Post]):
         viewer_id: uuid.UUID | None = None,
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
+        subgroup_id: uuid.UUID | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """
         @brief Fetch paginated feed posts with author, media, reactions, and comment count.
@@ -53,6 +54,7 @@ class PostRepository(BaseRepository[Post]):
         @param viewer_id Current user UUID for block filter and reaction state.
         @param cursor Opaque cursor (ISO timestamp of last seen post).
         @param limit Number of posts to return.
+        @param subgroup_id Optional subgroup ID to filter posts.
         @return Tuple of (enriched post dicts, next_cursor).
         """
         limit = min(limit, MAX_PAGE_SIZE)
@@ -71,6 +73,9 @@ class PostRepository(BaseRepository[Post]):
                 stmt = stmt.where(Post.created_at < cursor_ts)
             except (ValueError, TypeError):
                 pass
+
+        if subgroup_id is not None:
+            stmt = stmt.where(Post.subgroup_id == subgroup_id)
 
         if viewer_id:
             stmt = self.apply_block_filter(stmt, viewer_id)
@@ -127,6 +132,7 @@ class PostRepository(BaseRepository[Post]):
         content: str,
         community_id: uuid.UUID,
         reply_to_prompt_id: uuid.UUID | None = None,
+        subgroup_id: uuid.UUID | None = None,
     ) -> Post:
         """
         @brief Insert a new post row.
@@ -135,6 +141,7 @@ class PostRepository(BaseRepository[Post]):
         @param content Markdown content.
         @param community_id Community scope.
         @param reply_to_prompt_id Optional prompt post UUID for reply tracking.
+        @param subgroup_id Optional subgroup UUID to scope the post.
         @return The created Post ORM instance.
         """
         post = Post(
@@ -142,6 +149,7 @@ class PostRepository(BaseRepository[Post]):
             content=content,
             community_id=community_id,
             reply_to_prompt_id=reply_to_prompt_id,
+            subgroup_id=subgroup_id,
         )
         return await self.create(post)
 
@@ -179,6 +187,53 @@ class PostRepository(BaseRepository[Post]):
             return False
         await self.soft_delete(post)
         return True
+
+    async def list_replies_for_prompt(
+        self,
+        prompt_id: uuid.UUID,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """
+        @brief Fetch posts that are replies to a prompt, with media IDs.
+
+        @param prompt_id Prompt UUID to filter replies.
+        @param limit Maximum number of posts to return.
+        @return List of dicts with post data and media_ids list.
+        """
+        from app.models.media import Media
+
+        stmt = (
+            self._base_query()
+            .where(Post.reply_to_prompt_id == prompt_id)
+            .order_by(Post.created_at.asc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        posts = list(result.scalars().all())
+
+        if not posts:
+            return []
+
+        post_ids = [p.id for p in posts]
+
+        media_stmt = (
+            select(PostMedia.post_id, Media.id)
+            .join(Media, PostMedia.media_id == Media.id)
+            .where(PostMedia.post_id.in_(post_ids))
+            .order_by(PostMedia.position)
+        )
+        media_result = await self._session.execute(media_stmt)
+        media_map: dict[uuid.UUID, list[uuid.UUID]] = {}
+        for pm_post_id, media_id in media_result.all():
+            media_map.setdefault(pm_post_id, []).append(media_id)
+
+        return [
+            {
+                "id": p.id,
+                "media_ids": media_map.get(p.id, []),
+            }
+            for p in posts
+        ]
 
     async def _enrich_posts(
         self,

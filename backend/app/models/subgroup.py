@@ -34,6 +34,12 @@ class Subgroup(Base):
     slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text)
     avatar_url: Mapped[str | None] = mapped_column(Text)
+    cover_media_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     join_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="open")
     created_by: Mapped[uuid.UUID | None] = mapped_column(

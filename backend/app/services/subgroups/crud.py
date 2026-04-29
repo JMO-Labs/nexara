@@ -86,12 +86,14 @@ class SubgroupCrudMixin:
         is_private: bool = False,
         join_policy: str = "open",
         parent_id: uuid.UUID | None = None,
+        cover_media_id: uuid.UUID | None = None,
+        initial_owner_id: uuid.UUID | None = None,
     ) -> tuple[Subgroup, ChatChannel]:
         """
         @brief Create a new subgroup.
 
-        Enforces slug uniqueness, auto-adds the creator as ``owner``,
-        and inserts the associated chat channel row.
+        Enforces slug uniqueness, auto-adds the creator as ``owner`` (or moderator
+        if ``initial_owner_id`` is set), and inserts the associated chat channel row.
 
         @param user The authenticated user creating the subgroup.
         @param name Subgroup display name.
@@ -100,14 +102,29 @@ class SubgroupCrudMixin:
         @param avatar_url Optional avatar URL.
         @param is_private Hide from public discovery when true.
         @param join_policy One of ``open``/``invite_only``/``admin_approval``.
+        @param cover_media_id Optional cover media ID (must be in same community).
+        @param initial_owner_id Optional user ID to assign as owner; creator becomes moderator.
         @return Tuple of (Subgroup, ChatChannel).
         @raises ConflictError If a subgroup with this slug exists.
+        @raises NotFoundError If cover_media_id or initial_owner_id invalid.
         """
         existing = await self._subgroup_repo.get_by_slug(slug, self._community_id)
         if existing is not None:
             raise ConflictError(message=_("A subgroup with this slug already exists"))
 
         await self._validate_parent(parent_id)
+
+        # Validate cover_media_id if provided
+        if cover_media_id is not None:
+            media = await self._subgroup_repo.get_media_by_id(cover_media_id)
+            if media is None or media.community_id != self._community_id:
+                raise NotFoundError(message=_("Media not found or not in this community"))
+
+        # Validate initial_owner_id if provided
+        if initial_owner_id is not None and initial_owner_id != user.id:
+            owner = await self._get_user_by_id(initial_owner_id)
+            if owner is None or owner.community_id != self._community_id:
+                raise NotFoundError(message=_("User not found or not in this community"))
 
         subgroup = await self._subgroup_repo.create_subgroup(
             community_id=self._community_id,
@@ -119,14 +136,31 @@ class SubgroupCrudMixin:
             join_policy=join_policy,
             created_by=user.id,
             parent_id=parent_id,
+            cover_media_id=cover_media_id,
         )
 
-        await self._member_repo.add_member(
-            community_id=self._community_id,
-            subgroup_id=subgroup.id,
-            user_id=user.id,
-            role="owner",
-        )
+        # Add members: if initial_owner_id, add target as owner and creator as moderator
+        if initial_owner_id is not None and initial_owner_id != user.id:
+            await self._member_repo.add_member(
+                community_id=self._community_id,
+                subgroup_id=subgroup.id,
+                user_id=initial_owner_id,
+                role="owner",
+            )
+            await self._member_repo.add_member(
+                community_id=self._community_id,
+                subgroup_id=subgroup.id,
+                user_id=user.id,
+                role="moderator",
+            )
+        else:
+            # Creator is owner (default)
+            await self._member_repo.add_member(
+                community_id=self._community_id,
+                subgroup_id=subgroup.id,
+                user_id=user.id,
+                role="owner",
+            )
 
         channel = await self._subgroup_repo.create_chat_channel(
             community_id=self._community_id,
@@ -141,6 +175,23 @@ class SubgroupCrudMixin:
             created_by=str(user.id),
         )
         return subgroup, channel
+
+    async def _get_user_by_id(self, user_id: uuid.UUID) -> User | None:
+        """
+        @brief Fetch a user by ID, filtered by community.
+
+        @param user_id User UUID.
+        @return The User or None.
+        """
+        from sqlalchemy import select
+
+        stmt = select(User).where(
+            User.id == user_id,
+            User.community_id == self._community_id,
+            User.deleted_at.is_(None),
+        )
+        result = await self._subgroup_repo._session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_subgroup(self, slug: str, user: User) -> Subgroup:
         """
@@ -190,7 +241,8 @@ class SubgroupCrudMixin:
         @param user Acting user.
         @param updates Dict of field updates.
         @return The updated Subgroup.
-        @raises NotFoundError If subgroup not found.
+        @raises NotFoundError If subgroup not found or cover_media_id is
+            from a different community.
         @raises AuthorizationError If user lacks permission or subgroup
             is archived.
         """
@@ -204,6 +256,11 @@ class SubgroupCrudMixin:
 
         if "parent_id" in updates:
             await self._validate_parent(updates["parent_id"], self_id=subgroup.id)
+
+        if "cover_media_id" in updates and updates["cover_media_id"] is not None:
+            media = await self._subgroup_repo.get_media_by_id(updates["cover_media_id"])
+            if media is None or media.community_id != self._community_id:
+                raise NotFoundError(message=_("Media not found or not in this community"))
 
         return await self._subgroup_repo.update_fields(subgroup, updates)
 

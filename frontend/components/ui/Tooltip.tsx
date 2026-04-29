@@ -5,7 +5,22 @@
  */
 import { Tooltip as JoyTooltip, type TooltipProps } from '@mui/joy';
 import { Box } from '@mui/joy';
-import type { ReactNode } from 'react';
+import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+
+/**
+ * Anchor element used by JoyTooltip. Joy clones the child and injects an
+ * `ownerState` prop; a plain DOM span warns. This forwardRef strips it.
+ */
+const TooltipAnchor = forwardRef<
+  HTMLSpanElement,
+  HTMLAttributes<HTMLSpanElement> & { ownerState?: unknown }
+>(function TooltipAnchor({ ownerState: _ownerState, children, ...rest }, ref) {
+  return (
+    <span ref={ref} {...rest} style={{ display: 'inline-flex', ...rest.style }}>
+      {children}
+    </span>
+  );
+});
 
 export interface AppTooltipProps extends Omit<TooltipProps, 'title' | 'children'> {
   title: ReactNode;
@@ -20,9 +35,14 @@ export function Tooltip({
   children,
   disabled,
   placement = 'top',
+  enterDelay = 400,
+  enterNextDelay,
   ...rest
 }: AppTooltipProps) {
   if (disabled) return <>{children}</>;
+  // Default enterNextDelay to match enterDelay so each tooltip waits its own
+  // delay instead of inheriting the shared shorter "next" timer.
+  const nextDelay = enterNextDelay ?? enterDelay;
   const body = shortcut ? (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <span>{title}</span>
@@ -48,13 +68,15 @@ export function Tooltip({
     <JoyTooltip
       title={body}
       placement={placement}
-      enterDelay={400}
+      enterDelay={enterDelay}
+      enterNextDelay={nextDelay}
       leaveDelay={0}
       arrow
-      variant="outlined"
+      variant="solid"
+      color="neutral"
       {...rest}
     >
-      <span style={{ display: 'inline-flex' }}>{children}</span>
+      <TooltipAnchor>{children}</TooltipAnchor>
     </JoyTooltip>
   );
 }

@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.models.media import Media
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -185,10 +186,12 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         join_policy: str,
         created_by: uuid.UUID,
         parent_id: uuid.UUID | None = None,
+        cover_media_id: uuid.UUID | None = None,
     ) -> Subgroup:
         """
         @brief Insert a new subgroup row.
 
+        @param cover_media_id Optional cover media ID (already validated).
         @return The created Subgroup (with server defaults populated).
         """
         subgroup = Subgroup(
@@ -201,6 +204,7 @@ class SubgroupRepository(BaseRepository[Subgroup]):
             join_policy=join_policy,
             created_by=created_by,
             parent_id=parent_id,
+            cover_media_id=cover_media_id,
         )
         return await self.create(subgroup)
 
@@ -313,6 +317,41 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_media_by_id(
+        self,
+        media_id: uuid.UUID,
+    ) -> Media | None:
+        """
+        @brief Fetch a media row by ID.
+
+        @param media_id The media's UUID.
+        @return The Media or None.
+        """
+        stmt = select(Media).where(Media.id == media_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def is_member(
+        self,
+        subgroup_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> bool:
+        """
+        @brief Check if a user is a member of a subgroup.
+
+        @param subgroup_id Subgroup ID.
+        @param user_id User ID.
+        @return True if user is a member.
+        """
+        stmt = select(
+            func.count(SubgroupMember.user_id)
+        ).where(
+            SubgroupMember.subgroup_id == subgroup_id,
+            SubgroupMember.user_id == user_id,
+        )
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one() or 0) > 0
+
 
 class SubgroupMemberRepository(BaseRepository[SubgroupMember]):
     """
@@ -341,6 +380,20 @@ class SubgroupMemberRepository(BaseRepository[SubgroupMember]):
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def list_my_roles(
+        self,
+        user_id: uuid.UUID,
+    ) -> dict[uuid.UUID, str]:
+        """
+        @brief Map subgroup_id -> role for every direct membership of user_id.
+        @return Dict keyed by subgroup_id with role value.
+        """
+        stmt = select(SubgroupMember.subgroup_id, SubgroupMember.role).where(
+            SubgroupMember.user_id == user_id,
+        )
+        result = await self._session.execute(stmt)
+        return {sid: role for sid, role in result.all()}
 
     async def add_member(
         self,

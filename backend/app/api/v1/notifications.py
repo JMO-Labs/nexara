@@ -48,7 +48,7 @@ def _build_service(
     )
 
 
-@router.get("/", response_model=NotificationList)
+@router.get("", response_model=NotificationList)
 async def list_notifications(
     user: User = Depends(get_current_user),
     service: NotificationService = Depends(_build_service),
@@ -93,7 +93,7 @@ async def mark_all_read(
     return MessageResponse(message=_("Marked {count} as read").format(count=count))
 
 
-@router.delete("/", response_model=MessageResponse)
+@router.delete("", response_model=MessageResponse)
 async def clear_all_notifications(
     user: User = Depends(get_current_user),
     service: NotificationService = Depends(_build_service),

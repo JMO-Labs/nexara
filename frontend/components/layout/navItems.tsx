@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: '/app', Icon: NewspaperIcon, mobile: true },
   { label: 'Chat', href: '/app/chat', Icon: ChatBubbleLeftRightIcon, mobile: true },
   { label: 'Events', href: '/app/events', Icon: CalendarDaysIcon, mobile: true },
-  { label: 'Subgroups', href: '/app/subgroups', Icon: UserGroupIcon },
+  { label: 'Groups', href: '/app/subgroups', Icon: UserGroupIcon },
   { label: 'Galleries', href: '/app/galleries', Icon: PhotoIcon },
   { label: 'Media', href: '/app/media', Icon: FilmIcon },
   { label: 'Members', href: '/app/members', Icon: UsersIcon },

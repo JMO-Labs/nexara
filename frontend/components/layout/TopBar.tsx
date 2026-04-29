@@ -14,6 +14,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { IconButton } from '@/components/ui/IconButton';
 import { NotificationsBell } from '@/components/notifications/NotificationsBell';
 import { AvatarMenu } from './AvatarMenu';
+import { GroupContextSwitcher } from './GroupContextSwitcher';
 import { useUI } from '@/stores/ui';
 
 export function TopBar() {
@@ -87,6 +88,7 @@ export function TopBar() {
             <MagnifyingGlassIcon aria-hidden width={20} height={20} />
           </IconButton>
         </Box>
+        <GroupContextSwitcher />
         <NotificationsBell />
         <AvatarMenu />
       </Stack>

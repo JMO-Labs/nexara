@@ -21,10 +21,12 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.post_repo import PostRepository
+from app.repositories.subgroup_media_repo import SubgroupMediaRepository
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.schemas.common import MessageResponse
 from app.schemas.subgroup import (
     AddMemberRequest,
+    MediaAggregateListResponse,
     MembershipResponse,
     PinPostRequest,
     RoleChangeRequest,
@@ -34,6 +36,7 @@ from app.schemas.subgroup import (
     SubgroupUpdate,
 )
 from app.services.subgroup_service import SubgroupService
+from app.services.subgroups.subgroup_media_service import SubgroupMediaService
 
 logger = structlog.get_logger(__name__)
 
@@ -74,6 +77,7 @@ async def _detail_response(
         slug=subgroup.slug,
         description=subgroup.description,
         avatar_url=subgroup.avatar_url,
+        cover_media_id=subgroup.cover_media_id,
         is_private=subgroup.is_private,
         join_policy=subgroup.join_policy,
         created_by=subgroup.created_by,
@@ -94,7 +98,13 @@ async def list_subgroups(
 ) -> list[SubgroupResponse]:
     """@brief List subgroups visible to the current user."""
     subgroups = await service.list_subgroups(user)
-    return [SubgroupResponse.model_validate(s) for s in subgroups]
+    roles = await service._member_repo.list_my_roles(user.id)  # noqa: SLF001
+    out: list[SubgroupResponse] = []
+    for s in subgroups:
+        resp = SubgroupResponse.model_validate(s)
+        resp.my_role = roles.get(s.id)
+        out.append(resp)
+    return out
 
 
 @router.post(
@@ -107,7 +117,7 @@ async def create_subgroup(
     user: User = Depends(get_current_user),
     service: SubgroupService = Depends(_build_service),
 ) -> SubgroupDetailResponse:
-    """@brief Create a new subgroup. The creator becomes owner."""
+    """@brief Create a new subgroup. The creator becomes owner unless initial_owner_id is set."""
     subgroup, _channel = await service.create_subgroup(
         user,
         name=body.name,
@@ -117,6 +127,8 @@ async def create_subgroup(
         is_private=body.is_private,
         join_policy=body.join_policy,
         parent_id=body.parent_id,
+        cover_media_id=body.cover_media_id,
+        initial_owner_id=body.initial_owner_id,
     )
     return await _detail_response(service, subgroup, user)
 
@@ -306,3 +318,50 @@ async def unpin_post(
     """@brief Remove the pinned post from a subgroup."""
     await service.unpin_post(slug, user)
     return MessageResponse(message=_("Pinned post cleared"))
+
+
+def _build_media_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> SubgroupMediaService:
+    """@brief Build SubgroupMediaService with injected repositories."""
+    community_id = uuid.UUID(settings.COMMUNITY_ID)
+    return SubgroupMediaService(
+        subgroup_repo=SubgroupRepository(db),
+        media_repo=SubgroupMediaRepository(db),
+        community_id=community_id,
+    )
+
+
+@router.get("/{slug}/media", response_model=MediaAggregateListResponse)
+async def list_subgroup_media(
+    slug: str,
+    source: str = "all",
+    cursor: str | None = None,
+    limit: int = 60,
+    user: User = Depends(get_current_user),
+    subgroup_service: SubgroupService = Depends(_build_service),
+    media_service: SubgroupMediaService = Depends(_build_media_service),
+) -> MediaAggregateListResponse:
+    """
+    @brief List media aggregated from posts, galleries, and events in a subgroup.
+
+    @param slug Subgroup slug.
+    @param source Filter: 'post', 'gallery', 'event', or 'all' (default).
+    @param cursor Pagination cursor (timestamp:uuid).
+    @param limit Items per page (1-200, default 60).
+    @return Media list with pagination.
+    """
+    # Resolve subgroup from slug
+    subgroup = await subgroup_service.get_subgroup(slug, user)
+
+    # Fetch media
+    items, next_cursor = await media_service.list_media(
+        subgroup_id=subgroup.id,
+        viewer_id=user.id,
+        source=source,
+        cursor=cursor,
+        limit=limit,
+    )
+
+    return MediaAggregateListResponse(items=items, next_cursor=next_cursor)

@@ -10,6 +10,7 @@ import {
   listGalleries,
   getGallery,
   createGallery,
+  updateGallery,
   deleteGallery,
   listItems,
   removeItem,
@@ -17,10 +18,10 @@ import {
   type ListGalleriesParams,
 } from '@/lib/api/galleries';
 
-export function useGalleryList(params?: ListGalleriesParams) {
+export function useGalleryList(params?: ListGalleriesParams | null) {
   return useQuery({
-    queryKey: qk.galleries.list(params ?? {}),
-    queryFn: () => listGalleries(params),
+    queryKey: qk.galleries.list(params as Record<string, unknown> | undefined ?? {}),
+    queryFn: () => listGalleries(params ?? undefined),
     staleTime: 30_000,
   });
 }
@@ -52,6 +53,16 @@ export function useCreateGallery() {
     mutationFn: (body: CreateGalleryBody) => createGallery(body),
     successKey: 'toasts.galleries.created',
     onSuccess: () => invalidateAll(qc),
+  });
+}
+
+export function useUpdateGallery() {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: ({ id, body }: { id: string; body: Partial<CreateGalleryBody> }) =>
+      updateGallery(id, body),
+    successKey: 'toasts.galleries.updated',
+    onSuccess: (_data, vars) => invalidateAll(qc, vars.id),
   });
 }
 

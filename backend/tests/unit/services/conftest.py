@@ -82,6 +82,12 @@ def notification_svc():
 
 
 @pytest.fixture
+def interest_svc():
+    """@brief Mock InterestService."""
+    return AsyncMock()
+
+
+@pytest.fixture
 def mock_event_bus():
     """@brief Mock EventBus for testing event emission."""
     return AsyncMock(spec=EventBus)
@@ -94,16 +100,18 @@ def media_attacher():
 
 
 @pytest.fixture
-def service(post_repo, comment_repo, reaction_repo, notification_svc, prompt_repo):
+def service(post_repo, comment_repo, reaction_repo, notification_svc, prompt_repo, interest_svc):
     """@brief PostService with mocked dependencies."""
-    return PostService(
+    svc = PostService(
         post_repo=post_repo,
         comment_repo=comment_repo,
         reaction_repo=reaction_repo,
         notification_service=notification_svc,
         community_id=COMMUNITY_ID,
         prompt_repo=prompt_repo,
+        interest_service=interest_svc,
     )
+    return svc
 
 
 @pytest.fixture

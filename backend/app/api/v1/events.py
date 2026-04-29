@@ -105,6 +105,7 @@ async def list_events(
     end: datetime | None = Query(None, description="Window end (UTC)"),
     cursor: str | None = None,
     limit: int = Query(100, ge=1, le=500),
+    subgroup_id: uuid.UUID | None = None,
     user: User = Depends(get_current_user),
     service: EventService = Depends(_build_service),
 ) -> EventList:
@@ -112,7 +113,9 @@ async def list_events(
     now = datetime.now(UTC)
     s = start or now - timedelta(days=7)
     e = end or now + timedelta(days=90)
-    return await service.list_events(user.id, s, e, cursor=cursor, limit=limit)
+    return await service.list_events(
+        user.id, s, e, cursor=cursor, limit=limit, subgroup_id=subgroup_id
+    )
 
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -265,6 +268,20 @@ async def contribute_to_event_gallery(
     gallery = await service.ensure_event_gallery(event_id, user.id, "Event Gallery")
     result = await service.bulk_add_items(gallery.id, user.id, body)
     return result
+
+
+@router.post("/{event_id}/gallery:link", response_model=GalleryResponse, status_code=201)
+async def link_event_gallery(
+    event_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: GalleryService = Depends(_build_gallery_service),
+) -> GalleryResponse:
+    """@brief Ensure event-linked gallery exists (idempotent).
+
+    Creates a lazy auto-gallery for the event if one doesn't exist,
+    scoped to the event's visibility/subgroup settings.
+    """
+    return await service.get_or_create_for_event(event_id, viewer_id=user.id)
 
 
 # ── Subscriptions ─────────────────────────────────────────────────

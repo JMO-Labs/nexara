@@ -21,10 +21,16 @@ export const qk = {
     promptResponses: (promptPostId: string) =>
       ["feed", "prompt-responses", promptPostId] as const,
   },
+  posts: {
+    all: () => ["posts"] as const,
+    list: (filters?: Record<string, unknown>) =>
+      ["posts", "list", filters ?? {}] as const,
+  },
   chat: {
     channels: () => ["chat", "channels"] as const,
     messages: (channelId: string) => ["chat", "messages", channelId] as const,
     dms: () => ["chat", "dms"] as const,
+    subgroupChannel: (subgroupId: string) => ["chat", "subgroup-channel", subgroupId] as const,
   },
   subgroups: {
     all: () => ["subgroups"] as const,
@@ -34,7 +40,7 @@ export const qk = {
   },
   events: {
     all: () => ["events"] as const,
-    list: (range?: { from?: string; to?: string }) =>
+    list: (range?: { from?: string; to?: string; subgroup_id?: string }) =>
       ["events", "list", range ?? {}] as const,
     detail: (id: string) => ["events", "detail", id] as const,
     subscriptions: {

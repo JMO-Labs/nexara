@@ -108,7 +108,7 @@ class Settings(BaseSettings):
     CF_ACCESS_TEAM_DOMAIN: str = ""
 
     # --- Rate Limiting ---
-    RATE_LIMIT_DEFAULT: str = "60/minute"
+    RATE_LIMIT_DEFAULT: str = "600/minute"
     RATE_LIMIT_AUTH: str = "10/minute"
 
     @property

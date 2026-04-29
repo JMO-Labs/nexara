@@ -116,6 +116,24 @@ class TestCreateGallery:
                 GalleryCreate(title="X", visibility="subgroup"),
             )
 
+    @pytest.mark.asyncio
+    async def test_create_with_subgroup_id_persists(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        repo.create.side_effect = _fill
+        user_id = uuid.uuid4()
+        subgroup_id = uuid.uuid4()
+        result = await service.create_gallery(
+            user_id,
+            GalleryCreate(
+                title="Group Photos",
+                visibility="subgroup",
+                subgroup_id=subgroup_id,
+            ),
+        )
+        assert result.subgroup_id == subgroup_id
+        assert result.visibility == "subgroup"
+
 
 class TestDefaultGallery:
     @pytest.mark.asyncio
@@ -151,6 +169,95 @@ class TestEventGallery:
         result = await service.ensure_event_gallery(event_id, owner_id, "Picnic")
         assert result.event_id == event_id
         assert result.title == "Picnic"
+
+
+class TestGetOrCreateForEvent:
+    @pytest.mark.asyncio
+    async def test_returns_existing_gallery(
+        self, service: GalleryService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        """get_or_create_for_event returns existing gallery if one exists."""
+        event_id = uuid.uuid4()
+        viewer_id = uuid.uuid4()
+        existing_gallery = _make_gallery(event_id=event_id, visibility="community")
+
+        # Mock the repo to return an existing gallery
+        repo.get_event_gallery.return_value = existing_gallery
+
+        # Mock event_service to verify event is accessible
+        from app.models.event import Event
+
+        mock_event = MagicMock(spec=Event)
+        mock_event.id = event_id
+        mock_event.title = "Summer Picnic"
+        mock_event.visibility = "community"
+        mock_event.subgroup_id = None
+        mock_event.author_id = uuid.uuid4()
+
+        repo.get_by_id = AsyncMock()
+        # We'll need to mock the event fetch
+
+        result = await service.get_or_create_for_event(event_id, viewer_id=viewer_id)
+        assert result.id == existing_gallery.id
+        assert result.event_id == event_id
+        repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_creates_new_gallery_when_absent(
+        self, service: GalleryService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        """get_or_create_for_event creates new gallery with event settings."""
+        event_id = uuid.uuid4()
+        viewer_id = uuid.uuid4()
+        event_author_id = uuid.uuid4()
+        subgroup_id = uuid.uuid4()
+
+        # Mock: no existing gallery
+        repo.get_event_gallery.return_value = None
+
+        # Mock event
+        from app.models.event import Event
+
+        mock_event = MagicMock(spec=Event)
+        mock_event.id = event_id
+        mock_event.title = "Summer Picnic"
+        mock_event.visibility = "subgroup"
+        mock_event.subgroup_id = subgroup_id
+        mock_event.author_id = event_author_id
+
+        session.get = AsyncMock(return_value=mock_event)
+        repo.get_by_id = AsyncMock(return_value=mock_event)
+        repo.create.side_effect = _fill
+
+        # Mock _user_subgroup_ids to include subgroup_id so viewer can see the event
+        service._user_subgroup_ids = AsyncMock(return_value=[subgroup_id])
+
+        result = await service.get_or_create_for_event(event_id, viewer_id=viewer_id)
+
+        # Verify the created gallery has event's properties
+        assert result.title == "Summer Picnic"
+        assert result.visibility == "subgroup"
+        assert result.subgroup_id == subgroup_id
+        assert result.event_id == event_id
+        assert result.owner_id == event_author_id
+        repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found_when_event_missing(
+        self, service: GalleryService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        """get_or_create_for_event raises NotFoundError if event not found."""
+        event_id = uuid.uuid4()
+        viewer_id = uuid.uuid4()
+
+        # Mock: no existing gallery
+        repo.get_event_gallery.return_value = None
+
+        # Mock: event not found
+        session.get = AsyncMock(return_value=None)
+
+        with pytest.raises(NotFoundError):
+            await service.get_or_create_for_event(event_id, viewer_id=viewer_id)
 
 
 class TestContributionPolicy:

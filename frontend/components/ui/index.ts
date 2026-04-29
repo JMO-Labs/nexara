@@ -19,4 +19,5 @@ export { Badge, Chip, type BadgeProps, type ChipProps } from './Badge';
 export { ToastRoot } from './Toast';
 export { Tooltip, type AppTooltipProps } from './Tooltip';
 export { CommandPalette, type CommandItem, type CommandPaletteProps } from './CommandPalette';
+export { Markdown, type MarkdownProps } from './Markdown';
 export * as motionPrimitives from './motion';

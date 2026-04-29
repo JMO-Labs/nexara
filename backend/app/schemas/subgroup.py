@@ -31,6 +31,8 @@ class SubgroupCreate(BaseModel):
     @param avatar_url Optional avatar URL.
     @param is_private When true, the subgroup is hidden from discovery.
     @param join_policy One of ``open``, ``invite_only``, ``admin_approval``.
+    @param cover_media_id Optional cover media ID.
+    @param initial_owner_id Optional user ID to make owner (creator becomes moderator if set).
     """
 
     name: str = Field(min_length=1, max_length=120)
@@ -40,6 +42,8 @@ class SubgroupCreate(BaseModel):
     is_private: bool = False
     join_policy: str = Field(default="open", pattern=r"^(open|invite_only|admin_approval)$")
     parent_id: UUID | None = None
+    cover_media_id: UUID | None = None
+    initial_owner_id: UUID | None = None
 
 
 class SubgroupUpdate(BaseModel):
@@ -55,6 +59,7 @@ class SubgroupUpdate(BaseModel):
     is_private: bool | None = None
     join_policy: str | None = Field(default=None, pattern=r"^(open|invite_only|admin_approval)$")
     parent_id: UUID | None = None
+    cover_media_id: UUID | None = None
 
 
 class SubgroupResponse(BaseModel):
@@ -67,6 +72,7 @@ class SubgroupResponse(BaseModel):
     slug: str
     description: str | None = None
     avatar_url: str | None = None
+    cover_media_id: UUID | None = None
     is_private: bool
     join_policy: str
     created_by: UUID | None = None
@@ -74,6 +80,7 @@ class SubgroupResponse(BaseModel):
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    my_role: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -151,3 +158,35 @@ class PinPostRequest(BaseModel):
     """
 
     post_id: UUID
+
+
+class MediaItemResponse(BaseModel):
+    """
+    @brief Single media item in aggregated media response.
+
+    @param media_id UUID of the media file.
+    @param media Embedded media metadata (from MediaResponse schema).
+    @param source Source type: 'post', 'gallery', or 'event'.
+    @param source_id UUID of the source (post, gallery, or event).
+    @param source_title Human-readable title of the source.
+    @param created_at ISO timestamp when the media was added.
+    """
+
+    media_id: str
+    media: dict[str, object]
+    source: str
+    source_id: str
+    source_title: str | None = None
+    created_at: datetime
+
+
+class MediaAggregateListResponse(BaseModel):
+    """
+    @brief Aggregated media list response with pagination.
+
+    @param items List of media items.
+    @param next_cursor Opaque cursor for next page, or None if end of results.
+    """
+
+    items: list[MediaItemResponse]
+    next_cursor: str | None = None

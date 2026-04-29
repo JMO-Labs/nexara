@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
+from app.models.event import Event
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.models.subgroup import SubgroupMember
 from app.repositories.gallery_repo import GalleryRepository
@@ -149,6 +150,56 @@ class GalleryService:
         )
         gallery = await self._repo.create(gallery)
         return GalleryResponse.model_validate(gallery)
+
+    async def get_or_create_for_event(
+        self, event_id: uuid.UUID, *, viewer_id: uuid.UUID
+    ) -> GalleryResponse:
+        """@brief Get-or-create gallery for event, tied to event's visibility/subgroup.
+
+        @param event_id UUID of the event.
+        @param viewer_id UUID of the requesting user (checked for event visibility).
+        @return GalleryResponse.
+        @raises NotFoundError If the event is not found or not visible to viewer.
+        """
+        # Check for existing gallery first
+        existing = await self._repo.get_event_gallery(self._community_id, event_id)
+        if existing is not None:
+            return GalleryResponse.model_validate(existing)
+
+        # Fetch the event to verify visibility and extract properties
+        event = await self._session.get(Event, event_id)
+        if event is None:
+            raise NotFoundError(_("Event not found"))
+
+        # Check visibility (using same logic as event service)
+        if not await self._can_view_event(event, viewer_id):
+            raise AuthorizationError(_("You cannot view this event"))
+
+        # Create gallery with event's properties
+        gallery = Gallery(
+            community_id=self._community_id,
+            owner_id=event.author_id,
+            title=event.title,
+            visibility=event.visibility,
+            contribution_policy="community",
+            subgroup_id=event.subgroup_id,
+            event_id=event.id,
+        )
+        gallery = await self._repo.create(gallery)
+        return GalleryResponse.model_validate(gallery)
+
+    async def _can_view_event(self, event: Event, user_id: uuid.UUID) -> bool:
+        """@brief Check if user can view an event (same visibility logic as EventService)."""
+        if event.visibility == "community":
+            return True
+        if event.visibility == "private":
+            return event.author_id == user_id
+        if event.visibility == "subgroup":
+            if event.subgroup_id is None:
+                return False
+            ids = await self._user_subgroup_ids(user_id)
+            return event.subgroup_id in ids
+        return False
 
     async def get_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> GalleryResponse:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)

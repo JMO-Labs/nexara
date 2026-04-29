@@ -46,6 +46,7 @@ class PostService:
         media_attacher: Callable[[uuid.UUID, list[uuid.UUID], User], Awaitable[None]] | None = None,
         poll_service: PollService | None = None,
         prompt_repo: PromptRepository | None = None,
+        interest_service: Any | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -56,12 +57,14 @@ class PostService:
         self._media_attacher = media_attacher
         self._poll_service = poll_service
         self._prompt_repo = prompt_repo
+        self._interest_service = interest_service
 
     async def list_feed(
         self,
         viewer_id: uuid.UUID | None = None,
         cursor: str | None = None,
         limit: int = 20,
+        subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Fetch paginated activity feed.
         @return Dict with items, cursor, and has_more.
@@ -71,6 +74,7 @@ class PostService:
             viewer_id=viewer_id,
             cursor=cursor,
             limit=limit,
+            subgroup_id=subgroup_id,
         )
         return {
             "items": items,
@@ -103,6 +107,7 @@ class PostService:
         poll: PollCreate | None = None,
         *,
         reply_to_prompt_id: uuid.UUID | None = None,
+        subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
         post = await self._post_repo.create_post(
@@ -110,6 +115,7 @@ class PostService:
             content=content,
             community_id=self._community_id,
             reply_to_prompt_id=reply_to_prompt_id,
+            subgroup_id=subgroup_id,
         )
 
         if media_ids and self._media_attacher:
@@ -120,6 +126,16 @@ class PostService:
 
         if reply_to_prompt_id and self._prompt_repo:
             await self._prompt_repo.increment_response_count(reply_to_prompt_id)
+            prompt = await self._prompt_repo.get_by_id(reply_to_prompt_id)
+            if (
+                prompt
+                and prompt.prompt_type == "interest_capture"
+                and prompt.interest_category_slug
+                and self._interest_service
+            ):
+                await self._interest_service.suggest_for_user(
+                    user.id, prompt.interest_category_slug, content
+                )
 
         enriched = await self._post_repo.get_post_detail(
             post.id,

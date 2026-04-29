@@ -36,7 +36,7 @@ class TestListFeed:
         assert result["cursor"] == "cursor-123"
         assert result["has_more"] is True
         post_repo.list_feed.assert_awaited_once_with(
-            COMMUNITY_ID, viewer_id=None, cursor=None, limit=20
+            COMMUNITY_ID, viewer_id=None, cursor=None, limit=20, subgroup_id=None
         )
 
     @pytest.mark.asyncio
@@ -45,7 +45,7 @@ class TestListFeed:
         post_repo.list_feed.return_value = ([], None)
         await service.list_feed(viewer_id=VIEWER_ID, cursor="c", limit=10)
         post_repo.list_feed.assert_awaited_once_with(
-            COMMUNITY_ID, viewer_id=VIEWER_ID, cursor="c", limit=10
+            COMMUNITY_ID, viewer_id=VIEWER_ID, cursor="c", limit=10, subgroup_id=None
         )
 
 
@@ -87,6 +87,7 @@ class TestCreatePost:
             content="Hello world",
             community_id=COMMUNITY_ID,
             reply_to_prompt_id=None,
+            subgroup_id=None,
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
 
@@ -146,6 +147,49 @@ class TestCreatePost:
         prompt_id = uuid.uuid4()
         await service.create_post(user, "Great prompt!", reply_to_prompt_id=prompt_id)
         prompt_repo.increment_response_count.assert_awaited_once_with(prompt_id)
+
+    @pytest.mark.asyncio
+    async def test_reply_to_interest_prompt_suggests_interest(
+        self,
+        service,
+        post_repo,
+        prompt_repo,
+    ):
+        """create_post() with interest_capture prompt calls interest_service.suggest_for_user."""
+        user = _make_user()
+        post = _make_post()
+        prompt_id = uuid.uuid4()
+        prompt = MagicMock(
+            id=prompt_id,
+            prompt_type="interest_capture",
+            interest_category_slug="cooking",
+        )
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {"id": str(post.id), "content": "I love Thai food"}
+        prompt_repo.get_by_id.return_value = prompt
+        await service.create_post(user, "I love Thai food", reply_to_prompt_id=prompt_id)
+        service._interest_service.suggest_for_user.assert_awaited_once_with(
+            user.id, "cooking", "I love Thai food"
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_post_with_subgroup_id(self, service, post_repo):
+        """create_post() persists subgroup_id when provided."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        enriched = {"id": str(post.id), "content": "Subgroup post"}
+        post_repo.get_post_detail.return_value = enriched
+        subgroup_id = uuid.uuid4()
+        result = await service.create_post(user, "Subgroup post", subgroup_id=subgroup_id)
+        assert result == enriched
+        post_repo.create_post.assert_awaited_once_with(
+            author_id=user.id,
+            content="Subgroup post",
+            community_id=COMMUNITY_ID,
+            reply_to_prompt_id=None,
+            subgroup_id=subgroup_id,
+        )
 
 
 class TestDeletePost:

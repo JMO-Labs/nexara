@@ -28,6 +28,7 @@ class EventRepository(BaseRepository[Event]):
         *,
         viewer_id: uuid.UUID | None = None,
         subgroup_ids: list[uuid.UUID] | None = None,
+        subgroup_id: uuid.UUID | None = None,
     ) -> list[Event]:
         """
         @brief List events overlapping ``[start, end]``.
@@ -40,6 +41,7 @@ class EventRepository(BaseRepository[Event]):
         @param end Window end (UTC).
         @param viewer_id Optional viewer for block filter + visibility scoping.
         @param subgroup_ids Subgroup IDs the viewer belongs to (for subgroup events).
+        @param subgroup_id Optional single subgroup ID to filter events.
         @return Event rows.
         """
         stmt = select(Event).where(Event.community_id == community_id)
@@ -65,6 +67,9 @@ class EventRepository(BaseRepository[Event]):
             )
             stmt = stmt.where(visible)
             stmt = self.apply_block_filter(stmt, viewer_id)
+
+        if subgroup_id is not None:
+            stmt = stmt.where(Event.subgroup_id == subgroup_id)
 
         stmt = stmt.order_by(Event.starts_at.asc())
         result = await self._session.execute(stmt)

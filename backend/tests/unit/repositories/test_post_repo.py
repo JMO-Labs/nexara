@@ -105,6 +105,48 @@ class TestPostRepositoryListFeed:
         session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_filters_by_subgroup_id(self):
+        """list_feed should filter posts by subgroup_id when provided."""
+        session = _make_session()
+        subgroup_id = uuid.uuid4()
+        now = datetime.now(UTC)
+
+        post = MagicMock(spec=Post)
+        post.id, post.content = POST_ID, "Group post"
+        post.created_at = post.updated_at = now
+        post.subgroup_id = subgroup_id
+
+        user = MagicMock(spec=User)
+        user.id, user.username, user.display_name, user.avatar_url = (
+            AUTHOR_ID,
+            "alice",
+            "Alice",
+            None,
+        )
+
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = [post]
+        mock_posts = MagicMock()
+        mock_posts.all.return_value = [(post, user)]
+        mock_empty = MagicMock()
+        mock_empty.all.return_value = []
+        mock_comments = MagicMock()
+        mock_comments.all.return_value = [(POST_ID, 0)]
+
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
+        session.execute = AsyncMock(
+            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
+        )
+        repo = PostRepository(session)
+        items, next_cursor = await repo.list_feed(COMMUNITY_ID, subgroup_id=subgroup_id)
+
+        assert len(items) == 1
+        assert items[0]["id"] == str(POST_ID)
+        session.execute.assert_awaited()
+
+    @pytest.mark.asyncio
     async def test_returns_enriched_posts_with_cursor(self):
         """list_feed should return enriched posts and next_cursor when limit+1 exist."""
         session = _make_session()

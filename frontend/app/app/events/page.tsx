@@ -38,6 +38,7 @@ import {
 import { useEventsInRange } from "@/hooks/useEvents";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useCalendars } from "@/hooks/useCalendars";
+import { PageMasthead } from "@/components/layout/PageMasthead";
 import type { EventItem } from "@/lib/api/events";
 
 export default function EventsPage() {
@@ -81,7 +82,7 @@ export default function EventsPage() {
 
   const fetchEnd = React.useMemo(() => {
     if (view === "week") return addDays(weekStart, 7);
-    if (view === "day") return selectedDay ?? startOfDay(new Date());
+    if (view === "day") return addDays(selectedDay ?? startOfDay(new Date()), 1);
     return monthEnd;
   }, [view, weekStart, selectedDay, monthEnd]);
 
@@ -205,6 +206,20 @@ export default function EventsPage() {
         position: "relative",
       }}
     >
+      <PageMasthead
+        title="Events"
+        meta={`${filtered.length} ${filtered.length === 1 ? "event" : "events"} ${
+          view === "month"
+            ? "this month"
+            : view === "week"
+              ? "this week"
+              : view === "day"
+                ? "this day"
+                : "in view"
+        }`}
+        size="md"
+      />
+
       <CalendarFilterBar
         month={month}
         onMonthChange={setMonth}
