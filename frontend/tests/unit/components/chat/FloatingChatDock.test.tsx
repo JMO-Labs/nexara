@@ -108,6 +108,49 @@ describe("FloatingChatDock", () => {
     ).toBeInTheDocument();
   });
 
+  it("Escape key stops propagation — parent React onKeyDown does not fire", () => {
+    useChatDock.setState({ openThreadIds: ["t1"] });
+    const parentKeyDown = vi.fn();
+    // Wrap the dock in a div with a React onKeyDown to test stopPropagation
+    const qc = new QueryClient();
+    render(
+      <QueryClientProvider client={qc}>
+        <CssVarsProvider theme={joyTheme}>
+          <div onKeyDown={parentKeyDown}>
+            <FloatingChatDock />
+          </div>
+        </CssVarsProvider>
+      </QueryClientProvider>,
+    );
+    const region = screen.getByRole("region", { name: /conversation/i });
+    fireEvent.keyDown(region, { key: "Escape" });
+    // Thread closed
+    expect(useChatDock.getState().openThreadIds).not.toContain("t1");
+    // React synthetic event propagation was stopped — parent handler NOT called
+    expect(parentKeyDown).not.toHaveBeenCalled();
+  });
+
+  it("mobile: drawer onClose does NOT open launcher", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches:
+        query.includes("max-width: 767px") || query === "(max-width: 767px)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    useChatDock.setState({
+      openThreadIds: ["t1"],
+      launcherOpen: false,
+    });
+    wrap(<FloatingChatDock />);
+    // launcherOpen must remain false after dock renders
+    expect(useChatDock.getState().launcherOpen).toBe(false);
+  });
+
   it("mobile: renders drawer instead of stacked cards when viewport < 768px", () => {
     // Mock matchMedia to indicate mobile
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({

@@ -18,6 +18,13 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/app/home" }));
 vi.mock("@/hooks/useChat", () => ({
   useChannels: vi.fn(),
   useDmThreads: vi.fn(),
+  useChatRealtime: vi.fn(() => ({
+    status: "closed",
+    typing: {},
+    send: vi.fn(),
+    unread: {},
+    markRead: vi.fn(),
+  })),
 }));
 
 import { useChannels, useDmThreads } from "@/hooks/useChat";

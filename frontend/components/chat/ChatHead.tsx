@@ -43,6 +43,23 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
   const qc = useQueryClient();
   const { markRead } = useChatRealtime();
 
+  // Fix 2: capture focused element on mount; restore on unmount.
+  const priorFocusRef = React.useRef<HTMLElement | null>(null);
+  React.useEffect(() => {
+    priorFocusRef.current =
+      (document.activeElement as HTMLElement | null) ?? null;
+    return () => {
+      const prior = priorFocusRef.current;
+      if (prior && document.contains(prior)) {
+        prior.focus();
+      } else {
+        (
+          document.getElementById("chat-launcher-pill") as HTMLElement | null
+        )?.focus();
+      }
+    };
+  }, []);
+
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useMessages(threadId);
 
@@ -72,7 +89,10 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
   const handleFocus = () => markRead(threadId);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") closeThread(threadId);
+    if (e.key === "Escape") {
+      e.stopPropagation(); // Fix 2: prevent parent modal/dialog handling Escape
+      closeThread(threadId);
+    }
   };
 
   return (

@@ -11,11 +11,13 @@ import Stack from "@mui/joy/Stack";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useChatDock } from "@/stores/chatDock";
-import { useChatRealtime } from "@/hooks/useChat";
+import { useChatRealtime, useChannels, useDmThreads } from "@/hooks/useChat";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { ChatHead } from "./ChatHead";
 import { ChatLauncher } from "./ChatLauncher";
 import { Drawer } from "@/components/ui/Drawer";
 import { spring, fast } from "@/components/ui/motion";
+import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
 // Slide-from-bottom variant for chat head cards
 const chatHeadVariants: Variants = {
@@ -23,21 +25,6 @@ const chatHeadVariants: Variants = {
   show: { opacity: 1, y: 0, transition: spring },
   exit: { opacity: 0, y: 40, transition: fast },
 };
-
-function useIsMobile(): boolean {
-  const [mobile, setMobile] = React.useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches,
-  );
-  React.useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return mobile;
-}
 
 /**
  * @brief Syncs useChatRealtime unread totals → chatDock.unreadCount.
@@ -53,15 +40,36 @@ function UnreadSync() {
   return null;
 }
 
+/**
+ * @brief Builds a Map<threadId, humanLabel> from channels + DM threads.
+ *        Used to pass resolved names to ChatHead instead of raw UUIDs.
+ */
+function useLabelMap(
+  channels: ChatChannel[],
+  dms: DmThread[],
+): Map<string, string> {
+  return React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of channels) map.set(c.id, `# ${c.name}`);
+    for (const d of dms) map.set(d.channel_id, d.peer.display_name);
+    return map;
+  }, [channels, dms]);
+}
+
 export function FloatingChatDock() {
   const pathname = usePathname();
   const openThreadIds = useChatDock((s) => s.openThreadIds);
   const launcherOpen = useChatDock((s) => s.launcherOpen);
-  const setLauncherOpen = useChatDock((s) => s.setLauncherOpen);
+  const closeThread = useChatDock((s) => s.closeThread);
   const isMobile = useIsMobile();
 
-  // Do not render on the full chat page — it would be redundant.
-  if (pathname.startsWith("/app/chat")) return null;
+  const { data: channels = [] } = useChannels();
+  const { data: dms = [] } = useDmThreads();
+  const labelMap = useLabelMap(channels, dms);
+
+  // Fix 1: exact match or subpath — do not hide on /app/chat-something
+  if (pathname === "/app/chat" || pathname.startsWith("/app/chat/"))
+    return null;
 
   if (isMobile) {
     // Mobile: single bottom drawer; show most recently opened thread
@@ -76,11 +84,17 @@ export function FloatingChatDock() {
         {activeId && (
           <Drawer
             open={!launcherOpen && Boolean(activeId)}
-            onClose={() => setLauncherOpen(true)}
+            onClose={() => {
+              // Fix 7 + 8: close the active thread; do NOT reopen the launcher.
+              closeThread(activeId);
+            }}
             side="bottom"
             title="Chat"
           >
-            <ChatHead threadId={activeId} label={activeId} />
+            <ChatHead
+              threadId={activeId}
+              label={labelMap.get(activeId) ?? "Conversation"}
+            />
           </Drawer>
         )}
       </Box>
@@ -120,7 +134,11 @@ export function FloatingChatDock() {
                 alignItems: "flex-end",
               }}
             >
-              <ChatHead threadId={id} label={id} />
+              {/* Fix 3: resolved label instead of raw UUID */}
+              <ChatHead
+                threadId={id}
+                label={labelMap.get(id) ?? "Conversation"}
+              />
             </motion.div>
           ))}
         </AnimatePresence>

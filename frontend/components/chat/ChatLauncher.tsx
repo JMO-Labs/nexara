@@ -2,43 +2,58 @@
 /**
  * @file components/chat/ChatLauncher.tsx
  * @brief Floating chat launcher pill. Desktop: click toggles an inline
- *        popover listing recent channels + DMs. Mobile: opens bottom drawer.
- *        Calls useChatDock.openThread on thread selection.
+ *        popover (role=menu) listing recent channels + DMs. Mobile: opens
+ *        bottom drawer. Calls useChatDock.openThread on thread selection.
  */
 import * as React from "react";
 import Box from "@mui/joy/Box";
 import Typography from "@mui/joy/Typography";
 import Stack from "@mui/joy/Stack";
+import { Skeleton } from "@mui/joy";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@/components/ui";
 import { Drawer } from "@/components/ui/Drawer";
 import { useChatDock } from "@/stores/chatDock";
-import { useChannels, useDmThreads } from "@/hooks/useChat";
+import { useChannels, useDmThreads, useChatRealtime } from "@/hooks/useChat";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
-
-function useIsMobile(): boolean {
-  const [mobile, setMobile] = React.useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 767px)").matches,
-  );
-  React.useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return mobile;
-}
 
 interface ThreadListProps {
   channels: ChatChannel[];
   dms: DmThread[];
+  unread: Record<string, number>;
+  isLoading: boolean;
   onSelect: (id: string) => void;
 }
 
-function ThreadList({ channels, dms, onSelect }: ThreadListProps) {
+function ThreadList({
+  channels,
+  dms,
+  unread,
+  isLoading,
+  onSelect,
+}: ThreadListProps) {
   const grouped = channels.filter((c) => c.channel_type !== "direct");
+  const firstItemRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Fix 5: auto-focus first item when list mounts
+  React.useEffect(() => {
+    firstItemRef.current?.focus();
+  }, []);
+
+  // Fix 9: show skeleton rows while loading
+  if (isLoading) {
+    return (
+      <Stack spacing={0.5} sx={{ minWidth: 220, p: 1 }}>
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} variant="rectangular" height={36} />
+        ))}
+      </Stack>
+    );
+  }
+
+  const allEmpty = grouped.length === 0 && dms.length === 0;
+
   return (
     <Stack spacing={0.5} sx={{ minWidth: 220 }}>
       {grouped.length > 0 && (
@@ -50,10 +65,11 @@ function ThreadList({ channels, dms, onSelect }: ThreadListProps) {
           >
             Channels
           </Typography>
-          {grouped.map((c) => (
+          {grouped.map((c, i) => (
             <Box
               key={c.id}
-              role="button"
+              ref={i === 0 && dms.length === 0 ? firstItemRef : undefined}
+              role="menuitem"
               tabIndex={0}
               onClick={() => onSelect(c.id)}
               onKeyDown={(e) =>
@@ -74,9 +90,22 @@ function ThreadList({ channels, dms, onSelect }: ThreadListProps) {
               aria-label={`Open channel ${c.name}`}
             >
               <Avatar size="sm">{c.name.charAt(0).toUpperCase()}</Avatar>
-              <Typography level="body-sm" noWrap>
+              <Typography level="body-sm" noWrap sx={{ flex: 1 }}>
                 # {c.name}
               </Typography>
+              {/* Fix 10: unread dot */}
+              {(unread[c.id] ?? 0) > 0 && (
+                <Box
+                  aria-label={`${unread[c.id]} unread`}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: "danger.500",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
             </Box>
           ))}
         </>
@@ -90,10 +119,11 @@ function ThreadList({ channels, dms, onSelect }: ThreadListProps) {
           >
             Direct messages
           </Typography>
-          {dms.map((d) => (
+          {dms.map((d, i) => (
             <Box
               key={d.channel_id}
-              role="button"
+              ref={i === 0 ? firstItemRef : undefined}
+              role="menuitem"
               tabIndex={0}
               onClick={() => onSelect(d.channel_id)}
               onKeyDown={(e) =>
@@ -116,14 +146,27 @@ function ThreadList({ channels, dms, onSelect }: ThreadListProps) {
               <Avatar src={d.peer.avatar_url ?? undefined} size="sm">
                 {d.peer.display_name.charAt(0)}
               </Avatar>
-              <Typography level="body-sm" noWrap>
+              <Typography level="body-sm" noWrap sx={{ flex: 1 }}>
                 {d.peer.display_name}
               </Typography>
+              {/* Fix 10: unread dot */}
+              {(unread[d.channel_id] ?? 0) > 0 && (
+                <Box
+                  aria-label={`${unread[d.channel_id]} unread`}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: "danger.500",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
             </Box>
           ))}
         </>
       )}
-      {grouped.length === 0 && dms.length === 0 && (
+      {allEmpty && (
         <Typography level="body-sm" textColor="text.tertiary" sx={{ p: 1.5 }}>
           No conversations yet
         </Typography>
@@ -142,10 +185,14 @@ export function ChatLauncher() {
   const openThread = useChatDock((s) => s.openThread);
 
   const isMobile = useIsMobile();
-  const anchorRef = React.useRef<HTMLButtonElement | null>(null);
+  // Fix 5: stable ref on pill for focus restoration
+  const pillRef = React.useRef<HTMLButtonElement | null>(null);
+  const popoverRef = React.useRef<HTMLDivElement | null>(null);
 
-  const { data: channels = [] } = useChannels();
-  const { data: dms = [] } = useDmThreads();
+  const { data: channels = [], isLoading: chLoading } = useChannels();
+  const { data: dms = [], isLoading: dmLoading } = useDmThreads();
+  const { unread } = useChatRealtime();
+  const isLoading = chLoading || dmLoading;
 
   const toggle = () => setLauncherOpen(!launcherOpen);
 
@@ -154,15 +201,33 @@ export function ChatLauncher() {
     setLauncherOpen(false);
   };
 
+  // Fix 5: outside-click closes popover
+  React.useEffect(() => {
+    if (!launcherOpen || isMobile) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        pillRef.current &&
+        !pillRef.current.contains(e.target as Node)
+      ) {
+        setLauncherOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [launcherOpen, isMobile, setLauncherOpen]);
+
   const pill = (
     <Box sx={{ position: "relative" }}>
       <Box
         component="button"
-        ref={anchorRef}
+        ref={pillRef}
+        id="chat-launcher-pill"
         onClick={toggle}
         aria-label="Open chat"
         aria-expanded={launcherOpen}
-        aria-haspopup="true"
+        aria-haspopup="menu"
         sx={{
           display: "flex",
           alignItems: "center",
@@ -208,11 +273,18 @@ export function ChatLauncher() {
         )}
       </Box>
 
-      {/* Desktop popover */}
+      {/* Fix 5: role=menu, z-index 1250 (Fix 11), Escape closes */}
       {!isMobile && launcherOpen && (
         <Box
-          role="dialog"
+          ref={popoverRef}
+          role="menu"
           aria-label="Chat thread list"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setLauncherOpen(false);
+              pillRef.current?.focus();
+            }
+          }}
           sx={{
             position: "absolute",
             bottom: "calc(100% + 8px)",
@@ -223,13 +295,19 @@ export function ChatLauncher() {
             borderRadius: "md",
             boxShadow: "lg",
             p: 1,
-            zIndex: 1300,
+            zIndex: 1250, // Fix 11: below Joy Modal default 1300
             minWidth: 240,
             maxHeight: 400,
             overflowY: "auto",
           }}
         >
-          <ThreadList channels={channels} dms={dms} onSelect={handleSelect} />
+          <ThreadList
+            channels={channels}
+            dms={dms}
+            unread={unread}
+            isLoading={isLoading}
+            onSelect={handleSelect}
+          />
         </Box>
       )}
     </Box>
@@ -245,7 +323,13 @@ export function ChatLauncher() {
           side="bottom"
           title="Chat"
         >
-          <ThreadList channels={channels} dms={dms} onSelect={handleSelect} />
+          <ThreadList
+            channels={channels}
+            dms={dms}
+            unread={unread}
+            isLoading={isLoading}
+            onSelect={handleSelect}
+          />
         </Drawer>
       </>
     );
