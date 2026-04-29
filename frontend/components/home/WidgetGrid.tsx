@@ -1,32 +1,31 @@
 "use client";
 /**
  * @file components/home/WidgetGrid.tsx
- * @brief Dashboard grid powered by react-grid-layout (legacy entry).
- *        - Drag-to-reorder anywhere on the widget except `.rgl-cancel`.
- *        - Free-form resize via the bottom-right grip.
- *        - Persists positions via useHomeLayout.applyLayout.
- *
- *        Uses non-responsive ReactGridLayout + WidthProvider so the layout
- *        prop is the single source of truth (responsive variant maintains
- *        per-breakpoint state and was sending stale rows back through
- *        onLayoutChange when children changed).
+ * @brief Dashboard grid powered by react-grid-layout v2.
+ *        - useContainerWidth hook measures the wrapper element.
+ *        - gridConfig / dragConfig / resizeConfig group related props.
+ *        - persistLayout fires only on user-initiated drag/resize so the
+ *          collapse toggle (which mutates item.h via props) does not race.
  */
 import * as React from "react";
-import RGL, {
-  WidthProvider,
+import GridLayout, {
+  useContainerWidth,
+  verticalCompactor,
   type Layout,
   type LayoutItem,
-} from "react-grid-layout/legacy";
+} from "react-grid-layout";
 import { getDef } from "@/lib/widgets/registry";
-import { GRID_COLS, GRID_ROW_HEIGHT, type WidgetInstance } from "@/lib/widgets/registry";
+import {
+  GRID_COLS,
+  GRID_ROW_HEIGHT,
+  type WidgetInstance,
+} from "@/lib/widgets/registry";
 import { WidgetFrame } from "./WidgetFrame";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useWidgetDrag } from "@/stores/widgetDrag";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-
-const ReactGridLayout = WidthProvider(RGL);
 
 const DRAG_CANCEL = ".rgl-cancel,button,a,input,textarea,select,[role=slider]";
 
@@ -48,6 +47,7 @@ export function WidgetGrid({
   isLoading = false,
 }: WidgetGridProps) {
   const dragDisabledIds = useWidgetDrag((s) => s.disabledIds);
+  const { width, containerRef, mounted } = useContainerWidth();
 
   const layout: Layout = React.useMemo<Layout>(
     () =>
@@ -72,20 +72,15 @@ export function WidgetGrid({
     [widgets, dragDisabledIds],
   );
 
-  // Only fire applyLayout for user-initiated drag/resize end events, not for
-  // every internal RGL onLayoutChange (which may emit stale rows on children
-  // changes). We persist on dragStop and resizeStop only.
   const widgetsById = React.useMemo(() => {
     const m = new Map<string, WidgetInstance>();
     for (const w of widgets) m.set(w.id, w);
     return m;
   }, [widgets]);
 
-  // Guard: only persist layout when an interaction was actually started by
-  // the user. RGL otherwise emits Stop events on internal reflows (collapse
-  // toggles, prop-driven h changes) which would overwrite stored heights.
+  // Guard: only persist on user-initiated drag/resize. RGL also fires Stop
+  // events on internal reflows triggered by prop changes (e.g. collapse).
   const userInteractingRef = React.useRef(false);
-
   const handleStart = React.useCallback(() => {
     userInteractingRef.current = true;
   }, []);
@@ -97,7 +92,6 @@ export function WidgetGrid({
       onApplyLayout(
         newLayout.map((l) => {
           const stored = widgetsById.get(l.i);
-          // Preserve stored h on collapsed widgets so expand restores height.
           const h = stored?.collapsed ? stored.h : l.h;
           return { i: l.i, x: l.x, y: l.y, w: l.w, h };
         }),
@@ -119,40 +113,54 @@ export function WidgetGrid({
   }
 
   return (
-    <ReactGridLayout
-      className="layout"
-      layout={layout}
-      cols={GRID_COLS}
-      rowHeight={GRID_ROW_HEIGHT}
-      margin={[12, 12]}
-      containerPadding={[0, 0]}
-      onDragStart={handleStart}
-      onDragStop={persistLayout}
-      onResizeStart={handleStart}
-      onResizeStop={persistLayout}
-      draggableCancel={DRAG_CANCEL}
-      resizeHandles={["se"]}
-      compactType="vertical"
-      preventCollision={false}
-      autoSize
-    >
-      {widgets.map((widget) => {
-        const def = getDef(widget.defId);
-        if (!def) return null;
-        return (
-          <div key={widget.id}>
-            <WidgetFrame
-              title={def.title}
-              collapsed={widget.collapsed}
-              onToggleCollapsed={() => onToggleCollapsed(widget.id)}
-              onRemove={() => onRemove(widget.id)}
-            >
-              <def.Component instanceId={widget.id} props={widget.props} />
-            </WidgetFrame>
-          </div>
-        );
-      })}
-    </ReactGridLayout>
+    <div ref={containerRef}>
+      {mounted && (
+        <GridLayout
+          width={width}
+          layout={layout}
+          gridConfig={{
+            cols: GRID_COLS,
+            rowHeight: GRID_ROW_HEIGHT,
+            margin: [12, 12],
+            containerPadding: [0, 0],
+            maxRows: Infinity,
+          }}
+          dragConfig={{
+            enabled: true,
+            bounded: false,
+            cancel: DRAG_CANCEL,
+            threshold: 3,
+          }}
+          resizeConfig={{
+            enabled: true,
+            handles: ["se"],
+          }}
+          compactor={verticalCompactor}
+          autoSize
+          onDragStart={handleStart}
+          onDragStop={persistLayout}
+          onResizeStart={handleStart}
+          onResizeStop={persistLayout}
+        >
+          {widgets.map((widget) => {
+            const def = getDef(widget.defId);
+            if (!def) return null;
+            return (
+              <div key={widget.id}>
+                <WidgetFrame
+                  title={def.title}
+                  collapsed={widget.collapsed}
+                  onToggleCollapsed={() => onToggleCollapsed(widget.id)}
+                  onRemove={() => onRemove(widget.id)}
+                >
+                  <def.Component instanceId={widget.id} props={widget.props} />
+                </WidgetFrame>
+              </div>
+            );
+          })}
+        </GridLayout>
+      )}
+    </div>
   );
 }
 
