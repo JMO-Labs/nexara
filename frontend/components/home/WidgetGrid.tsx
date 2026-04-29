@@ -81,8 +81,19 @@ export function WidgetGrid({
     return m;
   }, [widgets]);
 
-  const handleDragStop = React.useCallback(
+  // Guard: only persist layout when an interaction was actually started by
+  // the user. RGL otherwise emits Stop events on internal reflows (collapse
+  // toggles, prop-driven h changes) which would overwrite stored heights.
+  const userInteractingRef = React.useRef(false);
+
+  const handleStart = React.useCallback(() => {
+    userInteractingRef.current = true;
+  }, []);
+
+  const persistLayout = React.useCallback(
     (newLayout: Layout) => {
+      if (!userInteractingRef.current) return;
+      userInteractingRef.current = false;
       onApplyLayout(
         newLayout.map((l) => {
           const stored = widgetsById.get(l.i);
@@ -94,8 +105,6 @@ export function WidgetGrid({
     },
     [onApplyLayout, widgetsById],
   );
-
-  const handleResizeStop = handleDragStop;
 
   if (isLoading) {
     return (
@@ -117,8 +126,10 @@ export function WidgetGrid({
       rowHeight={GRID_ROW_HEIGHT}
       margin={[12, 12]}
       containerPadding={[0, 0]}
-      onDragStop={handleDragStop}
-      onResizeStop={handleResizeStop}
+      onDragStart={handleStart}
+      onDragStop={persistLayout}
+      onResizeStart={handleStart}
+      onResizeStop={persistLayout}
       draggableCancel={DRAG_CANCEL}
       resizeHandles={["se"]}
       compactType="vertical"
