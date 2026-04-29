@@ -18,6 +18,7 @@ from app.api.v1.chat import router as chat_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.galleries import router as galleries_router
+from app.api.v1.home import router as home_router
 from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.media import router as media_router
@@ -47,6 +48,7 @@ api_v1_router.include_router(chat_router)
 api_v1_router.include_router(events_router)
 api_v1_router.include_router(calendar_subscriptions_router)
 api_v1_router.include_router(galleries_router)
+api_v1_router.include_router(home_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)

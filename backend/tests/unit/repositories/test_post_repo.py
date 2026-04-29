@@ -136,15 +136,68 @@ class TestPostRepositoryListFeed:
         mock_polls = MagicMock()
         mock_polls.scalars.return_value.all.return_value = []
 
+        # Extra call for subgroup name lookup
+        mock_subgroup_names = MagicMock()
+        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha")]
+
         session.execute = AsyncMock(
-            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
+            side_effect=[
+                mock_list,
+                mock_posts,
+                mock_subgroup_names,
+                mock_empty,
+                mock_empty,
+                mock_comments,
+                mock_polls,
+            ]
         )
         repo = PostRepository(session)
         items, next_cursor = await repo.list_feed(COMMUNITY_ID, subgroup_id=subgroup_id)
 
         assert len(items) == 1
         assert items[0]["id"] == str(POST_ID)
+        assert items[0]["subgroup_id"] == str(subgroup_id)
+        assert items[0]["subgroup_name"] == "Alpha"
         session.execute.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_feed_includes_subgroup_badge_fields_for_community_posts(self):
+        """list_feed posts without a subgroup have subgroup_id/subgroup_name as None."""
+        session = _make_session()
+        now = datetime.now(UTC)
+
+        post = MagicMock(spec=Post)
+        post.id, post.content = POST_ID, "Community post"
+        post.created_at = post.updated_at = now
+        post.subgroup_id = None
+
+        user = MagicMock(spec=User)
+        user.id, user.username, user.display_name, user.avatar_url = (
+            AUTHOR_ID,
+            "bob",
+            "Bob",
+            None,
+        )
+
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = [post]
+        mock_posts = MagicMock()
+        mock_posts.all.return_value = [(post, user)]
+        mock_empty = MagicMock()
+        mock_empty.all.return_value = []
+        mock_comments = MagicMock()
+        mock_comments.all.return_value = [(POST_ID, 0)]
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
+        session.execute = AsyncMock(
+            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
+        )
+        repo = PostRepository(session)
+        items, _ = await repo.list_feed(COMMUNITY_ID)
+
+        assert items[0]["subgroup_id"] is None
+        assert items[0]["subgroup_name"] is None
 
     @pytest.mark.asyncio
     async def test_returns_enriched_posts_with_cursor(self):
@@ -154,9 +207,11 @@ class TestPostRepositoryListFeed:
         post = MagicMock(spec=Post)
         post.id, post.content = POST_ID, "Test post"
         post.created_at = post.updated_at = now
+        post.subgroup_id = None
         post2 = MagicMock(spec=Post)
         post2.id, post2.content = uuid.uuid4(), "Second"
         post2.created_at = post2.updated_at = now
+        post2.subgroup_id = None
         user = MagicMock(spec=User)
         user.id, user.username, user.display_name, user.avatar_url = (
             AUTHOR_ID,
@@ -186,6 +241,8 @@ class TestPostRepositoryListFeed:
         assert len(items) == 2
         assert items[0]["id"] == str(POST_ID)
         assert items[0]["author"]["username"] == "alice"
+        assert items[0]["subgroup_id"] is None
+        assert items[0]["subgroup_name"] is None
         assert next_cursor is not None
 
 
@@ -211,6 +268,7 @@ class TestPostRepositoryGetPostDetail:
         session = _make_session()
         post = MagicMock(spec=Post)
         post.id, post.content = POST_ID, "Test content"
+        post.subgroup_id = None
         user = MagicMock(spec=User)
         user.id, user.username, user.display_name, user.avatar_url = (
             AUTHOR_ID,
@@ -239,6 +297,8 @@ class TestPostRepositoryGetPostDetail:
         assert result is not None
         assert result["id"] == str(POST_ID)
         assert result["author"]["username"] == "bob"
+        assert result["subgroup_id"] is None
+        assert result["subgroup_name"] is None
 
 
 class TestCommentRepository:

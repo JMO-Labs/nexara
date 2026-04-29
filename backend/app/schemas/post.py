@@ -57,6 +57,8 @@ class PostResponse(BaseModel):
     poll: PollResponse | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)
     comment_count: int = 0
+    subgroup_id: UUID | None = None
+    subgroup_name: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 
 from app.models.poll import Poll, PollOption, PollVote
 from app.models.post import Comment, Post, PostMedia, Reaction
+from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
@@ -102,6 +103,34 @@ class PostRepository(BaseRepository[Post]):
                 ordered.append(data)
 
         return ordered, next_cursor
+
+    async def count_new_since(
+        self,
+        community_id: uuid.UUID,
+        viewer_id: uuid.UUID,
+        since: Any,
+    ) -> int:
+        """
+        @brief Count posts visible to viewer created after ``since``.
+
+        @param community_id Community scope.
+        @param viewer_id Viewer UUID for block filter.
+        @param since Datetime cutoff (posts created after this are counted).
+        @return Integer count of new posts.
+        """
+        from datetime import datetime as dt
+
+        stmt = (
+            select(func.count())
+            .select_from(Post)
+            .where(Post.community_id == community_id)
+            .where(Post.deleted_at.is_(None))
+        )
+        if isinstance(since, dt):
+            stmt = stmt.where(Post.created_at > since)
+        stmt = self.apply_block_filter(stmt, viewer_id)
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one())
 
     async def get_post_detail(
         self,
@@ -252,6 +281,14 @@ class PostRepository(BaseRepository[Post]):
         )
         posts_result = await self._session.execute(posts_stmt)
         post_rows = posts_result.all()
+
+        # Load subgroup names for posts that belong to a subgroup
+        subgroup_ids = {p.subgroup_id for p, _ in post_rows if p.subgroup_id is not None}
+        subgroup_name_map: dict[uuid.UUID, str] = {}
+        if subgroup_ids:
+            sg_stmt = select(Subgroup.id, Subgroup.name).where(Subgroup.id.in_(subgroup_ids))
+            sg_result = await self._session.execute(sg_stmt)
+            subgroup_name_map = {sg_id: sg_name for sg_id, sg_name in sg_result.all()}
 
         from app.models.media import Media
 
@@ -444,6 +481,10 @@ class PostRepository(BaseRepository[Post]):
                 "poll": poll_map.get(post.id),
                 "reactions": reaction_map.get(post.id, []),
                 "comment_count": comment_map.get(post.id, 0),
+                "subgroup_id": str(post.subgroup_id) if post.subgroup_id else None,
+                "subgroup_name": (
+                    subgroup_name_map.get(post.subgroup_id) if post.subgroup_id else None
+                ),
                 "created_at": post.created_at.isoformat(),
                 "updated_at": post.updated_at.isoformat(),
             }
