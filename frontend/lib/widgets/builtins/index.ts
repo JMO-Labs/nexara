@@ -20,7 +20,7 @@ register({
   id: "feed",
   title: "Community Feed",
   description: "Posts from your community and all groups you belong to.",
-  defaultSize: "lg",
+  defaultSize: 8,
   category: "core",
   Component: FeedWidget,
 });
@@ -29,7 +29,7 @@ register({
   id: "upcoming-events",
   title: "Upcoming Events",
   description: "Events in your community and groups over the next 7–30 days.",
-  defaultSize: "md",
+  defaultSize: 4,
   category: "core",
   Component: UpcomingEventsWidget,
 });
@@ -38,7 +38,7 @@ register({
   id: "media-carousel",
   title: "Media Carousel",
   description: "Recent photos and videos from across your groups.",
-  defaultSize: "full",
+  defaultSize: 12,
   category: "media",
   Component: MediaCarouselWidget,
 });
@@ -47,7 +47,7 @@ register({
   id: "activity",
   title: "Activity Digest",
   description: "Your last 24h notifications grouped by type.",
-  defaultSize: "sm",
+  defaultSize: 3,
   category: "social",
   Component: ActivityWidget,
 });
@@ -56,7 +56,7 @@ register({
   id: "quick-actions",
   title: "Quick Actions",
   description: "Shortcuts to create a post, event, or upload media.",
-  defaultSize: "sm",
+  defaultSize: 3,
   category: "core",
   Component: QuickActionsWidget,
 });
@@ -65,7 +65,7 @@ register({
   id: "my-groups",
   title: "My Groups",
   description: "Compact view of the groups you belong to.",
-  defaultSize: "sm",
+  defaultSize: 6,
   category: "social",
   Component: MyGroupsWidget,
 });

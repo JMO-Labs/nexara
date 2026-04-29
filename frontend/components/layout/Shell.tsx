@@ -22,6 +22,7 @@ import { HelpButton } from "@/components/help/HelpButton";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
+import { RightRail } from "@/components/home/RightRail";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -119,6 +120,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <WelcomeModal />
           <OnboardingTour />
           <FloatingChatDock />
+          <RightRail />
           <ConfirmDialog />
         </>
       )}

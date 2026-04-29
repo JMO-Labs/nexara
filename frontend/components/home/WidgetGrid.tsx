@@ -1,195 +1,92 @@
 "use client";
 /**
  * @file components/home/WidgetGrid.tsx
- * @brief Drag-and-drop responsive grid for home page widgets.
- *        Uses @dnd-kit/sortable for keyboard-accessible reordering.
- *        Grid: 12-col on lg, 6-col on md, 1-col on xs.
- *        Size map: sm=3col, md=6col, lg=9col, full=12col.
- * @param widgets  Sorted widget instances from useHomeLayout.
- * @param onReorder Callback with new id order after drag.
- * @param onRemove  Callback to remove a widget instance.
- * @param onToggleCollapsed Callback to toggle widget collapse.
- * @param isLoading Show skeleton cells while layout is loading.
+ * @brief Dashboard grid powered by react-grid-layout (legacy entry).
+ *        - Drag-to-reorder anywhere on the widget except `.rgl-cancel`.
+ *        - Free-form resize via the bottom-right grip.
+ *        - Persists positions via useHomeLayout.applyLayout.
+ *
+ *        Uses non-responsive ReactGridLayout + WidthProvider so the layout
+ *        prop is the single source of truth (responsive variant maintains
+ *        per-breakpoint state and was sending stale rows back through
+ *        onLayoutChange when children changed).
  */
 import * as React from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import RGL, {
+  WidthProvider,
+  type Layout,
+  type LayoutItem,
+} from "react-grid-layout/legacy";
 import { getDef } from "@/lib/widgets/registry";
+import { GRID_COLS, GRID_ROW_HEIGHT, type WidgetInstance } from "@/lib/widgets/registry";
 import { WidgetFrame } from "./WidgetFrame";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { WidgetInstance } from "@/lib/widgets/registry";
 import { useWidgetDrag } from "@/stores/widgetDrag";
 
-// ---------------------------------------------------------------------------
-// Size → col-span map (sm=3, md=4, lg=8, full=12 on 12-col grid)
-// ---------------------------------------------------------------------------
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
-const SIZE_SPAN: Record<WidgetInstance["size"], string> = {
-  sm: "col-span-12 md:col-span-6 lg:col-span-3",
-  md: "col-span-12 md:col-span-4",
-  lg: "col-span-12 lg:col-span-8",
-  full: "col-span-12",
-};
+const ReactGridLayout = WidthProvider(RGL);
 
-// ---------------------------------------------------------------------------
-// Drag handle icon
-// ---------------------------------------------------------------------------
-
-function GripIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="currentColor"
-      className="text-neutral-400"
-    >
-      <circle cx="4" cy="3" r="1" />
-      <circle cx="10" cy="3" r="1" />
-      <circle cx="4" cy="7" r="1" />
-      <circle cx="10" cy="7" r="1" />
-      <circle cx="4" cy="11" r="1" />
-      <circle cx="10" cy="11" r="1" />
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SortableWidget — wrapper for each draggable widget cell
-// ---------------------------------------------------------------------------
-
-interface SortableWidgetProps {
-  widget: WidgetInstance;
-  onRemove: (id: string) => void;
-  onToggleCollapsed: (id: string) => void;
-  onSizeChange: (id: string, size: WidgetInstance["size"]) => void;
-}
-
-function SortableWidget({
-  widget,
-  onRemove,
-  onToggleCollapsed,
-  onSizeChange,
-}: SortableWidgetProps) {
-  const dragDisabled = useWidgetDrag((s) => s.disabledIds.has(widget.id));
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: widget.id, disabled: dragDisabled });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const def = getDef(widget.defId);
-  if (!def) {
-    return null;
-  }
-
-  const DragHandle = (
-    <button
-      type="button"
-      aria-label="Drag to reorder widget"
-      className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)]"
-      {...attributes}
-      {...listeners}
-    >
-      <GripIcon />
-    </button>
-  );
-
-  return (
-    <div ref={setNodeRef} style={style} className={SIZE_SPAN[widget.size]}>
-      <WidgetFrame
-        title={def.title}
-        collapsed={widget.collapsed}
-        onToggleCollapsed={() => onToggleCollapsed(widget.id)}
-        onRemove={() => onRemove(widget.id)}
-        onSizeChange={(s) => onSizeChange(widget.id, s)}
-        currentSize={widget.size}
-        dragHandleSlot={DragHandle}
-        size={widget.size}
-      >
-        <def.Component instanceId={widget.id} props={widget.props} />
-      </WidgetFrame>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// WidgetGrid
-// ---------------------------------------------------------------------------
+const DRAG_CANCEL = ".rgl-cancel,button,a,input,textarea,select,[role=slider]";
 
 export interface WidgetGridProps {
   widgets: WidgetInstance[];
-  onReorder: (newIds: string[]) => void;
+  onApplyLayout: (
+    items: Array<{ i: string; x: number; y: number; w: number; h: number }>,
+  ) => void;
   onRemove: (instanceId: string) => void;
   onToggleCollapsed: (instanceId: string) => void;
-  onSizeChange: (instanceId: string, size: WidgetInstance["size"]) => void;
   isLoading?: boolean;
 }
 
 export function WidgetGrid({
   widgets,
-  onReorder,
+  onApplyLayout,
   onRemove,
   onToggleCollapsed,
-  onSizeChange,
   isLoading = false,
 }: WidgetGridProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+  const dragDisabledIds = useWidgetDrag((s) => s.disabledIds);
+
+  const layout: Layout = React.useMemo<Layout>(
+    () =>
+      widgets.map<LayoutItem>((w) => {
+        const def = getDef(w.defId);
+        return {
+          i: w.id,
+          x: w.x,
+          y: w.y,
+          w: w.w,
+          h: w.h,
+          minW: def?.minW ?? 2,
+          minH: def?.minH ?? 2,
+          isDraggable: !dragDisabledIds.has(w.id),
+          isResizable: !dragDisabledIds.has(w.id),
+        };
+      }),
+    [widgets, dragDisabledIds],
   );
 
-  const sorted = React.useMemo(
-    () => [...widgets].sort((a, b) => a.order - b.order),
-    [widgets],
+  // Only fire applyLayout for user-initiated drag/resize end events, not for
+  // every internal RGL onLayoutChange (which may emit stale rows on children
+  // changes). We persist on dragStop and resizeStop only.
+  const handleDragStop = React.useCallback(
+    (newLayout: Layout) => {
+      onApplyLayout(
+        newLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })),
+      );
+    },
+    [onApplyLayout],
   );
-  const ids = React.useMemo(() => sorted.map((w) => w.id), [sorted]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = widgets.findIndex((w) => w.id === active.id);
-    const newIndex = widgets.findIndex((w) => w.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const reordered = [...widgets];
-    const [moved] = reordered.splice(oldIndex, 1);
-    reordered.splice(newIndex, 0, moved);
-    onReorder(reordered.map((w) => w.id));
-  }
+  const handleResizeStop = handleDragStop;
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-12 gap-4">
+      <div className="grid grid-cols-12 gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="col-span-12 md:col-span-6 lg:col-span-3">
+          <div key={i} style={{ gridColumn: "span 3 / span 3" }}>
             <Skeleton height={200} rounded="md" />
           </div>
         ))}
@@ -198,25 +95,38 @@ export function WidgetGrid({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
+    <ReactGridLayout
+      className="layout"
+      layout={layout}
+      cols={GRID_COLS}
+      rowHeight={GRID_ROW_HEIGHT}
+      margin={[12, 12]}
+      containerPadding={[0, 0]}
+      onDragStop={handleDragStop}
+      onResizeStop={handleResizeStop}
+      draggableCancel={DRAG_CANCEL}
+      resizeHandles={["se"]}
+      compactType="vertical"
+      preventCollision={false}
+      autoSize
     >
-      <SortableContext items={ids} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-12 gap-4">
-          {sorted.map((widget) => (
-            <SortableWidget
-              key={widget.id}
-              widget={widget}
-              onRemove={onRemove}
-              onToggleCollapsed={onToggleCollapsed}
-              onSizeChange={onSizeChange}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+      {widgets.map((widget) => {
+        const def = getDef(widget.defId);
+        if (!def) return null;
+        return (
+          <div key={widget.id}>
+            <WidgetFrame
+              title={def.title}
+              collapsed={widget.collapsed}
+              onToggleCollapsed={() => onToggleCollapsed(widget.id)}
+              onRemove={() => onRemove(widget.id)}
+            >
+              <def.Component instanceId={widget.id} props={widget.props} />
+            </WidgetFrame>
+          </div>
+        );
+      })}
+    </ReactGridLayout>
   );
 }
 

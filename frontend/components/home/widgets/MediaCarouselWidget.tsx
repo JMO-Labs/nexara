@@ -75,8 +75,6 @@ export function MediaCarouselWidget(_: WidgetContext) {
       slides={slides}
       slidesPerView={3}
       loop
-      autoplay
-      autoplayDelayMs={5000}
       ariaLabel="Media from your groups"
       showArrows
       showDots

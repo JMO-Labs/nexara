@@ -14,6 +14,11 @@ import { Skeleton, EmptyState } from '@/components/ui';
 import type { ChatMessage } from '@/lib/api/chat';
 import { MessageItem } from './MessageItem';
 
+export interface MessageListHandle {
+  /** Force-scroll the viewport to the bottom on the next frame. */
+  scrollToBottom: () => void;
+}
+
 export interface MessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
@@ -35,7 +40,7 @@ function isCompact(prev: ChatMessage | undefined, cur: ChatMessage): boolean {
   return Math.abs(b - a) < GROUP_GAP_MS;
 }
 
-export function MessageList({
+export const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(function MessageList({
   messages,
   isLoading,
   hasMore,
@@ -44,10 +49,20 @@ export function MessageList({
   selfId,
   onReply,
   onSendDm,
-}: MessageListProps) {
+}, forwardedRef) {
   const parentRef = React.useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = React.useRef(true);
   const prevCount = React.useRef(0);
+
+  React.useImperativeHandle(forwardedRef, () => ({
+    scrollToBottom: () => {
+      pinnedToBottom.current = true;
+      requestAnimationFrame(() => {
+        const el = parentRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+  }), []);
 
   // Render oldest -> newest. Backend returns newest-first, so reverse once.
   const ordered = React.useMemo(() => [...messages].reverse(), [messages]);
@@ -183,4 +198,4 @@ export function MessageList({
       </motion.div>
     </AnimatePresence>
   );
-}
+});

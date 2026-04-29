@@ -10,10 +10,10 @@ import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
 import Typography from "@mui/joy/Typography";
 import { MinusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconButton } from "@/components/ui";
-import { MessageList } from "./MessageList";
+import { MessageList, type MessageListHandle } from "./MessageList";
 import { Composer } from "./Composer";
 import { useChatDock } from "@/stores/chatDock";
 import {
@@ -69,6 +69,8 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
     return data.pages.flatMap((p) => p.items);
   }, [data]);
 
+  const listRef = React.useRef<MessageListHandle | null>(null);
+
   const handleSend = (content: string) => {
     const optimistic: ChatMessage = {
       id: `optimistic-${Date.now()}`,
@@ -83,6 +85,7 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
     };
     optimisticAddMessage(qc, threadId, optimistic);
     sendChatMessage(threadId, content);
+    listRef.current?.scrollToBottom();
   };
 
   const handleTyping = () => sendChatTyping(threadId);
@@ -160,36 +163,36 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
         </IconButton>
       </Stack>
 
-      {/* Body — hidden when minimized */}
-      <AnimatePresence>
-        {!isMinimized && (
-          <motion.div
-            key="body"
-            initial={{ opacity: prefersReduced ? 1 : 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: prefersReduced ? 1 : 0 }}
-            transition={{ duration: prefersReduced ? 0 : 0.15 }}
-            style={{
-              flex: 1,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Box sx={{ flex: 1, minHeight: 0 }}>
-              <MessageList
-                messages={messages}
-                isLoading={isLoading}
-                hasMore={Boolean(hasNextPage)}
-                isFetchingMore={isFetchingNextPage}
-                onLoadMore={fetchNextPage}
-                selfId={selfId}
-              />
-            </Box>
+      {/* Body — hidden when minimized.
+          IMPORTANT: parent flex container with minHeight 0 is required so
+          MessageList can scroll without overlapping the Composer below. */}
+      {!isMinimized && (
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            opacity: 1,
+            transition: prefersReduced ? "none" : "opacity 0.15s ease",
+          }}
+        >
+          <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <MessageList
+              ref={listRef}
+              messages={messages}
+              isLoading={isLoading}
+              hasMore={Boolean(hasNextPage)}
+              isFetchingMore={isFetchingNextPage}
+              onLoadMore={fetchNextPage}
+              selfId={selfId}
+            />
+          </Box>
+          <Box sx={{ flexShrink: 0, borderTop: "1px solid", borderColor: "divider" }}>
             <Composer onSend={handleSend} onTyping={handleTyping} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

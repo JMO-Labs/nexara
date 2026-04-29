@@ -56,11 +56,9 @@ describe("FloatingChatDock", () => {
     });
   });
 
-  it("renders launcher when no threads are open", () => {
+  it("renders dock container when no threads are open", () => {
     wrap(<FloatingChatDock />);
-    expect(
-      screen.getByRole("button", { name: /open chat/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("floating-chat-dock")).toBeInTheDocument();
   });
 
   it("renders a chat head card when a thread is open", () => {

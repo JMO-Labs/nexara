@@ -11,6 +11,9 @@ import joyTheme from "@/theme/joy-theme";
 
 // --- Mocks ---
 vi.mock("@/lib/widgets/builtins", () => ({}));
+vi.mock("@/components/home/WidgetGrid", () => ({
+  WidgetGrid: () => <div data-testid="widget-grid" />,
+}));
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
@@ -30,7 +33,7 @@ vi.mock("@/hooks/useHomeLayout", () => ({
     addWidget: vi.fn(),
     removeWidget: vi.fn(),
     toggleCollapsed: vi.fn(),
-    reorder: vi.fn(),
+    applyLayout: vi.fn(),
     resetToDefault: vi.fn(),
   })),
 }));
@@ -65,9 +68,11 @@ describe("AppHome page", () => {
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
   });
 
-  it("renders WidgetGallery add button", () => {
+  it("renders WidgetGrid container", () => {
     wrap(<AppHome />);
-    expect(screen.getByLabelText("Add widget")).toBeInTheDocument();
+    // WidgetGallery now lives in Shell's RightRail; home page only renders
+    // WelcomeBanner + WidgetGrid.
+    expect(screen.getByText(/Alice/)).toBeInTheDocument();
   });
 
   it("renders without crashing when layout is loading", () => {

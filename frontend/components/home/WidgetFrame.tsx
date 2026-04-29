@@ -1,56 +1,32 @@
 "use client";
 /**
  * @file components/home/WidgetFrame.tsx
- * @brief Visual frame around a dashboard widget.
- *        Manages its own collapse via motion.div (no nested-button a11y issue).
- *        Provides title, collapse toggle, drag-handle slot, and optional remove button.
- * @param title             Widget heading text.
- * @param collapsed         Controlled collapsed state.
- * @param onToggleCollapsed Callback to flip collapsed state.
- * @param onRemove          If provided, shows a Remove button.
- * @param dragHandleSlot    Optional drag handle (passed from dnd-kit in P4).
- * @param size              Logical grid size; emitted as data-size attribute.
- * @param children          Widget body content.
- * @param className         Additional class names.
+ * @brief Editorial chrome around a dashboard widget. Drag + resize are
+ *        handled by react-grid-layout (the parent container). This frame
+ *        only provides title, collapse toggle, and an optional remove
+ *        button. Buttons match `.rgl-cancel` or `button` so RGL's
+ *        `draggableCancel` selector keeps clicks from initiating drag.
  */
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Card } from "@/components/ui/Card";
+import Box from "@mui/joy/Box";
 import { collapseTransition } from "@/components/ui/motion";
 import { useConfirmDialog } from "@/stores/confirmDialog";
-
-export type WidgetSize = "sm" | "md" | "lg" | "full";
 
 export interface WidgetFrameProps {
   title: string;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
   onRemove?: () => void;
-  onSizeChange?: (size: WidgetSize) => void;
-  currentSize?: WidgetSize;
-  /** Slot for dnd-kit drag handle (P3/P4). */
-  dragHandleSlot?: React.ReactNode;
-  size?: WidgetSize;
   children: React.ReactNode;
   className?: string;
 }
-
-const SIZE_LABELS: Record<WidgetSize, string> = {
-  sm: "S",
-  md: "M",
-  lg: "L",
-  full: "F",
-};
 
 export function WidgetFrame({
   title,
   collapsed = false,
   onToggleCollapsed,
   onRemove,
-  onSizeChange,
-  currentSize,
-  dragHandleSlot,
-  size,
   children,
   className,
 }: WidgetFrameProps) {
@@ -71,39 +47,72 @@ export function WidgetFrame({
   };
 
   return (
-    <Card
-      data-size={size}
-      className={className}
-      sx={{ p: 0, overflow: "hidden" }}
+    <Box
+      className={`group/widget ${className ?? ""}`}
+      sx={{
+        position: "relative",
+        height: "100%",
+        bgcolor: "background.surface",
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: "lg",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        transition: "border-color 150ms, box-shadow 150ms",
+        "&:hover": { borderColor: "neutral.300", boxShadow: "sm" },
+        // Show a subtle move-cursor on the body so users discover dragging.
+        cursor: "move",
+      }}
     >
-      {/* Header row — all buttons are flat siblings, no nesting */}
-      <div className="flex items-center justify-between w-full px-4 py-3">
-        <div className="flex items-center gap-2">
-          {dragHandleSlot}
-          <h2
-            className="text-sm font-semibold leading-none"
-            style={{ color: "var(--joy-palette-text-primary)" }}
-          >
-            {title}
-          </h2>
-        </div>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          px: 2,
+          pt: 1.75,
+          pb: 1,
+          gap: 1,
+          flexShrink: 0,
+        }}
+      >
+        <Box
+          component="h2"
+          sx={{
+            m: 0,
+            fontSize: "11px",
+            fontWeight: 600,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "text.tertiary",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {title}
+        </Box>
 
-        <div className="flex items-center gap-1">
-          {/* Collapse toggle */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, flexShrink: 0 }}>
           <button
             type="button"
             aria-label={collapsed ? "Expand widget" : "Collapse widget"}
             aria-expanded={!collapsed}
             aria-controls={panelId}
-            onClick={(e) => { e.stopPropagation(); onToggleCollapsed?.(); }}
-            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapsed?.();
+            }}
+            className="rgl-cancel p-1 rounded-md text-[var(--nx-palette-text-tertiary)] hover:text-[var(--nx-palette-text-primary)] hover:bg-[var(--nx-palette-neutral-100)] transition-colors"
           >
             <svg
               aria-hidden="true"
               width="14"
               height="14"
               viewBox="0 0 14 14"
-              fill="currentColor"
               className={`transition-transform ${collapsed ? "-rotate-90" : ""}`}
             >
               <path
@@ -116,22 +125,14 @@ export function WidgetFrame({
               />
             </svg>
           </button>
-
-          {/* Remove button */}
           {onRemove && (
             <button
               type="button"
               aria-label="Remove widget"
               onClick={handleRemove}
-              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-neutral-500 hover:text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] transition-colors"
+              className="rgl-cancel p-1 rounded-md text-[var(--nx-palette-text-tertiary)] hover:text-[var(--nx-palette-danger-500)] hover:bg-[var(--nx-palette-danger-50)] transition-colors opacity-0 md:group-hover/widget:opacity-100 focus-visible:opacity-100"
             >
-              <svg
-                aria-hidden="true"
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="currentColor"
-              >
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 14 14">
                 <path
                   d="M2 2l10 10M12 2L2 12"
                   stroke="currentColor"
@@ -142,10 +143,10 @@ export function WidgetFrame({
               </svg>
             </button>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      {/* Collapsible body */}
+      {/* Body — collapsible. flex:1 + minHeight:0 lets children scroll. */}
       <AnimatePresence initial={false}>
         {!collapsed && (
           <motion.div
@@ -154,37 +155,15 @@ export function WidgetFrame({
             initial={{ height: 0, overflow: "hidden" }}
             animate={{ height: "auto", overflow: "hidden", transition }}
             exit={{ height: 0, overflow: "hidden", transition }}
+            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
           >
-            <div className="px-4 pb-4">{children}</div>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 2, pb: 2 }}>
+              {children}
+            </Box>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Size controls — lower-left footer, always visible */}
-      {onSizeChange && currentSize && (
-        <div
-          className="flex items-center gap-0.5 px-3 pb-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {(["sm", "md", "lg", "full"] as WidgetSize[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-label={`Resize widget to ${s === "sm" ? "small" : s === "md" ? "medium" : s === "lg" ? "large" : "full"}`}
-              aria-pressed={currentSize === s}
-              onClick={(e) => { e.stopPropagation(); onSizeChange(s); }}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] ${
-                currentSize === s
-                  ? "bg-indigo-600 text-white"
-                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-              }`}
-            >
-              {SIZE_LABELS[s]}
-            </button>
-          ))}
-        </div>
-      )}
-    </Card>
+    </Box>
   );
 }
 

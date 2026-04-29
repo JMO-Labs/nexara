@@ -10,7 +10,6 @@ import Box from "@mui/joy/Box";
 import Typography from "@mui/joy/Typography";
 import Stack from "@mui/joy/Stack";
 import { Skeleton } from "@mui/joy";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@/components/ui";
 import { Drawer } from "@/components/ui/Drawer";
 import { useChatDock } from "@/stores/chatDock";
@@ -176,164 +175,44 @@ function ThreadList({
 }
 
 /**
- * @brief Launcher pill + popover (desktop) or bottom drawer (mobile).
+ * @brief Right-side slide-out drawer with the recent channels + DMs.
+ *        Triggered externally via useChatDock.launcherOpen (RightRail tab).
+ *        Desktop: right drawer. Mobile: bottom drawer.
  */
 export function ChatLauncher() {
   const launcherOpen = useChatDock((s) => s.launcherOpen);
-  const unreadCount = useChatDock((s) => s.unreadCount);
   const setLauncherOpen = useChatDock((s) => s.setLauncherOpen);
   const openThread = useChatDock((s) => s.openThread);
 
   const isMobile = useIsMobile();
-  // Fix 5: stable ref on pill for focus restoration
-  const pillRef = React.useRef<HTMLButtonElement | null>(null);
-  const popoverRef = React.useRef<HTMLDivElement | null>(null);
 
   const { data: channels = [], isLoading: chLoading } = useChannels();
   const { data: dms = [], isLoading: dmLoading } = useDmThreads();
   const { unread } = useChatRealtime();
   const isLoading = chLoading || dmLoading;
 
-  const toggle = () => setLauncherOpen(!launcherOpen);
-
   const handleSelect = (id: string) => {
     openThread(id);
     setLauncherOpen(false);
   };
 
-  // Fix 5: outside-click closes popover
-  React.useEffect(() => {
-    if (!launcherOpen || isMobile) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        pillRef.current &&
-        !pillRef.current.contains(e.target as Node)
-      ) {
-        setLauncherOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [launcherOpen, isMobile, setLauncherOpen]);
-
-  const pill = (
-    <Box sx={{ position: "relative" }}>
-      <Box
-        component="button"
-        ref={pillRef}
-        id="chat-launcher-pill"
-        onClick={toggle}
-        aria-label="Open chat"
-        aria-expanded={launcherOpen}
-        aria-haspopup="menu"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          px: 2,
-          py: 1,
-          borderRadius: "xl",
-          bgcolor: "primary.500",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          fontSize: "sm",
-          fontWeight: "md",
-          boxShadow: "md",
-          "&:hover": { bgcolor: "primary.600" },
-          "&:focus-visible": {
-            outline: "2px solid",
-            outlineColor: "primary.300",
-            outlineOffset: 2,
-          },
-        }}
-      >
-        <ChatBubbleLeftRightIcon width={18} />
-        <span>Chat</span>
-        {unreadCount > 0 && (
-          <Box
-            sx={{
-              ml: 0.5,
-              bgcolor: "danger.500",
-              color: "white",
-              borderRadius: "xl",
-              fontSize: "0.65rem",
-              fontWeight: "lg",
-              px: 0.75,
-              py: 0.1,
-              lineHeight: 1.4,
-            }}
-            aria-label={`${unreadCount} unread messages`}
-          >
-            {unreadCount}
-          </Box>
-        )}
+  return (
+    <Drawer
+      open={launcherOpen}
+      onClose={() => setLauncherOpen(false)}
+      side={isMobile ? "bottom" : "right"}
+      title="Chat"
+      width={360}
+    >
+      <Box sx={{ p: 1 }}>
+        <ThreadList
+          channels={channels}
+          dms={dms}
+          unread={unread}
+          isLoading={isLoading}
+          onSelect={handleSelect}
+        />
       </Box>
-
-      {/* Fix 5: role=menu, z-index 1250 (Fix 11), Escape closes */}
-      {!isMobile && launcherOpen && (
-        <Box
-          ref={popoverRef}
-          role="menu"
-          aria-label="Chat thread list"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setLauncherOpen(false);
-              pillRef.current?.focus();
-            }
-          }}
-          sx={{
-            position: "absolute",
-            bottom: "calc(100% + 8px)",
-            right: 0,
-            bgcolor: "background.surface",
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: "md",
-            boxShadow: "lg",
-            p: 1,
-            zIndex: 1250, // Fix 11: below Joy Modal default 1300
-            minWidth: 240,
-            maxHeight: 400,
-            overflowY: "auto",
-          }}
-        >
-          <ThreadList
-            channels={channels}
-            dms={dms}
-            unread={unread}
-            isLoading={isLoading}
-            onSelect={handleSelect}
-          />
-        </Box>
-      )}
-    </Box>
+    </Drawer>
   );
-
-  if (isMobile) {
-    return (
-      <>
-        {pill}
-        <Drawer
-          open={launcherOpen}
-          onClose={() => setLauncherOpen(false)}
-          side="bottom"
-          title="Chat"
-        >
-          <ThreadList
-            channels={channels}
-            dms={dms}
-            unread={unread}
-            isLoading={isLoading}
-            onSelect={handleSelect}
-          />
-        </Drawer>
-      </>
-    );
-  }
-
-  return pill;
 }

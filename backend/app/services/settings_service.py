@@ -23,6 +23,32 @@ from app.schemas.settings import (
 logger = structlog.get_logger(__name__)
 
 
+def _validate_settings_tolerant(settings: Any) -> UserSettingsResponse:
+    """Validate settings; if the legacy home_layout shape fails validation,
+    log a warning and treat the field as None so clients fall back to the
+    default dashboard layout."""
+    try:
+        return UserSettingsResponse.model_validate(settings)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "home_layout_legacy_dropped",
+            user_id=str(getattr(settings, "user_id", "?")),
+            error=str(exc),
+        )
+        # Re-validate with home_layout cleared.
+        try:
+            data = (
+                settings.__dict__
+                if hasattr(settings, "__dict__")
+                else dict(settings)
+            )
+            data = {k: v for k, v in data.items() if not k.startswith("_")}
+            data["home_layout"] = None
+            return UserSettingsResponse.model_validate(data)
+        except Exception:  # pragma: no cover
+            raise exc
+
+
 class SettingsService:
     """
     @brief Service layer for user settings operations.
@@ -50,7 +76,7 @@ class SettingsService:
         @return UserSettingsResponse with all preference fields.
         """
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
-        return UserSettingsResponse.model_validate(settings)
+        return _validate_settings_tolerant(settings)
 
     async def update_settings(
         self,
@@ -68,7 +94,7 @@ class SettingsService:
         update_dict = data.model_dump(exclude_unset=True)
         settings = await self._settings_repo.update(user_id, update_dict)
         logger.info("settings_updated", user_id=str(user_id), fields=list(update_dict.keys()))
-        return UserSettingsResponse.model_validate(settings)
+        return _validate_settings_tolerant(settings)
 
     async def update_profile(
         self,
@@ -137,7 +163,7 @@ class SettingsService:
             user_id=str(user_id),
             fields=list(update_dict.keys()),
         )
-        return UserSettingsResponse.model_validate(settings)
+        return _validate_settings_tolerant(settings)
 
     async def get_notification_preferences(
         self,

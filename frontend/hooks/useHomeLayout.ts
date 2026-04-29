@@ -1,92 +1,142 @@
 /**
  * @file hooks/useHomeLayout.ts
- * @brief TanStack Query hook for persisted home page widget layout.
- *
- * Fetches layout from GET /api/v1/settings/ (home_layout key), merges with
- * a default when missing, and exposes mutation helpers with optimistic updates.
+ * @brief TanStack Query hook for the persisted home page widget layout.
+ *        Layout uses react-grid-layout coordinates (x, y, w, h).
+ *        Reads from GET /api/v1/settings/ (home_layout key); persists via
+ *        the same endpoint with optimistic updates and a serialised mutation
+ *        queue so rapid drags / resizes don't race.
  */
 "use client";
 
+import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef } from "react";
 import { qk } from "@/lib/query-keys";
 import { getSettings } from "@/lib/api/settings";
 import { putHomeLayout, type HomeLayout } from "@/lib/api/home";
-import type { WidgetInstance, WidgetSize } from "@/lib/widgets/registry";
+import { getDef, type WidgetInstance } from "@/lib/widgets/registry";
 
 // ---------------------------------------------------------------------------
-// Default layout
+// Default layout — compact 12-col dashboard
 // ---------------------------------------------------------------------------
+
+interface DefEntry {
+  defId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const DEFAULT_ENTRIES: DefEntry[] = [
+  { defId: "feed", x: 0, y: 0, w: 8, h: 8 },
+  { defId: "upcoming-events", x: 8, y: 0, w: 4, h: 8 },
+  { defId: "media-carousel", x: 0, y: 8, w: 12, h: 4 },
+  { defId: "activity", x: 0, y: 12, w: 3, h: 4 },
+  { defId: "quick-actions", x: 3, y: 12, w: 3, h: 3 },
+  { defId: "my-groups", x: 6, y: 12, w: 6, h: 4 },
+];
 
 function makeDefault(): WidgetInstance[] {
-  // Row 2: feed (lg=8col) | upcoming-events (md=4col)
-  // Row 3: media-carousel (full=12col)
-  // Row 4: activity (sm=3col) | quick-actions (sm=3col) | my-groups (sm=6col treated as md)
-  const entries: Array<{ defId: string; size: WidgetSize; order: number }> = [
-    { defId: "feed", size: "lg", order: 0 },
-    { defId: "upcoming-events", size: "md", order: 1 },
-    { defId: "media-carousel", size: "full", order: 2 },
-    { defId: "activity", size: "sm", order: 3 },
-    { defId: "quick-actions", size: "sm", order: 4 },
-    { defId: "my-groups", size: "md", order: 5 },
-  ];
-  return entries.map((e) => ({
+  return DEFAULT_ENTRIES.map((e) => ({
     id: crypto.randomUUID(),
     defId: e.defId,
-    size: e.size,
-    order: e.order,
+    x: e.x,
+    y: e.y,
+    w: e.w,
+    h: e.h,
     collapsed: false,
   }));
 }
 
 // ---------------------------------------------------------------------------
-// Public result type
+// Legacy normalisation — convert old {size, order} rows to {x, y, w, h}.
+// ---------------------------------------------------------------------------
+
+const LEGACY_W: Record<string, number> = { sm: 3, md: 4, lg: 8, full: 12 };
+function legacyW(value: unknown): number {
+  if (typeof value === "number") return Math.max(1, Math.min(12, value));
+  if (typeof value === "string" && value in LEGACY_W) return LEGACY_W[value];
+  return 4;
+}
+
+function normaliseWidgets(raw: unknown): WidgetInstance[] | null {
+  if (!Array.isArray(raw)) return null;
+  // Detect new shape (has x/y/w/h) vs legacy (has size/order).
+  const isNew = raw.every(
+    (w) =>
+      typeof w === "object" &&
+      w !== null &&
+      "w" in w &&
+      "h" in w &&
+      "x" in w &&
+      "y" in w,
+  );
+  if (isNew) {
+    return raw.map((w) => {
+      const r = w as Record<string, unknown>;
+      return {
+        id: String(r.id ?? crypto.randomUUID()),
+        defId: String(r.defId ?? r.def_id ?? ""),
+        x: Number(r.x) || 0,
+        y: Number(r.y) || 0,
+        w: Math.max(1, Math.min(12, Number(r.w) || 4)),
+        h: Math.max(1, Number(r.h) || 4),
+        collapsed: Boolean(r.collapsed),
+        props: (r.props as Record<string, unknown> | undefined) ?? undefined,
+      };
+    });
+  }
+  // Legacy: pack rows by `order` using width from `size`.
+  let cursorX = 0;
+  let cursorY = 0;
+  return raw.map((w, i) => {
+    const r = w as Record<string, unknown>;
+    const width = legacyW(r.size);
+    if (cursorX + width > 12) {
+      cursorX = 0;
+      cursorY += 4;
+    }
+    const item: WidgetInstance = {
+      id: String(r.id ?? crypto.randomUUID()),
+      defId: String(r.defId ?? r.def_id ?? ""),
+      x: cursorX,
+      y: cursorY,
+      w: width,
+      h: 4,
+      collapsed: Boolean(r.collapsed),
+      props: (r.props as Record<string, unknown> | undefined) ?? undefined,
+    };
+    cursorX += width;
+    void i;
+    return item;
+  });
+}
+
 // ---------------------------------------------------------------------------
 
 export interface UseHomeLayoutResult {
   widgets: WidgetInstance[];
   isLoading: boolean;
   isError: boolean;
-  /** Add a new widget instance to the layout. */
   addWidget(
     defId: string,
-    opts?: { size?: WidgetSize; props?: Record<string, unknown> },
+    opts?: { props?: Record<string, unknown> },
   ): void;
-  /** Remove a widget instance by its instance id. */
   removeWidget(instanceId: string): void;
-  /** Toggle the collapsed state of a widget instance. */
   toggleCollapsed(instanceId: string): void;
-  /** Reorder widgets by providing instance ids in the desired order. */
-  reorder(instanceIds: string[]): void;
-  /** Change the size of a widget instance. */
-  setSize(instanceId: string, size: WidgetSize): void;
-  /** Reset the layout to the built-in default. */
+  /** Persist new x/y/w/h coordinates from react-grid-layout. */
+  applyLayout(items: Array<{ i: string; x: number; y: number; w: number; h: number }>): void;
   resetToDefault(): void;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Hook that provides the persisted home layout and mutation helpers.
- *
- * Reads from the settings endpoint (home_layout key). Falls back to a default
- * layout when the key is absent. Mutations are optimistic with rollback.
- *
- * @return UseHomeLayoutResult with widget array and action helpers.
- */
 export function useHomeLayout(): UseHomeLayoutResult {
   const qc = useQueryClient();
   const QUERY_KEY = qk.home.layout();
 
-  // Stable default layout — avoids regenerating UUIDs on every render (Fix A).
   const defaultLayout = useMemo(() => makeDefault(), []);
-
-  // Promise-chain queue — serialises rapid mutations to prevent server races (Fix D).
   const pendingRef = useRef<Promise<unknown>>(Promise.resolve());
 
-  // Fetch the raw settings; extract home_layout from it.
   const {
     data: settings,
     isLoading,
@@ -95,7 +145,6 @@ export function useHomeLayout(): UseHomeLayoutResult {
     queryKey: QUERY_KEY,
     queryFn: async () => {
       const s = await getSettings();
-      // settings.home_layout may be null/undefined or a HomeLayout-shaped dict
       return (
         (s as unknown as { home_layout?: HomeLayout | null }).home_layout ??
         null
@@ -104,37 +153,31 @@ export function useHomeLayout(): UseHomeLayoutResult {
     staleTime: 60_000,
   });
 
-  const widgets: WidgetInstance[] =
-    settings?.widgets && settings.widgets.length > 0
-      ? settings.widgets
-      : defaultLayout;
+  const widgets: WidgetInstance[] = React.useMemo(() => {
+    if (!settings?.widgets || settings.widgets.length === 0) return defaultLayout;
+    const norm = normaliseWidgets(settings.widgets as unknown);
+    return norm && norm.length > 0 ? norm : defaultLayout;
+  }, [settings, defaultLayout]);
 
-  // ---------------------------------------------------------------------------
-  // Single base mutation — PATCHes settings with a new widget list
-  // ---------------------------------------------------------------------------
   const mutation = useMutation({
     mutationFn: (newWidgets: WidgetInstance[]) =>
-      putHomeLayout({ widgets: newWidgets }),
-
+      putHomeLayout({ widgets: newWidgets as unknown as HomeLayout["widgets"] }),
     onMutate: async (newWidgets) => {
       await qc.cancelQueries({ queryKey: QUERY_KEY });
       const previous = qc.getQueryData<HomeLayout | null>(QUERY_KEY);
-      qc.setQueryData(QUERY_KEY, { widgets: newWidgets });
+      qc.setQueryData(QUERY_KEY, {
+        widgets: newWidgets as unknown as HomeLayout["widgets"],
+      });
       return { previous };
     },
-
     onError: (_err, _vars, ctx) => {
-      if (ctx?.previous !== undefined) {
-        qc.setQueryData(QUERY_KEY, ctx.previous);
-      }
+      if (ctx?.previous !== undefined) qc.setQueryData(QUERY_KEY, ctx.previous);
     },
-
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });
 
-  /** @brief Enqueue a mutation so rapid calls are serialised (Fix D). */
   function enqueue(next: WidgetInstance[]) {
     pendingRef.current = pendingRef.current
       .catch(() => undefined)
@@ -142,20 +185,23 @@ export function useHomeLayout(): UseHomeLayoutResult {
       .catch(() => undefined);
   }
 
-  // ---------------------------------------------------------------------------
-  // Public helpers
-  // ---------------------------------------------------------------------------
-
   function addWidget(
     defId: string,
-    opts?: { size?: WidgetSize; props?: Record<string, unknown> },
+    opts?: { props?: Record<string, unknown> },
   ) {
+    const def = getDef(defId);
+    const w = def?.defaultSize ?? 4;
+    const h = def?.defaultH ?? 4;
+    // Place new widget below the current layout to avoid overlaps.
+    const maxY = widgets.reduce((m, x) => Math.max(m, x.y + x.h), 0);
     const next: WidgetInstance = {
       id: crypto.randomUUID(),
       defId,
-      size: opts?.size ?? "md",
+      x: 0,
+      y: maxY,
+      w,
+      h,
       collapsed: false,
-      order: widgets.length,
       props: opts?.props,
     };
     enqueue([...widgets, next]);
@@ -173,19 +219,20 @@ export function useHomeLayout(): UseHomeLayoutResult {
     );
   }
 
-  function reorder(instanceIds: string[]) {
-    const byId = new Map(widgets.map((w) => [w.id, w]));
-    const reordered = instanceIds
-      .map((id, idx) => {
-        const w = byId.get(id);
-        return w ? { ...w, order: idx } : null;
-      })
-      .filter((w): w is WidgetInstance => w !== null);
-    enqueue(reordered);
-  }
-
-  function setSize(instanceId: string, size: WidgetSize) {
-    enqueue(widgets.map((w) => (w.id === instanceId ? { ...w, size } : w)));
+  function applyLayout(
+    items: Array<{ i: string; x: number; y: number; w: number; h: number }>,
+  ) {
+    const byId = new Map(items.map((it) => [it.i, it]));
+    const next = widgets.map((w) => {
+      const it = byId.get(w.id);
+      if (!it) return w;
+      if (w.x === it.x && w.y === it.y && w.w === it.w && w.h === it.h) return w;
+      return { ...w, x: it.x, y: it.y, w: it.w, h: it.h };
+    });
+    // Skip mutation if nothing changed.
+    const changed = next.some((w, i) => w !== widgets[i]);
+    if (!changed) return;
+    enqueue(next);
   }
 
   function resetToDefault() {
@@ -199,8 +246,7 @@ export function useHomeLayout(): UseHomeLayoutResult {
     addWidget,
     removeWidget,
     toggleCollapsed,
-    reorder,
-    setSize,
+    applyLayout,
     resetToDefault,
   };
 }

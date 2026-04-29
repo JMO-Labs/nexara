@@ -86,22 +86,16 @@ export function FloatingChatDock() {
     return null;
 
   if (isMobile) {
-    // Mobile: single bottom drawer; show most recently opened thread
+    // Mobile: single bottom drawer for active thread + launcher drawer
     const activeId = openThreadIds[openThreadIds.length - 1] ?? null;
     return (
-      <Box
-        data-testid="floating-chat-dock"
-        sx={{ position: "fixed", bottom: 16, right: 16, zIndex: 1200 }}
-      >
+      <Box data-testid="floating-chat-dock">
         <UnreadSync />
         <ChatLauncher />
         {activeId && (
           <Drawer
             open={!launcherOpen && Boolean(activeId)}
-            onClose={() => {
-              // Fix 7 + 8: close the active thread; do NOT reopen the launcher.
-              closeThread(activeId);
-            }}
+            onClose={() => closeThread(activeId)}
             side="bottom"
             title="Chat"
           >
@@ -121,7 +115,7 @@ export function FloatingChatDock() {
       sx={{
         position: "fixed",
         bottom: 16,
-        right: 16,
+        right: 64,
         zIndex: 1200,
         display: "flex",
         flexDirection: "row",
@@ -132,6 +126,7 @@ export function FloatingChatDock() {
       }}
     >
       <UnreadSync />
+      <ChatLauncher />
       {/* Open chat heads — left to right */}
       <Stack direction="row" spacing={1} alignItems="flex-end">
         <AnimatePresence initial={false}>
@@ -148,7 +143,6 @@ export function FloatingChatDock() {
                 alignItems: "flex-end",
               }}
             >
-              {/* Fix 3: resolved label instead of raw UUID */}
               <ChatHead
                 threadId={id}
                 label={labelMap.get(id) ?? "Conversation"}
@@ -157,9 +151,6 @@ export function FloatingChatDock() {
           ))}
         </AnimatePresence>
       </Stack>
-
-      {/* Launcher pill */}
-      <ChatLauncher />
     </Box>
   );
 }

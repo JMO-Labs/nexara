@@ -128,18 +128,6 @@ describe("WidgetFrame", () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it("renders dragHandleSlot when provided", () => {
-    wrap(
-      <WidgetFrame
-        title="Widget"
-        dragHandleSlot={<span data-testid="drag-handle">drag</span>}
-      >
-        <p>Content</p>
-      </WidgetFrame>,
-    );
-    expect(screen.getByTestId("drag-handle")).toBeInTheDocument();
-  });
-
   it("does not render remove button when onRemove is not provided", () => {
     wrap(
       <WidgetFrame title="Widget">
@@ -149,37 +137,6 @@ describe("WidgetFrame", () => {
     expect(
       screen.queryByRole("button", { name: /remove widget/i }),
     ).not.toBeInTheDocument();
-  });
-
-  it("renders S/M/L/F size buttons when onSizeChange and currentSize provided", () => {
-    wrap(
-      <WidgetFrame
-        title="Widget"
-        currentSize="md"
-        onSizeChange={vi.fn()}
-      >
-        <p>Content</p>
-      </WidgetFrame>,
-    );
-    expect(screen.getByRole("button", { name: /resize widget to small/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /resize widget to medium/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /resize widget to large/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /resize widget to full/i })).toBeInTheDocument();
-  });
-
-  it("clicking size button calls onSizeChange with that size", async () => {
-    const onSizeChange = vi.fn();
-    wrap(
-      <WidgetFrame
-        title="Widget"
-        currentSize="md"
-        onSizeChange={onSizeChange}
-      >
-        <p>Content</p>
-      </WidgetFrame>,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /resize widget to large/i }));
-    expect(onSizeChange).toHaveBeenCalledWith("lg");
   });
 
   it("header row has no nested buttons (collapse + remove are siblings, not children of another button)", () => {

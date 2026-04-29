@@ -8,22 +8,28 @@ and basic profile settings. Privacy and appearance settings ship in Phase 2.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class WidgetInstanceSchema(BaseModel):
-    """@brief Typed schema for a single persisted widget instance."""
+    """@brief Typed schema for a single persisted widget instance.
+
+    Layout coordinates are react-grid-layout-compatible: x, y, w, h on a
+    12-column grid. `collapsed` is independent of the grid coordinates.
+    """
 
     id: str = Field(..., max_length=64)
     def_id: str = Field(..., max_length=64, alias="defId")
-    size: Literal["sm", "md", "lg", "full"]
+    x: int = Field(..., ge=0, le=12)
+    y: int = Field(..., ge=0)
+    w: int = Field(..., ge=1, le=12)
+    h: int = Field(..., ge=1)
     collapsed: bool
-    order: int = Field(..., ge=0)
     props: dict[str, Any] | None = None
 
-    model_config = {"populate_by_name": True}
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 class HomeLayoutSchema(BaseModel):

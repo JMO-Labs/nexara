@@ -1,18 +1,14 @@
 "use client";
 /**
  * @file components/home/WelcomeBanner.tsx
- * @brief Welcome banner for the home page hub.
- *        Displays time-aware greeting, user name, and three stat chips
- *        (new posts, upcoming events, unread notifications).
- *        Shows skeleton loaders while data is loading.
- * @param userName             Authenticated user's display name.
- * @param newPosts             Count of new posts since last visit.
- * @param upcomingEvents       Count of events in next 7 days.
- * @param unreadNotifications  Unread notification count.
- * @param isLoading            Shows skeleton UI when true.
+ * @brief Editorial welcome banner. Warm Editorial palette (paper / ink /
+ *        terracotta), display serif greeting, tabular-nums stat chips, and
+ *        a subtle terracotta accent line.
  */
 import * as React from "react";
 import Link from "next/link";
+import Box from "@mui/joy/Box";
+import Typography from "@mui/joy/Typography";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export interface WelcomeBannerProps {
@@ -30,6 +26,14 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+function getDateLabel(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 interface StatChipProps {
   count: number;
   label: string;
@@ -40,13 +44,43 @@ interface StatChipProps {
 function StatChip({ count, label, href, ariaLabel }: StatChipProps) {
   const displayed = count > 99 ? "99+" : String(count);
   return (
-    <Link
-      href={href}
-      aria-label={ariaLabel}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-    >
-      <span className="font-bold">{displayed}</span>
-      <span>{label}</span>
+    <Link href={href} aria-label={ariaLabel} className="group focus-visible:outline-none">
+      <Box
+        sx={{
+          display: "inline-flex",
+          alignItems: "baseline",
+          gap: 1,
+          px: 1.75,
+          py: 1,
+          borderRadius: "md",
+          border: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.surface",
+          transition: "border-color 150ms, transform 150ms",
+          "&:hover": {
+            borderColor: "primary.500",
+            transform: "translateY(-1px)",
+          },
+          ".group:focus-visible &": {
+            outline: "2px solid var(--nx-palette-focusVisible)",
+            outlineOffset: "2px",
+          },
+        }}
+      >
+        <Typography
+          level="title-md"
+          sx={{
+            fontVariantNumeric: "tabular-nums",
+            color: "text.primary",
+            fontWeight: 600,
+          }}
+        >
+          {displayed}
+        </Typography>
+        <Typography level="body-xs" textColor="text.secondary">
+          {label}
+        </Typography>
+      </Box>
     </Link>
   );
 }
@@ -59,29 +93,83 @@ export function WelcomeBanner({
   isLoading = false,
 }: WelcomeBannerProps) {
   const greeting = getGreeting();
+  const dateLabel = getDateLabel();
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-6 flex flex-col gap-4">
-        <Skeleton width={220} height={32} rounded="md" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton width={120} height={32} rounded="pill" />
-          <Skeleton width={140} height={32} rounded="pill" />
-          <Skeleton width={160} height={32} rounded="pill" />
-        </div>
-      </div>
+      <Box
+        sx={{
+          position: "relative",
+          borderRadius: "xl",
+          border: "1px solid",
+          borderColor: "divider",
+          bgcolor: "background.surface",
+          px: { xs: 3, md: 4 },
+          py: { xs: 3, md: 3.5 },
+        }}
+      >
+        <Skeleton width={140} height={14} rounded="md" />
+        <Box sx={{ height: 8 }} />
+        <Skeleton width={320} height={36} rounded="md" />
+        <Box sx={{ height: 16 }} />
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <Skeleton width={120} height={40} rounded="md" />
+          <Skeleton width={140} height={40} rounded="md" />
+          <Skeleton width={130} height={40} rounded="md" />
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-6 flex flex-col gap-4">
-      {/* Greeting — sufficient contrast: white text on dark gradient (>4.5:1) */}
-      <h1 className="text-2xl font-bold text-white">
-        {greeting}, {userName}
-      </h1>
+    <Box
+      sx={{
+        position: "relative",
+        borderRadius: "xl",
+        border: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.surface",
+        px: { xs: 3, md: 4 },
+        py: { xs: 3, md: 3.5 },
+        overflow: "hidden",
+        // Terracotta accent line on the left edge for editorial rhythm.
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: "0 auto 0 0",
+          width: "3px",
+          background:
+            "linear-gradient(180deg, var(--nx-palette-primary-500), var(--nx-palette-primary-700))",
+        },
+      }}
+    >
+      <Typography
+        level="body-xs"
+        sx={{
+          textTransform: "uppercase",
+          letterSpacing: "0.14em",
+          color: "text.tertiary",
+          fontWeight: 600,
+        }}
+      >
+        {dateLabel}
+      </Typography>
 
-      <div
-        className="flex flex-wrap gap-2"
+      <Typography
+        level="h2"
+        sx={{
+          mt: 0.5,
+          fontFamily: "var(--font-display)",
+          fontWeight: 500,
+          letterSpacing: "-0.01em",
+          color: "text.primary",
+        }}
+      >
+        {greeting}, {userName}.
+      </Typography>
+
+      <Box
+        sx={{ mt: 2.5, display: "flex", flexWrap: "wrap", gap: 1.25 }}
         role="list"
         aria-label="Activity summary"
       >
@@ -109,8 +197,8 @@ export function WelcomeBanner({
             ariaLabel={`${unreadNotifications} unread notifications`}
           />
         </div>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

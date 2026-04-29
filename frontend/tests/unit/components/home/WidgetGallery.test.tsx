@@ -1,14 +1,33 @@
 /**
  * @file tests/unit/components/home/WidgetGallery.test.tsx
- * @brief Unit tests for WidgetGallery component.
+ * @brief Unit tests for the controlled WidgetGallery drawer.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CssVarsProvider } from "@mui/joy/styles";
 import joyTheme from "@/theme/joy-theme";
 import { clearRegistry, register } from "@/lib/widgets/registry";
+import type { WidgetContext, WidgetInstance } from "@/lib/widgets/registry";
+
+const mockAddWidget = vi.fn();
+const mockResetToDefault = vi.fn();
+let widgets: WidgetInstance[] = [];
+
+vi.mock("@/hooks/useHomeLayout", () => ({
+  useHomeLayout: () => ({
+    widgets,
+    isLoading: false,
+    isError: false,
+    addWidget: mockAddWidget,
+    removeWidget: vi.fn(),
+    toggleCollapsed: vi.fn(),
+    reorder: vi.fn(),
+    setSize: vi.fn(),
+    resetToDefault: mockResetToDefault,
+  }),
+}));
+
 import { WidgetGallery } from "@/components/home/WidgetGallery";
-import type { WidgetContext } from "@/lib/widgets/registry";
 
 function DummyWidget(_: WidgetContext) {
   return <div>dummy</div>;
@@ -20,12 +39,15 @@ function wrap(ui: React.ReactNode) {
 
 describe("WidgetGallery", () => {
   beforeEach(() => {
+    mockAddWidget.mockClear();
+    mockResetToDefault.mockClear();
+    widgets = [];
     clearRegistry();
     register({
       id: "test-widget",
       title: "Test Widget",
       description: "A test widget",
-      defaultSize: "sm",
+      defaultSize: 3,
       category: "core",
       Component: DummyWidget,
     });
@@ -35,52 +57,34 @@ describe("WidgetGallery", () => {
     clearRegistry();
   });
 
-  it("renders the add widget button", () => {
-    wrap(
-      <WidgetGallery
-        presentDefIds={[]}
-        onAdd={vi.fn()}
-        onReset={vi.fn()}
-      />,
-    );
-    expect(screen.getByLabelText("Add widget")).toBeInTheDocument();
-  });
-
-  it("opens drawer on button click", () => {
-    wrap(
-      <WidgetGallery
-        presentDefIds={[]}
-        onAdd={vi.fn()}
-        onReset={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Add widget"));
+  it("lists available widgets when open", () => {
+    wrap(<WidgetGallery open onClose={vi.fn()} />);
     expect(screen.getByText("Test Widget")).toBeInTheDocument();
   });
 
-  it("calls onAdd with defId when Add button clicked", () => {
-    const onAdd = vi.fn();
-    wrap(
-      <WidgetGallery
-        presentDefIds={[]}
-        onAdd={onAdd}
-        onReset={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Add widget"));
+  it("calls addWidget with defId when Add clicked", () => {
+    const onClose = vi.fn();
+    wrap(<WidgetGallery open onClose={onClose} />);
     fireEvent.click(screen.getByLabelText("Add Test Widget widget"));
-    expect(onAdd).toHaveBeenCalledWith("test-widget");
+    expect(mockAddWidget).toHaveBeenCalledWith("test-widget");
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it("does not show widgets already in layout", () => {
-    wrap(
-      <WidgetGallery
-        presentDefIds={["test-widget"]}
-        onAdd={vi.fn()}
-        onReset={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Add widget"));
-    expect(screen.getByText("All widgets are already on your page.")).toBeInTheDocument();
+  it("hides widgets already in layout", () => {
+    widgets = [
+      {
+        id: "w1",
+        defId: "test-widget",
+        x: 0,
+        y: 0,
+        w: 3,
+        h: 4,
+        collapsed: false,
+      },
+    ];
+    wrap(<WidgetGallery open onClose={vi.fn()} />);
+    expect(
+      screen.getByText("All widgets are already on your dashboard."),
+    ).toBeInTheDocument();
   });
 });

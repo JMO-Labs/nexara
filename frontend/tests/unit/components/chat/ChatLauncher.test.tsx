@@ -1,6 +1,7 @@
 /**
  * @file tests/unit/components/chat/ChatLauncher.test.tsx
- * @brief ChatLauncher pill + popover/drawer with thread list.
+ * @brief ChatLauncher = right-side slide-out drawer with thread list.
+ *        Triggered externally via useChatDock.launcherOpen (RightRail tab).
  */
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -11,10 +12,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useChatDock } from "@/stores/chatDock";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
-// Mock next/navigation
 vi.mock("next/navigation", () => ({ usePathname: () => "/app/home" }));
 
-// Mock the chat hooks
 vi.mock("@/hooks/useChat", () => ({
   useChannels: vi.fn(),
   useDmThreads: vi.fn(),
@@ -61,7 +60,7 @@ function wrap(ui: React.ReactNode) {
   );
 }
 
-describe("ChatLauncher", () => {
+describe("ChatLauncher (drawer)", () => {
   beforeEach(() => {
     useChatDock.setState({
       openThreadIds: [],
@@ -77,28 +76,6 @@ describe("ChatLauncher", () => {
       data: dms,
       isLoading: false,
     } as ReturnType<typeof useDmThreads>);
-  });
-
-  it("renders the launcher pill button", () => {
-    wrap(<ChatLauncher />);
-    expect(
-      screen.getByRole("button", { name: /open chat/i }),
-    ).toBeInTheDocument();
-  });
-
-  it("click toggles popover open", () => {
-    wrap(<ChatLauncher />);
-    const btn = screen.getByRole("button", { name: /open chat/i });
-    fireEvent.click(btn);
-    expect(useChatDock.getState().launcherOpen).toBe(true);
-  });
-
-  it("click when open sets launcherOpen false", () => {
-    useChatDock.setState({ launcherOpen: true });
-    wrap(<ChatLauncher />);
-    const btn = screen.getByRole("button", { name: /open chat/i });
-    fireEvent.click(btn);
-    expect(useChatDock.getState().launcherOpen).toBe(false);
   });
 
   it("lists DM threads when launcher is open", () => {
@@ -119,11 +96,5 @@ describe("ChatLauncher", () => {
     fireEvent.click(screen.getByText("Alice"));
     expect(useChatDock.getState().openThreadIds).toContain("d1");
     expect(useChatDock.getState().launcherOpen).toBe(false);
-  });
-
-  it("shows unread badge when unreadCount > 0", () => {
-    useChatDock.setState({ unreadCount: 3 });
-    wrap(<ChatLauncher />);
-    expect(screen.getByText("3")).toBeInTheDocument();
   });
 });

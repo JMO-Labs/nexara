@@ -1,13 +1,18 @@
 /**
  * @file lib/widgets/registry.ts
  * @brief In-process widget registry. Widgets register themselves at module
- *        load time via side-effect imports; the registry never imports React
- *        components directly — that is the caller's concern.
+ *        load time; the registry never imports React components directly.
+ *        Layout positions are stored as react-grid-layout (x, y, w, h).
  */
 
 import type React from "react";
 
-export type WidgetSize = "sm" | "md" | "lg" | "full";
+/** Total columns in the dashboard grid. Matches react-grid-layout default. */
+export const GRID_COLS = 12;
+
+/** Default row height in pixels for react-grid-layout. */
+export const GRID_ROW_HEIGHT = 80;
+
 export type WidgetCategory = "core" | "social" | "media" | "plugin";
 
 /** @brief Minimal session user shape needed for permission checks. */
@@ -26,72 +31,44 @@ export interface WidgetContext<P = unknown> {
 /**
  * @brief Static definition of a widget type.
  *
- * @param id        Unique stable key (e.g. 'feed', 'upcoming-events').
- * @param title     Human-readable name shown in the add menu and frame header.
- * @param description Optional blurb shown in the widget gallery.
- * @param defaultProps Default prop values merged at instantiation time.
- * @param defaultSize Initial column-span for new instances.
- * @param category  Grouping for the add-widget gallery.
- * @param Component React component rendered inside WidgetFrame.
- * @param permissions Optional guard; if returns false the widget is hidden.
+ * @param defaultSize Initial width in grid columns (1..12) for new instances.
+ * @param defaultH    Initial height in grid rows for new instances.
+ * @param minW/minH   Lower bound of the resize handle.
  */
 export interface WidgetDef<P = unknown> {
   id: string;
   title: string;
   description?: string;
   defaultProps?: P;
-  defaultSize: WidgetSize;
+  defaultSize: number;
+  defaultH?: number;
+  minW?: number;
+  minH?: number;
   category: WidgetCategory;
   Component: React.ComponentType<WidgetContext<P>>;
   permissions?: (user: SessionUser) => boolean;
 }
 
 /**
- * @brief A persisted instance of a widget in the user's layout.
- *
- * @param id        UUIDv4 generated at creation time (instance id).
- * @param defId     References WidgetDef.id.
- * @param size      Current column-span override (may differ from defaultSize).
- * @param collapsed Whether the widget body is hidden.
- * @param order     Zero-based position in the layout grid.
- * @param props     Per-instance prop overrides (merged with WidgetDef.defaultProps).
+ * @brief A persisted widget instance with grid coordinates.
  */
 export interface WidgetInstance {
   id: string;
   defId: string;
-  size: WidgetSize;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
   collapsed: boolean;
-  order: number;
   props?: Record<string, unknown>;
 }
 
-// ---------------------------------------------------------------------------
-// Internal store
-// ---------------------------------------------------------------------------
-
 const _registry = new Map<string, WidgetDef>();
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Register a widget definition.
- *
- * Idempotent: re-registering the same id with the same Component is a no-op
- * (safe for React StrictMode double-invocation and HMR). Re-registering with a
- * different Component logs a warning and overwrites.
- *
- * @param def The WidgetDef to register.
- */
 export function register(def: WidgetDef): void {
   const existing = _registry.get(def.id);
   if (existing !== undefined) {
-    if (existing.Component === def.Component) {
-      // Same component reference — silent no-op (StrictMode / HMR safe).
-      return;
-    }
-    // Different component — warn and overwrite.
+    if (existing.Component === def.Component) return;
     console.warn(
       `Widget '${def.id}' re-registered with a different Component. Overwriting.`,
     );
@@ -99,21 +76,10 @@ export function register(def: WidgetDef): void {
   _registry.set(def.id, def);
 }
 
-/**
- * @brief Look up a widget definition by id.
- *
- * @param id The widget definition id.
- * @return The WidgetDef, or undefined if not found.
- */
 export function getDef(id: string): WidgetDef | undefined {
   return _registry.get(id);
 }
 
-/**
- * @brief List all registered widget definitions, sorted by category then title.
- *
- * @return Sorted array of WidgetDef.
- */
 export function listDefs(): WidgetDef[] {
   return Array.from(_registry.values()).sort((a, b) => {
     if (a.category !== b.category) return a.category.localeCompare(b.category);
@@ -121,9 +87,6 @@ export function listDefs(): WidgetDef[] {
   });
 }
 
-/**
- * @brief Clear all registrations. Intended for testing only.
- */
 export function clearRegistry(): void {
   _registry.clear();
 }

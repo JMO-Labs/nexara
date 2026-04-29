@@ -1,97 +1,168 @@
 "use client";
 /**
  * @file components/home/widgets/MyGroupsWidget.tsx
- * @brief Compact tile grid of the user's subgroups (up to 6).
- *        Each tile links to the subgroup hub page.
+ * @brief Editorial group tiles. Avatar / monogram + name. Up to 6, with a
+ *        "+ View all" tile when more exist. Uses Joy theme tokens — no
+ *        hard-coded indigo.
  */
 import * as React from "react";
 import Link from "next/link";
-import Typography from "@mui/joy/Typography";
+import Box from "@mui/joy/Box";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { EmptyState, Skeleton } from "@/components/ui";
 import type { WidgetContext } from "@/lib/widgets/registry";
+
+const tileSx = {
+  all: "unset",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: 1,
+  px: 1.25,
+  py: 1,
+  borderRadius: "md",
+  border: "1px solid",
+  borderColor: "divider",
+  bgcolor: "background.surface",
+  transition: "border-color 150ms, transform 150ms",
+  "&:hover": {
+    borderColor: "primary.500",
+    transform: "translateY(-1px)",
+  },
+  "&:focus-visible": {
+    outline: "2px solid var(--nx-palette-focusVisible)",
+    outlineOffset: 2,
+  },
+} as const;
 
 export function MyGroupsWidget(_: WidgetContext) {
   const { data, isLoading } = useSubgroupList();
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" },
+          gap: 1,
+        }}
+      >
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} height={72} rounded="md" />
+          <Skeleton key={i} height={48} rounded="md" />
         ))}
-      </div>
+      </Box>
     );
   }
 
-  const allGroups = (data ?? []).filter((sg) => sg.my_role !== null);
-  const groups = allGroups.slice(0, 6);
-  const hasMore = allGroups.length > 6;
+  const all = (data ?? []).filter((sg) => sg.my_role !== null);
+  const groups = all.slice(0, 6);
+  const hasMore = all.length > 6;
 
   if (groups.length === 0) {
     return (
-      <EmptyState
-        title="No groups yet"
-        description="Join a group to see it here."
-      />
+      <EmptyState title="No groups yet" description="Join a group to see it here." />
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" },
+        gap: 1,
+      }}
+    >
       {groups.map((sg) => (
-        <Link
+        <Box
           key={sg.id}
+          component={Link}
           href={`/app/subgroups/${sg.slug}`}
           aria-label={`Go to ${sg.name}`}
-          className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)]"
+          sx={tileSx}
         >
           {sg.avatar_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={sg.avatar_url}
               alt=""
-              className="w-10 h-10 rounded-full object-cover"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-              <span className="text-indigo-600 dark:text-indigo-400 text-sm font-bold">
-                {sg.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                bgcolor: "primary.softBg",
+                color: "primary.plainColor",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              {sg.name.charAt(0).toUpperCase()}
+            </Box>
           )}
-          <Typography
-            level="body-xs"
-            fontWeight="md"
-            noWrap
-            sx={{ maxWidth: "100%" }}
+          <Box
+            sx={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: "text.primary",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
           >
             {sg.name}
-          </Typography>
-        </Link>
+          </Box>
+        </Box>
       ))}
       {hasMore && (
-        <Link
+        <Box
+          component={Link}
           href="/app/subgroups"
           aria-label="View all groups"
-          className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)]"
+          sx={tileSx}
         >
-          <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
-            <span className="text-neutral-500 dark:text-neutral-400 text-lg font-bold">
-              +
-            </span>
-          </div>
-          <Typography
-            level="body-xs"
-            fontWeight="md"
-            noWrap
-            sx={{ maxWidth: "100%" }}
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              bgcolor: "background.level1",
+              color: "text.tertiary",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontWeight: 600,
+              flexShrink: 0,
+            }}
+          >
+            +
+          </Box>
+          <Box
+            sx={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: "text.secondary",
+            }}
           >
             View all
-          </Typography>
-        </Link>
+          </Box>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 

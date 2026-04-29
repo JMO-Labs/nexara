@@ -86,52 +86,101 @@ export function ActivityWidget(_ctx: WidgetContext) {
   const recent = items.slice(0, 5);
 
   return (
-    <Stack spacing={1.5}>
-      {/* Summary line */}
-      <Typography level="body-sm" textColor="text.secondary">
+    <Stack spacing={1.25}>
+      <Typography
+        level="body-sm"
+        sx={{ color: "text.primary", lineHeight: 1.5 }}
+      >
         {summary}
       </Typography>
 
-      {/* Expand toggle */}
       <Button
         variant="plain"
         size="sm"
+        color="neutral"
         onClick={() => setExpanded((v) => !v)}
         startDecorator={
-          expanded ? (
-            <ChevronUpIcon width={14} />
-          ) : (
-            <ChevronDownIcon width={14} />
-          )
+          expanded ? <ChevronUpIcon width={12} /> : <ChevronDownIcon width={12} />
         }
-        sx={{ alignSelf: "flex-start" }}
+        sx={{
+          alignSelf: "flex-start",
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          color: "text.tertiary",
+          minHeight: 0,
+          py: 0.25,
+          px: 0.75,
+          "&:hover": { color: "text.primary", bgcolor: "transparent" },
+        }}
       >
-        {expanded ? "Collapse" : "Show recent"}
+        {expanded ? "Hide" : "Recent"}
       </Button>
 
-      {/* Item list */}
       {expanded && (
-        <Stack spacing={0.5}>
+        <Stack
+          spacing={0}
+          sx={{ borderTop: "1px solid", borderColor: "divider" }}
+        >
           {recent.map((n) => {
             const message =
-              typeof n.payload?.message === "string" ? n.payload.message : labelFor(n.type);
+              typeof n.payload?.message === "string"
+                ? n.payload.message
+                : labelFor(n.type);
             const link =
               typeof n.payload?.link === "string" ? n.payload.link : null;
 
             const Row = (
               <Box
                 sx={{
-                  px: 1.5,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 1.25,
                   py: 1,
-                  borderRadius: "sm",
-                  background: !n.read_at ? "primary.softBg" : "transparent",
-                  "&:hover": { background: "neutral.softBg" },
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  position: "relative",
+                  transition: "background-color 120ms",
+                  "&:hover": { bgcolor: "background.level1" },
+                  ...(n.read_at
+                    ? {}
+                    : {
+                        "&::before": {
+                          content: '""',
+                          position: "absolute",
+                          left: -8,
+                          top: "calc(50% - 3px)",
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          bgcolor: "primary.500",
+                        },
+                      }),
                 }}
               >
-                <Typography level="body-xs" textColor="text.tertiary">
+                <Typography
+                  level="body-xs"
+                  sx={{
+                    fontVariantNumeric: "tabular-nums",
+                    color: "text.tertiary",
+                    flexShrink: 0,
+                    width: 64,
+                  }}
+                >
                   {formatTime(n.created_at)}
                 </Typography>
-                <Typography level="body-sm" noWrap>
+                <Typography
+                  level="body-sm"
+                  sx={{
+                    color: "text.primary",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
                   {message}
                 </Typography>
               </Box>

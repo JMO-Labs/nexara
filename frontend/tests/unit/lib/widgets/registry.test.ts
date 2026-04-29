@@ -23,7 +23,7 @@ function makeDef(
   return {
     id,
     title,
-    defaultSize: "md",
+    defaultSize: 4,
     category,
     Component: _noop,
   };
