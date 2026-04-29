@@ -157,6 +157,8 @@ class EventService:
                 user_rsvp = RSVPResponse.model_validate(att)
 
         slots = self._slots_from_db(event.contribution_slots)
+        # TODO(home-redesign): batch subgroup_slug lookups across event list responses
+        # (currently one query per event in _build_response).
         subgroup_slug = await self._subgroup_slug(event.subgroup_id)
 
         return EventResponse(

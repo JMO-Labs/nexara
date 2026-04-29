@@ -8,7 +8,12 @@
 import * as React from "react";
 import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useChatDock } from "@/stores/chatDock";
 import { useChatRealtime, useChannels, useDmThreads } from "@/hooks/useChat";
@@ -19,12 +24,20 @@ import { Drawer } from "@/components/ui/Drawer";
 import { spring, fast } from "@/components/ui/motion";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
-// Slide-from-bottom variant for chat head cards
-const chatHeadVariants: Variants = {
-  hidden: { opacity: 0, y: 40 },
-  show: { opacity: 1, y: 0, transition: spring },
-  exit: { opacity: 0, y: 40, transition: fast },
-};
+/** Build slide-from-bottom variants; reduced-motion replaces y movement with a
+ *  simple opacity fade so no positional animation occurs. */
+function useChatHeadVariants(): Variants {
+  const reduced = useReducedMotion();
+  return {
+    hidden: { opacity: 0, y: reduced ? 0 : 40 },
+    show: { opacity: 1, y: 0, transition: reduced ? { duration: 0 } : spring },
+    exit: {
+      opacity: 0,
+      y: reduced ? 0 : 40,
+      transition: reduced ? { duration: 0 } : fast,
+    },
+  };
+}
 
 /**
  * @brief Syncs useChatRealtime unread totals → chatDock.unreadCount.
@@ -57,6 +70,7 @@ function useLabelMap(
 }
 
 export function FloatingChatDock() {
+  const chatHeadVariants = useChatHeadVariants();
   const pathname = usePathname();
   const openThreadIds = useChatDock((s) => s.openThreadIds);
   const launcherOpen = useChatDock((s) => s.launcherOpen);

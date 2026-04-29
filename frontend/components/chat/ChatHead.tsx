@@ -10,7 +10,7 @@ import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
 import Typography from "@mui/joy/Typography";
 import { MinusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconButton } from "@/components/ui";
 import { MessageList } from "./MessageList";
@@ -36,6 +36,7 @@ const CARD_H = 420;
 const HEADER_H = 44;
 
 export function ChatHead({ threadId, label }: ChatHeadProps) {
+  const prefersReduced = useReducedMotion();
   const closeThread = useChatDock((s) => s.closeThread);
   const toggleMinimize = useChatDock((s) => s.toggleMinimize);
   const isMinimized = useChatDock((s) => s.minimized[threadId] ?? false);
@@ -164,10 +165,10 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
         {!isMinimized && (
           <motion.div
             key="body"
-            initial={{ opacity: 0 }}
+            initial={{ opacity: prefersReduced ? 1 : 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            exit={{ opacity: prefersReduced ? 1 : 0 }}
+            transition={{ duration: prefersReduced ? 0 : 0.15 }}
             style={{
               flex: 1,
               minHeight: 0,
