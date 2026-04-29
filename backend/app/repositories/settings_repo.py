@@ -85,7 +85,7 @@ class SettingsRepository:
             raise ValueError(msg)
 
         for key, value in data.items():
-            if hasattr(settings, key) and value is not None:
+            if hasattr(settings, key):
                 setattr(settings, key, value)
 
         await self._session.flush()

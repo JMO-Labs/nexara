@@ -5,10 +5,10 @@
  *        components directly — that is the caller's concern.
  */
 
-import type React from 'react';
+import type React from "react";
 
-export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
-export type WidgetCategory = 'core' | 'social' | 'media' | 'plugin';
+export type WidgetSize = "sm" | "md" | "lg" | "full";
+export type WidgetCategory = "core" | "social" | "media" | "plugin";
 
 /** @brief Minimal session user shape needed for permission checks. */
 export interface SessionUser {
@@ -62,7 +62,7 @@ export interface WidgetInstance {
   size: WidgetSize;
   collapsed: boolean;
   order: number;
-  props?: unknown;
+  props?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,12 +78,23 @@ const _registry = new Map<string, WidgetDef>();
 /**
  * @brief Register a widget definition.
  *
+ * Idempotent: re-registering the same id with the same Component is a no-op
+ * (safe for React StrictMode double-invocation and HMR). Re-registering with a
+ * different Component logs a warning and overwrites.
+ *
  * @param def The WidgetDef to register.
- * @throws Error if a definition with the same id is already registered.
  */
 export function register(def: WidgetDef): void {
-  if (_registry.has(def.id)) {
-    throw new Error(`Widget '${def.id}' is already registered.`);
+  const existing = _registry.get(def.id);
+  if (existing !== undefined) {
+    if (existing.Component === def.Component) {
+      // Same component reference — silent no-op (StrictMode / HMR safe).
+      return;
+    }
+    // Different component — warn and overwrite.
+    console.warn(
+      `Widget '${def.id}' re-registered with a different Component. Overwriting.`,
+    );
   }
   _registry.set(def.id, def);
 }

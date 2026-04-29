@@ -8,9 +8,28 @@ and basic profile settings. Privacy and appearance settings ship in Phase 2.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+
+class WidgetInstanceSchema(BaseModel):
+    """@brief Typed schema for a single persisted widget instance."""
+
+    id: str = Field(..., max_length=64)
+    def_id: str = Field(..., max_length=64, alias="defId")
+    size: Literal["sm", "md", "lg", "full"]
+    collapsed: bool
+    order: int = Field(..., ge=0)
+    props: dict[str, Any] | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class HomeLayoutSchema(BaseModel):
+    """@brief Typed schema for the persisted home page widget layout."""
+
+    widgets: list[WidgetInstanceSchema] = Field(..., max_length=64)
 
 
 class NotificationPreferences(BaseModel):
@@ -54,7 +73,7 @@ class UserSettingsResponse(BaseModel):
     mute_all_email: bool
     theme: str
     locale: str
-    home_layout: dict[str, Any] | None = None
+    home_layout: HomeLayoutSchema | None = None
 
     model_config = {"from_attributes": True}
 
@@ -64,7 +83,7 @@ class UserSettingsUpdate(BaseModel):
 
     theme: str | None = Field(default=None, pattern=r"^(system|light|dark)$")
     locale: str | None = Field(default=None, max_length=10)
-    home_layout: dict[str, Any] | None = None
+    home_layout: HomeLayoutSchema | None = None
 
 
 class ProfileUpdate(BaseModel):

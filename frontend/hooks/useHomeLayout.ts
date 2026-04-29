@@ -5,13 +5,14 @@
  * Fetches layout from GET /api/v1/settings/ (home_layout key), merges with
  * a default when missing, and exposes mutation helpers with optimistic updates.
  */
-'use client';
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
-import { getSettings } from '@/lib/api/settings';
-import { putHomeLayout, type HomeLayout } from '@/lib/api/home';
-import type { WidgetInstance, WidgetSize } from '@/lib/widgets/registry';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useRef } from "react";
+import { qk } from "@/lib/query-keys";
+import { getSettings } from "@/lib/api/settings";
+import { putHomeLayout, type HomeLayout } from "@/lib/api/home";
+import type { WidgetInstance, WidgetSize } from "@/lib/widgets/registry";
 
 // ---------------------------------------------------------------------------
 // Default layout
@@ -19,12 +20,12 @@ import type { WidgetInstance, WidgetSize } from '@/lib/widgets/registry';
 
 function makeDefault(): WidgetInstance[] {
   const entries: Array<{ defId: string; size: WidgetSize; order: number }> = [
-    { defId: 'feed', size: 'lg', order: 0 },
-    { defId: 'upcoming-events', size: 'md', order: 1 },
-    { defId: 'activity', size: 'sm', order: 2 },
-    { defId: 'quick-actions', size: 'sm', order: 3 },
-    { defId: 'media-carousel', size: 'full', order: 4 },
-    { defId: 'my-groups', size: 'sm', order: 5 },
+    { defId: "feed", size: "lg", order: 0 },
+    { defId: "upcoming-events", size: "md", order: 1 },
+    { defId: "activity", size: "sm", order: 2 },
+    { defId: "quick-actions", size: "sm", order: 3 },
+    { defId: "media-carousel", size: "full", order: 4 },
+    { defId: "my-groups", size: "sm", order: 5 },
   ];
   return entries.map((e) => ({
     id: crypto.randomUUID(),
@@ -44,7 +45,10 @@ export interface UseHomeLayoutResult {
   isLoading: boolean;
   isError: boolean;
   /** Add a new widget instance to the layout. */
-  addWidget(defId: string, opts?: { size?: WidgetSize; props?: unknown }): void;
+  addWidget(
+    defId: string,
+    opts?: { size?: WidgetSize; props?: Record<string, unknown> },
+  ): void;
   /** Remove a widget instance by its instance id. */
   removeWidget(instanceId: string): void;
   /** Toggle the collapsed state of a widget instance. */
@@ -73,6 +77,12 @@ export function useHomeLayout(): UseHomeLayoutResult {
   const qc = useQueryClient();
   const QUERY_KEY = qk.home.layout();
 
+  // Stable default layout — avoids regenerating UUIDs on every render (Fix A).
+  const defaultLayout = useMemo(() => makeDefault(), []);
+
+  // Promise-chain queue — serialises rapid mutations to prevent server races (Fix D).
+  const pendingRef = useRef<Promise<unknown>>(Promise.resolve());
+
   // Fetch the raw settings; extract home_layout from it.
   const {
     data: settings,
@@ -83,13 +93,18 @@ export function useHomeLayout(): UseHomeLayoutResult {
     queryFn: async () => {
       const s = await getSettings();
       // settings.home_layout may be null/undefined or a HomeLayout-shaped dict
-      return (s as unknown as { home_layout?: HomeLayout | null }).home_layout ?? null;
+      return (
+        (s as unknown as { home_layout?: HomeLayout | null }).home_layout ??
+        null
+      );
     },
     staleTime: 60_000,
   });
 
   const widgets: WidgetInstance[] =
-    settings?.widgets && settings.widgets.length > 0 ? settings.widgets : makeDefault();
+    settings?.widgets && settings.widgets.length > 0
+      ? settings.widgets
+      : defaultLayout;
 
   // ---------------------------------------------------------------------------
   // Single base mutation — PATCHes settings with a new widget list
@@ -116,32 +131,43 @@ export function useHomeLayout(): UseHomeLayoutResult {
     },
   });
 
-  function mutate(newWidgets: WidgetInstance[]) {
-    mutation.mutate(newWidgets);
+  /** @brief Enqueue a mutation so rapid calls are serialised (Fix D). */
+  function enqueue(next: WidgetInstance[]) {
+    pendingRef.current = pendingRef.current
+      .catch(() => undefined)
+      .then(() => mutation.mutateAsync(next))
+      .catch(() => undefined);
   }
 
   // ---------------------------------------------------------------------------
   // Public helpers
   // ---------------------------------------------------------------------------
 
-  function addWidget(defId: string, opts?: { size?: WidgetSize; props?: unknown }) {
+  function addWidget(
+    defId: string,
+    opts?: { size?: WidgetSize; props?: Record<string, unknown> },
+  ) {
     const next: WidgetInstance = {
       id: crypto.randomUUID(),
       defId,
-      size: opts?.size ?? 'md',
+      size: opts?.size ?? "md",
       collapsed: false,
       order: widgets.length,
       props: opts?.props,
     };
-    mutate([...widgets, next]);
+    enqueue([...widgets, next]);
   }
 
   function removeWidget(instanceId: string) {
-    mutate(widgets.filter((w) => w.id !== instanceId));
+    enqueue(widgets.filter((w) => w.id !== instanceId));
   }
 
   function toggleCollapsed(instanceId: string) {
-    mutate(widgets.map((w) => (w.id === instanceId ? { ...w, collapsed: !w.collapsed } : w)));
+    enqueue(
+      widgets.map((w) =>
+        w.id === instanceId ? { ...w, collapsed: !w.collapsed } : w,
+      ),
+    );
   }
 
   function reorder(instanceIds: string[]) {
@@ -152,15 +178,15 @@ export function useHomeLayout(): UseHomeLayoutResult {
         return w ? { ...w, order: idx } : null;
       })
       .filter((w): w is WidgetInstance => w !== null);
-    mutate(reordered);
+    enqueue(reordered);
   }
 
   function setSize(instanceId: string, size: WidgetSize) {
-    mutate(widgets.map((w) => (w.id === instanceId ? { ...w, size } : w)));
+    enqueue(widgets.map((w) => (w.id === instanceId ? { ...w, size } : w)));
   }
 
   function resetToDefault() {
-    mutate(makeDefault());
+    enqueue(makeDefault());
   }
 
   return {

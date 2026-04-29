@@ -4,8 +4,8 @@
  *        summary stats and aggregated media feed.
  */
 
-import { apiGet, apiPut } from './client';
-import type { WidgetInstance } from '@/lib/widgets/registry';
+import { apiGet, apiPut } from "./client";
+import type { WidgetInstance } from "@/lib/widgets/registry";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,12 +52,18 @@ export interface HomeLayout {
   widgets: WidgetInstance[];
 }
 
+/** @brief Minimal shape of the settings response returned after a layout PUT. */
+export interface UserSettingsResponse {
+  home_layout: HomeLayout | null;
+  [key: string]: unknown;
+}
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
 
-const HOME = '/api/v1/home';
-const SETTINGS = '/api/v1/settings';
+const HOME = "/api/v1/home";
+const SETTINGS = "/api/v1/settings";
 
 /**
  * @brief Fetch home summary stats (new posts, upcoming events, unread notifs).
@@ -79,5 +85,7 @@ export const getHomeMedia = (limit = 24): Promise<HomeMediaResponse> =>
  * @param layout The HomeLayout object with widget instances.
  * @return Updated settings object (we only care about the side-effect).
  */
-export const putHomeLayout = (layout: HomeLayout): Promise<unknown> =>
-  apiPut<unknown>(`${SETTINGS}/`, { home_layout: layout });
+export const putHomeLayout = (
+  layout: HomeLayout,
+): Promise<UserSettingsResponse> =>
+  apiPut<UserSettingsResponse>(`${SETTINGS}/`, { home_layout: layout });

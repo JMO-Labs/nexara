@@ -65,7 +65,7 @@ class SettingsService:
         @return Updated UserSettingsResponse.
         """
         await self._settings_repo.get_or_create(user_id, self._community_id)
-        update_dict = data.model_dump(exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True)
         settings = await self._settings_repo.update(user_id, update_dict)
         logger.info("settings_updated", user_id=str(user_id), fields=list(update_dict.keys()))
         return UserSettingsResponse.model_validate(settings)
