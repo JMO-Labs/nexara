@@ -32,9 +32,11 @@ function labelFor(type: string): string {
   return TYPE_LABELS[type] ?? type.replace(/_/g, " ");
 }
 
+const ACTIVITY_WINDOW_DAYS = 7;
+
 function summarise(items: NotificationItem[]): string {
   const counts: Record<string, number> = {};
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   for (const n of items) {
     if (new Date(n.created_at).getTime() < cutoff) continue;
     counts[n.type] = (counts[n.type] ?? 0) + 1;
@@ -56,9 +58,9 @@ function formatTime(iso: string): string {
 export function ActivityWidget(_ctx: WidgetContext) {
   const [expanded, setExpanded] = React.useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: LIST_KEY,
-    queryFn: () => listNotifications(undefined, 30),
+    queryFn: () => listNotifications(undefined, 50),
     staleTime: 60_000,
   });
 
@@ -71,54 +73,73 @@ export function ActivityWidget(_ctx: WidgetContext) {
     );
   }
 
-  const items = data?.items ?? [];
-  const summary = summarise(items);
-
-  if (!summary) {
+  if (isError) {
     return (
       <EmptyState
-        title="No recent activity"
-        description="Your last 24h activity will appear here."
+        title="Activity unavailable"
+        description="Couldn't load notifications. Try again later."
       />
     );
   }
 
-  const recent = items.slice(0, 5);
+  const items = data?.items ?? [];
+  const summary = summarise(items);
+  const recentItems = items.slice(0, 5);
+
+  if (!summary) {
+    // No grouped summary — fall back to showing the most recent few items
+    // directly so the widget never sits silently empty if any items exist.
+    if (recentItems.length === 0) {
+      return (
+        <EmptyState
+          title="No recent activity"
+          description={`Activity from the last ${ACTIVITY_WINDOW_DAYS} days will appear here.`}
+        />
+      );
+    }
+  }
+
+  const recent = recentItems;
+  const showItems = !summary || expanded;
 
   return (
     <Stack spacing={1.25}>
-      <Typography
-        level="body-sm"
-        sx={{ color: "text.primary", lineHeight: 1.5 }}
-      >
-        {summary}
-      </Typography>
+      {summary && (
+        <Typography
+          level="body-sm"
+          sx={{ color: "text.primary", lineHeight: 1.5 }}
+        >
+          {summary}
+        </Typography>
+      )}
 
-      <Button
-        variant="plain"
-        size="sm"
-        color="neutral"
-        onClick={() => setExpanded((v) => !v)}
-        startDecorator={
-          expanded ? <ChevronUpIcon width={12} /> : <ChevronDownIcon width={12} />
-        }
-        sx={{
-          alignSelf: "flex-start",
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          color: "text.tertiary",
-          minHeight: 0,
-          py: 0.25,
-          px: 0.75,
-          "&:hover": { color: "text.primary", bgcolor: "transparent" },
-        }}
-      >
-        {expanded ? "Hide" : "Recent"}
-      </Button>
+      {summary && (
+        <Button
+          variant="plain"
+          size="sm"
+          color="neutral"
+          onClick={() => setExpanded((v) => !v)}
+          startDecorator={
+            expanded ? <ChevronUpIcon width={12} /> : <ChevronDownIcon width={12} />
+          }
+          sx={{
+            alignSelf: "flex-start",
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            color: "text.tertiary",
+            minHeight: 0,
+            py: 0.25,
+            px: 0.75,
+            "&:hover": { color: "text.primary", bgcolor: "transparent" },
+          }}
+        >
+          {expanded ? "Hide" : "Recent"}
+        </Button>
+      )}
 
-      {expanded && (
+      {showItems && (
         <Stack
           spacing={0}
           sx={{ borderTop: "1px solid", borderColor: "divider" }}

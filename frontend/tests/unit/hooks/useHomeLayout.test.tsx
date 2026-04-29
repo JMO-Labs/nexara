@@ -65,7 +65,9 @@ describe("useHomeLayout", () => {
     const { result } = renderHook(() => useHomeLayout(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.widgets.length).toBe(6);
-    expect(result.current.widgets[0].defId).toBe("feed");
+    const ids = result.current.widgets.map((w) => w.defId);
+    expect(ids).toContain("feed");
+    expect(ids).toContain("activity");
     expect(result.current.widgets[0].w).toBeGreaterThan(0);
   });
 

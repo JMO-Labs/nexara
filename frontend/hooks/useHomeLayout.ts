@@ -28,13 +28,16 @@ interface DefEntry {
   h: number;
 }
 
+// Row 0: action-menu strip — quick-actions | activity | my-groups (equal height)
+// Row 1: feed (8) | upcoming-events (4)
+// Row 2: media-carousel (12)
 const DEFAULT_ENTRIES: DefEntry[] = [
-  { defId: "feed", x: 0, y: 0, w: 8, h: 8 },
-  { defId: "upcoming-events", x: 8, y: 0, w: 4, h: 8 },
-  { defId: "media-carousel", x: 0, y: 8, w: 12, h: 4 },
-  { defId: "activity", x: 0, y: 12, w: 3, h: 4 },
-  { defId: "quick-actions", x: 3, y: 12, w: 3, h: 3 },
-  { defId: "my-groups", x: 6, y: 12, w: 6, h: 4 },
+  { defId: "quick-actions", x: 0, y: 0, w: 4, h: 3 },
+  { defId: "activity", x: 4, y: 0, w: 4, h: 3 },
+  { defId: "my-groups", x: 8, y: 0, w: 4, h: 3 },
+  { defId: "feed", x: 0, y: 3, w: 8, h: 8 },
+  { defId: "upcoming-events", x: 8, y: 3, w: 4, h: 8 },
+  { defId: "media-carousel", x: 0, y: 11, w: 12, h: 4 },
 ];
 
 function makeDefault(): WidgetInstance[] {

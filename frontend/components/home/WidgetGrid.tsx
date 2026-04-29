@@ -53,16 +53,20 @@ export function WidgetGrid({
     () =>
       widgets.map<LayoutItem>((w) => {
         const def = getDef(w.defId);
+        // Collapsed widgets render at h=1 (header only). Persisted h stays
+        // intact so expand restores the previous height.
+        const renderedH = w.collapsed ? 1 : w.h;
         return {
           i: w.id,
           x: w.x,
           y: w.y,
           w: w.w,
-          h: w.h,
+          h: renderedH,
           minW: def?.minW ?? 2,
-          minH: def?.minH ?? 2,
+          minH: w.collapsed ? 1 : (def?.minH ?? 2),
+          maxH: w.collapsed ? 1 : undefined,
           isDraggable: !dragDisabledIds.has(w.id),
-          isResizable: !dragDisabledIds.has(w.id),
+          isResizable: !w.collapsed && !dragDisabledIds.has(w.id),
         };
       }),
     [widgets, dragDisabledIds],
@@ -71,13 +75,24 @@ export function WidgetGrid({
   // Only fire applyLayout for user-initiated drag/resize end events, not for
   // every internal RGL onLayoutChange (which may emit stale rows on children
   // changes). We persist on dragStop and resizeStop only.
+  const widgetsById = React.useMemo(() => {
+    const m = new Map<string, WidgetInstance>();
+    for (const w of widgets) m.set(w.id, w);
+    return m;
+  }, [widgets]);
+
   const handleDragStop = React.useCallback(
     (newLayout: Layout) => {
       onApplyLayout(
-        newLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })),
+        newLayout.map((l) => {
+          const stored = widgetsById.get(l.i);
+          // Preserve stored h on collapsed widgets so expand restores height.
+          const h = stored?.collapsed ? stored.h : l.h;
+          return { i: l.i, x: l.x, y: l.y, w: l.w, h };
+        }),
       );
     },
-    [onApplyLayout],
+    [onApplyLayout, widgetsById],
   );
 
   const handleResizeStop = handleDragStop;

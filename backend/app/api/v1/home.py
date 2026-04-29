@@ -9,6 +9,8 @@ Provides two routes under /home prefix for the home-page redesign:
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,6 +63,8 @@ async def list_home_media(
     service: HomeService = Depends(_build_service),
     limit: int = Query(24, ge=1, le=200),
     source: str = Query("all"),
+    scope: str = Query("all", pattern="^(all|community|subgroup|personal)$"),
+    subgroup_id: uuid.UUID | None = Query(None),
 ) -> MediaAggregateListResponse:
     """
     @brief Return aggregated media across user's visible subgroups.
@@ -72,6 +76,8 @@ async def list_home_media(
         user=user,
         limit=limit,
         source=source,
+        scope=scope,
+        subgroup_id=subgroup_id,
     )
     return MediaAggregateListResponse(
         items=[MediaItemResponse(**item) for item in items],

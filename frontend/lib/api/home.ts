@@ -74,11 +74,26 @@ export const getHomeSummary = (): Promise<HomeSummary> =>
 
 /**
  * @brief Fetch aggregated media items visible to the current user.
- * @param limit Maximum number of items to return (default 24).
- * @return HomeMediaResponse with items array and optional cursor.
+ *
+ * @param opts Either a numeric limit (legacy) or a struct with limit / scope /
+ *             subgroupId. Scope = 'all' | 'community' | 'subgroup' | 'personal'.
  */
-export const getHomeMedia = (limit = 24): Promise<HomeMediaResponse> =>
-  apiGet<HomeMediaResponse>(`${HOME}/media?limit=${limit}`);
+export const getHomeMedia = (
+  opts: number | {
+    limit?: number;
+    scope?: "all" | "community" | "subgroup" | "personal";
+    subgroupId?: string;
+  } = 24,
+): Promise<HomeMediaResponse> => {
+  const params = typeof opts === "number" ? { limit: opts } : opts;
+  const limit = params.limit ?? 24;
+  const scope = params.scope ?? "all";
+  const qs = new URLSearchParams();
+  qs.set("limit", String(limit));
+  qs.set("scope", scope);
+  if (params.subgroupId) qs.set("subgroup_id", params.subgroupId);
+  return apiGet<HomeMediaResponse>(`${HOME}/media?${qs.toString()}`);
+};
 
 /**
  * @brief Persist the user's home layout via the settings endpoint.

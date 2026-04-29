@@ -70,7 +70,9 @@ describe('useHomeMedia', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(homeApi.getHomeMedia).toHaveBeenCalledWith(12);
+    expect(homeApi.getHomeMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 12, scope: "all" }),
+    );
   });
 
   it('uses default limit 24 when none provided', async () => {
@@ -80,7 +82,9 @@ describe('useHomeMedia', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(homeApi.getHomeMedia).toHaveBeenCalledWith(24);
+    expect(homeApi.getHomeMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 24, scope: "all" }),
+    );
   });
 
   it('reflects isError on failure', async () => {

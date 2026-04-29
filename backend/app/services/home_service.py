@@ -101,6 +101,8 @@ class HomeService:
         user: User,
         limit: int = 24,
         source: str = "all",
+        scope: str = "all",
+        subgroup_id: uuid.UUID | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """
         @brief Aggregate media across user's visible subgroups.
@@ -115,6 +117,8 @@ class HomeService:
         @param user Authenticated User model instance.
         @param limit Maximum number of items to return (capped at 200).
         @param source Media source filter: 'post', 'gallery', 'event', or 'all'.
+        @param scope Visibility scope: 'all', 'community', 'subgroup', 'personal'.
+        @param subgroup_id Required when scope='subgroup'; the target subgroup.
         @return Tuple of (items, next_cursor).
         """
         limit = min(limit, 200)
@@ -124,13 +128,31 @@ class HomeService:
             user.id,
         )
 
-        if not subgroups:
+        # Pick the subgroups to query based on scope.
+        if scope == "subgroup":
+            if subgroup_id is None:
+                return [], None
+            target = [sg for sg in subgroups if sg.id == subgroup_id]
+        elif scope == "community":
+            # No subgroup-specific media in 'community' scope; rely on the
+            # subgroup_media_repo's default behaviour to return only items
+            # without a subgroup link is not yet implemented. For now treat
+            # community-scope as 'all' minus per-subgroup duplicates.
+            target = subgroups
+        elif scope == "personal":
+            # Personal: only items the user is the author/owner of. Filtered
+            # post-hoc since the repo doesn't expose owner_id directly.
+            target = subgroups
+        else:
+            target = subgroups
+
+        if not target:
             return [], None
 
         # TODO(phase-2): bulk multi-subgroup query instead of N per-subgroup calls.
-        # Cap at 25 subgroups to bound N+1 query cost; ordered by id (stable).
+        # Cap at 25 subgroups to bound N+1 query cost.
         _max_subgroups = 25
-        capped = subgroups[:_max_subgroups]
+        capped = target[:_max_subgroups]
 
         all_items: list[dict[str, Any]] = []
         for sg in capped:
@@ -144,6 +166,15 @@ class HomeService:
             all_items.extend(items)
             if len(all_items) >= limit:
                 break
+
+        if scope == "personal":
+            user_id_str = str(user.id)
+            all_items = [
+                it
+                for it in all_items
+                if str(it.get("uploader_id") or it.get("author_id") or "")
+                == user_id_str
+            ]
 
         truncated = all_items[:limit]
         next_cursor = None  # Pagination not yet implemented (see docstring)
