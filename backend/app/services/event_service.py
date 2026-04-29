@@ -21,7 +21,7 @@ from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
-from app.models.subgroup import SubgroupMember
+from app.models.subgroup import Subgroup, SubgroupMember
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
@@ -137,6 +137,15 @@ class EventService:
                 continue
         return out
 
+    async def _subgroup_slug(self, subgroup_id: uuid.UUID | None) -> str | None:
+        """@brief Return the URL slug for a subgroup, or None if not found."""
+        if subgroup_id is None:
+            return None
+        result = await self._session.execute(
+            select(Subgroup.slug).where(Subgroup.id == subgroup_id)
+        )
+        return result.scalar_one_or_none()
+
     async def _build_response(
         self, event: Event, *, user_id: uuid.UUID | None = None
     ) -> EventResponse:
@@ -148,6 +157,7 @@ class EventService:
                 user_rsvp = RSVPResponse.model_validate(att)
 
         slots = self._slots_from_db(event.contribution_slots)
+        subgroup_slug = await self._subgroup_slug(event.subgroup_id)
 
         return EventResponse(
             id=event.id,
@@ -163,6 +173,7 @@ class EventService:
             ical_uid=event.ical_uid,
             visibility=event.visibility,
             subgroup_id=event.subgroup_id,
+            subgroup_slug=subgroup_slug,
             calendar_id=event.calendar_id,
             color=event.color,
             latitude=event.latitude,

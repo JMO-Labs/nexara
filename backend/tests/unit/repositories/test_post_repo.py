@@ -138,7 +138,7 @@ class TestPostRepositoryListFeed:
 
         # Extra call for subgroup name lookup
         mock_subgroup_names = MagicMock()
-        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha")]
+        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha", "alpha")]
 
         session.execute = AsyncMock(
             side_effect=[
@@ -158,6 +158,7 @@ class TestPostRepositoryListFeed:
         assert items[0]["id"] == str(POST_ID)
         assert items[0]["subgroup_id"] == str(subgroup_id)
         assert items[0]["subgroup_name"] == "Alpha"
+        assert items[0]["subgroup_slug"] == "alpha"
         session.execute.assert_awaited()
 
     @pytest.mark.asyncio
@@ -198,6 +199,7 @@ class TestPostRepositoryListFeed:
 
         assert items[0]["subgroup_id"] is None
         assert items[0]["subgroup_name"] is None
+        assert items[0]["subgroup_slug"] is None
 
     @pytest.mark.asyncio
     async def test_returns_enriched_posts_with_cursor(self):
@@ -408,7 +410,7 @@ class TestListFeedVisibilityPredicate:
         mock_posts = MagicMock()
         mock_posts.all.return_value = [(post, user)]
         mock_subgroup_names = MagicMock()
-        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha")]
+        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha", "alpha")]
         mock_empty = MagicMock()
         mock_empty.all.return_value = []
         mock_comments = MagicMock()

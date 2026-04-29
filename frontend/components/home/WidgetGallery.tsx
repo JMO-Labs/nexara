@@ -29,9 +29,7 @@ export function WidgetGallery({
 }: WidgetGalleryProps) {
   const [open, setOpen] = React.useState(false);
 
-  const available = listDefs().filter(
-    (def) => !presentDefIds.includes(def.id),
-  );
+  const available = listDefs().filter((def) => !presentDefIds.includes(def.id));
 
   return (
     <>
@@ -73,7 +71,11 @@ export function WidgetGallery({
           {/* Widget list */}
           <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
             {available.length === 0 ? (
-              <Typography level="body-sm" textColor="text.tertiary" sx={{ textAlign: "center", py: 4 }}>
+              <Typography
+                level="body-sm"
+                textColor="text.tertiary"
+                sx={{ textAlign: "center", py: 4 }}
+              >
                 All widgets are already on your page.
               </Typography>
             ) : (
@@ -125,6 +127,12 @@ export function WidgetGallery({
               variant="soft"
               color="neutral"
               onClick={() => {
+                if (
+                  !window.confirm(
+                    "Reset layout to default? All customisations will be lost.",
+                  )
+                )
+                  return;
                 onReset();
                 setOpen(false);
               }}

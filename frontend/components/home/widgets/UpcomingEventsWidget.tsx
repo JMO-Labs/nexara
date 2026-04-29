@@ -15,6 +15,7 @@ import { SourceBadge } from "@/components/feed/SourceBadge";
 import type { EventItem } from "@/lib/api/events";
 import type { Subgroup } from "@/lib/api/subgroups";
 import type { WidgetContext } from "@/lib/widgets/registry";
+import { useWidgetDrag } from "@/stores/widgetDrag";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 function formatEventTime(starts: string, allDay: boolean): string {
@@ -31,11 +32,25 @@ function formatEventTime(starts: string, allDay: boolean): string {
 
 const DAYS_OPTIONS = [7, 14, 30] as const;
 
-export function UpcomingEventsWidget(_: WidgetContext) {
+export function UpcomingEventsWidget({ instanceId }: WidgetContext) {
   const [days, setDays] = React.useState<7 | 14 | 30>(14);
-  const [filterSubgroupId, setFilterSubgroupId] = React.useState<string | undefined>(undefined);
-  const [selectedEvent, setSelectedEvent] = React.useState<EventItem | null>(null);
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const [filterSubgroupId, setFilterSubgroupId] = React.useState<
+    string | undefined
+  >(undefined);
+  const [selectedEvent, setSelectedEvent] = React.useState<EventItem | null>(
+    null,
+  );
+  const disableDrag = useWidgetDrag((s) => s.disable);
+  const enableDrag = useWidgetDrag((s) => s.enable);
+
+  React.useEffect(() => {
+    if (selectedEvent) {
+      disableDrag(instanceId);
+    } else {
+      enableDrag(instanceId);
+    }
+    return () => enableDrag(instanceId);
+  }, [selectedEvent, instanceId, disableDrag, enableDrag]);
 
   const { data, isLoading } = useUpcomingEvents(days, filterSubgroupId);
   const { data: subgroupsData } = useSubgroupList();
@@ -44,14 +59,16 @@ export function UpcomingEventsWidget(_: WidgetContext) {
 
   const subgroupNameMap = React.useMemo(() => {
     const m = new Map<string, string>();
-    (subgroupsData as Subgroup[] | undefined ?? []).forEach((sg) => m.set(sg.id, sg.name));
+    ((subgroupsData as Subgroup[] | undefined) ?? []).forEach((sg) =>
+      m.set(sg.id, sg.name),
+    );
     return m;
   }, [subgroupsData]);
 
   const subgroups = subgroupsData ?? [];
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <Stack spacing={1.5}>
         {/* Controls row */}
         <div className="flex flex-wrap items-center gap-2">
@@ -108,10 +125,15 @@ export function UpcomingEventsWidget(_: WidgetContext) {
         {/* Events list */}
         {isLoading ? (
           <Stack spacing={1}>
-            {[0, 1, 2].map((i) => <Skeleton key={i} height={52} rounded="md" />)}
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} height={52} rounded="md" />
+            ))}
           </Stack>
         ) : events.length === 0 ? (
-          <EmptyState title="No upcoming events" description={`Nothing scheduled in the next ${days} days.`} />
+          <EmptyState
+            title="No upcoming events"
+            description={`Nothing scheduled in the next ${days} days.`}
+          />
         ) : (
           <Stack spacing={0.5}>
             {events.slice(0, 10).map((event) => (
@@ -132,7 +154,12 @@ export function UpcomingEventsWidget(_: WidgetContext) {
                   </div>
                   <SourceBadge
                     subgroupId={event.subgroup_id}
-                    subgroupName={event.subgroup_id ? (subgroupNameMap.get(event.subgroup_id) ?? null) : null}
+                    subgroupName={
+                      event.subgroup_id
+                        ? (subgroupNameMap.get(event.subgroup_id) ?? null)
+                        : null
+                    }
+                    subgroupSlug={event.subgroup_slug ?? null}
                   />
                 </div>
               </button>
@@ -141,9 +168,8 @@ export function UpcomingEventsWidget(_: WidgetContext) {
         )}
       </Stack>
 
-      {/* EventDetailPanel */}
+      {/* EventDetailPanel — portaled to document.body; no containerRef needed */}
       <EventDetailPanel
-        containerRef={containerRef}
         event={selectedEvent}
         subgroupNames={subgroupNameMap}
         onClose={() => setSelectedEvent(null)}

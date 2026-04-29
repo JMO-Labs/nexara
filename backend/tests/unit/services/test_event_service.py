@@ -81,6 +81,7 @@ def session() -> AsyncMock:
     scalars = MagicMock()
     scalars.all.return_value = []
     exec_result.scalars.return_value = scalars
+    exec_result.scalar_one_or_none.return_value = None
     s.execute.return_value = exec_result
     return s
 

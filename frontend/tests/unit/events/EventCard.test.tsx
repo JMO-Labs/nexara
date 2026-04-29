@@ -39,6 +39,7 @@ const ev: EventItem = {
   recurrence_rule: null,
   visibility: 'community',
   subgroup_id: null,
+  subgroup_slug: null,
   calendar_id: null,
   color: null,
   latitude: null,

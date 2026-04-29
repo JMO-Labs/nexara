@@ -24,7 +24,7 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -32,6 +32,7 @@ import { getDef } from "@/lib/widgets/registry";
 import { WidgetFrame } from "./WidgetFrame";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { WidgetInstance } from "@/lib/widgets/registry";
+import { useWidgetDrag } from "@/stores/widgetDrag";
 
 // ---------------------------------------------------------------------------
 // Size → col-span map
@@ -83,6 +84,7 @@ function SortableWidget({
   onRemove,
   onToggleCollapsed,
 }: SortableWidgetProps) {
+  const dragDisabled = useWidgetDrag((s) => s.disabledIds.has(widget.id));
   const {
     attributes,
     listeners,
@@ -90,7 +92,7 @@ function SortableWidget({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: widget.id });
+  } = useSortable({ id: widget.id, disabled: dragDisabled });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -116,11 +118,7 @@ function SortableWidget({
   );
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={SIZE_SPAN[widget.size]}
-    >
+    <div ref={setNodeRef} style={style} className={SIZE_SPAN[widget.size]}>
       <WidgetFrame
         title={def.title}
         collapsed={widget.collapsed}
@@ -155,11 +153,17 @@ export function WidgetGrid({
   isLoading = false,
 }: WidgetGridProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const sorted = React.useMemo(
+    () => [...widgets].sort((a, b) => a.order - b.order),
+    [widgets],
+  );
+  const ids = React.useMemo(() => sorted.map((w) => w.id), [sorted]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -187,27 +191,22 @@ export function WidgetGrid({
     );
   }
 
-  const ids = widgets.map((w) => w.id);
-
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+      <SortableContext items={ids} strategy={rectSortingStrategy}>
         <div className="grid grid-cols-12 gap-4">
-          {widgets
-            .slice()
-            .sort((a, b) => a.order - b.order)
-            .map((widget) => (
-              <SortableWidget
-                key={widget.id}
-                widget={widget}
-                onRemove={onRemove}
-                onToggleCollapsed={onToggleCollapsed}
-              />
-            ))}
+          {sorted.map((widget) => (
+            <SortableWidget
+              key={widget.id}
+              widget={widget}
+              onRemove={onRemove}
+              onToggleCollapsed={onToggleCollapsed}
+            />
+          ))}
         </div>
       </SortableContext>
     </DndContext>

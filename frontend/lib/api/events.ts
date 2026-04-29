@@ -16,6 +16,7 @@ export interface EventItem {
   recurrence_rule: string | null;
   visibility: string;
   subgroup_id: string | null;
+  subgroup_slug: string | null;
   calendar_id: string | null;
   color: string | null;
   latitude: number | null;
@@ -67,9 +68,7 @@ export interface ListEventsParams {
   subgroup_id?: string;
 }
 
-export const listEvents = (
-  params: ListEventsParams = {},
-) => {
+export const listEvents = (params: ListEventsParams = {}) => {
   const qs = new URLSearchParams();
   if (params.start) qs.set("start", params.start);
   if (params.end) qs.set("end", params.end);

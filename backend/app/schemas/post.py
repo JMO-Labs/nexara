@@ -59,6 +59,7 @@ class PostResponse(BaseModel):
     comment_count: int = 0
     subgroup_id: UUID | None = None
     subgroup_name: str | None = None
+    subgroup_slug: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -129,6 +129,7 @@ class EventResponse(BaseModel):
     ical_uid: str
     visibility: str
     subgroup_id: UUID | None
+    subgroup_slug: str | None = None
     calendar_id: UUID | None = None
     color: str | None = None
     latitude: float | None = None

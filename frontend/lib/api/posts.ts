@@ -68,6 +68,7 @@ export interface Post {
   updated_at: string;
   subgroup_id: string | null;
   subgroup_name: string | null;
+  subgroup_slug: string | null;
 }
 
 export interface Comment {

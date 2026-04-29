@@ -53,6 +53,7 @@ const fakePost: Post = {
   updated_at: new Date().toISOString(),
   subgroup_id: "sg-1",
   subgroup_name: "Hiking Club",
+  subgroup_slug: "hiking-club",
 };
 
 function wrap(ui: React.ReactNode) {

@@ -27,9 +27,7 @@ vi.mock("next/link", () => ({
 
 describe("SourceBadge", () => {
   it("renders Community pill when subgroupId is null", () => {
-    render(
-      <SourceBadge subgroupId={null} subgroupName={null} />,
-    );
+    render(<SourceBadge subgroupId={null} subgroupName={null} />);
     expect(screen.getByText("Community")).toBeInTheDocument();
     expect(screen.getByLabelText("Posted in Community")).toBeInTheDocument();
   });
@@ -58,12 +56,10 @@ describe("SourceBadge", () => {
     expect(link.getAttribute("href")).toBe("/app/subgroups/book-club");
   });
 
-  it("falls back to subgroupId in href when slug is absent", () => {
-    render(
-      <SourceBadge subgroupId="sg-123" subgroupName="Book Club" />,
-    );
-    const link = screen.getByRole("link");
-    expect(link.getAttribute("href")).toBe("/app/subgroups/sg-123");
+  it("renders non-clickable span (no anchor) when subgroupId set but slug absent", () => {
+    render(<SourceBadge subgroupId="sg-123" subgroupName="Book Club" />);
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByLabelText("Posted in Book Club")).toBeInTheDocument();
   });
 
   it("click does not bubble to parent", () => {

@@ -44,10 +44,15 @@ async def enrich_posts(
 
     subgroup_ids = {p.subgroup_id for p, _ in post_rows if p.subgroup_id is not None}
     subgroup_name_map: dict[uuid.UUID, str] = {}
+    subgroup_slug_map: dict[uuid.UUID, str] = {}
     if subgroup_ids:
-        sg_stmt = select(Subgroup.id, Subgroup.name).where(Subgroup.id.in_(subgroup_ids))
+        sg_stmt = select(Subgroup.id, Subgroup.name, Subgroup.slug).where(
+            Subgroup.id.in_(subgroup_ids)
+        )
         sg_result = await session.execute(sg_stmt)
-        subgroup_name_map = {sg_id: sg_name for sg_id, sg_name in sg_result.all()}
+        for sg_id, sg_name, sg_slug in sg_result.all():
+            subgroup_name_map[sg_id] = sg_name
+            subgroup_slug_map[sg_id] = sg_slug
 
     media_stmt = (
         select(PostMedia.post_id, Media)
@@ -231,6 +236,9 @@ async def enrich_posts(
             "subgroup_id": str(post.subgroup_id) if post.subgroup_id else None,
             "subgroup_name": (
                 subgroup_name_map.get(post.subgroup_id) if post.subgroup_id else None
+            ),
+            "subgroup_slug": (
+                subgroup_slug_map.get(post.subgroup_id) if post.subgroup_id else None
             ),
             "created_at": post.created_at.isoformat(),
             "updated_at": post.updated_at.isoformat(),

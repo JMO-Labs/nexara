@@ -6,7 +6,8 @@
  *        show the subgroup name as an accent pill linking to the group page.
  * @param subgroupId   Subgroup UUID or null for community posts.
  * @param subgroupName Human-readable subgroup name.
- * @param subgroupSlug URL slug for the subgroup (falls back to id).
+ * @param subgroupSlug URL slug for the subgroup. When absent the badge renders
+ *                     as a non-clickable span to avoid UUID 404s.
  */
 import * as React from "react";
 import Link from "next/link";
@@ -33,8 +34,21 @@ export function SourceBadge({
     );
   }
 
-  const href = `/app/subgroups/${subgroupSlug ?? subgroupId}`;
   const name = subgroupName ?? "Subgroup";
+
+  if (!subgroupSlug) {
+    // Slug unavailable — render non-clickable badge to avoid UUID 404s.
+    return (
+      <span
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+        aria-label={`Posted in ${name}`}
+      >
+        {name}
+      </span>
+    );
+  }
+
+  const href = `/app/subgroups/${subgroupSlug}`;
 
   return (
     <Link

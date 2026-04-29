@@ -24,7 +24,9 @@ export function MyGroupsWidget(_: WidgetContext) {
     );
   }
 
-  const groups = (data ?? []).filter((sg) => sg.my_role !== null).slice(0, 6);
+  const allGroups = (data ?? []).filter((sg) => sg.my_role !== null);
+  const groups = allGroups.slice(0, 6);
+  const hasMore = allGroups.length > 6;
 
   if (groups.length === 0) {
     return (
@@ -58,11 +60,37 @@ export function MyGroupsWidget(_: WidgetContext) {
               </span>
             </div>
           )}
-          <Typography level="body-xs" fontWeight="md" noWrap sx={{ maxWidth: "100%" }}>
+          <Typography
+            level="body-xs"
+            fontWeight="md"
+            noWrap
+            sx={{ maxWidth: "100%" }}
+          >
             {sg.name}
           </Typography>
         </Link>
       ))}
+      {hasMore && (
+        <Link
+          href="/app/subgroups"
+          aria-label="View all groups"
+          className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)]"
+        >
+          <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+            <span className="text-neutral-500 dark:text-neutral-400 text-lg font-bold">
+              +
+            </span>
+          </div>
+          <Typography
+            level="body-xs"
+            fontWeight="md"
+            noWrap
+            sx={{ maxWidth: "100%" }}
+          >
+            View all
+          </Typography>
+        </Link>
+      )}
     </div>
   );
 }
