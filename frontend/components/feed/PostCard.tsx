@@ -18,6 +18,7 @@ import { PostBody } from './PostBody';
 import { PostMedia } from './PostMedia';
 import { ReactionRow } from './ReactionRow';
 import { CommentThread } from './CommentThread';
+import { SourceBadge } from './SourceBadge';
 import type { Post } from '@/lib/api/posts';
 
 export interface PostCardProps {
@@ -45,14 +46,20 @@ export function PostCard({
   return (
     <Card sx={{ p: 2 }}>
       <Stack spacing={1.5}>
-        <PostHeader
-          post={post}
-          isAuthor={isAuthor}
-          isAdmin={isAdmin}
-          onDelete={() => {
-            if (window.confirm('Delete this post?')) delMut.mutate(post.id);
-          }}
-        />
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <PostHeader
+            post={post}
+            isAuthor={isAuthor}
+            isAdmin={isAdmin}
+            onDelete={() => {
+              if (window.confirm('Delete this post?')) delMut.mutate(post.id);
+            }}
+          />
+          <SourceBadge
+            subgroupId={post.subgroup_id ?? null}
+            subgroupName={post.subgroup_name ?? null}
+          />
+        </div>
         <PostBody content={post.content} truncate={truncateBody} />
         {post.media.length > 0 ? (
           <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />

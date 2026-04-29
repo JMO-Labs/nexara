@@ -1,40 +1,50 @@
-'use client';
+"use client";
 /**
  * @file app/app/page.tsx
- * @brief Dashboard. Two-column layout: feed (primary) + calendar rail.
- *        Calendar collapses below feed under lg breakpoint.
+ * @brief Home hub page. Welcome banner + widget grid + gallery button.
+ *        CalendarRail removed; upcoming events live in UpcomingEventsWidget.
  */
-import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import { FeedView } from '@/components/feed/FeedView';
-import { CalendarRail } from '@/components/events/CalendarRail';
-import { useSession } from '@/stores/session';
+import "@/lib/widgets/builtins";
+import { useHomeLayout } from "@/hooks/useHomeLayout";
+import { useHomeSummary } from "@/hooks/useHomeSummary";
+import { useSession } from "@/stores/session";
+import { WelcomeBanner } from "@/components/home/WelcomeBanner";
+import { WidgetGrid } from "@/components/home/WidgetGrid";
+import { WidgetGallery } from "@/components/home/WidgetGallery";
 
 export default function AppHome() {
   const user = useSession((s) => s.user);
+  const layout = useHomeLayout();
+  const summary = useHomeSummary();
+
+  const userName = user?.display_name ?? user?.username ?? "there";
+  const newPosts = summary.data?.new_posts ?? 0;
+  const upcomingEvents = summary.data?.upcoming_events ?? 0;
+  const unreadNotifications = summary.data?.unread_notifications ?? 0;
+
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: { xs: 2, lg: 3 },
-        width: '100%',
-        flex: 1,
-        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 720px) minmax(0, 1fr)' },
-        alignItems: 'stretch',
-      }}
-    >
-      <Box sx={{ minWidth: 0, width: '100%' }}>
-        <FeedView
-          heading={
-            <Typography level="h2" sx={{ fontFamily: 'var(--font-display)' }}>
-              Welcome back{user?.display_name ? `, ${user.display_name}` : ''}.
-            </Typography>
-          }
-        />
-      </Box>
-      <Box sx={{ minWidth: 0, width: '100%' }}>
-        <CalendarRail />
-      </Box>
-    </Box>
+    <main className="flex flex-col gap-6 px-4 py-6 max-w-screen-2xl mx-auto w-full">
+      <WelcomeBanner
+        userName={userName}
+        newPosts={newPosts}
+        upcomingEvents={upcomingEvents}
+        unreadNotifications={unreadNotifications}
+        isLoading={summary.isLoading}
+      />
+
+      <WidgetGrid
+        widgets={layout.widgets}
+        onReorder={layout.reorder}
+        onRemove={layout.removeWidget}
+        onToggleCollapsed={layout.toggleCollapsed}
+        isLoading={layout.isLoading}
+      />
+
+      <WidgetGallery
+        presentDefIds={layout.widgets.map((w) => w.defId)}
+        onAdd={(defId) => layout.addWidget(defId)}
+        onReset={layout.resetToDefault}
+      />
+    </main>
   );
 }
