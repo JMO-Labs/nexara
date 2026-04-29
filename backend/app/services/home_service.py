@@ -64,7 +64,7 @@ class HomeService:
         if now is None:
             now = datetime.now(UTC)
 
-        since = user.last_seen_at if user.last_seen_at else now - timedelta(hours=24)
+        since = user.last_seen_at or (now - timedelta(hours=24))
 
         # Resolve subgroup IDs once; used for both post and event visibility scoping.
         subgroups = await self._subgroup_repo.list_visible_for_user(
@@ -100,7 +100,6 @@ class HomeService:
         self,
         user: User,
         limit: int = 24,
-        cursor: str | None = None,
         source: str = "all",
     ) -> tuple[list[dict[str, Any]], str | None]:
         """
@@ -110,9 +109,11 @@ class HomeService:
         truncates to ``limit``. Does not guarantee strict chronological
         ordering across subgroups — items are returned in per-subgroup order.
 
+        Pagination not yet implemented — Phase 2 will add cursor support
+        across multiple subgroups.
+
         @param user Authenticated User model instance.
         @param limit Maximum number of items to return (capped at 200).
-        @param cursor Pagination cursor (currently ignored in multi-subgroup mode).
         @param source Media source filter: 'post', 'gallery', 'event', or 'all'.
         @return Tuple of (items, next_cursor).
         """
@@ -126,8 +127,13 @@ class HomeService:
         if not subgroups:
             return [], None
 
+        # TODO(phase-2): bulk multi-subgroup query instead of N per-subgroup calls.
+        # Cap at 25 subgroups to bound N+1 query cost; ordered by id (stable).
+        _max_subgroups = 25
+        capped = subgroups[:_max_subgroups]
+
         all_items: list[dict[str, Any]] = []
-        for sg in subgroups:
+        for sg in capped:
             items, _ = await self._media_repo.list_media(
                 subgroup_id=sg.id,
                 viewer_id=user.id,
@@ -140,5 +146,5 @@ class HomeService:
                 break
 
         truncated = all_items[:limit]
-        next_cursor = None  # Multi-subgroup cursor pagination is not implemented
+        next_cursor = None  # Pagination not yet implemented (see docstring)
         return truncated, next_cursor

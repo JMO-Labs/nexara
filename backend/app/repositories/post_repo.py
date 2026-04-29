@@ -12,6 +12,7 @@ Enrichment helpers live in post_enrichment.py.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -70,8 +71,6 @@ class PostRepository(BaseRepository[Post]):
         )
 
         if cursor:
-            from datetime import datetime
-
             try:
                 cursor_ts = datetime.fromisoformat(cursor)
                 stmt = stmt.where(Post.created_at < cursor_ts)
@@ -138,15 +137,13 @@ class PostRepository(BaseRepository[Post]):
         @param subgroup_ids Subgroup IDs the viewer belongs to (for visibility scoping).
         @return Integer count of new posts.
         """
-        from datetime import datetime as dt
-
         stmt = (
             select(func.count())
             .select_from(Post)
             .where(Post.community_id == community_id)
             .where(Post.deleted_at.is_(None))
         )
-        if isinstance(since, dt):
+        if isinstance(since, datetime):
             stmt = stmt.where(Post.created_at > since)
 
         allowed = subgroup_ids or []

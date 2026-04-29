@@ -260,6 +260,8 @@ class TestSummaryVisibilityScoping:
         call_kwargs = post_repo.count_new_since.call_args
         assert call_kwargs.kwargs["subgroup_ids"] == [sg1.id, sg2.id]
         assert call_kwargs.kwargs["viewer_id"] == USER_ID
+        event_call_kwargs = event_repo.list_in_range.call_args
+        assert event_call_kwargs.kwargs["subgroup_ids"] == [sg1.id, sg2.id]
 
     @pytest.mark.asyncio
     async def test_summary_zero_subgroups_passes_empty_list_to_count_new_since(self):

@@ -16,8 +16,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.media import Media
 from app.models.poll import Poll, PollOption, PollVote
-from app.models.post import Comment, PostMedia, Reaction
+from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.subgroup import Subgroup
 from app.models.user import User
 
@@ -35,8 +36,6 @@ async def enrich_posts(
     @param viewer_id Current user for ``reacted_by_me`` flag.
     @return Dict mapping post_id -> enriched dict.
     """
-    from app.models.post import Post
-
     posts_stmt = (
         select(Post, User).join(User, Post.author_id == User.id).where(Post.id.in_(post_ids))
     )
@@ -49,8 +48,6 @@ async def enrich_posts(
         sg_stmt = select(Subgroup.id, Subgroup.name).where(Subgroup.id.in_(subgroup_ids))
         sg_result = await session.execute(sg_stmt)
         subgroup_name_map = {sg_id: sg_name for sg_id, sg_name in sg_result.all()}
-
-    from app.models.media import Media
 
     media_stmt = (
         select(PostMedia.post_id, Media)

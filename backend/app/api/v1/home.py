@@ -9,12 +9,9 @@ Provides two routes under /home prefix for the home-page redesign:
 
 from __future__ import annotations
 
-import uuid
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.repositories.event_repo import EventRepository
@@ -29,14 +26,9 @@ from app.services.home_service import HomeService
 router = APIRouter(prefix="/home", tags=["home"])
 
 
-def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
-    """@brief Extract the community UUID from settings."""
-    return uuid.UUID(settings.COMMUNITY_ID)
-
-
 def _build_service(
     db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
+    user: User = Depends(get_current_user),
 ) -> HomeService:
     """@brief Build HomeService with all dependencies injected."""
     return HomeService(
@@ -45,7 +37,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         subgroup_repo=SubgroupRepository(db),
         media_repo=SubgroupMediaRepository(db),
-        community_id=community_id,
+        community_id=user.community_id,
     )
 
 
@@ -68,18 +60,17 @@ async def list_home_media(
     user: User = Depends(get_current_user),
     service: HomeService = Depends(_build_service),
     limit: int = Query(24, ge=1, le=200),
-    cursor: str | None = Query(None),
     source: str = Query("all"),
 ) -> MediaAggregateListResponse:
     """
     @brief Return aggregated media across user's visible subgroups.
 
     Suitable for the home-page media carousel widget.
+    Pagination not yet implemented — Phase 2 will add cursor support across multiple subgroups.
     """
     items, next_cursor = await service.list_media(
         user=user,
         limit=limit,
-        cursor=cursor,
         source=source,
     )
     return MediaAggregateListResponse(
