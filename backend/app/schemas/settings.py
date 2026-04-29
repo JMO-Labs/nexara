@@ -8,6 +8,8 @@ and basic profile settings. Privacy and appearance settings ship in Phase 2.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -52,6 +54,7 @@ class UserSettingsResponse(BaseModel):
     mute_all_email: bool
     theme: str
     locale: str
+    home_layout: dict[str, Any] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -61,6 +64,7 @@ class UserSettingsUpdate(BaseModel):
 
     theme: str | None = Field(default=None, pattern=r"^(system|light|dark)$")
     locale: str | None = Field(default=None, max_length=10)
+    home_layout: dict[str, Any] | None = None
 
 
 class ProfileUpdate(BaseModel):
