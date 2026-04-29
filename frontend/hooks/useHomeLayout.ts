@@ -19,13 +19,16 @@ import type { WidgetInstance, WidgetSize } from "@/lib/widgets/registry";
 // ---------------------------------------------------------------------------
 
 function makeDefault(): WidgetInstance[] {
+  // Row 2: feed (lg=8col) | upcoming-events (md=4col)
+  // Row 3: media-carousel (full=12col)
+  // Row 4: activity (sm=3col) | quick-actions (sm=3col) | my-groups (sm=6col treated as md)
   const entries: Array<{ defId: string; size: WidgetSize; order: number }> = [
     { defId: "feed", size: "lg", order: 0 },
     { defId: "upcoming-events", size: "md", order: 1 },
-    { defId: "activity", size: "sm", order: 2 },
-    { defId: "quick-actions", size: "sm", order: 3 },
-    { defId: "media-carousel", size: "full", order: 4 },
-    { defId: "my-groups", size: "sm", order: 5 },
+    { defId: "media-carousel", size: "full", order: 2 },
+    { defId: "activity", size: "sm", order: 3 },
+    { defId: "quick-actions", size: "sm", order: 4 },
+    { defId: "my-groups", size: "md", order: 5 },
   ];
   return entries.map((e) => ({
     id: crypto.randomUUID(),

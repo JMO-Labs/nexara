@@ -31,8 +31,8 @@ export interface ChatHeadProps {
   label: string;
 }
 
-const CARD_W = 320;
-const CARD_H = 420;
+const CARD_W = 480;
+const CARD_H = 560;
 const HEADER_H = 44;
 
 export function ChatHead({ threadId, label }: ChatHeadProps) {

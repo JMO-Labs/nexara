@@ -37,6 +37,7 @@ export default function AppHome() {
         onReorder={layout.reorder}
         onRemove={layout.removeWidget}
         onToggleCollapsed={layout.toggleCollapsed}
+        onSizeChange={layout.setSize}
         isLoading={layout.isLoading}
       />
 

@@ -3,6 +3,18 @@
 Based on the "Verification" section of the home redesign plan.
 Run these after `cd deploy && docker compose up -d` with the dev server.
 
+## Polish pass (phase-5-motion)
+
+- **ConfirmDialog now used everywhere**: `window.confirm` removed from all 7 call sites
+  (WidgetFrame remove, WidgetGallery reset, PostCard delete, ChatLayout remove DM,
+  MembersList remove member, galleries delete gallery, galleries remove item).
+  OS dialogs are fully replaced by the in-app MUI Joy modal (`ConfirmDialog` mounted in Shell).
+- **Default layout changed**: feed(lg=8) | upcoming-events(md=4) / media-carousel(full) / activity(sm) + quick-actions(sm) + my-groups(md)
+- **Widget resize controls**: S/M/L/F buttons in lower-left footer of each widget frame.
+- **Chat dock sizing**: ChatHead cards increased to 480×560 px.
+- **Dark mode text**: WidgetFrame title uses `var(--joy-palette-text-primary)` Joy token.
+- **Size grid**: md=4col, lg=8col on the 12-column grid (changed from md=6, lg=9).
+
 | # | Step | Status |
 |---|------|--------|
 | 1 | Home page loads without JS errors in browser console | ⏳ manual |

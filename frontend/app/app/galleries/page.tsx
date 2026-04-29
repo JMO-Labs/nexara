@@ -30,6 +30,7 @@ import {
   useRemoveItem,
 } from '@/hooks/useGalleries';
 import { useSession } from '@/stores/session';
+import { useConfirmDialog } from '@/stores/confirmDialog';
 import { API_BASE } from '@/lib/auth/session';
 import type { Gallery, ListGalleriesParams } from '@/lib/api/galleries';
 
@@ -524,6 +525,7 @@ function GalleryDrawer({
   const { data: gallery } = useGalleryDetail(galleryId);
   const { data: items, isLoading } = useGalleryItems(galleryId);
   const sessionUser = useSession((s) => s.user);
+  const confirm = useConfirmDialog((s) => s.confirm);
   const updateMut = useUpdateGallery();
   const deleteMut = useDeleteGallery();
   const removeItemMut = useRemoveItem(galleryId ?? '');
@@ -535,15 +537,27 @@ function GalleryDrawer({
       (gallery.contribution_policy === 'community' ||
         gallery.contribution_policy === 'collaborators'));
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!gallery) return;
-    if (!window.confirm(`Delete gallery "${gallery.title}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: `Delete gallery?`,
+      message: `Delete "${gallery.title}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     deleteMut.mutate(gallery.id, { onSuccess: () => onClose() });
   };
 
-  const handleRemoveItem = (e: React.MouseEvent, itemId: string) => {
+  const handleRemoveItem = async (e: React.MouseEvent, itemId: string) => {
     e.stopPropagation();
-    if (!window.confirm('Remove this item from gallery?')) return;
+    const ok = await confirm({
+      title: 'Remove item?',
+      message: 'Remove this item from the gallery?',
+      confirmLabel: 'Remove',
+      tone: 'danger',
+    });
+    if (!ok) return;
     removeItemMut.mutate(itemId);
   };
 

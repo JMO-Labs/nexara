@@ -19,6 +19,7 @@ import {
   useRemoveMember,
   useChangeRole,
 } from '@/hooks/useSubgroups';
+import { useConfirmDialog } from '@/stores/confirmDialog';
 import type { Membership } from '@/lib/api/subgroups';
 
 export interface MembersListProps {
@@ -47,6 +48,7 @@ function MemberRow({
   onDemote?: (role: 'moderator') => void;
   busy?: boolean;
 }) {
+  const confirm = useConfirmDialog((s) => s.confirm);
   const ownerCount = members.filter((mem) => mem.role === 'owner').length;
   const isOnlyOwner = m.role === 'owner' && ownerCount === 1;
   const canPromoteToOwner = viewerRole === 'owner';
@@ -121,10 +123,14 @@ function MemberRow({
               disabled={isOnlyOwner && m.role === 'owner'}
               aria-disabled={isOnlyOwner && m.role === 'owner'}
               title={isOnlyOwner && m.role === 'owner' ? 'At least one owner required' : ''}
-              onClick={() => {
-                if (window.confirm('Remove this member from the group?')) {
-                  onRemove?.();
-                }
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Remove member?',
+                  message: 'Remove this member from the group?',
+                  confirmLabel: 'Remove',
+                  tone: 'danger',
+                });
+                if (ok) onRemove?.();
               }}
             >
               Remove from group

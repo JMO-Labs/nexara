@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CssVarsProvider } from "@mui/joy/styles";
 import joyTheme from "@/theme/joy-theme";
+import { useConfirmDialog } from "@/stores/confirmDialog";
 
 vi.mock("framer-motion", async (importOriginal) => {
   const actual = await importOriginal<typeof import("framer-motion")>();
@@ -36,6 +37,16 @@ function wrap(ui: React.ReactNode) {
 describe("WidgetFrame", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Reset confirm dialog store
+    useConfirmDialog.setState({
+      isOpen: false,
+      title: '',
+      message: '',
+      confirmLabel: 'Confirm',
+      cancelLabel: 'Cancel',
+      tone: 'neutral',
+      _resolve: null,
+    });
   });
 
   it("renders the widget title", () => {
@@ -87,7 +98,9 @@ describe("WidgetFrame", () => {
 
   it("shows remove button and calls onRemove after confirm", async () => {
     const onRemove = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    // Mock confirm store to auto-accept
+    const mockConfirm = vi.fn().mockResolvedValue(true);
+    useConfirmDialog.setState({ confirm: mockConfirm } as any);
     wrap(
       <WidgetFrame title="Widget" onRemove={onRemove}>
         <p>Content</p>
@@ -96,13 +109,14 @@ describe("WidgetFrame", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /remove widget/i }),
     );
-    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(mockConfirm).toHaveBeenCalledOnce();
     expect(onRemove).toHaveBeenCalledOnce();
   });
 
   it("does not call onRemove when confirm is cancelled", async () => {
     const onRemove = vi.fn();
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const mockConfirm = vi.fn().mockResolvedValue(false);
+    useConfirmDialog.setState({ confirm: mockConfirm } as any);
     wrap(
       <WidgetFrame title="Widget" onRemove={onRemove}>
         <p>Content</p>
@@ -135,6 +149,37 @@ describe("WidgetFrame", () => {
     expect(
       screen.queryByRole("button", { name: /remove widget/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders S/M/L/F size buttons when onSizeChange and currentSize provided", () => {
+    wrap(
+      <WidgetFrame
+        title="Widget"
+        currentSize="md"
+        onSizeChange={vi.fn()}
+      >
+        <p>Content</p>
+      </WidgetFrame>,
+    );
+    expect(screen.getByRole("button", { name: /resize widget to small/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resize widget to medium/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resize widget to large/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resize widget to full/i })).toBeInTheDocument();
+  });
+
+  it("clicking size button calls onSizeChange with that size", async () => {
+    const onSizeChange = vi.fn();
+    wrap(
+      <WidgetFrame
+        title="Widget"
+        currentSize="md"
+        onSizeChange={onSizeChange}
+      >
+        <p>Content</p>
+      </WidgetFrame>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /resize widget to large/i }));
+    expect(onSizeChange).toHaveBeenCalledWith("lg");
   });
 
   it("header row has no nested buttons (collapse + remove are siblings, not children of another button)", () => {

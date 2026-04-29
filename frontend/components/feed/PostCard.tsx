@@ -9,6 +9,7 @@ import Stack from "@mui/joy/Stack";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { Button, Card } from "@/components/ui";
 import { useSession } from "@/stores/session";
+import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
 import { PostHeader } from "./PostHeader";
 import { PostBody } from "./PostBody";
@@ -39,6 +40,7 @@ export function PostCard({
   const [commentsOverflowing, setCommentsOverflowing] = React.useState(false);
   const reactMut = useTogglePostReaction(post.id);
   const delMut = useDeletePost();
+  const confirm = useConfirmDialog((s) => s.confirm);
 
   return (
     <Card sx={{ p: 2 }}>
@@ -48,8 +50,14 @@ export function PostCard({
             post={post}
             isAuthor={isAuthor}
             isAdmin={isAdmin}
-            onDelete={() => {
-              if (window.confirm("Delete this post?")) delMut.mutate(post.id);
+            onDelete={async () => {
+              const ok = await confirm({
+                title: "Delete post?",
+                message: "This post will be permanently deleted.",
+                confirmLabel: "Delete",
+                tone: "danger",
+              });
+              if (ok) delMut.mutate(post.id);
             }}
           />
           <SourceBadge

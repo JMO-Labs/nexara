@@ -15,6 +15,7 @@ import Divider from "@mui/joy/Divider";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { listDefs } from "@/lib/widgets/registry";
+import { useConfirmDialog } from "@/stores/confirmDialog";
 
 export interface WidgetGalleryProps {
   presentDefIds: string[];
@@ -28,6 +29,7 @@ export function WidgetGallery({
   onReset,
 }: WidgetGalleryProps) {
   const [open, setOpen] = React.useState(false);
+  const confirm = useConfirmDialog((s) => s.confirm);
 
   const available = listDefs().filter((def) => !presentDefIds.includes(def.id));
 
@@ -126,13 +128,14 @@ export function WidgetGallery({
               fullWidth
               variant="soft"
               color="neutral"
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    "Reset layout to default? All customisations will be lost.",
-                  )
-                )
-                  return;
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Reset layout to default?",
+                  message: "All customisations will be lost.",
+                  confirmLabel: "Reset",
+                  tone: "danger",
+                });
+                if (!ok) return;
                 onReset();
                 setOpen(false);
               }}

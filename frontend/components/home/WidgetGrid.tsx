@@ -35,13 +35,13 @@ import type { WidgetInstance } from "@/lib/widgets/registry";
 import { useWidgetDrag } from "@/stores/widgetDrag";
 
 // ---------------------------------------------------------------------------
-// Size → col-span map
+// Size → col-span map (sm=3, md=4, lg=8, full=12 on 12-col grid)
 // ---------------------------------------------------------------------------
 
 const SIZE_SPAN: Record<WidgetInstance["size"], string> = {
   sm: "col-span-12 md:col-span-6 lg:col-span-3",
-  md: "col-span-12 md:col-span-6",
-  lg: "col-span-12 lg:col-span-9",
+  md: "col-span-12 md:col-span-4",
+  lg: "col-span-12 lg:col-span-8",
   full: "col-span-12",
 };
 
@@ -77,12 +77,14 @@ interface SortableWidgetProps {
   widget: WidgetInstance;
   onRemove: (id: string) => void;
   onToggleCollapsed: (id: string) => void;
+  onSizeChange: (id: string, size: WidgetInstance["size"]) => void;
 }
 
 function SortableWidget({
   widget,
   onRemove,
   onToggleCollapsed,
+  onSizeChange,
 }: SortableWidgetProps) {
   const dragDisabled = useWidgetDrag((s) => s.disabledIds.has(widget.id));
   const {
@@ -124,6 +126,8 @@ function SortableWidget({
         collapsed={widget.collapsed}
         onToggleCollapsed={() => onToggleCollapsed(widget.id)}
         onRemove={() => onRemove(widget.id)}
+        onSizeChange={(s) => onSizeChange(widget.id, s)}
+        currentSize={widget.size}
         dragHandleSlot={DragHandle}
         size={widget.size}
       >
@@ -142,6 +146,7 @@ export interface WidgetGridProps {
   onReorder: (newIds: string[]) => void;
   onRemove: (instanceId: string) => void;
   onToggleCollapsed: (instanceId: string) => void;
+  onSizeChange: (instanceId: string, size: WidgetInstance["size"]) => void;
   isLoading?: boolean;
 }
 
@@ -150,6 +155,7 @@ export function WidgetGrid({
   onReorder,
   onRemove,
   onToggleCollapsed,
+  onSizeChange,
   isLoading = false,
 }: WidgetGridProps) {
   const sensors = useSensors(
@@ -205,6 +211,7 @@ export function WidgetGrid({
               widget={widget}
               onRemove={onRemove}
               onToggleCollapsed={onToggleCollapsed}
+              onSizeChange={onSizeChange}
             />
           ))}
         </div>

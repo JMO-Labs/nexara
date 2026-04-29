@@ -9,6 +9,7 @@ import { CssVarsProvider } from '@mui/joy/styles';
 import joyTheme from '@/theme/joy-theme';
 import { MembersList, type MembersListProps } from '@/components/subgroups/MembersList';
 import * as useSubgroupsModule from '@/hooks/useSubgroups';
+import { useConfirmDialog } from '@/stores/confirmDialog';
 import type { Membership } from '@/lib/api/subgroups';
 
 const mockMembers: Membership[] = [
@@ -319,7 +320,9 @@ describe('MembersList', () => {
       variables: undefined,
     } as any);
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    // Mock confirm store to auto-accept
+    const mockConfirm = vi.fn().mockResolvedValue(true);
+    useConfirmDialog.setState({ confirm: mockConfirm } as any);
 
     const user = userEvent.setup();
     wrap(
@@ -340,7 +343,7 @@ describe('MembersList', () => {
     const removeOption = await screen.findByText('Remove from group');
     await user.click(removeOption);
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(mockConfirm).toHaveBeenCalled();
     expect(mockRemove).toHaveBeenCalledWith('user-3');
 
     mockUseSubgroupMembers.mockRestore();

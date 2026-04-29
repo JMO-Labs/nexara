@@ -34,6 +34,7 @@ import { MessageList } from './MessageList';
 import { Composer } from './Composer';
 import { TypingIndicator } from './TypingIndicator';
 import { NewDmModal } from './NewDmModal';
+import { useConfirmDialog } from '@/stores/confirmDialog';
 import type { ChatChannel, ChatMessage, DmThread } from '@/lib/api/chat';
 
 export interface ChatLayoutProps {
@@ -71,6 +72,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   const pushToast = useToasts((s) => s.push);
   const createDm = useCreateDm();
   const deleteDm = useDeleteDm();
+  const confirm = useConfirmDialog((s) => s.confirm);
   const [replyTo, setReplyTo] = React.useState<ChatMessage | null>(null);
   const [dmModalOpen, setDmModalOpen] = React.useState(false);
   const [threadPaneOpen, setThreadPaneOpen] = React.useState(false);
@@ -246,12 +248,13 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             unread={unread}
             onSelect={select}
             onDeleteDm={async (channelId) => {
-              if (
-                typeof window !== 'undefined' &&
-                !window.confirm('Remove this conversation from your inbox?')
-              ) {
-                return;
-              }
+              const ok = await confirm({
+                title: 'Remove conversation?',
+                message: 'This conversation will be removed from your inbox.',
+                confirmLabel: 'Remove',
+                tone: 'neutral',
+              });
+              if (!ok) return;
               try {
                 await deleteDm.mutateAsync(channelId);
                 if (channelId === activeId) router.push('/app/chat');
