@@ -96,6 +96,7 @@ class TestSummary:
             community_id=COMMUNITY_ID,
             viewer_id=USER_ID,
             since=last_seen,
+            subgroup_ids=[],
         )
 
     @pytest.mark.asyncio
@@ -129,6 +130,7 @@ class TestSummary:
             community_id=COMMUNITY_ID,
             viewer_id=USER_ID,
             since=expected_since,
+            subgroup_ids=[],
         )
 
     @pytest.mark.asyncio
@@ -221,6 +223,73 @@ class TestSummary:
         assert result.new_posts == 0
         assert result.upcoming_events == 0
         assert result.unread_notifications == 0
+
+
+class TestSummaryVisibilityScoping:
+    """@brief Tests that summary() passes subgroup_ids to count_new_since."""
+
+    @pytest.mark.asyncio
+    async def test_summary_resolves_subgroup_ids_and_passes_to_count_new_since(self):
+        """summary() should resolve subgroups via subgroup_repo and pass ids to count_new_since."""
+        user = _make_user(last_seen_at=NOW - timedelta(hours=1))
+        sg1 = _make_subgroup()
+        sg2 = _make_subgroup()
+
+        post_repo = AsyncMock(spec=PostRepository)
+        post_repo.count_new_since.return_value = 3
+
+        event_repo = AsyncMock(spec=EventRepository)
+        event_repo.list_in_range.return_value = []
+
+        notification_repo = AsyncMock(spec=NotificationRepository)
+        notification_repo.get_unread_count.return_value = 0
+
+        subgroup_repo = AsyncMock(spec=SubgroupRepository)
+        subgroup_repo.list_visible_for_user.return_value = [sg1, sg2]
+
+        svc = _build_service(
+            post_repo=post_repo,
+            event_repo=event_repo,
+            notification_repo=notification_repo,
+            subgroup_repo=subgroup_repo,
+        )
+        result = await svc.summary(user=user, now=NOW)
+
+        assert result.new_posts == 3
+        subgroup_repo.list_visible_for_user.assert_awaited_once_with(COMMUNITY_ID, USER_ID)
+        call_kwargs = post_repo.count_new_since.call_args
+        assert call_kwargs.kwargs["subgroup_ids"] == [sg1.id, sg2.id]
+        assert call_kwargs.kwargs["viewer_id"] == USER_ID
+
+    @pytest.mark.asyncio
+    async def test_summary_zero_subgroups_passes_empty_list_to_count_new_since(self):
+        """summary() passes subgroup_ids=[] when user belongs to no subgroups."""
+        user = _make_user(last_seen_at=NOW - timedelta(hours=1))
+
+        post_repo = AsyncMock(spec=PostRepository)
+        post_repo.count_new_since.return_value = 1
+
+        event_repo = AsyncMock(spec=EventRepository)
+        event_repo.list_in_range.return_value = []
+
+        notification_repo = AsyncMock(spec=NotificationRepository)
+        notification_repo.get_unread_count.return_value = 0
+
+        subgroup_repo = AsyncMock(spec=SubgroupRepository)
+        subgroup_repo.list_visible_for_user.return_value = []
+
+        svc = _build_service(
+            post_repo=post_repo,
+            event_repo=event_repo,
+            notification_repo=notification_repo,
+            subgroup_repo=subgroup_repo,
+        )
+        result = await svc.summary(user=user, now=NOW)
+
+        assert result.new_posts == 1
+        call_kwargs = post_repo.count_new_since.call_args
+        assert call_kwargs.kwargs["subgroup_ids"] == []
+        assert call_kwargs.kwargs["viewer_id"] == USER_ID
 
 
 class TestListMedia:

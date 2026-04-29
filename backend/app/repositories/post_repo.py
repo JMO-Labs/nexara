@@ -5,6 +5,8 @@
 Provides cursor-paginated feed queries with author, media, reactions,
 and comment counts. All queries apply soft-delete filtering and
 community_id scoping.
+
+Enrichment helpers live in post_enrichment.py.
 """
 
 from __future__ import annotations
@@ -13,13 +15,12 @@ import uuid
 from typing import Any
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 
-from app.models.poll import Poll, PollOption, PollVote
-from app.models.post import Comment, Post, PostMedia, Reaction
-from app.models.subgroup import Subgroup
-from app.models.user import User
+from app.models.media import Media
+from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
+from app.repositories.post_enrichment import enrich_posts
 
 logger = structlog.get_logger(__name__)
 
@@ -47,15 +48,17 @@ class PostRepository(BaseRepository[Post]):
         cursor: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         subgroup_id: uuid.UUID | None = None,
+        subgroup_ids: list[uuid.UUID] | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """
         @brief Fetch paginated feed posts with author, media, reactions, and comment count.
 
         @param community_id Community scope.
-        @param viewer_id Current user UUID for block filter and reaction state.
+        @param viewer_id Current user UUID for block filter, reaction state, and visibility.
         @param cursor Opaque cursor (ISO timestamp of last seen post).
         @param limit Number of posts to return.
-        @param subgroup_id Optional subgroup ID to filter posts.
+        @param subgroup_id Optional single subgroup ID filter (overrides visibility predicate).
+        @param subgroup_ids Subgroup IDs the viewer belongs to (for visibility scoping).
         @return Tuple of (enriched post dicts, next_cursor).
         """
         limit = min(limit, MAX_PAGE_SIZE)
@@ -77,6 +80,20 @@ class PostRepository(BaseRepository[Post]):
 
         if subgroup_id is not None:
             stmt = stmt.where(Post.subgroup_id == subgroup_id)
+        elif viewer_id is not None:
+            allowed = subgroup_ids or []
+            if allowed:
+                visibility_pred = or_(
+                    Post.visibility == "community",
+                    and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
+                    and_(Post.visibility == "private", Post.author_id == viewer_id),
+                )
+            else:
+                visibility_pred = or_(
+                    Post.visibility == "community",
+                    and_(Post.visibility == "private", Post.author_id == viewer_id),
+                )
+            stmt = stmt.where(visibility_pred)
 
         if viewer_id:
             stmt = self.apply_block_filter(stmt, viewer_id)
@@ -109,13 +126,16 @@ class PostRepository(BaseRepository[Post]):
         community_id: uuid.UUID,
         viewer_id: uuid.UUID,
         since: Any,
+        *,
+        subgroup_ids: list[uuid.UUID] | None = None,
     ) -> int:
         """
         @brief Count posts visible to viewer created after ``since``.
 
         @param community_id Community scope.
-        @param viewer_id Viewer UUID for block filter.
+        @param viewer_id Viewer UUID for block filter and visibility scoping.
         @param since Datetime cutoff (posts created after this are counted).
+        @param subgroup_ids Subgroup IDs the viewer belongs to (for visibility scoping).
         @return Integer count of new posts.
         """
         from datetime import datetime as dt
@@ -128,6 +148,21 @@ class PostRepository(BaseRepository[Post]):
         )
         if isinstance(since, dt):
             stmt = stmt.where(Post.created_at > since)
+
+        allowed = subgroup_ids or []
+        if allowed:
+            visibility_pred = or_(
+                Post.visibility == "community",
+                and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
+                and_(Post.visibility == "private", Post.author_id == viewer_id),
+            )
+        else:
+            visibility_pred = or_(
+                Post.visibility == "community",
+                and_(Post.visibility == "private", Post.author_id == viewer_id),
+            )
+        stmt = stmt.where(visibility_pred)
+
         stmt = self.apply_block_filter(stmt, viewer_id)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
@@ -229,8 +264,6 @@ class PostRepository(BaseRepository[Post]):
         @param limit Maximum number of posts to return.
         @return List of dicts with post data and media_ids list.
         """
-        from app.models.media import Media
-
         stmt = (
             self._base_query()
             .where(Post.reply_to_prompt_id == prompt_id)
@@ -270,222 +303,10 @@ class PostRepository(BaseRepository[Post]):
         viewer_id: uuid.UUID | None,
     ) -> dict[uuid.UUID, dict[str, Any]]:
         """
-        @brief Batch-load authors, media, reactions, and comment counts for posts.
+        @brief Delegate to post_enrichment.enrich_posts.
 
         @param post_ids List of post UUIDs.
-        @param viewer_id Current user for `reacted_by_me` flag.
+        @param viewer_id Current user for ``reacted_by_me`` flag.
         @return Dict mapping post_id -> enriched dict.
         """
-        posts_stmt = (
-            select(Post, User).join(User, Post.author_id == User.id).where(Post.id.in_(post_ids))
-        )
-        posts_result = await self._session.execute(posts_stmt)
-        post_rows = posts_result.all()
-
-        # Load subgroup names for posts that belong to a subgroup
-        subgroup_ids = {p.subgroup_id for p, _ in post_rows if p.subgroup_id is not None}
-        subgroup_name_map: dict[uuid.UUID, str] = {}
-        if subgroup_ids:
-            sg_stmt = select(Subgroup.id, Subgroup.name).where(Subgroup.id.in_(subgroup_ids))
-            sg_result = await self._session.execute(sg_stmt)
-            subgroup_name_map = {sg_id: sg_name for sg_id, sg_name in sg_result.all()}
-
-        from app.models.media import Media
-
-        media_stmt = (
-            select(PostMedia.post_id, Media)
-            .join(Media, PostMedia.media_id == Media.id)
-            .where(PostMedia.post_id.in_(post_ids))
-            .order_by(PostMedia.position)
-        )
-        media_result = await self._session.execute(media_stmt)
-        media_map: dict[uuid.UUID, list[dict[str, Any]]] = {}
-        for pm_post_id, media in media_result.all():
-            media_map.setdefault(pm_post_id, []).append(
-                {
-                    "id": str(media.id),
-                    "url": f"/api/v1/media/{media.id}/file",
-                    "thumbnail_url": f"/api/v1/media/{media.id}/thumbnail"
-                    if media.thumbnail_key
-                    else None,
-                    "mime_type": media.content_type,
-                    "width": media.width,
-                    "height": media.height,
-                }
-            )
-
-        reaction_stmt = (
-            select(
-                Reaction.target_id,
-                Reaction.emoji,
-                func.count().label("cnt"),
-            )
-            .where(Reaction.target_type == "post", Reaction.target_id.in_(post_ids))
-            .group_by(Reaction.target_id, Reaction.emoji)
-        )
-        reaction_result = await self._session.execute(reaction_stmt)
-        reaction_map: dict[uuid.UUID, list[dict[str, Any]]] = {}
-        for target_id, emoji, cnt in reaction_result.all():
-            reaction_map.setdefault(target_id, []).append(
-                {
-                    "emoji": emoji,
-                    "count": cnt,
-                    "reacted_by_me": False,
-                }
-            )
-
-        if viewer_id:
-            my_reactions_stmt = select(Reaction.target_id, Reaction.emoji).where(
-                Reaction.target_type == "post",
-                Reaction.target_id.in_(post_ids),
-                Reaction.user_id == viewer_id,
-            )
-            my_result = await self._session.execute(my_reactions_stmt)
-            my_set = {(tid, em) for tid, em in my_result.all()}
-            for pid, reactions in reaction_map.items():
-                for r in reactions:
-                    if (pid, r["emoji"]) in my_set:
-                        r["reacted_by_me"] = True
-
-        comment_stmt = (
-            select(Comment.post_id, func.count().label("cnt"))
-            .where(Comment.post_id.in_(post_ids))
-            .group_by(Comment.post_id)
-        )
-        comment_result = await self._session.execute(comment_stmt)
-        comment_map = {pid: cnt for pid, cnt in comment_result.all()}
-
-        # Polls attached to posts
-        poll_stmt = select(Poll).where(Poll.post_id.in_(post_ids))
-        poll_result = await self._session.execute(poll_stmt)
-        polls = list(poll_result.scalars().all())
-        poll_by_post: dict[uuid.UUID, Poll] = {}
-        poll_ids: list[uuid.UUID] = []
-        for p in polls:
-            if p.post_id:
-                poll_by_post[p.post_id] = p
-                poll_ids.append(p.id)
-
-        poll_options_map: dict[uuid.UUID, list[PollOption]] = {}
-        poll_vote_counts: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
-        poll_user_votes: dict[uuid.UUID, list[str]] = {}
-        # voters per (poll_id, option_id) for non-anonymous polls
-        poll_voters: dict[tuple[uuid.UUID, uuid.UUID], list[dict[str, Any]]] = {}
-        if poll_ids:
-            opt_stmt = (
-                select(PollOption)
-                .where(PollOption.poll_id.in_(poll_ids))
-                .order_by(PollOption.position)
-            )
-            opt_result = await self._session.execute(opt_stmt)
-            for opt in opt_result.scalars().all():
-                poll_options_map.setdefault(opt.poll_id, []).append(opt)
-
-            vote_stmt = (
-                select(PollVote.poll_id, PollVote.option_id, func.count().label("cnt"))
-                .where(PollVote.poll_id.in_(poll_ids))
-                .group_by(PollVote.poll_id, PollVote.option_id)
-            )
-            vote_result = await self._session.execute(vote_stmt)
-            for pid, oid, cnt in vote_result.all():
-                poll_vote_counts.setdefault(pid, {})[oid] = cnt
-
-            if viewer_id:
-                uv_stmt = select(PollVote.poll_id, PollVote.option_id).where(
-                    PollVote.poll_id.in_(poll_ids), PollVote.user_id == viewer_id
-                )
-                uv_result = await self._session.execute(uv_stmt)
-                for pid, oid in uv_result.all():
-                    poll_user_votes.setdefault(pid, []).append(str(oid))
-
-            # Load voters for non-anonymous polls
-            non_anon_poll_ids = [p.id for p in polls if not p.is_anonymous]
-            if non_anon_poll_ids:
-                voters_stmt = (
-                    select(PollVote.poll_id, PollVote.option_id, User)
-                    .join(User, PollVote.user_id == User.id)
-                    .where(PollVote.poll_id.in_(non_anon_poll_ids))
-                )
-                voters_result = await self._session.execute(voters_stmt)
-                for pid, oid, voter in voters_result.all():
-                    poll_voters.setdefault((pid, oid), []).append(
-                        {
-                            "id": str(voter.id),
-                            "display_name": voter.display_name,
-                            "avatar_url": voter.avatar_url,
-                        }
-                    )
-
-        poll_map: dict[uuid.UUID, dict[str, Any]] = {}
-        for post_id_key, poll in poll_by_post.items():
-            opts = poll_options_map.get(poll.id, [])
-            counts = poll_vote_counts.get(poll.id, {})
-            total = sum(counts.values())
-            user_vote = poll_user_votes.get(poll.id)
-
-            # Apply result_visibility: hide counts when viewer shouldn't see them
-            show_results = False
-            if poll.result_visibility == "always":
-                show_results = True
-            elif poll.result_visibility == "after_vote" and user_vote:
-                show_results = True
-            elif poll.result_visibility == "after_expiry":
-                from datetime import UTC
-                from datetime import datetime as dt
-
-                is_expired = poll.expires_at is not None and poll.expires_at < dt.now(UTC)
-                show_results = poll.closed or is_expired
-
-            visible_counts = counts if show_results else {}
-            visible_total = total if show_results else 0
-
-            include_voters = show_results and not poll.is_anonymous
-
-            poll_map[post_id_key] = {
-                "id": str(poll.id),
-                "post_id": str(poll.post_id) if poll.post_id else None,
-                "poll_type": poll.poll_type,
-                "question": poll.question,
-                "options": [
-                    {
-                        "id": str(o.id),
-                        "label": o.label,
-                        "image_media_id": str(o.image_media_id) if o.image_media_id else None,
-                        "position": o.position,
-                        "vote_count": visible_counts.get(o.id, 0),
-                        "voters": poll_voters.get((poll.id, o.id), []) if include_voters else [],
-                    }
-                    for o in opts
-                ],
-                "is_anonymous": poll.is_anonymous,
-                "result_visibility": poll.result_visibility,
-                "expires_at": poll.expires_at.isoformat() if poll.expires_at else None,
-                "closed": poll.closed,
-                "total_votes": visible_total,
-                "user_vote": user_vote if show_results else None,
-                "created_at": poll.created_at.isoformat(),
-            }
-
-        enriched: dict[uuid.UUID, dict[str, Any]] = {}
-        for post, author in post_rows:
-            enriched[post.id] = {
-                "id": str(post.id),
-                "content": post.content,
-                "author": {
-                    "id": str(author.id),
-                    "username": author.username,
-                    "display_name": author.display_name,
-                    "avatar_url": author.avatar_url,
-                },
-                "media": media_map.get(post.id, []),
-                "poll": poll_map.get(post.id),
-                "reactions": reaction_map.get(post.id, []),
-                "comment_count": comment_map.get(post.id, 0),
-                "subgroup_id": str(post.subgroup_id) if post.subgroup_id else None,
-                "subgroup_name": (
-                    subgroup_name_map.get(post.subgroup_id) if post.subgroup_id else None
-                ),
-                "created_at": post.created_at.isoformat(),
-                "updated_at": post.updated_at.isoformat(),
-            }
-        return enriched
+        return await enrich_posts(self._session, post_ids, viewer_id)

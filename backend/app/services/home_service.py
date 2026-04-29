@@ -66,18 +66,19 @@ class HomeService:
 
         since = user.last_seen_at if user.last_seen_at else now - timedelta(hours=24)
 
-        new_posts = await self._post_repo.count_new_since(
-            community_id=self._community_id,
-            viewer_id=user.id,
-            since=since,
-        )
-
-        # Resolve user's subgroup IDs for event visibility scoping
+        # Resolve subgroup IDs once; used for both post and event visibility scoping.
         subgroups = await self._subgroup_repo.list_visible_for_user(
             self._community_id,
             user.id,
         )
         subgroup_ids = [sg.id for sg in subgroups]
+
+        new_posts = await self._post_repo.count_new_since(
+            community_id=self._community_id,
+            viewer_id=user.id,
+            since=since,
+            subgroup_ids=subgroup_ids,
+        )
 
         events = await self._event_repo.list_in_range(
             self._community_id,
