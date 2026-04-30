@@ -47,12 +47,7 @@ export function WidgetGrid({
   isLoading = false,
 }: WidgetGridProps) {
   const dragDisabledIds = useWidgetDrag((s) => s.disabledIds);
-  // measureBeforeMount: true so we don't render with the default 1280px
-  // width and overflow / underflow the actual container. Eliminates the
-  // first-paint "widgets too narrow / too wide" jump.
-  const { width, containerRef, mounted } = useContainerWidth({
-    measureBeforeMount: true,
-  });
+  const { width, containerRef, mounted } = useContainerWidth();
 
   // Filter out widgets whose def is not registered — keeps the children
   // array, layout array, and onLayoutChange events in lock-step (RGL gets
