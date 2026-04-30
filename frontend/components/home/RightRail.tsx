@@ -26,6 +26,8 @@ interface RailTabProps {
 }
 
 function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
+  // Collapsed rest state shows just the icon (40x40 puck). On hover or
+  // focus the tab grows leftward and reveals the label.
   return (
     <Box
       component="button"
@@ -38,25 +40,29 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
-        gap: 1,
+        gap: 0,
         position: "relative",
-        // Tab tucks against right edge with rounded-left corners only.
         borderTopLeftRadius: 12,
         borderBottomLeftRadius: 12,
-        pl: 1.5,
+        pl: 1.25,
         pr: 1.25,
-        py: 1.5,
+        py: 1,
+        minHeight: 40,
+        // Collapsed: tucked against right edge, icon only.
+        width: 40,
         bgcolor: active ? "primary.500" : "background.surface",
         color: active ? "#fff" : "text.primary",
         border: "1px solid",
         borderColor: active ? "primary.500" : "divider",
         borderRight: "none",
         boxShadow: "sm",
-        transform: "translateX(0)",
+        overflow: "hidden",
         transition:
-          "transform 180ms ease, background-color 150ms, color 150ms, box-shadow 150ms",
-        "&:hover": {
-          transform: "translateX(-4px)",
+          "width 200ms ease, gap 200ms ease, padding 200ms ease, background-color 150ms, color 150ms, box-shadow 150ms",
+        "&:hover, &:focus-visible": {
+          width: 132,
+          gap: 8,
+          pl: 1.5,
           boxShadow: "md",
         },
         "&:focus-visible": {
@@ -69,6 +75,7 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
         sx={{
           width: 16,
           height: 16,
+          flexShrink: 0,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -80,10 +87,17 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
       <Box
         component="span"
         sx={{
+          flex: 1,
+          minWidth: 0,
           fontSize: 11,
           fontWeight: 600,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
+          whiteSpace: "nowrap",
+          // Hidden in collapsed state; revealed by parent's hover.
+          opacity: 0,
+          transition: "opacity 150ms ease",
+          "button:hover &, button:focus-visible &": { opacity: 1 },
         }}
       >
         {label}
@@ -91,19 +105,27 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
       {typeof badge === "number" && badge > 0 && (
         <Box
           sx={{
-            ml: 0.25,
+            position: "absolute",
+            top: 4,
+            right: 4,
             bgcolor: active ? "rgba(255,255,255,0.25)" : "primary.500",
             color: "#fff",
             borderRadius: "xl",
-            minWidth: 18,
-            height: 18,
+            minWidth: 16,
+            height: 16,
             px: 0.5,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 700,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontVariantNumeric: "tabular-nums",
+            // Pop into the row when expanded.
+            "button:hover &, button:focus-visible &": {
+              position: "relative",
+              top: "auto",
+              right: "auto",
+            },
           }}
         >
           {badge > 99 ? "99+" : badge}
