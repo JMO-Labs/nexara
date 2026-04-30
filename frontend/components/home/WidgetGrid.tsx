@@ -49,9 +49,17 @@ export function WidgetGrid({
   const dragDisabledIds = useWidgetDrag((s) => s.disabledIds);
   const { width, containerRef, mounted } = useContainerWidth();
 
+  // Filter out widgets whose def is not registered — keeps the children
+  // array, layout array, and onLayoutChange events in lock-step (RGL gets
+  // confused if layout and children diverge in length).
+  const validWidgets = React.useMemo(
+    () => widgets.filter((w) => getDef(w.defId) !== undefined),
+    [widgets],
+  );
+
   const layout: Layout = React.useMemo<Layout>(
     () =>
-      widgets.map<LayoutItem>((w) => {
+      validWidgets.map<LayoutItem>((w) => {
         const def = getDef(w.defId);
         // Collapsed widgets render at h=1 (header only). Persisted h stays
         // intact so expand restores the previous height.
@@ -69,14 +77,14 @@ export function WidgetGrid({
           isResizable: !w.collapsed && !dragDisabledIds.has(w.id),
         };
       }),
-    [widgets, dragDisabledIds],
+    [validWidgets, dragDisabledIds],
   );
 
   const widgetsById = React.useMemo(() => {
     const m = new Map<string, WidgetInstance>();
-    for (const w of widgets) m.set(w.id, w);
+    for (const w of validWidgets) m.set(w.id, w);
     return m;
-  }, [widgets]);
+  }, [validWidgets]);
 
   // Guard: only persist on user-initiated drag/resize. RGL also fires Stop
   // events on internal reflows triggered by prop changes (e.g. collapse).
@@ -113,7 +121,7 @@ export function WidgetGrid({
   }
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} style={{ width: "100%" }}>
       {mounted && (
         <GridLayout
           width={width}
@@ -142,9 +150,8 @@ export function WidgetGrid({
           onResizeStart={handleStart}
           onResizeStop={persistLayout}
         >
-          {widgets.map((widget) => {
-            const def = getDef(widget.defId);
-            if (!def) return null;
+          {validWidgets.map((widget) => {
+            const def = getDef(widget.defId)!;
             return (
               <div key={widget.id}>
                 <WidgetFrame

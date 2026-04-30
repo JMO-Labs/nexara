@@ -8,9 +8,7 @@
  *        `draggableCancel` selector keeps clicks from initiating drag.
  */
 import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Box from "@mui/joy/Box";
-import { collapseTransition } from "@/components/ui/motion";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 
 export interface WidgetFrameProps {
@@ -30,8 +28,6 @@ export function WidgetFrame({
   children,
   className,
 }: WidgetFrameProps) {
-  const prefersReduced = useReducedMotion();
-  const transition = prefersReduced ? { duration: 0 } : collapseTransition;
   const panelId = React.useId();
   const confirm = useConfirmDialog((s) => s.confirm);
 
@@ -146,23 +142,24 @@ export function WidgetFrame({
         </Box>
       </Box>
 
-      {/* Body — collapsible. flex:1 + minHeight:0 lets children scroll. */}
-      <AnimatePresence initial={false}>
-        {!collapsed && (
-          <motion.div
-            id={panelId}
-            key="widget-body"
-            initial={{ height: 0, overflow: "hidden" }}
-            animate={{ height: "auto", overflow: "hidden", transition }}
-            exit={{ height: 0, overflow: "hidden", transition }}
-            style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-          >
-            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 2, pb: 2 }}>
-              {children}
-            </Box>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Body — sized by the parent GridItem (h grid units * row height).
+          When collapsed, the GridItem is forced to h=1 so the body is
+          clipped behind the header; we keep this div mounted so RGL's
+          size transition stays smooth. */}
+      <Box
+        id={panelId}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: collapsed ? "none" : "flex",
+          flexDirection: "column",
+          overflow: "auto",
+          px: 2,
+          pb: 2,
+        }}
+      >
+        {children}
+      </Box>
     </Box>
   );
 }

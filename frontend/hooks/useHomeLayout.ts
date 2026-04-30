@@ -173,7 +173,10 @@ export function useHomeLayout(): UseHomeLayoutResult {
       });
       return { previous };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
+      // Surface the backend error so we don't silently roll back without a hint.
+      // eslint-disable-next-line no-console
+      console.error("[useHomeLayout] mutation failed:", err);
       if (ctx?.previous !== undefined) qc.setQueryData(QUERY_KEY, ctx.previous);
     },
     onSettled: () => {
