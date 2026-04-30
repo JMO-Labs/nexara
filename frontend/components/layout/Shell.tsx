@@ -38,8 +38,11 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [status, router]);
 
   // Listen for hard auth failures (refresh exhausted) and force-redirect.
+  // Only act when no user is currently set; a stale 401 from a request
+  // started before re-login must not kick the freshly-logged-in user.
   useEffect(() => {
     function onAuthExpired() {
+      if (useSession.getState().user) return;
       useSession.getState().setUser(null);
       router.replace("/login");
     }
