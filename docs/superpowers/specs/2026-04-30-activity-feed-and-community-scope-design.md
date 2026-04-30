@@ -350,13 +350,19 @@ Subgroup  → pick one of viewer's subgroups
 - `tests/unit/api/test_home_activity_api.py`
 
 **Backend (modified):**
-- `app/services/post_service.py`, `event_service.py`, `gallery_service.py`,
-  `media_service.py`, `comment_service.py` (or wherever comments live),
-  `reaction_service.py`, `rsvp_service.py`, `chat_service.py`,
-  `subgroup_member_service.py`, `subgroup_service.py`,
-  `prompt_service.py` — each gains one `activity_repo.record(...)`
-  call after commit and one `activity_repo.invalidate(...)` call in
-  delete paths.
+- `app/services/post_service.py` (handles `post.created`,
+  `post.commented` — comments live on `PostService.add_comment` —
+  and `post.reacted` via `toggle_comment_reaction` /
+  post-reaction handlers), `event_service.py`
+  (`event.created`, `event.rsvp`), `gallery_service.py`
+  (`gallery.created`), `media_service.py` (`media.uploaded`),
+  `chat_service.py` (`chat.posted`, sampled),
+  `subgroup_member_service.py` (`member.joined`),
+  `subgroups/crud.py` (`subgroup.created`), `prompt_service.py`
+  (`prompt.responded`, fired when a user submits a prompt response /
+  interest answer) — each gains one `activity_repo.record(...)` call
+  after commit and one `activity_repo.invalidate(...)` call in delete
+  paths.
 - `app/services/home_service.py` — `list_media` rewritten as union;
   `upcoming_events` audited.
 - `app/repositories/subgroup_media_repo.py` — add `list_aggregated`.
