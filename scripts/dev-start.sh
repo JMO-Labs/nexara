@@ -183,9 +183,9 @@ do_start() {
   fi
 
   # 10) Start frontend
-  log "Starting Nuxt frontend on :${FRONTEND_PORT}..."
+  log "Starting Next.js frontend on :${FRONTEND_PORT}..."
   cd "${FRONTEND_DIR}"
-  nohup npx nuxt dev --host 0.0.0.0 --port ${FRONTEND_PORT} \
+  nohup npm run dev -- --hostname 0.0.0.0 --port ${FRONTEND_PORT} \
     > "${DATA_DIR}/frontend.log" 2>&1 &
   local frontend_pid=$!
   echo "${frontend_pid}" > "${DATA_DIR}/frontend.pid"

@@ -10,11 +10,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { qk } from "@/lib/query-keys";
 import { getSettings } from "@/lib/api/settings";
 import { putHomeLayout, type HomeLayout } from "@/lib/api/home";
 import { getDef, type WidgetInstance } from "@/lib/widgets/registry";
+import { getAccessToken } from "@/lib/auth/session";
+import { ApiError } from "@/lib/api/errors";
 
 // ---------------------------------------------------------------------------
 // Default layout — compact 12-col dashboard
@@ -138,7 +140,6 @@ export function useHomeLayout(): UseHomeLayoutResult {
   const QUERY_KEY = qk.home.layout();
 
   const defaultLayout = useMemo(() => makeDefault(), []);
-  const pendingRef = useRef<Promise<unknown>>(Promise.resolve());
 
   const {
     data: settings,
@@ -162,33 +163,45 @@ export function useHomeLayout(): UseHomeLayoutResult {
     return norm && norm.length > 0 ? norm : defaultLayout;
   }, [settings, defaultLayout]);
 
+  // Mirror the most recent widgets into a ref so queued mutations see the
+  // latest optimistic state instead of a stale closure (delete then re-add
+  // back-to-back would otherwise PUT against pre-delete widgets).
+  const widgetsRef = React.useRef(widgets);
+  React.useEffect(() => {
+    widgetsRef.current = widgets;
+  }, [widgets]);
+
+  // Cache is the single source of truth for layout. We update it
+  // optimistically on every change and persist to the server in the
+  // background. We never touch the cache from server responses — that
+  // raced with rapid drag/resize sequences and caused widgets to snap
+  // back to stale positions whenever a slower in-flight PUT resolved
+  // after a newer optimistic update.
   const mutation = useMutation({
-    mutationFn: (newWidgets: WidgetInstance[]) =>
-      putHomeLayout({ widgets: newWidgets as unknown as HomeLayout["widgets"] }),
-    onMutate: async (newWidgets) => {
-      await qc.cancelQueries({ queryKey: QUERY_KEY });
-      const previous = qc.getQueryData<HomeLayout | null>(QUERY_KEY);
-      qc.setQueryData(QUERY_KEY, {
+    mutationFn: (newWidgets: WidgetInstance[]) => {
+      if (!getAccessToken()) return Promise.resolve(null);
+      return putHomeLayout({
         widgets: newWidgets as unknown as HomeLayout["widgets"],
       });
-      return { previous };
     },
-    onError: (err, _vars, ctx) => {
-      // Surface the backend error so we don't silently roll back without a hint.
-      // eslint-disable-next-line no-console
-      console.error("[useHomeLayout] mutation failed:", err);
-      if (ctx?.previous !== undefined) qc.setQueryData(QUERY_KEY, ctx.previous);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEY });
+    onError: (err) => {
+      // Don't roll the cache back — newer optimistic updates may have
+      // landed since this mutation started. 401s are handled by the
+      // global auth-expired listener.
+      if (!(err instanceof ApiError && err.status === 401)) {
+        // eslint-disable-next-line no-console
+        console.error("[useHomeLayout] mutation failed:", err);
+      }
     },
   });
 
   function enqueue(next: WidgetInstance[]) {
-    pendingRef.current = pendingRef.current
-      .catch(() => undefined)
-      .then(() => mutation.mutateAsync(next))
-      .catch(() => undefined);
+    // Cache is authoritative. Update it synchronously so subsequent
+    // reads see the new layout, then fire-and-forget the PUT.
+    qc.setQueryData(QUERY_KEY, {
+      widgets: next as unknown as HomeLayout["widgets"],
+    });
+    mutation.mutate(next);
   }
 
   function addWidget(
@@ -198,8 +211,8 @@ export function useHomeLayout(): UseHomeLayoutResult {
     const def = getDef(defId);
     const w = def?.defaultSize ?? 4;
     const h = def?.defaultH ?? 4;
-    // Place new widget below the current layout to avoid overlaps.
-    const maxY = widgets.reduce((m, x) => Math.max(m, x.y + x.h), 0);
+    const current = widgetsRef.current;
+    const maxY = current.reduce((m, x) => Math.max(m, x.y + x.h), 0);
     const next: WidgetInstance = {
       id: crypto.randomUUID(),
       defId,
@@ -210,16 +223,16 @@ export function useHomeLayout(): UseHomeLayoutResult {
       collapsed: false,
       props: opts?.props,
     };
-    enqueue([...widgets, next]);
+    enqueue([...current, next]);
   }
 
   function removeWidget(instanceId: string) {
-    enqueue(widgets.filter((w) => w.id !== instanceId));
+    enqueue(widgetsRef.current.filter((w) => w.id !== instanceId));
   }
 
   function toggleCollapsed(instanceId: string) {
     enqueue(
-      widgets.map((w) =>
+      widgetsRef.current.map((w) =>
         w.id === instanceId ? { ...w, collapsed: !w.collapsed } : w,
       ),
     );
@@ -229,14 +242,14 @@ export function useHomeLayout(): UseHomeLayoutResult {
     items: Array<{ i: string; x: number; y: number; w: number; h: number }>,
   ) {
     const byId = new Map(items.map((it) => [it.i, it]));
-    const next = widgets.map((w) => {
+    const current = widgetsRef.current;
+    const next = current.map((w) => {
       const it = byId.get(w.id);
       if (!it) return w;
       if (w.x === it.x && w.y === it.y && w.w === it.w && w.h === it.h) return w;
       return { ...w, x: it.x, y: it.y, w: it.w, h: it.h };
     });
-    // Skip mutation if nothing changed.
-    const changed = next.some((w, i) => w !== widgets[i]);
+    const changed = next.some((w, i) => w !== current[i]);
     if (!changed) return;
     enqueue(next);
   }

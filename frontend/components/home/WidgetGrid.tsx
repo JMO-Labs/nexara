@@ -9,7 +9,6 @@
  */
 import * as React from "react";
 import GridLayout, {
-  useContainerWidth,
   verticalCompactor,
   type Layout,
   type LayoutItem,
@@ -47,7 +46,30 @@ export function WidgetGrid({
   isLoading = false,
 }: WidgetGridProps) {
   const dragDisabledIds = useWidgetDrag((s) => s.disabledIds);
-  const { width, containerRef, mounted } = useContainerWidth();
+  // Measure on mount via a ref callback (fires before paint, before
+  // useEffect) so the very first render of <GridLayout/> already knows the
+  // correct width. ResizeObserver re-measures on viewport / sidebar shifts.
+  const [width, setWidth] = React.useState(0);
+  const observerRef = React.useRef<ResizeObserver | null>(null);
+  const containerRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (!node) return;
+    setWidth(node.getBoundingClientRect().width);
+    if (typeof ResizeObserver === "undefined") return;
+    let raf: number | null = null;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      if (w <= 0) return;
+      if (raf !== null) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setWidth(w));
+    });
+    ro.observe(node);
+    observerRef.current = ro;
+  }, []);
+  const mounted = width > 0;
 
   // Filter out widgets whose def is not registered — keeps the children
   // array, layout array, and onLayoutChange events in lock-step (RGL gets
@@ -86,26 +108,52 @@ export function WidgetGrid({
     return m;
   }, [validWidgets]);
 
-  // Guard: only persist on user-initiated drag/resize. RGL also fires Stop
-  // events on internal reflows triggered by prop changes (e.g. collapse).
-  const userInteractingRef = React.useRef(false);
-  const handleStart = React.useCallback(() => {
-    userInteractingRef.current = true;
-  }, []);
+  // RGL v2's onDragStop / onResizeStop only fire on user-completed
+  // interactions, so we can persist directly. Stash the latest widgetsById
+  // in a ref so the persist callback never goes stale between drags
+  // (its useCallback identity would otherwise change every time `widgets`
+  // mutates, churning the inline arrow we hand to <GridLayout>).
+  const widgetsByIdRef = React.useRef(widgetsById);
+  React.useEffect(() => {
+    widgetsByIdRef.current = widgetsById;
+  }, [widgetsById]);
+  const onApplyLayoutRef = React.useRef(onApplyLayout);
+  React.useEffect(() => {
+    onApplyLayoutRef.current = onApplyLayout;
+  }, [onApplyLayout]);
 
-  const persistLayout = React.useCallback(
-    (newLayout: Layout) => {
-      if (!userInteractingRef.current) return;
-      userInteractingRef.current = false;
-      onApplyLayout(
-        newLayout.map((l) => {
-          const stored = widgetsById.get(l.i);
-          const h = stored?.collapsed ? stored.h : l.h;
-          return { i: l.i, x: l.x, y: l.y, w: l.w, h };
-        }),
-      );
-    },
-    [onApplyLayout, widgetsById],
+  const persistOnStop = React.useCallback((newLayout: Layout) => {
+    onApplyLayoutRef.current(
+      newLayout.map((l) => {
+        const stored = widgetsByIdRef.current.get(l.i);
+        const h = stored?.collapsed ? stored.h : l.h;
+        return { i: l.i, x: l.x, y: l.y, w: l.w, h };
+      }),
+    );
+  }, []);
+  // Stable config objects — RGL re-runs sync effects when these deep-change.
+  const gridConfig = React.useMemo(
+    () => ({
+      cols: GRID_COLS,
+      rowHeight: GRID_ROW_HEIGHT,
+      margin: [12, 12] as [number, number],
+      containerPadding: [0, 0] as [number, number],
+      maxRows: Infinity,
+    }),
+    [],
+  );
+  const dragConfig = React.useMemo(
+    () => ({
+      enabled: true,
+      bounded: false,
+      cancel: DRAG_CANCEL,
+      threshold: 3,
+    }),
+    [],
+  );
+  const resizeConfig = React.useMemo(
+    () => ({ enabled: true, handles: ["se"] as const }),
+    [],
   );
 
   if (isLoading) {
@@ -121,34 +169,18 @@ export function WidgetGrid({
   }
 
   return (
-    <div ref={containerRef} style={{ width: "100%" }}>
+    <div ref={containerRef} style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
       {mounted && (
         <GridLayout
           width={width}
           layout={layout}
-          gridConfig={{
-            cols: GRID_COLS,
-            rowHeight: GRID_ROW_HEIGHT,
-            margin: [12, 12],
-            containerPadding: [0, 0],
-            maxRows: Infinity,
-          }}
-          dragConfig={{
-            enabled: true,
-            bounded: false,
-            cancel: DRAG_CANCEL,
-            threshold: 3,
-          }}
-          resizeConfig={{
-            enabled: true,
-            handles: ["se"],
-          }}
+          gridConfig={gridConfig}
+          dragConfig={dragConfig}
+          resizeConfig={resizeConfig}
           compactor={verticalCompactor}
           autoSize
-          onDragStart={handleStart}
-          onDragStop={persistLayout}
-          onResizeStart={handleStart}
-          onResizeStop={persistLayout}
+          onDragStop={persistOnStop}
+          onResizeStop={persistOnStop}
         >
           {validWidgets.map((widget) => {
             const def = getDef(widget.defId)!;

@@ -2,9 +2,9 @@
 /**
  * @file components/home/RightRail.tsx
  * @brief Vertical stack of slide-out tabs affixed to the right edge of the
- *        viewport. Each tab toggles a right-side drawer (Chat / Customize).
- *        Tabs feature an icon + small horizontal label. Hover extends the
- *        tab outward for affordance. Customize tab is hidden outside /app.
+ *        viewport. Tracks pointer Y to apply a macOS-Dock-style zoom: the
+ *        tab nearest the cursor scales + translates outward most, neighbors
+ *        ease into the falloff so the rail feels like one connected ribbon.
  */
 import * as React from "react";
 import { usePathname } from "next/navigation";
@@ -24,18 +24,32 @@ interface RailTabProps {
   active: boolean;
   badge?: number;
   onClick: () => void;
+  /** 0..1 — proximity weight from dock controller (1 = under cursor). */
+  proximity: number;
+  registerRef: (el: HTMLButtonElement | null) => void;
 }
 
-function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
-  // Icon-only puck flush against right edge. Hover peeks ~6px outward
-  // and a delayed tooltip surfaces the label.
+// Dock falloff curve: peak shift/scale at proximity=1, eases to 0 at edges.
+const MAX_SCALE_BOOST = 0.45; // 1 -> 1.45 at peak (grows leftward from right edge)
+
+function RailTab({
+  label,
+  icon,
+  active,
+  badge,
+  onClick,
+  proximity,
+  registerRef,
+}: RailTabProps) {
   const tooltipTitle =
     typeof badge === "number" && badge > 0
       ? `${label} (${badge} unread)`
       : label;
+  const scale = 1 + proximity * MAX_SCALE_BOOST;
   return (
-    <Tooltip title={tooltipTitle} placement="left" enterDelay={500}>
+    <Tooltip title={tooltipTitle} placement="left" enterDelay={400}>
       <Box
+        ref={registerRef}
         component="button"
         type="button"
         onClick={onClick}
@@ -59,11 +73,16 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
           borderBottom: "1px solid",
           borderLeft: "1px solid",
           borderColor: active ? "primary.500" : "divider",
-          boxShadow: "0 4px 12px -4px rgba(0,0,0,0.18)",
-          transform: "translateX(0)",
+          boxShadow:
+            proximity > 0.05
+              ? "0 8px 18px -6px rgba(0,0,0,0.28)"
+              : "0 4px 12px -4px rgba(0,0,0,0.18)",
+          transformOrigin: "right center",
+          transform: `scale(${scale})`,
+          zIndex: proximity > 0.05 ? Math.round(10 + proximity * 100) : 1,
           transition:
-            "transform 180ms ease, background-color 150ms, color 150ms, box-shadow 150ms",
-          // Grab dots — vertical 3-dot indicator on inner-left edge.
+            "transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms ease, background-color 150ms, color 150ms",
+          willChange: "transform",
           "&::before": {
             content: '""',
             position: "absolute",
@@ -77,14 +96,9 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
               : "radial-gradient(circle, var(--nx-palette-text-tertiary) 1px, transparent 1px)",
             backgroundSize: "2px 4px",
             backgroundRepeat: "repeat-y",
-            opacity: 0.6,
+            opacity: 0.5 + proximity * 0.5,
             transition: "opacity 150ms ease",
           },
-          "&:hover, &:focus-visible": {
-            transform: "translateX(-6px)",
-            boxShadow: "0 6px 16px -4px rgba(0,0,0,0.25)",
-          },
-          "&:hover::before, &:focus-visible::before": { opacity: 1 },
           "&:focus-visible": {
             outline: "2px solid var(--nx-palette-focusVisible)",
             outlineOffset: 2,
@@ -132,6 +146,10 @@ function RailTab({ label, icon, active, badge, onClick }: RailTabProps) {
   );
 }
 
+// Cursor proximity in px where a tab still gets any zoom influence.
+// Tighter than tab-height + gap so neighbors only get a faint nudge.
+const INFLUENCE_RADIUS = 56;
+
 export function RightRail() {
   const pathname = usePathname();
   const launcherOpen = useChatDock((s) => s.launcherOpen);
@@ -141,16 +159,74 @@ export function RightRail() {
   const setCustomizeOpen = useDashboardRail((s) => s.setCustomizeOpen);
 
   const onHome = pathname === "/app";
-  // Hide rail entirely on the dedicated chat page (matches FloatingChatDock).
-  const onChatRoute = pathname === "/app/chat" || pathname.startsWith("/app/chat/");
+  const onChatRoute =
+    pathname === "/app/chat" || pathname.startsWith("/app/chat/");
+
+  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const [proximities, setProximities] = React.useState<number[]>([]);
+
+  const updateFromPointer = React.useCallback((clientY: number | null) => {
+    const next = tabRefs.current.map((el) => {
+      if (!el || clientY === null) return 0;
+      const r = el.getBoundingClientRect();
+      const center = r.top + r.height / 2;
+      const d = Math.abs(clientY - center);
+      if (d >= INFLUENCE_RADIUS) return 0;
+      // Cosine falloff: smooth peak at center, 0 at radius.
+      const t = 1 - d / INFLUENCE_RADIUS;
+      return t * t * (3 - 2 * t); // smoothstep
+    });
+    setProximities((prev) => {
+      if (
+        prev.length === next.length &&
+        prev.every((v, i) => Math.abs(v - next[i]) < 0.01)
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
 
   if (onChatRoute) return null;
+
+  const tabs: Array<{
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    active: boolean;
+    badge?: number;
+    onClick: () => void;
+  }> = [
+    {
+      key: "chat",
+      label: "Chat",
+      icon: <ChatBubbleLeftRightIcon width={16} />,
+      active: launcherOpen,
+      badge: unread,
+      onClick: () => setLauncherOpen(!launcherOpen),
+    },
+  ];
+  if (onHome) {
+    tabs.push({
+      key: "customize",
+      label: "Customize",
+      icon: <AdjustmentsHorizontalIcon width={16} />,
+      active: customizeOpen,
+      onClick: () => setCustomizeOpen(!customizeOpen),
+    });
+  }
+
+  if (tabRefs.current.length !== tabs.length) {
+    tabRefs.current = Array(tabs.length).fill(null);
+  }
 
   return (
     <>
       <Box
         role="toolbar"
         aria-label="Dashboard tools"
+        onPointerMove={(e) => updateFromPointer(e.clientY)}
+        onPointerLeave={() => updateFromPointer(null)}
         sx={{
           position: "fixed",
           top: "50%",
@@ -158,29 +234,29 @@ export function RightRail() {
           transform: "translateY(-50%)",
           display: "flex",
           flexDirection: "column",
-          // Tabs hug right edge so a hovered tab grows leftward
-          // independently — siblings keep their collapsed width.
           alignItems: "flex-end",
+          // Generous hit-zone so the dock reacts before the cursor reaches a tab.
+          pl: 6,
+          py: 4,
           gap: 1,
           zIndex: 1100,
           pointerEvents: "auto",
         }}
       >
-        <RailTab
-          label="Chat"
-          icon={<ChatBubbleLeftRightIcon width={16} />}
-          active={launcherOpen}
-          badge={unread}
-          onClick={() => setLauncherOpen(!launcherOpen)}
-        />
-        {onHome && (
+        {tabs.map((t, i) => (
           <RailTab
-            label="Customize"
-            icon={<AdjustmentsHorizontalIcon width={16} />}
-            active={customizeOpen}
-            onClick={() => setCustomizeOpen(!customizeOpen)}
+            key={t.key}
+            label={t.label}
+            icon={t.icon}
+            active={t.active}
+            badge={t.badge}
+            onClick={t.onClick}
+            proximity={proximities[i] ?? 0}
+            registerRef={(el) => {
+              tabRefs.current[i] = el;
+            }}
           />
-        )}
+        ))}
       </Box>
 
       {onHome && (
