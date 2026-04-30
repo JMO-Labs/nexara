@@ -161,6 +161,9 @@ export function RightRail() {
           transform: "translateY(-50%)",
           display: "flex",
           flexDirection: "column",
+          // Tabs hug right edge so a hovered tab grows leftward
+          // independently — siblings keep their collapsed width.
+          alignItems: "flex-end",
           gap: 1,
           zIndex: 1100,
           pointerEvents: "auto",
