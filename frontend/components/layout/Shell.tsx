@@ -37,6 +37,16 @@ export function Shell({ children }: { children: ReactNode }) {
     }
   }, [status, router]);
 
+  // Listen for hard auth failures (refresh exhausted) and force-redirect.
+  useEffect(() => {
+    function onAuthExpired() {
+      useSession.getState().setUser(null);
+      router.replace("/login");
+    }
+    window.addEventListener("nx:auth-expired", onAuthExpired);
+    return () => window.removeEventListener("nx:auth-expired", onAuthExpired);
+  }, [router]);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Ignore if user is typing in an input/textarea
