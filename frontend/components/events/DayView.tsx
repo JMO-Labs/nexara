@@ -5,16 +5,16 @@
  *        Multi-event overlap allowed with left-edge positioning.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
 import { format, isToday as isTodayFn, parseISO } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
 import { assignTimeLanes } from "@/lib/events/lanes";
+import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
+import { chipStyle } from "./toneStyle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
-const HOUR_LABEL_WIDTH = 50;
+const HOUR_LABEL_WIDTH = 44;
 
 export interface DayViewProps {
   day: Date;
@@ -69,213 +69,107 @@ export function DayView({
   const nowOffset = (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-      }}
-    >
+    <div className="flex h-full w-full flex-col">
       {/* Day header */}
-      <Box
-        sx={{
-          textAlign: "center",
-          py: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          mb: 1,
-        }}
+      <div
+        className="mb-2 border-b border-ink/15 py-3 text-center"
+        aria-current={isToday ? "date" : undefined}
       >
-        <Typography level="h3" sx={{ mb: 0.25 }}>
-          {format(day, "EEEE")}
-        </Typography>
-        <Typography level="body-sm" sx={{ color: "text.secondary" }}>
-          {format(day, "MMMM d, yyyy")}
-        </Typography>
-      </Box>
+        <h2 className="text-xl font-black">{format(day, "EEEE")}</h2>
+        <p className="text-sm text-muted">{format(day, "MMMM d, yyyy")}</p>
+      </div>
 
       {/* All-day strip */}
       {allDay.length > 0 && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "stretch",
-            gap: 0.5,
-            mb: 1,
-            pl: `${HOUR_LABEL_WIDTH}px`,
-            pr: 0.5,
-          }}
-        >
-          <Box
-            sx={{
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "text.tertiary",
-              alignSelf: "center",
-              position: "absolute",
-              left: 4,
-              width: HOUR_LABEL_WIDTH - 8,
-              textAlign: "right",
-            }}
+        <div className="mb-2 flex items-start gap-2 pr-1">
+          <span
+            className="shrink-0 pr-2 pt-1 text-right text-[11px] font-semibold text-muted"
+            style={{ width: HOUR_LABEL_WIDTH }}
           >
             All day
-          </Box>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, flex: 1 }}>
+          </span>
+          <div className="flex flex-1 flex-wrap gap-1.5">
             {allDay.map((ev) => {
               const tone = toneForEvent(ev, subgroupNames);
-              const isSelected = selectedEventId === ev.id;
               return (
-                <Box
+                <button
                   key={ev.id}
-                  role="button"
-                  tabIndex={0}
+                  type="button"
                   onClick={() => onSelectEvent(ev)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelectEvent(ev);
-                    }
-                  }}
-                  sx={{
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: "4px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    backgroundColor: isSelected ? tone.solid : tone.soft,
-                    color: isSelected ? tone.onSolid : tone.onSoft,
-                    cursor: "pointer",
-                    border: `1px solid ${isSelected ? tone.solid : "transparent"}`,
-                    "&:hover": {
-                      backgroundColor: tone.solid,
-                      color: tone.onSolid,
-                    },
+                  className="min-h-8 cursor-pointer rounded border px-2 py-1 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  style={{
+                    ...chipStyle(tone, selectedEventId === ev.id),
+                    ...(selectedEventId === ev.id
+                      ? {}
+                      : { borderColor: "transparent" }),
                   }}
                 >
                   {ev.title}
-                </Box>
+                </button>
               );
             })}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
 
       {/* Timeline grid */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          position: "relative",
-          display: "flex",
-          minHeight: 0,
-        }}
-      >
-        {/* Hour labels and lines */}
-        <Box
-          sx={{
-            width: HOUR_LABEL_WIDTH,
-            flexShrink: 0,
-            borderRight: "1px solid",
-            borderColor: "divider",
-            pt: 0.5,
-          }}
+      <div className="relative flex min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-2xl bg-surface">
+        {/* Hour labels */}
+        <div
+          className="shrink-0 border-r border-ink/15 pt-0.5"
+          style={{ width: HOUR_LABEL_WIDTH }}
         >
           {Array.from({ length: 24 }).map((_, hour) => (
-            <Box
+            <div
               key={hour}
-              sx={{
-                height: HOUR_HEIGHT,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "flex-end",
-                pr: 1,
-                borderBottom: hour < 23 ? "1px solid" : "none",
-                borderColor: "divider",
-                fontSize: 11,
-                color: "text.tertiary",
-                fontWeight: 600,
-              }}
+              className={cn(
+                "flex items-start justify-end pr-2 text-[11px] font-semibold text-muted",
+                hour < 23 && "border-b border-ink/15",
+              )}
+              style={{ height: HOUR_HEIGHT }}
             >
               {format(new Date().setHours(hour, 0), "h a")}
-            </Box>
+            </div>
           ))}
-        </Box>
+        </div>
 
         {/* Events container */}
-        <Box
-          sx={{
-            flex: 1,
-            position: "relative",
-            minHeight: `${24 * HOUR_HEIGHT}px`,
-          }}
+        <div
+          className="relative flex-1"
+          style={{ minHeight: 24 * HOUR_HEIGHT }}
         >
-          {/* Grid background */}
           {Array.from({ length: 24 }).map((_, hour) => (
-            <Box
+            <div
               key={hour}
-              sx={{
-                position: "absolute",
-                top: hour * HOUR_HEIGHT,
-                left: 0,
-                right: 0,
-                height: HOUR_HEIGHT,
-                borderBottom: hour < 23 ? "1px solid" : "none",
-                borderColor: "divider",
-              }}
+              className={cn(
+                "absolute inset-x-0",
+                hour < 23 && "border-b border-ink/15",
+              )}
+              style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
             />
           ))}
 
           {/* Current-time indicator */}
           {isToday && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: nowOffset,
-                left: 0,
-                right: 0,
-                height: 0,
-                zIndex: 20,
-                pointerEvents: "none",
-                borderTop: "2px solid",
-                borderColor: "danger.solidBg",
-              }}
+            <div
+              className="pointer-events-none absolute inset-x-0 z-20 h-0 border-t-2 border-ink"
+              style={{ top: nowOffset }}
+              aria-hidden="true"
             >
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: "danger.solidBg",
-                  top: "-5px",
-                  left: -4,
-                  boxShadow: "0 0 0 2px var(--joy-palette-background-surface)",
-                  animation:
-                    "pulse-now 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                  "@keyframes pulse-now": {
-                    "0%, 100%": { opacity: 1 },
-                    "50%": { opacity: 0.55 },
-                  },
-                }}
-              />
-            </Box>
+              <span className="absolute -left-1 -top-[5px] size-2 rounded-full bg-ink ring-2 ring-surface" />
+            </div>
           )}
 
           {/* Event blocks */}
           {lanes.map((seg, idx) => {
             const isSelected = selectedEventId === seg.event.id;
             const laneWidthPct = 100 / seg.cluster;
-            const leftPct = seg.lane * laneWidthPct;
-
             return (
-              <Box
+              <div
                 key={`event-${seg.event.id}-${idx}`}
                 role="button"
                 tabIndex={0}
+                aria-label={`${seg.event.title}, ${format(parseISO(seg.event.starts_at), "p")}`}
                 onClick={() => onSelectEvent(seg.event)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -283,71 +177,28 @@ export function DayView({
                     onSelectEvent(seg.event);
                   }
                 }}
-                sx={{
-                  position: "absolute",
+                className="absolute z-10 box-border cursor-pointer overflow-hidden rounded border px-1.5 py-1 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                style={{
                   top: seg.topOffset,
-                  left: `${leftPct}%`,
+                  left: `${seg.lane * laneWidthPct}%`,
                   width: `calc(${laneWidthPct}% - 4px)`,
                   height: seg.height,
-                  px: 0.75,
-                  py: 0.5,
-                  boxSizing: "border-box",
-                  backgroundColor: isSelected ? seg.tone.solid : seg.tone.soft,
-                  color: isSelected ? seg.tone.onSolid : seg.tone.onSoft,
-                  borderRadius: "4px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  lineHeight: 1.2,
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  border: `1px solid ${isSelected ? seg.tone.solid : "transparent"}`,
-                  transition: "all 120ms ease",
-                  "&:hover": {
-                    backgroundColor: seg.tone.solid,
-                    color: seg.tone.onSolid,
-                    zIndex: 11,
-                  },
-                  "&:focus-visible": {
-                    outline: "2px solid",
-                    outlineColor: seg.tone.solid,
-                    outlineOffset: "1px",
-                  },
-                  zIndex: 10,
+                  ...chipStyle(seg.tone, isSelected),
+                  ...(isSelected ? {} : { borderColor: "transparent" }),
                 }}
               >
-                <Typography
-                  level="body-xs"
-                  sx={{
-                    color: "inherit",
-                    fontWeight: 700,
-                    fontSize: 11,
-                    lineHeight: 1.15,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {seg.event.title}
-                </Typography>
+                <p className="truncate font-black">{seg.event.title}</p>
                 {seg.height >= 32 && (
-                  <Typography
-                    level="body-xs"
-                    sx={{
-                      color: "inherit",
-                      opacity: 0.8,
-                      fontSize: 10,
-                      mt: "1px",
-                    }}
-                  >
+                  <p className="mt-px text-[11px] opacity-90">
                     {format(parseISO(seg.event.starts_at), "h:mm a")}
-                  </Typography>
+                  </p>
                 )}
-              </Box>
+              </div>
             );
           })}
-        </Box>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }
 

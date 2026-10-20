@@ -2,12 +2,11 @@
 /**
  * @file components/events/WeekView.tsx
  * @brief Weekly calendar grid view. 7 columns, hourly rows (48px each).
- *        Current time line (1px brand) with 6px pulsing dot.
+ *        Current time line (1px accent) with 6px dot. Scrolls sideways inside
+ *        its own container on phones.
  *        Multi-event overlap allowed via lane assignment.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
 import {
   format,
   getHours,
@@ -17,10 +16,12 @@ import {
 } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
 import { assignTimeLanes, type TimeLane } from "@/lib/events/lanes";
+import { cn } from "@/lib/utils";
+import { chipStyle } from "./toneStyle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
-const HOUR_LABEL_WIDTH = 50;
+const HOUR_LABEL_WIDTH = 44;
 
 export interface WeekViewProps {
   weekStart: Date;
@@ -75,236 +76,137 @@ export function WeekView({
   const todayIndex = week.findIndex((d) => isTodayFn(d));
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        fontFamily: "var(--font-body)",
-      }}
-    >
-      {/* Day headers */}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: `${HOUR_LABEL_WIDTH}px repeat(7, 1fr)`,
-          gap: 0,
-          mb: 1,
-          px: 0.5,
-        }}
-      >
-        <Box />
-
-        {week.map((day) => {
-          const today = isTodayFn(day);
-          return (
-            <Box
-              key={day.toISOString()}
-              sx={{
-                textAlign: "center",
-                py: 0.75,
-              }}
-            >
-              <Typography
-                level="body-xs"
-                sx={{
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 600,
-                  color: today ? "primary.solidBg" : "text.secondary",
-                  mb: 0.25,
-                }}
-              >
-                {format(day, "EEE")}
-              </Typography>
-              <Typography
-                level="body-sm"
-                sx={{
-                  fontWeight: today ? 700 : 500,
-                  color: today ? "primary.solidBg" : "text.primary",
-                }}
-              >
-                {format(day, "d")}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Box>
-
-      {/* Scrollable timeline */}
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: "sm",
-          backgroundColor: "background.surface",
-          position: "relative",
-          display: "flex",
-        }}
-      >
-        {/* Hour label gutter */}
-        <Box
-          sx={{
-            width: HOUR_LABEL_WIDTH,
-            flexShrink: 0,
-            borderRight: "1px solid",
-            borderColor: "divider",
+    <div className="flex h-full w-full flex-col overflow-x-auto">
+      <div className="flex h-full min-w-[560px] flex-1 flex-col">
+        {/* Day headers */}
+        <div
+          className="mb-2 grid px-1"
+          style={{
+            gridTemplateColumns: `${HOUR_LABEL_WIDTH}px repeat(7, 1fr)`,
           }}
         >
-          {Array.from({ length: 24 }).map((_, hour) => (
-            <Box
-              key={hour}
-              sx={{
-                height: HOUR_HEIGHT,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "flex-end",
-                pr: 1,
-                pt: 0.25,
-                fontSize: 10,
-                color: "text.tertiary",
-                fontWeight: 600,
-                borderBottom: hour < 23 ? "1px solid" : "none",
-                borderColor: "divider",
-              }}
-            >
-              {hour === 0 ? "" : format(new Date().setHours(hour, 0), "h a")}
-            </Box>
-          ))}
-        </Box>
-
-        {/* Hour rows grid (7 day columns) */}
-        <Box
-          sx={{
-            flex: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            minHeight: `${24 * HOUR_HEIGHT}px`,
-            position: "relative",
-          }}
-        >
-          {Array.from({ length: 24 }).map((_, hour) => (
-            <React.Fragment key={hour}>
-              {Array.from({ length: 7 }).map((_, dayIdx) => (
-                <Box
-                  key={`${hour}-${dayIdx}`}
-                  sx={{
-                    position: "relative",
-                    height: HOUR_HEIGHT,
-                    borderRight: dayIdx < 6 ? "1px solid" : "none",
-                    borderColor: "divider",
-                    borderBottom: hour < 23 ? "1px solid" : "none",
-                    backgroundColor: "transparent",
-                    transition: "background-color 120ms ease",
-                    "&:hover": {
-                      backgroundColor: "background.level1",
-                    },
-                  }}
-                />
-              ))}
-            </React.Fragment>
-          ))}
-
-          {/* Event blocks overlay — per-day, lane-aware horizontal placement */}
-          {lanesPerDay.flatMap(({ lanes }, dayIdx) => {
-            const dayWidthPct = 100 / 7;
-            const dayLeftPct = dayIdx * dayWidthPct;
-            return lanes.map((seg, segIdx) => {
-              const isSelected = selectedEventId === seg.event.id;
-              const laneWidthPct = dayWidthPct / seg.cluster;
-              const leftPct = dayLeftPct + seg.lane * laneWidthPct;
-              return (
-                <Box
-                  key={`event-${seg.event.id}-${dayIdx}-${segIdx}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelectEvent(seg.event)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onSelectEvent(seg.event);
-                    }
-                  }}
-                  sx={{
-                    position: "absolute",
-                    left: `${leftPct}%`,
-                    width: `calc(${laneWidthPct}% - 2px)`,
-                    top: seg.topOffset,
-                    height: seg.height,
-                    zIndex: 10,
-                    px: 0.5,
-                    py: 0.25,
-                    boxSizing: "border-box",
-                    backgroundColor: isSelected
-                      ? seg.tone.solid
-                      : seg.tone.soft,
-                    color: isSelected ? seg.tone.onSolid : seg.tone.onSoft,
-                    borderRadius: "4px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    lineHeight: 1.2,
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    cursor: "pointer",
-                    border: `1px solid ${isSelected ? seg.tone.solid : "transparent"}`,
-                    transition: "all 120ms ease",
-                    "&:hover": {
-                      backgroundColor: seg.tone.solid,
-                      color: seg.tone.onSolid,
-                      zIndex: 11,
-                    },
-                    "&:focus-visible": {
-                      outline: "2px solid",
-                      outlineColor: seg.tone.solid,
-                      outlineOffset: "1px",
-                    },
-                  }}
+          <div />
+          {week.map((day) => {
+            const today = isTodayFn(day);
+            return (
+              <div key={day.toISOString()} className="py-1.5 text-center">
+                <p className="text-xs font-semibold text-muted">
+                  {format(day, "EEE")}
+                </p>
+                <p
+                  className={cn(
+                    "mx-auto mt-0.5 flex size-7 items-center justify-center rounded-full text-sm",
+                    today
+                      ? "bg-accent font-black text-surface-strong"
+                      : "font-semibold text-ink",
+                  )}
+                  aria-current={today ? "date" : undefined}
                 >
-                  {seg.event.title}
-                </Box>
-              );
-            });
+                  {format(day, "d")}
+                </p>
+              </div>
+            );
           })}
+        </div>
 
-          {/* Current time indicator */}
-          {todayIndex !== -1 && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: `${currentHour * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT}px`,
-                left: `${(todayIndex * 100) / 7}%`,
-                width: `${100 / 7}%`,
-                height: "1px",
-                backgroundColor: "primary.solidBg",
-                zIndex: 20,
-              }}
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  backgroundColor: "primary.solidBg",
-                  top: "-2.5px",
-                  left: "4px",
-                  animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                  "@keyframes pulse": {
-                    "0%, 100%": { opacity: 1 },
-                    "50%": { opacity: 0.5 },
-                  },
+        {/* Scrollable timeline */}
+        <div className="relative flex flex-1 overflow-y-auto overflow-x-hidden rounded-2xl bg-surface">
+          {/* Hour label gutter */}
+          <div
+            className="shrink-0 border-r border-ink/15"
+            style={{ width: HOUR_LABEL_WIDTH }}
+          >
+            {Array.from({ length: 24 }).map((_, hour) => (
+              <div
+                key={hour}
+                className={cn(
+                  "flex items-start justify-end pr-2 pt-0.5 text-[11px] font-semibold text-muted",
+                  hour < 23 && "border-b border-ink/15",
+                )}
+                style={{ height: HOUR_HEIGHT }}
+              >
+                {hour === 0 ? "" : format(new Date().setHours(hour, 0), "h a")}
+              </div>
+            ))}
+          </div>
+
+          {/* Hour rows grid (7 day columns) */}
+          <div
+            className="relative grid flex-1 grid-cols-7"
+            style={{ minHeight: 24 * HOUR_HEIGHT }}
+          >
+            {Array.from({ length: 24 }).map((_, hour) => (
+              <React.Fragment key={hour}>
+                {Array.from({ length: 7 }).map((_, dayIdx) => (
+                  <div
+                    key={`${hour}-${dayIdx}`}
+                    className={cn(
+                      "hover:bg-bg motion-safe:transition-colors",
+                      dayIdx < 6 && "border-r border-ink/15",
+                      hour < 23 && "border-b border-ink/15",
+                    )}
+                    style={{ height: HOUR_HEIGHT }}
+                  />
+                ))}
+              </React.Fragment>
+            ))}
+
+            {/* Event blocks overlay: per-day, lane-aware horizontal placement */}
+            {lanesPerDay.flatMap(({ lanes }, dayIdx) => {
+              const dayWidthPct = 100 / 7;
+              const dayLeftPct = dayIdx * dayWidthPct;
+              return lanes.map((seg, segIdx) => {
+                const isSelected = selectedEventId === seg.event.id;
+                const laneWidthPct = dayWidthPct / seg.cluster;
+                return (
+                  <div
+                    key={`event-${seg.event.id}-${dayIdx}-${segIdx}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${seg.event.title}, ${format(parseISO(seg.event.starts_at), "p")}`}
+                    onClick={() => onSelectEvent(seg.event)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelectEvent(seg.event);
+                      }
+                    }}
+                    className="absolute z-10 box-border cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                    style={{
+                      left: `${dayLeftPct + seg.lane * laneWidthPct}%`,
+                      width: `calc(${laneWidthPct}% - 2px)`,
+                      top: seg.topOffset,
+                      height: seg.height,
+                      ...chipStyle(seg.tone, isSelected),
+                      ...(isSelected ? {} : { borderColor: "transparent" }),
+                    }}
+                  >
+                    {seg.event.title}
+                  </div>
+                );
+              });
+            })}
+
+            {/* Current time indicator */}
+            {todayIndex !== -1 && (
+              <div
+                className="pointer-events-none absolute z-20 h-px bg-ink"
+                style={{
+                  top:
+                    currentHour * HOUR_HEIGHT +
+                    (now.getMinutes() / 60) * HOUR_HEIGHT,
+                  left: `${(todayIndex * 100) / 7}%`,
+                  width: `${100 / 7}%`,
                 }}
-              />
-            </Box>
-          )}
-        </Box>
-      </Box>
-    </Box>
+                aria-hidden="true"
+              >
+                <span className="absolute -top-[2.5px] left-1 size-1.5 rounded-full bg-ink" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
