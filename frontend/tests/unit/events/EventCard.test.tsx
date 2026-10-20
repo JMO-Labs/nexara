@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { EventCard } from "@/components/events/EventCard";
 import type { EventItem } from "@/lib/api/events";
 
@@ -54,11 +52,7 @@ const ev: EventItem = {
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("EventCard", () => {
