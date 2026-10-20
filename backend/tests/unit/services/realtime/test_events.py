@@ -26,7 +26,7 @@ class TestPostCreated:
     def test_creates_feed_update_event(self):
         cid = uuid.uuid4()
         post = {"id": str(uuid.uuid4()), "content": "Hello"}
-        event = post_created(cid, post)
+        event = post_created(CommunityTarget(community_id=cid), post)
 
         assert event.type == EventType.FEED_UPDATE
         assert isinstance(event.target, CommunityTarget)
@@ -43,7 +43,7 @@ class TestCommentCreated:
         pid = uuid.uuid4()
         uid = uuid.uuid4()
         comment = {"id": str(uuid.uuid4()), "content": "Nice!"}
-        event = comment_created(cid, pid, comment, uid)
+        event = comment_created(CommunityTarget(community_id=cid), pid, comment, uid)
 
         assert event.type == EventType.FEED_UPDATE
         assert isinstance(event.target, CommunityTarget)
@@ -61,7 +61,9 @@ class TestReactionToggled:
         pid = uuid.uuid4()
         tid = uuid.uuid4()
         uid = uuid.uuid4()
-        event = reaction_toggled(cid, pid, "post", tid, "heart", 5, "added", uid)
+        event = reaction_toggled(
+            CommunityTarget(community_id=cid), pid, "post", tid, "heart", 5, "added", uid
+        )
 
         assert event.type == EventType.FEED_UPDATE
         assert event.payload["event"] == FeedEvent.REACTION_TOGGLED

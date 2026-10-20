@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import AuthorizationError, NotFoundError
-from app.services.realtime.events import EventType, FeedEvent
+from app.services.realtime.events import EventType, FeedEvent, UserTarget
 from tests.unit.services.conftest import (
     ADMIN_ID,
     AUTHOR_ID,
@@ -21,6 +21,41 @@ from tests.unit.services.conftest import (
     _make_post,
     _make_user,
 )
+
+AUDIENCE = [AUTHOR_ID, VIEWER_ID]
+
+
+@pytest.fixture(autouse=True)
+def _audience():
+    """@brief Stub audience resolution; assert it is the only source of targets."""
+    with patch(
+        "app.services.post_service.resolve_audience", new=AsyncMock(return_value=AUDIENCE)
+    ) as m:
+        yield m
+
+
+def _emitted(bus):
+    return [c.args[0] for c in bus.emit.await_args_list]
+
+
+class TestAudienceScoping:
+    """@brief Feed events go only to the resolved audience."""
+
+    @pytest.mark.asyncio
+    async def test_create_post_emits_only_to_audience(
+        self, service_with_event_bus, post_repo, mock_event_bus, _audience
+    ):
+        post = _make_post()
+        post.visibility = "subgroup"
+        post.subgroup_id = uuid.uuid4()
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {"id": str(post.id)}
+        await service_with_event_bus.create_post(_make_user(user_id=AUTHOR_ID), "Hi")
+        events = _emitted(mock_event_bus)
+        assert all(isinstance(e.target, UserTarget) for e in events)
+        assert {e.target.user_id for e in events} == set(AUDIENCE)
+        kw = _audience.await_args.kwargs
+        assert kw["visibility"] == "subgroup" and kw["subgroup_id"] == post.subgroup_id
 
 
 class TestListFeed:
@@ -116,7 +151,6 @@ class TestCreatePost:
         post_repo.create_post.return_value = post
         post_repo.get_post_detail.return_value = enriched
         await service_with_event_bus.create_post(user, "Hello")
-        mock_event_bus.emit.assert_awaited_once()
         event = mock_event_bus.emit.call_args[0][0]
         assert event.type == EventType.FEED_UPDATE
         assert event.payload["event"] == FeedEvent.POST_CREATED
