@@ -13,7 +13,8 @@ const sizes = {
 
 export interface AvatarProps {
   src?: string;
-  name: string;
+  /** Missing for deleted/unknown users; falls back to "?". */
+  name?: string;
   size?: keyof typeof sizes;
   className?: string;
 }
@@ -23,8 +24,8 @@ export interface AvatarProps {
  * @param name display name
  * @return uppercase initials
  */
-function initials(name: string): string {
-  return name
+function initials(name: string | undefined): string {
+  return (name ?? "")
     .trim()
     .split(/\s+/)
     .slice(0, 2)
@@ -52,13 +53,13 @@ export function Avatar({ src, name, size = "md", className }: AvatarProps) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
-          alt={name}
+          alt={name ?? ""}
           className="size-full object-cover"
           onError={() => setFailed(true)}
         />
       ) : (
-        <span role="img" aria-label={name}>
-          {initials(name)}
+        <span role="img" aria-label={name ?? "Unknown user"}>
+          {initials(name) || "?"}
         </span>
       )}
     </span>

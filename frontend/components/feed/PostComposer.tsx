@@ -198,9 +198,11 @@ export function PostComposer({
           onClick={() => setExpanded(true)}
           className="bg-surface text-muted focus-visible:outline-accent flex w-full cursor-text items-center gap-3 rounded-[1.25rem] border border-muted/40 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <Avatar src={me.avatar_url ?? undefined} size="sm">
-            {me.display_name.charAt(0)}
-          </Avatar>
+          <Avatar
+            src={me.avatar_url ?? undefined}
+            name={me.display_name}
+            size="sm"
+          />
           <span className="text-base">
             Share something with your community…
           </span>
@@ -232,9 +234,11 @@ export function PostComposer({
       )}
 
       <div className="flex items-start gap-3">
-        <Avatar src={me.avatar_url ?? undefined} size="sm">
-          {me.display_name.charAt(0)}
-        </Avatar>
+        <Avatar
+          src={me.avatar_url ?? undefined}
+          name={me.display_name}
+          size="sm"
+        />
         <div className="min-w-0 grow">
           <div className="min-h-20 rounded-xl border border-muted/40 p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
             <EditorContent editor={editor} />
