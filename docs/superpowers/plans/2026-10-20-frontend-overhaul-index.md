@@ -11,8 +11,8 @@
 | # | Phase | Spec § | Depends on | Detailed plan |
 |---|-------|--------|-----------|---------------|
 | P0 | Merge `polish/phase-5-motion` to `main`; branch `feat/frontend-overhaul` | §8.0 | — | in P1 plan, Task 0 |
-| P1 | Foundation + shell: remove Joy/§9 deps, Tailwind v4 + shadcn, tokens, font, Lucide, `components/ui/*` rebuilt, side nav, bottom tab bar, More sheet, top bar | §5, §6 Shell, §8.1–2, §9 | P0 | `…-p1-foundation-shell.md` ✅ written |
-| P2 | Home + unified feed: `GET /api/v1/home/feed` (BE), SSE live merge, 10s collapse, N-new pill, Next-up card, widget column (dnd-kit reorder/hide, `home_layout` new shape), delete RGL grid/RightRail/dashboardRail/widgetDrag | §6 Home, Feed, §11 | P1 | pending |
+| P1 | Foundation + shell: remove Joy/§9 deps, Tailwind v4 + shadcn, tokens, font, Lucide, `components/ui/*` rebuilt, side nav, bottom tab bar, More sheet, top bar | §5, §6 Shell, §8.1–2, §9 | P0 | `…-p1-foundation-shell.md` ✅ done |
+| P2 | Home + unified feed: `GET /api/v1/home/feed` (BE), SSE live merge, 10s collapse, N-new pill, Next-up card, widget column (dnd-kit reorder/hide, `home_layout` new shape), delete RGL grid/RightRail/dashboardRail/widgetDrag; **SSE audience fix**, `feed_ping`; **pulled in:** PostComposer, chat dock children, Event/Gallery create modals, login page | §6 Home, Feed, §11 | P1 | `…-p2-home-feed.md` ✅ written |
 | P3 | Re-skin: feed post detail + comments + reactions + poll cards; chat (split `ChatLayout.tsx` 510; phone full-screen; dock desktop-only) | §8.4 | P1 (P2 for PostCard reuse) | pending |
 | P4 | Re-skin: events/calendar. Split `EventCreateModal` 609, `EventDetailPanel` 545, `CalendarSubscriptionsPanel` 501, `events/page.tsx` 462, `CalendarFilterBar` 416 | §8.4, §9 | P1 | pending |
 | P5 | Re-skin: galleries/media (split `galleries/page.tsx` 804, embla only), subgroups hub, members | §8.4, §9 | P1 | pending |
