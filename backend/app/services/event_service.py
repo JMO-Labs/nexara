@@ -22,6 +22,7 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
 from app.models.subgroup import Subgroup, SubgroupMember
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
@@ -64,6 +65,7 @@ class EventService:
         notification_service: Any | None = None,
         calendar_service: CalendarService | None = None,
         token_repo: Any | None = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._repo = event_repo
         self._community_id = community_id
@@ -80,6 +82,7 @@ class EventService:
 
             token_repo = CalendarTokenRepository(session)
         self._token_repo = token_repo
+        self._activity_repo = activity_repo
 
     # ── Internal helpers ──────────────────────────────────────────────
 
@@ -237,6 +240,30 @@ class EventService:
             reminder_offsets_minutes=data.reminder_offsets_minutes,
         )
         event = await self._repo.create(event)
+
+        if self._activity_repo is not None:
+            from app.models.user import User
+
+            user_result = await self._session.execute(select(User).where(User.id == user_id))
+            user = user_result.scalar_one_or_none()
+            user_name = user.display_name if user else "Unknown"
+
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user_id,
+                verb="event.created",
+                object_type="event",
+                object_id=event.id,
+                subgroup_id=event.subgroup_id,
+                visibility=event.visibility,
+                target_type="subgroup" if event.subgroup_id else "community",
+                target_id=event.subgroup_id or self._community_id,
+                metadata={
+                    "actor_name": user_name,
+                    "object_title": event.title,
+                },
+            )
+
         return await self._build_response(event, user_id=user_id)
 
     async def get_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> EventResponse:
@@ -284,6 +311,8 @@ class EventService:
             raise AuthorizationError(_("Only the event organizer can delete this event"))
         await self._session.delete(event)
         await self._session.flush()
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("event", event_id)
 
     async def list_events(
         self,
@@ -394,6 +423,30 @@ class EventService:
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("rsvp_notify_failed", error=str(exc))
+
+        if self._activity_repo is not None:
+            from app.models.user import User
+
+            user_result = await self._session.execute(select(User).where(User.id == user_id))
+            user = user_result.scalar_one_or_none()
+            user_name = user.display_name if user else "Unknown"
+
+            rsvp_id = att.id if hasattr(att, "id") else uuid.uuid4()
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user_id,
+                verb="event.rsvp",
+                object_type="rsvp",
+                object_id=rsvp_id,
+                subgroup_id=event.subgroup_id,
+                visibility=event.visibility,
+                target_type="event",
+                target_id=event_id,
+                metadata={
+                    "actor_name": user_name,
+                    "object_title": event.title,
+                },
+            )
 
         return RSVPResponse.model_validate(att)
 

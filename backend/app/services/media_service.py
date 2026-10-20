@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
@@ -66,12 +67,14 @@ class MediaService:
         community_id: uuid.UUID,
         *,
         valkey_client: Redis | None = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._repo = media_repo
         self._storage = storage_backend
         self._user_repo = user_repo
         self._community_id = community_id
         self._valkey = valkey_client
+        self._activity_repo = activity_repo
 
     def _session(self) -> AsyncSession:
         """@brief Get the session from the media repo for quota operations."""
@@ -140,6 +143,21 @@ class MediaService:
             community_id=self._community_id,
         )
         await increment_storage_used(self._session(), user.id, size)
+
+        if self._activity_repo is not None:
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="media.uploaded",
+                object_type="media",
+                object_id=media.id,
+                subgroup_id=None,
+                visibility="private",
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": filename,
+                },
+            )
 
         generate_thumbnail.delay(str(media.id))
 
@@ -231,6 +249,8 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("media", media_id)
 
     async def attach_to_post(
         self,

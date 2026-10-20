@@ -3,8 +3,8 @@
 Revision ID: 0016_gallery_cover_backfill
 Revises: 0015_event_original_start
 """
-from alembic import op
 
+from alembic import op
 
 revision = "0016_gallery_cover_backfill"
 down_revision = "0015_event_original_start"

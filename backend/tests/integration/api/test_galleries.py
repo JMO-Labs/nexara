@@ -1,6 +1,6 @@
 """
 @file test_galleries.py
-@brief Integration tests for galleries API — CRUD, bulk add, collaborators, search, event-gallery, admin, block-filter.
+@brief Integration tests for galleries API: CRUD, bulk add, collaborators, search, admin.
 """
 
 from __future__ import annotations
@@ -107,7 +107,9 @@ class TestGalleriesCRUD:
         user_id = uuid.uuid4()
         gallery_id = uuid.uuid4()
         mock_user = _make_mock_user(user_id=user_id)
-        gallery = _make_mock_gallery(gallery_id=gallery_id, owner_id=user_id, title="My Photos", item_count=5)
+        gallery = _make_mock_gallery(
+            gallery_id=gallery_id, owner_id=user_id, title="My Photos", item_count=5
+        )
 
         async def _override_user():
             return mock_user

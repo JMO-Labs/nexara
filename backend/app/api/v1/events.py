@@ -325,7 +325,7 @@ async def update_occurrence(
     event_id: uuid.UUID,
     iso_start: str,
     scope: str = Query("this", regex="^(this|this_and_following|all)$"),
-    data: EventUpdate = None,
+    data: EventUpdate | None = None,
     user: User = Depends(get_current_user),
     service: EventService = Depends(_build_service),
 ) -> EventResponse:

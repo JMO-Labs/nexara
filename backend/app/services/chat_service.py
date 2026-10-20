@@ -28,6 +28,7 @@ from app.core.i18n import _
 from app.models.chat import ChatMessage
 from app.models.subgroup import ChatChannel
 from app.models.user import User
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.chat_repo import (
     TOMBSTONE_CONTENT,
     ChatChannelRepository,
@@ -104,6 +105,7 @@ class ChatService:
         rate_limiter: Redis | None = None,
         broadcaster: Any = None,
         link_preview_enqueue: Any = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._channel_repo = channel_repo
         self._message_repo = message_repo
@@ -111,6 +113,7 @@ class ChatService:
         self._rate_limiter = rate_limiter
         self._broadcaster = broadcaster
         self._link_preview_enqueue = link_preview_enqueue
+        self._activity_repo = activity_repo
 
     # ── Channel management ───────────────────────────────────────────
 
@@ -255,6 +258,29 @@ class ChatService:
         )
         payload = serialize_message(message, user)
 
+        # Record activity with throttling via Redis SETNX (1 per 30 min per user per channel)
+        if self._activity_repo is not None and self._rate_limiter is not None:
+            throttle_key = f"activity:chat:throttle:{self._community_id}:{user.id}:{channel.id}"
+            setnx_result = await self._rate_limiter.set(throttle_key, "1", nx=True, ex=1800)
+            if setnx_result:
+                await self._activity_repo.record(
+                    community_id=self._community_id,
+                    actor_id=user.id,
+                    verb="chat.posted",
+                    object_type="chat",
+                    object_id=message.id,
+                    subgroup_id=channel.subgroup_id if hasattr(channel, "subgroup_id") else None,
+                    visibility="community"
+                    if not hasattr(channel, "subgroup_id") or channel.subgroup_id is None
+                    else "subgroup",
+                    target_type="channel",
+                    target_id=channel.id,
+                    metadata={
+                        "actor_name": user.display_name,
+                        "object_title": channel.name if hasattr(channel, "name") else "Chat",
+                    },
+                )
+
         await self._broadcast(channel.id, "chat.message", payload, channel=channel)
         await self._enqueue_link_previews(content, message.id)
 
@@ -361,6 +387,8 @@ class ChatService:
                 "edited_at": deleted.edited_at.isoformat() if deleted.edited_at else None,
             }
             await self._broadcast(deleted.channel_id, "chat.deleted", payload)
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("chat", message_id)
 
     async def leave_dm(
         self,

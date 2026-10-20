@@ -343,9 +343,7 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         @param user_id User ID.
         @return True if user is a member.
         """
-        stmt = select(
-            func.count(SubgroupMember.user_id)
-        ).where(
+        stmt = select(func.count(SubgroupMember.user_id)).where(
             SubgroupMember.subgroup_id == subgroup_id,
             SubgroupMember.user_id == user_id,
         )

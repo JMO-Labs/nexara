@@ -223,7 +223,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
             return stmt
 
         author_col_name = None
-        for candidate in ("user_id", "author_id", "created_by", "uploader_id"):
+        for candidate in ("user_id", "author_id", "created_by", "uploader_id", "actor_id"):
             if hasattr(entity_cls, candidate):
                 author_col_name = candidate
                 break

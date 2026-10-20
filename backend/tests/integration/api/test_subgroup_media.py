@@ -88,19 +88,16 @@ class TestSubgroupMedia:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch(
-                "app.api.v1.subgroups.SubgroupService"
-            ) as mock_service_cls, patch(
-                "app.api.v1.subgroups.SubgroupMediaService"
-            ) as mock_media_service_cls:
+            with (
+                patch("app.api.v1.subgroups.SubgroupService") as mock_service_cls,
+                patch("app.api.v1.subgroups.SubgroupMediaService") as mock_media_service_cls,
+            ):
                 mock_service = AsyncMock()
                 mock_service.get_subgroup = AsyncMock(return_value=mock_sg)
                 mock_service_cls.return_value = mock_service
 
                 mock_media_service = AsyncMock()
-                mock_media_service.list_media = AsyncMock(
-                    return_value=(media_items, None)
-                )
+                mock_media_service.list_media = AsyncMock(return_value=(media_items, None))
                 mock_media_service_cls.return_value = mock_media_service
 
                 transport = ASGITransport(app=test_app)
@@ -156,19 +153,16 @@ class TestSubgroupMedia:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch(
-                "app.api.v1.subgroups.SubgroupService"
-            ) as mock_service_cls, patch(
-                "app.api.v1.subgroups.SubgroupMediaService"
-            ) as mock_media_service_cls:
+            with (
+                patch("app.api.v1.subgroups.SubgroupService") as mock_service_cls,
+                patch("app.api.v1.subgroups.SubgroupMediaService") as mock_media_service_cls,
+            ):
                 mock_service = AsyncMock()
                 mock_service.get_subgroup = AsyncMock(return_value=mock_sg)
                 mock_service_cls.return_value = mock_service
 
                 mock_media_service = AsyncMock()
-                mock_media_service.list_media = AsyncMock(
-                    return_value=(media_items, None)
-                )
+                mock_media_service.list_media = AsyncMock(return_value=(media_items, None))
                 mock_media_service_cls.return_value = mock_media_service
 
                 transport = ASGITransport(app=test_app)
@@ -206,19 +200,16 @@ class TestSubgroupMedia:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch(
-                "app.api.v1.subgroups.SubgroupService"
-            ) as mock_service_cls, patch(
-                "app.api.v1.subgroups.SubgroupMediaService"
-            ) as mock_media_service_cls:
+            with (
+                patch("app.api.v1.subgroups.SubgroupService") as mock_service_cls,
+                patch("app.api.v1.subgroups.SubgroupMediaService") as mock_media_service_cls,
+            ):
                 mock_service = AsyncMock()
                 mock_service.get_subgroup = AsyncMock(return_value=mock_sg)
                 mock_service_cls.return_value = mock_service
 
                 mock_media_service = AsyncMock()
-                mock_media_service.list_media = AsyncMock(
-                    return_value=(media_items, next_cursor)
-                )
+                mock_media_service.list_media = AsyncMock(return_value=(media_items, next_cursor))
                 mock_media_service_cls.return_value = mock_media_service
 
                 transport = ASGITransport(app=test_app)

@@ -1,10 +1,11 @@
 """
 @file home.py
-@brief Home aggregation endpoints: summary stats and media carousel feed.
+@brief Home aggregation endpoints: summary stats, media carousel feed, and activity feed.
 
-Provides two routes under /home prefix for the home-page redesign:
+Provides three routes under /home prefix for the home-page redesign:
   - GET /summary  — activity summary for the welcome banner
   - GET /media    — aggregated media for the carousel widget
+  - GET /activity — aggregated community activity feed (Phase 3)
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1 import home_activity
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.repositories.event_repo import EventRepository
@@ -26,6 +28,10 @@ from app.schemas.subgroup import MediaAggregateListResponse, MediaItemResponse
 from app.services.home_service import HomeService
 
 router = APIRouter(prefix="/home", tags=["home"])
+
+# Include the activity sub-router
+
+router.include_router(home_activity.router)
 
 
 def _build_service(
@@ -63,7 +69,7 @@ async def list_home_media(
     service: HomeService = Depends(_build_service),
     limit: int = Query(24, ge=1, le=200),
     source: str = Query("all"),
-    scope: str = Query("all", pattern="^(all|community|subgroup|personal)$"),
+    scope: str = Query("all", pattern="^(all|community|subgroup)$"),
     subgroup_id: uuid.UUID | None = Query(None),
 ) -> MediaAggregateListResponse:
     """

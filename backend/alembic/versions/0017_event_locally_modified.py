@@ -3,9 +3,10 @@
 Revision ID: 0017_event_locally_modified
 Revises: 0016_gallery_cover_backfill
 """
-from alembic import op
+
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = "0017_event_locally_modified"
 down_revision = "0016_gallery_cover_backfill"

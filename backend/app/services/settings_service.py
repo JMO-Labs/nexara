@@ -37,11 +37,7 @@ def _validate_settings_tolerant(settings: Any) -> UserSettingsResponse:
         )
         # Re-validate with home_layout cleared.
         try:
-            data = (
-                settings.__dict__
-                if hasattr(settings, "__dict__")
-                else dict(settings)
-            )
+            data = settings.__dict__ if hasattr(settings, "__dict__") else dict(settings)
             data = {k: v for k, v in data.items() if not k.startswith("_")}
             data["home_layout"] = None
             return UserSettingsResponse.model_validate(data)

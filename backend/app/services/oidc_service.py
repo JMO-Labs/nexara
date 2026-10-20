@@ -135,9 +135,7 @@ class OIDCService:
                     email_verified=True,
                 )
                 user = await self._user_repo.create(user)
-                await CalendarRepository(self._session).ensure_personal(
-                    user.community_id, user.id
-                )
+                await CalendarRepository(self._session).ensure_personal(user.community_id, user.id)
                 logger.info("oidc_user_created", user_id=str(user.id), email=email)
         else:
             await self._user_repo.update(user, {"role": role})

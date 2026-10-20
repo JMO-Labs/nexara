@@ -22,15 +22,25 @@ USER_ID = uuid.uuid4()
 
 HOME_LAYOUT_PAYLOAD = {
     "widgets": [
-        {"id": "abc-123", "defId": "feed", "size": "lg", "collapsed": False, "order": 0},
-        {"id": "def-456", "defId": "upcoming-events", "size": "md", "collapsed": False, "order": 1},
+        {"id": "abc-123", "defId": "feed", "x": 0, "y": 0, "w": 6, "h": 2, "collapsed": False},
+        {
+            "id": "def-456",
+            "defId": "upcoming-events",
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 2,
+            "collapsed": False,
+        },
     ]
 }
 
 HOME_LAYOUT_SCHEMA = HomeLayoutSchema(
     widgets=[
-        WidgetInstanceSchema(id="abc-123", defId="feed", size="lg", collapsed=False, order=0),
-        WidgetInstanceSchema(id="def-456", defId="upcoming-events", size="md", collapsed=False, order=1),
+        WidgetInstanceSchema(id="abc-123", defId="feed", x=0, y=0, w=6, h=2, collapsed=False),
+        WidgetInstanceSchema(
+            id="def-456", defId="upcoming-events", x=6, y=0, w=6, h=2, collapsed=False
+        ),
     ]
 )
 

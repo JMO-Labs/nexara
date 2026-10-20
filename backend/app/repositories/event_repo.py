@@ -58,7 +58,7 @@ class EventRepository(BaseRepository[Event]):
         if viewer_id is not None:
             allowed_ids = subgroup_ids or []
             visible = or_(
-                Event.visibility == "community",
+                and_(Event.visibility == "community", Event.subgroup_id.is_(None)),
                 and_(Event.visibility == "private", Event.author_id == viewer_id),
                 and_(
                     Event.visibility == "subgroup",
@@ -266,6 +266,20 @@ class EventRepository(BaseRepository[Event]):
             stmt = stmt.where(EventAttendance.status.in_(statuses))
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def exists_many(
+        self,
+        event_ids: set[uuid.UUID] | list[uuid.UUID],
+    ) -> set[uuid.UUID]:
+        """
+        @brief Batch-check which event IDs exist (soft-delete aware).
+
+        @param event_ids Set or list of event UUIDs to check.
+        @return Set of event IDs that exist (not soft-deleted).
+        """
+        stmt = select(Event.id).where(Event.id.in_(list(event_ids)))
+        result = await self._session.execute(stmt)
+        return set(result.scalars().all())
 
     async def count_subscriptions_for(self, user_id: uuid.UUID) -> int:
         """@brief Count active (non-deleted) subscriptions for a user."""

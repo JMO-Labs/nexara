@@ -348,3 +348,119 @@ class TestToggleReaction:
         assert event.payload["emoji"] == "\U0001f44d"
         assert event.payload["count"] == 1
         assert event.payload["action"] == "added"
+
+
+class TestActivityRecording:
+    """@brief Tests for activity repo wiring in PostService."""
+
+    @pytest.mark.asyncio
+    async def test_create_post_records_activity(
+        self, service_with_activity_repo, post_repo, activity_repo
+    ):
+        """create_post() records post.created activity."""
+        user = _make_user(user_id=AUTHOR_ID, display_name="Alice")
+        post = _make_post()
+        post.visibility = "community"
+        post.subgroup_id = None
+        post_repo.create_post.return_value = post
+        enriched = {"id": str(post.id), "content": "Hello world"}
+        post_repo.get_post_detail.return_value = enriched
+
+        await service_with_activity_repo.create_post(user, "Hello world")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["community_id"] == COMMUNITY_ID
+        assert call_kwargs["actor_id"] == AUTHOR_ID
+        assert call_kwargs["verb"] == "post.created"
+        assert call_kwargs["object_type"] == "post"
+        assert call_kwargs["object_id"] == post.id
+        assert call_kwargs["visibility"] == "community"
+        assert call_kwargs["metadata"]["actor_name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_add_comment_records_activity(
+        self, service_with_activity_repo, post_repo, comment_repo, activity_repo
+    ):
+        """add_comment() records post.commented activity."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Bob")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.content = "Great post!"
+        comment.parent_id = None
+        comment.created_at = MagicMock()
+        comment.created_at.isoformat.return_value = "2025-01-01T00:00:00"
+
+        post_repo.get_by_id.return_value = post
+        comment_repo.create_comment.return_value = comment
+
+        await service_with_activity_repo.add_comment(POST_ID, user, "Great post!")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.commented"
+        assert call_kwargs["object_type"] == "comment"
+        assert call_kwargs["object_id"] == comment.id
+        assert call_kwargs["metadata"]["actor_name"] == "Bob"
+
+    @pytest.mark.asyncio
+    async def test_toggle_post_reaction_records_activity(
+        self, service_with_activity_repo, post_repo, reaction_repo, activity_repo
+    ):
+        """toggle_reaction() on post records post.reacted activity when added."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Charlie")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        post_repo.get_by_id.return_value = post
+        reaction_repo.toggle.return_value = ("added", 1)
+
+        await service_with_activity_repo.toggle_reaction(POST_ID, user, "👍")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.reacted"
+        assert call_kwargs["object_type"] == "reaction"
+        assert call_kwargs["metadata"]["actor_name"] == "Charlie"
+
+    @pytest.mark.asyncio
+    async def test_toggle_comment_reaction_records_activity(
+        self, service_with_activity_repo, post_repo, comment_repo, reaction_repo, activity_repo
+    ):
+        """toggle_comment_reaction() records post.reacted activity when added."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Diana")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.post_id = POST_ID
+        comment.author_id = AUTHOR_ID
+
+        post_repo.get_by_id.return_value = post
+        comment_repo.get_by_id.return_value = comment
+        reaction_repo.toggle.return_value = ("added", 2)
+
+        await service_with_activity_repo.toggle_comment_reaction(POST_ID, comment.id, user, "❤️")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.reacted"
+        assert call_kwargs["object_type"] == "reaction"
+        assert call_kwargs["metadata"]["actor_name"] == "Diana"
+
+    @pytest.mark.asyncio
+    async def test_delete_post_invalidates_activity(
+        self, service_with_activity_repo, post_repo, activity_repo
+    ):
+        """delete_post() invalidates post activity."""
+        user = _make_user(user_id=AUTHOR_ID)
+        post = _make_post(author_id=AUTHOR_ID)
+        post_repo.get_by_id.return_value = post
+
+        await service_with_activity_repo.delete_post(POST_ID, user)
+
+        activity_repo.invalidate.assert_awaited_once_with("post", POST_ID)

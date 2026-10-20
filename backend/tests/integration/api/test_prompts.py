@@ -2,7 +2,8 @@
 @file test_prompts.py
 @brief Integration tests for prompts API: CRUD, firing, responses, summaries, notifications.
 
-Tests prompt operations via HTTP endpoints with mocked external dependencies (Celery, NotificationService, InterestService).
+Tests prompt operations via HTTP endpoints with mocked external dependencies
+(Celery, NotificationService, InterestService).
 """
 
 from __future__ import annotations
@@ -194,9 +195,9 @@ class TestPromptFiring:
                         with patch(
                             "app.repositories.prompt_repo.PromptRepository.create_prompt_post",
                         ) as mock_create_pp:
-                            from app.services.prompt_service import PromptService
-                            from app.repositories.prompt_repo import PromptRepository
                             from app.repositories.post_repo import PostRepository
+                            from app.repositories.prompt_repo import PromptRepository
+                            from app.services.prompt_service import PromptService
 
                             mock_db = AsyncMock()
                             svc = PromptService(
@@ -260,14 +261,14 @@ class TestPromptResponses:
                         "app.repositories.prompt_repo.PromptRepository.get_by_id",
                         return_value=mock_prompt,
                     ):
-                        from app.services.post_service import PostService
-                        from app.repositories.post_repo import PostRepository
-                        from app.repositories.prompt_repo import PromptRepository
                         from app.repositories.comment_repo import (
                             CommentRepository,
                             ReactionRepository,
                         )
+                        from app.repositories.post_repo import PostRepository
+                        from app.repositories.prompt_repo import PromptRepository
                         from app.services.notification_service import NotificationService
+                        from app.services.post_service import PostService
 
                         mock_db = AsyncMock()
                         notif_svc = NotificationService(
@@ -285,7 +286,9 @@ class TestPromptResponses:
                         )
 
                         user = _mock_member()
-                        await svc.create_post(user, "I love Christmas!", reply_to_prompt_id=prompt_id)
+                        await svc.create_post(
+                            user, "I love Christmas!", reply_to_prompt_id=prompt_id
+                        )
 
                         mock_incr.assert_called_once_with(prompt_id)
 
@@ -353,9 +356,9 @@ class TestPromptExpiry:
                             with patch(
                                 "app.repositories.prompt_repo.PromptRepository.finalise",
                             ) as mock_finalise:
-                                from app.services.prompt_service import PromptService
-                                from app.repositories.prompt_repo import PromptRepository
                                 from app.repositories.post_repo import PostRepository
+                                from app.repositories.prompt_repo import PromptRepository
+                                from app.services.prompt_service import PromptService
 
                                 mock_db = AsyncMock()
                                 svc = PromptService(
@@ -424,9 +427,9 @@ class TestPromptNotifications:
                         with patch(
                             "app.repositories.prompt_repo.PromptRepository.create_prompt_post",
                         ):
-                            from app.services.prompt_service import PromptService
-                            from app.repositories.prompt_repo import PromptRepository
                             from app.repositories.post_repo import PostRepository
+                            from app.repositories.prompt_repo import PromptRepository
+                            from app.services.prompt_service import PromptService
 
                             mock_db = AsyncMock()
                             svc = PromptService(
@@ -489,14 +492,14 @@ class TestInterestCapture:
                         "app.repositories.prompt_repo.PromptRepository.get_by_id",
                         return_value=mock_prompt,
                     ):
-                        from app.services.post_service import PostService
-                        from app.repositories.post_repo import PostRepository
-                        from app.repositories.prompt_repo import PromptRepository
                         from app.repositories.comment_repo import (
                             CommentRepository,
                             ReactionRepository,
                         )
+                        from app.repositories.post_repo import PostRepository
+                        from app.repositories.prompt_repo import PromptRepository
                         from app.services.notification_service import NotificationService
+                        from app.services.post_service import PostService
 
                         mock_db = AsyncMock()
                         notif_svc = NotificationService(

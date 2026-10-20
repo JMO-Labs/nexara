@@ -233,9 +233,7 @@ class TestEditMessage:
     """@brief Tests for edit_message()."""
 
     @pytest.mark.asyncio
-    async def test_edit_by_author(
-        self, service, channel_repo, message_repo, broadcaster
-    ) -> None:
+    async def test_edit_by_author(self, service, channel_repo, message_repo, broadcaster) -> None:
         """edit_message lets the author mutate content and broadcasts update."""
         user = _make_user()
         existing = _make_message(author_id=user.id, content="original")
@@ -287,9 +285,7 @@ class TestDeleteMessage:
     """@brief Tests for delete_message()."""
 
     @pytest.mark.asyncio
-    async def test_delete_by_author(
-        self, service, channel_repo, message_repo, broadcaster
-    ) -> None:
+    async def test_delete_by_author(self, service, channel_repo, message_repo, broadcaster) -> None:
         """Author can delete their own message, broadcasts chat.deleted."""
         user = _make_user()
         existing = _make_message(author_id=user.id)
@@ -311,9 +307,7 @@ class TestDeleteMessage:
         assert envelope["payload"]["deleted"] is True
 
     @pytest.mark.asyncio
-    async def test_delete_by_admin(
-        self, service, channel_repo, message_repo, broadcaster
-    ) -> None:
+    async def test_delete_by_admin(self, service, channel_repo, message_repo, broadcaster) -> None:
         """Admin can delete anybody's message."""
         admin = _make_user(user_id=ADMIN_ID, role="admin")
         existing = _make_message(author_id=OTHER_USER_ID)

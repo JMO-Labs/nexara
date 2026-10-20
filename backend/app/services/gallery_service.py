@@ -18,6 +18,7 @@ from app.core.i18n import _
 from app.models.event import Event
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.models.subgroup import SubgroupMember
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.gallery_repo import GalleryRepository
 from app.schemas.gallery import (
     CollaboratorResponse,
@@ -45,12 +46,14 @@ class GalleryService:
         *,
         notification_service: Any | None = None,
         audit_repo: Any | None = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._repo = gallery_repo
         self._community_id = community_id
         self._session = session
         self._notifications = notification_service
         self._audit_repo = audit_repo
+        self._activity_repo = activity_repo
 
     # ── Helpers ───────────────────────────────────────────────────────
 
@@ -111,6 +114,30 @@ class GalleryService:
             cover_media_id=data.cover_media_id,
         )
         gallery = await self._repo.create(gallery)
+
+        if self._activity_repo is not None:
+            from app.models.user import User
+
+            user_result = await self._session.execute(select(User).where(User.id == user_id))
+            user = user_result.scalar_one_or_none()
+            user_name = user.display_name if user else "Unknown"
+
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user_id,
+                verb="gallery.created",
+                object_type="gallery",
+                object_id=gallery.id,
+                subgroup_id=gallery.subgroup_id,
+                visibility=gallery.visibility,
+                target_type="subgroup" if gallery.subgroup_id else "community",
+                target_id=gallery.subgroup_id or self._community_id,
+                metadata={
+                    "actor_name": user_name,
+                    "object_title": gallery.title,
+                },
+            )
+
         return GalleryResponse.model_validate(gallery)
 
     async def ensure_default_gallery(self, user_id: uuid.UUID) -> GalleryResponse:
@@ -231,6 +258,8 @@ class GalleryService:
             raise AuthorizationError(_("Only the gallery owner can delete this gallery"))
         await self._session.delete(gallery)
         await self._session.flush()
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("gallery", gallery_id)
 
     async def search(
         self,

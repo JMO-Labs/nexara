@@ -1,5 +1,6 @@
 import pytest
-from app.core.http_safe import safe_fetch, UnsafeUrlError
+
+from app.core.http_safe import UnsafeUrlError, safe_fetch
 
 
 @pytest.mark.asyncio

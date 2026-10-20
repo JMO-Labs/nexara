@@ -308,13 +308,14 @@ class TestListMedia:
         subgroup_repo.list_visible_for_user.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
-        media_repo.list_media.return_value = ([], None)
+        media_repo.list_aggregated.return_value = ([], None)
 
         svc = _build_service(subgroup_repo=subgroup_repo, media_repo=media_repo)
         items, next_cursor = await svc.list_media(user=user, limit=24)
 
         assert items == []
         assert next_cursor is None
+        media_repo.list_aggregated.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_list_media_aggregates_across_user_subgroups(self):
@@ -338,16 +339,17 @@ class TestListMedia:
         }
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
-        media_repo.list_media.side_effect = [
-            ([item_a], None),
-            ([item_b], None),
-        ]
+        media_repo.list_aggregated.return_value = ([item_a, item_b], None)
 
         svc = _build_service(subgroup_repo=subgroup_repo, media_repo=media_repo)
         items, next_cursor = await svc.list_media(user=user, limit=24)
 
         assert len(items) == 2
-        assert media_repo.list_media.await_count == 2
+        # Single union call, not per-subgroup loop
+        assert media_repo.list_aggregated.await_count == 1
+        call_kwargs = media_repo.list_aggregated.await_args.kwargs
+        assert sg1.id in call_kwargs["subgroup_ids"]
+        assert sg2.id in call_kwargs["subgroup_ids"]
 
     @pytest.mark.asyncio
     async def test_list_media_respects_limit(self):
@@ -367,9 +369,54 @@ class TestListMedia:
             for i in range(1, 11)
         ]
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
-        media_repo.list_media.return_value = (items_data, None)
+        # Repo respects limit; mock truncated to 5 to match real DB behavior.
+        media_repo.list_aggregated.return_value = (items_data[:5], None)
 
         svc = _build_service(subgroup_repo=subgroup_repo, media_repo=media_repo)
         items, _ = await svc.list_media(user=user, limit=5)
 
         assert len(items) <= 5
+        # Verify limit propagated to repo
+        assert media_repo.list_aggregated.await_args.kwargs["limit"] == 5
+
+
+class TestEventAggregation:
+    """@brief Tests for HomeService event aggregation (audit Phase 4)."""
+
+    @pytest.mark.asyncio
+    async def test_summary_calls_list_in_range_once_with_union(self):
+        """
+        summary() calls event_repo.list_in_range ONCE with subgroup_ids,
+        not looped per-subgroup. Ensures event_repo.list_in_range already
+        unions community-root + subgroup rows per visibility predicate.
+        """
+        user = _make_user(last_seen_at=NOW - timedelta(hours=1))
+        sg1 = _make_subgroup()
+        sg2 = _make_subgroup()
+
+        post_repo = AsyncMock(spec=PostRepository)
+        post_repo.count_new_since.return_value = 0
+
+        event_repo = AsyncMock(spec=EventRepository)
+        event_repo.list_in_range.return_value = []
+
+        notification_repo = AsyncMock(spec=NotificationRepository)
+        notification_repo.get_unread_count.return_value = 0
+
+        subgroup_repo = AsyncMock(spec=SubgroupRepository)
+        subgroup_repo.list_visible_for_user.return_value = [sg1, sg2]
+
+        svc = _build_service(
+            post_repo=post_repo,
+            event_repo=event_repo,
+            notification_repo=notification_repo,
+            subgroup_repo=subgroup_repo,
+        )
+        await svc.summary(user=user, now=NOW)
+
+        # Verify list_in_range called exactly once (not looped per-subgroup)
+        event_repo.list_in_range.assert_awaited_once()
+        call_kwargs = event_repo.list_in_range.call_args.kwargs
+        # Verify subgroup_ids are passed for union (not per-subgroup filtering)
+        assert call_kwargs["subgroup_ids"] == [sg1.id, sg2.id]
+        assert call_kwargs["viewer_id"] == USER_ID

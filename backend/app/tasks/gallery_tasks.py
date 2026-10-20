@@ -1,6 +1,7 @@
 """@file gallery_tasks.py
 @brief Celery tasks for gallery reminders and batched activity notifications.
 """
+
 from __future__ import annotations
 
 import asyncio

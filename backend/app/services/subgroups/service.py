@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.subgroups.crud import SubgroupCrudMixin
@@ -40,9 +41,12 @@ class SubgroupService(
         post_repo: PostRepository,
         community_id: uuid.UUID,
         max_memberships_per_user: int = 5,
+        *,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._subgroup_repo = subgroup_repo
         self._member_repo = member_repo
         self._post_repo = post_repo
         self._community_id = community_id
         self._max_memberships = max_memberships_per_user
+        self._activity_repo = activity_repo

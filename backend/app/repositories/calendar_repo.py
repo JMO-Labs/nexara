@@ -19,9 +19,7 @@ class CalendarRepository(BaseRepository[Calendar]):
 
     model = Calendar
 
-    async def list_for_user(
-        self, community_id: uuid.UUID, user_id: uuid.UUID
-    ) -> list[Calendar]:
+    async def list_for_user(self, community_id: uuid.UUID, user_id: uuid.UUID) -> list[Calendar]:
         """
         @brief Calendars visible to a user.
 
@@ -59,9 +57,7 @@ class CalendarRepository(BaseRepository[Calendar]):
         out.sort(key=lambda c: (rank.get(c.kind, 3), c.name.lower()))
         return out
 
-    async def get_personal(
-        self, community_id: uuid.UUID, owner_id: uuid.UUID
-    ) -> Calendar | None:
+    async def get_personal(self, community_id: uuid.UUID, owner_id: uuid.UUID) -> Calendar | None:
         """@brief Fetch a user's personal calendar."""
         stmt = select(Calendar).where(
             Calendar.community_id == community_id,

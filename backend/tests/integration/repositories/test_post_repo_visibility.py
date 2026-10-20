@@ -12,7 +12,6 @@ import os
 import uuid
 
 import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.models  # noqa: F401 — registers all mapped classes
@@ -105,9 +104,7 @@ class TestListFeedVisibilityIntegration:
     """@brief Integration tests for PostRepository.list_feed visibility predicate."""
 
     @pytest.mark.asyncio
-    async def test_user_in_s1_sees_community_s1_and_own_private(
-        self, session: AsyncSession
-    ):
+    async def test_user_in_s1_sees_community_s1_and_own_private(self, session: AsyncSession):
         """
         User A in subgroups [S1]:
         list_feed returns: community post, S1 post, A's private post.

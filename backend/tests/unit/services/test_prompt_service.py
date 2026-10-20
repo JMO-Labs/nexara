@@ -352,20 +352,13 @@ class TestSeedBuiltinPrompts:
         import json
         from pathlib import Path
 
-        path = (
-            Path(__file__).resolve().parents[4]
-            / "backend"
-            / "data"
-            / "builtin_prompts.json"
-        )
+        path = Path(__file__).resolve().parents[4] / "backend" / "data" / "builtin_prompts.json"
         data = json.loads(path.read_text(encoding="utf-8"))
 
         standard_count = sum(
             1 for entry in data if entry.get("prompt_type", "standard") == "standard"
         )
-        interest_count = sum(
-            1 for entry in data if entry.get("prompt_type") == "interest_capture"
-        )
+        interest_count = sum(1 for entry in data if entry.get("prompt_type") == "interest_capture")
 
         assert len(data) == 24
         assert standard_count == 15
@@ -376,12 +369,7 @@ class TestSeedBuiltinPrompts:
         import json
         from pathlib import Path
 
-        path = (
-            Path(__file__).resolve().parents[4]
-            / "backend"
-            / "data"
-            / "builtin_prompts.json"
-        )
+        path = Path(__file__).resolve().parents[4] / "backend" / "data" / "builtin_prompts.json"
         data = json.loads(path.read_text(encoding="utf-8"))
 
         required_fields = {"title", "body", "frequency_type", "active_days", "scope"}
@@ -395,9 +383,9 @@ class TestSeedBuiltinPrompts:
             ], f"Invalid prompt_type in {entry['title']}"
             # Check interest_capture entries have category slug
             if entry.get("prompt_type") == "interest_capture":
-                assert (
-                    entry.get("interest_category_slug") is not None
-                ), f"interest_category_slug missing in {entry['title']}"
-                assert (
-                    entry.get("interest_capture_hint") is not None
-                ), f"interest_capture_hint missing in {entry['title']}"
+                assert entry.get("interest_category_slug") is not None, (
+                    f"interest_category_slug missing in {entry['title']}"
+                )
+                assert entry.get("interest_capture_hint") is not None, (
+                    f"interest_capture_hint missing in {entry['title']}"
+                )

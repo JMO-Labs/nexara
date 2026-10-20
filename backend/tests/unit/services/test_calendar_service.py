@@ -60,9 +60,7 @@ def service(repo: AsyncMock, session: AsyncMock) -> CalendarService:
 
 class TestListForUser:
     @pytest.mark.asyncio
-    async def test_returns_repo_results(
-        self, service: CalendarService, repo: AsyncMock
-    ) -> None:
+    async def test_returns_repo_results(self, service: CalendarService, repo: AsyncMock) -> None:
         user_id = uuid.uuid4()
         community = _make_cal(kind="community", name="Community")
         personal = _make_cal(kind="personal", name="Personal", owner_id=user_id)
@@ -75,9 +73,7 @@ class TestListForUser:
 
 class TestDeriveCalendarId:
     @pytest.mark.asyncio
-    async def test_private_uses_personal(
-        self, service: CalendarService, repo: AsyncMock
-    ) -> None:
+    async def test_private_uses_personal(self, service: CalendarService, repo: AsyncMock) -> None:
         user_id = uuid.uuid4()
         cal = _make_cal(kind="personal", owner_id=user_id)
         repo.ensure_personal.return_value = cal
@@ -100,9 +96,7 @@ class TestDeriveCalendarId:
         assert out == cal.id
 
     @pytest.mark.asyncio
-    async def test_community_default(
-        self, service: CalendarService, repo: AsyncMock
-    ) -> None:
+    async def test_community_default(self, service: CalendarService, repo: AsyncMock) -> None:
         cal = _make_cal(kind="community")
         repo.ensure_community.return_value = cal
         out = await service.derive_calendar_id(

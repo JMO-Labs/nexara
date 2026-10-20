@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -16,6 +16,9 @@ from app.models.subgroup import ChatChannel, Subgroup
 from app.models.user import User
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.subgroups.helpers import is_admin, require_role
+
+if TYPE_CHECKING:
+    from app.repositories.activity_repo import ActivityRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -28,11 +31,13 @@ class SubgroupCrudMixin:
       - ``_subgroup_repo`` — :class:`SubgroupRepository`
       - ``_member_repo`` — :class:`SubgroupMemberRepository`
       - ``_community_id`` — community UUID
+      - ``_activity_repo`` — optional activity repo
     """
 
     _subgroup_repo: SubgroupRepository
     _member_repo: SubgroupMemberRepository
     _community_id: uuid.UUID
+    _activity_repo: ActivityRepository | None
 
     async def _validate_parent(
         self,
@@ -167,6 +172,23 @@ class SubgroupCrudMixin:
             subgroup_id=subgroup.id,
             name=name,
         )
+
+        if self._activity_repo is not None:
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="subgroup.created",
+                object_type="subgroup",
+                object_id=subgroup.id,
+                subgroup_id=subgroup.id,
+                visibility="community",
+                target_type="community",
+                target_id=self._community_id,
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": name,
+                },
+            )
 
         logger.info(
             "subgroup_created",

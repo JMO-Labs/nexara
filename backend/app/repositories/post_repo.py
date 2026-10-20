@@ -83,13 +83,13 @@ class PostRepository(BaseRepository[Post]):
             allowed = subgroup_ids or []
             if allowed:
                 visibility_pred = or_(
-                    Post.visibility == "community",
+                    and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
                     and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
                     and_(Post.visibility == "private", Post.author_id == viewer_id),
                 )
             else:
                 visibility_pred = or_(
-                    Post.visibility == "community",
+                    and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
                     and_(Post.visibility == "private", Post.author_id == viewer_id),
                 )
             stmt = stmt.where(visibility_pred)
@@ -149,13 +149,13 @@ class PostRepository(BaseRepository[Post]):
         allowed = subgroup_ids or []
         if allowed:
             visibility_pred = or_(
-                Post.visibility == "community",
+                and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
                 and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
                 and_(Post.visibility == "private", Post.author_id == viewer_id),
             )
         else:
             visibility_pred = or_(
-                Post.visibility == "community",
+                and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
                 and_(Post.visibility == "private", Post.author_id == viewer_id),
             )
         stmt = stmt.where(visibility_pred)
@@ -293,6 +293,25 @@ class PostRepository(BaseRepository[Post]):
             }
             for p in posts
         ]
+
+    async def exists_many(
+        self,
+        post_ids: set[uuid.UUID] | list[uuid.UUID],
+    ) -> set[uuid.UUID]:
+        """
+        @brief Batch-check which post IDs exist (soft-delete aware).
+
+        @param post_ids Set or list of post UUIDs to check.
+        @return Set of post IDs that exist (not soft-deleted).
+        """
+        stmt = select(Post.id).where(
+            and_(
+                Post.id.in_(list(post_ids)),
+                Post.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return set(result.scalars().all())
 
     async def _enrich_posts(
         self,

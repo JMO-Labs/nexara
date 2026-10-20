@@ -52,15 +52,18 @@ class TestGalleryPostEventReminders:
         mock_notif = AsyncMock()
         mock_notif.notify = AsyncMock()
 
-        with patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory, \
-             patch("app.tasks.gallery_tasks.EventRepository", return_value=mock_event_repo), \
-             patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo), \
-             patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif), \
-             patch("app.tasks.gallery_tasks.NotificationRepository"), \
-             patch("app.tasks.gallery_tasks.SettingsRepository"):
+        with (
+            patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
+            patch("app.tasks.gallery_tasks.EventRepository", return_value=mock_event_repo),
+            patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo),
+            patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif),
+            patch("app.tasks.gallery_tasks.NotificationRepository"),
+            patch("app.tasks.gallery_tasks.SettingsRepository"),
+        ):
 
             async def mock_context():
                 return mock_session
+
             mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_factory.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -101,13 +104,14 @@ class TestGalleryPostEventReminders:
         mock_notif = AsyncMock()
         mock_notif.notify = AsyncMock()
 
-        with patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory, \
-             patch("app.tasks.gallery_tasks.EventRepository", return_value=mock_event_repo), \
-             patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo), \
-             patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif), \
-             patch("app.tasks.gallery_tasks.NotificationRepository"), \
-             patch("app.tasks.gallery_tasks.SettingsRepository"):
-
+        with (
+            patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
+            patch("app.tasks.gallery_tasks.EventRepository", return_value=mock_event_repo),
+            patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo),
+            patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif),
+            patch("app.tasks.gallery_tasks.NotificationRepository"),
+            patch("app.tasks.gallery_tasks.SettingsRepository"),
+        ):
             mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_factory.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -152,12 +156,13 @@ class TestGalleryBatchNotifications:
         mock_notif = AsyncMock()
         mock_notif.notify = AsyncMock()
 
-        with patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory, \
-             patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo), \
-             patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif), \
-             patch("app.tasks.gallery_tasks.NotificationRepository"), \
-             patch("app.tasks.gallery_tasks.SettingsRepository"):
-
+        with (
+            patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
+            patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo),
+            patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif),
+            patch("app.tasks.gallery_tasks.NotificationRepository"),
+            patch("app.tasks.gallery_tasks.SettingsRepository"),
+        ):
             mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_factory.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -185,12 +190,13 @@ class TestGalleryBatchNotifications:
         mock_notif = AsyncMock()
         mock_notif.notify = AsyncMock()
 
-        with patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory, \
-             patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo), \
-             patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif), \
-             patch("app.tasks.gallery_tasks.NotificationRepository"), \
-             patch("app.tasks.gallery_tasks.SettingsRepository"):
-
+        with (
+            patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
+            patch("app.tasks.gallery_tasks.GalleryRepository", return_value=mock_gallery_repo),
+            patch("app.tasks.gallery_tasks.NotificationService", return_value=mock_notif),
+            patch("app.tasks.gallery_tasks.NotificationRepository"),
+            patch("app.tasks.gallery_tasks.SettingsRepository"),
+        ):
             mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_factory.return_value.__aexit__ = AsyncMock(return_value=None)
 

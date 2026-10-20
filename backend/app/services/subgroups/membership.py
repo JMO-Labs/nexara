@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.core.exceptions import AuthorizationError, ConflictError, NotFoundError
 from app.core.i18n import _
@@ -14,6 +14,9 @@ from app.models.subgroup import SubgroupMember
 from app.models.user import User
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.subgroups.helpers import count_owners, is_admin, require_role
+
+if TYPE_CHECKING:
+    from app.repositories.activity_repo import ActivityRepository
 
 
 class SubgroupMembershipMixin:
@@ -23,12 +26,14 @@ class SubgroupMembershipMixin:
     Expected attributes:
       - ``_subgroup_repo``, ``_member_repo``, ``_community_id``
       - ``_max_memberships`` — per-user cap for active memberships
+      - ``_activity_repo`` — optional activity repo
     """
 
     _subgroup_repo: SubgroupRepository
     _member_repo: SubgroupMemberRepository
     _community_id: uuid.UUID
     _max_memberships: int
+    _activity_repo: ActivityRepository | None
 
     async def get_subgroup(self, slug: str, user: User) -> Any:  # noqa: D401
         """@brief Implemented in :class:`SubgroupCrudMixin`."""
@@ -73,6 +78,24 @@ class SubgroupMembershipMixin:
                 user_id=user.id,
                 role="member",
             )
+
+            if self._activity_repo is not None:
+                await self._activity_repo.record(
+                    community_id=self._community_id,
+                    actor_id=user.id,
+                    verb="member.joined",
+                    object_type="member",
+                    object_id=user.id,
+                    subgroup_id=subgroup.id,
+                    visibility="subgroup",
+                    target_type="subgroup",
+                    target_id=subgroup.id,
+                    metadata={
+                        "actor_name": user.display_name,
+                        "object_title": subgroup.name,
+                    },
+                )
+
             return {"status": "joined", "role": "member"}
 
         return {"status": "pending", "policy": subgroup.join_policy}

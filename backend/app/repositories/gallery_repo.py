@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, delete, func, literal, or_, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, literal, or_, select, update
 
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.repositories.base import BaseRepository
@@ -72,7 +72,7 @@ class GalleryRepository(BaseRepository[Gallery]):
 
         allowed = subgroup_ids or []
         visible = or_(
-            Gallery.visibility == "community",
+            and_(Gallery.visibility == "community", Gallery.subgroup_id.is_(None)),
             and_(Gallery.visibility == "private", Gallery.owner_id == viewer_id),
             and_(
                 Gallery.visibility == "subgroup",
@@ -287,10 +287,101 @@ class GalleryRepository(BaseRepository[Gallery]):
 
     async def list_subscribers(self, gallery_id: uuid.UUID) -> list[uuid.UUID]:
         """@brief Return list of subscriber IDs (collaborators + owner)."""
-        gallery = await self.get(gallery_id)
+        gallery = await self.get_by_id(gallery_id)
         if not gallery:
             return []
         subscribers = [gallery.owner_id]
         collaborators = await self.list_collaborators(gallery_id)
         subscribers.extend([c.user_id for c in collaborators])
         return list(set(subscribers))
+
+    async def exists_many(
+        self,
+        gallery_ids: set[uuid.UUID] | list[uuid.UUID],
+    ) -> set[uuid.UUID]:
+        """
+        @brief Batch-check which gallery IDs exist (soft-delete aware).
+
+        @param gallery_ids Set or list of gallery UUIDs to check.
+        @return Set of gallery IDs that exist (not soft-deleted).
+        """
+        stmt = select(Gallery.id).where(Gallery.id.in_(list(gallery_ids)))
+        result = await self._session.execute(stmt)
+        return set(result.scalars().all())
+
+    async def list_aggregated(
+        self,
+        community_id: uuid.UUID,
+        *,
+        viewer_id: uuid.UUID,
+        subgroup_ids: list[uuid.UUID] | None = None,
+        scope: str = "all",
+        subgroup_id: uuid.UUID | None = None,
+        limit: int = 20,
+        cursor: str | None = None,
+    ) -> tuple[list[Gallery], str | None]:
+        """@brief List galleries visible to a viewer with community-level scoping.
+
+        A single query that respects visibility and scope:
+        - scope='all': community-root (subgroup_id IS NULL) + viewer's subgroups
+        - scope='community': community-root only (subgroup_id IS NULL)
+        - scope='subgroup': specific subgroup_id only
+
+        @param community_id Community scope.
+        @param viewer_id Requesting user ID (for block filter).
+        @param subgroup_ids Viewer's subgroup IDs (used for scope='all').
+        @param scope Filter scope: 'all', 'community', or 'subgroup'.
+        @param subgroup_id Required when scope='subgroup'; target subgroup.
+        @param limit Max galleries to return (1-200).
+        @param cursor Opaque pagination cursor (gallery_id).
+        @return Tuple of (galleries, next_cursor).
+        """
+        stmt = select(Gallery).where(Gallery.community_id == community_id)
+
+        # Build scope predicate (narrows which containers to search)
+        scope_pred: ColumnElement[bool]
+        if scope == "community":
+            scope_pred = Gallery.subgroup_id.is_(None)
+        elif scope == "subgroup":
+            if subgroup_id is None:
+                return [], None
+            scope_pred = Gallery.subgroup_id == subgroup_id
+        else:  # "all"
+            allowed_ids = subgroup_ids or []
+            scope_pred = or_(
+                Gallery.subgroup_id.is_(None),
+                Gallery.subgroup_id.in_(allowed_ids) if allowed_ids else literal(False),
+            )
+
+        stmt = stmt.where(scope_pred)
+
+        # Apply visibility predicates (visibility + optional subgroup membership)
+        allowed = subgroup_ids or []
+        visible = or_(
+            and_(Gallery.visibility == "community", Gallery.subgroup_id.is_(None)),
+            and_(Gallery.visibility == "private", Gallery.owner_id == viewer_id),
+            and_(
+                Gallery.visibility == "subgroup",
+                Gallery.subgroup_id.in_(allowed) if allowed else literal(False),
+            ),
+        )
+        stmt = stmt.where(visible)
+
+        stmt = self.apply_block_filter(stmt, viewer_id)
+        stmt = stmt.order_by(Gallery.created_at.desc())
+        stmt = stmt.limit(limit + 1)
+
+        if cursor:
+            try:
+                cursor_id = uuid.UUID(cursor)
+                stmt = stmt.where(Gallery.id < cursor_id)
+            except ValueError:
+                pass
+
+        result = await self._session.execute(stmt)
+        rows = list(result.scalars().all())
+        next_cursor: str | None = None
+        if len(rows) > limit:
+            rows = rows[:limit]
+            next_cursor = str(rows[-1].id)
+        return rows, next_cursor

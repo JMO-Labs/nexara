@@ -83,6 +83,86 @@ class TestChatChannelRepositoryGetCommunityDefault:
         assert await repo.get_community_default(COMMUNITY_ID) is None
 
 
+class TestChatChannelRepositoryListForUser:
+    """@brief Tests for list_for_user()."""
+
+    @pytest.mark.asyncio
+    async def test_includes_community_channels(self) -> None:
+        """list_for_user returns community-type channels for any authenticated user."""
+        session = _make_session()
+        community_ch = MagicMock(spec=ChatChannel)
+        community_ch.channel_type = "community"
+        community_ch.id = uuid.uuid4()
+
+        # Mock the subgroup_member_ids and dm_channel_ids subqueries
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [community_ch]
+        session.execute = AsyncMock(return_value=mock_result)
+
+        repo = ChatChannelRepository(session)
+        user_id = uuid.uuid4()
+        channels = await repo.list_for_user(user_id, COMMUNITY_ID)
+
+        assert len(channels) >= 1
+        assert community_ch in channels
+        session.execute.assert_awaited()
+
+
+class TestChatChannelRepositoryGetOrCreateCommunityDefault:
+    """@brief Tests for get_or_create_community_default()."""
+
+    @pytest.mark.asyncio
+    async def test_existing_community_channel_returned(self) -> None:
+        """get_or_create_community_default returns existing channel without inserting."""
+        session = _make_session()
+        existing = MagicMock(spec=ChatChannel)
+        existing.channel_type = "community"
+        existing.subgroup_id = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = existing
+        session.execute = AsyncMock(return_value=mock_result)
+
+        repo = ChatChannelRepository(session)
+        channel, created = await repo.get_or_create_community_default(COMMUNITY_ID)
+
+        assert channel is existing
+        assert created is False
+        session.add.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_new_community_channel_created(self) -> None:
+        """get_or_create_community_default inserts a new community channel."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=mock_result)
+
+        repo = ChatChannelRepository(session)
+        channel, created = await repo.get_or_create_community_default(COMMUNITY_ID)
+
+        assert created is True
+        assert channel is not None
+        assert channel.channel_type == "community"
+        assert channel.subgroup_id is None
+        assert channel.name == "General"
+        session.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_custom_name_respected(self) -> None:
+        """get_or_create_community_default accepts a custom channel name."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=mock_result)
+
+        repo = ChatChannelRepository(session)
+        channel, created = await repo.get_or_create_community_default(COMMUNITY_ID, name="Main")
+
+        assert created is True
+        assert channel.name == "Main"
+        assert channel.channel_type == "community"
+
+
 class TestChatChannelRepositoryGetOrCreateDm:
     """@brief Tests for get_or_create_dm()."""
 

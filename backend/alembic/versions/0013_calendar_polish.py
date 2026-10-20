@@ -3,9 +3,11 @@
 Revision ID: 0013
 Revises: 0012
 """
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "0013"
 down_revision = "0012"
@@ -33,7 +35,9 @@ def upgrade() -> None:
     )
     op.add_column(
         "calendar_subscriptions",
-        sa.Column("sync_interval_minutes", sa.Integer(), server_default=sa.text("60"), nullable=False),
+        sa.Column(
+            "sync_interval_minutes", sa.Integer(), server_default=sa.text("60"), nullable=False
+        ),
     )
     op.create_table(
         "calendar_tokens",

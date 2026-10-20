@@ -3,6 +3,7 @@
 Revision ID: 0018_subgroup_cover_media
 Revises: 0017_event_locally_modified
 """
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 

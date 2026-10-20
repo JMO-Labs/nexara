@@ -15,7 +15,7 @@ from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
 from app.repositories.post_repo import PostRepository
-from app.repositories.subgroup_repo import SubgroupMemberRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.subgroups.helpers import require_role
 
 
@@ -29,6 +29,7 @@ class SubgroupPinsMixin:
 
     _post_repo: PostRepository
     _member_repo: SubgroupMemberRepository
+    _subgroup_repo: SubgroupRepository
     _community_id: uuid.UUID
 
     async def get_subgroup(self, slug: str, user: User) -> Any:  # noqa: D401

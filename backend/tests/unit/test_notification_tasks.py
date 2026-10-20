@@ -42,9 +42,7 @@ class TestDispatchEventReminders:
     """@brief Verify event reminder dispatch task."""
 
     def test_task_name(self):
-        assert (
-            dispatch_event_reminders.name == "app.tasks.event_tasks.dispatch_event_reminders"
-        )
+        assert dispatch_event_reminders.name == "app.tasks.event_tasks.dispatch_event_reminders"
 
     def test_queue_is_notifications(self):
         assert dispatch_event_reminders.queue == "notifications"

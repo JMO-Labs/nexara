@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -113,7 +114,7 @@ class UserSettings(Base):
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="en-US")
 
     # Home page layout — arbitrary JSON blob; None means "use default"
-    home_layout: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
+    home_layout: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

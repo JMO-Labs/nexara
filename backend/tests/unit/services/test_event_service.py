@@ -94,9 +94,7 @@ def calendar_service() -> AsyncMock:
 
 
 @pytest.fixture
-def service(
-    repo: AsyncMock, session: AsyncMock, calendar_service: AsyncMock
-) -> EventService:
+def service(repo: AsyncMock, session: AsyncMock, calendar_service: AsyncMock) -> EventService:
     user_id = uuid.uuid4()
     return EventService(
         event_repo=repo,
@@ -435,9 +433,7 @@ class TestReminderOffsets:
             )
 
     @pytest.mark.asyncio
-    async def test_event_updated_with_offsets(
-        self, service: EventService, repo: AsyncMock
-    ) -> None:
+    async def test_event_updated_with_offsets(self, service: EventService, repo: AsyncMock) -> None:
         """Event update with custom offsets should persist them."""
         event = _make_event()
         event.reminder_offsets_minutes = [60]
@@ -528,9 +524,7 @@ class TestExceptionOccurrences:
     """@brief Tests for RRULE exception occurrences (scope: this, this_and_following, all)."""
 
     @pytest.mark.asyncio
-    async def test_exception_this_only(
-        self, service: EventService, repo: AsyncMock
-    ) -> None:
+    async def test_exception_this_only(self, service: EventService, repo: AsyncMock) -> None:
         """@brief Scope 'this' creates a child override for single occurrence."""
         # Use service's actor_id as the organizer
         parent = _make_event(
@@ -552,9 +546,7 @@ class TestExceptionOccurrences:
 
         repo.create.side_effect = _create_child
 
-        result = await service.update_occurrence(
-            parent.id, occ, "this", {"title": "Override"}
-        )
+        result = await service.update_occurrence(parent.id, occ, "this", {"title": "Override"})
 
         assert result.recurrence_id == parent.id
         assert result.original_start == occ
@@ -607,9 +599,7 @@ class TestExceptionOccurrences:
         repo.create.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_exception_all(
-        self, service: EventService, repo: AsyncMock
-    ) -> None:
+    async def test_exception_all(self, service: EventService, repo: AsyncMock) -> None:
         """@brief Scope 'all' updates the parent event directly."""
         parent = _make_event(
             author_id=service._actor_id,
@@ -628,9 +618,7 @@ class TestExceptionOccurrences:
 
         repo.update.return_value = updated
 
-        result = await service.update_occurrence(
-            parent.id, occ, "all", {"title": "Renamed"}
-        )
+        result = await service.update_occurrence(parent.id, occ, "all", {"title": "Renamed"})
 
         assert result.id == parent.id
         assert result.title == "Renamed"
@@ -660,7 +648,6 @@ class TestExceptionOccurrences:
     ) -> None:
         """@brief Non-organizer cannot update occurrence."""
         organizer_id = uuid.uuid4()
-        other_user = uuid.uuid4()
         parent = _make_event(
             author_id=organizer_id,
             recurrence_rule="FREQ=WEEKLY;COUNT=4",
@@ -740,8 +727,7 @@ class TestSubscriptionPerUserCap:
     async def test_create_subscription_enforces_per_user_cap(
         self, service: EventService, repo: AsyncMock
     ) -> None:
-        """@brief Creating a subscription when user is at limit raises AppError with code subscription_limit."""
-        from app.core.config import Settings
+        """@brief Subscription at limit raises AppError subscription_limit."""
 
         user_id = uuid.uuid4()
 

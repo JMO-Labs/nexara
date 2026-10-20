@@ -12,7 +12,6 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -59,8 +58,9 @@ class TestEventLifecycle:
         """Event POST endpoint accepts valid event data."""
         # This is a basic schema validation test
         # that doesn't require full database integration
+        from datetime import UTC, datetime
+
         from app.schemas.event import EventCreate
-        from datetime import datetime, UTC
 
         event_data = {
             "title": "Team standup",
@@ -167,7 +167,6 @@ class TestRecurringExpansion:
 
     def test_rrule_expansion_logic(self, test_app):
         """Recurring events expand via RRULE parsing."""
-        from app.services.event_service import EventService
         from dateutil.rrule import rrulestr
 
         # Test RRULE parsing
@@ -191,8 +190,9 @@ class TestICalExport:
 
     def test_ical_token_generation(self, test_app):
         """iCal tokens are generated and hashed."""
-        from app.repositories.calendar_token_repo import CalendarTokenRepository, _hash
         import secrets
+
+        from app.repositories.calendar_token_repo import _hash
 
         # Test token hashing
         raw_token = secrets.token_urlsafe(32)
@@ -234,7 +234,7 @@ class TestSubscriptionSync:
     def test_sync_task_structure(self, test_app):
         """Subscription sync task has proper celery configuration."""
         # Verify safe_fetch is available for SSRF-safe fetching
-        from app.core.http_safe import safe_fetch, UnsafeUrlError
+        from app.core.http_safe import UnsafeUrlError, safe_fetch
 
         assert callable(safe_fetch)
 
@@ -289,8 +289,8 @@ class TestReminderDispatch:
 
     def test_reminder_offsets_validation(self, test_app):
         """Reminder offset values are validated."""
+
         from app.schemas.event import EventCreate
-        from pydantic import ValidationError
 
         # Valid offsets
         valid_data = {

@@ -22,10 +22,11 @@ from __future__ import annotations
 import base64
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from sqlalchemy import and_, or_, select
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage, DirectMessageParticipant
@@ -179,16 +180,13 @@ class ChatChannelRepository(BaseRepository[ChatChannel]):
         """
         from sqlalchemy import delete
 
-        stmt = (
-            delete(DirectMessageParticipant)
-            .where(
-                DirectMessageParticipant.channel_id == channel_id,
-                DirectMessageParticipant.user_id == user_id,
-            )
+        stmt = delete(DirectMessageParticipant).where(
+            DirectMessageParticipant.channel_id == channel_id,
+            DirectMessageParticipant.user_id == user_id,
         )
         result = await self._session.execute(stmt)
         await self._session.flush()
-        return (result.rowcount or 0) > 0
+        return (cast(CursorResult[Any], result).rowcount or 0) > 0
 
     async def list_member_ids(
         self,
@@ -366,6 +364,47 @@ class ChatChannelRepository(BaseRepository[ChatChannel]):
             ]
         )
         await self._session.flush()
+        return (channel, True)
+
+    async def get_or_create_community_default(
+        self,
+        community_id: uuid.UUID,
+        name: str = "General",
+    ) -> tuple[ChatChannel, bool]:
+        """
+        @brief Return (creating if absent) the default community-level chat channel.
+
+        Ensures every community has exactly one community-type channel as the
+        default General channel for community-wide discussion.
+
+        @param community_id Community scope.
+        @param name Channel display name (defaults to "General").
+        @return ``(channel, created)`` tuple.
+        """
+        stmt = (
+            select(ChatChannel)
+            .where(
+                ChatChannel.community_id == community_id,
+                ChatChannel.channel_type == "community",
+                ChatChannel.subgroup_id.is_(None),
+            )
+            .order_by(ChatChannel.created_at.asc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            return (existing, False)
+
+        channel = ChatChannel(
+            community_id=community_id,
+            name=name,
+            channel_type="community",
+            subgroup_id=None,
+        )
+        self._session.add(channel)
+        await self._session.flush()
+        await self._session.refresh(channel)
         return (channel, True)
 
     async def get_or_create_subgroup(

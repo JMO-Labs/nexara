@@ -3,8 +3,10 @@
 Revision ID: 0014_prompt_interest
 Revises: 0013
 """
-from alembic import op
+
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0014_prompt_interest"
 down_revision = "0013"
@@ -15,7 +17,9 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "prompts",
-        sa.Column("prompt_type", sa.String(32), server_default=sa.text("'standard'"), nullable=False),
+        sa.Column(
+            "prompt_type", sa.String(32), server_default=sa.text("'standard'"), nullable=False
+        ),
     )
     op.add_column("prompts", sa.Column("interest_category_slug", sa.String(64), nullable=True))
     op.add_column("prompts", sa.Column("interest_capture_hint", sa.Text(), nullable=True))

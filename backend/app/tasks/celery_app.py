@@ -145,6 +145,10 @@ celery_app.conf.update(
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
             "schedule": 60.0 * 60,
         },
+        "prune-activity-events": {
+            "task": "app.tasks.maintenance_tasks.prune_activity_events",
+            "schedule": crontab(hour="1", minute="0"),
+        },
     },
 )
 

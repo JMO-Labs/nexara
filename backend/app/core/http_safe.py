@@ -1,6 +1,7 @@
 """@file http_safe.py
 @brief SSRF-resistant HTTP fetcher for ingesting external URLs (e.g. iCal feeds).
 """
+
 from __future__ import annotations
 
 import ipaddress

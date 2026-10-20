@@ -268,7 +268,7 @@ class PromptService:
             summary_post_id: uuid.UUID | None = None
             if prompt and prompt.generate_summary:
                 summary_content = self._build_summary_content(prompt, tracker)
-                media_ids = await self._collect_summary_media_ids(tracker.prompt_id)
+                media_ids = await self._collect_summary_media_ids(tracker.prompt_id)  # noqa: F841
                 summary = Post(
                     community_id=self._community_id,
                     author_id=prompt.created_by,

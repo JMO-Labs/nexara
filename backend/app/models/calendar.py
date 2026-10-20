@@ -105,9 +105,7 @@ class Calendar(Base):
             "calendars_one_community_per_community",
             "community_id",
             unique=True,
-            postgresql_where=(
-                "kind = 'community' AND deleted_at IS NULL"
-            ),
+            postgresql_where=("kind = 'community' AND deleted_at IS NULL"),
         ),
         Index("calendars_owner_idx", "owner_id"),
         Index("calendars_subgroup_idx", "subgroup_id"),

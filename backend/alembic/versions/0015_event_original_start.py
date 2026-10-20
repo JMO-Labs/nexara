@@ -3,8 +3,10 @@
 Revision ID: 0015_event_original_start
 Revises: 0014_prompt_interest
 """
-from alembic import op
+
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0015_event_original_start"
 down_revision = "0014_prompt_interest"
