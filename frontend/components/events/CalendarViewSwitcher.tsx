@@ -16,7 +16,7 @@ export interface CalendarViewSwitcherProps {
   onChange: (view: CalendarView) => void;
 }
 
-const VIEWS = ["month", "week", "day", "list"] as const;
+export const VIEWS = ["month", "week", "day", "list"] as const;
 
 /**
  * @brief View switcher built on toggle-group (single select, never empty).

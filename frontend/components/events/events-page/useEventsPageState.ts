@@ -14,7 +14,10 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { CalendarView } from "@/components/events/CalendarViewSwitcher";
+import {
+  VIEWS,
+  type CalendarView,
+} from "@/components/events/CalendarViewSwitcher";
 import type { CalendarSourceId } from "@/components/events/CalendarFilterBar";
 import { useEventsInRange } from "@/hooks/useEvents";
 import { useSubgroupList } from "@/hooks/useSubgroups";
@@ -28,7 +31,11 @@ import type { EventItem } from "@/lib/api/events";
 export function useEventsPageState() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const viewParam = searchParams.get("view") as CalendarView | null;
+  const raw = searchParams.get("view");
+  // Unknown ?view= values fall back to month instead of rendering "undefined".
+  const viewParam = (VIEWS as readonly string[]).includes(raw ?? "")
+    ? (raw as CalendarView)
+    : null;
   const [view, setViewLocal] = React.useState<CalendarView>(
     () => viewParam ?? "month",
   );
