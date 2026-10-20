@@ -1,36 +1,48 @@
 "use client";
 /**
  * @file components/admin/UsersTab.tsx
- * @brief Admin user management table with search, role editing, and actions.
+ * @brief Admin user management table with search and suspend/restore/delete.
+ *        Rows stack into cards on phone.
  */
 import { useState } from "react";
+import { Check, Loader2, Trash2, X } from "lucide-react";
 import {
   useAdminUsers,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
 } from "@/hooks/useAdmin";
-import Stack from "@mui/joy/Stack";
-import Input from "@mui/joy/Input";
-import Button from "@mui/joy/Button";
-import Select from "@mui/joy/Select";
-import Chip from "@mui/joy/Chip";
-import { IconButton } from "@/components/ui/IconButton";
-import Option from "@mui/joy/Option";
-import Table from "@mui/joy/Table";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
-import Modal from "@mui/joy/Modal";
-import ModalDialog from "@mui/joy/ModalDialog";
-import ModalClose from "@mui/joy/ModalClose";
-import Typography from "@mui/joy/Typography";
-import Card from "@mui/joy/Card";
-import { TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Badge,
+  Button,
+  IconButton,
+  Input,
+  Modal,
+  Option,
+  Select,
+} from "@/components/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/shadcn/table";
 
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Admin",
+  member: "Member",
+  viewer: "Viewer",
+};
+
+/**
+ * @brief Users admin tab.
+ * @return tab content
+ */
 export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [density, setDensity] = useState<"comfortable" | "compact">(
     "comfortable",
   );
@@ -39,10 +51,7 @@ export function UsersTab() {
     data: usersPage,
     isLoading,
     error,
-  } = useAdminUsers({
-    q: searchQuery || undefined,
-    limit: 50,
-  });
+  } = useAdminUsers({ q: searchQuery || undefined, limit: 50 });
 
   const suspendMutation = useSuspendUser();
   const restoreMutation = useRestoreUser();
@@ -50,222 +59,161 @@ export function UsersTab() {
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
+      <div className="flex justify-center py-16">
+        <Loader2
+          role="status"
+          aria-label="Loading users"
+          className="size-6 motion-safe:animate-spin"
+        />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert color="danger" variant="soft">
+      <div
+        role="alert"
+        className="rounded-2xl border-l-4 border-danger bg-surface p-3"
+      >
         Failed to load users
-      </Alert>
+      </div>
     );
   }
 
   if (!usersPage) return null;
 
-  const handleSuspend = (userId: string) => {
-    suspendMutation.mutate(userId);
-  };
-
-  const handleRestore = (userId: string) => {
-    restoreMutation.mutate(userId);
-  };
-
-  const handleDeleteClick = (userId: string) => {
-    setDeletingUserId(userId);
-    setDeleteConfirm(true);
-  };
-
   const handleConfirmDelete = () => {
     if (deletingUserId) {
       deleteMutation.mutate(deletingUserId);
-      setDeleteConfirm(false);
       setDeletingUserId(null);
     }
   };
 
+  const cell = density === "compact" ? "py-1 text-xs" : "py-2 text-sm";
+
   return (
-    <Stack spacing={3}>
-      <Stack
-        direction="row"
-        spacing={2}
-        alignItems="center"
-        justifyContent="space-between"
-      >
-        <Input
-          placeholder="Search by name or email..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ flex: 1 }}
-        />
-        <Select
-          value={density}
-          onChange={(_, val) =>
-            val && setDensity(val as "comfortable" | "compact")
-          }
-          size="sm"
-          variant="soft"
-          sx={{ minWidth: 120 }}
-        >
-          <Option value="comfortable">Comfortable</Option>
-          <Option value="compact">Compact</Option>
-        </Select>
-      </Stack>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <Input
+            type="search"
+            aria-label="Search users"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="sm:w-40">
+          <Select
+            label="Density"
+            value={density}
+            onValueChange={(v) => setDensity(v as "comfortable" | "compact")}
+          >
+            <Option value="comfortable">Comfortable</Option>
+            <Option value="compact">Compact</Option>
+          </Select>
+        </div>
+      </div>
 
       {usersPage.items.length === 0 ? (
-        <Alert color="primary" variant="soft">
+        <div role="status" className="rounded-2xl bg-surface p-3">
           No users found
-        </Alert>
+        </div>
       ) : (
-        <Card variant="outlined">
-          <Table
-            stripe="odd"
-            hoverRow
-            sx={{
-              "--TableCell-paddingX":
-                density === "compact" ? "0.75rem" : "1rem",
-              "--TableCell-paddingY":
-                density === "compact" ? "0.375rem" : "0.5rem",
-              fontSize: density === "compact" ? "0.85rem" : "inherit",
-            }}
-          >
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="rounded-2xl bg-surface p-2">
+          <Table>
+            <TableHeader className="max-md:sr-only">
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {usersPage.items.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <Typography
-                      level={density === "compact" ? "body-xs" : "body-sm"}
-                    >
-                      {user.display_name || user.username}
-                    </Typography>
-                  </td>
-                  <td>
-                    <Typography
-                      level={density === "compact" ? "body-xs" : "body-sm"}
-                    >
-                      {user.email}
-                    </Typography>
-                  </td>
-                  <td>
-                    <Chip
-                      size={density === "compact" ? "sm" : "md"}
-                      color={
-                        user.role === "admin"
-                          ? "danger"
-                          : user.role === "member"
-                            ? "primary"
-                            : "neutral"
-                      }
-                      variant="soft"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {user.role === "admin" && "Admin"}
-                      {user.role === "member" && "Member"}
-                      {user.role === "viewer" && "Viewer"}
-                    </Chip>
-                  </td>
-                  <td>
-                    <Typography
-                      level={density === "compact" ? "body-xs" : "body-sm"}
-                      color={user.status === "active" ? "success" : "warning"}
-                    >
-                      {user.status}
-                    </Typography>
-                  </td>
-                  <td>
-                    <Stack direction="row" spacing={0.25}>
+                <TableRow
+                  key={user.id}
+                  className="max-md:grid max-md:grid-cols-2 max-md:items-center max-md:gap-x-3"
+                >
+                  <TableCell
+                    className={`${cell} max-md:col-span-2 font-semibold`}
+                  >
+                    {user.display_name || user.username}
+                  </TableCell>
+                  <TableCell
+                    className={`${cell} max-md:col-span-2 max-md:whitespace-normal max-md:break-all`}
+                  >
+                    {user.email}
+                  </TableCell>
+                  <TableCell className={cell}>
+                    <Badge tone={user.role === "admin" ? "accent" : "neutral"}>
+                      {ROLE_LABEL[user.role] ?? user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={cell}>{user.status}</TableCell>
+                  <TableCell className={`${cell} max-md:col-span-2`}>
+                    <div className="flex gap-1">
                       {user.status === "active" ? (
                         <IconButton
-                          tooltip="Suspend user"
-                          size={density === "compact" ? "sm" : "md"}
-                          variant="soft"
-                          color="warning"
+                          variant="ghost"
                           aria-label="Suspend user"
-                          onClick={() => handleSuspend(user.id)}
+                          title="Suspend user"
+                          onClick={() => suspendMutation.mutate(user.id)}
                         >
-                          <XMarkIcon width={16} height={16} />
+                          <X className="size-4" aria-hidden="true" />
                         </IconButton>
                       ) : (
                         <IconButton
-                          tooltip="Restore user"
-                          size={density === "compact" ? "sm" : "md"}
-                          variant="soft"
-                          color="success"
+                          variant="ghost"
                           aria-label="Restore user"
-                          onClick={() => handleRestore(user.id)}
+                          title="Restore user"
+                          onClick={() => restoreMutation.mutate(user.id)}
                         >
-                          <CheckIcon width={16} height={16} />
+                          <Check className="size-4" aria-hidden="true" />
                         </IconButton>
                       )}
                       <IconButton
-                        tooltip="Delete user"
-                        size={density === "compact" ? "sm" : "md"}
-                        variant="soft"
-                        color="danger"
+                        variant="ghost"
                         aria-label="Delete user"
-                        onClick={() => handleDeleteClick(user.id)}
+                        title="Delete user"
+                        onClick={() => setDeletingUserId(user.id)}
                       >
-                        <TrashIcon width={16} height={16} />
+                        <Trash2 className="size-4" aria-hidden="true" />
                       </IconButton>
-                    </Stack>
-                  </td>
-                </tr>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           </Table>
-        </Card>
+        </div>
       )}
 
       <Modal
-        aria-labelledby="delete-modal"
-        open={deleteConfirm}
-        onClose={() => setDeleteConfirm(false)}
-      >
-        <ModalDialog>
-          <ModalClose variant="plain" sx={{ m: 1 }} />
-          <Typography
-            component="h2"
-            id="delete-modal"
-            level="inherit"
-            fontSize="1.25em"
-            mb="0.25em"
-          >
-            Delete User
-          </Typography>
-          <Typography level="body-sm" textColor="text.tertiary">
-            Are you sure? This action cannot be undone.
-          </Typography>
-          <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-            <Button
-              variant="plain"
-              color="neutral"
-              onClick={() => setDeleteConfirm(false)}
-            >
+        open={deletingUserId !== null}
+        onClose={() => setDeletingUserId(null)}
+        title="Delete user"
+        description="Are you sure? This action cannot be undone."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeletingUserId(null)}>
               Cancel
             </Button>
             <Button
-              variant="solid"
-              color="danger"
+              variant="destructive"
               onClick={handleConfirmDelete}
               loading={deleteMutation.isPending}
             >
               Delete
             </Button>
-          </Stack>
-        </ModalDialog>
+          </>
+        }
+      >
+        {null}
       </Modal>
-    </Stack>
+    </div>
   );
 }
