@@ -7,10 +7,6 @@
  *        week's row when an event crosses a Sunday boundary.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Tooltip from "@mui/joy/Tooltip";
 import {
   addMonths,
   endOfMonth,
@@ -25,10 +21,18 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { IconButton } from "@/components/ui";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconButton, Tooltip } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { toneForEvent } from "./eventColors";
+import { chipStyle } from "./toneStyle";
 import type { EventItem } from "@/lib/api/events";
 
+const BRAND_TONE = toneForEvent({
+  visibility: "community",
+  subgroup_id: null,
+  color: null,
+});
 const LANE_HEIGHT = 18;
 const MAX_LANES_VISIBLE = 3;
 const HEADER_OFFSET = 26;
@@ -118,32 +122,26 @@ function eventsOnDay(events: EventItem[], day: Date): EventItem[] {
 
 function DayPreview({ day, events }: { day: Date; events: EventItem[] }) {
   return (
-    <Box sx={{ p: 1, maxWidth: 280, maxHeight: 280, overflowY: "auto" }}>
-      <Typography level="title-sm" sx={{ mb: 0.5 }}>
-        {format(day, "EEEE, MMM d")}
-      </Typography>
+    <div className="max-h-70 max-w-70 overflow-y-auto p-1">
+      <p className="mb-1 text-sm font-semibold">{format(day, "EEEE, MMM d")}</p>
       {events.length === 0 ? (
-        <Typography level="body-xs" textColor="text.tertiary">
-          No events
-        </Typography>
+        <p className="text-xs">No events</p>
       ) : (
-        <Stack spacing={0.75}>
+        <ul className="flex flex-col gap-1.5">
           {events.map((ev) => (
-            <Box key={ev.id}>
-              <Typography level="body-xs" textColor="text.tertiary">
+            <li key={ev.id}>
+              <span className="block text-xs opacity-80">
                 {ev.is_all_day
                   ? "All day"
                   : format(parseISO(ev.starts_at), "p")}
                 {ev.location ? ` · ${ev.location}` : ""}
-              </Typography>
-              <Typography level="body-sm" sx={{ fontWeight: 600 }}>
-                {ev.title}
-              </Typography>
-            </Box>
+              </span>
+              <span className="block text-sm font-semibold">{ev.title}</span>
+            </li>
           ))}
-        </Stack>
+        </ul>
       )}
-    </Box>
+    </div>
   );
 }
 
@@ -153,6 +151,11 @@ export interface MonthCalendarProps {
   onMonthChange: (m: Date) => void;
 }
 
+/**
+ * @brief Compact month grid with navigation and per-day hover preview.
+ * @param props see MonthCalendarProps
+ * @return calendar element
+ */
 export function MonthCalendar({
   events,
   month,
@@ -165,76 +168,47 @@ export function MonthCalendar({
   );
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 1 }}
-      >
-        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
-          {format(month, "MMMM yyyy")}
-        </Typography>
-        <Stack direction="row" spacing={0.5}>
+    <div className="w-full">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-base font-black">{format(month, "MMMM yyyy")}</h2>
+        <div className="flex items-center gap-1">
           <IconButton
             size="sm"
-            variant="plain"
+            variant="ghost"
             aria-label="Previous month"
             onClick={() => onMonthChange(subMonths(month, 1))}
           >
-            <ChevronLeftIcon width={16} />
+            <ChevronLeft className="size-4" aria-hidden="true" />
           </IconButton>
           <IconButton
             size="sm"
-            variant="plain"
+            variant="ghost"
             aria-label="Today"
+            className="w-auto px-3 text-xs"
             onClick={() => onMonthChange(new Date())}
           >
-            <Typography level="body-xs">Today</Typography>
+            Today
           </IconButton>
           <IconButton
             size="sm"
-            variant="plain"
+            variant="ghost"
             aria-label="Next month"
             onClick={() => onMonthChange(addMonths(month, 1))}
           >
-            <ChevronRightIcon width={16} />
+            <ChevronRight className="size-4" aria-hidden="true" />
           </IconButton>
-        </Stack>
-      </Stack>
+        </div>
+      </div>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          mb: 0.5,
-        }}
-      >
+      <div className="mb-1 grid grid-cols-7" aria-hidden="true">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <Typography
-            key={d}
-            level="body-xs"
-            textColor="text.tertiary"
-            sx={{
-              textAlign: "center",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-            }}
-          >
+          <span key={d} className="text-center text-xs text-muted">
             {d}
-          </Typography>
+          </span>
         ))}
-      </Box>
+      </div>
 
-      <Stack
-        spacing={0}
-        sx={{
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: "sm",
-          overflow: "hidden",
-        }}
-      >
+      <div className="overflow-hidden rounded-2xl bg-surface">
         {weeks.map((week, wi) => {
           const segs = weekSegments[wi];
           const maxLane = segs.reduce((m, s) => Math.max(m, s.lane + 1), 0);
@@ -245,128 +219,95 @@ export function MonthCalendar({
             (maxLane > MAX_LANES_VISIBLE ? 16 : 4);
 
           return (
-            <Box
+            <div
               key={wi}
-              sx={{
-                position: "relative",
-                display: "grid",
-                gridTemplateColumns: "repeat(7, 1fr)",
-                minHeight: rowHeight,
-                borderTop: wi === 0 ? "none" : "1px solid",
-                borderColor: "divider",
-              }}
+              className={cn(
+                "relative grid grid-cols-7",
+                wi > 0 && "border-t border-ink/15",
+              )}
+              style={{ minHeight: rowHeight }}
             >
-              {week.map((day) => {
+              {week.map((day, di) => {
                 const inMonth = isSameMonth(day, month);
                 const today = isToday(day);
-                const dayEvents = eventsOnDay(events, day);
                 return (
                   <Tooltip
                     key={day.toISOString()}
-                    title={<DayPreview day={day} events={dayEvents} />}
-                    placement="top"
-                    variant="outlined"
-                    arrow
-                    enterDelay={250}
+                    content={
+                      <DayPreview day={day} events={eventsOnDay(events, day)} />
+                    }
                   >
-                    <Box
-                      sx={{
-                        borderLeft: "1px solid",
-                        borderColor: "divider",
-                        "&:first-of-type": { borderLeft: "none" },
-                        p: 0.5,
-                        opacity: inMonth ? 1 : 0.45,
-                        cursor: "default",
-                        minHeight: rowHeight,
-                      }}
+                    <div
+                      tabIndex={0}
+                      aria-label={format(day, "EEEE, MMMM d")}
+                      className={cn(
+                        "p-1 outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                        di > 0 && "border-l border-ink/15",
+                        !inMonth && "opacity-60",
+                      )}
+                      style={{ minHeight: rowHeight }}
                     >
-                      <Box
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          fontSize: 12,
-                          fontWeight: today ? 700 : 500,
-                          backgroundColor: today
-                            ? "primary.solidBg"
-                            : "transparent",
-                          color: today ? "common.white" : "text.primary",
-                        }}
+                      <span
+                        className={cn(
+                          "inline-flex size-6 items-center justify-center rounded-full text-xs",
+                          today
+                            ? "bg-accent font-black text-surface-strong"
+                            : "font-semibold text-ink",
+                        )}
                       >
                         {format(day, "d")}
-                      </Box>
-                    </Box>
+                      </span>
+                    </div>
                   </Tooltip>
                 );
               })}
 
               {/* Event bar overlay */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: HEADER_OFFSET,
-                  left: 0,
-                  right: 0,
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  pointerEvents: "none",
-                }}
+              <div
+                className="pointer-events-none absolute inset-x-0 grid grid-cols-7"
+                style={{ top: HEADER_OFFSET }}
               >
                 {segs
                   .filter((s) => s.lane < MAX_LANES_VISIBLE)
                   .map((s, i) => (
-                    <Box
+                    <div
                       key={`${s.event.id}-${i}`}
-                      sx={{
+                      title={s.event.title}
+                      className={cn(
+                        "pointer-events-auto mx-px truncate px-1.5 text-[11px] font-semibold",
+                        s.startsHere && "rounded-l",
+                        s.endsHere && "rounded-r",
+                      )}
+                      style={{
                         gridColumn: `${s.col + 1} / span ${s.span}`,
                         gridRow: 1,
                         transform: `translateY(${s.lane * LANE_HEIGHT}px)`,
                         height: LANE_HEIGHT - 3,
-                        mx: 0.25,
-                        px: 0.75,
-                        borderRadius: s.startsHere && s.endsHere ? 4 : 2,
-                        borderTopLeftRadius: s.startsHere ? 4 : 0,
-                        borderBottomLeftRadius: s.startsHere ? 4 : 0,
-                        borderTopRightRadius: s.endsHere ? 4 : 0,
-                        borderBottomRightRadius: s.endsHere ? 4 : 0,
-                        backgroundColor: "primary.solidBg",
-                        color: "common.white",
-                        fontSize: 11,
                         lineHeight: `${LANE_HEIGHT - 3}px`,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        pointerEvents: "auto",
+                        ...chipStyle(BRAND_TONE, true),
                       }}
-                      title={s.event.title}
                     >
-                      {s.startsHere ? s.event.title : " "}
-                    </Box>
+                      {s.startsHere ? s.event.title : " "}
+                    </div>
                   ))}
                 {segs.some((s) => s.lane >= MAX_LANES_VISIBLE) && (
-                  <Box
-                    sx={{
+                  <div
+                    className="pointer-events-none px-1 text-[11px] text-muted"
+                    style={{
                       gridColumn: "1 / span 7",
                       gridRow: 1,
                       transform: `translateY(${MAX_LANES_VISIBLE * LANE_HEIGHT}px)`,
-                      px: 0.5,
-                      fontSize: 10,
-                      color: "text.tertiary",
-                      pointerEvents: "none",
                     }}
                   >
                     + more
-                  </Box>
+                  </div>
                 )}
-              </Box>
-            </Box>
+              </div>
+            </div>
           );
         })}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }
 

@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { WeekView } from "@/components/events/WeekView";
 import type { EventItem } from "@/lib/api/events";
 import { parseISO, startOfWeek } from "date-fns";
@@ -36,11 +34,7 @@ const baseEvent: Omit<EventItem, "id" | "starts_at" | "ends_at"> = {
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("WeekView", () => {

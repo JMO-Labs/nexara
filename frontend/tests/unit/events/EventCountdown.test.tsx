@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { useEventCountdown } from "@/hooks/useEventCountdown";
 import { EventCountdown } from "@/components/events/EventCountdown";
 import type { EventItem } from "@/lib/api/events";
@@ -77,11 +75,7 @@ describe("EventCountdown", () => {
     const qc = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    return render(
-      <QueryClientProvider client={qc}>
-        <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-      </QueryClientProvider>,
-    );
+    return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
   }
 
   it("renders event title and countdown", () => {

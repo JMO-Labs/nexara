@@ -4,9 +4,7 @@
  * @brief Event tile: title, schedule, location, RSVP row.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Box from "@mui/joy/Box";
+import { MapPin } from "lucide-react";
 import { Card, Markdown } from "@/components/ui";
 import { RsvpInline } from "./RsvpInline";
 import type { EventItem } from "@/lib/api/events";
@@ -29,36 +27,40 @@ function formatRange(starts: string, ends: string, allDay: boolean): string {
   return `${date} · ${t(s)} – ${t(e)}`;
 }
 
+/**
+ * @brief Event tile.
+ * @param event event to render
+ * @return card element
+ */
 export function EventCard({ event }: EventCardProps) {
   return (
-    <Card>
-      <Stack spacing={1}>
-        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
-          {event.title}
-        </Typography>
-        <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
-          {formatRange(event.starts_at, event.ends_at, event.is_all_day)}
-        </Typography>
-        {event.location && (
-          <Typography level="body-sm">📍 {event.location}</Typography>
-        )}
-        {event.description && (
-          <Box sx={{ fontSize: "0.875rem" }}>
-            <Markdown
-              content={event.description}
-              size="sm"
-              truncate
-              clampLines={4}
-            />
-          </Box>
-        )}
-        <RsvpInline
-          eventId={event.id}
-          labels={event.rsvp_labels}
-          current={event.user_rsvp?.status ?? null}
-          counts={event.rsvp_counts}
-        />
-      </Stack>
+    <Card className="flex flex-col gap-2 p-4">
+      <h3 className="text-lg font-semibold">{event.title}</h3>
+      <p className="text-sm text-muted">
+        {formatRange(event.starts_at, event.ends_at, event.is_all_day)}
+      </p>
+      {event.location && (
+        <p className="flex items-center gap-1.5 text-sm">
+          <MapPin aria-hidden className="size-4 shrink-0" />
+          {event.location}
+        </p>
+      )}
+      {event.description && (
+        <div className="text-sm">
+          <Markdown
+            content={event.description}
+            size="sm"
+            truncate
+            clampLines={4}
+          />
+        </div>
+      )}
+      <RsvpInline
+        eventId={event.id}
+        labels={event.rsvp_labels}
+        current={event.user_rsvp?.status ?? null}
+        counts={event.rsvp_counts}
+      />
     </Card>
   );
 }
