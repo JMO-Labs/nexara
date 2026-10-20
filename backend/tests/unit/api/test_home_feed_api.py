@@ -10,10 +10,10 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.schemas.home_feed import HomeFeedResponse
 from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user
+from app.schemas.home_feed import HomeFeedResponse
 
 
 @pytest.mark.asyncio

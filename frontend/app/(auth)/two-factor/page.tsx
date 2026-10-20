@@ -5,6 +5,7 @@
  *        with `requires_2fa: true`. The two_factor_token rides in the URL
  *        so a refresh on this page still recovers the flow.
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -21,7 +22,6 @@ import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { verifyTwoFactorLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
-import { safeInternalLink } from "@/lib/safeLink";
 import { formatApiError } from "@/lib/api/errors";
 
 const Schema = z.object({

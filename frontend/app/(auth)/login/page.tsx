@@ -4,6 +4,7 @@
  * @brief Email/password login. Routes through 2FA when required, otherwise
  *        lands on /app (or the `next` query param).
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -15,7 +16,6 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { login as apiLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
-import { safeInternalLink } from "@/lib/safeLink";
 import { formatApiError } from "@/lib/api/errors";
 
 const Schema = z.object({
