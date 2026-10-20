@@ -264,7 +264,7 @@ deploy/helm/nexara/Chart.lock
 # Documentation build output
 # =============================================================================
 docs/build/
-public/
+/public/
 
 # =============================================================================
 # CI caches (local development)
