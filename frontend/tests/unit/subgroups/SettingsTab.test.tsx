@@ -5,10 +5,8 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
-import joyTheme from "@/theme/joy-theme";
 import { SettingsTab } from "@/components/subgroups/hub/SettingsTab";
 import * as mediaApi from "@/lib/api/media";
 import * as subgroupApi from "@/lib/api/subgroups";
@@ -41,9 +39,7 @@ function wrap(ui: React.ReactNode) {
   const qc = new QueryClient();
   return render(
     <NextIntlClientProvider locale="en" messages={{}}>
-      <QueryClientProvider client={qc}>
-        <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-      </QueryClientProvider>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
     </NextIntlClientProvider>,
   );
 }
@@ -97,8 +93,9 @@ describe("SettingsTab", () => {
     wrap(<SettingsTab subgroup={mockSubgroup} />);
 
     const uploadBtn = screen.getByRole("button", { name: /upload cover/i });
-    const fileInput = uploadBtn.querySelector(
-      'input[type="file"]',
+    expect(uploadBtn).toBeInTheDocument();
+    const fileInput = screen.getByLabelText(
+      /cover image file/i,
     ) as HTMLInputElement;
 
     const file = new File(["test"], "cover.jpg", { type: "image/jpeg" });

@@ -4,7 +4,6 @@
  * @brief Grid of SubgroupCard with skeleton + empty fallbacks.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
 import { Skeleton, EmptyState } from "@/components/ui";
 import { SubgroupCard } from "./SubgroupCard";
 import {
@@ -17,6 +16,13 @@ export interface SubgroupListProps {
   onSelect: (slug: string) => void;
 }
 
+const GRID = "grid grid-cols-1 gap-4 md:grid-cols-2";
+
+/**
+ * @brief Subgroup grid.
+ * @param props onSelect callback
+ * @return grid, skeletons or empty state
+ */
 export function SubgroupList({ onSelect }: SubgroupListProps) {
   const { data, isLoading, error } = useSubgroupList();
   const join = useJoinSubgroup();
@@ -24,17 +30,11 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "grid",
-          gap: 2,
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-        }}
-      >
+      <div className={GRID}>
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} height={120} />
         ))}
-      </Box>
+      </div>
     );
   }
 
@@ -54,13 +54,7 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
   }
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gap: 2,
-        gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-      }}
-    >
+    <div className={GRID}>
       {data.map((sg) => (
         <SubgroupCard
           key={sg.id}
@@ -74,7 +68,7 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
           }
         />
       ))}
-    </Box>
+    </div>
   );
 }
 

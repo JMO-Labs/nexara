@@ -7,9 +7,6 @@
  * component-local state for the session. Persistence comes via galleries.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { UploadZone } from "@/components/media/UploadZone";
 import { MediaGrid } from "@/components/media/MediaGrid";
 import type { MediaItem } from "@/lib/api/media";
@@ -17,35 +14,15 @@ import type { MediaItem } from "@/lib/api/media";
 export default function MediaPage() {
   const [recent, setRecent] = React.useState<MediaItem[]>([]);
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 3 }}
-      >
-        <Typography level="h2" sx={{ fontFamily: "var(--font-display)" }}>
-          Media
-        </Typography>
-      </Stack>
-      <Stack spacing={3}>
+    <div className="mx-auto max-w-[1200px] p-4 md:p-8">
+      <h1 className="mb-6 text-3xl font-black tracking-tight">Media</h1>
+      <div className="flex flex-col gap-6">
         <UploadZone onComplete={(m) => setRecent((cur) => [m, ...cur])} />
-        <Box>
-          <Typography
-            level="title-sm"
-            sx={{
-              fontFamily: "var(--font-display)",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              color: "text.tertiary",
-              mb: 1.5,
-            }}
-          >
-            Recent uploads
-          </Typography>
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">Recent uploads</h2>
           <MediaGrid items={recent} />
-        </Box>
-      </Stack>
-    </Box>
+        </section>
+      </div>
+    </div>
   );
 }

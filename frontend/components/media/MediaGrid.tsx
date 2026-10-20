@@ -4,7 +4,6 @@
  * @brief Responsive grid of MediaCards.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
 import { EmptyState, Button } from "@/components/ui";
 import { MediaCard } from "./MediaCard";
 import type { MediaItem } from "@/lib/api/media";
@@ -21,7 +20,7 @@ export function MediaGrid({ items, onSelect }: MediaGridProps) {
         title="No uploads yet"
         description="Drop files above to upload your first media."
         action={
-          <Button variant="soft" onClick={() => window.scrollTo(0, 0)}>
+          <Button variant="secondary" onClick={() => window.scrollTo(0, 0)}>
             Back to upload
           </Button>
         }
@@ -29,21 +28,11 @@ export function MediaGrid({ items, onSelect }: MediaGridProps) {
     );
   }
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gap: 2,
-        gridTemplateColumns: {
-          xs: "1fr 1fr",
-          md: "repeat(3, 1fr)",
-          lg: "repeat(4, 1fr)",
-        },
-      }}
-    >
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
       {items.map((m) => (
         <MediaCard key={m.id} media={m} onSelect={onSelect} />
       ))}
-    </Box>
+    </div>
   );
 }
 

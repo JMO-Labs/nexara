@@ -5,10 +5,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Sheet from "@mui/joy/Sheet";
-import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/Tabs";
+import { Tabs, TabList, Tab, TabPanel } from "@/components/ui";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 
 const TABS = [{ id: "galleries", label: "Galleries" }];
@@ -20,67 +17,27 @@ export default function MemberProfilePage() {
   const currentTab = searchParams.get("tab") || "galleries";
 
   return (
-    <Sheet
-      sx={{
-        flex: 1,
-        width: "100%",
-        mx: "auto",
-        px: { xs: 2, md: 6 },
-        py: { xs: 2, md: 3 },
-        borderRadius: { xs: "sm", md: "md" },
-      }}
-    >
-      <Stack spacing={3}>
-        <div>
-          <Typography level="h1" component="h1">
-            Member Profile
-          </Typography>
-          <Typography level="body-md" color="neutral">
-            User ID: {userId}
-          </Typography>
-        </div>
-
-        <Tabs
-          value={currentTab}
-          sx={{
-            "--Tabs-gap": "0px",
-            "--Tab-minHeight": "48px",
-          }}
-        >
-          <TabList
-            disableUnderline
-            sx={{
-              borderBottom: "1px solid",
-              borderColor: "divider",
-              display: "flex",
-              overflow: "auto",
-            }}
-          >
+    <div className="mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
+      <div>
+        <h1 className="text-3xl font-black tracking-tight">Member profile</h1>
+        <p className="text-sm text-ink/70">User ID: {userId}</p>
+      </div>
+      <Tabs value={currentTab}>
+        <div className="overflow-x-auto">
+          <TabList aria-label="Member sections">
             {TABS.map(({ id, label }) => (
-              <Tab
-                key={id}
-                value={id}
-                sx={{
-                  flexShrink: 0,
-                  px: 2,
-                  py: 1.5,
-                  "&:hover": {
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  },
-                }}
-              >
+              <Tab key={id} value={id} className="min-h-11">
                 {label}
               </Tab>
             ))}
           </TabList>
-
-          {TABS.map(({ id }) => (
-            <TabPanel key={id} value={id} sx={{ px: 0, py: 3 }}>
-              {id === "galleries" && <MemberGalleriesTab userId={userId} />}
-            </TabPanel>
-          ))}
-        </Tabs>
-      </Stack>
-    </Sheet>
+        </div>
+        {TABS.map(({ id }) => (
+          <TabPanel key={id} value={id}>
+            {id === "galleries" && <MemberGalleriesTab userId={userId} />}
+          </TabPanel>
+        ))}
+      </Tabs>
+    </div>
   );
 }

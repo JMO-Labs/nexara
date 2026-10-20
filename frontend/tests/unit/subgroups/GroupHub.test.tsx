@@ -5,10 +5,8 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
-import joyTheme from "@/theme/joy-theme";
 import { GroupHub } from "@/components/subgroups/hub/GroupHub";
 import * as useSubgroupsModule from "@/hooks/useSubgroups";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
@@ -51,9 +49,7 @@ function wrap(ui: React.ReactNode, queryClient?: QueryClient) {
   const qc = queryClient || new QueryClient();
   return render(
     <NextIntlClientProvider locale="en" messages={{}}>
-      <QueryClientProvider client={qc}>
-        <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-      </QueryClientProvider>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
     </NextIntlClientProvider>,
   );
 }
@@ -143,6 +139,21 @@ describe("GroupHub", () => {
     expect(
       screen.getAllByRole("button", { name: /settings/i }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("tab nav scrolls horizontally on phone and marks the active tab", () => {
+    vi.spyOn(useSubgroupsModule, "useSubgroupDetail").mockReturnValue({
+      data: mockSubgroupDetail,
+      isLoading: false,
+    } as any);
+
+    wrap(<GroupHub slug="hiking" />);
+    const nav = screen.getByRole("navigation", { name: /group sections/i });
+    expect(nav.querySelector("ul")?.className).toMatch(/overflow-x-auto/);
+    expect(screen.getByRole("button", { name: /overview/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("shows MemberOnlyGate when user is not member of invite_only group", () => {

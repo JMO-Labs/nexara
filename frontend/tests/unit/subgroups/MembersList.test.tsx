@@ -5,8 +5,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import {
   MembersList,
   type MembersListProps,
@@ -49,7 +47,7 @@ const mockMembers: Membership[] = [
 ];
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("MembersList", () => {
@@ -307,7 +305,10 @@ describe("MembersList", () => {
 
     // Demote option should be disabled with aria-disabled
     const demoteOption = screen.getByText("Demote to moderator");
-    expect(demoteOption.closest("li")).toHaveAttribute("aria-disabled", "true");
+    expect(demoteOption.closest("[role=menuitem]")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
 
     mockUseSubgroupMembers.mockRestore();
   });

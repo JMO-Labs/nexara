@@ -5,8 +5,6 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { GalleryCard } from "@/components/galleries/GalleryCard";
 import type { Gallery } from "@/lib/api/galleries";
 
@@ -29,7 +27,7 @@ const g: Gallery = {
 };
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(ui);
 }
 
 describe("GalleryCard", () => {

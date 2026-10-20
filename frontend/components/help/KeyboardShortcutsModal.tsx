@@ -59,7 +59,7 @@ export function KeyboardShortcutsModal() {
       <div className="flex flex-col gap-6">
         {SHORTCUTS.map((section) => (
           <section key={section.name} className="flex flex-col gap-3">
-            <h3 className="text-muted text-xs font-semibold tracking-wider uppercase">
+            <h3 className="text-muted text-sm font-semibold">
               {section.name}
             </h3>
             <ul className="flex flex-col gap-2">

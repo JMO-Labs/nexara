@@ -5,8 +5,6 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { useRouter } from "next/navigation";
 import { SubgroupCard } from "@/components/subgroups/SubgroupCard";
 import type { Subgroup } from "@/lib/api/subgroups";
@@ -14,7 +12,7 @@ import type { Subgroup } from "@/lib/api/subgroups";
 vi.mock("next/navigation");
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 const sg: Subgroup = {
@@ -104,9 +102,7 @@ describe("SubgroupCard", () => {
     vi.mocked(useRouter).mockReturnValue({ push: mockPush } as any);
     const onSelect = vi.fn();
     const { container } = render(
-      <CssVarsProvider theme={joyTheme}>
-        <SubgroupCard subgroup={sg} onSelect={onSelect} />
-      </CssVarsProvider>,
+      <SubgroupCard subgroup={sg} onSelect={onSelect} />,
     );
     const card = container.querySelector('[role="button"]');
     if (card) {

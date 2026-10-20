@@ -11,7 +11,9 @@ export type TokenName =
   | "accent"
   | "sun"
   | "leaf"
-  | "muted";
+  | "muted"
+  | "nav-muted"
+  | "danger";
 
 export const palette: {
   light: Record<TokenName, string>;
@@ -25,7 +27,9 @@ export const palette: {
     accent: "#C6B4F5",
     sun: "#F2D16B",
     leaf: "#7BAE7F",
-    muted: "#9DB8A2",
+    muted: "#4F6B57",
+    "nav-muted": "#9DB8A2",
+    danger: "#B3261E",
   },
   dark: {
     bg: "#0E1F15",
@@ -36,5 +40,7 @@ export const palette: {
     sun: "#C9A94A",
     leaf: "#4E7F56",
     muted: "#86A38C",
+    "nav-muted": "#86A38C",
+    danger: "#F2B8B5",
   },
 };

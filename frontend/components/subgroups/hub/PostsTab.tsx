@@ -5,9 +5,6 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import { AnimatePresence, motion } from "framer-motion";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
@@ -50,16 +47,16 @@ export function PostsTab({ subgroup }: PostsTabProps) {
   );
 
   return (
-    <Stack spacing={2}>
+    <div className="flex flex-col gap-4">
       {subgroup.my_role && (
         <PostComposer defaultSubgroupId={subgroup.id} onPosted={() => {}} />
       )}
       {isLoading ? (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} height={180} />
           ))}
-        </Stack>
+        </div>
       ) : isError ? (
         <EmptyState
           title="Couldn't load posts"
@@ -76,39 +73,28 @@ export function PostsTab({ subgroup }: PostsTabProps) {
           description="Be the first to share something with your community."
         />
       ) : (
-        <AnimatePresence>
-          <Stack spacing={2}>
+        <>
+          <div className="flex flex-col gap-4">
             {posts.map((p) => (
-              <motion.div
-                key={p.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-              >
+              <div key={p.id}>
                 <PostCard
                   post={p}
                   truncateBody
                   onOpen={(id) => router.push(`/app/post/${id}`)}
                 />
-              </motion.div>
+              </div>
             ))}
-            <div ref={sentinelRef} aria-hidden style={{ height: 1 }} />
+            <div ref={sentinelRef} aria-hidden className="h-px" />
             {isFetchingNextPage ? <Skeleton height={120} /> : null}
             {!hasNextPage && posts.length > 0 ? (
-              <Typography
-                level="body-xs"
-                textColor="text.tertiary"
-                sx={{ textAlign: "center", py: 2 }}
-              >
+              <p className="py-4 text-center text-xs text-muted">
                 You&apos;re all caught up.
-              </Typography>
+              </p>
             ) : null}
-          </Stack>
-        </AnimatePresence>
+          </div>
+        </>
       )}
-    </Stack>
+    </div>
   );
 }
 

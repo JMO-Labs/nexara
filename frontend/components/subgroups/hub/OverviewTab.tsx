@@ -4,8 +4,6 @@
  * @brief Overview tab: pinned post, upcoming events, recent posts.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { EmptyState } from "@/components/ui";
 import { EventCard } from "@/components/events/EventCard";
 import { PostCard } from "@/components/feed/PostCard";
@@ -28,53 +26,53 @@ export function OverviewTab({ subgroup }: OverviewTabProps) {
   const recentPosts = feedPages.flatMap((p) => p.items);
 
   return (
-    <Stack spacing={3}>
-      {/* Pinned Post Block */}
+    <div className="flex flex-col gap-6">
+      {/* Pinned post Block */}
       {subgroup.pinned_post_id && pinnedPost.data ? (
-        <Stack spacing={1}>
-          <Typography level="title-sm">Pinned Post</Typography>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-base font-semibold">Pinned post</h3>
           <PostCard post={pinnedPost.data} truncateBody />
-        </Stack>
+        </div>
       ) : null}
 
-      {/* Upcoming Events Rail */}
-      <Stack spacing={1}>
-        <Typography level="title-sm">Upcoming Events</Typography>
+      {/* Upcoming events Rail */}
+      <div className="flex flex-col gap-2">
+        <h3 className="text-base font-semibold">Upcoming events</h3>
         {upcomingEventsQuery.isLoading ? (
-          <Typography level="body-sm">Loading...</Typography>
+          <p className="text-sm text-muted">Loading…</p>
         ) : upcomingEvents.length === 0 ? (
           <EmptyState
             title="No upcoming events"
             description="Check back soon!"
           />
         ) : (
-          <Stack spacing={2}>
+          <div className="flex flex-col gap-4">
             {upcomingEvents.slice(0, 5).map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
-          </Stack>
+          </div>
         )}
-      </Stack>
+      </div>
 
-      {/* Recent Posts Preview */}
-      <Stack spacing={1}>
-        <Typography level="title-sm">Recent Posts</Typography>
+      {/* Recent posts Preview */}
+      <div className="flex flex-col gap-2">
+        <h3 className="text-base font-semibold">Recent posts</h3>
         {feedQuery.isLoading ? (
-          <Typography level="body-sm">Loading...</Typography>
+          <p className="text-sm text-muted">Loading…</p>
         ) : recentPosts.length === 0 ? (
           <EmptyState
             title="Quiet here"
             description="Be the first to share something with your community."
           />
         ) : (
-          <Stack spacing={2}>
+          <div className="flex flex-col gap-4">
             {recentPosts.slice(0, 3).map((post) => (
               <PostCard key={post.id} post={post} truncateBody />
             ))}
-          </Stack>
+          </div>
         )}
-      </Stack>
-    </Stack>
+      </div>
+    </div>
   );
 }
 

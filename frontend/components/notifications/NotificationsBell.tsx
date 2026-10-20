@@ -164,7 +164,7 @@ export function NotificationsBell() {
           tabIndex={-1}
           role="dialog"
           aria-label="Notifications"
-          className="bg-surface-strong text-ink border-ink/10 absolute top-[calc(100%+8px)] right-0 z-[1100] flex outline-none max-h-[min(70dvh,560px)] w-80 flex-col overflow-hidden rounded-2xl border shadow-lg sm:w-96"
+          className="bg-surface text-ink border-ink/10 absolute top-[calc(100%+8px)] right-0 z-[1100] flex outline-none max-h-[min(70dvh,560px)] w-80 flex-col overflow-hidden rounded-2xl border shadow-lg sm:w-96"
         >
           <div className="border-ink/10 flex items-center justify-between border-b p-4">
             <h2 className="font-display text-base font-semibold">

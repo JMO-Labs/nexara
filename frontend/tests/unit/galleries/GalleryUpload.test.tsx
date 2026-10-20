@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { GalleryUpload } from "@/components/galleries/GalleryUpload";
 import * as galleryApi from "@/lib/api/galleries";
 import * as mediaApi from "@/lib/api/media";
@@ -17,11 +15,7 @@ vi.mock("@/lib/api/media");
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("GalleryUpload", () => {
@@ -130,5 +124,12 @@ describe("GalleryUpload", () => {
     await waitFor(() => {
       expect(screen.getByText("Done")).toBeInTheDocument();
     });
+  });
+
+  it("has a visible Choose files button as keyboard path", () => {
+    wrap(<GalleryUpload galleryId="g1" />);
+    expect(
+      screen.getByRole("button", { name: "Choose files" }),
+    ).toBeInTheDocument();
   });
 });

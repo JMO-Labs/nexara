@@ -1,19 +1,17 @@
 "use client";
 /**
  * @file components/subgroups/SubgroupCard.tsx
- * @brief Editorial group tile. Per-slug deterministic gradient gives each
- *        group a stable color identity (no cover-media field exists on
- *        Subgroup). Click selects, secondary button joins/leaves.
+ * @brief Group tile. Per-slug deterministic gradient gives each group a
+ *        stable color identity unless a cover image exists. Click selects,
+ *        secondary button joins/leaves.
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import { Button, Chip } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import type { Subgroup } from "@/lib/api/subgroups";
 import { gradientFor, monogram } from "@/lib/groupVisuals";
+import { cn } from "@/lib/utils";
 
 export interface SubgroupCardProps {
   subgroup: Subgroup;
@@ -23,10 +21,18 @@ export interface SubgroupCardProps {
   onJoin?: (slug: string) => void;
   onLeave?: (slug: string) => void;
   busy?: boolean;
-  /** Anchor tile = taller hero variant (used in bento mosaic). */
+  /** Anchor tile = taller hero variant (used in the mosaic). */
   anchor?: boolean;
 }
 
+const LIGHT_BTN = "min-h-11 bg-white text-black/85 hover:bg-white/90";
+const GLASS_BTN = "min-h-11 bg-white/15 text-white hover:bg-white/25";
+
+/**
+ * @brief Group tile card.
+ * @param props subgroup data, membership state and callbacks
+ * @return card element
+ */
 export function SubgroupCard({
   subgroup,
   memberCount,
@@ -43,289 +49,159 @@ export function SubgroupCard({
     [subgroup.slug],
   );
   const handleClick = () => onSelect(subgroup.slug);
-
-  const getCtaButton = () => {
-    if (isMember) {
-      return (
-        <Button
-          variant="soft"
-          color="neutral"
-          size="sm"
-          loading={busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            onLeave?.(subgroup.slug);
-          }}
-          sx={{
-            bgcolor: "rgba(255,255,255,0.14)",
-            color: "#fff",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
-          }}
-        >
-          Leave
-        </Button>
-      );
-    }
-
-    if (subgroup.join_policy === "invite_only") {
-      return (
-        <Button
-          size="sm"
-          disabled
-          sx={{
-            bgcolor: "rgba(255,255,255,0.14)",
-            color: "#fff",
-            "&:disabled": { opacity: 0.5 },
-          }}
-        >
-          Invite required
-        </Button>
-      );
-    }
-
-    if (subgroup.join_policy === "admin_approval") {
-      return (
-        <Button
-          size="sm"
-          loading={busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            onJoin?.(subgroup.slug);
-          }}
-          sx={{
-            bgcolor: "#fff",
-            color: "rgba(0,0,0,0.85)",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.88)" },
-          }}
-        >
-          Request to join
-        </Button>
-      );
-    }
-
-    return (
-      <Button
-        size="sm"
-        loading={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onJoin?.(subgroup.slug);
-        }}
-        sx={{
-          bgcolor: "#fff",
-          color: "rgba(0,0,0,0.85)",
-          "&:hover": { bgcolor: "rgba(255,255,255,0.88)" },
-        }}
-      >
-        Join
-      </Button>
-    );
+  const stop = (fn?: (slug: string) => void) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fn?.(subgroup.slug);
   };
 
+  let cta: React.ReactNode;
+  if (isMember) {
+    cta = (
+      <Button
+        variant="ghost"
+        size="sm"
+        loading={busy}
+        onClick={stop(onLeave)}
+        className={GLASS_BTN}
+      >
+        Leave
+      </Button>
+    );
+  } else if (subgroup.join_policy === "invite_only") {
+    cta = (
+      <Button
+        size="sm"
+        disabled
+        className={cn(GLASS_BTN, "disabled:opacity-50")}
+      >
+        Invite required
+      </Button>
+    );
+  } else {
+    cta = (
+      <Button
+        variant="ghost"
+        size="sm"
+        loading={busy}
+        onClick={stop(onJoin)}
+        className={LIGHT_BTN}
+      >
+        {subgroup.join_policy === "admin_approval" ? "Request to join" : "Join"}
+      </Button>
+    );
+  }
+
   return (
-    <Box
+    <div
       role="button"
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleClick();
         }
       }}
-      sx={{
-        position: "relative",
-        minHeight: anchor ? { xs: 320, md: 420 } : { xs: 220, md: 260 },
-        height: "100%",
-        borderRadius: "lg",
-        overflow: "hidden",
-        cursor: "pointer",
-        background,
-        color: "rgba(255,255,255,0.92)",
-        boxShadow: "0 10px 36px -18px rgba(0,0,0,0.55)",
-        transition:
-          "transform 600ms cubic-bezier(0.22,1,0.36,1), box-shadow 400ms ease",
-        "&:hover": {
-          transform: "translateY(-3px)",
-          boxShadow: "0 22px 60px -22px rgba(0,0,0,0.65)",
-        },
-        "&:hover .nx-grain": { opacity: 0.18 },
-        "&:hover .nx-mono": { transform: "rotate(-3deg) scale(1.04)" },
-        "&:hover .nx-thumb": { transform: "scale(1.04)" },
-      }}
+      style={{ background }}
+      className={cn(
+        "group/card relative h-full cursor-pointer overflow-hidden rounded-[1.25rem] text-white/90 shadow-lg outline-none transition-[transform,box-shadow] motion-safe:duration-500 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        anchor
+          ? "min-h-[320px] md:min-h-[420px]"
+          : "min-h-[220px] md:min-h-[260px]",
+      )}
     >
-      {/* cover image (replaces gradient when present) */}
       {subgroup.cover_media_id && (
-        <MediaThumb
-          mediaId={subgroup.cover_media_id}
-          alt={subgroup.name}
-          zoomOnHover
-        />
+        <>
+          <MediaThumb
+            mediaId={subgroup.cover_media_id}
+            alt={subgroup.name}
+            zoomOnHover
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/65"
+          />
+        </>
       )}
-      {/* darker scrim to keep text legible over photo backgrounds */}
-      {subgroup.cover_media_id && (
-        <Box
-          aria-hidden
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.65) 100%)",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-      {/* grain veil */}
-      <Box
+      <div
         aria-hidden
-        className="nx-grain"
-        sx={{
-          position: "absolute",
-          inset: 0,
-          opacity: 0.1,
-          mixBlendMode: "overlay",
-          transition: "opacity 400ms ease",
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>\")",
-        }}
-      />
-      {/* corner monogram */}
-      <Box
-        className="nx-mono"
-        aria-hidden
-        sx={{
-          position: "absolute",
-          top: anchor ? 24 : 18,
-          left: anchor ? 24 : 18,
-          width: anchor ? 64 : 48,
-          height: anchor ? 64 : 48,
-          borderRadius: "999px",
-          background: monogramBg,
-          color: "rgba(0,0,0,0.78)",
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "var(--font-display)",
-          fontWeight: 500,
-          fontSize: anchor ? 22 : 17,
-          letterSpacing: "0.02em",
-          transition: "transform 400ms cubic-bezier(0.22,1,0.36,1)",
-        }}
+        style={{ background: monogramBg }}
+        className={cn(
+          "absolute grid place-items-center rounded-full font-display text-black/80",
+          anchor
+            ? "top-6 left-6 size-16 text-[22px]"
+            : "top-[18px] left-[18px] size-12 text-[17px]",
+        )}
       >
         {monogram(subgroup.name)}
-      </Box>
+      </div>
 
-      {/* meta strip top-right */}
-      <Stack
-        direction="row"
-        spacing={0.75}
-        sx={{
-          position: "absolute",
-          top: anchor ? 28 : 22,
-          right: anchor ? 24 : 18,
-        }}
-      >
-        {subgroup.is_private && (
-          <Chip
-            size="sm"
-            variant="soft"
-            sx={{
-              bgcolor: "rgba(255,255,255,0.16)",
-              color: "#fff",
-              backdropFilter: "blur(6px)",
-              fontFamily: "var(--font-mono, var(--font-body))",
-              fontSize: "10px",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-            }}
-          >
-            Private
-          </Chip>
-        )}
-      </Stack>
-
-      {/* footer block */}
-      <Box
-        sx={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          p: anchor ? { xs: 3, md: 4 } : { xs: 2.25, md: 2.75 },
-          background:
-            "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0.7) 100%)",
-        }}
-      >
-        <Typography
-          level="body-xs"
-          sx={{
-            fontFamily: "var(--font-mono, var(--font-body))",
-            fontSize: "10px",
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.6)",
-            mb: 0.75,
-          }}
+      {subgroup.is_private && (
+        <div
+          className={cn(
+            "absolute",
+            anchor ? "top-7 right-6" : "top-5 right-[18px]",
+          )}
         >
+          <Badge className="bg-white/20 text-white uppercase tracking-widest">
+            Private
+          </Badge>
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0 bg-gradient-to-b from-transparent via-black/45 to-black/70",
+          anchor ? "p-6 md:p-8" : "p-4 md:p-5",
+        )}
+      >
+        <p className="mb-1.5 text-xs uppercase tracking-widest text-white/70">
           {subgroup.join_policy.replace("_", " ")}
           {typeof memberCount === "number" && (
             <>
-              <Box component="span" sx={{ mx: 0.75, opacity: 0.4 }}>
-                ·
-              </Box>
+              <span className="mx-1.5 opacity-40">·</span>
               {memberCount} {memberCount === 1 ? "member" : "members"}
             </>
           )}
-        </Typography>
-        <Typography
-          sx={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 400,
-            fontSize: anchor
-              ? { xs: "34px", md: "52px" }
-              : { xs: "22px", md: "28px" },
-            lineHeight: 1.02,
-            letterSpacing: "-0.02em",
-            color: "#fff",
-            textShadow: "0 2px 22px rgba(0,0,0,0.35)",
-            mb: subgroup.description ? 1 : 0,
-          }}
+        </p>
+        <h3
+          className={cn(
+            "font-semibold leading-tight tracking-tight text-white",
+            anchor
+              ? "text-[34px] md:text-[52px]"
+              : "text-[22px] md:text-[28px]",
+            subgroup.description && "mb-2",
+          )}
         >
           {subgroup.name}
-        </Typography>
+        </h3>
         {subgroup.description && (
-          <Typography
-            level="body-sm"
-            sx={{
-              color: "rgba(255,255,255,0.78)",
-              display: "-webkit-box",
-              WebkitLineClamp: anchor ? 3 : 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              maxWidth: anchor ? "78%" : "100%",
-            }}
+          <p
+            className={cn(
+              "text-sm text-white/80",
+              anchor ? "line-clamp-3 max-w-[78%]" : "line-clamp-2",
+            )}
           >
             {subgroup.description}
-          </Typography>
+          </p>
         )}
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-          {getCtaButton()}
+        <div className="mt-4 flex gap-2">
+          {cta}
           <Button
-            variant="plain"
+            variant="ghost"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/app/subgroups/${subgroup.slug}`);
             }}
-            sx={{
-              color: "rgba(255,255,255,0.78)",
-              "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.08)" },
-            }}
+            className="min-h-11 text-white/80 hover:bg-white/10 hover:text-white"
           >
             Open →
           </Button>
-        </Stack>
-      </Box>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }
 

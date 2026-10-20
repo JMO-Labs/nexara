@@ -6,8 +6,7 @@
  *        but locked to this group's events. Members get a "New event" button.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   endOfMonth,
   isSameDay,
@@ -81,46 +80,21 @@ export function EventsTab({ subgroup }: EventsTabProps) {
   const canCreate = !!subgroup.my_role;
 
   return (
-    <Box ref={wrapperRef} sx={{ position: "relative", minHeight: 400 }}>
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 2 }}
-      >
-        <Box
-          sx={{
-            fontFamily: "var(--font-display)",
-            fontSize: 14,
-            textTransform: "uppercase",
-            letterSpacing: "0.16em",
-            fontWeight: 700,
-            color: "text.secondary",
-          }}
-        >
+    <div ref={wrapperRef} className="relative min-h-96">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-muted">
           {events.length} {events.length === 1 ? "event" : "events"} this month
-        </Box>
+        </p>
         {canCreate && (
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             New event
           </Button>
         )}
-      </Stack>
+      </div>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 320px" },
-          gap: 2,
-          alignItems: "start",
-        }}
-      >
-        <Box
-          sx={{
-            minWidth: 0,
-            opacity: isLoading ? 0.6 : 1,
-            transition: "opacity 200ms",
-          }}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div
+          className={`min-w-0 transition-opacity ${isLoading ? "opacity-60" : ""}`}
         >
           <MonthCalendarLarge
             events={events}
@@ -131,99 +105,56 @@ export function EventsTab({ subgroup }: EventsTabProps) {
             onSelectDay={onSelectDay}
             onSelectEvent={onSelectEvent}
           />
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ mt: 1, justifyContent: "center" }}
-          >
+          <div className="mt-2 flex justify-center gap-2">
             <Button
               size="sm"
-              variant="plain"
+              variant="ghost"
+              className="min-h-11"
               onClick={() =>
                 setMonth((m) =>
                   startOfMonth(new Date(m.getFullYear(), m.getMonth() - 1, 1)),
                 )
               }
             >
-              ← Prev
+              <ChevronLeft className="size-4" aria-hidden /> Prev
             </Button>
             <Button
               size="sm"
-              variant="plain"
+              variant="ghost"
+              className="min-h-11"
               onClick={() => setMonth(startOfMonth(new Date()))}
             >
               Today
             </Button>
             <Button
               size="sm"
-              variant="plain"
+              variant="ghost"
+              className="min-h-11"
               onClick={() =>
                 setMonth((m) =>
                   startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)),
                 )
               }
             >
-              Next →
+              Next <ChevronRight className="size-4" aria-hidden />
             </Button>
-          </Stack>
-        </Box>
+          </div>
+        </div>
 
-        <Box
-          sx={{
-            position: { lg: "sticky" },
-            top: { lg: 16 },
-            height: { xs: "auto", lg: "calc(100vh - 200px)" },
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: "sm",
-            backgroundColor: "background.body",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          <Box
-            sx={{
-              px: 2,
-              py: 1.25,
-              borderBottom: "1px solid",
-              borderColor: "divider",
-              fontFamily: "var(--font-display)",
-              fontSize: 13,
-              textTransform: "uppercase",
-              letterSpacing: "0.16em",
-              fontWeight: 700,
-              color: "text.secondary",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+        <div className="flex h-auto flex-col overflow-hidden rounded-2xl bg-surface lg:sticky lg:top-4 lg:h-[calc(100vh-200px)]">
+          <div className="flex items-center justify-between border-b border-current/15 px-4 py-2.5 text-sm font-semibold text-muted">
             <span>{selectedDay ? "This day" : "This month"}</span>
             {selectedDay && (
-              <Box
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={() => setSelectedDay(null)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelectedDay(null);
-                  }
-                }}
-                sx={{
-                  cursor: "pointer",
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  color: "text.tertiary",
-                  "&:hover": { color: "text.primary" },
-                }}
+                className="min-h-11 px-2 text-xs outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 Clear
-              </Box>
+              </button>
             )}
-          </Box>
-          <Box sx={{ flex: 1, minHeight: 0 }}>
+          </div>
+          <div className="min-h-0 flex-1">
             <EventRail
               events={railEvents}
               selectedDay={selectedDay}
@@ -231,9 +162,9 @@ export function EventsTab({ subgroup }: EventsTabProps) {
               subgroupNames={subgroupNames}
               onSelectEvent={onSelectEvent}
             />
-          </Box>
-        </Box>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       <EventDetailPanel
         containerRef={wrapperRef}
@@ -253,7 +184,7 @@ export function EventsTab({ subgroup }: EventsTabProps) {
         event={editEvent}
         onClose={() => setEditEvent(null)}
       />
-    </Box>
+    </div>
   );
 }
 
