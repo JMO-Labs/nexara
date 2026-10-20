@@ -293,3 +293,4 @@ plans/
 node_modules/
 
 CLAUDE.md
+.superpowers/
