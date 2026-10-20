@@ -4,14 +4,12 @@
  * @brief Full-screen post detail (mobile + direct/refresh navigation).
  */
 import { use } from "react";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
-import { EmptyState, Skeleton } from "@/components/ui";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostCard } from "@/components/feed/PostCard";
 import { CommentThread } from "@/components/feed/CommentThread";
 import { usePost } from "@/hooks/usePosts";
-import JoyButton from "@mui/joy/Button";
-import Link from "next/link";
 
 export default function PostPage({
   params,
@@ -22,25 +20,28 @@ export default function PostPage({
   const { data: post, isLoading, isError } = usePost(id);
 
   return (
-    <Stack spacing={2} sx={{ width: "100%", maxWidth: 720, mx: "auto" }}>
-      <Box>
-        <JoyButton component={Link} href="/app" variant="plain" size="sm">
-          ← Back
-        </JoyButton>
-      </Box>
+    <div className="mx-auto flex w-full max-w-180 flex-col gap-4">
+      <div>
+        <Button asChild variant="ghost" size="sm" className="min-h-11">
+          <Link href="/app">
+            <ChevronLeft className="size-4" aria-hidden="true" />
+            Back to feed
+          </Link>
+        </Button>
+      </div>
       {isLoading ? (
-        <Skeleton height={240} />
+        <Skeleton height={240} rounded="lg" />
       ) : isError || !post ? (
         <EmptyState
           title="Post not found"
           description="It may have been deleted."
         />
       ) : (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           <PostCard post={post} />
           <CommentThread postId={post.id} />
-        </Stack>
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }
