@@ -1,51 +1,63 @@
 /**
  * @file components/layout/navItems.tsx
- * @brief Single source of truth for sidebar + mobile nav targets. Keeping
- *        them aligned avoids the bottom-nav-vs-rail drift the legacy app had.
+ * @brief Single source of truth for side nav, bottom tab bar and More sheet.
  */
-import type { ComponentType, SVGProps } from "react";
 import {
-  NewspaperIcon,
-  ChatBubbleLeftRightIcon,
-  CalendarDaysIcon,
-  UserGroupIcon,
-  PhotoIcon,
-  FilmIcon,
-  UsersIcon,
-  Cog6ToothIcon,
-} from "@heroicons/react/24/outline";
-
-export type IconType = ComponentType<SVGProps<SVGSVGElement>>;
+  House,
+  MessageCircle,
+  CalendarDays,
+  Users,
+  Images,
+  Film,
+  Contact,
+  Bell,
+  Settings,
+  ShieldCheck,
+  CircleHelp,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface NavItem {
   label: string;
   href: string;
-  Icon: IconType;
-  mobile?: boolean;
+  Icon: LucideIcon;
+  adminOnly?: boolean;
 }
 
+/**
+ * @brief Whether a nav href is active for the pathname.
+ * @param pathname current path
+ * @param href nav target
+ * @return true when active
+ */
 export function isNavActive(pathname: string, href: string): boolean {
   if (href === "/app") return pathname === "/app";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/app", Icon: NewspaperIcon, mobile: true },
-  {
-    label: "Chat",
-    href: "/app/chat",
-    Icon: ChatBubbleLeftRightIcon,
-    mobile: true,
-  },
-  {
-    label: "Events",
-    href: "/app/events",
-    Icon: CalendarDaysIcon,
-    mobile: true,
-  },
-  { label: "Groups", href: "/app/subgroups", Icon: UserGroupIcon },
-  { label: "Galleries", href: "/app/galleries", Icon: PhotoIcon },
-  { label: "Media", href: "/app/media", Icon: FilmIcon },
-  { label: "Members", href: "/app/members", Icon: UsersIcon },
-  { label: "Admin", href: "/app/admin", Icon: Cog6ToothIcon },
+/**
+ * @brief Filter out admin-only items for non-admins.
+ * @param items nav items
+ * @param isAdmin viewer is admin
+ * @return visible items
+ */
+export function visibleNav(items: NavItem[], isAdmin: boolean): NavItem[] {
+  return items.filter((i) => !i.adminOnly || isAdmin);
+}
+
+export const PRIMARY_NAV: NavItem[] = [
+  { label: "Home", href: "/app", Icon: House },
+  { label: "Chat", href: "/app/chat", Icon: MessageCircle },
+  { label: "Calendar", href: "/app/events", Icon: CalendarDays },
+  { label: "Groups", href: "/app/subgroups", Icon: Users },
+];
+
+export const MORE_NAV: NavItem[] = [
+  { label: "Galleries", href: "/app/galleries", Icon: Images },
+  { label: "Media", href: "/app/media", Icon: Film },
+  { label: "Members", href: "/app/members", Icon: Contact },
+  { label: "Notifications", href: "/app/notifications", Icon: Bell },
+  { label: "Settings", href: "/app/settings", Icon: Settings },
+  { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },
+  { label: "Help", href: "/app/help", Icon: CircleHelp },
 ];
