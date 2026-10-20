@@ -3,8 +3,6 @@
  * @brief Admin panel server page wrapper.
  */
 import { AdminTabs } from "@/components/admin/AdminTabs";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 
 export const metadata = {
   title: "Admin Panel",
@@ -12,14 +10,14 @@ export const metadata = {
 
 export default function AdminPage() {
   return (
-    <Stack spacing={4}>
+    <div className="flex flex-col gap-6">
       <div>
-        <Typography level="h1">Admin Panel</Typography>
-        <Typography level="body-md" textColor="text.tertiary">
+        <h1 className="text-3xl font-black">Admin panel</h1>
+        <p className="text-sm text-muted">
           Manage community, users, settings, and integrations.
-        </Typography>
+        </p>
       </div>
       <AdminTabs />
-    </Stack>
+    </div>
   );
 }

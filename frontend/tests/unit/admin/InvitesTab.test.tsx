@@ -33,7 +33,7 @@ describe("InvitesTab", () => {
 
     render(<InvitesTab />, { wrapper });
 
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("should render error state", () => {

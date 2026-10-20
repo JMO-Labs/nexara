@@ -4,6 +4,7 @@
  * @brief OAuth provider management tab for SSO configuration.
  */
 import { useState } from "react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
   useOauthProviders,
   useCreateOauthProvider,
@@ -11,23 +12,12 @@ import {
   useDeleteOauthProvider,
   useDiscoverIssuer,
 } from "@/hooks/useAdminOauth";
-import Stack from "@mui/joy/Stack";
-import Grid from "@mui/joy/Grid";
-import Button from "@mui/joy/Button";
-import IconButton from "@mui/joy/IconButton";
-import Card from "@mui/joy/Card";
-import Typography from "@mui/joy/Typography";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
-import Modal from "@mui/joy/Modal";
-import ModalDialog from "@mui/joy/ModalDialog";
-import ModalClose from "@mui/joy/ModalClose";
-import Input from "@mui/joy/Input";
-import Switch from "@mui/joy/Switch";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import { TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { Button, IconButton, Input, Modal, Switch } from "@/components/ui";
 
+/**
+ * @brief SSO providers admin tab.
+ * @return tab content
+ */
 export function SsoTab() {
   const [openModal, setOpenModal] = useState(false);
   const [issuerUrl, setIssuerUrl] = useState("");
@@ -45,15 +35,13 @@ export function SsoTab() {
   const handleDiscoverIssuer = async () => {
     if (!issuerUrl) return;
     try {
-      const discovered = await discoverMutation.mutateAsync(issuerUrl);
-      // Auto-fill endpoints based on discovery
-      console.log("Discovered endpoints:", discovered);
+      await discoverMutation.mutateAsync(issuerUrl);
     } catch (err) {
       console.error("Discovery failed:", err);
     }
   };
 
-  const handleCreateProvider = async (e: React.FormEvent) => {
+  const handleCreateProvider = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
       slug,
@@ -73,184 +61,148 @@ export function SsoTab() {
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
+      <div className="flex justify-center py-16">
+        <Loader2
+          role="status"
+          aria-label="Loading providers"
+          className="size-6 motion-safe:animate-spin"
+        />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Alert color="danger" variant="soft">
+      <div
+        role="alert"
+        className="rounded-2xl border-l-4 border-danger bg-surface p-3"
+      >
         Failed to load OAuth providers
-      </Alert>
+      </div>
     );
   }
 
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" justifyContent="flex-end">
-        <Button
-          startDecorator={<PlusIcon width={20} height={20} />}
-          onClick={() => setOpenModal(true)}
-        >
-          Add Provider
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <Button onClick={() => setOpenModal(true)}>
+          <Plus className="size-4" aria-hidden="true" />
+          Add provider
         </Button>
-      </Stack>
+      </div>
 
       {providers && providers.length > 0 ? (
-        <Grid container spacing={2}>
+        <ul className="grid gap-4 md:grid-cols-2">
           {providers.map((provider) => (
-            <Grid key={provider.id} xs={12} md={6}>
-              <Card variant="outlined" sx={{ height: "100%" }}>
-                <Stack spacing={1.5}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
-                  >
-                    <div>
-                      <Typography level="title-md">
-                        {provider.display_name}
-                      </Typography>
-                      <Typography level="body-xs" color="neutral">
-                        {provider.slug}
-                      </Typography>
-                    </div>
-                    <Typography level="body-xs" color="neutral">
-                      {provider.provider_type.toUpperCase()}
-                    </Typography>
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    spacing={1}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Switch
-                        checked={provider.enabled}
-                        onChange={() => toggleMutation.mutate(provider.id)}
-                        size="sm"
-                      />
-                      <Typography level="body-xs">
-                        {provider.enabled ? "Enabled" : "Disabled"}
-                      </Typography>
-                    </Stack>
-                    <IconButton
-                      size="sm"
-                      variant="soft"
-                      color="danger"
-                      onClick={() => deleteMutation.mutate(provider.id)}
-                      title="Delete provider"
-                    >
-                      <TrashIcon width={16} height={16} />
-                    </IconButton>
-                  </Stack>
-                </Stack>
-              </Card>
-            </Grid>
+            <li
+              key={provider.id}
+              className="flex flex-col gap-3 rounded-2xl bg-surface p-4"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="truncate font-semibold">
+                    {provider.display_name}
+                  </h3>
+                  <p className="text-sm text-muted">{provider.slug}</p>
+                </div>
+                <span className="text-sm text-muted">
+                  {provider.provider_type.toUpperCase()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <Switch
+                    checked={provider.enabled}
+                    onCheckedChange={() => toggleMutation.mutate(provider.id)}
+                    aria-label={`Toggle ${provider.display_name}`}
+                  />
+                  {provider.enabled ? "Enabled" : "Disabled"}
+                </label>
+                <IconButton
+                  variant="ghost"
+                  aria-label={`Delete ${provider.display_name}`}
+                  onClick={() => deleteMutation.mutate(provider.id)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </IconButton>
+              </div>
+            </li>
           ))}
-        </Grid>
+        </ul>
       ) : (
-        <Alert color="primary" variant="soft">
+        <div role="status" className="rounded-2xl bg-surface p-3">
           No OAuth providers configured yet
-        </Alert>
+        </div>
       )}
 
       <Modal
-        aria-labelledby="sso-modal"
         open={openModal}
         onClose={() => setOpenModal(false)}
+        title="Add OAuth provider"
       >
-        <ModalDialog>
-          <ModalClose variant="plain" sx={{ m: 1 }} />
-          <Typography
-            component="h2"
-            id="sso-modal"
-            level="inherit"
-            fontSize="1.25em"
-            mb="0.25em"
-          >
-            Add OAuth Provider
-          </Typography>
-          <form onSubmit={handleCreateProvider}>
-            <Stack spacing={2}>
-              <FormControl>
-                <FormLabel>Provider Slug</FormLabel>
-                <Input
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="e.g., google, github"
-                  required
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Display Name</FormLabel>
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g., Sign in with Google"
-                  required
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Issuer URL</FormLabel>
-                <Input
-                  value={issuerUrl}
-                  onChange={(e) => setIssuerUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  type="url"
-                  required
-                />
-                <Button
-                  size="sm"
-                  variant="soft"
-                  onClick={handleDiscoverIssuer}
-                  sx={{ mt: 1 }}
-                  loading={discoverMutation.isPending}
-                >
-                  Discover Endpoints
-                </Button>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Client ID</FormLabel>
-                <Input
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  required
-                />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Client Secret</FormLabel>
-                <Input
-                  type="password"
-                  value={clientSecret}
-                  onChange={(e) => setClientSecret(e.target.value)}
-                  required
-                />
-              </FormControl>
-
-              <Stack direction="row" spacing={2}>
-                <Button
-                  variant="plain"
-                  color="neutral"
-                  onClick={() => setOpenModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" loading={createMutation.isPending}>
-                  Create Provider
-                </Button>
-              </Stack>
-            </Stack>
-          </form>
-        </ModalDialog>
+        <form onSubmit={handleCreateProvider} className="flex flex-col gap-4">
+          <Input
+            label="Provider slug"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="e.g., google, github"
+            required
+          />
+          <Input
+            label="Display name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="e.g., Sign in with Google"
+            required
+          />
+          <div className="flex flex-col gap-2">
+            <Input
+              label="Issuer URL"
+              value={issuerUrl}
+              onChange={(e) => setIssuerUrl(e.target.value)}
+              placeholder="https://example.com"
+              type="url"
+              required
+            />
+            <div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleDiscoverIssuer}
+                loading={discoverMutation.isPending}
+              >
+                Discover endpoints
+              </Button>
+            </div>
+          </div>
+          <Input
+            label="Client ID"
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            required
+          />
+          <Input
+            label="Client secret"
+            type="password"
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+            required
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpenModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={createMutation.isPending}>
+              Create provider
+            </Button>
+          </div>
+        </form>
       </Modal>
-    </Stack>
+    </div>
   );
 }

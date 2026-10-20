@@ -4,13 +4,15 @@
  * @brief Push notification opt-in row for the Notifications settings tab.
  *        Shows current permission, lets the user subscribe/unsubscribe.
  */
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Button from "@mui/joy/Button";
-import Chip from "@mui/joy/Chip";
-import Alert from "@mui/joy/Alert";
+import { Button, Badge, Card } from "@/components/ui";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
+const alertCls = "rounded-2xl bg-surface p-3 text-sm border-l-4";
+
+/**
+ * @brief Push subscription controls.
+ * @return push opt-in card
+ */
 export function PushSubscriptionRow() {
   const {
     supported,
@@ -25,35 +27,27 @@ export function PushSubscriptionRow() {
 
   if (!supported) {
     return (
-      <Alert color="neutral" variant="soft">
+      <div role="status" className={`${alertCls} border-muted`}>
         Web Push is not supported in this browser.
-      </Alert>
+      </div>
     );
   }
 
   return (
-    <Stack spacing={1.5}>
-      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-        <Typography level="title-md">Push notifications</Typography>
-        <Chip
-          size="sm"
-          variant="soft"
-          color={isSubscribed ? "success" : "neutral"}
-        >
+    <Card className="max-w-3xl space-y-3 p-4 md:p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-semibold">Push notifications</h2>
+        <Badge tone={isSubscribed ? "leaf" : "neutral"}>
           {isSubscribed ? "Active" : "Inactive"}
-        </Chip>
-        <Chip size="sm" variant="outlined">
-          permission: {permission}
-        </Chip>
-      </Stack>
-      <Typography level="body-sm" color="neutral">
+        </Badge>
+        <Badge>permission: {permission}</Badge>
+      </div>
+      <p className="text-sm text-muted">
         Receive notifications on this device even when Nexara is closed.
-      </Typography>
-      <Stack direction="row" spacing={1}>
+      </p>
+      <div>
         {!isSubscribed ? (
           <Button
-            variant="solid"
-            color="primary"
             loading={isSubscribing}
             onClick={() => subscribe().catch(() => {})}
             disabled={permission === "denied"}
@@ -62,25 +56,24 @@ export function PushSubscriptionRow() {
           </Button>
         ) : (
           <Button
-            variant="outlined"
-            color="neutral"
+            variant="outline"
             loading={isUnsubscribing}
             onClick={() => unsubscribe().catch(() => {})}
           >
             Disable on this device
           </Button>
         )}
-      </Stack>
+      </div>
       {permission === "denied" && (
-        <Alert color="warning" variant="soft">
+        <div role="alert" className={`${alertCls} border-sun`}>
           Notifications are blocked. Enable them in your browser site settings.
-        </Alert>
+        </div>
       )}
       {error && (
-        <Alert color="danger" variant="soft" role="alert">
+        <div role="alert" className={`${alertCls} border-destructive`}>
           {error.message}
-        </Alert>
+        </div>
       )}
-    </Stack>
+    </Card>
   );
 }

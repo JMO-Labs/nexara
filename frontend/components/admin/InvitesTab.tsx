@@ -4,24 +4,29 @@
  * @brief Admin invite creation and management.
  */
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import {
   useInvites,
   useCreateInvite,
   useRevokeInvite,
 } from "@/hooks/useInvites";
-import Stack from "@mui/joy/Stack";
-import Grid from "@mui/joy/Grid";
-import Input from "@mui/joy/Input";
-import Select from "@mui/joy/Select";
-import Option from "@mui/joy/Option";
-import Button from "@mui/joy/Button";
-import IconButton from "@mui/joy/IconButton";
-import Card from "@mui/joy/Card";
-import Table from "@mui/joy/Table";
-import Typography from "@mui/joy/Typography";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import {
+  Button,
+  Card,
+  IconButton,
+  Input,
+  Option,
+  Select,
+} from "@/components/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/shadcn/table";
+import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
 
 export function InvitesTab() {
   const [email, setEmail] = useState("");
@@ -40,127 +45,84 @@ export function InvitesTab() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
+  if (isLoading) return <AdminLoading />;
 
   if (error) {
-    return (
-      <Alert color="danger" variant="soft">
-        Failed to load invites
-      </Alert>
-    );
+    return <AdminNotice tone="error">Failed to load invites</AdminNotice>;
   }
 
   return (
-    <Grid container spacing={2}>
-      {/* Form: 5/12 on desktop, full width on mobile */}
-      <Grid xs={12} md={5}>
-        <Card variant="soft">
-          <Stack spacing={2}>
-            <Typography level="title-md">Create Invite</Typography>
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={1.5}>
-                <Input
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  size="sm"
-                />
-                <Select
-                  value={role}
-                  onChange={(_, val) => val && setRole(val)}
-                  size="sm"
-                >
-                  <Option value="admin">Admin</Option>
-                  <Option value="member">Member</Option>
-                  <Option value="viewer">Viewer</Option>
-                </Select>
-                <Button
-                  type="submit"
-                  loading={createMutation.isPending}
-                  size="sm"
-                >
-                  Send Invite
-                </Button>
-              </Stack>
-            </form>
-          </Stack>
-        </Card>
-      </Grid>
+    <div className="grid gap-4 md:grid-cols-12">
+      <Card className="p-4 md:col-span-5">
+        <h3 className="mb-3 text-lg font-semibold">Create invite</h3>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <Input
+            type="email"
+            label="Email address"
+            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Select label="Role" value={role} onValueChange={setRole}>
+            <Option value="admin">Admin</Option>
+            <Option value="member">Member</Option>
+            <Option value="viewer">Viewer</Option>
+          </Select>
+          <Button type="submit" loading={createMutation.isPending}>
+            Send invite
+          </Button>
+        </form>
+      </Card>
 
-      {/* List: 7/12 on desktop, full width on mobile */}
-      <Grid xs={12} md={7}>
+      <div className="md:col-span-7">
         {invites && invites.length > 0 ? (
-          <Card variant="outlined">
-            <Typography level="title-md" sx={{ mb: 1.5 }}>
-              Pending Invites
-            </Typography>
-            <Table
-              stripe="odd"
-              hoverRow
-              sx={{
-                "--TableCell-paddingX": "0.75rem",
-                "--TableCell-paddingY": "0.375rem",
-                fontSize: "0.875rem",
-              }}
-            >
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th style={{ width: "40px" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Card className="p-4">
+            <h3 className="mb-3 text-lg font-semibold">Pending invites</h3>
+            <Table>
+              <TableHeader className={stackTable.head}>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {invites.map((invite) => (
-                  <tr key={invite.id}>
-                    <td>
-                      <Typography level="body-xs">{invite.email}</Typography>
-                    </td>
-                    <td>
-                      <Typography level="body-xs">{invite.role}</Typography>
-                    </td>
-                    <td>
-                      <Typography
-                        level="body-xs"
-                        color={invite.used_at ? "success" : "warning"}
-                      >
-                        {invite.used_at ? "Used" : "Pending"}
-                      </Typography>
-                    </td>
-                    <td>
+                  <TableRow key={invite.id} className={stackTable.row}>
+                    <TableCell data-label="Email" className={stackTable.cell}>
+                      {invite.email}
+                    </TableCell>
+                    <TableCell data-label="Role" className={stackTable.cell}>
+                      {invite.role}
+                    </TableCell>
+                    <TableCell data-label="Status" className={stackTable.cell}>
+                      {invite.used_at ? "Used" : "Pending"}
+                    </TableCell>
+                    <TableCell className={stackTable.cell}>
                       <IconButton
                         size="sm"
-                        variant="soft"
-                        color="danger"
+                        variant="ghost"
+                        className="text-danger"
                         onClick={() => revokeMutation.mutate(invite.id)}
-                        loading={revokeMutation.isPending}
-                        title="Revoke invite"
+                        disabled={revokeMutation.isPending}
+                        aria-label={`Revoke invite for ${invite.email}`}
                       >
-                        <TrashIcon width={14} height={14} />
+                        <Trash2 className="size-4" aria-hidden="true" />
                       </IconButton>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
             </Table>
           </Card>
         ) : (
-          <Card variant="soft">
-            <Alert color="primary" variant="plain">
-              No pending invites
-            </Alert>
-          </Card>
+          <AdminNotice>No pending invites</AdminNotice>
         )}
-      </Grid>
-    </Grid>
+      </div>
+    </div>
   );
 }

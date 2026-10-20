@@ -12,13 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
-import Alert from "@mui/joy/Alert";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { verifyTwoFactorLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
@@ -50,7 +44,7 @@ export default function TwoFactorPage() {
         title="Two-factor session expired"
         subtitle="Start the sign-in flow again to receive a fresh prompt."
       >
-        <Link href="/login" style={{ textDecoration: "underline" }}>
+        <Link href="/login" className="underline">
           Back to sign-in
         </Link>
       </AuthCard>
@@ -74,37 +68,29 @@ export default function TwoFactorPage() {
       subtitle="Enter the 6-digit code from your authenticator app, or a backup code."
     >
       {error && (
-        <Alert color="danger" variant="soft">
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {error}
-        </Alert>
+        </p>
       )}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2.5}>
-          <FormControl error={!!formState.errors.code}>
-            <FormLabel>Code</FormLabel>
-            <Input
-              autoFocus
-              slotProps={{
-                input: {
-                  autoComplete: "one-time-code",
-                  inputMode: "numeric",
-                  ...register("code"),
-                },
-              }}
-            />
-            {formState.errors.code && (
-              <FormHelperText>{formState.errors.code.message}</FormHelperText>
-            )}
-          </FormControl>
-          <Button
-            type="submit"
-            size="lg"
-            loading={formState.isSubmitting}
-            fullWidth
-          >
-            Verify
-          </Button>
-        </Stack>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-4"
+      >
+        <Input
+          label="Code"
+          autoFocus
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          error={formState.errors.code?.message}
+          {...register("code")}
+        />
+        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+          Verify
+        </Button>
       </form>
     </AuthCard>
   );

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useSessionBootstrap } from "@/hooks/useSession";
 import { useModals } from "@/stores/modals";
+import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
 import { SideNav } from "./SideNav";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
@@ -78,6 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
+        <BrandingStyle />
         <SideNav />
         <div className="flex min-h-dvh min-w-0 flex-col md:pl-16">
           <TopBar />

@@ -9,13 +9,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
-import Alert from "@mui/joy/Alert";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { requestMagicLink } from "@/lib/api/auth";
 import { formatApiError } from "@/lib/api/errors";
@@ -47,7 +41,7 @@ export default function MagicLinkPage() {
         title="Check your inbox"
         subtitle="If an account exists for that email, a sign-in link is on its way. The link expires in 15 minutes."
       >
-        <Link href="/login" style={{ textDecoration: "underline" }}>
+        <Link href="/login" className="underline">
           Back to sign-in
         </Link>
       </AuthCard>
@@ -60,37 +54,32 @@ export default function MagicLinkPage() {
       subtitle="We'll email you a one-time link — no password needed."
     >
       {error && (
-        <Alert color="danger" variant="soft">
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {error}
-        </Alert>
+        </p>
       )}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2.5}>
-          <FormControl error={!!formState.errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              autoFocus
-              slotProps={{
-                input: { autoComplete: "email", ...register("email") },
-              }}
-            />
-            {formState.errors.email && (
-              <FormHelperText>{formState.errors.email.message}</FormHelperText>
-            )}
-          </FormControl>
-          <Button
-            type="submit"
-            size="lg"
-            loading={formState.isSubmitting}
-            fullWidth
-          >
-            Email me a link
-          </Button>
-          <Link href="/login" style={{ textDecoration: "underline" }}>
-            Back to sign-in
-          </Link>
-        </Stack>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-4"
+      >
+        <Input
+          label="Email"
+          type="email"
+          autoFocus
+          autoComplete="email"
+          error={formState.errors.email?.message}
+          {...register("email")}
+        />
+        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+          Email me a link
+        </Button>
+        <Link href="/login" className="underline">
+          Back to sign-in
+        </Link>
       </form>
     </AuthCard>
   );
