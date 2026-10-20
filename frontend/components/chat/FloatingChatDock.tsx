@@ -12,20 +12,13 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
-import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useChatDock } from "@/stores/chatDock";
 import { useChatRealtime, useChannels, useDmThreads } from "@/hooks/useChat";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
-// Heavy children (message list, composer, launcher) load on demand.
-const ChatHead = dynamic(() => import("./ChatHead").then((m) => m.ChatHead), {
-  ssr: false,
-});
-const ChatLauncher = dynamic(
-  () => import("./ChatLauncher").then((m) => m.ChatLauncher),
-  { ssr: false },
-);
+import { ChatHead } from "./ChatHead";
+import { ChatLauncher } from "./ChatLauncher";
 import { Drawer } from "@/components/ui/Drawer";
 import { spring, fast } from "@/components/ui/motion";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";

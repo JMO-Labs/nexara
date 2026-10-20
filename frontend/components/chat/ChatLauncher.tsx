@@ -1,21 +1,47 @@
 "use client";
 /**
  * @file components/chat/ChatLauncher.tsx
- * @brief Floating chat launcher pill. Desktop: click toggles an inline
- *        popover (role=menu) listing recent channels + DMs. Mobile: opens
- *        bottom drawer. Calls useChatDock.openThread on thread selection.
+ * @brief Chat launcher drawer listing recent channels + DMs. Opened via
+ *        useChatDock.launcherOpen. Desktop: right drawer; mobile: bottom.
+ *        Selecting a thread calls useChatDock.openThread.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
-import Stack from "@mui/joy/Stack";
-import { Skeleton } from "@mui/joy";
-import { Avatar } from "@/components/ui";
-import { Drawer } from "@/components/ui/Drawer";
+import { Avatar, Skeleton, Drawer } from "@/components/ui";
 import { useChatDock } from "@/stores/chatDock";
 import { useChannels, useDmThreads, useChatRealtime } from "@/hooks/useChat";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
+
+interface RowProps {
+  id: string;
+  name: string;
+  label: string;
+  src?: string;
+  unread: number;
+  onSelect: (id: string) => void;
+}
+
+/** @brief One selectable thread row with unread dot. */
+function Row({ id, name, label, src, unread, onSelect }: RowProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(id)}
+      aria-label={label}
+      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm outline-none hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <Avatar size="sm" name={name} src={src} />
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      {unread > 0 && (
+        <span
+          role="img"
+          aria-label={`${unread} unread`}
+          className="size-2 shrink-0 rounded-full bg-accent"
+        />
+      )}
+    </button>
+  );
+}
 
 interface ThreadListProps {
   channels: ChatChannel[];
@@ -25,6 +51,7 @@ interface ThreadListProps {
   onSelect: (id: string) => void;
 }
 
+/** @brief Grouped channel and DM lists. */
 function ThreadList({
   channels,
   dms,
@@ -33,163 +60,71 @@ function ThreadList({
   onSelect,
 }: ThreadListProps) {
   const grouped = channels.filter((c) => c.channel_type !== "direct");
-  const firstItemRef = React.useRef<HTMLDivElement | null>(null);
-
-  // Fix 5: auto-focus first item when list mounts
-  React.useEffect(() => {
-    firstItemRef.current?.focus();
-  }, []);
-
-  // Fix 9: show skeleton rows while loading
   if (isLoading) {
     return (
-      <Stack spacing={0.5} sx={{ minWidth: 220, p: 1 }}>
+      <div className="flex min-w-56 flex-col gap-1 p-2">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} variant="rectangular" height={36} />
+          <Skeleton key={i} height={36} />
         ))}
-      </Stack>
+      </div>
     );
   }
-
-  const allEmpty = grouped.length === 0 && dms.length === 0;
-
+  if (grouped.length === 0 && dms.length === 0) {
+    return <p className="p-3 text-sm text-muted">No conversations yet</p>;
+  }
   return (
-    <Stack spacing={0.5} sx={{ minWidth: 220 }}>
+    <div className="flex min-w-56 flex-col gap-1">
       {grouped.length > 0 && (
         <>
-          <Typography
-            level="body-xs"
-            textColor="text.tertiary"
-            sx={{ px: 1, pt: 0.5 }}
-          >
+          <h3 className="px-2 pt-1 text-xs font-semibold text-muted">
             Channels
-          </Typography>
-          {grouped.map((c, i) => (
-            <Box
+          </h3>
+          {grouped.map((c) => (
+            <Row
               key={c.id}
-              ref={i === 0 && dms.length === 0 ? firstItemRef : undefined}
-              role="menuitem"
-              tabIndex={0}
-              onClick={() => onSelect(c.id)}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") && onSelect(c.id)
-              }
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1.5,
-                py: 0.75,
-                borderRadius: "sm",
-                cursor: "pointer",
-                "&:hover": { bgcolor: "background.level1" },
-                outline: "none",
-                "&:focus-visible": { boxShadow: "sm" },
-              }}
-              aria-label={`Open channel ${c.name}`}
-            >
-              <Avatar size="sm">{c.name.charAt(0).toUpperCase()}</Avatar>
-              <Typography level="body-sm" noWrap sx={{ flex: 1 }}>
-                # {c.name}
-              </Typography>
-              {/* Fix 10: unread dot */}
-              {(unread[c.id] ?? 0) > 0 && (
-                <Box
-                  aria-label={`${unread[c.id]} unread`}
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    bgcolor: "danger.500",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-            </Box>
+              id={c.id}
+              name={`# ${c.name}`}
+              label={`Open channel ${c.name}`}
+              unread={unread[c.id] ?? 0}
+              onSelect={onSelect}
+            />
           ))}
         </>
       )}
       {dms.length > 0 && (
         <>
-          <Typography
-            level="body-xs"
-            textColor="text.tertiary"
-            sx={{ px: 1, pt: 0.5 }}
-          >
+          <h3 className="px-2 pt-1 text-xs font-semibold text-muted">
             Direct messages
-          </Typography>
-          {dms.map((d, i) => (
-            <Box
+          </h3>
+          {dms.map((d) => (
+            <Row
               key={d.channel_id}
-              ref={i === 0 ? firstItemRef : undefined}
-              role="menuitem"
-              tabIndex={0}
-              onClick={() => onSelect(d.channel_id)}
-              onKeyDown={(e) =>
-                (e.key === "Enter" || e.key === " ") && onSelect(d.channel_id)
-              }
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1.5,
-                py: 0.75,
-                borderRadius: "sm",
-                cursor: "pointer",
-                "&:hover": { bgcolor: "background.level1" },
-                outline: "none",
-                "&:focus-visible": { boxShadow: "sm" },
-              }}
-              aria-label={`Open conversation with ${d.peer.display_name}`}
-            >
-              <Avatar src={d.peer.avatar_url ?? undefined} size="sm">
-                {d.peer.display_name.charAt(0)}
-              </Avatar>
-              <Typography level="body-sm" noWrap sx={{ flex: 1 }}>
-                {d.peer.display_name}
-              </Typography>
-              {/* Fix 10: unread dot */}
-              {(unread[d.channel_id] ?? 0) > 0 && (
-                <Box
-                  aria-label={`${unread[d.channel_id]} unread`}
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    bgcolor: "danger.500",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-            </Box>
+              id={d.channel_id}
+              name={d.peer.display_name}
+              label={`Open conversation with ${d.peer.display_name}`}
+              src={d.peer.avatar_url ?? undefined}
+              unread={unread[d.channel_id] ?? 0}
+              onSelect={onSelect}
+            />
           ))}
         </>
       )}
-      {allEmpty && (
-        <Typography level="body-sm" textColor="text.tertiary" sx={{ p: 1.5 }}>
-          No conversations yet
-        </Typography>
-      )}
-    </Stack>
+    </div>
   );
 }
 
 /**
- * @brief Right-side slide-out drawer with the recent channels + DMs.
- *        Triggered externally via useChatDock.launcherOpen (RightRail tab).
- *        Desktop: right drawer. Mobile: bottom drawer.
+ * @brief Drawer with recent channels + DMs; driven by useChatDock.
+ * @return drawer element
  */
 export function ChatLauncher() {
   const launcherOpen = useChatDock((s) => s.launcherOpen);
   const setLauncherOpen = useChatDock((s) => s.setLauncherOpen);
   const openThread = useChatDock((s) => s.openThread);
-
   const isMobile = useIsMobile();
-
   const { data: channels = [], isLoading: chLoading } = useChannels();
   const { data: dms = [], isLoading: dmLoading } = useDmThreads();
   const { unread } = useChatRealtime();
-  const isLoading = chLoading || dmLoading;
 
   const handleSelect = (id: string) => {
     openThread(id);
@@ -202,17 +137,14 @@ export function ChatLauncher() {
       onClose={() => setLauncherOpen(false)}
       side={isMobile ? "bottom" : "right"}
       title="Chat"
-      width={360}
     >
-      <Box sx={{ p: 1 }}>
-        <ThreadList
-          channels={channels}
-          dms={dms}
-          unread={unread}
-          isLoading={isLoading}
-          onSelect={handleSelect}
-        />
-      </Box>
+      <ThreadList
+        channels={channels}
+        dms={dms}
+        unread={unread}
+        isLoading={chLoading || dmLoading}
+        onSelect={handleSelect}
+      />
     </Drawer>
   );
 }
