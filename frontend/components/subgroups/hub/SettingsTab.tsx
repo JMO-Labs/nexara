@@ -5,11 +5,6 @@
 "use client";
 
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
 import { Input, Textarea, Select, Option, Button } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useUpdateSubgroup } from "@/hooks/useSubgroups";
@@ -43,11 +38,9 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
 
   if (!canManage) {
     return (
-      <Stack spacing={2}>
-        <Typography level="body-md" sx={{ color: "text.secondary" }}>
-          You don&apos;t have permission to manage group settings.
-        </Typography>
-      </Stack>
+      <p className="text-muted">
+        You don&apos;t have permission to manage group settings.
+      </p>
     );
   }
 
@@ -82,105 +75,88 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   };
 
   return (
-    <Stack component="form" spacing={3} onSubmit={submit}>
-      <FormControl>
-        <FormLabel>Group name</FormLabel>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </FormControl>
+    <form className="flex max-w-xl flex-col gap-6" onSubmit={submit}>
+      <Input
+        label="Group name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
 
-      <FormControl>
-        <FormLabel>Description</FormLabel>
-        <Textarea
-          minRows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </FormControl>
+      <Textarea
+        label="Description"
+        rows={3}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+      />
 
-      <FormControl>
-        <FormLabel>Join policy</FormLabel>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">Join policy</span>
         <Select
-          value={joinPolicy}
-          onChange={(_e, v) =>
-            setJoinPolicy((v as UpdateSubgroupBody["join_policy"]) ?? "open")
+          label="Join policy"
+          value={joinPolicy ?? "open"}
+          onValueChange={(v) =>
+            setJoinPolicy(v as UpdateSubgroupBody["join_policy"])
           }
         >
           <Option value="open">Open (anyone can join)</Option>
           <Option value="invite_only">Invite only</Option>
           <Option value="admin_approval">Admin approval required</Option>
         </Select>
-      </FormControl>
+      </div>
 
-      <FormControl>
-        <FormLabel>Private group</FormLabel>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">Private group</span>
         <Select
+          label="Private group"
           value={isPrivate ? "true" : "false"}
-          onChange={(_e, v) => setIsPrivate(v === "true")}
+          onValueChange={(v) => setIsPrivate(v === "true")}
         >
           <Option value="false">Visible to all members</Option>
           <Option value="true">Visible only to members</Option>
         </Select>
-        <FormHelperText>
+        <p className="text-sm text-muted">
           Private groups only appear to members in the directory.
-        </FormHelperText>
-      </FormControl>
+        </p>
+      </div>
 
-      <FormControl>
-        <FormLabel>Logo (avatar URL)</FormLabel>
-        <Input
-          value={avatarUrl}
-          onChange={(e) => setAvatarUrl(e.target.value)}
-          placeholder="https://example.com/logo.png"
-        />
-      </FormControl>
+      <Input
+        label="Logo (avatar URL)"
+        value={avatarUrl}
+        onChange={(e) => setAvatarUrl(e.target.value)}
+        placeholder="https://example.com/logo.png"
+      />
 
-      <FormControl>
-        <FormLabel>Cover image</FormLabel>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold">Cover image</span>
         {coverMediaId && (
-          <Stack
-            sx={{
-              position: "relative",
-              width: "100%",
-              height: "150px",
-              mb: 1,
-              borderRadius: "md",
-              overflow: "hidden",
-              bg: "neutral.100",
-            }}
-          >
+          <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-surface">
             <MediaThumb mediaId={coverMediaId} alt="Cover preview" />
-          </Stack>
+          </div>
         )}
         <Button
-          variant="outlined"
-          component="label"
-          sx={{ alignSelf: "flex-start" }}
+          type="button"
+          variant="outline"
+          className="self-start"
           disabled={mediaUpload.isPending}
+          onClick={() => fileInputRef.current?.click()}
         >
           {mediaUpload.isPending ? "Uploading…" : "Upload cover"}
-          <input
-            type="file"
-            accept="image/*"
-            hidden
-            ref={fileInputRef}
-            onChange={handleCoverUpload}
-          />
         </Button>
-      </FormControl>
+        <input
+          type="file"
+          accept="image/*"
+          hidden
+          aria-label="Cover image file"
+          ref={fileInputRef}
+          onChange={handleCoverUpload}
+        />
+      </div>
 
-      <Button
-        type="submit"
-        variant="solid"
-        size="lg"
-        loading={update.isPending}
-      >
+      <Button type="submit" size="lg" loading={update.isPending}>
         Save changes
       </Button>
-    </Stack>
+    </form>
   );
 }
 

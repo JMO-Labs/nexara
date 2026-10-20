@@ -8,10 +8,7 @@
  */
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { X } from "lucide-react";
 import { IconButton, Skeleton } from "@/components/ui";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
@@ -93,62 +90,27 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
   const typingCount = channelId ? (typing[channelId]?.length ?? 0) : 0;
 
   return (
-    <Stack
-      sx={{
-        height: "100%",
-        minHeight: 0,
-        bgcolor: "background.body",
-        borderLeft: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{
-          px: 2,
-          py: 1.5,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          flexShrink: 0,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            level="title-sm"
-            sx={{
-              fontFamily: "var(--font-display)",
-              textTransform: "uppercase",
-              letterSpacing: "0.14em",
-              color: "text.tertiary",
-              fontSize: "10px",
-            }}
-          >
-            Group chat
-          </Typography>
-          <Typography level="title-md" noWrap>
-            {subgroup.name}
-          </Typography>
-        </Box>
+    <div className="flex h-full min-h-0 flex-col border-l border-current/15 bg-bg">
+      <div className="flex shrink-0 items-center justify-between border-b border-current/15 px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-xs text-muted">Group chat</p>
+          <h2 className="truncate text-base font-semibold">{subgroup.name}</h2>
+        </div>
         <IconButton
           size="sm"
-          variant="plain"
-          color="neutral"
+          variant="ghost"
           aria-label="Close chat"
           onClick={onClose}
         >
-          <XMarkIcon style={{ width: 18, height: 18 }} />
+          <X className="size-4" aria-hidden />
         </IconButton>
-      </Stack>
+      </div>
 
-      <Box
-        sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
-      >
+      <div className="flex min-h-0 flex-1 flex-col">
         {channelLoading || !channelId ? (
-          <Box sx={{ p: 2 }}>
+          <div className="p-4">
             <Skeleton height={300} />
-          </Box>
+          </div>
         ) : (
           <MessageList
             messages={messages}
@@ -160,22 +122,17 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
             onReply={(m) => setReplyTo(m)}
           />
         )}
-      </Box>
+      </div>
 
       {typingCount > 0 && (
-        <Typography
-          level="body-xs"
-          sx={{ px: 2, py: 0.5, color: "text.tertiary", flexShrink: 0 }}
-        >
+        <p className="shrink-0 px-4 py-1 text-xs text-muted">
           {typingCount === 1
             ? "Someone is typing…"
             : `${typingCount} people typing…`}
-        </Typography>
+        </p>
       )}
 
-      <Box
-        sx={{ flexShrink: 0, borderTop: "1px solid", borderColor: "divider" }}
-      >
+      <div className="shrink-0 border-t border-current/15">
         <Composer
           disabled={!channelId}
           onSend={handleSend}
@@ -191,8 +148,8 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
           }
           onCancelReply={() => setReplyTo(null)}
         />
-      </Box>
-    </Stack>
+      </div>
+    </div>
   );
 }
 

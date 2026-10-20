@@ -2,17 +2,17 @@
  * @file components/subgroups/hub/tabs.ts
  * @brief Group hub tab registry + metadata.
  */
-import type { ComponentType, SVGProps } from "react";
+import type { LucideIcon } from "lucide-react";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 import {
-  HomeIcon,
-  CalendarDaysIcon,
-  PhotoIcon,
-  FilmIcon,
-  NewspaperIcon,
-  UsersIcon,
-  Cog6ToothIcon,
-} from "@heroicons/react/24/outline";
+  Home,
+  CalendarDays,
+  Image as ImageIcon,
+  Film,
+  Newspaper,
+  Users,
+  Settings,
+} from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { EventsTab } from "./EventsTab";
 import { GalleriesTab } from "./GalleriesTab";
@@ -21,7 +21,7 @@ import { PostsTab } from "./PostsTab";
 import { MembersTab } from "./MembersTab";
 import { SettingsTab } from "./SettingsTab";
 
-export type IconType = ComponentType<SVGProps<SVGSVGElement>>;
+export type IconType = LucideIcon;
 
 export interface GroupTab {
   id: string;
@@ -32,26 +32,26 @@ export interface GroupTab {
 }
 
 export const GROUP_TABS: GroupTab[] = [
-  { id: "overview", label: "Overview", Icon: HomeIcon, Component: OverviewTab },
+  { id: "overview", label: "Overview", Icon: Home, Component: OverviewTab },
   {
     id: "events",
     label: "Events",
-    Icon: CalendarDaysIcon,
+    Icon: CalendarDays,
     Component: EventsTab,
   },
   {
     id: "galleries",
     label: "Galleries",
-    Icon: PhotoIcon,
+    Icon: ImageIcon,
     Component: GalleriesTab,
   },
-  { id: "media", label: "Media", Icon: FilmIcon, Component: MediaTab },
-  { id: "posts", label: "Posts", Icon: NewspaperIcon, Component: PostsTab },
-  { id: "members", label: "Members", Icon: UsersIcon, Component: MembersTab },
+  { id: "media", label: "Media", Icon: Film, Component: MediaTab },
+  { id: "posts", label: "Posts", Icon: Newspaper, Component: PostsTab },
+  { id: "members", label: "Members", Icon: Users, Component: MembersTab },
   {
     id: "settings",
     label: "Settings",
-    Icon: Cog6ToothIcon,
+    Icon: Settings,
     Component: SettingsTab,
     visible: (s) => s.my_role === "owner" || s.my_role === "moderator",
   },
