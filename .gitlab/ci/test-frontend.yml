@@ -10,6 +10,9 @@
 test:frontend:
   stage: test
   image: $NODE_IMAGE
+  variables:
+    # Node 25 global localStorage stub shadows jsdom without this flag.
+    NODE_OPTIONS: "--no-experimental-webstorage"
   extends:
     - .cache:node-rw
   needs:

@@ -1,6 +1,7 @@
+import { expect, test } from "vitest";
 import { safeInternalLink } from "@/lib/safeLink";
 
-test.each([
+test.each<[unknown, string | null]>([
   ["/app/post/1?x=1#c", "/app/post/1?x=1#c"],
   ["javascript:alert(1)", null],
   ["https://evil.com", null],
