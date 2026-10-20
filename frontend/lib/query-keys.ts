@@ -93,6 +93,7 @@ export const qk = {
   home: {
     layout: () => ["home-layout"] as const,
     summary: () => ["home-summary"] as const,
+    feed: () => ["home-feed"] as const,
     media: (limit?: number) => ["home-media", limit ?? 24] as const,
     activity: (limit?: number) => ["home-activity", limit ?? 30] as const,
   },
