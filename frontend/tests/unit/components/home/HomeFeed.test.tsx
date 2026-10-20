@@ -8,7 +8,7 @@ import type { FeedItem } from "@/lib/api/home";
 
 const state = vi.hoisted(() => ({
   hook: {} as Record<string, unknown>,
-  io: null as null | (() => void),
+  io: null as null | ((entries: IntersectionObserverEntry[]) => void),
 }));
 vi.mock("@/hooks/useHomeFeed", () => ({ useHomeFeed: () => state.hook }));
 vi.mock("@/components/feed/PostComposer", () => ({

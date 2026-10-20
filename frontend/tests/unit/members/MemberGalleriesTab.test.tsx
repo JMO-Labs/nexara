@@ -73,9 +73,7 @@ const queryClient = new QueryClient({
 
 function wrap(ui: React.ReactNode) {
   return render(
-    <QueryClientProvider client={queryClient}>
-      {ui}
-    </QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 }
 

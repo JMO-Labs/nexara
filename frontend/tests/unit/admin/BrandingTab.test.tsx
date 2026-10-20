@@ -45,8 +45,7 @@ describe("BrandingTab", () => {
       color_accent: "#8b5cf6",
     });
     vi.mocked(api.updateBranding).mockResolvedValue({
-      ...base,
-      community_name: "Soto crew",
+      branding: { ...base, community_name: "Soto crew" },
     });
     wrap(<BrandingTab />);
     const name = await screen.findByLabelText("Community name");
