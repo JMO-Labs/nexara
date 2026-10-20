@@ -8,9 +8,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const push = vi.fn();
+let search = "";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(search),
 }));
 vi.mock("next/link", () => ({
   default: ({
@@ -35,6 +36,7 @@ import * as flow from "@/lib/auth/flow";
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    search = "";
     vi.mocked(api.getAuthConfig).mockResolvedValue({
       oidc_enabled: true,
       registration_enabled: true,
@@ -69,5 +71,20 @@ describe("LoginPage", () => {
     render(<LoginPage />);
     const link = await screen.findByRole("link", { name: "Google" });
     expect(link.getAttribute("href")).toBe("/oauth/g");
+  });
+
+  it.each([
+    ["https://evil.example", "/app"],
+    ["//evil.example", "/app"],
+    ["/app/events", "/app/events"],
+  ])("next=%s navigates to %s", async (next, expected) => {
+    search = `next=${encodeURIComponent(next)}`;
+    vi.mocked(api.login).mockResolvedValue({} as never);
+    vi.mocked(flow.completeLogin).mockResolvedValue({ kind: "ok" } as never);
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
+    await userEvent.type(screen.getByLabelText("Password"), "pw");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(expected));
   });
 });

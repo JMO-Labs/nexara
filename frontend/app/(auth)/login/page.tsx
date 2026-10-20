@@ -15,6 +15,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { login as apiLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
+import { safeInternalLink } from "@/lib/safeLink";
 import { formatApiError } from "@/lib/api/errors";
 
 const Schema = z.object({
@@ -26,7 +27,7 @@ type FormData = z.infer<typeof Schema>;
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/app";
+  const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({

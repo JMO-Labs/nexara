@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { verifyTwoFactorLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
+import { safeInternalLink } from "@/lib/safeLink";
 import { formatApiError } from "@/lib/api/errors";
 
 const Schema = z.object({
@@ -35,7 +36,7 @@ export default function TwoFactorPage() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
-  const next = params.get("next") ?? "/app";
+  const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
