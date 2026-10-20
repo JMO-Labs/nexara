@@ -5,8 +5,7 @@
  *        Comment thread rendered conditionally when expanded.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
@@ -26,6 +25,14 @@ export interface PostCardProps {
   truncateBody?: boolean;
 }
 
+/**
+ * @brief Feed card for a single post.
+ * @param post the post
+ * @param onOpen open-detail callback (media click)
+ * @param defaultCommentsOpen start with comments expanded
+ * @param truncateBody clamp long bodies
+ * @return card element
+ */
 export function PostCard({
   post,
   onOpen,
@@ -43,66 +50,63 @@ export function PostCard({
   const confirm = useConfirmDialog((s) => s.confirm);
 
   return (
-    <Card sx={{ p: 2 }}>
-      <Stack spacing={1.5}>
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <PostHeader
-            post={post}
-            isAuthor={isAuthor}
-            isAdmin={isAdmin}
-            onDelete={async () => {
-              const ok = await confirm({
-                title: "Delete post?",
-                message: "This post will be permanently deleted.",
-                confirmLabel: "Delete",
-                tone: "danger",
-              });
-              if (ok) delMut.mutate(post.id);
-            }}
-          />
-          <SourceBadge
-            subgroupId={post.subgroup_id ?? null}
-            subgroupName={post.subgroup_name ?? null}
-            subgroupSlug={post.subgroup_slug ?? null}
-          />
-        </div>
-        <PostBody content={post.content} truncate={truncateBody} />
-        {post.media.length > 0 ? (
-          <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
-        ) : null}
-        <ReactionRow
-          reactions={post.reactions}
-          commentCount={post.comment_count}
-          onReact={(e) => reactMut.mutate(e)}
-          onCommentClick={() => setCommentsOpen((v) => !v)}
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <PostHeader
+          post={post}
+          isAuthor={isAuthor}
+          isAdmin={isAdmin}
+          onDelete={async () => {
+            const ok = await confirm({
+              title: "Delete post?",
+              message: "This post will be permanently deleted.",
+              confirmLabel: "Delete",
+              tone: "danger",
+            });
+            if (ok) delMut.mutate(post.id);
+          }}
         />
-        {commentsOpen ? (
-          <CommentThread
-            postId={post.id}
-            expanded={commentsExpanded}
-            onOverflowChange={setCommentsOverflowing}
-          />
-        ) : null}
-        {commentsOpen &&
-        post.comment_count > 0 &&
-        (commentsOverflowing || commentsExpanded) ? (
-          <Button
-            variant="plain"
-            size="sm"
-            onClick={() => setCommentsExpanded((v) => !v)}
-            startDecorator={
-              commentsExpanded ? (
-                <ChevronUpIcon width={14} />
-              ) : (
-                <ChevronDownIcon width={14} />
-              )
-            }
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {commentsExpanded ? "Collapse comments" : "Expand comments"}
-          </Button>
-        ) : null}
-      </Stack>
+        <SourceBadge
+          subgroupId={post.subgroup_id ?? null}
+          subgroupName={post.subgroup_name ?? null}
+          subgroupSlug={post.subgroup_slug ?? null}
+        />
+      </div>
+      <PostBody content={post.content} truncate={truncateBody} />
+      {post.media.length > 0 ? (
+        <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
+      ) : null}
+      <ReactionRow
+        reactions={post.reactions}
+        commentCount={post.comment_count}
+        onReact={(e) => reactMut.mutate(e)}
+        onCommentClick={() => setCommentsOpen((v) => !v)}
+      />
+      {commentsOpen ? (
+        <CommentThread
+          postId={post.id}
+          expanded={commentsExpanded}
+          onOverflowChange={setCommentsOverflowing}
+        />
+      ) : null}
+      {commentsOpen &&
+      post.comment_count > 0 &&
+      (commentsOverflowing || commentsExpanded) ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          aria-expanded={commentsExpanded}
+          onClick={() => setCommentsExpanded((v) => !v)}
+        >
+          {commentsExpanded ? (
+            <ChevronUp className="size-4" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="size-4" aria-hidden="true" />
+          )}
+          {commentsExpanded ? "Collapse comments" : "Expand comments"}
+        </Button>
+      ) : null}
     </Card>
   );
 }
