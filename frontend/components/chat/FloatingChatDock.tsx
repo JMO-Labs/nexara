@@ -6,20 +6,26 @@
  *        Mobile: single bottom drawer (only one thread at a time).
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
 import {
   AnimatePresence,
   motion,
   useReducedMotion,
   type Variants,
 } from "framer-motion";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useChatDock } from "@/stores/chatDock";
 import { useChatRealtime, useChannels, useDmThreads } from "@/hooks/useChat";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { ChatHead } from "./ChatHead";
-import { ChatLauncher } from "./ChatLauncher";
+
+// Heavy children (message list, composer, launcher) load on demand.
+const ChatHead = dynamic(() => import("./ChatHead").then((m) => m.ChatHead), {
+  ssr: false,
+});
+const ChatLauncher = dynamic(
+  () => import("./ChatLauncher").then((m) => m.ChatLauncher),
+  { ssr: false },
+);
 import { Drawer } from "@/components/ui/Drawer";
 import { spring, fast } from "@/components/ui/motion";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
@@ -89,7 +95,7 @@ export function FloatingChatDock() {
     // Mobile: single bottom drawer for active thread + launcher drawer
     const activeId = openThreadIds[openThreadIds.length - 1] ?? null;
     return (
-      <Box data-testid="floating-chat-dock">
+      <div data-testid="floating-chat-dock">
         <UnreadSync />
         <ChatLauncher />
         {activeId && (
@@ -105,30 +111,19 @@ export function FloatingChatDock() {
             />
           </Drawer>
         )}
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box
+    <div
       data-testid="floating-chat-dock"
-      sx={{
-        position: "fixed",
-        bottom: 16,
-        right: 64,
-        zIndex: 1200,
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "flex-end",
-        gap: 1,
-        pointerEvents: "none",
-        "& > *": { pointerEvents: "auto" },
-      }}
+      className="pointer-events-none fixed right-16 bottom-4 z-[1200] flex flex-row items-end gap-2 *:pointer-events-auto"
     >
       <UnreadSync />
       <ChatLauncher />
       {/* Open chat heads — left to right */}
-      <Stack direction="row" spacing={1} alignItems="flex-end">
+      <div className="flex flex-row items-end gap-2">
         <AnimatePresence initial={false}>
           {openThreadIds.map((id) => (
             <motion.div
@@ -137,11 +132,7 @@ export function FloatingChatDock() {
               initial="hidden"
               animate="show"
               exit="exit"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-              }}
+              className="flex flex-col items-end"
             >
               <ChatHead
                 threadId={id}
@@ -150,7 +141,7 @@ export function FloatingChatDock() {
             </motion.div>
           ))}
         </AnimatePresence>
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }

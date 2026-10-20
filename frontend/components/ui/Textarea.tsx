@@ -1,43 +1,33 @@
 "use client";
 /**
  * @file components/ui/Textarea.tsx
- * @brief Joy Textarea wrapper with optional editorial label.
+ * @brief Labelled textarea with error and hint.
  */
 import * as React from "react";
-import JoyTextarea, {
-  type TextareaProps as JoyTextareaProps,
-} from "@mui/joy/Textarea";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
+import { Field, controlClass, type FieldProps } from "./Field";
+import { cn } from "@/lib/utils";
 
-export type TextareaProps = JoyTextareaProps & {
-  label?: React.ReactNode;
-  helperText?: React.ReactNode;
-};
+export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> &
+  FieldProps;
 
-export const Textarea = React.forwardRef<HTMLDivElement, TextareaProps>(
-  function Textarea({ label, helperText, error, ...rest }, ref) {
-    const ta = <JoyTextarea ref={ref as never} error={error} {...rest} />;
-    if (!label && !helperText) return ta;
+/**
+ * @brief Textarea primitive.
+ * @param props native textarea props plus label, error, hint
+ * @return labelled textarea
+ */
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  function Textarea({ label, error, hint, className, id, ...rest }, ref) {
     return (
-      <FormControl error={error}>
-        {label && (
-          <FormLabel
-            sx={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 500,
-              letterSpacing: "0.02em",
-              fontSize: "0.78rem",
-              textTransform: "uppercase",
-            }}
-          >
-            {label}
-          </FormLabel>
+      <Field label={label} error={error} hint={hint} id={id}>
+        {(a) => (
+          <textarea
+            ref={ref}
+            className={cn(controlClass, "min-h-20 py-2", className)}
+            {...a}
+            {...rest}
+          />
         )}
-        {ta}
-        {helperText && <FormHelperText>{helperText}</FormHelperText>}
-      </FormControl>
+      </Field>
     );
   },
 );

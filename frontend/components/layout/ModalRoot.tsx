@@ -5,14 +5,31 @@
  *        imperative modals (driven by useModals), toasts.
  *        Handles create-post, create-event, create-gallery modal keys.
  */
-import * as React from "react";
+import dynamic from "next/dynamic";
 import { GlobalCommandPalette } from "@/components/search/GlobalCommandPalette";
 import { ToastRoot } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
-import { PostComposer } from "@/components/feed/PostComposer";
-import { EventCreateModal } from "@/components/events/EventCreateModal";
-import { GalleryCreateModal } from "@/components/galleries/GalleryCreateModal";
 import { useModals } from "@/stores/modals";
+
+// Lazy-loaded so the shell does not pull in heavy feature modules at load.
+const PostComposer = dynamic(
+  () => import("@/components/feed/PostComposer").then((m) => m.PostComposer),
+  { ssr: false },
+);
+const EventCreateModal = dynamic(
+  () =>
+    import("@/components/events/EventCreateModal").then(
+      (m) => m.EventCreateModal,
+    ),
+  { ssr: false },
+);
+const GalleryCreateModal = dynamic(
+  () =>
+    import("@/components/galleries/GalleryCreateModal").then(
+      (m) => m.GalleryCreateModal,
+    ),
+  { ssr: false },
+);
 
 export function ModalRoot() {
   const open = useModals((s) => s.open);
@@ -29,10 +46,10 @@ export function ModalRoot() {
       </Modal>
 
       {/* create-event */}
-      <EventCreateModal open={open === "create-event"} onClose={close} />
+      {open === "create-event" && <EventCreateModal open onClose={close} />}
 
       {/* create-gallery */}
-      <GalleryCreateModal open={open === "create-gallery"} onClose={close} />
+      {open === "create-gallery" && <GalleryCreateModal open onClose={close} />}
     </>
   );
 }

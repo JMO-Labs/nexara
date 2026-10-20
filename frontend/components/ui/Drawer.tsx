@@ -1,80 +1,49 @@
 "use client";
 /**
  * @file components/ui/Drawer.tsx
- * @brief Side drawer (right/left/bottom). Joy Drawer base with
- *        framer-motion variants. Used heavily — modals-over-routes.
+ * @brief Side/bottom drawer built on shadcn sheet (Radix dialog).
  */
-import * as React from "react";
-import JoyDrawer, { type DrawerProps as JoyDrawerProps } from "@mui/joy/Drawer";
-import ModalClose from "@mui/joy/ModalClose";
-import Typography from "@mui/joy/Typography";
-import Box from "@mui/joy/Box";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./shadcn/sheet";
 
-export interface DrawerProps extends Omit<JoyDrawerProps, "title"> {
+export interface DrawerProps {
   open: boolean;
   onClose: () => void;
-  title?: React.ReactNode;
+  title: string;
   side?: "left" | "right" | "bottom";
-  width?: number | string;
-  hideClose?: boolean;
+  children: ReactNode;
 }
 
+/**
+ * @brief Accessible drawer.
+ * @param props see DrawerProps
+ * @return sheet element
+ */
 export function Drawer({
   open,
   onClose,
   title,
   side = "right",
-  width = 480,
-  hideClose,
   children,
-  slotProps,
-  ...rest
 }: DrawerProps) {
   return (
-    <JoyDrawer
-      open={open}
-      onClose={onClose}
-      anchor={side}
-      slotProps={{
-        ...slotProps,
-        content: {
-          ...(slotProps?.content ?? {}),
-          sx: {
-            width: side === "bottom" ? "100%" : width,
-            maxWidth: "100%",
-            borderTopLeftRadius: side === "right" ? "var(--nx-radius-lg)" : 0,
-            borderBottomLeftRadius:
-              side === "right" ? "var(--nx-radius-lg)" : 0,
-            borderTopRightRadius: side === "left" ? "var(--nx-radius-lg)" : 0,
-            borderBottomRightRadius:
-              side === "left" ? "var(--nx-radius-lg)" : 0,
-            backgroundColor: "background.surface",
-          },
-        },
-      }}
-      {...rest}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          p: 2,
-        }}
-      >
-        {title ? (
-          <Typography level="h4" sx={{ fontFamily: "var(--font-display)" }}>
-            {title}
-          </Typography>
-        ) : (
-          <span />
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent
+        side={side}
+        aria-describedby={undefined}
+        className={cn(
+          "bg-surface text-ink",
+          side === "bottom" &&
+            "max-h-[85dvh] overflow-y-auto rounded-t-[1.25rem] pb-[env(safe-area-inset-bottom)]",
         )}
-        {!hideClose && <ModalClose sx={{ position: "static" }} />}
-      </Box>
-      <Box sx={{ px: 2, pb: 2, flex: 1, minHeight: 0, overflow: "auto" }}>
-        {children}
-      </Box>
-    </JoyDrawer>
+      >
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        <div className="px-4 pb-4">{children}</div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

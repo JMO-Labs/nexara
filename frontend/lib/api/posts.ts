@@ -2,7 +2,7 @@
  * @file lib/api/posts.ts
  * @brief Posts/comments/reactions REST endpoints.
  */
-import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
 
 export interface PostAuthor {
   id: string;
@@ -122,15 +122,15 @@ export const listFeed = (params?: ListFeedParams | null, limit = 20) => {
   return apiGet<Cursor<Post>>(`${POSTS}?${qs}`);
 };
 
-export const getPost = (id: string) => apiGet<Post>(`${POSTS}/${id}`);
+export const getPost = (id: string) => apiGet<Post>(`${POSTS}/${seg(id)}`);
 
 export const createPost = (body: CreatePostBody) => apiPost<Post>(POSTS, body);
 
 export const updatePost = (id: string, content: string) =>
-  apiPut<Post>(`${POSTS}/${id}`, { content });
+  apiPut<Post>(`${POSTS}/${seg(id)}`, { content });
 
 export const deletePost = (id: string) =>
-  apiDelete<{ message: string }>(`${POSTS}/${id}`);
+  apiDelete<{ message: string }>(`${POSTS}/${seg(id)}`);
 
 export const listComments = (
   postId: string,
@@ -139,17 +139,18 @@ export const listComments = (
 ) => {
   const qs = new URLSearchParams({ limit: String(limit) });
   if (cursor) qs.set("cursor", cursor);
-  return apiGet<Cursor<Comment>>(`${POSTS}/${postId}/comments?${qs}`);
+  return apiGet<Cursor<Comment>>(`${POSTS}/${seg(postId)}/comments?${qs}`);
 };
 
 export const createComment = (
   postId: string,
   content: string,
   parent_id?: string,
-) => apiPost<Comment>(`${POSTS}/${postId}/comments`, { content, parent_id });
+) =>
+  apiPost<Comment>(`${POSTS}/${seg(postId)}/comments`, { content, parent_id });
 
 export const togglePostReaction = (postId: string, emoji: string) =>
-  apiPost<ReactionResponse>(`${POSTS}/${postId}/reactions`, { emoji });
+  apiPost<ReactionResponse>(`${POSTS}/${seg(postId)}/reactions`, { emoji });
 
 export const toggleCommentReaction = (
   postId: string,
@@ -157,6 +158,6 @@ export const toggleCommentReaction = (
   emoji: string,
 ) =>
   apiPost<ReactionResponse>(
-    `${POSTS}/${postId}/comments/${commentId}/reactions`,
+    `${POSTS}/${seg(postId)}/comments/${seg(commentId)}/reactions`,
     { emoji },
   );

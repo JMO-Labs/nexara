@@ -2,7 +2,7 @@
  * @file lib/api/galleries.ts
  * @brief Galleries + items + collaborators REST endpoints.
  */
-import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 
 export interface Gallery {
   id: string;
@@ -78,18 +78,18 @@ export const listGalleries = (params?: ListGalleriesParams) => {
   return apiGet<GalleryListResponse>(`${BASE}${query ? `?${query}` : ""}`);
 };
 
-export const getGallery = (id: string) => apiGet<Gallery>(`${BASE}/${id}`);
+export const getGallery = (id: string) => apiGet<Gallery>(`${BASE}/${seg(id)}`);
 export const createGallery = (body: CreateGalleryBody) =>
   apiPost<Gallery>(BASE, body);
 export const updateGallery = (id: string, body: Partial<CreateGalleryBody>) =>
-  apiPatch<Gallery>(`${BASE}/${id}`, body);
+  apiPatch<Gallery>(`${BASE}/${seg(id)}`, body);
 export const deleteGallery = (id: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${id}`);
+  apiDelete<{ message: string }>(`${BASE}/${seg(id)}`);
 export const listItems = (id: string) =>
-  apiGet<GalleryItem[]>(`${BASE}/${id}/items`);
+  apiGet<GalleryItem[]>(`${BASE}/${seg(id)}/items`);
 export const addItem = (id: string, media_id: string, caption?: string) =>
-  apiPost<GalleryItem>(`${BASE}/${id}/items`, { media_id, caption });
+  apiPost<GalleryItem>(`${BASE}/${seg(id)}/items`, { media_id, caption });
 export const removeItem = (id: string, itemId: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${id}/items/${itemId}`);
+  apiDelete<{ message: string }>(`${BASE}/${seg(id)}/items/${seg(itemId)}`);
 export const listCollaborators = (id: string) =>
-  apiGet<Collaborator[]>(`${BASE}/${id}/collaborators`);
+  apiGet<Collaborator[]>(`${BASE}/${seg(id)}/collaborators`);

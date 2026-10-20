@@ -22,7 +22,7 @@ import { useSubgroupDetail } from "@/hooks/useSubgroups";
 import { CoverBand } from "./CoverBand";
 import { MemberOnlyGate } from "./MemberOnlyGate";
 import { GroupChatPanel } from "./GroupChatPanel";
-import { getVisibleTabs } from "./tabs";
+import { getVisibleTabs } from "./shadcn/tabs";
 
 const CHAT_OPEN_KEY = "nx:groupHub:chatOpen";
 const NAV_COLLAPSED_KEY = "nx:groupHub:navCollapsed";

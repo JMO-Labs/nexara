@@ -1,50 +1,37 @@
-"use client";
 /**
  * @file components/ui/SettingsRow.tsx
- * @brief Two-column settings control layout (label left, input right on md+).
- * @param label Primary setting label
- * @param description Optional descriptive text below label
- * @param children Form control(s) to display
+ * @brief Two-column settings layout (label left, control right on md+).
  */
-import React, { type ReactNode } from "react";
-import { Grid, Typography } from "@mui/joy";
+import * as React from "react";
 
 export interface SettingsRowProps {
   label: string;
   description?: string;
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
+/**
+ * @brief Settings row.
+ * @param label primary label
+ * @param description optional helper text
+ * @param children control(s)
+ * @return row element
+ */
 export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
   function SettingsRow({ label, description, children }, ref) {
     return (
-      <Grid
+      <div
         ref={ref}
-        container
-        spacing={2}
-        sx={{
-          alignItems: "flex-start",
-          py: 1.5,
-          borderBottom: "1px solid var(--joy-palette-divider)",
-        }}
+        className="grid grid-cols-1 items-start gap-2 border-b border-ink/10 py-3 md:grid-cols-3 md:gap-4"
       >
-        <Grid xs={12} md={4}>
-          <Typography level="body-sm" fontWeight="md">
-            {label}
-          </Typography>
+        <div>
+          <p className="text-sm font-semibold">{label}</p>
           {description && (
-            <Typography
-              level="body-xs"
-              sx={{ color: "text.tertiary", mt: 0.5 }}
-            >
-              {description}
-            </Typography>
+            <p className="mt-0.5 text-xs opacity-70">{description}</p>
           )}
-        </Grid>
-        <Grid xs={12} md={8}>
-          {children}
-        </Grid>
-      </Grid>
+        </div>
+        <div className="md:col-span-2">{children}</div>
+      </div>
     );
   },
 );

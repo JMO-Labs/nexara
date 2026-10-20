@@ -1,58 +1,51 @@
-"use client";
 /**
  * @file components/ui/Skeleton.tsx
- * @brief Editorial skeleton — fog shimmer over paper. Animated via CSS
- *        keyframes for cheap repeated use; reduced-motion disables.
- *        Mount/unmount wrapped in motion.div for fade effect.
+ * @brief Loading placeholder. Pulse only when motion is allowed.
  */
 import * as React from "react";
-import Box, { type BoxProps } from "@mui/joy/Box";
-import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
-export type SkeletonProps = BoxProps & {
+export type SkeletonProps = React.HTMLAttributes<HTMLDivElement> & {
   width?: number | string;
   height?: number | string;
   rounded?: "sm" | "md" | "lg" | "pill";
 };
 
-const rad = { sm: "sm", md: "md", lg: "lg", pill: "999px" } as const;
+const rad = {
+  sm: "rounded-md",
+  md: "rounded-xl",
+  lg: "rounded-[1.25rem]",
+  pill: "rounded-full",
+} as const;
 
+/**
+ * @brief Status-role placeholder block.
+ * @param width css width (default 100%)
+ * @param height css height (default 16)
+ * @param rounded radius step
+ * @return div
+ */
 export function Skeleton({
   width = "100%",
   height = 16,
   rounded = "sm",
-  sx,
+  className,
+  style,
   ...rest
 }: SkeletonProps) {
   return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.2 } }}
-    >
-      <Box
-        role="status"
-        aria-busy="true"
-        aria-live="polite"
-        sx={{
-          width,
-          height,
-          borderRadius: rad[rounded],
-          background:
-            "linear-gradient(90deg, var(--nx-palette-neutral-100) 0%, var(--nx-palette-neutral-200) 50%, var(--nx-palette-neutral-100) 100%)",
-          backgroundSize: "200% 100%",
-          animation: "nx-shimmer 1400ms ease-in-out infinite",
-          "@keyframes nx-shimmer": {
-            "0%": { backgroundPosition: "200% 0" },
-            "100%": { backgroundPosition: "-200% 0" },
-          },
-          "@media (prefers-reduced-motion: reduce)": {
-            animation: "none",
-          },
-          ...sx,
-        }}
-        {...rest}
-      />
-    </motion.div>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className={cn(
+        "bg-muted/40 motion-safe:animate-pulse",
+        rad[rounded],
+        className,
+      )}
+      style={{ width, height, ...style }}
+      {...rest}
+    />
   );
 }
 

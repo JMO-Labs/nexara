@@ -8,11 +8,26 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  CommandPalette,
-  type CommandItem,
-} from "@/components/ui/CommandPalette";
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem as CmdItem,
+  CommandList,
+} from "@/components/ui/shadcn/command";
 import { useGlobalSearch } from "@/hooks/useSearch";
 import { useUI } from "@/stores/ui";
+
+/** One palette row. */
+interface CommandItem {
+  id: string;
+  label: string;
+  hint?: string;
+  group: string;
+  external?: boolean;
+  onSelect: () => void;
+}
 
 const NAV_ACTIONS: CommandItem[] = [
   {
@@ -66,7 +81,8 @@ const NAV_ACTIONS: CommandItem[] = [
   },
 ];
 
-export function GlobalCommandPalette() {
+/** Palette contents; mounted only while open so query state resets on close. */
+function PaletteBody() {
   const router = useRouter();
   const setOpen = useUI((s) => s.setCommandPaletteOpen);
   const [query, setQuery] = React.useState("");
@@ -139,11 +155,64 @@ export function GlobalCommandPalette() {
     return [...searchItems, ...navItems];
   }, [data?.items, debouncedQuery, isLoading, router, setOpen]);
 
+  // Search results are server-filtered; only filter local nav items.
+  const q = query.trim().toLowerCase();
+  const visible = items.filter(
+    (it) => it.external || !q || it.label.toLowerCase().includes(q),
+  );
+  const groups = new Map<string, CommandItem[]>();
+  for (const it of visible) {
+    groups.set(it.group, [...(groups.get(it.group) ?? []), it]);
+  }
+
   return (
-    <CommandPalette
-      items={items}
-      placeholder="Search Nexara — try a name, post, or event…"
-      onQueryChange={setQuery}
-    />
+    <Command shouldFilter={false}>
+      <CommandInput
+        aria-label="Command palette"
+        placeholder="Search Nexara — try a name, post, or event…"
+        value={query}
+        onValueChange={setQuery}
+      />
+      <CommandList>
+        <CommandEmpty>No matches</CommandEmpty>
+        {[...groups].map(([group, list]) => (
+          <CommandGroup key={group} heading={group}>
+            {list.map((it) => (
+              <CmdItem key={it.id} value={it.id} onSelect={it.onSelect}>
+                <span>{it.label}</span>
+                {it.hint && (
+                  <span className="ml-auto truncate text-xs text-muted">
+                    {it.hint}
+                  </span>
+                )}
+              </CmdItem>
+            ))}
+          </CommandGroup>
+        ))}
+      </CommandList>
+    </Command>
+  );
+}
+
+export function GlobalCommandPalette() {
+  const open = useUI((s) => s.commandPaletteOpen);
+  const setOpen = useUI((s) => s.setCommandPaletteOpen);
+
+  // Cmd/Ctrl+K toggles the palette
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen(!useUI.getState().commandPaletteOpen);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setOpen]);
+
+  return (
+    <CommandDialog open={open} onOpenChange={setOpen} title="Command palette">
+      <PaletteBody />
+    </CommandDialog>
   );
 }

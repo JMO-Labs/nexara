@@ -4,12 +4,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { SettingsRow } from "@/components/ui/SettingsRow";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("SettingsRow", () => {

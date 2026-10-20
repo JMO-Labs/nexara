@@ -2,7 +2,7 @@
  * @file lib/api/subgroups.ts
  * @brief Subgroup REST endpoints + membership management.
  */
-import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
 
 export interface Subgroup {
   id: string;
@@ -61,25 +61,29 @@ const BASE = "/api/v1/subgroups";
 
 export const listSubgroups = () => apiGet<Subgroup[]>(BASE);
 export const getSubgroup = (slug: string) =>
-  apiGet<SubgroupDetail>(`${BASE}/${slug}`);
+  apiGet<SubgroupDetail>(`${BASE}/${seg(slug)}`);
 export const createSubgroup = (body: CreateSubgroupBody) =>
   apiPost<SubgroupDetail>(BASE, body);
 export const updateSubgroup = (slug: string, body: UpdateSubgroupBody) =>
-  apiPut<SubgroupDetail>(`${BASE}/${slug}`, body);
+  apiPut<SubgroupDetail>(`${BASE}/${seg(slug)}`, body);
 export const deleteSubgroup = (slug: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${slug}`);
+  apiDelete<{ message: string }>(`${BASE}/${seg(slug)}`);
 export const joinSubgroup = (slug: string) =>
-  apiPost<Membership>(`${BASE}/${slug}/join`);
+  apiPost<Membership>(`${BASE}/${seg(slug)}/join`);
 export const leaveSubgroup = (slug: string) =>
-  apiPost<{ message: string }>(`${BASE}/${slug}/leave`);
+  apiPost<{ message: string }>(`${BASE}/${seg(slug)}/leave`);
 export const listMembers = (slug: string) =>
-  apiGet<Membership[]>(`${BASE}/${slug}/members`);
+  apiGet<Membership[]>(`${BASE}/${seg(slug)}/members`);
 export const addMember = (slug: string, user_id: string, role = "member") =>
-  apiPost<Membership>(`${BASE}/${slug}/members`, { user_id, role });
+  apiPost<Membership>(`${BASE}/${seg(slug)}/members`, { user_id, role });
 export const changeMemberRole = (slug: string, user_id: string, role: string) =>
-  apiPost<Membership>(`${BASE}/${slug}/members/${user_id}/role`, { role });
+  apiPost<Membership>(`${BASE}/${seg(slug)}/members/${seg(user_id)}/role`, {
+    role,
+  });
 export const removeMember = (slug: string, user_id: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${slug}/members/${user_id}`);
+  apiDelete<{ message: string }>(
+    `${BASE}/${seg(slug)}/members/${seg(user_id)}`,
+  );
 
 /**
  * @brief Media response types for subgroup media aggregation.
@@ -127,6 +131,6 @@ export const getSubgroupMedia = (
   if (params?.source) qs.set("source", params.source);
   if (params?.cursor) qs.set("cursor", params.cursor);
   if (params?.limit) qs.set("limit", String(params.limit));
-  const url = `${BASE}/${slug}/media${qs.toString() ? `?${qs}` : ""}`;
+  const url = `${BASE}/${seg(slug)}/media${qs.toString() ? `?${qs}` : ""}`;
   return apiGet<MediaListResponse>(url);
 };

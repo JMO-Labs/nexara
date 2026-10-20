@@ -1,18 +1,17 @@
 /**
  * @file app/layout.tsx
- * @brief Root layout. Mounts fonts, providers, and the no-flash color-scheme
- *        bootstrap script so dark/light mode hydrates without flicker.
+ * @brief Root layout. Mounts font and providers. next-themes sets the `dark`
+ *        class on <html> before paint (no scheme flash).
  */
 import type { Metadata, Viewport } from "next";
-import InitColorSchemeScript from "@mui/joy/InitColorSchemeScript";
-import { fraunces, geist, geistMono } from "@/theme/fonts";
+import { hanken } from "@/theme/font";
 import ServiceWorkerRegistrar from "@/components/layout/ServiceWorkerRegistrar";
 import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Nexara", template: "%s · Nexara" },
-  description: "A warm, self-hosted home for the communities you love.",
+  description: "A private home for your family and friends.",
   applicationName: "Nexara",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Nexara", statusBarStyle: "default" },
@@ -21,8 +20,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F5EFE6" },
-    { media: "(prefers-color-scheme: dark)", color: "#1A1816" },
+    { media: "(prefers-color-scheme: light)", color: "#E9F1E4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1F15" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -35,13 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${fraunces.variable} ${geist.variable} ${geistMono.variable}`}
-    >
+    <html lang="en" suppressHydrationWarning className={hanken.variable}>
       <body>
-        <InitColorSchemeScript defaultMode="system" />
         <Providers>{children}</Providers>
         <ServiceWorkerRegistrar />
       </body>

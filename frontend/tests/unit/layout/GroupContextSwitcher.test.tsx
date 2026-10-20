@@ -4,9 +4,8 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { GroupContextSwitcher } from "@/components/layout/GroupContextSwitcher";
 import * as useSubgroupsModule from "@/hooks/useSubgroups";
 import type { Subgroup } from "@/lib/api/subgroups";
@@ -22,7 +21,7 @@ vi.mock("next/navigation", () => ({
 import { usePathname } from "next/navigation";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 const subgroupA: Subgroup = {
@@ -128,11 +127,9 @@ describe("GroupContextSwitcher", () => {
 
     wrap(<GroupContextSwitcher />);
     const button = screen.getByRole("button", { name: "Switch group context" });
-    fireEvent.click(button);
+    await userEvent.click(button);
 
-    await waitFor(() => {
-      expect(screen.getByText("Hiking Club")).toBeInTheDocument();
-      expect(screen.getByText("Tech Board")).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Hiking Club")).toBeInTheDocument();
+    expect(screen.getByText("Tech Board")).toBeInTheDocument();
   });
 });
