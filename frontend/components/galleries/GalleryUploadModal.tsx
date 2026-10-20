@@ -4,9 +4,6 @@
  * @brief Two-step modal: gallery selector + uploader.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
 import {
   Modal,
   Input,
@@ -75,67 +72,54 @@ export function GalleryUploadModal({
     onClose();
   };
 
+  const actions = "flex justify-end gap-2";
   return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      title={step === "select" ? "Upload media" : "Upload media"}
-    >
+    <Modal open={open} onClose={handleClose} title="Upload media">
       {step === "select" ? (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           {!showNewGalleryForm ? (
             <>
-              <FormControl>
-                <FormLabel>Select a gallery</FormLabel>
-                <Select
-                  value={selectedGalleryId ?? ""}
-                  onChange={(_e, v) => {
-                    if (v === "new") {
-                      setShowNewGalleryForm(true);
-                    } else if (v) {
-                      handleSelectExisting(v as string);
-                    }
-                  }}
-                  slotProps={{ listbox: { sx: { maxHeight: "300px" } } }}
-                >
-                  {galleries.map((g) => (
-                    <Option key={g.id} value={g.id}>
-                      {g.title}
-                    </Option>
-                  ))}
-                  <Option value="new">+ Create new gallery</Option>
-                </Select>
-              </FormControl>
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                <Button variant="plain" color="neutral" onClick={handleClose}>
+              <Select
+                label="Select a gallery"
+                placeholder="Select a gallery"
+                value={selectedGalleryId ?? ""}
+                onValueChange={(v) => {
+                  if (v === "new") setShowNewGalleryForm(true);
+                  else if (v) handleSelectExisting(v);
+                }}
+              >
+                {galleries.map((g) => (
+                  <Option key={g.id} value={g.id}>
+                    {g.title}
+                  </Option>
+                ))}
+                <Option value="new">Create new gallery</Option>
+              </Select>
+              <div className={actions}>
+                <Button variant="ghost" onClick={handleClose}>
                   Cancel
                 </Button>
-              </Stack>
+              </div>
             </>
           ) : (
             <>
-              <FormControl required>
-                <FormLabel>Gallery title</FormLabel>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  placeholder="e.g. Summer 2026"
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Description</FormLabel>
-                <Textarea
-                  minRows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional description"
-                />
-              </FormControl>
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Input
+                label="Gallery title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                placeholder="e.g. Summer 2026"
+              />
+              <Textarea
+                label="Description"
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description"
+              />
+              <div className={actions}>
                 <Button
-                  variant="plain"
-                  color="neutral"
+                  variant="ghost"
                   onClick={() => setShowNewGalleryForm(false)}
                 >
                   Back
@@ -146,21 +130,21 @@ export function GalleryUploadModal({
                   onClick={handleCreateAndUpload}
                   disabled={!title.trim()}
                 >
-                  Create & Upload
+                  Create & upload
                 </Button>
-              </Stack>
+              </div>
             </>
           )}
-        </Stack>
+        </div>
       ) : selectedGalleryId ? (
-        <Stack spacing={2}>
+        <div className="flex flex-col gap-4">
           <GalleryUpload galleryId={selectedGalleryId} />
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button variant="plain" color="neutral" onClick={handleClose}>
+          <div className={actions}>
+            <Button variant="ghost" onClick={handleClose}>
               Done
             </Button>
-          </Stack>
-        </Stack>
+          </div>
+        </div>
       ) : null}
     </Modal>
   );

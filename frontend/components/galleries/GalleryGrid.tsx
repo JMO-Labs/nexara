@@ -5,12 +5,12 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Box from "@mui/joy/Box";
-import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton, EmptyState, Button } from "@/components/ui";
 import { GalleryCard } from "./GalleryCard";
 import { useGalleryList } from "@/hooks/useGalleries";
 import type { ListGalleriesParams } from "@/lib/api/galleries";
+
+const GRID = "grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4";
 
 export interface GalleryGridProps {
   onSelect: (id: string) => void;
@@ -27,19 +27,28 @@ export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
         title="Couldn't load galleries"
         description={String(error)}
         action={
-          <Button variant="soft" onClick={() => router.refresh()}>
+          <Button variant="secondary" onClick={() => router.refresh()}>
             Retry
           </Button>
         }
       />
     );
-  if (!data || data.items.length === 0) {
+  if (isLoading || !data) {
+    return (
+      <div className={GRID}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} height={220} />
+        ))}
+      </div>
+    );
+  }
+  if (data.items.length === 0) {
     return (
       <EmptyState
         title="No galleries yet"
         description="Create one to share photos."
         action={
-          <Button variant="solid" onClick={() => router.push("/app/media")}>
+          <Button variant="primary" onClick={() => router.push("/app/media")}>
             Browse media
           </Button>
         }
@@ -48,59 +57,11 @@ export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {isLoading ? (
-        <motion.div
-          key="sk"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr 1fr",
-                md: "repeat(3, 1fr)",
-                lg: "repeat(4, 1fr)",
-              },
-            }}
-          >
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} height={220} />
-            ))}
-          </Box>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="ct"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr 1fr",
-                md: "repeat(3, 1fr)",
-                lg: "repeat(4, 1fr)",
-              },
-            }}
-          >
-            {data.items.map((g) => (
-              <motion.div key={g.id} layout>
-                <GalleryCard gallery={g} onSelect={onSelect} />
-              </motion.div>
-            ))}
-          </Box>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className={GRID}>
+      {data.items.map((g) => (
+        <GalleryCard key={g.id} gallery={g} onSelect={onSelect} />
+      ))}
+    </div>
   );
 }
 
