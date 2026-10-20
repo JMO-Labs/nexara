@@ -3,7 +3,7 @@
  * @brief Notification REST endpoints. The SSE stream is consumed via
  *        useSSE; these calls cover the imperative bits (list, count, mark).
  */
-import { apiGet, apiPost, apiDelete } from "./client";
+import { apiGet, apiPost, apiDelete, seg } from "./client";
 
 export interface NotificationPayload {
   message?: string;
@@ -36,7 +36,7 @@ export const getUnreadCount = () =>
   apiGet<{ count: number }>("/api/v1/notifications/unread-count");
 
 export const markRead = (id: string) =>
-  apiPost<{ message: string }>(`/api/v1/notifications/${id}/read`);
+  apiPost<{ message: string }>(`/api/v1/notifications/${seg(id)}/read`);
 
 export const markAllRead = () =>
   apiPost<{ message: string }>("/api/v1/notifications/read-all");

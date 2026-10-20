@@ -24,7 +24,7 @@ vi.mock("@/components/help/KeyboardShortcutsModal", () =>
 vi.mock("@/components/help/HelpButton", () => stub("HelpButton"));
 vi.mock("@/components/onboarding/OnboardingTour", () => stub("OnboardingTour"));
 vi.mock("@/components/onboarding/WelcomeModal", () => stub("WelcomeModal"));
-vi.mock("@/components/home/RightRail", () => stub("RightRail"));
+vi.mock("@/components/home/RightRail", () => stub("RightRail", "rail"));
 vi.mock("@/components/ui/ConfirmDialog", () => stub("ConfirmDialog"));
 vi.mock("@/components/chat/FloatingChatDock", () =>
   stub("FloatingChatDock", "dock"),
@@ -75,5 +75,10 @@ describe("Shell", () => {
       "hidden",
       "md:block",
     );
+  });
+
+  it("does not mount the right rail", () => {
+    setup();
+    expect(screen.queryByTestId("rail")).not.toBeInTheDocument();
   });
 });

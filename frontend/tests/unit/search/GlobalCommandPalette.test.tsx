@@ -5,11 +5,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { GlobalCommandPalette } from "@/components/search/GlobalCommandPalette";
 import { useUI } from "@/stores/ui";
+
+// jsdom lacks APIs cmdk relies on.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+Element.prototype.scrollIntoView ??= () => {};
 
 const mockPush = vi.fn();
 
@@ -42,17 +48,15 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
-    expect(screen.queryByLabelText(/command palette/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     act(() => useUI.getState().setCommandPaletteOpen(true));
     await waitFor(() => {
-      expect(screen.getByLabelText(/command palette/i)).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
   });
 
@@ -63,11 +67,9 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
@@ -86,15 +88,13 @@ describe("GlobalCommandPalette", () => {
     );
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "he");
 
@@ -127,15 +127,13 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "post");
 
@@ -163,15 +161,13 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "post");
 
@@ -180,7 +176,7 @@ describe("GlobalCommandPalette", () => {
       expect(item).toBeInTheDocument();
     });
 
-    const item = screen.getByText("My Post").closest('div[role="option"]');
+    const item = screen.getByText("My Post").closest('[role="option"]');
     await user.click(item!);
 
     expect(mockPush).toHaveBeenCalledWith("/app/post/p1");
@@ -205,24 +201,22 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "john");
 
     await waitFor(() => {
-      const item = screen.getByText("John Doe").closest('div[role="option"]');
+      const item = screen.getByText("John Doe").closest('[role="option"]');
       expect(item).toBeInTheDocument();
     });
 
-    const item = screen.getByText("John Doe").closest('div[role="option"]');
+    const item = screen.getByText("John Doe").closest('[role="option"]');
     await user.click(item!);
 
     expect(mockPush).toHaveBeenCalledWith("/app/members?user=u1");
@@ -247,24 +241,22 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "party");
 
     await waitFor(() => {
-      const item = screen.getByText("Party Time").closest('div[role="option"]');
+      const item = screen.getByText("Party Time").closest('[role="option"]');
       expect(item).toBeInTheDocument();
     });
 
-    const item = screen.getByText("Party Time").closest('div[role="option"]');
+    const item = screen.getByText("Party Time").closest('[role="option"]');
     await user.click(item!);
 
     expect(mockPush).toHaveBeenCalledWith("/app/events?event=e1");
@@ -290,28 +282,22 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "comment");
 
     await waitFor(() => {
-      const item = screen
-        .getByText("Comment reply")
-        .closest('div[role="option"]');
+      const item = screen.getByText("Comment reply").closest('[role="option"]');
       expect(item).toBeInTheDocument();
     });
 
-    const item = screen
-      .getByText("Comment reply")
-      .closest('div[role="option"]');
+    const item = screen.getByText("Comment reply").closest('[role="option"]');
     await user.click(item!);
 
     expect(mockPush).toHaveBeenCalledWith("/app/post/p1#comment-c1");
@@ -336,24 +322,22 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
     await user.type(input, "post");
 
     await waitFor(() => {
-      const item = screen.getByText("My Post").closest('div[role="option"]');
+      const item = screen.getByText("My Post").closest('[role="option"]');
       expect(item).toBeInTheDocument();
     });
 
-    const item = screen.getByText("My Post").closest('div[role="option"]');
+    const item = screen.getByText("My Post").closest('[role="option"]');
     await user.click(item!);
 
     await waitFor(() => {
@@ -368,25 +352,41 @@ describe("GlobalCommandPalette", () => {
     });
 
     render(
-      <CssVarsProvider theme={joyTheme}>
-        <QueryClientProvider client={qc}>
-          <GlobalCommandPalette />
-        </QueryClientProvider>
-      </CssVarsProvider>,
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
     );
 
     act(() => useUI.getState().setCommandPaletteOpen(true));
-    const input = await screen.findByLabelText(/command palette/i);
+    const input = await screen.findByRole("combobox");
     const user = userEvent.setup();
 
     await waitFor(() => {
-      const home = screen.getByText("Home").closest('div[role="option"]');
+      const home = screen.getByText("Home").closest('[role="option"]');
       expect(home).toBeInTheDocument();
     });
 
-    const home = screen.getByText("Home").closest('div[role="option"]');
+    const home = screen.getByText("Home").closest('[role="option"]');
     await user.click(home!);
 
     expect(mockPush).toHaveBeenCalledWith("/app");
+  });
+});
+
+describe("GlobalCommandPalette hotkey", () => {
+  it("Ctrl+K toggles open state", async () => {
+    (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { items: [], next_cursor: null, has_more: false },
+      isLoading: false,
+    });
+    const qc = new QueryClient();
+    useUI.getState().setCommandPaletteOpen(false);
+    render(
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
+    );
+    await userEvent.keyboard("{Control>}k{/Control}");
+    await waitFor(() => expect(useUI.getState().commandPaletteOpen).toBe(true));
   });
 });

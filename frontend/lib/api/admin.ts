@@ -3,7 +3,7 @@
  * @brief Admin panel API endpoints covering metrics, user management,
  *        settings, and audit logging.
  */
-import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
 
 /**
  * @brief Community-level activity metrics.
@@ -150,7 +150,7 @@ export const listAdminUsers = (filters?: {
  * @return MessageResponse
  */
 export const changeUserRole = (userId: string, role: string) =>
-  apiPut<MessageResponse>(`/api/v1/admin/users/${userId}/role`, { role });
+  apiPut<MessageResponse>(`/api/v1/admin/users/${seg(userId)}/role`, { role });
 
 /**
  * @brief Suspend a user.
@@ -158,7 +158,7 @@ export const changeUserRole = (userId: string, role: string) =>
  * @return MessageResponse
  */
 export const suspendUser = (userId: string) =>
-  apiPost<MessageResponse>(`/api/v1/admin/users/${userId}/suspend`);
+  apiPost<MessageResponse>(`/api/v1/admin/users/${seg(userId)}/suspend`);
 
 /**
  * @brief Restore a suspended user.
@@ -166,7 +166,7 @@ export const suspendUser = (userId: string) =>
  * @return MessageResponse
  */
 export const restoreUser = (userId: string) =>
-  apiPost<MessageResponse>(`/api/v1/admin/users/${userId}/restore`);
+  apiPost<MessageResponse>(`/api/v1/admin/users/${seg(userId)}/restore`);
 
 /**
  * @brief Delete a user.
@@ -174,7 +174,7 @@ export const restoreUser = (userId: string) =>
  * @return MessageResponse
  */
 export const deleteUser = (userId: string) =>
-  apiDelete<MessageResponse>(`/api/v1/admin/users/${userId}`);
+  apiDelete<MessageResponse>(`/api/v1/admin/users/${seg(userId)}`);
 
 /**
  * @brief Fetch admin settings.

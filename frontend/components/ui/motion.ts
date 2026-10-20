@@ -1,14 +1,17 @@
 /**
  * @file components/ui/motion.ts
  * @brief Motion primitives. Variants for page/modal/drawer/list-stagger.
- *        Spring config from theme tokens; reduced-motion respected via CSS.
+ *        Spring/ease config inlined; reduced-motion respected via CSS.
  */
 import type { Variants, Transition } from "framer-motion";
-import { motion as tokens } from "@/theme/tokens";
 
-export const spring: Transition = tokens.spring;
-export const fast: Transition = tokens.fast;
-export const page: Transition = tokens.page;
+export const spring: Transition = {
+  type: "spring",
+  stiffness: 200,
+  damping: 24,
+};
+export const fast: Transition = { duration: 0.18, ease: [0.4, 0, 0.2, 1] };
+export const page: Transition = { duration: 0.24, ease: [0.4, 0, 0.2, 1] };
 
 export const fadeSlide: Variants = {
   hidden: { opacity: 0, y: 8 },
