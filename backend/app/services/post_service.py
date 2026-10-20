@@ -24,6 +24,7 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
+from app.services.activity_publish import record_activity
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -135,7 +136,10 @@ class PostService:
             if prompt:
                 if self._activity_repo is not None:
                     response_id = uuid.uuid4()
-                    await self._activity_repo.record(
+                    await record_activity(
+                        self._activity_repo,
+                        self._post_repo._session,
+                        self._event_bus,
                         community_id=self._community_id,
                         actor_id=user.id,
                         verb="prompt.responded",
@@ -174,7 +178,10 @@ class PostService:
         )
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.created",
@@ -335,7 +342,10 @@ class PostService:
         }
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.commented",
@@ -398,7 +408,10 @@ class PostService:
 
         if action == "added" and self._activity_repo is not None:
             reaction_id = uuid.uuid4()
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.reacted",
@@ -472,7 +485,10 @@ class PostService:
 
         if action == "added" and self._activity_repo is not None:
             reaction_id = uuid.uuid4()
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.reacted",

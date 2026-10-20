@@ -47,7 +47,7 @@ class ActivityRepository(BaseRepository[ActivityEvent]):
         target_type: str | None = None,
         target_id: uuid.UUID | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> None:
+    ) -> ActivityEvent | None:
         """
         @brief Record a new activity event (best-effort, never fails caller).
 
@@ -65,7 +65,7 @@ class ActivityRepository(BaseRepository[ActivityEvent]):
         @param target_type Optional container type ('subgroup', 'community', 'post', etc.).
         @param target_id Optional container UUID.
         @param metadata Optional JSONB snapshot (actor_name, object_title, etc.).
-        @return None.
+        @return The flushed event, or None if the insert failed.
         """
         try:
             event = ActivityEvent(
@@ -82,6 +82,8 @@ class ActivityRepository(BaseRepository[ActivityEvent]):
             )
             self._session.add(event)
             await self._session.flush()
+            await self._session.refresh(event)
+            return event
         except Exception as e:
             logger.exception(
                 "activity_record_failed",
@@ -90,6 +92,7 @@ class ActivityRepository(BaseRepository[ActivityEvent]):
                 object_id=str(object_id),
                 error=str(e),
             )
+            return None
 
     async def invalidate(self, object_type: str, object_id: uuid.UUID) -> None:
         """

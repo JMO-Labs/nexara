@@ -38,6 +38,7 @@ from app.schemas.event import (
     RSVPRequest,
     RSVPResponse,
 )
+from app.services.activity_publish import record_activity
 from app.services.calendar_service import CalendarService
 
 logger = structlog.get_logger(__name__)
@@ -248,7 +249,10 @@ class EventService:
             user = user_result.scalar_one_or_none()
             user_name = user.display_name if user else "Unknown"
 
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._session,
+                None,
                 community_id=self._community_id,
                 actor_id=user_id,
                 verb="event.created",
@@ -432,7 +436,10 @@ class EventService:
             user_name = user.display_name if user else "Unknown"
 
             rsvp_id = att.id if hasattr(att, "id") else uuid.uuid4()
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._session,
+                None,
                 community_id=self._community_id,
                 actor_id=user_id,
                 verb="event.rsvp",

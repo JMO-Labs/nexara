@@ -28,6 +28,7 @@ class EventType(StrEnum):
     """@brief Top-level SSE event type names (wire format)."""
 
     FEED_UPDATE = "feed_update"
+    FEED_PING = "feed_ping"
     NOTIFICATION = "notification"
     TYPING = "typing"
     PRESENCE = "presence"
