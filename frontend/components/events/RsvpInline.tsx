@@ -4,8 +4,7 @@
  * @brief Inline RSVP toggle row using rsvp_labels (defaults to attending/maybe/declined).
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import { Chip } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { useRsvp } from "@/hooks/useEvents";
 
 const DEFAULT_LABELS: Record<string, string> = {
@@ -33,24 +32,30 @@ export function RsvpInline({
     rsvp.mutate(current === status ? null : status);
   };
   return (
-    <Stack direction="row" spacing={1} role="group" aria-label="RSVP">
+    <div role="group" aria-label="RSVP" className="flex flex-wrap gap-2">
       {Object.entries(merged).map(([status, label]) => {
         const active = current === status;
         const count = counts?.[status] ?? 0;
         return (
-          <Chip
+          <button
             key={status}
-            variant={active ? "solid" : "outlined"}
-            color={active ? "primary" : "neutral"}
+            type="button"
+            aria-pressed={active}
             onClick={() => onClick(status)}
             disabled={rsvp.isPending}
+            className={cn(
+              "inline-flex min-h-8 items-center rounded-full border px-3 text-sm font-semibold transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50",
+              active
+                ? "border-accent bg-accent text-surface-strong"
+                : "border-ink/30 bg-transparent text-ink hover:bg-bg",
+            )}
           >
             {label}
             {count > 0 ? ` · ${count}` : ""}
-          </Chip>
+          </button>
         );
       })}
-    </Stack>
+    </div>
   );
 }
 

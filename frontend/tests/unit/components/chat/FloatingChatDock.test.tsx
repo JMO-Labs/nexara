@@ -31,36 +31,8 @@ vi.mock("@/hooks/useChat", () => ({
   })),
   sendChatMessage: vi.fn(),
   sendChatTyping: vi.fn(),
+  optimisticAddMessage: vi.fn(),
 }));
-
-// Heavy children are lazy-loaded by the dock; stub them (Joy-era internals).
-vi.mock("@/components/chat/ChatLauncher", () => ({
-  ChatLauncher: () => <button>Chats</button>,
-}));
-vi.mock("@/components/chat/ChatHead", async () => {
-  const { useChatDock } = await import("@/stores/chatDock");
-  return {
-    ChatHead: ({ threadId, label }: { threadId: string; label: string }) => (
-      <section
-        role="region"
-        aria-label={label}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            e.stopPropagation();
-            useChatDock.getState().closeThread(threadId);
-          }
-        }}
-      >
-        <button onClick={() => useChatDock.getState().toggleMinimize(threadId)}>
-          Minimize
-        </button>
-        <button onClick={() => useChatDock.getState().closeThread(threadId)}>
-          Close
-        </button>
-      </section>
-    ),
-  };
-});
 
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
 
@@ -96,7 +68,7 @@ describe("FloatingChatDock", () => {
   it("close button calls store closeThread", async () => {
     useChatDock.setState({ openThreadIds: ["t1"] });
     wrap(<FloatingChatDock />);
-    const closeBtn = await screen.findByRole("button", { name: /close/i });
+    const closeBtn = await screen.findByRole("button", { name: "Close" });
     fireEvent.click(closeBtn);
     expect(useChatDock.getState().openThreadIds).not.toContain("t1");
   });

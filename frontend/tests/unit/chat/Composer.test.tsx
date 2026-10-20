@@ -5,12 +5,10 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { Composer } from "@/components/chat/Composer";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("Composer", () => {

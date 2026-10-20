@@ -24,10 +24,13 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
+from app.services.activity_publish import record_activity
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
+from app.services.realtime.audience import emit_to_audience, resolve_audience
 from app.services.realtime.event_bus import EventBus
+from app.services.realtime.events import CommunityTarget
 
 logger = structlog.get_logger(__name__)
 
@@ -133,7 +136,10 @@ class PostService:
             if prompt:
                 if self._activity_repo is not None:
                     response_id = uuid.uuid4()
-                    await self._activity_repo.record(
+                    await record_activity(
+                        self._activity_repo,
+                        self._post_repo._session,
+                        self._event_bus,
                         community_id=self._community_id,
                         actor_id=user.id,
                         verb="prompt.responded",
@@ -172,7 +178,10 @@ class PostService:
         )
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.created",
@@ -189,8 +198,9 @@ class PostService:
             )
 
         if enriched and self._event_bus:
-            await self._event_bus.emit(
-                events.post_created(self._community_id, enriched),
+            await self._emit_scoped(
+                events.post_created(self._target, enriched),
+                post,
             )
 
         return enriched or {}
@@ -332,7 +342,10 @@ class PostService:
         }
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.commented",
@@ -349,13 +362,9 @@ class PostService:
             )
 
         if self._event_bus:
-            await self._event_bus.emit(
-                events.comment_created(
-                    self._community_id,
-                    post_id,
-                    comment_dict,
-                    user.id,
-                ),
+            await self._emit_scoped(
+                events.comment_created(self._target, post_id, comment_dict, user.id),
+                post,
             )
 
         return comment_dict
@@ -399,7 +408,10 @@ class PostService:
 
         if action == "added" and self._activity_repo is not None:
             reaction_id = uuid.uuid4()
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.reacted",
@@ -416,6 +428,7 @@ class PostService:
             )
 
         await self._publish_reaction_event(
+            post,
             post_id,
             "post",
             post_id,
@@ -472,7 +485,10 @@ class PostService:
 
         if action == "added" and self._activity_repo is not None:
             reaction_id = uuid.uuid4()
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._post_repo._session,
+                self._event_bus,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="post.reacted",
@@ -489,6 +505,7 @@ class PostService:
             )
 
         await self._publish_reaction_event(
+            post,
             post_id,
             "comment",
             comment_id,
@@ -500,8 +517,27 @@ class PostService:
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
 
+    @property
+    def _target(self) -> CommunityTarget:
+        """@brief Nominal target for builders; real routing is per-user via audience."""
+        return CommunityTarget(community_id=self._community_id)
+
+    async def _emit_scoped(self, event: events.RealtimeEvent, post: Post) -> None:
+        """@brief Emit a feed event only to users permitted to see ``post``."""
+        if not self._event_bus:
+            return
+        audience = await resolve_audience(
+            self._post_repo._session,
+            self._community_id,
+            visibility=post.visibility,
+            subgroup_id=post.subgroup_id,
+            author_id=post.author_id,
+        )
+        await emit_to_audience(self._event_bus, audience, event.type, event.payload)
+
     async def _publish_reaction_event(
         self,
+        post: Post,
         post_id: uuid.UUID,
         target_type: str,
         target_id: uuid.UUID,
@@ -511,19 +547,11 @@ class PostService:
         user_id: uuid.UUID,
     ) -> None:
         """@brief Publish a reaction_toggled SSE event via the event bus."""
-        if not self._event_bus:
-            return
-        await self._event_bus.emit(
+        await self._emit_scoped(
             events.reaction_toggled(
-                self._community_id,
-                post_id,
-                target_type,
-                target_id,
-                emoji,
-                count,
-                action,
-                user_id,
+                self._target, post_id, target_type, target_id, emoji, count, action, user_id
             ),
+            post,
         )
 
     async def _notify_comment_participants(

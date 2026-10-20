@@ -11,7 +11,8 @@ Usage::
 
     from app.services.realtime.events import post_created, CommunityTarget
 
-    await event_bus.emit(post_created(community_id, enriched_post))
+    event = post_created(CommunityTarget(community_id=cid), enriched_post)
+    await emit_to_audience(event_bus, audience, event.type, event.payload)
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ class EventType(StrEnum):
     """@brief Top-level SSE event type names (wire format)."""
 
     FEED_UPDATE = "feed_update"
+    FEED_PING = "feed_ping"
     NOTIFICATION = "notification"
     TYPING = "typing"
     PRESENCE = "presence"
@@ -88,22 +90,22 @@ class RealtimeEvent(BaseModel):
 # ── Builder functions ────────────────────────────────────────────────────
 
 
-def post_created(community_id: UUID, post: dict[str, Any]) -> RealtimeEvent:
+def post_created(target: EventTarget, post: dict[str, Any]) -> RealtimeEvent:
     """
     @brief Build a feed_update event for a newly created post.
 
-    @param community_id Community to broadcast to.
+    @param target Routing target (see :mod:`audience`).
     @param post Enriched post dict.
     """
     return RealtimeEvent(
         type=EventType.FEED_UPDATE,
-        target=CommunityTarget(community_id=community_id),
+        target=target,
         payload={"event": FeedEvent.POST_CREATED, "post": post},
     )
 
 
 def comment_created(
-    community_id: UUID,
+    target: EventTarget,
     post_id: UUID,
     comment: dict[str, Any],
     user_id: UUID,
@@ -111,14 +113,14 @@ def comment_created(
     """
     @brief Build a feed_update event for a new comment.
 
-    @param community_id Community to broadcast to.
+    @param target Routing target (see :mod:`audience`).
     @param post_id ID of the parent post.
     @param comment Serialized comment dict.
     @param user_id Author of the comment.
     """
     return RealtimeEvent(
         type=EventType.FEED_UPDATE,
-        target=CommunityTarget(community_id=community_id),
+        target=target,
         payload={
             "event": FeedEvent.COMMENT_CREATED,
             "post_id": str(post_id),
@@ -129,7 +131,7 @@ def comment_created(
 
 
 def reaction_toggled(
-    community_id: UUID,
+    target: EventTarget,
     post_id: UUID,
     target_type: str,
     target_id: UUID,
@@ -141,7 +143,7 @@ def reaction_toggled(
     """
     @brief Build a feed_update event for a reaction toggle.
 
-    @param community_id Community to broadcast to.
+    @param target Routing target (see :mod:`audience`).
     @param post_id ID of the parent post.
     @param target_type "post" or "comment".
     @param target_id ID of the reacted entity.
@@ -152,7 +154,7 @@ def reaction_toggled(
     """
     return RealtimeEvent(
         type=EventType.FEED_UPDATE,
-        target=CommunityTarget(community_id=community_id),
+        target=target,
         payload={
             "event": FeedEvent.REACTION_TOGGLED,
             "post_id": str(post_id),
@@ -195,7 +197,7 @@ def user_notification(
 
 
 def poll_voted(
-    community_id: UUID,
+    target: EventTarget,
     post_id: UUID | None,
     poll_id: UUID,
     results: dict[str, Any],
@@ -203,14 +205,14 @@ def poll_voted(
     """
     @brief Build a feed_update event for a poll vote.
 
-    @param community_id Community to broadcast to.
+    @param target Routing target (see :mod:`audience`).
     @param post_id ID of the parent post (if any).
     @param poll_id ID of the poll.
     @param results Serialized poll results.
     """
     return RealtimeEvent(
         type=EventType.FEED_UPDATE,
-        target=CommunityTarget(community_id=community_id),
+        target=target,
         payload={
             "event": FeedEvent.POLL_VOTED,
             "post_id": str(post_id) if post_id else None,

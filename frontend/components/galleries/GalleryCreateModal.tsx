@@ -4,9 +4,6 @@
  * @brief Form modal to create a new gallery.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
 import {
   Modal,
   Input,
@@ -24,6 +21,11 @@ export interface GalleryCreateModalProps {
   defaultSubgroupId?: string | null;
 }
 
+/**
+ * @brief Modal form for creating a gallery.
+ * @param props see GalleryCreateModalProps
+ * @return modal element
+ */
 export function GalleryCreateModal({
   open,
   onClose,
@@ -31,12 +33,14 @@ export function GalleryCreateModal({
 }: GalleryCreateModalProps) {
   const create = useCreateGallery();
   const { data: calendars } = useCalendars();
-  const [title, setTitle] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [scope, setScope] = React.useState<ScopeValue>({
+  const initialScope = (): ScopeValue => ({
     visibility: defaultSubgroupId ? "subgroup" : "community",
     subgroup_id: defaultSubgroupId ?? null,
   });
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [scope, setScope] = React.useState<ScopeValue>(initialScope);
+  const [error, setError] = React.useState<string | null>(null);
 
   const myGroups = React.useMemo(
     () =>
@@ -48,6 +52,11 @@ export function GalleryCreateModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (scope.visibility === "subgroup" && !scope.subgroup_id) {
+      setError("Choose a group to share with.");
+      return;
+    }
+    setError(null);
     const payload: {
       title: string;
       description: string | null;
@@ -64,49 +73,42 @@ export function GalleryCreateModal({
     await create.mutateAsync(payload);
     setTitle("");
     setDescription("");
-    setScope({
-      visibility: defaultSubgroupId ? "subgroup" : "community",
-      subgroup_id: defaultSubgroupId ?? null,
-    });
+    setScope(initialScope());
     onClose();
   };
 
   return (
     <Modal open={open} onClose={onClose} title="New gallery">
-      <Stack component="form" spacing={2} onSubmit={submit}>
-        <FormControl required>
-          <FormLabel>Title</FormLabel>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </FormControl>
-        <FormControl>
-          <FormLabel>Description</FormLabel>
-          <Textarea
-            minRows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </FormControl>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Input
+          label="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
+        <Textarea
+          label="Description"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
         {!defaultSubgroupId && (
           <ScopeSelect value={scope} onChange={setScope} subgroups={myGroups} />
         )}
-        <Stack direction="row" spacing={1} justifyContent="flex-end">
-          <Button
-            variant="plain"
-            color="neutral"
-            type="button"
-            onClick={onClose}
-          >
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={create.isPending}>
             Create
           </Button>
-        </Stack>
-      </Stack>
+        </div>
+      </form>
     </Modal>
   );
 }

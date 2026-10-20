@@ -1,15 +1,10 @@
 "use client";
 /**
  * @file components/feed/ReactionRow.tsx
- * @brief Reactions chip strip + add-reaction trigger + comment count.
+ * @brief Reaction chips + add-reaction picker + comment count.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
-import Popover from "@mui/joy/Tooltip";
-import { motion } from "framer-motion";
-import { ChatBubbleLeftIcon, FaceSmileIcon } from "@heroicons/react/24/outline";
+import { MessageCircle, Smile } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import type { ReactionSummary } from "@/lib/api/posts";
 
@@ -22,10 +17,14 @@ export interface ReactionRowProps {
   onCommentClick?: () => void;
 }
 
-interface ReactionScaleState {
-  [emoji: string]: boolean;
-}
-
+/**
+ * @brief Row of reaction toggles with a quick-pick popover.
+ * @param reactions summary per emoji
+ * @param commentCount number of comments
+ * @param onReact toggle handler
+ * @param onCommentClick toggles the comment thread
+ * @return row element
+ */
 export function ReactionRow({
   reactions,
   commentCount,
@@ -33,148 +32,74 @@ export function ReactionRow({
   onCommentClick,
 }: ReactionRowProps) {
   const [open, setOpen] = React.useState(false);
-  const [scalingEmoji, setScalingEmoji] = React.useState<ReactionScaleState>(
-    {},
-  );
-  const [displayCounts, setDisplayCounts] = React.useState<
-    Record<string, number>
-  >({});
-
-  const handleReact = (emoji: string) => {
-    setScalingEmoji((s) => ({ ...s, [emoji]: true }));
-    setTimeout(() => setScalingEmoji((s) => ({ ...s, [emoji]: false })), 200);
-    onReact(emoji);
-  };
-
-  // Animate count changes
-  React.useEffect(() => {
-    reactions.forEach((r) => {
-      if (!displayCounts[r.emoji]) {
-        setDisplayCounts((c) => ({ ...c, [r.emoji]: r.count }));
-      } else {
-        const start = displayCounts[r.emoji];
-        const end = r.count;
-        if (start === end) return;
-
-        const startTime = Date.now();
-        const duration = 250;
-
-        const animateCount = () => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const current = Math.round(start + (end - start) * progress);
-          setDisplayCounts((c) => ({ ...c, [r.emoji]: current }));
-
-          if (progress < 1) {
-            requestAnimationFrame(animateCount);
-          }
-        };
-
-        const frameId = requestAnimationFrame(animateCount);
-        return () => cancelAnimationFrame(frameId);
-      }
-    });
-  }, [reactions]);
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+    <div className="flex flex-wrap items-center gap-2">
       {reactions.map((r) => (
-        <motion.div
+        <button
           key={r.emoji}
-          animate={
-            scalingEmoji[r.emoji] ? { scale: [1, 1.2, 1] } : { scale: 1 }
-          }
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          type="button"
+          aria-pressed={r.reacted_by_me}
+          aria-label={`${r.emoji} reaction, ${r.count} ${r.count === 1 ? "person" : "people"}`}
+          onClick={() => onReact(r.emoji)}
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm text-ink outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            r.reacted_by_me
+              ? "border-accent bg-accent/15"
+              : "border-ink/20 bg-bg hover:bg-ink/5"
+          }`}
         >
-          <Box
-            role="button"
-            aria-pressed={r.reacted_by_me}
-            aria-label={`${r.emoji} reaction, ${r.count} ${r.count === 1 ? "person" : "people"}`}
-            onClick={() => handleReact(r.emoji)}
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              px: 0.75,
-              py: 0.25,
-              borderRadius: "sm",
-              cursor: "pointer",
-              gap: 0.5,
-              bgcolor: r.reacted_by_me ? "primary.softBg" : "background.level1",
-              color: r.reacted_by_me ? "primary.plainColor" : "text.primary",
-              border: "1px solid",
-              borderColor: r.reacted_by_me
-                ? "primary.outlinedBorder"
-                : "divider",
-              fontSize: "0.875rem",
-              transition: "background 200ms",
-              "&:hover": {
-                bgcolor: r.reacted_by_me
-                  ? "primary.plainHoverBg"
-                  : "background.level2",
-              },
-            }}
-          >
-            {r.emoji} {displayCounts[r.emoji] ?? r.count}
-          </Box>
-        </motion.div>
+          {r.emoji} {r.count}
+        </button>
       ))}
-      <Box sx={{ position: "relative" }}>
-        <Popover title="Add reaction" placement="top">
-          <IconButton
-            aria-label="Add reaction"
-            size="sm"
-            variant="plain"
-            onClick={() => setOpen((v) => !v)}
-          >
-            <FaceSmileIcon width={18} />
-          </IconButton>
-        </Popover>
+      <div
+        className="relative"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+        }}
+      >
+        <IconButton
+          aria-label="Add reaction"
+          aria-expanded={open}
+          size="sm"
+          variant="ghost"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <Smile className="size-[18px]" aria-hidden="true" />
+        </IconButton>
         {open ? (
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: "100%",
-              left: 0,
-              mb: 0.5,
-              p: 0.5,
-              display: "flex",
-              gap: 0.25,
-              backgroundColor: "background.popup",
-              borderRadius: "md",
-              boxShadow: "md",
-              zIndex: 10,
-            }}
-            onMouseLeave={() => setOpen(false)}
+          <div
+            role="group"
+            aria-label="Pick a reaction"
+            className="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-xl bg-surface p-1 shadow-md"
           >
             {QUICK.map((e) => (
               <IconButton
                 key={e}
+                aria-label={`React ${e}`}
                 size="sm"
-                variant="plain"
+                variant="ghost"
                 onClick={() => {
                   onReact(e);
                   setOpen(false);
                 }}
               >
-                <span style={{ fontSize: 18 }}>{e}</span>
+                <span className="text-lg">{e}</span>
               </IconButton>
             ))}
-          </Box>
+          </div>
         ) : null}
-      </Box>
-      <Box sx={{ flexGrow: 1 }} />
+      </div>
+      <div className="grow" />
       <IconButton
         aria-label="Comments"
         size="sm"
-        variant="plain"
+        variant="ghost"
         onClick={onCommentClick}
       >
-        <ChatBubbleLeftIcon width={18} />
+        <MessageCircle className="size-[18px]" aria-hidden="true" />
       </IconButton>
-      <Typography level="body-xs" textColor="text.tertiary">
-        {commentCount}
-      </Typography>
-    </Stack>
+      <span className="text-xs text-ink/75">{commentCount}</span>
+    </div>
   );
 }
 

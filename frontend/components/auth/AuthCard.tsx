@@ -1,13 +1,17 @@
-"use client";
 /**
  * @file components/auth/AuthCard.tsx
- * @brief Shared header + container for auth form pages.
+ * @brief Shared brand header + card container for auth form pages.
  */
 import type { ReactNode } from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
+import { Card } from "@/components/ui";
 
+/**
+ * @brief Card with community name, title and optional subtitle.
+ * @param title heading text
+ * @param subtitle optional line under the heading
+ * @param children form content
+ * @return auth card
+ */
 export function AuthCard({
   title,
   subtitle,
@@ -18,18 +22,15 @@ export function AuthCard({
   children: ReactNode;
 }) {
   return (
-    <Stack spacing={4}>
-      <Box>
-        <Typography level="h2" sx={{ fontFamily: "var(--font-display)" }}>
-          {title}
-        </Typography>
-        {subtitle && (
-          <Typography level="body-md" color="neutral" sx={{ mt: 1 }}>
-            {subtitle}
-          </Typography>
-        )}
-      </Box>
-      {children}
-    </Stack>
+    <div className="flex flex-col gap-4">
+      <p className="text-center text-3xl font-black">Nexara</p>
+      <Card className="flex flex-col gap-6 p-6">
+        <div>
+          <h1 className="text-2xl font-semibold">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm opacity-80">{subtitle}</p>}
+        </div>
+        {children}
+      </Card>
+    </div>
   );
 }

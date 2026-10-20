@@ -1,26 +1,21 @@
 "use client";
 /**
  * @file components/feed/PostComposer.tsx
- * @brief Tiptap-based rich-text composer for new posts. Inline trigger row
+ * @brief Tailwind/shadcn-skinned Tiptap-based rich-text composer for new posts. Inline trigger row
  *        opens an editor; supports submit on Cmd/Ctrl+Enter.
  *        Polls and media attachment surfaced as toggles; payload pieces
  *        are attached as media_ids / poll on submit.
  *        Supports reply-to-prompt with banner display and state management.
- *        Shows interest-capture toast after submitting interest_capture replies.
+ *        Shows interest-capture prompt after submitting interest_capture replies.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
-import Alert from "@mui/joy/Alert";
-import Typography from "@mui/joy/Typography";
-import Snackbar from "@mui/joy/Snackbar";
-import Chip from "@mui/joy/Chip";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
   Avatar,
   Button,
+  Chip,
   IconButton,
   ScopeSelect,
   type ScopeValue,
@@ -29,11 +24,9 @@ import { useSession } from "@/stores/session";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useCalendars } from "@/hooks/useCalendars";
 import { addInterest } from "@/lib/api/users";
-import {
-  PhotoIcon,
-  ChartBarIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { useToasts } from "@/stores/toasts";
+import { ComposerToolbar } from "./ComposerToolbar";
+import { X } from "lucide-react";
 
 export interface PostComposerProps {
   onPosted?: () => void;
@@ -59,7 +52,7 @@ export function PostComposer({
   const { data: calendars } = useCalendars();
   const [expanded, setExpanded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [showInterestToast, setShowInterestToast] = React.useState(false);
+  const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
   const [scope, setScope] = React.useState<ScopeValue>({
     visibility: defaultSubgroupId ? "subgroup" : "community",
@@ -135,10 +128,11 @@ export function PostComposer({
       await createMut.mutateAsync(payload);
       editor.commands.clearContent();
       setExpanded(false);
+      useToasts.getState().push({ variant: "success", message: "Posted" });
 
       // Show interest toast if this is an interest_capture prompt reply
       if (promptType === "interest_capture" && interestCategorySlug) {
-        setShowInterestToast(true);
+        setShowInterest(true);
       }
 
       onPosted?.();
@@ -157,220 +151,121 @@ export function PostComposer({
 
   if (!me) return null;
 
+  const interestPrompt = showInterest ? (
+    <div
+      role="status"
+      className="bg-surface text-ink mt-2 flex flex-col items-start gap-2 rounded-2xl border border-muted/40 p-3"
+    >
+      <p className="text-sm font-semibold">Add to your interests?</p>
+      {interestCategorySlug && (
+        <Chip tone="accent">{interestCategorySlug}</Chip>
+      )}
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          loading={addingInterest}
+          onClick={async () => {
+            if (!interestCategorySlug) return;
+            setAddingInterest(true);
+            try {
+              await addInterest(interestCategorySlug);
+              setShowInterest(false);
+            } catch (e) {
+              console.error("Failed to add interest:", e);
+            } finally {
+              setAddingInterest(false);
+            }
+          }}
+        >
+          Add
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowInterest(false)}
+        >
+          Not now
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   if (!expanded) {
     return (
-      <Box
-        onClick={() => setExpanded(true)}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          p: 1.5,
-          borderRadius: "lg",
-          border: "1px solid",
-          borderColor: "divider",
-          backgroundColor: "background.surface",
-          cursor: "text",
-        }}
-      >
-        <Avatar src={me.avatar_url ?? undefined} size="sm">
-          {me.display_name.charAt(0)}
-        </Avatar>
-        <Typography level="body-md" textColor="text.tertiary">
-          Share something with your community…
-        </Typography>
-      </Box>
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="bg-surface text-muted focus-visible:outline-accent flex w-full cursor-text items-center gap-3 rounded-[1.25rem] border border-muted/40 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <Avatar src={me.avatar_url ?? undefined} size="sm">
+            {me.display_name.charAt(0)}
+          </Avatar>
+          <span className="text-base">
+            Share something with your community…
+          </span>
+        </button>
+        {interestPrompt}
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{
-        p: 1.5,
-        borderRadius: "lg",
-        border: "1px solid",
-        borderColor: "divider",
-        backgroundColor: "background.surface",
-      }}
+    <div
+      className="bg-surface rounded-[1.25rem] border border-muted/40 p-3"
       data-tour="composer"
     >
-      {/* Reply-to-prompt banner */}
       {replyToPromptId && replyToPromptTitle && (
-        <Box
-          sx={{
-            mb: 1.5,
-            animation: "fadeIn 0.3s ease-out",
-            "@keyframes fadeIn": {
-              from: { opacity: 0, transform: "translateY(-4px)" },
-              to: { opacity: 1, transform: "translateY(0)" },
-            },
-          }}
-        >
-          <Alert
-            variant="soft"
-            color="primary"
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+        <div className="bg-bg mb-3 flex items-center justify-between gap-2 rounded-xl p-2 text-sm">
+          <p>
+            <strong>Replying to:</strong> {replyToPromptTitle}
+          </p>
+          <IconButton
+            aria-label="Clear reply"
+            variant="ghost"
+            size="sm"
+            onClick={onClearReplyPrompt}
           >
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ flexGrow: 1 }}
-            >
-              <Typography level="body-sm">
-                <strong>Replying to:</strong> {replyToPromptTitle}
-              </Typography>
-            </Stack>
-            <IconButton
-              aria-label="Clear reply"
-              variant="plain"
-              size="sm"
-              onClick={onClearReplyPrompt}
-              sx={{ ml: 1 }}
-            >
-              <XMarkIcon width={16} />
-            </IconButton>
-          </Alert>
-        </Box>
+            <X className="size-4" aria-hidden />
+          </IconButton>
+        </div>
       )}
 
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
+      <div className="flex items-start gap-3">
         <Avatar src={me.avatar_url ?? undefined} size="sm">
           {me.display_name.charAt(0)}
         </Avatar>
-        <Box sx={{ flexGrow: 1 }}>
-          <Box
-            sx={{
-              minHeight: 80,
-              borderRadius: "md",
-              p: 1,
-              border: "1px solid",
-              borderColor: "divider",
-              "& .tiptap-editor": { outline: "none", minHeight: 60 },
-              "& .tiptap-editor p.is-editor-empty:first-of-type::before": {
-                content: "attr(data-placeholder)",
-                color: "var(--joy-palette-text-tertiary)",
-                float: "left",
-                pointerEvents: "none",
-                height: 0,
-              },
-            }}
-          >
+        <div className="min-w-0 grow">
+          <div className="min-h-20 rounded-xl border border-muted/40 p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
             <EditorContent editor={editor} />
-          </Box>
+          </div>
           {error ? (
-            <Typography level="body-xs" color="danger" sx={{ mt: 0.5 }}>
+            <p role="alert" className="mt-1 text-xs text-destructive">
               {error}
-            </Typography>
+            </p>
           ) : null}
           {!defaultSubgroupId && (
-            <Box sx={{ mt: 1.5, mb: 1 }}>
+            <div className="mt-3 mb-2">
               <ScopeSelect
                 value={scope}
                 onChange={setScope}
                 subgroups={myGroups}
               />
-            </Box>
+            </div>
           )}
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-            <IconButton
-              aria-label="Attach media"
-              variant="plain"
-              size="sm"
-              disabled
-              title="Coming soon"
-            >
-              <PhotoIcon width={18} />
-            </IconButton>
-            <IconButton
-              aria-label="Add poll"
-              variant="plain"
-              size="sm"
-              disabled
-              title="Coming soon"
-            >
-              <ChartBarIcon width={18} />
-            </IconButton>
-            <Box sx={{ flexGrow: 1 }} />
-            <IconButton
-              aria-label="Cancel"
-              variant="plain"
-              size="sm"
-              onClick={() => {
-                editor?.commands.clearContent();
-                setExpanded(false);
-                setError(null);
-              }}
-            >
-              <XMarkIcon width={18} />
-            </IconButton>
-            <Button onClick={submit} loading={createMut.isPending} size="sm">
-              Post
-            </Button>
-          </Stack>
-        </Box>
-      </Stack>
-
-      {/* Interest-capture toast */}
-      <Snackbar
-        variant="soft"
-        color="primary"
-        open={showInterestToast}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        onClose={() => setShowInterestToast(false)}
-        sx={{ zIndex: 1000 }}
-      >
-        <Stack direction="column" spacing={1}>
-          <Typography level="body-sm">
-            <strong>Add to your interests?</strong>
-          </Typography>
-          {interestCategorySlug && (
-            <Chip
-              size="sm"
-              variant="soft"
-              color="primary"
-              sx={{ alignSelf: "flex-start" }}
-            >
-              {interestCategorySlug}
-            </Chip>
-          )}
-          <Stack direction="row" spacing={1}>
-            <Button
-              size="sm"
-              variant="solid"
-              color="primary"
-              loading={addingInterest}
-              onClick={async () => {
-                if (!interestCategorySlug) return;
-                setAddingInterest(true);
-                try {
-                  await addInterest(interestCategorySlug);
-                  setShowInterestToast(false);
-                } catch (e) {
-                  console.error("Failed to add interest:", e);
-                } finally {
-                  setAddingInterest(false);
-                }
-              }}
-            >
-              Add
-            </Button>
-            <Button
-              size="sm"
-              variant="plain"
-              color="neutral"
-              onClick={() => setShowInterestToast(false)}
-            >
-              Not now
-            </Button>
-          </Stack>
-        </Stack>
-      </Snackbar>
-    </Box>
+          <ComposerToolbar
+            posting={createMut.isPending}
+            onSubmit={submit}
+            onCancel={() => {
+              editor?.commands.clearContent();
+              setExpanded(false);
+              setError(null);
+            }}
+          />
+        </div>
+      </div>
+      {interestPrompt}
+    </div>
   );
 }
 

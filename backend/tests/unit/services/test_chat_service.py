@@ -390,3 +390,43 @@ class TestGetHistory:
         channel_repo.get_for_user.return_value = None
         with pytest.raises(NotFoundError):
             await service.get_history(_make_user(), CHANNEL_ID)
+
+
+class TestActivityRecording:
+    """@brief chat.posted activity must never expose non-public channels."""
+
+    def _svc(self, channel_repo, message_repo, broadcaster, link_preview_enqueue):
+        channel_repo._session = MagicMock()
+        limiter = AsyncMock()
+        limiter.incr = AsyncMock(return_value=1)
+        limiter.expire = AsyncMock()
+        limiter.set = AsyncMock(return_value=True)
+        return ChatService(
+            channel_repo=channel_repo,
+            message_repo=message_repo,
+            community_id=COMMUNITY_ID,
+            rate_limiter=limiter,
+            broadcaster=broadcaster,
+            link_preview_enqueue=link_preview_enqueue,
+            activity_repo=AsyncMock(),
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("ctype,expected", [("direct", 0), ("community", 1)])
+    async def test_activity_by_channel_type(
+        self,
+        ctype,
+        expected,
+        channel_repo,
+        message_repo,
+        broadcaster,
+        link_preview_enqueue,
+        monkeypatch,
+    ) -> None:
+        rec = AsyncMock()
+        monkeypatch.setattr("app.services.chat_service.record_activity", rec)
+        channel_repo.get_for_user.return_value = _make_channel(ctype)
+        message_repo.create_message.return_value = _make_message()
+        svc = self._svc(channel_repo, message_repo, broadcaster, link_preview_enqueue)
+        await svc.send_message(_make_user(), CHANNEL_ID, "hi")
+        assert rec.await_count == expected

@@ -72,6 +72,8 @@ class ActivityService:
         user: User,
         cursor: datetime | None = None,
         limit: int = 30,
+        window_seconds: int = AGGREGATION_WINDOW_MINUTES * 60,
+        subgroup_ids: list[uuid.UUID] | None = None,
     ) -> ActivityFeedResponse:
         """
         @brief Fetch aggregated activity feed for authenticated user.
@@ -88,16 +90,21 @@ class ActivityService:
         @param user Authenticated User instance.
         @param cursor Optional datetime cursor (fetch events before this time).
         @param limit Max items (default 30, capped at 100).
+        @param window_seconds Aggregation window in seconds (default 3600).
+        @param subgroup_ids Override of the viewer's subgroup scope (e.g. members only).
         @return ActivityFeedResponse with paginated items.
         """
         limit = min(limit, 100)
 
         # 1. Resolve viewer's subgroup membership
-        subgroups = await self._subgroup_repo.list_visible_for_user(
-            self._community_id,
-            user.id,
-        )
-        viewer_subgroup_ids = [sg.id for sg in subgroups]
+        if subgroup_ids is not None:
+            viewer_subgroup_ids = subgroup_ids
+        else:
+            subgroups = await self._subgroup_repo.list_visible_for_user(
+                self._community_id,
+                user.id,
+            )
+            viewer_subgroup_ids = [sg.id for sg in subgroups]
 
         # 2. Fetch visibility-filtered events (excludes viewer's own actions)
         events = await self._activity_repo.list_for_user(
@@ -112,7 +119,7 @@ class ActivityService:
         events = await self._filter_dead_objects(events)
 
         # 4. Aggregation: collapse consecutive same (actor, verb, target) within 60 min
-        aggregated = self._aggregate_events(events)
+        aggregated = self._aggregate_events(events, window_seconds)
 
         # 5. Build ActivityItem responses
         items = [
@@ -193,7 +200,9 @@ class ActivityService:
 
         return filtered
 
-    def _aggregate_events(self, events: list[Any]) -> list[list[Any]]:
+    def _aggregate_events(
+        self, events: list[Any], window_seconds: int = AGGREGATION_WINDOW_MINUTES * 60
+    ) -> list[list[Any]]:
         """
         @brief Collapse consecutive same (actor_id, verb, target_type, target_id)
                with created_at deltas ≤60 min into single group.
@@ -229,7 +238,7 @@ class ActivityService:
 
             # Check if same key and within 60-min window
             time_delta = current_group[0].created_at - event.created_at
-            if key == current_key and time_delta < timedelta(minutes=AGGREGATION_WINDOW_MINUTES):
+            if key == current_key and time_delta < timedelta(seconds=window_seconds):
                 current_group.append(event)
             else:
                 # Start new group

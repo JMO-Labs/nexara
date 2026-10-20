@@ -5,8 +5,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 
 // Mock hooks before importing component
 vi.mock("@/hooks/useEvents", () => ({
@@ -33,21 +31,17 @@ import { useUpcomingEvents } from "@/hooks/useEvents";
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("UpcomingEventsWidget", () => {
   it("renders without crashing", () => {
-    wrap(<UpcomingEventsWidget instanceId="w1" />);
+    wrap(<UpcomingEventsWidget />);
     expect(document.body).toBeTruthy();
   });
 
   it("shows skeleton while loading", () => {
-    wrap(<UpcomingEventsWidget instanceId="w1" />);
+    wrap(<UpcomingEventsWidget />);
     // Loading state renders skeleton elements
     expect(document.body.children.length).toBeGreaterThan(0);
   });
@@ -58,7 +52,7 @@ describe("UpcomingEventsWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useUpcomingEvents>);
 
-    wrap(<UpcomingEventsWidget instanceId="w1" />);
+    wrap(<UpcomingEventsWidget />);
     expect(screen.getByText("No upcoming events")).toBeInTheDocument();
   });
 
@@ -96,7 +90,7 @@ describe("UpcomingEventsWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useUpcomingEvents>);
 
-    wrap(<UpcomingEventsWidget instanceId="w1" />);
+    wrap(<UpcomingEventsWidget />);
     expect(screen.getByText("Team Meeting")).toBeInTheDocument();
   });
 });

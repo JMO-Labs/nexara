@@ -21,8 +21,7 @@ import React, { useState } from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
+import { useToasts } from "@/stores/toasts";
 import { PostComposer } from "@/components/feed/PostComposer";
 
 // Mock session store
@@ -37,6 +36,8 @@ vi.mock("@/stores/session", () => ({
   }),
 }));
 
+vi.mock("@/lib/api/users", () => ({ addInterest: vi.fn(async () => {}) }));
+
 vi.mock("@/hooks/useCalendars", () => ({
   useCalendars: () => ({
     data: [
@@ -48,7 +49,7 @@ vi.mock("@/hooks/useCalendars", () => ({
 
 describe("PostComposer", () => {
   function wrap(ui: React.ReactNode) {
-    return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+    return render(<>{ui}</>);
   }
 
   beforeEach(() => {
@@ -216,6 +217,48 @@ describe("PostComposer", () => {
       expect(callArgs).toBeDefined();
       expect(callArgs.visibility).toBe("community");
       expect(callArgs.subgroup_id).toBeNull();
+    });
+  });
+
+  describe("new behavior", () => {
+    async function open(ui: React.ReactNode, text = "Hello") {
+      const user = userEvent.setup();
+      wrap(ui);
+      await user.click(
+        screen.getByText(/Share something with your community/i),
+      );
+      await user.click(document.querySelector(".tiptap-editor") as HTMLElement);
+      await user.keyboard(text);
+      return user;
+    }
+
+    it("sends subgroup payload when defaultSubgroupId is set", async () => {
+      const user = await open(<PostComposer defaultSubgroupId="sg1" />);
+      await user.click(screen.getByRole("button", { name: "Post" }));
+      const args = mockCreatePost.mock.calls[0]?.[0];
+      expect(args.visibility).toBe("subgroup");
+      expect(args.subgroup_id).toBe("sg1");
+    });
+
+    it("pushes a Posted toast on success", async () => {
+      useToasts.getState().clear();
+      const user = await open(<PostComposer />);
+      await user.click(screen.getByRole("button", { name: "Post" }));
+      expect(
+        useToasts.getState().items.some((t) => t.message === "Posted"),
+      ).toBe(true);
+    });
+
+    it("shows the interest slug as visible chip text after posting", async () => {
+      const user = await open(
+        <PostComposer
+          promptType="interest_capture"
+          interestCategorySlug="gardening"
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Post" }));
+      expect(await screen.findByText("gardening")).toBeVisible();
+      expect(screen.getByText(/Add to your interests/i)).toBeInTheDocument();
     });
   });
 

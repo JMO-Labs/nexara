@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -15,6 +15,7 @@ from app.core.exceptions import AppError
 from app.models.poll import Poll, PollOption, PollVote
 from app.repositories.poll_repo import PollRepository
 from app.services.poll_service import PollService
+from app.services.realtime.events import UserTarget
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 USER_ID = uuid.uuid4()
@@ -25,7 +26,10 @@ OPTION_B = uuid.uuid4()
 
 @pytest.fixture
 def poll_repo():
-    return AsyncMock(spec=PollRepository)
+    repo = AsyncMock(spec=PollRepository)
+    repo._session = AsyncMock()
+    repo._session.get.return_value = None
+    return repo
 
 
 @pytest.fixture
@@ -97,9 +101,15 @@ class TestCastVote:
         poll_repo.get_vote_counts.return_value = {OPTION_A: 1}
         poll_repo.get_user_votes.return_value = [OPTION_A]
 
-        await service.cast_vote(POLL_ID, USER_ID, [OPTION_A])
+        with patch(
+            "app.services.poll_service.resolve_audience",
+            new=AsyncMock(return_value=[USER_ID]),
+        ):
+            await service.cast_vote(POLL_ID, USER_ID, [OPTION_A])
 
-        event_bus.emit.assert_awaited_once()
+        event_bus.emit.assert_awaited()
+        targets = [c.args[0].target for c in event_bus.emit.await_args_list]
+        assert all(isinstance(t, UserTarget) for t in targets)
 
     @pytest.mark.asyncio
     async def test_invalid_option_rejected(self, service, poll_repo):

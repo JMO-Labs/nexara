@@ -4,8 +4,6 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostCard } from "@/components/feed/PostCard";
 import type { Post } from "@/lib/api/posts";
@@ -58,11 +56,7 @@ const fakePost: Post = {
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("PostCard SourceBadge integration", () => {

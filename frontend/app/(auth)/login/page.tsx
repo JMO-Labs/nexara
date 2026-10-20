@@ -4,20 +4,14 @@
  * @brief Email/password login. Routes through 2FA when required, otherwise
  *        lands on /app (or the `next` query param).
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
-import Typography from "@mui/joy/Typography";
-import Alert from "@mui/joy/Alert";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { login as apiLogin } from "@/lib/api/auth";
@@ -33,7 +27,7 @@ type FormData = z.infer<typeof Schema>;
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/app";
+  const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
@@ -63,66 +57,51 @@ export default function LoginPage() {
       subtitle={
         <>
           New here?{" "}
-          <Link href="/register" style={{ textDecoration: "underline" }}>
+          <Link href="/register" className="underline">
             Create an account
           </Link>
         </>
       }
     >
       {error && (
-        <Alert color="danger" variant="soft">
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {error}
-        </Alert>
+        </p>
       )}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2.5}>
-          <FormControl error={!!formState.errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              autoFocus
-              slotProps={{
-                input: { autoComplete: "email", ...register("email") },
-              }}
-            />
-            {formState.errors.email && (
-              <FormHelperText>{formState.errors.email.message}</FormHelperText>
-            )}
-          </FormControl>
-          <FormControl error={!!formState.errors.password}>
-            <FormLabel>Password</FormLabel>
-            <Input
-              type="password"
-              slotProps={{
-                input: {
-                  autoComplete: "current-password",
-                  ...register("password"),
-                },
-              }}
-            />
-            {formState.errors.password && (
-              <FormHelperText>
-                {formState.errors.password.message}
-              </FormHelperText>
-            )}
-          </FormControl>
-          <Button
-            type="submit"
-            size="lg"
-            loading={formState.isSubmitting}
-            fullWidth
-          >
-            Sign in
-          </Button>
-          <Stack direction="row" justifyContent="space-between">
-            <Typography level="body-sm">
-              <Link href="/magic-link">Email a magic link</Link>
-            </Typography>
-            <Typography level="body-sm">
-              <Link href="/reset-password">Forgot password?</Link>
-            </Typography>
-          </Stack>
-        </Stack>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-4"
+      >
+        <Input
+          label="Email"
+          type="email"
+          autoFocus
+          autoComplete="email"
+          error={formState.errors.email?.message}
+          {...register("email")}
+        />
+        <Input
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          error={formState.errors.password?.message}
+          {...register("password")}
+        />
+        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+          Sign in
+        </Button>
+        <div className="flex justify-between text-sm">
+          <Link href="/magic-link" className="underline">
+            Email a magic link
+          </Link>
+          <Link href="/reset-password" className="underline">
+            Forgot password?
+          </Link>
+        </div>
       </form>
       <OAuthButtons />
     </AuthCard>

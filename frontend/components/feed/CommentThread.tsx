@@ -4,9 +4,6 @@
  * @brief Threaded comments list with a single inline reply input.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Box from "@mui/joy/Box";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, Button, Textarea, Skeleton, Markdown } from "@/components/ui";
 import { useComments, useCreateComment } from "@/hooks/usePosts";
@@ -32,45 +29,30 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
     }
   }, [comment.created_at]);
   return (
-    <Stack
-      direction="row"
-      spacing={1.25}
-      sx={{ pl: Math.min(depth, 3) * 3, mt: 1 }}
+    <div
+      className="mt-2 flex gap-2.5"
+      style={{ paddingLeft: Math.min(depth, 3) * 12 }}
     >
-      <Avatar src={comment.author.avatar_url ?? undefined} size="sm">
-        {comment.author.display_name.charAt(0)}
-      </Avatar>
-      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Box
-          sx={{
-            backgroundColor: "background.level1",
-            borderRadius: "md",
-            px: 1.5,
-            py: 1,
-          }}
-        >
-          <Typography level="title-sm">
-            {comment.author.display_name}
-          </Typography>
+      <Avatar
+        src={comment.author.avatar_url ?? undefined}
+        name={comment.author.display_name}
+        size="sm"
+      />
+      <div className="min-w-0 grow">
+        <div className="rounded-xl bg-bg px-3 py-2">
+          <p className="text-sm font-semibold">{comment.author.display_name}</p>
           <Markdown content={comment.content} size="sm" />
-        </Box>
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ mt: 0.5, ml: 1 }}
-          alignItems="center"
-        >
-          <Typography level="body-xs" textColor="text.tertiary">
-            {time}
-          </Typography>
-          <Typography
-            level="body-xs"
-            sx={{ cursor: "pointer" }}
+        </div>
+        <div className="ml-2 mt-1 flex items-center gap-3 text-xs text-ink/75">
+          <span>{time}</span>
+          <button
+            type="button"
             onClick={() => onReply(comment.id)}
+            className="rounded font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Reply
-          </Typography>
-        </Stack>
+          </button>
+        </div>
         {comment.replies?.map((r) => (
           <CommentNode
             key={r.id}
@@ -79,8 +61,8 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
             onReply={onReply}
           />
         ))}
-      </Box>
-    </Stack>
+      </div>
+    </div>
   );
 }
 
@@ -90,6 +72,13 @@ export interface CommentThreadProps {
   onOverflowChange?: (overflowing: boolean) => void;
 }
 
+/**
+ * @brief Comment list + composer for a post.
+ * @param postId post id
+ * @param expanded taller scroll area
+ * @param onOverflowChange reports whether the list overflows its box
+ * @return thread element
+ */
 export function CommentThread({
   postId,
   expanded = false,
@@ -129,15 +118,15 @@ export function CommentThread({
   };
 
   return (
-    <Stack spacing={1} sx={{ mt: 1 }}>
-      <Stack direction="row" spacing={1} alignItems="flex-start">
+    <div className="mt-2 flex flex-col gap-2">
+      <div className="flex items-start gap-2">
         <Textarea
+          aria-label={replyTo ? "Write a reply" : "Add a comment"}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={replyTo ? "Write a reply…" : "Add a comment…"}
-          minRows={1}
-          maxRows={6}
-          sx={{ flexGrow: 1 }}
+          rows={1}
+          className="min-h-10 grow"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -153,55 +142,46 @@ export function CommentThread({
         >
           Send
         </Button>
-      </Stack>
+      </div>
       {replyTo ? (
-        <Typography
-          level="body-xs"
-          sx={{ cursor: "pointer" }}
+        <button
+          type="button"
           onClick={() => setReplyTo(null)}
+          className="self-start rounded text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Cancel reply
-        </Typography>
+        </button>
       ) : null}
       {isLoading ? (
-        <Stack spacing={1}>
+        <div className="flex flex-col gap-2">
           <Skeleton height={48} />
           <Skeleton height={48} />
-        </Stack>
+        </div>
       ) : flat.length === 0 ? (
-        <Typography level="body-sm" textColor="text.tertiary" sx={{ py: 1 }}>
-          No comments yet.
-        </Typography>
+        <p className="py-2 text-sm text-ink/75">No comments yet.</p>
       ) : (
-        <Box
+        <div
           ref={scrollRef}
-          sx={{
-            maxHeight: expanded ? EXPANDED_MAX : COLLAPSED_MAX,
-            overflowY: "auto",
-            pr: 0.5,
-            transition: "max-height 200ms ease",
-            borderTop: "1px solid",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
+          className="overflow-y-auto border-y border-ink/15 pr-1 motion-safe:transition-[max-height]"
+          style={{ maxHeight: expanded ? EXPANDED_MAX : COLLAPSED_MAX }}
         >
           {flat.map((c) => (
             <CommentNode key={c.id} comment={c} onReply={setReplyTo} />
           ))}
           {hasNextPage ? (
             <Button
-              variant="plain"
+              variant="ghost"
               size="sm"
+              className="mt-2"
               onClick={() => fetchNextPage()}
               loading={isFetchingNextPage}
-              sx={{ mt: 1 }}
             >
               Load more
             </Button>
           ) : null}
-        </Box>
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }
 

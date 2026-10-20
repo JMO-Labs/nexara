@@ -213,8 +213,14 @@ moves. At final merge: everything green, coverage ≥ `main`, full GitLab CI pas
 - **Feed endpoint:** new server endpoint `GET /api/v1/home/feed` returning posts + activity in
   one cursor-paginated stream (server already must filter for privacy, so merge there). Existing
   posts/activity endpoints stay for other screens.
-- **10-second collapse:** server returns already-collapsed items on page load; client merges
-  live SSE arrivals into an existing entry when `(actor, verb, target)` matches within 10s.
+- **10-second collapse + live:** collapse happens only server-side (activity aggregation window
+  10s for the home feed). Live = server emits a lightweight `feed_ping` SSE event to the item's
+  audience only; client refetches the feed head and slides in unseen ids. No client-side merge.
+- **SSE audience scoping (bug fix):** existing `feed_update` events broadcast to the whole
+  community (`CommunityTarget`) regardless of visibility. All feed events are re-targeted to
+  resolved recipients (`UserTarget` per viewer allowed to see the item, minus block relations).
+  ponytail ceiling: O(members) per event; move filtering into the connection manager if
+  communities grow beyond hundreds.
 - **Old widget layouts:** grid-shaped `home_layout` values reset to default order on first read.
   No data migration.
 - **Sequencing:** frontend phases 0–4 do not block on Notifications Plan A. Inbox (phase 5)

@@ -1,9 +1,8 @@
 "use client";
 /**
  * @file components/feed/PostMedia.tsx
- * @brief Media grid for post attachments. 1/2/3+ layouts. Images only for now.
+ * @brief Media grid for post attachments (1 / 2 / 3+ layouts).
  */
-import Box from "@mui/joy/Box";
 import type { PostMedia as Media } from "@/lib/api/posts";
 
 export interface PostMediaProps {
@@ -15,38 +14,30 @@ function isImage(m: Media) {
   return m.mime_type.startsWith("image/");
 }
 
+/**
+ * @brief Grid of up to four attachments with a "+N" overlay.
+ * @param media attachments
+ * @param onClick tile click handler (index)
+ * @return grid element or null
+ */
 export function PostMedia({ media, onClick }: PostMediaProps) {
   if (!media || media.length === 0) return null;
   const visible = media.slice(0, 4);
   const overflow = Math.max(0, media.length - 4);
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gap: 1,
-        borderRadius: "md",
-        overflow: "hidden",
-        gridTemplateColumns:
-          visible.length === 1
-            ? "1fr"
-            : visible.length === 2
-              ? "1fr 1fr"
-              : "1fr 1fr",
-        gridTemplateRows: visible.length > 2 ? "repeat(2, 1fr)" : "1fr",
-      }}
+    <div
+      className={`grid gap-2 overflow-hidden rounded-xl ${
+        visible.length === 1 ? "grid-cols-1" : "grid-cols-2"
+      }`}
     >
       {visible.map((m, i) => (
-        <Box
+        <div
           key={m.id}
           onClick={() => onClick?.(i)}
-          sx={{
-            position: "relative",
-            cursor: onClick ? "pointer" : "default",
-            aspectRatio: visible.length === 1 ? "16 / 10" : "1 / 1",
-            overflow: "hidden",
-            backgroundColor: "background.level1",
-          }}
+          className={`relative overflow-hidden bg-bg ${
+            onClick ? "cursor-pointer" : ""
+          } ${visible.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}
         >
           {isImage(m) ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -54,35 +45,19 @@ export function PostMedia({ media, onClick }: PostMediaProps) {
               src={m.thumbnail_url ?? m.url}
               alt=""
               loading="lazy"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              className="size-full object-cover"
             />
           ) : (
-            <video
-              src={m.url}
-              controls
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+            <video src={m.url} controls className="size-full object-cover" />
           )}
           {i === 3 && overflow > 0 ? (
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "common.white",
-                fontFamily: "display",
-                fontSize: 24,
-                background: "rgba(0,0,0,0.5)",
-              }}
-            >
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-2xl font-black text-white">
               +{overflow}
-            </Box>
+            </div>
           ) : null}
-        </Box>
+        </div>
       ))}
-    </Box>
+    </div>
   );
 }
 

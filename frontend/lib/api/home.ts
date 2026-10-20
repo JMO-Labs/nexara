@@ -5,7 +5,7 @@
  */
 
 import { apiGet, apiPut } from "./client";
-import type { WidgetInstance } from "@/lib/widgets/registry";
+import type { Post } from "./posts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,9 +68,35 @@ export interface ActivityFeedResponse {
   next_cursor: string | null;
 }
 
+/** @brief Post entry of the unified home feed (post = enriched post dict). */
+export interface PostFeedItem {
+  kind: "post";
+  id: string;
+  created_at: string;
+  post: Post;
+}
+
+/** @brief Activity entry of the unified home feed. */
+export interface ActivityFeedItem {
+  kind: "activity";
+  id: string;
+  created_at: string;
+  activity: ActivityItem;
+}
+
+/** @brief Discriminated union of unified feed items. */
+export type FeedItem = PostFeedItem | ActivityFeedItem;
+
+/** @brief Response envelope for the unified home feed. */
+export interface HomeFeedResponse {
+  items: FeedItem[];
+  next_cursor: string | null;
+}
+
 /** @brief Persisted home layout stored under settings.home_layout. */
 export interface HomeLayout {
-  widgets: WidgetInstance[];
+  order: string[];
+  hidden: string[];
 }
 
 /** @brief Minimal shape of the settings response returned after a layout PUT. */
@@ -149,3 +175,15 @@ export const putHomeLayout = (
   layout: HomeLayout,
 ): Promise<UserSettingsResponse> =>
   apiPut<UserSettingsResponse>(`${SETTINGS}/`, { home_layout: layout });
+
+/**
+ * @brief Fetch the unified home feed (posts + activity), newest first.
+ * @param cursor ISO datetime cursor from the previous page.
+ * @return HomeFeedResponse page.
+ */
+export const getHomeFeed = (cursor?: string): Promise<HomeFeedResponse> => {
+  const qs = new URLSearchParams();
+  if (cursor) qs.set("cursor", cursor);
+  const q = qs.toString();
+  return apiGet<HomeFeedResponse>(`${HOME}/feed${q ? `?${q}` : ""}`);
+};
