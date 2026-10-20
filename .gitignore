@@ -264,7 +264,7 @@ deploy/helm/nexara/Chart.lock
 # Documentation build output
 # =============================================================================
 docs/build/
-public/
+/public/
 
 # =============================================================================
 # CI caches (local development)
@@ -288,7 +288,7 @@ Thumbs.db
 # =============================================================================
 # Plans (local planning documents, not part of the application source)
 # =============================================================================
-plans/
+/plans/
 
 node_modules/
 
