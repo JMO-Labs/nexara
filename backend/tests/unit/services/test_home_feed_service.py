@@ -13,10 +13,10 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.services.home_feed_service import HomeFeedService
 
 from app.models.user import User
 from app.schemas.activity import ActivityFeedResponse, ActivityItem
+from app.services.home_feed_service import HomeFeedService
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 VIEWER_ID = uuid.uuid4()
@@ -141,3 +141,10 @@ async def test_paging_returns_distinct_items():
             break
     assert len(seen) == 5
     assert len(set(seen)) == 5
+
+
+@pytest.mark.asyncio
+async def test_chat_verbs_dropped():
+    svc, _ = _service([], [_act(1, "chat.posted"), _act(2)], [])
+    res = await svc.list(_viewer(), None, 20)
+    assert [i.activity.verb for i in res.items] == ["post.commented"]

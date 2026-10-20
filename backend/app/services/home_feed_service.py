@@ -71,7 +71,7 @@ class HomeFeedService:
         merged += [
             ActivityFeedItem(id=a.id, created_at=a.created_at, activity=a)
             for a in act.items
-            if a.verb != "post.created"
+            if a.verb != "post.created" and not a.verb.startswith("chat.")
         ]
         merged.sort(key=lambda i: i.created_at, reverse=True)
         deduped = list({(i.kind, i.id): i for i in reversed(merged)}.values())[::-1]
