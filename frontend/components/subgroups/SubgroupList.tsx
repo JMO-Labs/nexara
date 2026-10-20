@@ -1,13 +1,17 @@
-'use client';
+"use client";
 /**
  * @file components/subgroups/SubgroupList.tsx
  * @brief Grid of SubgroupCard with skeleton + empty fallbacks.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import { Skeleton, EmptyState } from '@/components/ui';
-import { SubgroupCard } from './SubgroupCard';
-import { useSubgroupList, useJoinSubgroup, useLeaveSubgroup } from '@/hooks/useSubgroups';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import { Skeleton, EmptyState } from "@/components/ui";
+import { SubgroupCard } from "./SubgroupCard";
+import {
+  useSubgroupList,
+  useJoinSubgroup,
+  useLeaveSubgroup,
+} from "@/hooks/useSubgroups";
 
 export interface SubgroupListProps {
   onSelect: (slug: string) => void;
@@ -20,7 +24,13 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+        }}
+      >
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} height={120} />
         ))}
@@ -29,7 +39,9 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
   }
 
   if (error) {
-    return <EmptyState title="Couldn't load subgroups" description={String(error)} />;
+    return (
+      <EmptyState title="Couldn't load subgroups" description={String(error)} />
+    );
   }
 
   if (!data || data.length === 0) {
@@ -42,7 +54,13 @@ export function SubgroupList({ onSelect }: SubgroupListProps) {
   }
 
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+    <Box
+      sx={{
+        display: "grid",
+        gap: 2,
+        gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+      }}
+    >
       {data.map((sg) => (
         <SubgroupCard
           key={sg.id}

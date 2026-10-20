@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/notifications/NotificationsBell.tsx
  * @brief Top-bar bell. Shows unread badge, opens an anchored popover
@@ -6,15 +6,15 @@
  *        type, summary, timestamp and an Acknowledge button. SSE drives
  *        live count + list updates.
  */
-import { useState, useEffect, useRef } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Sheet from '@mui/joy/Sheet';
-import Badge from '@mui/joy/Badge';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Sheet from "@mui/joy/Sheet";
+import Badge from "@mui/joy/Badge";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   BellIcon,
   CheckIcon,
@@ -26,11 +26,11 @@ import {
   DocumentTextIcon,
   PhotoIcon,
   InboxIcon,
-} from '@heroicons/react/24/outline';
-import type { ComponentType, SVGProps } from 'react';
-import { IconButton } from '@/components/ui/IconButton';
-import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
+} from "@heroicons/react/24/outline";
+import type { ComponentType, SVGProps } from "react";
+import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   getUnreadCount,
   listNotifications,
@@ -39,28 +39,28 @@ import {
   STREAM_PATH,
   type NotificationItem,
   type NotificationListResponse,
-} from '@/lib/api/notifications';
-import { useSSE } from '@/hooks/useSSE';
-import { useSession } from '@/stores/session';
+} from "@/lib/api/notifications";
+import { useSSE } from "@/hooks/useSSE";
+import { useSession } from "@/stores/session";
 
-const COUNT_KEY = ['notifications', 'unread-count'] as const;
-const LIST_KEY = ['notifications', 'list'] as const;
+const COUNT_KEY = ["notifications", "unread-count"] as const;
+const LIST_KEY = ["notifications", "list"] as const;
 
 type IconCmp = ComponentType<SVGProps<SVGSVGElement>>;
 
 const TYPE_META: Record<string, { label: string; icon: IconCmp }> = {
-  mention: { label: 'Mention', icon: AtSymbolIcon },
-  comment: { label: 'Comment', icon: ChatBubbleLeftIcon },
-  reaction: { label: 'Reaction', icon: HeartIcon },
-  event_rsvp: { label: 'Event RSVP', icon: CalendarIcon },
-  prompt: { label: 'Prompt', icon: SparklesIcon },
-  prompt_summary: { label: 'Prompt summary', icon: SparklesIcon },
-  gallery_activity: { label: 'Gallery', icon: PhotoIcon },
-  post: { label: 'Post', icon: DocumentTextIcon },
+  mention: { label: "Mention", icon: AtSymbolIcon },
+  comment: { label: "Comment", icon: ChatBubbleLeftIcon },
+  reaction: { label: "Reaction", icon: HeartIcon },
+  event_rsvp: { label: "Event RSVP", icon: CalendarIcon },
+  prompt: { label: "Prompt", icon: SparklesIcon },
+  prompt_summary: { label: "Prompt summary", icon: SparklesIcon },
+  gallery_activity: { label: "Gallery", icon: PhotoIcon },
+  post: { label: "Post", icon: DocumentTextIcon },
 };
 
 function metaFor(type: string): { label: string; icon: IconCmp } {
-  return TYPE_META[type] ?? { label: type.replace(/_/g, ' '), icon: InboxIcon };
+  return TYPE_META[type] ?? { label: type.replace(/_/g, " "), icon: InboxIcon };
 }
 
 export function NotificationsBell() {
@@ -68,10 +68,12 @@ export function NotificationsBell() {
   const [pulse, setPulse] = useState(false);
   const [badgeKey, setBadgeKey] = useState(0);
   const prevCountRef = useRef(0);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const isAuthed = useSession((s) => s.status === 'authenticated');
+  const isAuthed = useSession((s) => s.status === "authenticated");
   const qc = useQueryClient();
 
   const { data: count } = useQuery({
@@ -81,7 +83,11 @@ export function NotificationsBell() {
     staleTime: 30_000,
   });
 
-  const { data: list, isLoading, error } = useQuery({
+  const {
+    data: list,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: LIST_KEY,
     queryFn: () => listNotifications(),
     enabled: isAuthed,
@@ -106,16 +112,14 @@ export function NotificationsBell() {
 
   const dismissOne = (id: string) => {
     qc.setQueryData<NotificationListResponse>(LIST_KEY, (prev) =>
-      prev
-        ? { ...prev, items: prev.items.filter((n) => n.id !== id) }
-        : prev,
+      prev ? { ...prev, items: prev.items.filter((n) => n.id !== id) } : prev,
     );
     ackOne.mutate(id);
   };
 
   useSSE(STREAM_PATH, {
     enabled: isAuthed,
-    eventTypes: ['notification', 'user_notification'],
+    eventTypes: ["notification", "user_notification"],
     onMessage: () => {
       qc.invalidateQueries({ queryKey: COUNT_KEY });
       if (open) qc.invalidateQueries({ queryKey: LIST_KEY });
@@ -145,35 +149,35 @@ export function NotificationsBell() {
       if (!wrapperRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
   return (
-    <Box ref={wrapperRef} sx={{ position: 'relative' }}>
+    <Box ref={wrapperRef} sx={{ position: "relative" }}>
       <Badge
         key={`badge-${badgeKey}`}
-        badgeContent={unread > 99 ? '99+' : unread}
+        badgeContent={unread > 99 ? "99+" : unread}
         color="danger"
         invisible={unread === 0}
         size="sm"
       >
         <motion.div
           animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
-          transition={{ duration: 0.35, ease: 'easeInOut' }}
+          transition={{ duration: 0.35, ease: "easeInOut" }}
         >
           <IconButton
             tooltip="Notifications"
             variant="plain"
             color="neutral"
             aria-label={
-              unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'
+              unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
             }
             aria-expanded={open}
             aria-haspopup="dialog"
@@ -191,16 +195,16 @@ export function NotificationsBell() {
           aria-label="Notifications"
           variant="outlined"
           sx={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
+            position: "absolute",
+            top: "calc(100% + 8px)",
             right: 0,
             width: { xs: 320, sm: 380 },
-            maxHeight: 'min(70dvh, 560px)',
-            borderRadius: 'lg',
-            boxShadow: 'lg',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
+            maxHeight: "min(70dvh, 560px)",
+            borderRadius: "lg",
+            boxShadow: "lg",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
             zIndex: 1100,
           }}
         >
@@ -208,9 +212,12 @@ export function NotificationsBell() {
             direction="row"
             alignItems="center"
             justifyContent="space-between"
-            sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+            sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}
           >
-            <Typography level="title-md" sx={{ fontFamily: 'var(--font-display)' }}>
+            <Typography
+              level="title-md"
+              sx={{ fontFamily: "var(--font-display)" }}
+            >
               Notifications
             </Typography>
             {unread > 0 && (
@@ -224,7 +231,7 @@ export function NotificationsBell() {
               </Button>
             )}
           </Stack>
-          <Box sx={{ overflow: 'auto', flex: 1 }}>
+          <Box sx={{ overflow: "auto", flex: 1 }}>
             {isLoading && (
               <Stack spacing={1} sx={{ p: 2 }}>
                 <Skeleton height={56} rounded="md" />
@@ -236,7 +243,7 @@ export function NotificationsBell() {
               <Typography
                 level="body-sm"
                 color="danger"
-                sx={{ p: 4, textAlign: 'center' }}
+                sx={{ p: 4, textAlign: "center" }}
               >
                 Could not load notifications.
                 {unread > 0 && ` (${unread} unread reported)`}
@@ -246,11 +253,11 @@ export function NotificationsBell() {
               <Typography
                 level="body-sm"
                 color="neutral"
-                sx={{ p: 4, textAlign: 'center' }}
+                sx={{ p: 4, textAlign: "center" }}
               >
                 {unread > 0
                   ? `${unread} unread reported but list is empty — try refresh.`
-                  : 'You’re all caught up.'}
+                  : "You’re all caught up."}
               </Typography>
             )}
             {!isLoading &&
@@ -283,8 +290,9 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
   const unread = !item.read_at;
   const { label, icon: Icon } = metaFor(item.type);
   const message =
-    typeof item.payload?.message === 'string' ? item.payload.message : label;
-  const link = typeof item.payload?.link === 'string' ? item.payload.link : null;
+    typeof item.payload?.message === "string" ? item.payload.message : label;
+  const link =
+    typeof item.payload?.link === "string" ? item.payload.link : null;
 
   const Body = (
     <Stack
@@ -294,10 +302,10 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
       sx={{
         px: 2,
         py: 1.5,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        background: unread ? 'primary.softBg' : 'transparent',
-        '&:hover': { background: 'neutral.softBg' },
+        borderBottom: "1px solid",
+        borderColor: "divider",
+        background: unread ? "primary.softBg" : "transparent",
+        "&:hover": { background: "neutral.softBg" },
       }}
     >
       <Box
@@ -307,12 +315,12 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
           flexShrink: 0,
           width: 32,
           height: 32,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: unread ? 'primary.plainColor' : 'neutral.plainColor',
-          background: unread ? 'primary.softBg' : 'neutral.softBg',
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: unread ? "primary.plainColor" : "neutral.plainColor",
+          background: unread ? "primary.softBg" : "neutral.softBg",
         }}
       >
         <Icon aria-hidden width={18} height={18} />
@@ -321,7 +329,7 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
         <Typography level="body-xs" color="neutral" sx={{ mb: 0.25 }}>
           {formatTime(item.created_at)}
         </Typography>
-        <Typography level="body-sm" sx={{ wordBreak: 'break-word' }}>
+        <Typography level="body-sm" sx={{ wordBreak: "break-word" }}>
           {message}
         </Typography>
       </Box>
@@ -350,7 +358,7 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
     <Box
       component={Link}
       href={link}
-      sx={{ display: 'block', color: 'inherit', textDecoration: 'none' }}
+      sx={{ display: "block", color: "inherit", textDecoration: "none" }}
       onClick={() => {
         onDismiss(item.id);
         onNavigate();
@@ -364,7 +372,7 @@ function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
 function formatTime(iso: string): string {
   const d = new Date(iso);
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return 'just now';
+  if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86_400) return `${Math.floor(diff / 3600)}h ago`;
   return d.toLocaleDateString();

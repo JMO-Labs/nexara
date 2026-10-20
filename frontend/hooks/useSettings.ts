@@ -2,10 +2,10 @@
  * @file hooks/useSettings.ts
  * @brief TanStack Query hooks for user settings: profile, notifications, appearance.
  */
-'use client';
+"use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
 import {
   getSettings,
   updateSettings,
@@ -16,8 +16,8 @@ import {
   type NotificationPreferences,
   type ProfileUpdate,
   type UserSettingsUpdate,
-} from '@/lib/api/settings';
-import { useMutationWithToast } from './useMutationWithToast';
+} from "@/lib/api/settings";
+import { useMutationWithToast } from "./useMutationWithToast";
 
 /**
  * @brief Fetch user settings (theme, locale, notifications).
@@ -52,7 +52,7 @@ export function useUpdateSettings() {
 
   return useMutationWithToast({
     mutationFn: (body: Partial<UserSettingsUpdate>) => updateSettings(body),
-    successKey: 'toasts.settings.saved',
+    successKey: "toasts.settings.saved",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings.profile() });
     },
@@ -68,7 +68,7 @@ export function useUpdateProfile() {
 
   return useMutationWithToast({
     mutationFn: (body: Partial<ProfileUpdate>) => updateProfile(body),
-    successKey: 'toasts.settings.saved',
+    successKey: "toasts.settings.saved",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings.profile() });
     },
@@ -84,7 +84,7 @@ export function useUpdateEmail() {
 
   return useMutationWithToast({
     mutationFn: (email: string) => updateEmail(email),
-    successKey: 'toasts.settings.saved',
+    successKey: "toasts.settings.saved",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings.profile() });
     },
@@ -101,7 +101,7 @@ export function useUpdateNotificationPrefs() {
   return useMutationWithToast({
     mutationFn: (body: Partial<NotificationPreferences>) =>
       updateNotificationPrefs(body),
-    successKey: 'toasts.settings.saved',
+    successKey: "toasts.settings.saved",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings.notifications() });
     },

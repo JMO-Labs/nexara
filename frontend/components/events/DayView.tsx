@@ -66,8 +66,7 @@ export function DayView({
     return () => clearInterval(id);
   }, []);
   const isToday = isTodayFn(day);
-  const nowOffset =
-    (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
+  const nowOffset = (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT;
 
   return (
     <Box
@@ -255,7 +254,8 @@ export function DayView({
                   top: "-5px",
                   left: -4,
                   boxShadow: "0 0 0 2px var(--joy-palette-background-surface)",
-                  animation: "pulse-now 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                  animation:
+                    "pulse-now 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                   "@keyframes pulse-now": {
                     "0%, 100%": { opacity: 1 },
                     "50%": { opacity: 0.55 },

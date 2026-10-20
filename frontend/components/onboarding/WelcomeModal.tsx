@@ -6,24 +6,24 @@
  * Provides direct shortcuts to common first actions.
  */
 
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Modal from '@mui/joy/Modal';
-import ModalClose from '@mui/joy/ModalClose';
-import Sheet from '@mui/joy/Sheet';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Button from '@mui/joy/Button';
-import Box from '@mui/joy/Box';
+import Link from "next/link";
+import Modal from "@mui/joy/Modal";
+import ModalClose from "@mui/joy/ModalClose";
+import Sheet from "@mui/joy/Sheet";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Button from "@mui/joy/Button";
+import Box from "@mui/joy/Box";
 import {
   UserCircleIcon,
   UserGroupIcon,
   CalendarIcon,
-} from '@heroicons/react/24/outline';
-import { useSession } from '@/stores/session';
-import { useState } from 'react';
-import * as usersApi from '@/lib/api/users';
+} from "@heroicons/react/24/outline";
+import { useSession } from "@/stores/session";
+import { useState } from "react";
+import * as usersApi from "@/lib/api/users";
 
 interface ActionLink {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -35,21 +35,21 @@ interface ActionLink {
 const ACTIONS: ActionLink[] = [
   {
     icon: UserCircleIcon,
-    label: 'Edit profile',
-    href: '/app/settings?tab=profile',
-    description: 'Complete your profile info',
+    label: "Edit profile",
+    href: "/app/settings?tab=profile",
+    description: "Complete your profile info",
   },
   {
     icon: UserGroupIcon,
-    label: 'Find friends',
-    href: '/app/members',
-    description: 'Connect with community members',
+    label: "Find friends",
+    href: "/app/members",
+    description: "Connect with community members",
   },
   {
     icon: CalendarIcon,
-    label: 'Browse events',
-    href: '/app/events',
-    description: 'Discover upcoming events',
+    label: "Browse events",
+    href: "/app/events",
+    description: "Discover upcoming events",
   },
 ];
 
@@ -91,9 +91,9 @@ export function WelcomeModal() {
         variant="outlined"
         sx={{
           p: 3,
-          borderRadius: 'md',
+          borderRadius: "md",
           maxWidth: 500,
-          mx: 'auto',
+          mx: "auto",
         }}
       >
         <ModalClose variant="plain" sx={{ m: 1 }} />
@@ -103,7 +103,8 @@ export function WelcomeModal() {
               Welcome to the community!
             </Typography>
             <Typography level="body-md" textColor="text.tertiary">
-              Let&apos;s help you get started with a quick tour and some useful links.
+              Let&apos;s help you get started with a quick tour and some useful
+              links.
             </Typography>
           </Box>
 
@@ -111,21 +112,25 @@ export function WelcomeModal() {
             {ACTIONS.map((action) => {
               const Icon = action.icon;
               return (
-                <Link key={action.href} href={action.href} style={{ textDecoration: 'none' }}>
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  style={{ textDecoration: "none" }}
+                >
                   <Box
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       gap: 1.5,
                       p: 1.5,
-                      borderRadius: 'md',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        backgroundColor: 'primary.softBg',
+                      borderRadius: "md",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      transition: "all 0.2s ease",
+                      cursor: "pointer",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        backgroundColor: "primary.softBg",
                       },
                     }}
                   >
@@ -153,10 +158,7 @@ export function WelcomeModal() {
             >
               Skip for now
             </Button>
-            <Button
-              fullWidth
-              onClick={handleTakeTour}
-            >
+            <Button fullWidth onClick={handleTakeTour}>
               Take tour
             </Button>
           </Stack>

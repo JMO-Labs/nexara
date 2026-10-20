@@ -2,18 +2,18 @@
  * @file tests/unit/hooks/useMutationWithToast.test.ts
  * @brief Test useMutationWithToast wrapper for automatic toast handling.
  */
-import * as React from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useMutationWithToast } from '@/hooks/useMutationWithToast';
-import { useToasts } from '@/stores/toasts';
+import * as React from "react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
+import { useToasts } from "@/stores/toasts";
 
-vi.mock('next-intl', () => ({
+vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      'toasts.success.example': 'Success!',
-      'toasts.errors.generic': 'Something went wrong',
+      "toasts.success.example": "Success!",
+      "toasts.errors.generic": "Something went wrong",
     };
     return translations[key] || key;
   },
@@ -23,23 +23,23 @@ const createWrapper = () => {
   const queryClient = new QueryClient();
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
-  Wrapper.displayName = 'Wrapper';
+  Wrapper.displayName = "Wrapper";
   return Wrapper;
 };
 
-describe('useMutationWithToast', () => {
+describe("useMutationWithToast", () => {
   beforeEach(() => {
     useToasts.getState().clear();
     vi.clearAllMocks();
   });
 
-  it('shows success toast with successKey', async () => {
+  it("shows success toast with successKey", async () => {
     const mutationFn = vi.fn().mockResolvedValue({ ok: true });
     const { result } = renderHook(
       () =>
         useMutationWithToast({
           mutationFn,
-          successKey: 'toasts.success.example',
+          successKey: "toasts.success.example",
         }),
       { wrapper: createWrapper() },
     );
@@ -55,19 +55,19 @@ describe('useMutationWithToast', () => {
     const toasts = useToasts.getState().items;
     expect(toasts).toHaveLength(1);
     expect(toasts[0]).toMatchObject({
-      variant: 'success',
-      message: 'Success!',
+      variant: "success",
+      message: "Success!",
     });
   });
 
-  it('shows error toast with errorKey', async () => {
-    const err = new Error('Test error');
+  it("shows error toast with errorKey", async () => {
+    const err = new Error("Test error");
     const mutationFn = vi.fn().mockRejectedValue(err);
     const { result } = renderHook(
       () =>
         useMutationWithToast({
           mutationFn,
-          errorKey: 'toasts.errors.generic',
+          errorKey: "toasts.errors.generic",
         }),
       { wrapper: createWrapper() },
     );
@@ -83,18 +83,18 @@ describe('useMutationWithToast', () => {
     const toasts = useToasts.getState().items;
     expect(toasts).toHaveLength(1);
     expect(toasts[0]).toMatchObject({
-      variant: 'danger',
-      message: 'Something went wrong',
+      variant: "danger",
+      message: "Something went wrong",
     });
   });
 
-  it('respects silentSuccess flag', async () => {
+  it("respects silentSuccess flag", async () => {
     const mutationFn = vi.fn().mockResolvedValue({ ok: true });
     const { result } = renderHook(
       () =>
         useMutationWithToast({
           mutationFn,
-          successKey: 'toasts.success.example',
+          successKey: "toasts.success.example",
           silentSuccess: true,
         }),
       { wrapper: createWrapper() },
@@ -112,8 +112,8 @@ describe('useMutationWithToast', () => {
     expect(toasts).toHaveLength(0);
   });
 
-  it('respects silentError flag', async () => {
-    const err = new Error('Test error');
+  it("respects silentError flag", async () => {
+    const err = new Error("Test error");
     const mutationFn = vi.fn().mockRejectedValue(err);
     const { result } = renderHook(
       () =>
@@ -136,14 +136,14 @@ describe('useMutationWithToast', () => {
     expect(toasts).toHaveLength(0);
   });
 
-  it('calls original onSuccess callback', async () => {
+  it("calls original onSuccess callback", async () => {
     const onSuccess = vi.fn();
     const mutationFn = vi.fn().mockResolvedValue({ id: 1 });
     const { result } = renderHook(
       () =>
         useMutationWithToast({
           mutationFn,
-          successKey: 'toasts.success.example',
+          successKey: "toasts.success.example",
           onSuccess,
         }),
       { wrapper: createWrapper() },
@@ -160,9 +160,9 @@ describe('useMutationWithToast', () => {
     expect(onSuccess).toHaveBeenCalledWith({ id: 1 }, undefined, undefined);
   });
 
-  it('calls original onError callback', async () => {
+  it("calls original onError callback", async () => {
     const onError = vi.fn();
-    const err = new Error('Test error');
+    const err = new Error("Test error");
     const mutationFn = vi.fn().mockRejectedValue(err);
     const { result } = renderHook(
       () =>

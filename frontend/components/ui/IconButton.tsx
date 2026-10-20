@@ -1,15 +1,17 @@
-'use client';
+"use client";
 /**
  * @file components/ui/IconButton.tsx
  * @brief Joy IconButton wrapped with motion.span for press feedback and optional tooltip.
  */
-import * as React from 'react';
-import JoyIconButton, { type IconButtonProps as JoyIconButtonProps } from '@mui/joy/IconButton';
-import { motion } from 'framer-motion';
-import { spring } from './motion';
-import { Tooltip } from './Tooltip';
+import * as React from "react";
+import JoyIconButton, {
+  type IconButtonProps as JoyIconButtonProps,
+} from "@mui/joy/IconButton";
+import { motion } from "framer-motion";
+import { spring } from "./motion";
+import { Tooltip } from "./Tooltip";
 
-export interface IconButtonProps extends Omit<JoyIconButtonProps, 'tooltip'> {
+export interface IconButtonProps extends Omit<JoyIconButtonProps, "tooltip"> {
   tooltip?: string;
   shortcut?: string;
 }
@@ -17,7 +19,11 @@ export interface IconButtonProps extends Omit<JoyIconButtonProps, 'tooltip'> {
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   function IconButton({ tooltip, shortcut, ...props }, ref) {
     const button = (
-      <motion.span whileTap={{ scale: 0.92 }} transition={spring} style={{ display: 'inline-flex' }}>
+      <motion.span
+        whileTap={{ scale: 0.92 }}
+        transition={spring}
+        style={{ display: "inline-flex" }}
+      >
         <JoyIconButton ref={ref} {...props} />
       </motion.span>
     );

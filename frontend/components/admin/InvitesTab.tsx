@@ -1,27 +1,31 @@
-'use client';
+"use client";
 /**
  * @file components/admin/InvitesTab.tsx
  * @brief Admin invite creation and management.
  */
-import { useState } from 'react';
-import { useInvites, useCreateInvite, useRevokeInvite } from '@/hooks/useInvites';
-import Stack from '@mui/joy/Stack';
-import Grid from '@mui/joy/Grid';
-import Input from '@mui/joy/Input';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Button from '@mui/joy/Button';
-import IconButton from '@mui/joy/IconButton';
-import Card from '@mui/joy/Card';
-import Table from '@mui/joy/Table';
-import Typography from '@mui/joy/Typography';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import { TrashIcon } from '@heroicons/react/24/outline';
+import { useState } from "react";
+import {
+  useInvites,
+  useCreateInvite,
+  useRevokeInvite,
+} from "@/hooks/useInvites";
+import Stack from "@mui/joy/Stack";
+import Grid from "@mui/joy/Grid";
+import Input from "@mui/joy/Input";
+import Select from "@mui/joy/Select";
+import Option from "@mui/joy/Option";
+import Button from "@mui/joy/Button";
+import IconButton from "@mui/joy/IconButton";
+import Card from "@mui/joy/Card";
+import Table from "@mui/joy/Table";
+import Typography from "@mui/joy/Typography";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 export function InvitesTab() {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<string>('member');
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<string>("member");
 
   const { data: invites, isLoading, error } = useInvites();
   const createMutation = useCreateInvite();
@@ -31,8 +35,8 @@ export function InvitesTab() {
     e.preventDefault();
     if (email) {
       createMutation.mutate({ email, role });
-      setEmail('');
-      setRole('member');
+      setEmail("");
+      setRole("member");
     }
   };
 
@@ -102,9 +106,9 @@ export function InvitesTab() {
               stripe="odd"
               hoverRow
               sx={{
-                '--TableCell-paddingX': '0.75rem',
-                '--TableCell-paddingY': '0.375rem',
-                fontSize: '0.875rem',
+                "--TableCell-paddingX": "0.75rem",
+                "--TableCell-paddingY": "0.375rem",
+                fontSize: "0.875rem",
               }}
             >
               <thead>
@@ -112,7 +116,7 @@ export function InvitesTab() {
                   <th>Email</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th style={{ width: '40px' }}>Actions</th>
+                  <th style={{ width: "40px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,9 +131,9 @@ export function InvitesTab() {
                     <td>
                       <Typography
                         level="body-xs"
-                        color={invite.used_at ? 'success' : 'warning'}
+                        color={invite.used_at ? "success" : "warning"}
                       >
-                        {invite.used_at ? 'Used' : 'Pending'}
+                        {invite.used_at ? "Used" : "Pending"}
                       </Typography>
                     </td>
                     <td>

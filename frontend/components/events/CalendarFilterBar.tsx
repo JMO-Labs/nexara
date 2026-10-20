@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/events/CalendarFilterBar.tsx
  * @brief Toolbar above the events calendar: month wordmark + nav, "Today",
@@ -6,24 +6,24 @@
  *        Calendars are grouped by kind (Community, Personal, Groups) with
  *        a per-group bulk toggle and a master "All" toggle.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Dropdown from '@mui/joy/Dropdown';
-import Menu from '@mui/joy/Menu';
-import MenuButton from '@mui/joy/MenuButton';
-import Checkbox from '@mui/joy/Checkbox';
-import Divider from '@mui/joy/Divider';
-import { addMonths, format, subMonths } from 'date-fns';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Dropdown from "@mui/joy/Dropdown";
+import Menu from "@mui/joy/Menu";
+import MenuButton from "@mui/joy/MenuButton";
+import Checkbox from "@mui/joy/Checkbox";
+import Divider from "@mui/joy/Divider";
+import { addMonths, format, subMonths } from "date-fns";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-} from '@heroicons/react/24/outline';
-import { Button, IconButton } from '@/components/ui';
-import { toneForSubgroupId } from './eventColors';
-import type { Calendar } from '@/lib/api/calendars';
+} from "@heroicons/react/24/outline";
+import { Button, IconButton } from "@/components/ui";
+import { toneForSubgroupId } from "./eventColors";
+import type { Calendar } from "@/lib/api/calendars";
 
 export type CalendarSourceId = string;
 
@@ -34,7 +34,7 @@ interface CalendarOption {
 }
 
 interface CalendarGroup {
-  kind: 'community' | 'personal' | 'subgroup';
+  kind: "community" | "personal" | "subgroup";
   label: string;
   options: CalendarOption[];
 }
@@ -48,44 +48,54 @@ export interface CalendarFilterBarProps {
   onCreate: () => void;
 }
 
-const GROUP_LABELS: Record<CalendarGroup['kind'], string> = {
-  community: 'Community',
-  personal: 'Personal',
-  subgroup: 'Groups',
+const GROUP_LABELS: Record<CalendarGroup["kind"], string> = {
+  community: "Community",
+  personal: "Personal",
+  subgroup: "Groups",
 };
 
-const GROUP_ORDER: CalendarGroup['kind'][] = ['community', 'personal', 'subgroup'];
+const GROUP_ORDER: CalendarGroup["kind"][] = [
+  "community",
+  "personal",
+  "subgroup",
+];
 
 function colorFor(cal: Calendar): string {
   if (cal.color) return cal.color;
-  if (cal.kind === 'subgroup' && cal.subgroup_id) {
+  if (cal.kind === "subgroup" && cal.subgroup_id) {
     return toneForSubgroupId(cal.subgroup_id).solid;
   }
-  if (cal.kind === 'community') return toneForSubgroupId(null).solid;
-  return 'var(--joy-palette-warning-solidBg, #b45309)';
+  if (cal.kind === "community") return toneForSubgroupId(null).solid;
+  return "var(--joy-palette-warning-solidBg, #b45309)";
 }
 
 export function buildGroups(calendars: Calendar[]): CalendarGroup[] {
-  const buckets: Record<CalendarGroup['kind'], CalendarOption[]> = {
+  const buckets: Record<CalendarGroup["kind"], CalendarOption[]> = {
     community: [],
     personal: [],
     subgroup: [],
   };
   for (const cal of calendars) {
-    buckets[cal.kind].push({ id: cal.id, label: cal.name, color: colorFor(cal) });
+    buckets[cal.kind].push({
+      id: cal.id,
+      label: cal.name,
+      color: colorFor(cal),
+    });
   }
   for (const k of GROUP_ORDER) {
     buckets[k].sort((a, b) => a.label.localeCompare(b.label));
   }
-  return GROUP_ORDER
-    .filter((k) => buckets[k].length > 0)
-    .map((k) => ({ kind: k, label: GROUP_LABELS[k], options: buckets[k] }));
+  return GROUP_ORDER.filter((k) => buckets[k].length > 0).map((k) => ({
+    kind: k,
+    label: GROUP_LABELS[k],
+    options: buckets[k],
+  }));
 }
 
 function summarize(selectedCount: number, total: number): string {
-  if (selectedCount === 0) return 'No calendars';
-  if (selectedCount === total) return 'All calendars';
-  if (selectedCount === 1) return '1 calendar';
+  if (selectedCount === 0) return "No calendars";
+  if (selectedCount === total) return "All calendars";
+  if (selectedCount === 1) return "1 calendar";
   return `${selectedCount} calendars`;
 }
 
@@ -95,7 +105,7 @@ function Swatch({ color }: { color: string }) {
       sx={{
         width: 10,
         height: 10,
-        borderRadius: '50%',
+        borderRadius: "50%",
         backgroundColor: color,
         flexShrink: 0,
       }}
@@ -133,18 +143,18 @@ export function CalendarFilterBar({
     else onSelectedChange(allOptions.map((o) => o.id));
   };
 
-  const groupState = (g: CalendarGroup): 'all' | 'some' | 'none' => {
+  const groupState = (g: CalendarGroup): "all" | "some" | "none" => {
     const ids = g.options.map((o) => o.id);
     const on = ids.filter((id) => selectedSet.has(id)).length;
-    if (on === 0) return 'none';
-    if (on === ids.length) return 'all';
-    return 'some';
+    if (on === 0) return "none";
+    if (on === ids.length) return "all";
+    return "some";
   };
 
   const toggleGroup = (g: CalendarGroup) => {
     const ids = g.options.map((o) => o.id);
     const state = groupState(g);
-    if (state === 'all') {
+    if (state === "all") {
       onSelectedChange(selected.filter((x) => !ids.includes(x)));
     } else {
       const next = new Set(selected);
@@ -170,15 +180,15 @@ export function CalendarFilterBar({
       if (triggerRef.current?.contains(target)) return;
       setOpen(false);
     };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
   return (
     <Stack spacing={2} sx={{ mb: 3 }}>
       <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+        direction={{ xs: "column", md: "row" }}
+        alignItems={{ xs: "flex-start", md: "flex-end" }}
         justifyContent="space-between"
         spacing={2}
       >
@@ -187,25 +197,25 @@ export function CalendarFilterBar({
             level="body-xs"
             textColor="text.tertiary"
             sx={{
-              textTransform: 'uppercase',
-              letterSpacing: '0.18em',
+              textTransform: "uppercase",
+              letterSpacing: "0.18em",
               fontWeight: 700,
               mb: 0.25,
             }}
           >
-            Calendar · {format(month, 'yyyy')}
+            Calendar · {format(month, "yyyy")}
           </Typography>
           <Typography
             level="h1"
             component="h1"
             sx={{
-              fontFamily: 'var(--font-display)',
-              fontSize: { xs: '2.4rem', md: '3.2rem' },
+              fontFamily: "var(--font-display)",
+              fontSize: { xs: "2.4rem", md: "3.2rem" },
               lineHeight: 1,
-              letterSpacing: '-0.02em',
+              letterSpacing: "-0.02em",
             }}
           >
-            {format(month, 'MMMM')}
+            {format(month, "MMMM")}
           </Typography>
         </Box>
 
@@ -241,14 +251,14 @@ export function CalendarFilterBar({
       <Stack
         direction="row"
         spacing={1.5}
-        sx={{ flexWrap: 'wrap', rowGap: 1, alignItems: 'center' }}
+        sx={{ flexWrap: "wrap", rowGap: 1, alignItems: "center" }}
       >
         <Typography
           level="body-xs"
           textColor="text.tertiary"
           sx={{
-            textTransform: 'uppercase',
-            letterSpacing: '0.14em',
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
             fontWeight: 600,
           }}
         >
@@ -263,18 +273,18 @@ export function CalendarFilterBar({
             size="sm"
             endDecorator={<ChevronDownIcon width={14} />}
             sx={{
-              borderRadius: '999px',
+              borderRadius: "999px",
               fontSize: 12,
               fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
               gap: 1,
-              color: 'text.primary',
-              backgroundColor: 'background.surface',
-              borderColor: 'neutral.outlinedBorder',
-              '&:hover': {
-                backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
-                color: 'text.primary',
+              color: "text.primary",
+              backgroundColor: "background.surface",
+              borderColor: "neutral.outlinedBorder",
+              "&:hover": {
+                backgroundColor: "var(--joy-palette-neutral-softHoverBg)",
+                color: "text.primary",
               },
             }}
           >
@@ -293,27 +303,27 @@ export function CalendarFilterBar({
               p: 1,
               minWidth: 280,
               maxHeight: 420,
-              overflowY: 'auto',
-              backgroundColor: 'background.popup',
-              color: 'text.primary',
-              borderColor: 'neutral.outlinedBorder',
-              boxShadow: 'lg',
-              backdropFilter: 'saturate(1.1)',
+              overflowY: "auto",
+              backgroundColor: "background.popup",
+              color: "text.primary",
+              borderColor: "neutral.outlinedBorder",
+              boxShadow: "lg",
+              backdropFilter: "saturate(1.1)",
             }}
           >
             <Box
               component="label"
               onClick={(e) => e.stopPropagation()}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 1,
                 px: 1,
                 py: 0.75,
-                borderRadius: 'sm',
-                cursor: 'pointer',
-                '&:hover': {
-                  backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
+                borderRadius: "sm",
+                cursor: "pointer",
+                "&:hover": {
+                  backgroundColor: "var(--joy-palette-neutral-softHoverBg)",
                 },
               }}
             >
@@ -337,30 +347,31 @@ export function CalendarFilterBar({
                     component="label"
                     onClick={(e) => e.stopPropagation()}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       gap: 1,
                       px: 1,
                       py: 0.5,
-                      borderRadius: 'sm',
-                      cursor: 'pointer',
-                      '&:hover': {
-                  backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
-                },
+                      borderRadius: "sm",
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor:
+                          "var(--joy-palette-neutral-softHoverBg)",
+                      },
                     }}
                   >
                     <Checkbox
                       size="sm"
-                      checked={state === 'all'}
-                      indeterminate={state === 'some'}
+                      checked={state === "all"}
+                      indeterminate={state === "some"}
                       onChange={() => toggleGroup(g)}
                     />
                     <Typography
                       level="body-xs"
                       textColor="text.tertiary"
                       sx={{
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.14em',
+                        textTransform: "uppercase",
+                        letterSpacing: "0.14em",
                         fontWeight: 700,
                         flex: 1,
                       }}
@@ -368,8 +379,8 @@ export function CalendarFilterBar({
                       {g.label}
                     </Typography>
                     <Typography level="body-xs" textColor="text.tertiary">
-                      {g.options.filter((o) => selectedSet.has(o.id)).length}
-                      /{g.options.length}
+                      {g.options.filter((o) => selectedSet.has(o.id)).length}/
+                      {g.options.length}
                     </Typography>
                   </Box>
                   {g.options.map((o) => (
@@ -378,17 +389,18 @@ export function CalendarFilterBar({
                       component="label"
                       onClick={(e) => e.stopPropagation()}
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
+                        display: "flex",
+                        alignItems: "center",
                         gap: 1,
                         pl: 3.5,
                         pr: 1,
                         py: 0.5,
-                        borderRadius: 'sm',
-                        cursor: 'pointer',
-                        '&:hover': {
-                  backgroundColor: 'var(--joy-palette-neutral-softHoverBg)',
-                },
+                        borderRadius: "sm",
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor:
+                            "var(--joy-palette-neutral-softHoverBg)",
+                        },
                       }}
                     >
                       <Checkbox

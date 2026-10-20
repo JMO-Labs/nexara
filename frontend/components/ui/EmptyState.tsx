@@ -1,15 +1,15 @@
-'use client';
+"use client";
 /**
  * @file components/ui/EmptyState.tsx
  * @brief Empty state with optional illustration slot. Display title in
  *        Fraunces, body copy in Geist, primary action button. Used by
  *        feed/galleries/events/search "nothing yet" surfaces.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import { motion } from 'framer-motion';
-import { fadeSlide } from './motion';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Typography from "@mui/joy/Typography";
+import { motion } from "framer-motion";
+import { fadeSlide } from "./motion";
 
 export interface EmptyStateProps {
   illustration?: React.ReactNode;
@@ -19,29 +19,41 @@ export interface EmptyStateProps {
   compact?: boolean;
 }
 
-export function EmptyState({ illustration, title, description, action, compact }: EmptyStateProps) {
+export function EmptyState({
+  illustration,
+  title,
+  description,
+  action,
+  compact,
+}: EmptyStateProps) {
   return (
     <motion.div variants={fadeSlide} initial="hidden" animate="show">
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
           gap: 2,
           py: compact ? 4 : 8,
           px: 3,
-          color: 'text.secondary',
+          color: "text.secondary",
         }}
       >
         {illustration && (
-          <Box sx={{ width: compact ? 96 : 160, height: compact ? 96 : 160, opacity: 0.9 }}>
+          <Box
+            sx={{
+              width: compact ? 96 : 160,
+              height: compact ? 96 : 160,
+              opacity: 0.9,
+            }}
+          >
             {illustration}
           </Box>
         )}
         <Typography
-          level={compact ? 'h4' : 'h3'}
-          sx={{ fontFamily: 'var(--font-display)', color: 'text.primary' }}
+          level={compact ? "h4" : "h3"}
+          sx={{ fontFamily: "var(--font-display)", color: "text.primary" }}
         >
           {title}
         </Typography>

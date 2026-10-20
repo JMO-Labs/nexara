@@ -2,25 +2,25 @@
  * @file tests/unit/settings/AppearanceTab.test.tsx
  * @brief AppearanceTab component tests. Verify theme and locale selectors.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { CssVarsProvider } from '@mui/joy/styles';
-import joyTheme from '@/theme/joy-theme';
-import { AppearanceTab } from '@/components/settings/AppearanceTab';
-import * as settingsHooks from '@/hooks/useSettings';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CssVarsProvider } from "@mui/joy/styles";
+import joyTheme from "@/theme/joy-theme";
+import { AppearanceTab } from "@/components/settings/AppearanceTab";
+import * as settingsHooks from "@/hooks/useSettings";
 
-vi.mock('@/hooks/useSettings');
-vi.mock('next-themes', () => ({
+vi.mock("@/hooks/useSettings");
+vi.mock("next-themes", () => ({
   useTheme: () => ({
-    theme: 'system',
+    theme: "system",
     setTheme: vi.fn(),
   }),
 }));
 
 const mockSettings = {
-  theme: 'system' as const,
-  locale: 'en-US',
+  theme: "system" as const,
+  locale: "en-US",
   notif_mention_inapp: true,
   notif_mention_email: false,
   notif_comment_inapp: true,
@@ -43,11 +43,11 @@ const createWrapper = () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </CssVarsProvider>
   );
-  Wrapper.displayName = 'Wrapper';
+  Wrapper.displayName = "Wrapper";
   return Wrapper;
 };
 
-describe('AppearanceTab', () => {
+describe("AppearanceTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(settingsHooks.useUserSettings).mockReturnValue({
@@ -63,7 +63,7 @@ describe('AppearanceTab', () => {
     } as any);
   });
 
-  it('renders theme selector', () => {
+  it("renders theme selector", () => {
     render(<AppearanceTab />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/appearance/i)).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('AppearanceTab', () => {
     expect(labels.length).toBeGreaterThan(0);
   });
 
-  it('renders language selector', () => {
+  it("renders language selector", () => {
     render(<AppearanceTab />, { wrapper: createWrapper() });
 
     const labels = screen.getAllByText(/language/i);

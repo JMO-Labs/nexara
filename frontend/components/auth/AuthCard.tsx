@@ -1,12 +1,12 @@
-'use client';
+"use client";
 /**
  * @file components/auth/AuthCard.tsx
  * @brief Shared header + container for auth form pages.
  */
-import type { ReactNode } from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
+import type { ReactNode } from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
 
 export function AuthCard({
   title,
@@ -20,7 +20,7 @@ export function AuthCard({
   return (
     <Stack spacing={4}>
       <Box>
-        <Typography level="h2" sx={{ fontFamily: 'var(--font-display)' }}>
+        <Typography level="h2" sx={{ fontFamily: "var(--font-display)" }}>
           {title}
         </Typography>
         {subtitle && (

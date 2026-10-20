@@ -1,40 +1,40 @@
-'use client';
+"use client";
 /**
  * @file components/admin/SsoTab.tsx
  * @brief OAuth provider management tab for SSO configuration.
  */
-import { useState } from 'react';
+import { useState } from "react";
 import {
   useOauthProviders,
   useCreateOauthProvider,
   useToggleOauthProvider,
   useDeleteOauthProvider,
   useDiscoverIssuer,
-} from '@/hooks/useAdminOauth';
-import Stack from '@mui/joy/Stack';
-import Grid from '@mui/joy/Grid';
-import Button from '@mui/joy/Button';
-import IconButton from '@mui/joy/IconButton';
-import Card from '@mui/joy/Card';
-import Typography from '@mui/joy/Typography';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import Modal from '@mui/joy/Modal';
-import ModalDialog from '@mui/joy/ModalDialog';
-import ModalClose from '@mui/joy/ModalClose';
-import Input from '@mui/joy/Input';
-import Switch from '@mui/joy/Switch';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import { TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+} from "@/hooks/useAdminOauth";
+import Stack from "@mui/joy/Stack";
+import Grid from "@mui/joy/Grid";
+import Button from "@mui/joy/Button";
+import IconButton from "@mui/joy/IconButton";
+import Card from "@mui/joy/Card";
+import Typography from "@mui/joy/Typography";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import Modal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import ModalClose from "@mui/joy/ModalClose";
+import Input from "@mui/joy/Input";
+import Switch from "@mui/joy/Switch";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import { TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 export function SsoTab() {
   const [openModal, setOpenModal] = useState(false);
-  const [issuerUrl, setIssuerUrl] = useState('');
-  const [slug, setSlug] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [issuerUrl, setIssuerUrl] = useState("");
+  const [slug, setSlug] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
 
   const { data: providers, isLoading, error } = useOauthProviders();
   const createMutation = useCreateOauthProvider();
@@ -47,9 +47,9 @@ export function SsoTab() {
     try {
       const discovered = await discoverMutation.mutateAsync(issuerUrl);
       // Auto-fill endpoints based on discovery
-      console.log('Discovered endpoints:', discovered);
+      console.log("Discovered endpoints:", discovered);
     } catch (err) {
-      console.error('Discovery failed:', err);
+      console.error("Discovery failed:", err);
     }
   };
 
@@ -58,17 +58,17 @@ export function SsoTab() {
     createMutation.mutate({
       slug,
       display_name: displayName,
-      provider_type: 'oidc',
+      provider_type: "oidc",
       client_id: clientId,
       client_secret: clientSecret,
       issuer: issuerUrl,
     });
     setOpenModal(false);
-    setIssuerUrl('');
-    setSlug('');
-    setDisplayName('');
-    setClientId('');
-    setClientSecret('');
+    setIssuerUrl("");
+    setSlug("");
+    setDisplayName("");
+    setClientId("");
+    setClientSecret("");
   };
 
   if (isLoading) {
@@ -102,11 +102,17 @@ export function SsoTab() {
         <Grid container spacing={2}>
           {providers.map((provider) => (
             <Grid key={provider.id} xs={12} md={6}>
-              <Card variant="outlined" sx={{ height: '100%' }}>
+              <Card variant="outlined" sx={{ height: "100%" }}>
                 <Stack spacing={1.5}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                  >
                     <div>
-                      <Typography level="title-md">{provider.display_name}</Typography>
+                      <Typography level="title-md">
+                        {provider.display_name}
+                      </Typography>
                       <Typography level="body-xs" color="neutral">
                         {provider.slug}
                       </Typography>
@@ -115,7 +121,12 @@ export function SsoTab() {
                       {provider.provider_type.toUpperCase()}
                     </Typography>
                   </Stack>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    spacing={1}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <Switch
                         checked={provider.enabled}
@@ -123,7 +134,7 @@ export function SsoTab() {
                         size="sm"
                       />
                       <Typography level="body-xs">
-                        {provider.enabled ? 'Enabled' : 'Disabled'}
+                        {provider.enabled ? "Enabled" : "Disabled"}
                       </Typography>
                     </Stack>
                     <IconButton
@@ -232,10 +243,7 @@ export function SsoTab() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  loading={createMutation.isPending}
-                >
+                <Button type="submit" loading={createMutation.isPending}>
                   Create Provider
                 </Button>
               </Stack>

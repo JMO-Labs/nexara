@@ -1,28 +1,28 @@
-'use client';
+"use client";
 /**
  * @file components/subgroups/hub/EventsTab.tsx
  * @brief Events tab: month calendar + day rail scoped to the subgroup.
  *        Mirrors the calendar page layout (MonthCalendarLarge + EventRail)
  *        but locked to this group's events. Members get a "New event" button.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
 import {
   endOfMonth,
   isSameDay,
   parseISO,
   startOfDay,
   startOfMonth,
-} from 'date-fns';
-import { Button } from '@/components/ui';
-import { MonthCalendarLarge } from '@/components/events/MonthCalendarLarge';
-import { EventRail } from '@/components/events/EventRail';
-import { EventDetailPanel } from '@/components/events/EventDetailPanel';
-import { EventCreateModal } from '@/components/events/EventCreateModal';
-import { useEventsInRange } from '@/hooks/useEvents';
-import type { SubgroupDetail } from '@/lib/api/subgroups';
-import type { EventItem } from '@/lib/api/events';
+} from "date-fns";
+import { Button } from "@/components/ui";
+import { MonthCalendarLarge } from "@/components/events/MonthCalendarLarge";
+import { EventRail } from "@/components/events/EventRail";
+import { EventDetailPanel } from "@/components/events/EventDetailPanel";
+import { EventCreateModal } from "@/components/events/EventCreateModal";
+import { useEventsInRange } from "@/hooks/useEvents";
+import type { SubgroupDetail } from "@/lib/api/subgroups";
+import type { EventItem } from "@/lib/api/events";
 
 export interface EventsTabProps {
   subgroup: SubgroupDetail;
@@ -42,7 +42,11 @@ export function EventsTab({ subgroup }: EventsTabProps) {
   const monthStart = React.useMemo(() => startOfMonth(month), [month]);
   const monthEnd = React.useMemo(() => endOfMonth(month), [month]);
 
-  const { data, isLoading } = useEventsInRange(monthStart, monthEnd, subgroup.id);
+  const { data, isLoading } = useEventsInRange(
+    monthStart,
+    monthEnd,
+    subgroup.id,
+  );
   const events = React.useMemo(() => data?.items ?? [], [data?.items]);
 
   const subgroupNames = React.useMemo(
@@ -77,7 +81,7 @@ export function EventsTab({ subgroup }: EventsTabProps) {
   const canCreate = !!subgroup.my_role;
 
   return (
-    <Box ref={wrapperRef} sx={{ position: 'relative', minHeight: 400 }}>
+    <Box ref={wrapperRef} sx={{ position: "relative", minHeight: 400 }}>
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -86,15 +90,15 @@ export function EventsTab({ subgroup }: EventsTabProps) {
       >
         <Box
           sx={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: "var(--font-display)",
             fontSize: 14,
-            textTransform: 'uppercase',
-            letterSpacing: '0.16em',
+            textTransform: "uppercase",
+            letterSpacing: "0.16em",
             fontWeight: 700,
-            color: 'text.secondary',
+            color: "text.secondary",
           }}
         >
-          {events.length} {events.length === 1 ? 'event' : 'events'} this month
+          {events.length} {events.length === 1 ? "event" : "events"} this month
         </Box>
         {canCreate && (
           <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -105,17 +109,17 @@ export function EventsTab({ subgroup }: EventsTabProps) {
 
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 320px' },
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 320px" },
           gap: 2,
-          alignItems: 'start',
+          alignItems: "start",
         }}
       >
         <Box
           sx={{
             minWidth: 0,
             opacity: isLoading ? 0.6 : 1,
-            transition: 'opacity 200ms',
+            transition: "opacity 200ms",
           }}
         >
           <MonthCalendarLarge
@@ -130,13 +134,15 @@ export function EventsTab({ subgroup }: EventsTabProps) {
           <Stack
             direction="row"
             spacing={1}
-            sx={{ mt: 1, justifyContent: 'center' }}
+            sx={{ mt: 1, justifyContent: "center" }}
           >
             <Button
               size="sm"
               variant="plain"
               onClick={() =>
-                setMonth((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() - 1, 1)))
+                setMonth((m) =>
+                  startOfMonth(new Date(m.getFullYear(), m.getMonth() - 1, 1)),
+                )
               }
             >
               ← Prev
@@ -152,7 +158,9 @@ export function EventsTab({ subgroup }: EventsTabProps) {
               size="sm"
               variant="plain"
               onClick={() =>
-                setMonth((m) => startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)))
+                setMonth((m) =>
+                  startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)),
+                )
               }
             >
               Next →
@@ -162,53 +170,53 @@ export function EventsTab({ subgroup }: EventsTabProps) {
 
         <Box
           sx={{
-            position: { lg: 'sticky' },
+            position: { lg: "sticky" },
             top: { lg: 16 },
-            height: { xs: 'auto', lg: 'calc(100vh - 200px)' },
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 'sm',
-            backgroundColor: 'background.body',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            height: { xs: "auto", lg: "calc(100vh - 200px)" },
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: "sm",
+            backgroundColor: "background.body",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <Box
             sx={{
               px: 2,
               py: 1.25,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              fontFamily: 'var(--font-display)',
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              fontFamily: "var(--font-display)",
               fontSize: 13,
-              textTransform: 'uppercase',
-              letterSpacing: '0.16em',
+              textTransform: "uppercase",
+              letterSpacing: "0.16em",
               fontWeight: 700,
-              color: 'text.secondary',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              color: "text.secondary",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <span>{selectedDay ? 'This day' : 'This month'}</span>
+            <span>{selectedDay ? "This day" : "This month"}</span>
             {selectedDay && (
               <Box
                 role="button"
                 tabIndex={0}
                 onClick={() => setSelectedDay(null)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     setSelectedDay(null);
                   }
                 }}
                 sx={{
-                  cursor: 'pointer',
+                  cursor: "pointer",
                   fontSize: 10,
-                  letterSpacing: '0.18em',
-                  color: 'text.tertiary',
-                  '&:hover': { color: 'text.primary' },
+                  letterSpacing: "0.18em",
+                  color: "text.tertiary",
+                  "&:hover": { color: "text.primary" },
                 }}
               >
                 Clear

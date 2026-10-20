@@ -1,10 +1,10 @@
-'use client';
+"use client";
 /**
  * @file components/feed/PostBody.tsx
  * @brief Renders post text content as sanitized GFM markdown.
  */
-import * as React from 'react';
-import { Markdown } from '@/components/ui/Markdown';
+import * as React from "react";
+import { Markdown } from "@/components/ui/Markdown";
 
 export interface PostBodyProps {
   content: string;

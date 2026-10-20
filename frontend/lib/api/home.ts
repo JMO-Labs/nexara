@@ -47,6 +47,27 @@ export interface HomeMediaResponse {
   next_cursor: string | null;
 }
 
+/** @brief A single activity feed item (possibly aggregated). */
+export interface ActivityItem {
+  id: string;
+  actor_id: string;
+  actor_name: string;
+  verb: string;
+  object_type: string;
+  object_id: string;
+  container_type: string | null;
+  container_title: string | null;
+  object_title: string | null;
+  count: number;
+  created_at: string;
+}
+
+/** @brief Response envelope for the activity feed endpoint. */
+export interface ActivityFeedResponse {
+  items: ActivityItem[];
+  next_cursor: string | null;
+}
+
 /** @brief Persisted home layout stored under settings.home_layout. */
 export interface HomeLayout {
   widgets: WidgetInstance[];
@@ -79,11 +100,13 @@ export const getHomeSummary = (): Promise<HomeSummary> =>
  *             subgroupId. Scope = 'all' | 'community' | 'subgroup' | 'personal'.
  */
 export const getHomeMedia = (
-  opts: number | {
-    limit?: number;
-    scope?: "all" | "community" | "subgroup" | "personal";
-    subgroupId?: string;
-  } = 24,
+  opts:
+    | number
+    | {
+        limit?: number;
+        scope?: "all" | "community" | "subgroup" | "personal";
+        subgroupId?: string;
+      } = 24,
 ): Promise<HomeMediaResponse> => {
   const params = typeof opts === "number" ? { limit: opts } : opts;
   const limit = params.limit ?? 24;
@@ -93,6 +116,28 @@ export const getHomeMedia = (
   qs.set("scope", scope);
   if (params.subgroupId) qs.set("subgroup_id", params.subgroupId);
   return apiGet<HomeMediaResponse>(`${HOME}/media?${qs.toString()}`);
+};
+
+/**
+ * @brief Fetch aggregated activity feed visible to the current user.
+ *
+ * @param opts Either a numeric limit (legacy) or a struct with limit / cursor.
+ *             Cursor is ISO8601 datetime for pagination.
+ */
+export const getHomeActivity = (
+  opts:
+    | number
+    | {
+        limit?: number;
+        cursor?: string;
+      } = 30,
+): Promise<ActivityFeedResponse> => {
+  const params = typeof opts === "number" ? { limit: opts } : opts;
+  const limit = params.limit ?? 30;
+  const qs = new URLSearchParams();
+  qs.set("limit", String(limit));
+  if (params.cursor) qs.set("cursor", params.cursor);
+  return apiGet<ActivityFeedResponse>(`${HOME}/activity?${qs.toString()}`);
 };
 
 /**

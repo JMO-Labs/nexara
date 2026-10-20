@@ -3,9 +3,14 @@
  * @brief Reset, grain overlay, focus ring, scrollbar. Joy CSS-vars supply colors.
  */
 
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   min-height: 100dvh;
@@ -16,23 +21,29 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-a { color: inherit; text-decoration: none; }
+a {
+  color: inherit;
+  text-decoration: none;
+}
 
-input, textarea, select {
-  color: var(--nx-palette-text-primary, #2B2A28);
-  caret-color: var(--nx-palette-text-primary, #2B2A28);
+input,
+textarea,
+select {
+  color: var(--nx-palette-text-primary, #2b2a28);
+  caret-color: var(--nx-palette-text-primary, #2b2a28);
   font-family: inherit;
 }
 
-[data-joy-color-scheme='dark'] input,
-[data-joy-color-scheme='dark'] textarea,
-[data-joy-color-scheme='dark'] select {
-  color: var(--nx-palette-text-primary, #F5EFE6);
-  caret-color: var(--nx-palette-text-primary, #F5EFE6);
+[data-joy-color-scheme="dark"] input,
+[data-joy-color-scheme="dark"] textarea,
+[data-joy-color-scheme="dark"] select {
+  color: var(--nx-palette-text-primary, #f5efe6);
+  caret-color: var(--nx-palette-text-primary, #f5efe6);
 }
 
-input::placeholder, textarea::placeholder {
-  color: var(--nx-palette-text-tertiary, #8A7F6F);
+input::placeholder,
+textarea::placeholder {
+  color: var(--nx-palette-text-tertiary, #8a7f6f);
   opacity: 1;
 }
 
@@ -51,12 +62,12 @@ textarea:-webkit-autofill {
 
 /* Grain overlay — subtle paper texture, fixed across viewport. */
 body::after {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  background-image: url('/grain.svg');
+  background-image: url("/grain.svg");
   background-size: 240px 240px;
   opacity: 0.05;
   mix-blend-mode: overlay;
@@ -85,25 +96,36 @@ body::after {
   border-radius: 4px;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
   background: var(--nx-palette-neutral-200);
   border-radius: 8px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--nx-palette-neutral-300); }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--nx-palette-neutral-300);
+}
 
 ::selection {
   background: var(--nx-palette-primary-500);
-  color: #FFF;
+  color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  body::after { display: none; }
+  body::after {
+    display: none;
+  }
 }

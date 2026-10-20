@@ -5,16 +5,16 @@
  * Provides shortcuts to tour, keyboard shortcuts, docs, and support.
  */
 
-'use client';
+"use client";
 
-import Box from '@mui/joy/Box';
-import Menu from '@mui/joy/Menu';
-import MenuItem from '@mui/joy/MenuItem';
-import Dropdown from '@mui/joy/Dropdown';
-import MenuButton from '@mui/joy/MenuButton';
-import ListDivider from '@mui/joy/ListDivider';
-import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import { useModals } from '@/stores/modals';
+import Box from "@mui/joy/Box";
+import Menu from "@mui/joy/Menu";
+import MenuItem from "@mui/joy/MenuItem";
+import Dropdown from "@mui/joy/Dropdown";
+import MenuButton from "@mui/joy/MenuButton";
+import ListDivider from "@mui/joy/ListDivider";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { useModals } from "@/stores/modals";
 
 export function HelpButton() {
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
@@ -22,38 +22,38 @@ export function HelpButton() {
   return (
     <Dropdown>
       <MenuButton
-        slots={{ root: 'button' }}
+        slots={{ root: "button" }}
         slotProps={{
           root: {
-            'aria-label': 'Help menu',
-            'aria-haspopup': 'menu',
+            "aria-label": "Help menu",
+            "aria-haspopup": "menu",
             style: {
-              background: 'transparent',
+              background: "transparent",
               border: 0,
               padding: 4,
-              cursor: 'pointer',
+              cursor: "pointer",
             },
           },
         }}
       >
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             bottom: 20,
             right: 20,
             width: 48,
             height: 48,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'primary.main',
-            color: 'white',
-            cursor: 'pointer',
-            boxShadow: 'md',
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              transform: 'scale(1.1)',
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "primary.main",
+            color: "white",
+            cursor: "pointer",
+            boxShadow: "md",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              transform: "scale(1.1)",
             },
             zIndex: 1000,
           }}

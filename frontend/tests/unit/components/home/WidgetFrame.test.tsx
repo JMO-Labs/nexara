@@ -40,11 +40,11 @@ describe("WidgetFrame", () => {
     // Reset confirm dialog store
     useConfirmDialog.setState({
       isOpen: false,
-      title: '',
-      message: '',
-      confirmLabel: 'Confirm',
-      cancelLabel: 'Cancel',
-      tone: 'neutral',
+      title: "",
+      message: "",
+      confirmLabel: "Confirm",
+      cancelLabel: "Cancel",
+      tone: "neutral",
       _resolve: null,
     });
   });

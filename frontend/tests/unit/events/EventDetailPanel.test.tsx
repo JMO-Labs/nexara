@@ -2,14 +2,14 @@
  * @file tests/unit/events/EventDetailPanel.test.tsx
  * @brief Tests for EventDetailPanel — map embedding when geo coords present.
  */
-import * as React from 'react';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { CssVarsProvider } from '@mui/joy/styles';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import joyTheme from '@/theme/joy-theme';
-import { EventDetailPanel } from '@/components/events/EventDetailPanel';
-import type { EventItem } from '@/lib/api/events';
+import * as React from "react";
+import { describe, it, expect, vi, beforeAll } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { CssVarsProvider } from "@mui/joy/styles";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import joyTheme from "@/theme/joy-theme";
+import { EventDetailPanel } from "@/components/events/EventDetailPanel";
+import type { EventItem } from "@/lib/api/events";
 
 // Mock ResizeObserver (jsdom doesn't provide it)
 beforeAll(() => {
@@ -22,55 +22,81 @@ beforeAll(() => {
 });
 
 // Mock EventMiniMap to avoid Leaflet loading in jsdom
-vi.mock('@/components/events/EventMiniMap', () => ({
-  EventMiniMap: ({ lat, lon, height }: { lat: number; lon: number; height?: number }) => (
-    <div data-testid="event-mini-map" data-lat={lat} data-lon={lon} data-height={height}>
+vi.mock("@/components/events/EventMiniMap", () => ({
+  EventMiniMap: ({
+    lat,
+    lon,
+    height,
+  }: {
+    lat: number;
+    lon: number;
+    height?: number;
+  }) => (
+    <div
+      data-testid="event-mini-map"
+      data-lat={lat}
+      data-lon={lon}
+      data-height={height}
+    >
       Map
     </div>
   ),
-  default: ({ lat, lon, height }: { lat: number; lon: number; height?: number }) => (
-    <div data-testid="event-mini-map" data-lat={lat} data-lon={lon} data-height={height}>
+  default: ({
+    lat,
+    lon,
+    height,
+  }: {
+    lat: number;
+    lon: number;
+    height?: number;
+  }) => (
+    <div
+      data-testid="event-mini-map"
+      data-lat={lat}
+      data-lon={lon}
+      data-height={height}
+    >
       Map
     </div>
   ),
 }));
 
-vi.mock('next-intl', () => ({
+vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/hooks/useEvents', () => ({
+vi.mock("@/hooks/useEvents", () => ({
   useDeleteEvent: () => ({ mutate: vi.fn(), isPending: false }),
   useRsvp: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock('@/stores/session', () => ({
+vi.mock("@/stores/session", () => ({
   useSession: () => null,
 }));
 
 const baseEvent: EventItem = {
-  id: 'e1',
-  author_id: 'u1',
-  title: 'Test Event',
-  description: 'A test event',
-  location: 'Downtown Park',
-  starts_at: '2026-05-01T18:00:00Z',
-  ends_at: '2026-05-01T20:00:00Z',
+  id: "e1",
+  author_id: "u1",
+  title: "Test Event",
+  description: "A test event",
+  location: "Downtown Park",
+  starts_at: "2026-05-01T18:00:00Z",
+  ends_at: "2026-05-01T20:00:00Z",
   is_all_day: false,
   recurrence_rule: null,
-  visibility: 'community',
+  visibility: "community",
   subgroup_id: null,
   subgroup_slug: null,
   calendar_id: null,
   color: null,
   latitude: null,
   longitude: null,
-  rsvp_labels: { attending: 'Going', maybe: 'Maybe' },
+  rsvp_labels: { attending: "Going", maybe: "Maybe" },
   rsvp_counts: { attending: 2 },
   contribution_slots: [],
   user_rsvp: null,
-  created_at: '2026-04-25T00:00:00Z',
-  updated_at: '2026-04-25T00:00:00Z',
+  created_at: "2026-04-25T00:00:00Z",
+  updated_at: "2026-04-25T00:00:00Z",
 };
 
 function wrap(ui: React.ReactNode) {
@@ -82,8 +108,8 @@ function wrap(ui: React.ReactNode) {
   );
 }
 
-describe('EventDetailPanel', () => {
-  it('renders EventMiniMap when event has latitude and longitude', async () => {
+describe("EventDetailPanel", () => {
+  it("renders EventMiniMap when event has latitude and longitude", async () => {
     const containerRef = React.createRef<HTMLDivElement>();
     const event: EventItem = {
       ...baseEvent,
@@ -103,14 +129,14 @@ describe('EventDetailPanel', () => {
     );
 
     await waitFor(() => {
-      const map = screen.getByTestId('event-mini-map');
+      const map = screen.getByTestId("event-mini-map");
       expect(map).toBeInTheDocument();
-      expect(map).toHaveAttribute('data-lat', '40.7128');
-      expect(map).toHaveAttribute('data-lon', '-74.006');
+      expect(map).toHaveAttribute("data-lat", "40.7128");
+      expect(map).toHaveAttribute("data-lon", "-74.006");
     });
   });
 
-  it('does not render EventMiniMap when latitude is null', () => {
+  it("does not render EventMiniMap when latitude is null", () => {
     const containerRef = React.createRef<HTMLDivElement>();
     const event: EventItem = {
       ...baseEvent,
@@ -129,11 +155,11 @@ describe('EventDetailPanel', () => {
       </div>,
     );
 
-    const map = screen.queryByTestId('event-mini-map');
+    const map = screen.queryByTestId("event-mini-map");
     expect(map).not.toBeInTheDocument();
   });
 
-  it('does not render EventMiniMap when longitude is null', () => {
+  it("does not render EventMiniMap when longitude is null", () => {
     const containerRef = React.createRef<HTMLDivElement>();
     const event: EventItem = {
       ...baseEvent,
@@ -152,7 +178,7 @@ describe('EventDetailPanel', () => {
       </div>,
     );
 
-    const map = screen.queryByTestId('event-mini-map');
+    const map = screen.queryByTestId("event-mini-map");
     expect(map).not.toBeInTheDocument();
   });
 
@@ -176,9 +202,9 @@ describe('EventDetailPanel', () => {
     );
 
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: /Open in Google Maps/i });
+      const link = screen.getByRole("link", { name: /Open in Google Maps/i });
       expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute("target", "_blank");
     });
   });
 });

@@ -183,10 +183,7 @@ function SubscriptionRow({
         }}
       >
         {/* Title */}
-        <Typography
-          level="body-sm"
-          sx={{ fontWeight: "medium", truncate: true }}
-        >
+        <Typography level="body-sm" noWrap sx={{ fontWeight: "medium" }}>
           {sub.title}
         </Typography>
 
@@ -197,7 +194,9 @@ function SubscriptionRow({
             fontFamily: "monospace",
             fontSize: "12px",
             color: "neutral.500",
-            truncate: true,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
           }}
         >
           {sub.source_url}
@@ -309,9 +308,11 @@ function SubscriptionRow({
 interface AddModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (
-    data: AddFormState & { source_url: string; sync_interval_minutes: number },
-  ) => void;
+  onSubmit: (data: {
+    title: string;
+    source_url: string;
+    sync_interval_minutes: number;
+  }) => void;
   isLoading: boolean;
 }
 

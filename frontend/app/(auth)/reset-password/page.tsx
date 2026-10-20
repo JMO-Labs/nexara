@@ -1,29 +1,29 @@
-'use client';
+"use client";
 /**
  * @file app/(auth)/reset-password/page.tsx
  * @brief Two modes: request a reset email (no `?token=`), or set a new
  *        password (with `?token=`). Single page keeps deep links simple.
  */
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import Stack from '@mui/joy/Stack';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import FormHelperText from '@mui/joy/FormHelperText';
-import Alert from '@mui/joy/Alert';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { AuthCard } from '@/components/auth/AuthCard';
-import { requestPasswordReset, confirmPasswordReset } from '@/lib/api/auth';
-import { formatApiError } from '@/lib/api/errors';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Stack from "@mui/joy/Stack";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import FormHelperText from "@mui/joy/FormHelperText";
+import Alert from "@mui/joy/Alert";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { requestPasswordReset, confirmPasswordReset } from "@/lib/api/auth";
+import { formatApiError } from "@/lib/api/errors";
 
 const RequestSchema = z.object({ email: z.string().min(3) });
 const ConfirmSchema = z.object({
-  new_password: z.string().min(12, 'At least 12 characters'),
+  new_password: z.string().min(12, "At least 12 characters"),
 });
 type RequestData = z.infer<typeof RequestSchema>;
 type ConfirmData = z.infer<typeof ConfirmSchema>;
@@ -33,7 +33,7 @@ function RequestForm() {
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState } = useForm<RequestData>({
     resolver: zodResolver(RequestSchema),
-    defaultValues: { email: '' },
+    defaultValues: { email: "" },
   });
 
   const onSubmit = async (data: RequestData) => {
@@ -42,7 +42,7 @@ function RequestForm() {
       await requestPasswordReset(data.email);
       setSent(true);
     } catch (e) {
-      setError(formatApiError(e, 'Could not send reset email.'));
+      setError(formatApiError(e, "Could not send reset email."));
     }
   };
 
@@ -52,7 +52,7 @@ function RequestForm() {
         title="Check your inbox"
         subtitle="If an account exists, we've sent a password-reset link."
       >
-        <Link href="/login" style={{ textDecoration: 'underline' }}>
+        <Link href="/login" style={{ textDecoration: "underline" }}>
           Back to sign-in
         </Link>
       </AuthCard>
@@ -77,17 +77,22 @@ function RequestForm() {
               type="email"
               autoFocus
               slotProps={{
-                input: { autoComplete: 'email', ...register('email') },
+                input: { autoComplete: "email", ...register("email") },
               }}
             />
             {formState.errors.email && (
               <FormHelperText>{formState.errors.email.message}</FormHelperText>
             )}
           </FormControl>
-          <Button type="submit" size="lg" loading={formState.isSubmitting} fullWidth>
+          <Button
+            type="submit"
+            size="lg"
+            loading={formState.isSubmitting}
+            fullWidth
+          >
             Email reset link
           </Button>
-          <Link href="/login" style={{ textDecoration: 'underline' }}>
+          <Link href="/login" style={{ textDecoration: "underline" }}>
             Back to sign-in
           </Link>
         </Stack>
@@ -102,7 +107,7 @@ function ConfirmForm({ token }: { token: string }) {
   const [done, setDone] = useState(false);
   const { register, handleSubmit, formState } = useForm<ConfirmData>({
     resolver: zodResolver(ConfirmSchema),
-    defaultValues: { new_password: '' },
+    defaultValues: { new_password: "" },
   });
 
   const onSubmit = async (data: ConfirmData) => {
@@ -110,18 +115,15 @@ function ConfirmForm({ token }: { token: string }) {
     try {
       await confirmPasswordReset(token, data.new_password);
       setDone(true);
-      setTimeout(() => router.replace('/login'), 1200);
+      setTimeout(() => router.replace("/login"), 1200);
     } catch (e) {
-      setError(formatApiError(e, 'Reset failed.'));
+      setError(formatApiError(e, "Reset failed."));
     }
   };
 
   if (done) {
     return (
-      <AuthCard
-        title="Password updated"
-        subtitle="Redirecting you to sign in…"
-      >
+      <AuthCard title="Password updated" subtitle="Redirecting you to sign in…">
         <span />
       </AuthCard>
     );
@@ -143,16 +145,22 @@ function ConfirmForm({ token }: { token: string }) {
               autoFocus
               slotProps={{
                 input: {
-                  autoComplete: 'new-password',
-                  ...register('new_password'),
+                  autoComplete: "new-password",
+                  ...register("new_password"),
                 },
               }}
             />
             <FormHelperText>
-              {formState.errors.new_password?.message ?? 'At least 12 characters.'}
+              {formState.errors.new_password?.message ??
+                "At least 12 characters."}
             </FormHelperText>
           </FormControl>
-          <Button type="submit" size="lg" loading={formState.isSubmitting} fullWidth>
+          <Button
+            type="submit"
+            size="lg"
+            loading={formState.isSubmitting}
+            fullWidth
+          >
             Update password
           </Button>
         </Stack>
@@ -163,6 +171,6 @@ function ConfirmForm({ token }: { token: string }) {
 
 export default function ResetPasswordPage() {
   const params = useSearchParams();
-  const token = params.get('token');
+  const token = params.get("token");
   return token ? <ConfirmForm token={token} /> : <RequestForm />;
 }

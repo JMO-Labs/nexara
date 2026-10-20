@@ -2,12 +2,12 @@
  * @file app/app/admin/page.tsx
  * @brief Admin panel server page wrapper.
  */
-import { AdminTabs } from '@/components/admin/AdminTabs';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
+import { AdminTabs } from "@/components/admin/AdminTabs";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
 
 export const metadata = {
-  title: 'Admin Panel',
+  title: "Admin Panel",
 };
 
 export default function AdminPage() {

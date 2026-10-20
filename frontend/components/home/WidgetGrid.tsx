@@ -169,7 +169,10 @@ export function WidgetGrid({
   }
 
   return (
-    <div ref={containerRef} style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
+    <div
+      ref={containerRef}
+      style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}
+    >
       {mounted && (
         <GridLayout
           width={width}
@@ -182,12 +185,13 @@ export function WidgetGrid({
           onDragStop={persistOnStop}
           onResizeStop={persistOnStop}
         >
-          {validWidgets.map((widget) => {
+          {validWidgets.map((widget, idx) => {
             const def = getDef(widget.defId)!;
             return (
               <div key={widget.id}>
                 <WidgetFrame
                   title={def.title}
+                  index={idx}
                   collapsed={widget.collapsed}
                   onToggleCollapsed={() => onToggleCollapsed(widget.id)}
                   onRemove={() => onRemove(widget.id)}

@@ -1,18 +1,18 @@
-'use client';
+"use client";
 /**
  * @file hooks/useChat.ts
  * @brief TanStack Query hooks + WS bridge for chat. Channels list, message
  *        history (infinite), DM threads, send/typing helpers, and a realtime
  *        hook that pushes incoming chat.* frames into the React Query cache.
  */
-import * as React from 'react';
+import * as React from "react";
 import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
-} from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
+} from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
 import {
   type ChatMessage,
   type MessageHistoryPage,
@@ -22,8 +22,8 @@ import {
   getMessageHistory,
   listChannels,
   listDmThreads,
-} from '@/lib/api/chat';
-import { chatWs, type WsFrame, type WsStatus } from '@/lib/realtime/chat-ws';
+} from "@/lib/api/chat";
+import { chatWs, type WsFrame, type WsStatus } from "@/lib/realtime/chat-ws";
 
 type InfiniteHistory = {
   pages: MessageHistoryPage[];
@@ -48,7 +48,7 @@ export function useDmThreads() {
 
 export function useMessages(channelId: string | undefined, limit = 50) {
   return useInfiniteQuery({
-    queryKey: qk.chat.messages(channelId ?? ''),
+    queryKey: qk.chat.messages(channelId ?? ""),
     queryFn: ({ pageParam }) =>
       getMessageHistory(channelId!, pageParam as string | null, limit),
     initialPageParam: null as string | null,
@@ -62,7 +62,7 @@ export function useCreateDm() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (peerId: string) => createOrGetDm(peerId),
-    successKey: 'toasts.subgroups.member.added',
+    successKey: "toasts.subgroups.member.added",
     silentSuccess: true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.chat.dms() });
@@ -108,7 +108,7 @@ export function useSubgroupChannel(subgroupId: string) {
  *        no consumers remain.
  */
 export function useChatWs(): { status: WsStatus; send: typeof chatWs.send } {
-  const [status, setStatus] = React.useState<WsStatus>('closed');
+  const [status, setStatus] = React.useState<WsStatus>("closed");
 
   React.useEffect(() => {
     chatWs.acquire();
@@ -140,7 +140,7 @@ function prependMessage(
   const cutoff = Date.now() - 10_000;
   const idx = first.items.findIndex(
     (m) =>
-      m.id.startsWith('optimistic-') &&
+      m.id.startsWith("optimistic-") &&
       m.content === msg.content &&
       m.author?.id === msg.author?.id &&
       new Date(m.created_at).getTime() > cutoff,
@@ -211,11 +211,12 @@ export function useChatRealtime(): {
 
   // Expose channel-set helper via ref to keep effect deps stable.
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as unknown as { __nx_chat_active?: (id: string | null) => void })
-        .__nx_chat_active = (id) => {
-          activeChannel.current = id;
-        };
+    if (typeof window !== "undefined") {
+      (
+        window as unknown as { __nx_chat_active?: (id: string | null) => void }
+      ).__nx_chat_active = (id) => {
+        activeChannel.current = id;
+      };
     }
   }, []);
 
@@ -223,7 +224,7 @@ export function useChatRealtime(): {
     return chatWs.subscribe((frame: WsFrame) => {
       const payload = (frame.payload ?? {}) as Record<string, unknown>;
       switch (frame.type) {
-        case 'chat.message': {
+        case "chat.message": {
           const msg = payload as unknown as ChatMessage;
           if (!msg?.channel_id) return;
           qc.setQueryData<InfiniteHistory | undefined>(
@@ -238,7 +239,7 @@ export function useChatRealtime(): {
           }
           break;
         }
-        case 'chat.updated': {
+        case "chat.updated": {
           const msg = payload as unknown as ChatMessage;
           if (!msg?.channel_id) return;
           qc.setQueryData<InfiniteHistory | undefined>(
@@ -247,23 +248,32 @@ export function useChatRealtime(): {
           );
           break;
         }
-        case 'chat.deleted': {
+        case "chat.deleted": {
           const msg = payload as unknown as ChatMessage;
           if (!msg?.channel_id) return;
           qc.setQueryData<InfiniteHistory | undefined>(
             qk.chat.messages(msg.channel_id),
             (old) =>
-              patchMessage(old, { ...msg, content: '[deleted]', deleted: true }),
+              patchMessage(old, {
+                ...msg,
+                content: "[deleted]",
+                deleted: true,
+              }),
           );
           break;
         }
-        case 'chat.typing': {
+        case "chat.typing": {
           const channelId = payload.channel_id as string | undefined;
           const userId = payload.user_id as string | undefined;
           if (!channelId || !userId) return;
           setTyping((t) => {
-            const list = (t[channelId] ?? []).filter((s) => s.userId !== userId);
-            return { ...t, [channelId]: [...list, { channelId, userId, at: Date.now() }] };
+            const list = (t[channelId] ?? []).filter(
+              (s) => s.userId !== userId,
+            );
+            return {
+              ...t,
+              [channelId]: [...list, { channelId, userId, at: Date.now() }],
+            };
           });
           break;
         }
@@ -290,7 +300,8 @@ export function useChatRealtime(): {
 
   const typingByChannel = React.useMemo(() => {
     const out: Record<string, string[]> = {};
-    for (const [k, v] of Object.entries(typing)) out[k] = v.map((s) => s.userId);
+    for (const [k, v] of Object.entries(typing))
+      out[k] = v.map((s) => s.userId);
     return out;
   }, [typing]);
 
@@ -308,10 +319,13 @@ export function useChatRealtime(): {
 
 /** @brief Imperative helper to send a chat.message frame. */
 export function sendChatMessage(channelId: string, content: string): void {
-  chatWs.send({ type: 'chat.message', payload: { channel_id: channelId, content } });
+  chatWs.send({
+    type: "chat.message",
+    payload: { channel_id: channelId, content },
+  });
 }
 
 /** @brief Imperative helper to send a chat.typing frame (debounced by caller). */
 export function sendChatTyping(channelId: string): void {
-  chatWs.send({ type: 'chat.typing', payload: { channel_id: channelId } });
+  chatWs.send({ type: "chat.typing", payload: { channel_id: channelId } });
 }

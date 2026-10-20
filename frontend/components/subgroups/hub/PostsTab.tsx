@@ -52,7 +52,7 @@ export function PostsTab({ subgroup }: PostsTabProps) {
   return (
     <Stack spacing={2}>
       {subgroup.my_role && (
-        <PostComposer subgroupId={subgroup.id} onPosted={() => {}} />
+        <PostComposer defaultSubgroupId={subgroup.id} onPosted={() => {}} />
       )}
       {isLoading ? (
         <Stack spacing={2}>

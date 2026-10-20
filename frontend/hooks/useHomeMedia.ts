@@ -2,11 +2,11 @@
  * @file hooks/useHomeMedia.ts
  * @brief TanStack Query hook for aggregated home media carousel data.
  */
-'use client';
+"use client";
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
-import { getHomeMedia, type HomeMediaResponse } from '@/lib/api/home';
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
+import { getHomeMedia, type HomeMediaResponse } from "@/lib/api/home";
 
 export type HomeMediaScope = "all" | "community" | "subgroup" | "personal";
 
@@ -32,8 +32,7 @@ export function useHomeMedia(
   const subgroupId = params.subgroupId;
   return useQuery({
     queryKey: [...qk.home.media(limit), scope, subgroupId ?? null],
-    queryFn: () =>
-      getHomeMedia({ limit, scope, subgroupId }),
+    queryFn: () => getHomeMedia({ limit, scope, subgroupId }),
     staleTime: 5 * 60_000,
   });
 }

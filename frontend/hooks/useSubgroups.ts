@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file hooks/useSubgroups.ts
  * @brief TanStack Query hooks for subgroup CRUD + membership.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
 import {
   listSubgroups,
   getSubgroup,
@@ -20,7 +20,7 @@ import {
   removeMember,
   type CreateSubgroupBody,
   type UpdateSubgroupBody,
-} from '@/lib/api/subgroups';
+} from "@/lib/api/subgroups";
 
 export function useSubgroupList() {
   return useQuery({
@@ -32,7 +32,7 @@ export function useSubgroupList() {
 
 export function useSubgroupDetail(slug: string | null | undefined) {
   return useQuery({
-    queryKey: qk.subgroups.detail(slug ?? ''),
+    queryKey: qk.subgroups.detail(slug ?? ""),
     queryFn: () => getSubgroup(slug as string),
     enabled: !!slug,
     staleTime: 30_000,
@@ -41,7 +41,7 @@ export function useSubgroupDetail(slug: string | null | undefined) {
 
 export function useSubgroupMembers(slug: string | null | undefined) {
   return useQuery({
-    queryKey: qk.subgroups.members(slug ?? ''),
+    queryKey: qk.subgroups.members(slug ?? ""),
     queryFn: () => listMembers(slug as string),
     enabled: !!slug,
     staleTime: 30_000,
@@ -60,7 +60,7 @@ export function useCreateSubgroup() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (body: CreateSubgroupBody) => createSubgroup(body),
-    successKey: 'toasts.subgroups.created',
+    successKey: "toasts.subgroups.created",
     onSuccess: () => invalidateAll(qc),
   });
 }
@@ -85,7 +85,7 @@ export function useJoinSubgroup() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (slug: string) => joinSubgroup(slug),
-    successKey: 'toasts.subgroups.joined',
+    successKey: "toasts.subgroups.joined",
     onSuccess: (_d, slug) => invalidateAll(qc, slug),
   });
 }
@@ -94,7 +94,7 @@ export function useLeaveSubgroup() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (slug: string) => leaveSubgroup(slug),
-    successKey: 'toasts.subgroups.left',
+    successKey: "toasts.subgroups.left",
     onSuccess: (_d, slug) => invalidateAll(qc, slug),
   });
 }
@@ -104,7 +104,7 @@ export function useAddMember(slug: string) {
   return useMutationWithToast({
     mutationFn: (args: { user_id: string; role?: string }) =>
       addMember(slug, args.user_id, args.role),
-    successKey: 'toasts.subgroups.member.added',
+    successKey: "toasts.subgroups.member.added",
     onSuccess: () => invalidateAll(qc, slug),
   });
 }
@@ -122,7 +122,7 @@ export function useRemoveMember(slug: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (user_id: string) => removeMember(slug, user_id),
-    successKey: 'toasts.subgroups.member.removed',
+    successKey: "toasts.subgroups.member.removed",
     onSuccess: () => invalidateAll(qc, slug),
   });
 }

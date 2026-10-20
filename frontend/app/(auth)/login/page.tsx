@@ -1,28 +1,28 @@
-'use client';
+"use client";
 /**
  * @file app/(auth)/login/page.tsx
  * @brief Email/password login. Routes through 2FA when required, otherwise
  *        lands on /app (or the `next` query param).
  */
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import Stack from '@mui/joy/Stack';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import FormHelperText from '@mui/joy/FormHelperText';
-import Typography from '@mui/joy/Typography';
-import Alert from '@mui/joy/Alert';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { AuthCard } from '@/components/auth/AuthCard';
-import { OAuthButtons } from '@/components/auth/OAuthButtons';
-import { login as apiLogin } from '@/lib/api/auth';
-import { completeLogin } from '@/lib/auth/flow';
-import { formatApiError } from '@/lib/api/errors';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Stack from "@mui/joy/Stack";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import FormHelperText from "@mui/joy/FormHelperText";
+import Typography from "@mui/joy/Typography";
+import Alert from "@mui/joy/Alert";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { login as apiLogin } from "@/lib/api/auth";
+import { completeLogin } from "@/lib/auth/flow";
+import { formatApiError } from "@/lib/api/errors";
 
 const Schema = z.object({
   email: z.string().min(3),
@@ -33,12 +33,12 @@ type FormData = z.infer<typeof Schema>;
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') ?? '/app';
+  const next = params.get("next") ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -46,14 +46,14 @@ export default function LoginPage() {
     try {
       const resp = await apiLogin(data.email, data.password);
       const out = await completeLogin(resp);
-      if (out.kind === 'two_factor') {
+      if (out.kind === "two_factor") {
         const url = `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent(next)}`;
         router.push(url);
       } else {
         router.push(next);
       }
     } catch (e) {
-      setError(formatApiError(e, 'Sign-in failed.'));
+      setError(formatApiError(e, "Sign-in failed."));
     }
   };
 
@@ -62,8 +62,8 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle={
         <>
-          New here?{' '}
-          <Link href="/register" style={{ textDecoration: 'underline' }}>
+          New here?{" "}
+          <Link href="/register" style={{ textDecoration: "underline" }}>
             Create an account
           </Link>
         </>
@@ -82,7 +82,7 @@ export default function LoginPage() {
               type="email"
               autoFocus
               slotProps={{
-                input: { autoComplete: 'email', ...register('email') },
+                input: { autoComplete: "email", ...register("email") },
               }}
             />
             {formState.errors.email && (
@@ -95,13 +95,15 @@ export default function LoginPage() {
               type="password"
               slotProps={{
                 input: {
-                  autoComplete: 'current-password',
-                  ...register('password'),
+                  autoComplete: "current-password",
+                  ...register("password"),
                 },
               }}
             />
             {formState.errors.password && (
-              <FormHelperText>{formState.errors.password.message}</FormHelperText>
+              <FormHelperText>
+                {formState.errors.password.message}
+              </FormHelperText>
             )}
           </FormControl>
           <Button

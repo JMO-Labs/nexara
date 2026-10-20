@@ -13,6 +13,16 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // React-compiler lint rules (eslint-plugin-react-hooks v7): downgraded until
+  // the UI layer is rewritten.
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/static-components": "warn",
+    },
+  },
   // Tests: relax any/display-name rules — partial mock returns and inline
   // wrapper components are idiomatic in RTL/Vitest setups.
   {

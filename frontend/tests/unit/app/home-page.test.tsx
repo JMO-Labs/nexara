@@ -15,14 +15,21 @@ vi.mock("@/components/home/WidgetGrid", () => ({
   WidgetGrid: () => <div data-testid="widget-grid" />,
 }));
 vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => <a href={href}>{children}</a>,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/stores/session", () => ({
   useSession: vi.fn((sel) =>
-    sel({ user: { id: "u1", display_name: "Alice", role: "member" }, status: "authenticated" }),
+    sel({
+      user: { id: "u1", display_name: "Alice", role: "member" },
+      status: "authenticated",
+    }),
   ),
 }));
 vi.mock("@/hooks/useHomeLayout", () => ({

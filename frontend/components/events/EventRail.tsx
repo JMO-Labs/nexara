@@ -1,18 +1,18 @@
-'use client';
+"use client";
 /**
  * @file components/events/EventRail.tsx
  * @brief Right-side rail for /app/events. Renders the visible month's events
  *        sorted ascending and grouped by day, with a colored dot per
  *        subgroup. Selecting a row syncs with the calendar + detail panel.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
-import { EmptyState } from '@/components/ui';
-import type { EventItem } from '@/lib/api/events';
-import { toneForEvent } from './eventColors';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { format, isSameDay, parseISO, startOfDay } from "date-fns";
+import { EmptyState } from "@/components/ui";
+import type { EventItem } from "@/lib/api/events";
+import { toneForEvent } from "./eventColors";
 
 export interface EventRailProps {
   events: EventItem[];
@@ -23,7 +23,7 @@ export interface EventRailProps {
 }
 
 function dayKey(iso: string): string {
-  return format(parseISO(iso), 'yyyy-MM-dd');
+  return format(parseISO(iso), "yyyy-MM-dd");
 }
 
 export function EventRail({
@@ -44,7 +44,7 @@ export function EventRail({
 
   const groups = React.useMemo<[string, Date, EventItem[]][]>(() => {
     if (selectedDay) {
-      const k = format(selectedDay, 'yyyy-MM-dd');
+      const k = format(selectedDay, "yyyy-MM-dd");
       return sorted.length ? [[k, selectedDay, sorted]] : [];
     }
     const map = new Map<string, EventItem[]>();
@@ -65,12 +65,12 @@ export function EventRail({
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     if (!selectedDay || !containerRef.current) return;
-    const k = format(selectedDay, 'yyyy-MM-dd');
+    const k = format(selectedDay, "yyyy-MM-dd");
     const el = containerRef.current.querySelector<HTMLElement>(
       `[data-day="${k}"]`,
     );
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [selectedDay]);
 
@@ -79,11 +79,15 @@ export function EventRail({
       <Box sx={{ p: 2 }}>
         <EmptyState
           compact
-          title={selectedDay ? `No events on ${format(selectedDay, 'MMM d')}` : 'Nothing this month'}
+          title={
+            selectedDay
+              ? `No events on ${format(selectedDay, "MMM d")}`
+              : "Nothing this month"
+          }
           description={
             selectedDay
-              ? 'Pick another day or clear the selection to see the full month.'
-              : 'Switch months or clear filters to see more events.'
+              ? "Pick another day or clear the selection to see the full month."
+              : "Switch months or clear filters to see more events."
           }
         />
       </Box>
@@ -94,57 +98,53 @@ export function EventRail({
     <Box
       ref={containerRef}
       sx={{
-        height: '100%',
-        overflowY: 'auto',
+        height: "100%",
+        overflowY: "auto",
         px: 1.5,
         py: 1,
-        scrollbarGutter: 'stable',
+        scrollbarGutter: "stable",
       }}
     >
       {groups.map(([key, day, items]) => {
         const isSelectedDay =
           selectedDay && isSameDay(startOfDay(day), startOfDay(selectedDay));
         return (
-          <Box
-            key={key}
-            data-day={key}
-            sx={{ mb: 2, scrollMarginTop: 8 }}
-          >
+          <Box key={key} data-day={key} sx={{ mb: 2, scrollMarginTop: 8 }}>
             <Stack
               direction="row"
               alignItems="baseline"
               spacing={1}
               sx={{
-                position: 'sticky',
+                position: "sticky",
                 top: 0,
                 py: 0.5,
-                bgcolor: 'background.body',
+                bgcolor: "background.body",
                 zIndex: 1,
-                borderBottom: '1px solid',
-                borderColor: 'divider',
+                borderBottom: "1px solid",
+                borderColor: "divider",
                 mb: 1,
               }}
             >
               <Typography
                 level="title-md"
                 sx={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariantNumeric: 'tabular-nums',
-                  color: isSelectedDay ? 'primary.plainColor' : 'text.primary',
+                  fontFamily: "var(--font-display)",
+                  fontVariantNumeric: "tabular-nums",
+                  color: isSelectedDay ? "primary.plainColor" : "text.primary",
                 }}
               >
-                {format(day, 'd')}
+                {format(day, "d")}
               </Typography>
               <Typography
                 level="body-xs"
                 textColor="text.tertiary"
                 sx={{
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.14em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.14em",
                   fontWeight: 600,
                 }}
               >
-                {format(day, 'EEE · MMM')}
+                {format(day, "EEE · MMM")}
               </Typography>
             </Stack>
 
@@ -159,36 +159,34 @@ export function EventRail({
                     tabIndex={0}
                     onClick={() => onSelectEvent(ev)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         onSelectEvent(ev);
                       }
                     }}
                     sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '8px 1fr',
+                      display: "grid",
+                      gridTemplateColumns: "8px 1fr",
                       gap: 1,
-                      alignItems: 'stretch',
+                      alignItems: "stretch",
                       px: 1,
                       py: 1,
-                      borderRadius: 'sm',
-                      cursor: 'pointer',
-                      backgroundColor: selected
-                        ? tone.soft
-                        : 'transparent',
-                      transition: 'background-color 120ms ease',
-                      '&:hover': { backgroundColor: tone.soft },
-                      '&:focus-visible': {
-                        outline: '2px solid',
+                      borderRadius: "sm",
+                      cursor: "pointer",
+                      backgroundColor: selected ? tone.soft : "transparent",
+                      transition: "background-color 120ms ease",
+                      "&:hover": { backgroundColor: tone.soft },
+                      "&:focus-visible": {
+                        outline: "2px solid",
                         outlineColor: tone.solid,
-                        outlineOffset: '2px',
+                        outlineOffset: "2px",
                       },
                     }}
                   >
                     <Box
                       sx={{
                         width: 4,
-                        borderRadius: '2px',
+                        borderRadius: "2px",
                         backgroundColor: tone.solid,
                       }}
                     />
@@ -197,24 +195,24 @@ export function EventRail({
                         level="body-xs"
                         textColor="text.tertiary"
                         sx={{
-                          fontVariantNumeric: 'tabular-nums',
-                          letterSpacing: '0.04em',
+                          fontVariantNumeric: "tabular-nums",
+                          letterSpacing: "0.04em",
                         }}
                       >
                         {ev.is_all_day
-                          ? 'All day'
-                          : `${format(parseISO(ev.starts_at), 'h:mm a')} – ${format(parseISO(ev.ends_at), 'h:mm a')}`}
-                        {ev.location ? ` · ${ev.location}` : ''}
+                          ? "All day"
+                          : `${format(parseISO(ev.starts_at), "h:mm a")} – ${format(parseISO(ev.ends_at), "h:mm a")}`}
+                        {ev.location ? ` · ${ev.location}` : ""}
                       </Typography>
                       <Typography
                         level="body-sm"
                         sx={{
                           fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
+                          WebkitBoxOrient: "vertical",
                         }}
                       >
                         {ev.title}
@@ -225,8 +223,8 @@ export function EventRail({
                           mt: 0.25,
                           color: tone.onSoft,
                           fontWeight: 600,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.1em',
+                          textTransform: "uppercase",
+                          letterSpacing: "0.1em",
                           fontSize: 10,
                         }}
                       >

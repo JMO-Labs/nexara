@@ -1,14 +1,14 @@
-'use client';
+"use client";
 /**
  * @file components/chat/Composer.tsx
  * @brief Sticky-bottom chat composer. Multiline textarea + media controls
  *        (emoji, attach, poll). Enter sends, Shift+Enter inserts newline.
  *        Typing frames debounced by caller via onTyping.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
 import {
   PaperAirplaneIcon,
   PhotoIcon,
@@ -16,8 +16,8 @@ import {
   ChartBarIcon,
   XMarkIcon,
   ArrowUturnLeftIcon,
-} from '@heroicons/react/24/outline';
-import { Textarea, IconButton } from '@/components/ui';
+} from "@heroicons/react/24/outline";
+import { Textarea, IconButton } from "@/components/ui";
 
 export interface ReplyContext {
   authorName: string;
@@ -38,7 +38,7 @@ export interface ComposerProps {
 }
 
 const TYPING_DEBOUNCE_MS = 1500;
-const QUICK_EMOJI = ['👍', '❤️', '🎉', '😂', '🤔', '🔥', '✨', '👀'];
+const QUICK_EMOJI = ["👍", "❤️", "🎉", "😂", "🤔", "🔥", "✨", "👀"];
 
 export function Composer({
   disabled,
@@ -52,7 +52,7 @@ export function Composer({
   replyTo,
   onCancelReply,
 }: ComposerProps) {
-  const [value, setValue] = React.useState('');
+  const [value, setValue] = React.useState("");
   const [emojiOpen, setEmojiOpen] = React.useState(false);
   const lastTyping = React.useRef(0);
   const taRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -61,7 +61,7 @@ export function Composer({
     const content = value.trim();
     if (!content || disabled) return;
     onSend(content);
-    setValue('');
+    setValue("");
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -75,7 +75,7 @@ export function Composer({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
     }
@@ -92,9 +92,9 @@ export function Composer({
     <Box
       sx={{
         flexShrink: 0,
-        bgcolor: 'background.surface',
-        borderTop: '1px solid',
-        borderColor: 'divider',
+        bgcolor: "background.surface",
+        borderTop: "1px solid",
+        borderColor: "divider",
       }}
     >
       {replyTo && (
@@ -105,9 +105,9 @@ export function Composer({
           sx={{
             px: 1.5,
             py: 0.75,
-            bgcolor: 'background.level1',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            bgcolor: "background.level1",
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           <ArrowUturnLeftIcon width={14} />
@@ -131,8 +131,8 @@ export function Composer({
           sx={{
             px: 1.5,
             py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           {QUICK_EMOJI.map((e) => (
@@ -191,7 +191,7 @@ export function Composer({
           onChange={handleChange}
           onKeyDown={onKeyDown}
           disabled={disabled}
-          placeholder={placeholder ?? 'Write a message…'}
+          placeholder={placeholder ?? "Write a message…"}
           sx={{ flex: 1 }}
         />
 

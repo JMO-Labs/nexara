@@ -44,7 +44,11 @@ interface StatChipProps {
 function StatChip({ count, label, href, ariaLabel }: StatChipProps) {
   const displayed = count > 99 ? "99+" : String(count);
   return (
-    <Link href={href} aria-label={ariaLabel} className="group focus-visible:outline-none">
+    <Link
+      href={href}
+      aria-label={ariaLabel}
+      className="group focus-visible:outline-none"
+    >
       <Box
         sx={{
           display: "inline-flex",

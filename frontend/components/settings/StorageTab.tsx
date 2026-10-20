@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file components/settings/StorageTab.tsx
  * @brief Storage settings tab with two-column layout.
  */
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { Card, EmptyState } from '@/components/ui';
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { Card, EmptyState } from "@/components/ui";
 
 export function StorageTab() {
   return (

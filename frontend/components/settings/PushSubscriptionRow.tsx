@@ -1,15 +1,15 @@
-'use client';
+"use client";
 /**
  * @file components/settings/PushSubscriptionRow.tsx
  * @brief Push notification opt-in row for the Notifications settings tab.
  *        Shows current permission, lets the user subscribe/unsubscribe.
  */
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Button from '@mui/joy/Button';
-import Chip from '@mui/joy/Chip';
-import Alert from '@mui/joy/Alert';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Button from "@mui/joy/Button";
+import Chip from "@mui/joy/Chip";
+import Alert from "@mui/joy/Alert";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export function PushSubscriptionRow() {
   const {
@@ -35,8 +35,12 @@ export function PushSubscriptionRow() {
     <Stack spacing={1.5}>
       <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
         <Typography level="title-md">Push notifications</Typography>
-        <Chip size="sm" variant="soft" color={isSubscribed ? 'success' : 'neutral'}>
-          {isSubscribed ? 'Active' : 'Inactive'}
+        <Chip
+          size="sm"
+          variant="soft"
+          color={isSubscribed ? "success" : "neutral"}
+        >
+          {isSubscribed ? "Active" : "Inactive"}
         </Chip>
         <Chip size="sm" variant="outlined">
           permission: {permission}
@@ -52,7 +56,7 @@ export function PushSubscriptionRow() {
             color="primary"
             loading={isSubscribing}
             onClick={() => subscribe().catch(() => {})}
-            disabled={permission === 'denied'}
+            disabled={permission === "denied"}
           >
             Enable on this device
           </Button>
@@ -67,7 +71,7 @@ export function PushSubscriptionRow() {
           </Button>
         )}
       </Stack>
-      {permission === 'denied' && (
+      {permission === "denied" && (
         <Alert color="warning" variant="soft">
           Notifications are blocked. Enable them in your browser site settings.
         </Alert>

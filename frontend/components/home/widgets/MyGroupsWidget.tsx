@@ -60,7 +60,10 @@ export function MyGroupsWidget(_: WidgetContext) {
 
   if (groups.length === 0) {
     return (
-      <EmptyState title="No groups yet" description="Join a group to see it here." />
+      <EmptyState
+        title="No groups yet"
+        description="Join a group to see it here."
+      />
     );
   }
 

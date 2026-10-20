@@ -1,14 +1,14 @@
-'use client';
+"use client";
 /**
  * @file components/ui/Markdown.tsx
  * @brief Safe GFM markdown renderer. Sanitized via rehype-sanitize.
  *        Headings flatten to body weight to fit chat/post density.
  */
-import * as React from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
-import Box from '@mui/joy/Box';
+import * as React from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import Box from "@mui/joy/Box";
 
 export interface MarkdownProps {
   content: string;
@@ -16,17 +16,17 @@ export interface MarkdownProps {
   /** Lines to clamp when truncate is set. Default 6. */
   clampLines?: number;
   /** Override font size. Default inherits parent. */
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
 }
 
 const schema = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
-    a: [...(defaultSchema.attributes?.a || []), ['target'], ['rel']],
-    code: [...(defaultSchema.attributes?.code || []), ['className']],
+    a: [...(defaultSchema.attributes?.a || []), ["target"], ["rel"]],
+    code: [...(defaultSchema.attributes?.code || []), ["className"]],
   },
-  clobberPrefix: 'nx-md-',
+  clobberPrefix: "nx-md-",
 };
 
 const components: Components = {
@@ -44,68 +44,81 @@ const components: Components = {
   h6: ({ children }) => <strong>{children}</strong>,
 };
 
-export function Markdown({ content, truncate, clampLines = 6, size = 'md' }: MarkdownProps) {
+export function Markdown({
+  content,
+  truncate,
+  clampLines = 6,
+  size = "md",
+}: MarkdownProps) {
   if (!content?.trim()) return null;
   return (
     <Box
       className="nx-md"
       sx={{
-        fontSize: size === 'sm' ? '0.875rem' : 'inherit',
+        fontSize: size === "sm" ? "0.875rem" : "inherit",
         lineHeight: 1.55,
-        color: 'text.primary',
-        wordBreak: 'break-word',
-        '& p': { m: 0, '& + p': { mt: 0.75 } },
-        '& a': { color: 'var(--joy-palette-primary-plainColor)', textDecoration: 'underline' },
-        '& code': {
-          fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-          fontSize: '0.9em',
+        color: "text.primary",
+        wordBreak: "break-word",
+        "& p": { m: 0, "& + p": { mt: 0.75 } },
+        "& a": {
+          color: "var(--joy-palette-primary-plainColor)",
+          textDecoration: "underline",
+        },
+        "& code": {
+          fontFamily: "var(--font-mono, ui-monospace, monospace)",
+          fontSize: "0.9em",
           px: 0.5,
           py: 0.125,
-          borderRadius: '4px',
-          bgcolor: 'background.level1',
+          borderRadius: "4px",
+          bgcolor: "background.level1",
         },
-        '& pre': {
-          fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-          fontSize: '0.85em',
+        "& pre": {
+          fontFamily: "var(--font-mono, ui-monospace, monospace)",
+          fontSize: "0.85em",
           p: 1.25,
-          borderRadius: 'sm',
-          bgcolor: 'background.level1',
-          overflow: 'auto',
+          borderRadius: "sm",
+          bgcolor: "background.level1",
+          overflow: "auto",
           m: 0,
           mt: 0.75,
-          '& code': { p: 0, bgcolor: 'transparent' },
+          "& code": { p: 0, bgcolor: "transparent" },
         },
-        '& blockquote': {
+        "& blockquote": {
           m: 0,
           mt: 0.75,
           pl: 1.25,
-          borderLeft: '3px solid',
-          borderColor: 'divider',
-          color: 'text.secondary',
+          borderLeft: "3px solid",
+          borderColor: "divider",
+          color: "text.secondary",
         },
-        '& ul, & ol': { m: 0, mt: 0.5, pl: 2.5 },
-        '& li + li': { mt: 0.25 },
-        '& table': {
-          borderCollapse: 'collapse',
+        "& ul, & ol": { m: 0, mt: 0.5, pl: 2.5 },
+        "& li + li": { mt: 0.25 },
+        "& table": {
+          borderCollapse: "collapse",
           mt: 0.75,
-          fontSize: '0.9em',
+          fontSize: "0.9em",
         },
-        '& th, & td': {
-          border: '1px solid',
-          borderColor: 'divider',
+        "& th, & td": {
+          border: "1px solid",
+          borderColor: "divider",
           px: 1,
           py: 0.5,
-          textAlign: 'left',
+          textAlign: "left",
         },
-        '& th': { bgcolor: 'background.level1' },
-        '& hr': { border: 0, borderTop: '1px solid', borderColor: 'divider', my: 1 },
-        '& img': { maxWidth: '100%', borderRadius: 'sm' },
+        "& th": { bgcolor: "background.level1" },
+        "& hr": {
+          border: 0,
+          borderTop: "1px solid",
+          borderColor: "divider",
+          my: 1,
+        },
+        "& img": { maxWidth: "100%", borderRadius: "sm" },
         '& input[type="checkbox"]': { mr: 0.5 },
         ...(truncate && {
-          display: '-webkit-box',
+          display: "-webkit-box",
           WebkitLineClamp: clampLines,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
         }),
       }}
     >

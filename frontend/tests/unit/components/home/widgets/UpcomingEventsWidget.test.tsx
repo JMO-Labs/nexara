@@ -16,9 +16,13 @@ vi.mock("@/hooks/useSubgroups", () => ({
   useSubgroupList: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => <a href={href}>{children}</a>,
 }));
 vi.mock("@/components/events/EventDetailPanel", () => ({
   EventDetailPanel: () => null,
@@ -96,4 +100,3 @@ describe("UpcomingEventsWidget", () => {
     expect(screen.getByText("Team Meeting")).toBeInTheDocument();
   });
 });
-

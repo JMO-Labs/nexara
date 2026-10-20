@@ -14,7 +14,7 @@ export interface GallerySearchBarProps {
 
 export function GallerySearchBar({ onSearch }: GallerySearchBarProps) {
   const [value, setValue] = React.useState("");
-  const debounceRef = React.useRef<NodeJS.Timeout>();
+  const debounceRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;

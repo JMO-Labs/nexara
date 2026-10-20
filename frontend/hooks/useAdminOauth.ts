@@ -1,12 +1,12 @@
-'use client';
+"use client";
 /**
  * @file hooks/useAdminOauth.ts
  * @brief TanStack Query hooks for OAuth provider management.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
-import * as oauthApi from '@/lib/api/adminOauth';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
+import * as oauthApi from "@/lib/api/adminOauth";
 
 /**
  * @brief Fetch all OAuth providers.
@@ -26,7 +26,7 @@ export const useCreateOauthProvider = () => {
   return useMutationWithToast({
     mutationFn: (payload: oauthApi.OAuthProviderCreate) =>
       oauthApi.createOauthProvider(payload),
-    successKey: 'toasts.admin.user.updated',
+    successKey: "toasts.admin.user.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -46,7 +46,7 @@ export const useUpdateOauthProvider = () => {
       providerId: string;
       updates: oauthApi.OAuthProviderUpdate;
     }) => oauthApi.updateOauthProvider(providerId, updates),
-    successKey: 'toasts.admin.user.updated',
+    successKey: "toasts.admin.user.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -59,8 +59,9 @@ export const useUpdateOauthProvider = () => {
 export const useDeleteOauthProvider = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
-    mutationFn: (providerId: string) => oauthApi.deleteOauthProvider(providerId),
-    successKey: 'toasts.admin.user.updated',
+    mutationFn: (providerId: string) =>
+      oauthApi.deleteOauthProvider(providerId),
+    successKey: "toasts.admin.user.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -73,8 +74,9 @@ export const useDeleteOauthProvider = () => {
 export const useToggleOauthProvider = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
-    mutationFn: (providerId: string) => oauthApi.toggleOauthProvider(providerId),
-    successKey: 'toasts.admin.user.updated',
+    mutationFn: (providerId: string) =>
+      oauthApi.toggleOauthProvider(providerId),
+    successKey: "toasts.admin.user.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },

@@ -1,12 +1,12 @@
-'use client';
+"use client";
 /**
  * @file hooks/useInvites.ts
  * @brief TanStack Query hooks for invite management.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
-import * as invitesApi from '@/lib/api/invites';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
+import * as invitesApi from "@/lib/api/invites";
 
 /**
  * @brief Fetch all pending invites.
@@ -26,7 +26,7 @@ export const useCreateInvite = () => {
   return useMutationWithToast({
     mutationFn: ({ email, role }: { email: string; role: string }) =>
       invitesApi.createInvite(email, role),
-    successKey: 'toasts.invites.sent',
+    successKey: "toasts.invites.sent",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.invites() });
     },
@@ -40,7 +40,7 @@ export const useRevokeInvite = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
     mutationFn: (inviteId: string) => invitesApi.revokeInvite(inviteId),
-    successKey: 'toasts.invites.revoked',
+    successKey: "toasts.invites.revoked",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.invites() });
     },

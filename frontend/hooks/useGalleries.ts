@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file hooks/useGalleries.ts
  * @brief Gallery CRUD + items hooks.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
 import {
   listGalleries,
   getGallery,
@@ -16,11 +16,13 @@ import {
   removeItem,
   type CreateGalleryBody,
   type ListGalleriesParams,
-} from '@/lib/api/galleries';
+} from "@/lib/api/galleries";
 
 export function useGalleryList(params?: ListGalleriesParams | null) {
   return useQuery({
-    queryKey: qk.galleries.list(params as Record<string, unknown> | undefined ?? {}),
+    queryKey: qk.galleries.list(
+      (params as Record<string, unknown> | undefined) ?? {},
+    ),
     queryFn: () => listGalleries(params ?? undefined),
     staleTime: 30_000,
   });
@@ -28,7 +30,7 @@ export function useGalleryList(params?: ListGalleriesParams | null) {
 
 export function useGalleryDetail(id: string | null | undefined) {
   return useQuery({
-    queryKey: qk.galleries.detail(id ?? ''),
+    queryKey: qk.galleries.detail(id ?? ""),
     queryFn: () => getGallery(id as string),
     enabled: !!id,
   });
@@ -36,7 +38,7 @@ export function useGalleryDetail(id: string | null | undefined) {
 
 export function useGalleryItems(id: string | null | undefined) {
   return useQuery({
-    queryKey: [...qk.galleries.detail(id ?? ''), 'items'] as const,
+    queryKey: [...qk.galleries.detail(id ?? ""), "items"] as const,
     queryFn: () => listItems(id as string),
     enabled: !!id,
   });
@@ -51,7 +53,7 @@ export function useCreateGallery() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (body: CreateGalleryBody) => createGallery(body),
-    successKey: 'toasts.galleries.created',
+    successKey: "toasts.galleries.created",
     onSuccess: () => invalidateAll(qc),
   });
 }
@@ -59,9 +61,14 @@ export function useCreateGallery() {
 export function useUpdateGallery() {
   const qc = useQueryClient();
   return useMutationWithToast({
-    mutationFn: ({ id, body }: { id: string; body: Partial<CreateGalleryBody> }) =>
-      updateGallery(id, body),
-    successKey: 'toasts.galleries.updated',
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string;
+      body: Partial<CreateGalleryBody>;
+    }) => updateGallery(id, body),
+    successKey: "toasts.galleries.updated",
     onSuccess: (_data, vars) => invalidateAll(qc, vars.id),
   });
 }
@@ -70,7 +77,7 @@ export function useDeleteGallery() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (id: string) => deleteGallery(id),
-    successKey: 'toasts.galleries.deleted',
+    successKey: "toasts.galleries.deleted",
     onSuccess: () => invalidateAll(qc),
   });
 }

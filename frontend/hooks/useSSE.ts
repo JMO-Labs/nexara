@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file hooks/useSSE.ts
  * @brief Long-lived EventSource subscription to /notifications/stream.
@@ -7,8 +7,12 @@
  *        Reconnects on error with exponential backoff capped at 30s and
  *        replays Last-Event-ID on reconnect.
  */
-import { useEffect, useRef } from 'react';
-import { API_BASE, getAccessToken, refreshAccessToken } from '@/lib/auth/session';
+import { useEffect, useRef } from "react";
+import {
+  API_BASE,
+  getAccessToken,
+  refreshAccessToken,
+} from "@/lib/auth/session";
 
 export interface SSEOptions {
   enabled?: boolean;
@@ -20,7 +24,7 @@ export interface SSEOptions {
 
 export function useSSE(path: string, opts: SSEOptions = {}): void {
   const { enabled = true, onMessage, onError, eventTypes } = opts;
-  const eventTypesKey = (eventTypes ?? []).join(',');
+  const eventTypesKey = (eventTypes ?? []).join(",");
   const lastEventId = useRef<string | null>(null);
   const onMessageRef = useRef(onMessage);
   const onErrorRef = useRef(onError);
@@ -31,7 +35,7 @@ export function useSSE(path: string, opts: SSEOptions = {}): void {
   }, [onMessage, onError]);
 
   useEffect(() => {
-    if (!enabled || typeof EventSource === 'undefined') return;
+    if (!enabled || typeof EventSource === "undefined") return;
 
     let es: EventSource | null = null;
     let retryDelay = 1000;
@@ -44,11 +48,13 @@ export function useSSE(path: string, opts: SSEOptions = {}): void {
       if (!token) token = await refreshAccessToken();
       if (!token || cancelled) return;
 
-      const base = API_BASE || (typeof window !== 'undefined' ? window.location.origin : '');
+      const base =
+        API_BASE ||
+        (typeof window !== "undefined" ? window.location.origin : "");
       const url = new URL(`${base}${path}`);
-      url.searchParams.set('token', token);
+      url.searchParams.set("token", token);
       if (lastEventId.current) {
-        url.searchParams.set('last_event_id', lastEventId.current);
+        url.searchParams.set("last_event_id", lastEventId.current);
       }
 
       es = new EventSource(url.toString(), { withCredentials: true });
@@ -62,7 +68,7 @@ export function useSSE(path: string, opts: SSEOptions = {}): void {
           onMessageRef.current?.(ev.data, type);
         }
       };
-      es.onmessage = (ev) => dispatch(ev, 'message');
+      es.onmessage = (ev) => dispatch(ev, "message");
       for (const t of eventTypes ?? []) {
         es.addEventListener(t, (ev) => dispatch(ev as MessageEvent, t));
       }

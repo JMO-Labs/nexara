@@ -2,11 +2,11 @@
  * @file hooks/useHomeSummary.ts
  * @brief TanStack Query hook for home page summary stats.
  */
-'use client';
+"use client";
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
-import { getHomeSummary, type HomeSummary } from '@/lib/api/home';
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
+import { getHomeSummary, type HomeSummary } from "@/lib/api/home";
 
 /**
  * @brief Fetch summary stats for the home welcome banner.

@@ -177,7 +177,14 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
             transition: prefersReduced ? "none" : "opacity 0.15s ease",
           }}
         >
-          <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <MessageList
               ref={listRef}
               messages={messages}
@@ -188,7 +195,13 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
               selfId={selfId}
             />
           </Box>
-          <Box sx={{ flexShrink: 0, borderTop: "1px solid", borderColor: "divider" }}>
+          <Box
+            sx={{
+              flexShrink: 0,
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
             <Composer onSend={handleSend} onTyping={handleTyping} />
           </Box>
         </Box>

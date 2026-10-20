@@ -4,15 +4,15 @@
  *        gallery lightbox) live as intercepting routes; this store covers
  *        ephemeral confirms, composers, and forms triggered from buttons.
  */
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export type ModalKey =
-  | 'create-post'
-  | 'create-event'
-  | 'create-gallery'
-  | 'create-subgroup'
-  | 'invite-member'
-  | 'confirm';
+  | "create-post"
+  | "create-event"
+  | "create-gallery"
+  | "create-subgroup"
+  | "invite-member"
+  | "confirm";
 
 interface ModalState {
   open: ModalKey | null;

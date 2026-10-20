@@ -1,18 +1,23 @@
-'use client';
+"use client";
 /**
  * @file components/layout/MobileNav.tsx
  * @brief Fixed bottom nav for mobile. Three primary destinations + More.
  *        "More" toggles the full-screen drawer that exposes the rest.
  */
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import Box from '@mui/joy/Box';
-import Sheet from '@mui/joy/Sheet';
-import Typography from '@mui/joy/Typography';
-import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
-import { Drawer } from '@/components/ui/Drawer';
-import { NAV_ITEMS, isNavActive, type IconType, type NavItem } from './navItems';
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Box from "@mui/joy/Box";
+import Sheet from "@mui/joy/Sheet";
+import Typography from "@mui/joy/Typography";
+import { EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import { Drawer } from "@/components/ui/Drawer";
+import {
+  NAV_ITEMS,
+  isNavActive,
+  type IconType,
+  type NavItem,
+} from "./navItems";
 
 const MOBILE = NAV_ITEMS.filter((i) => i.mobile);
 const OVERFLOW = NAV_ITEMS.filter((i) => !i.mobile);
@@ -33,13 +38,13 @@ function NavTile({
   const inner = (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         gap: 0.25,
         py: 1,
-        color: active ? 'primary.plainColor' : 'text.secondary',
-        fontSize: '0.7rem',
+        color: active ? "primary.plainColor" : "text.secondary",
+        fontSize: "0.7rem",
       }}
     >
       <Icon aria-hidden width={22} height={22} />
@@ -55,7 +60,7 @@ function NavTile({
       component="button"
       type="button"
       onClick={onClick}
-      sx={{ flex: 1, all: 'unset', cursor: 'pointer' }}
+      sx={{ flex: 1, all: "unset", cursor: "pointer" }}
     >
       {inner}
     </Box>
@@ -71,8 +76,8 @@ export function MobileNav() {
       <Sheet
         variant="outlined"
         sx={{
-          display: { xs: 'flex', md: 'none' },
-          position: 'sticky',
+          display: { xs: "flex", md: "none" },
+          position: "sticky",
           bottom: 0,
           zIndex: 100,
           borderLeft: 0,
@@ -80,7 +85,7 @@ export function MobileNav() {
           borderBottom: 0,
         }}
       >
-        <Box sx={{ display: 'flex', width: '100%' }}>
+        <Box sx={{ display: "flex", width: "100%" }}>
           {MOBILE.map((i: NavItem) => (
             <NavTile
               key={i.href}
@@ -96,17 +101,17 @@ export function MobileNav() {
             aria-expanded={moreOpen}
             aria-controls="more-nav"
             onClick={() => setMoreOpen(!moreOpen)}
-            sx={{ flex: 1, all: 'unset', cursor: 'pointer' }}
+            sx={{ flex: 1, all: "unset", cursor: "pointer" }}
           >
             <Box
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
                 gap: 0.25,
                 py: 1,
-                color: 'text.secondary',
-                fontSize: '0.7rem',
+                color: "text.secondary",
+                fontSize: "0.7rem",
               }}
             >
               <EllipsisHorizontalIcon aria-hidden width={22} height={22} />
@@ -124,10 +129,13 @@ export function MobileNav() {
         aria-label="More navigation"
       >
         <Box sx={{ p: 2 }}>
-          <Typography level="title-md" sx={{ mb: 1, fontFamily: 'var(--font-display)' }}>
+          <Typography
+            level="title-md"
+            sx={{ mb: 1, fontFamily: "var(--font-display)" }}
+          >
             More
           </Typography>
-          <Box component="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+          <Box component="ul" sx={{ listStyle: "none", p: 0, m: 0 }}>
             {OVERFLOW.map((i) => {
               const { Icon } = i;
               return (
@@ -137,13 +145,13 @@ export function MobileNav() {
                     href={i.href}
                     onClick={() => setMoreOpen(false)}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
+                      display: "flex",
+                      alignItems: "center",
                       gap: 1.5,
                       px: 2,
                       py: 1.5,
-                      borderRadius: 'md',
-                      '&:hover': { background: 'neutral.softBg' },
+                      borderRadius: "md",
+                      "&:hover": { background: "neutral.softBg" },
                     }}
                   >
                     <Icon aria-hidden width={22} height={22} />

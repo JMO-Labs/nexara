@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/ui/CommandPalette.tsx
  * @brief ⌘K command palette shell. Phase 1 ships UI + keyboard plumbing
@@ -9,14 +9,14 @@
  * mounts while the palette is open — fresh mount handles the reset
  * without a setState-in-effect cycle.
  */
-import * as React from 'react';
-import JoyModal from '@mui/joy/Modal';
-import ModalDialog from '@mui/joy/ModalDialog';
-import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import { motion } from 'framer-motion';
-import { useUI } from '@/stores/ui';
-import { modalVariants } from './motion';
+import * as React from "react";
+import JoyModal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import Box from "@mui/joy/Box";
+import Typography from "@mui/joy/Typography";
+import { motion } from "framer-motion";
+import { useUI } from "@/stores/ui";
+import { modalVariants } from "./motion";
 
 export type CommandItem = {
   id: string;
@@ -46,7 +46,7 @@ function PaletteContent({
   close: () => void;
   onQueryChange?: (q: string) => void;
 }) {
-  const [q, setQ] = React.useState('');
+  const [q, setQ] = React.useState("");
   const [active, setActive] = React.useState(0);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -57,7 +57,7 @@ function PaletteContent({
       if (it.external) return true;
       const hay = [it.label, it.hint, it.group, ...(it.keywords ?? [])]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return hay.includes(needle);
     });
@@ -66,7 +66,7 @@ function PaletteContent({
   const grouped = React.useMemo(() => {
     const map = new Map<string, CommandItem[]>();
     for (const it of filtered) {
-      const g = it.group ?? 'Results';
+      const g = it.group ?? "Results";
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(it);
     }
@@ -81,16 +81,16 @@ function PaletteContent({
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((a) => Math.min(filtered.length - 1, a + 1));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(0, a - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       pick(active);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       close();
     }
   }
@@ -101,9 +101,9 @@ function PaletteContent({
       variants={modalVariants}
       initial="hidden"
       animate="show"
-      style={{ display: 'contents' }}
+      style={{ display: "contents" }}
     >
-      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
         <input
           ref={inputRef}
           autoFocus
@@ -117,19 +117,26 @@ function PaletteContent({
           placeholder={placeholder}
           aria-label="Command palette"
           style={{
-            width: '100%',
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            fontFamily: 'var(--font-body)',
-            fontSize: '1.05rem',
-            color: 'var(--nx-palette-text-primary)',
+            width: "100%",
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            fontFamily: "var(--font-body)",
+            fontSize: "1.05rem",
+            color: "var(--nx-palette-text-primary)",
           }}
         />
       </Box>
-      <Box sx={{ maxHeight: 420, overflow: 'auto', py: 1 }} aria-live="polite" aria-atomic="true">
+      <Box
+        sx={{ maxHeight: 420, overflow: "auto", py: 1 }}
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {filtered.length === 0 && (
-          <Typography level="body-sm" sx={{ p: 3, textAlign: 'center', color: 'text.tertiary' }}>
+          <Typography
+            level="body-sm"
+            sx={{ p: 3, textAlign: "center", color: "text.tertiary" }}
+          >
             Nothing matches.
           </Typography>
         )}
@@ -141,10 +148,10 @@ function PaletteContent({
                 px: 2,
                 pt: 1,
                 pb: 0.5,
-                fontFamily: 'var(--font-display)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'text.tertiary',
+                fontFamily: "var(--font-display)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "text.tertiary",
               }}
             >
               {group}
@@ -164,17 +171,19 @@ function PaletteContent({
                     px: 2,
                     py: 1,
                     mx: 1,
-                    borderRadius: 'sm',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    backgroundColor: isActive ? 'background.level1' : 'transparent',
+                    borderRadius: "sm",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    backgroundColor: isActive
+                      ? "background.level1"
+                      : "transparent",
                   }}
                 >
                   <Typography level="body-md">{it.label}</Typography>
                   {it.hint && (
-                    <Typography level="body-xs" sx={{ color: 'text.tertiary' }}>
+                    <Typography level="body-xs" sx={{ color: "text.tertiary" }}>
                       {it.hint}
                     </Typography>
                   )}
@@ -190,7 +199,7 @@ function PaletteContent({
 
 export function CommandPalette({
   items,
-  placeholder = 'Search or jump to…',
+  placeholder = "Search or jump to…",
   onQueryChange,
 }: CommandPaletteProps) {
   const open = useUI((s) => s.commandPaletteOpen);
@@ -198,13 +207,13 @@ export function CommandPalette({
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen(!useUI.getState().commandPaletteOpen);
       }
     }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [setOpen]);
 
   if (!open) return null;
@@ -213,10 +222,10 @@ export function CommandPalette({
       <ModalDialog
         sx={{
           maxWidth: 640,
-          width: 'calc(100vw - 32px)',
+          width: "calc(100vw - 32px)",
           p: 0,
-          overflow: 'hidden',
-          borderRadius: 'lg',
+          overflow: "hidden",
+          borderRadius: "lg",
         }}
       >
         <PaletteContent

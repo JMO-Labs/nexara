@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file hooks/useEventCountdown.ts
  * @brief Live countdown to event start (ticks every 30s).
  * Returns { days, hours, minutes } based on time until event.starts_at.
  */
-import { useEffect, useState } from 'react';
-import type { EventItem } from '@/lib/api/events';
+import { useEffect, useState } from "react";
+import type { EventItem } from "@/lib/api/events";
 
 export interface Countdown {
   days: number;
@@ -14,7 +14,9 @@ export interface Countdown {
 }
 
 export function useEventCountdown(event: EventItem): Countdown {
-  const [countdown, setCountdown] = useState<Countdown>(() => calculateCountdown(event));
+  const [countdown, setCountdown] = useState<Countdown>(() =>
+    calculateCountdown(event),
+  );
 
   useEffect(() => {
     const updateCountdown = () => {

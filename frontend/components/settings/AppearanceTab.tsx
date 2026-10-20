@@ -1,16 +1,16 @@
-'use client';
+"use client";
 /**
  * @file components/settings/AppearanceTab.tsx
  * @brief Appearance settings tab with two-column layout: theme and locale.
  */
-import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
-import Stack from '@mui/joy/Stack';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import Typography from '@mui/joy/Typography';
-import { Card, SettingsRow, Select } from '@/components/ui';
-import { useUpdateSettings, useUserSettings } from '@/hooks/useSettings';
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import Stack from "@mui/joy/Stack";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import Typography from "@mui/joy/Typography";
+import { Card, SettingsRow, Select } from "@/components/ui";
+import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
 export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
@@ -30,7 +30,7 @@ export function AppearanceTab() {
 
   const handleThemeChange = (value: string) => {
     setTheme(value);
-    mutate({ theme: value as 'system' | 'light' | 'dark' });
+    mutate({ theme: value as "system" | "light" | "dark" });
   };
 
   const handleLocaleChange = (value: string) => {
@@ -48,12 +48,14 @@ export function AppearanceTab() {
           label="Theme"
           description="Choose between light, dark, or system preference."
         >
-          <Stack spacing={1} sx={{ width: '100%' }}>
+          <Stack spacing={1} sx={{ width: "100%" }}>
             <FormControl>
               <FormLabel>Theme</FormLabel>
               <Select
-                value={theme || 'system'}
-                onChange={(_e, newValue) => handleThemeChange(newValue || 'system')}
+                value={theme || "system"}
+                onChange={(_e, newValue) =>
+                  handleThemeChange(newValue || "system")
+                }
                 disabled={isPending}
               >
                 <option value="system">System</option>
@@ -68,12 +70,14 @@ export function AppearanceTab() {
           label="Language"
           description="Select your preferred language."
         >
-          <Stack spacing={1} sx={{ width: '100%' }}>
+          <Stack spacing={1} sx={{ width: "100%" }}>
             <FormControl>
               <FormLabel>Language</FormLabel>
               <Select
-                value={settings.locale || 'en-US'}
-                onChange={(_e, newValue) => handleLocaleChange(newValue || 'en-US')}
+                value={settings.locale || "en-US"}
+                onChange={(_e, newValue) =>
+                  handleLocaleChange(newValue || "en-US")
+                }
                 disabled={isPending}
               >
                 <option value="en-US">English (US)</option>

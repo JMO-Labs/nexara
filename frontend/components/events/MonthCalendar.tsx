@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/events/MonthCalendar.tsx
  * @brief Month-grid calendar with multi-day spanning event bars and per-day
@@ -6,11 +6,11 @@
  *        bars span consecutive days within a week and re-flow to the next
  *        week's row when an event crosses a Sunday boundary.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Tooltip from '@mui/joy/Tooltip';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Tooltip from "@mui/joy/Tooltip";
 import {
   addMonths,
   endOfMonth,
@@ -24,10 +24,10 @@ import {
   startOfMonth,
   startOfWeek,
   subMonths,
-} from 'date-fns';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { IconButton } from '@/components/ui';
-import type { EventItem } from '@/lib/api/events';
+} from "date-fns";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { IconButton } from "@/components/ui";
+import type { EventItem } from "@/lib/api/events";
 
 const LANE_HEIGHT = 18;
 const MAX_LANES_VISIBLE = 3;
@@ -58,7 +58,11 @@ function buildWeeks(month: Date): Date[][] {
   return weeks;
 }
 
-function eventOverlapsWeek(ev: EventItem, weekStart: Date, weekEnd: Date): boolean {
+function eventOverlapsWeek(
+  ev: EventItem,
+  weekStart: Date,
+  weekEnd: Date,
+): boolean {
   const s = startOfDay(parseISO(ev.starts_at));
   const e = startOfDay(parseISO(ev.ends_at));
   return s <= weekEnd && e >= weekStart;
@@ -71,13 +75,18 @@ function assignLanes(events: EventItem[], week: Date[]): Segment[] {
   const segs: Segment[] = [];
   const sorted = [...events]
     .filter((e) => eventOverlapsWeek(e, weekStart, weekEnd))
-    .sort((a, b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime());
+    .sort(
+      (a, b) =>
+        parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
+    );
   for (const ev of sorted) {
     const evStart = startOfDay(parseISO(ev.starts_at));
     const evEnd = startOfDay(parseISO(ev.ends_at));
     const segStart = evStart < weekStart ? weekStart : evStart;
     const segEnd = evEnd > weekEnd ? weekEnd : evEnd;
-    const col = Math.round((segStart.getTime() - weekStart.getTime()) / 86400_000);
+    const col = Math.round(
+      (segStart.getTime() - weekStart.getTime()) / 86400_000,
+    );
     const span =
       Math.round((segEnd.getTime() - segStart.getTime()) / 86400_000) + 1;
     let lane = lanes.findIndex((d) => d < segStart);
@@ -109,9 +118,9 @@ function eventsOnDay(events: EventItem[], day: Date): EventItem[] {
 
 function DayPreview({ day, events }: { day: Date; events: EventItem[] }) {
   return (
-    <Box sx={{ p: 1, maxWidth: 280, maxHeight: 280, overflowY: 'auto' }}>
+    <Box sx={{ p: 1, maxWidth: 280, maxHeight: 280, overflowY: "auto" }}>
       <Typography level="title-sm" sx={{ mb: 0.5 }}>
-        {format(day, 'EEEE, MMM d')}
+        {format(day, "EEEE, MMM d")}
       </Typography>
       {events.length === 0 ? (
         <Typography level="body-xs" textColor="text.tertiary">
@@ -123,9 +132,9 @@ function DayPreview({ day, events }: { day: Date; events: EventItem[] }) {
             <Box key={ev.id}>
               <Typography level="body-xs" textColor="text.tertiary">
                 {ev.is_all_day
-                  ? 'All day'
-                  : format(parseISO(ev.starts_at), 'p')}
-                {ev.location ? ` · ${ev.location}` : ''}
+                  ? "All day"
+                  : format(parseISO(ev.starts_at), "p")}
+                {ev.location ? ` · ${ev.location}` : ""}
               </Typography>
               <Typography level="body-sm" sx={{ fontWeight: 600 }}>
                 {ev.title}
@@ -144,7 +153,11 @@ export interface MonthCalendarProps {
   onMonthChange: (m: Date) => void;
 }
 
-export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarProps) {
+export function MonthCalendar({
+  events,
+  month,
+  onMonthChange,
+}: MonthCalendarProps) {
   const weeks = React.useMemo(() => buildWeeks(month), [month]);
   const weekSegments = React.useMemo(
     () => weeks.map((w) => assignLanes(events, w)),
@@ -152,15 +165,15 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
   );
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ width: "100%" }}>
       <Stack
         direction="row"
         alignItems="center"
         justifyContent="space-between"
         sx={{ mb: 1 }}
       >
-        <Typography level="title-md" sx={{ fontFamily: 'var(--font-display)' }}>
-          {format(month, 'MMMM yyyy')}
+        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
+          {format(month, "MMMM yyyy")}
         </Typography>
         <Stack direction="row" spacing={0.5}>
           <IconButton
@@ -192,17 +205,21 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
 
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
           mb: 0.5,
         }}
       >
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
           <Typography
             key={d}
             level="body-xs"
             textColor="text.tertiary"
-            sx={{ textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.06em' }}
+            sx={{
+              textAlign: "center",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
           >
             {d}
           </Typography>
@@ -212,10 +229,10 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
       <Stack
         spacing={0}
         sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 'sm',
-          overflow: 'hidden',
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: "sm",
+          overflow: "hidden",
         }}
       >
         {weeks.map((week, wi) => {
@@ -223,18 +240,20 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
           const maxLane = segs.reduce((m, s) => Math.max(m, s.lane + 1), 0);
           const visibleLanes = Math.min(maxLane, MAX_LANES_VISIBLE);
           const rowHeight =
-            HEADER_OFFSET + visibleLanes * LANE_HEIGHT + (maxLane > MAX_LANES_VISIBLE ? 16 : 4);
+            HEADER_OFFSET +
+            visibleLanes * LANE_HEIGHT +
+            (maxLane > MAX_LANES_VISIBLE ? 16 : 4);
 
           return (
             <Box
               key={wi}
               sx={{
-                position: 'relative',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
+                position: "relative",
+                display: "grid",
+                gridTemplateColumns: "repeat(7, 1fr)",
                 minHeight: rowHeight,
-                borderTop: wi === 0 ? 'none' : '1px solid',
-                borderColor: 'divider',
+                borderTop: wi === 0 ? "none" : "1px solid",
+                borderColor: "divider",
               }}
             >
               {week.map((day) => {
@@ -252,30 +271,32 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
                   >
                     <Box
                       sx={{
-                        borderLeft: '1px solid',
-                        borderColor: 'divider',
-                        '&:first-of-type': { borderLeft: 'none' },
+                        borderLeft: "1px solid",
+                        borderColor: "divider",
+                        "&:first-of-type": { borderLeft: "none" },
                         p: 0.5,
                         opacity: inMonth ? 1 : 0.45,
-                        cursor: 'default',
+                        cursor: "default",
                         minHeight: rowHeight,
                       }}
                     >
                       <Box
                         sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           width: 22,
                           height: 22,
-                          borderRadius: '50%',
+                          borderRadius: "50%",
                           fontSize: 12,
                           fontWeight: today ? 700 : 500,
-                          backgroundColor: today ? 'primary.solidBg' : 'transparent',
-                          color: today ? 'common.white' : 'text.primary',
+                          backgroundColor: today
+                            ? "primary.solidBg"
+                            : "transparent",
+                          color: today ? "common.white" : "text.primary",
                         }}
                       >
-                        {format(day, 'd')}
+                        {format(day, "d")}
                       </Box>
                     </Box>
                   </Tooltip>
@@ -285,13 +306,13 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
               {/* Event bar overlay */}
               <Box
                 sx={{
-                  position: 'absolute',
+                  position: "absolute",
                   top: HEADER_OFFSET,
                   left: 0,
                   right: 0,
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, 1fr)',
-                  pointerEvents: 'none',
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, 1fr)",
+                  pointerEvents: "none",
                 }}
               >
                 {segs
@@ -311,30 +332,30 @@ export function MonthCalendar({ events, month, onMonthChange }: MonthCalendarPro
                         borderBottomLeftRadius: s.startsHere ? 4 : 0,
                         borderTopRightRadius: s.endsHere ? 4 : 0,
                         borderBottomRightRadius: s.endsHere ? 4 : 0,
-                        backgroundColor: 'primary.solidBg',
-                        color: 'common.white',
+                        backgroundColor: "primary.solidBg",
+                        color: "common.white",
                         fontSize: 11,
                         lineHeight: `${LANE_HEIGHT - 3}px`,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        pointerEvents: 'auto',
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        pointerEvents: "auto",
                       }}
                       title={s.event.title}
                     >
-                      {s.startsHere ? s.event.title : ' '}
+                      {s.startsHere ? s.event.title : " "}
                     </Box>
                   ))}
                 {segs.some((s) => s.lane >= MAX_LANES_VISIBLE) && (
                   <Box
                     sx={{
-                      gridColumn: '1 / span 7',
+                      gridColumn: "1 / span 7",
                       gridRow: 1,
                       transform: `translateY(${MAX_LANES_VISIBLE * LANE_HEIGHT}px)`,
                       px: 0.5,
                       fontSize: 10,
-                      color: 'text.tertiary',
-                      pointerEvents: 'none',
+                      color: "text.tertiary",
+                      pointerEvents: "none",
                     }}
                   >
                     + more

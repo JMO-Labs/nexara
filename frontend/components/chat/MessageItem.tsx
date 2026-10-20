@@ -1,25 +1,25 @@
-'use client';
+"use client";
 /**
  * @file components/chat/MessageItem.tsx
  * @brief Single chat message row: avatar, author, time, body.
  *        Avatar/name click opens a menu (View, Send DM). Hover row
  *        reveals a Reply action that bubbles up via onReply.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import Menu from '@mui/joy/Menu';
-import MenuItem from '@mui/joy/MenuItem';
-import Dropdown from '@mui/joy/Dropdown';
-import MenuButton from '@mui/joy/MenuButton';
-import { format } from 'date-fns';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Box from "@mui/joy/Box";
+import Typography from "@mui/joy/Typography";
+import Menu from "@mui/joy/Menu";
+import MenuItem from "@mui/joy/MenuItem";
+import Dropdown from "@mui/joy/Dropdown";
+import MenuButton from "@mui/joy/MenuButton";
+import { format } from "date-fns";
 import {
   ArrowUturnLeftIcon,
   ChatBubbleLeftRightIcon,
-} from '@heroicons/react/24/outline';
-import { Avatar, IconButton, Markdown } from '@/components/ui';
-import type { ChatMessage } from '@/lib/api/chat';
+} from "@heroicons/react/24/outline";
+import { Avatar, IconButton, Markdown } from "@/components/ui";
+import type { ChatMessage } from "@/lib/api/chat";
 
 export interface MessageItemProps {
   message: ChatMessage;
@@ -42,13 +42,13 @@ export function MessageItem({
 
   const time = (() => {
     try {
-      return format(new Date(message.created_at), 'p');
+      return format(new Date(message.created_at), "p");
     } catch {
-      return '';
+      return "";
     }
   })();
 
-  const name = message.author?.display_name ?? 'Unknown';
+  const name = message.author?.display_name ?? "Unknown";
   const initial = name.charAt(0);
   const deleted = message.deleted;
   const authorId = message.author?.id;
@@ -63,20 +63,22 @@ export function MessageItem({
     authorId && !isSelf ? (
       <Dropdown>
         <MenuButton
-          slots={{ root: 'span' }}
+          slots={{ root: "span" }}
           slotProps={{
             root: {
-              style: { cursor: 'pointer', background: 'none', border: 0, padding: 0 },
+              style: {
+                cursor: "pointer",
+                background: "none",
+                border: 0,
+                padding: 0,
+              },
             },
           }}
         >
           {avatar}
         </MenuButton>
         <Menu placement="bottom-start" size="sm">
-          <MenuItem
-            onClick={() => onSendDm?.(authorId)}
-            disabled={!onSendDm}
-          >
+          <MenuItem onClick={() => onSendDm?.(authorId)} disabled={!onSendDm}>
             <ChatBubbleLeftRightIcon width={16} style={{ marginRight: 8 }} />
             Send DM
           </MenuItem>
@@ -96,9 +98,9 @@ export function MessageItem({
       sx={{
         px: 2,
         py: compact ? 0.25 : 0.75,
-        position: 'relative',
-        '&:hover': { bgcolor: 'background.level1' },
-        opacity: message.id.startsWith('optimistic-') ? 0.6 : 1,
+        position: "relative",
+        "&:hover": { bgcolor: "background.level1" },
+        opacity: message.id.startsWith("optimistic-") ? 0.6 : 1,
       }}
     >
       <Stack sx={{ width: 36 }}>{!compact && authorBlock}</Stack>
@@ -108,19 +110,19 @@ export function MessageItem({
             <Typography level="title-sm">{name}</Typography>
             <Typography level="body-xs" textColor="text.tertiary">
               {time}
-              {message.edited_at && ' (edited)'}
+              {message.edited_at && " (edited)"}
             </Typography>
           </Stack>
         )}
         {deleted ? (
           <Typography
             level="body-sm"
-            sx={{ color: 'text.tertiary', fontStyle: 'italic' }}
+            sx={{ color: "text.tertiary", fontStyle: "italic" }}
           >
             {message.content}
           </Typography>
         ) : (
-          <Box sx={{ fontSize: '0.875rem' }}>
+          <Box sx={{ fontSize: "0.875rem" }}>
             <Markdown content={message.content} size="sm" />
           </Box>
         )}
@@ -129,14 +131,14 @@ export function MessageItem({
       {hover && !deleted && onReply && (
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             right: 8,
             top: 4,
-            bgcolor: 'background.surface',
-            borderRadius: 'sm',
-            boxShadow: 'sm',
-            border: '1px solid',
-            borderColor: 'divider',
+            bgcolor: "background.surface",
+            borderRadius: "sm",
+            boxShadow: "sm",
+            border: "1px solid",
+            borderColor: "divider",
           }}
         >
           <IconButton

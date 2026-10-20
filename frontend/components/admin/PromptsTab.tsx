@@ -1,56 +1,59 @@
-'use client';
+"use client";
 /**
  * @file components/admin/PromptsTab.tsx
  * @brief Admin prompts management tab with master-detail layout.
  *        Left pane: compact list. Right pane: edit form.
  */
-import { useState } from 'react';
+import { useState } from "react";
 import {
   usePrompts,
   useCreatePrompt,
   useUpdatePrompt,
   useDeletePrompt,
   useSeedBuiltinPrompts,
-} from '@/hooks/usePrompts';
-import Stack from '@mui/joy/Stack';
-import Button from '@mui/joy/Button';
-import Input from '@mui/joy/Input';
-import Textarea from '@mui/joy/Textarea';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import Select from '@mui/joy/Select';
-import Option from '@mui/joy/Option';
-import Chip from '@mui/joy/Chip';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import Typography from '@mui/joy/Typography';
-import Switch from '@mui/joy/Switch';
-import Sheet from '@mui/joy/Sheet';
-import Modal from '@mui/joy/Modal';
-import ModalDialog from '@mui/joy/ModalDialog';
-import ModalClose from '@mui/joy/ModalClose';
-import { PlusIcon } from '@heroicons/react/24/outline';
-import type { PromptCreate, PromptUpdate } from '@/lib/api/prompts';
+} from "@/hooks/usePrompts";
+import Stack from "@mui/joy/Stack";
+import Button from "@mui/joy/Button";
+import Input from "@mui/joy/Input";
+import Textarea from "@mui/joy/Textarea";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import Select from "@mui/joy/Select";
+import Option from "@mui/joy/Option";
+import Chip from "@mui/joy/Chip";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import Typography from "@mui/joy/Typography";
+import Switch from "@mui/joy/Switch";
+import Sheet from "@mui/joy/Sheet";
+import Modal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import ModalClose from "@mui/joy/ModalClose";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import type { PromptCreate, PromptUpdate } from "@/lib/api/prompts";
 
-const FREQUENCY_COLORS: Record<string, 'warning' | 'info' | 'danger' | 'neutral' | 'success'> = {
-  annual_date: 'warning',
-  weekly: 'info',
-  monthly: 'danger',
-  custom: 'neutral',
-  one_time: 'success',
+const FREQUENCY_COLORS: Record<
+  string,
+  "warning" | "primary" | "danger" | "neutral" | "success"
+> = {
+  annual_date: "warning",
+  weekly: "primary",
+  monthly: "danger",
+  custom: "neutral",
+  one_time: "success",
 };
 
 function getFrequencyColor(frequency: string) {
-  return FREQUENCY_COLORS[frequency] || 'neutral';
+  return FREQUENCY_COLORS[frequency] || "neutral";
 }
 
 export function PromptsTab() {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newPromptForm, setNewPromptForm] = useState<PromptCreate>({
-    title: '',
-    body: '',
-    frequency: 'annual_date',
+    title: "",
+    body: "",
+    frequency: "annual_date",
   });
 
   const { data: prompts = [], isLoading, error } = usePrompts();
@@ -112,9 +115,9 @@ export function PromptsTab() {
     if (newPromptForm.title.trim() && newPromptForm.body.trim()) {
       createMutation.mutate(newPromptForm);
       setNewPromptForm({
-        title: '',
-        body: '',
-        frequency: 'annual_date',
+        title: "",
+        body: "",
+        frequency: "annual_date",
       });
       setIsCreating(false);
     }
@@ -141,10 +144,10 @@ export function PromptsTab() {
       direction="row"
       spacing={3}
       sx={{
-        height: '600px',
-        '@media (max-width: 900px)': {
-          flexDirection: 'column',
-          height: 'auto',
+        height: "600px",
+        "@media (max-width: 900px)": {
+          flexDirection: "column",
+          height: "auto",
         },
       }}
     >
@@ -152,9 +155,9 @@ export function PromptsTab() {
       <Stack
         spacing={2}
         sx={{
-          width: { xs: '100%', md: '40%' },
-          maxWidth: { md: '480px' },
-          overflow: 'auto',
+          width: { xs: "100%", md: "40%" },
+          maxWidth: { md: "480px" },
+          overflow: "auto",
         }}
       >
         <Stack direction="row" spacing={1} justifyContent="space-between">
@@ -178,13 +181,15 @@ export function PromptsTab() {
               onClick={() => setSelectedPromptId(prompt.id)}
               sx={{
                 p: 2,
-                cursor: 'pointer',
-                borderRadius: 'sm',
-                transition: 'background-color 0.2s',
+                cursor: "pointer",
+                borderRadius: "sm",
+                transition: "background-color 0.2s",
                 backgroundColor:
-                  selectedPromptId === prompt.id ? 'action.selected' : undefined,
-                '&:hover': {
-                  backgroundColor: 'action.hover',
+                  selectedPromptId === prompt.id
+                    ? "action.selected"
+                    : undefined,
+                "&:hover": {
+                  backgroundColor: "action.hover",
                 },
               }}
             >
@@ -198,7 +203,7 @@ export function PromptsTab() {
                     onClick={(e) => e.stopPropagation()}
                     slotProps={{
                       input: {
-                        'aria-label': `Toggle ${prompt.title}`,
+                        "aria-label": `Toggle ${prompt.title}`,
                       },
                     }}
                   />
@@ -217,12 +222,14 @@ export function PromptsTab() {
                         size="sm"
                         variant="soft"
                         color={getFrequencyColor(prompt.frequency)}
-                        label={prompt.frequency.replace(/_/g, ' ')}
                       >
-                        {prompt.frequency.replace(/_/g, ' ')}
+                        {prompt.frequency.replace(/_/g, " ")}
                       </Chip>
                       {prompt.next_fire_at && (
-                        <Typography level="body-xs" sx={{ color: 'text.tertiary' }}>
+                        <Typography
+                          level="body-xs"
+                          sx={{ color: "text.tertiary" }}
+                        >
                           Soon
                         </Typography>
                       )}
@@ -241,7 +248,7 @@ export function PromptsTab() {
           spacing={2}
           sx={{
             flex: 1,
-            overflow: 'auto',
+            overflow: "auto",
             minWidth: 0,
           }}
         >
@@ -288,22 +295,24 @@ export function PromptsTab() {
             </Select>
           </FormControl>
 
-          {selectedPrompt.frequency === 'annual_date' && (
+          {selectedPrompt.frequency === "annual_date" && (
             <>
               <FormControl>
                 <FormLabel>Month</FormLabel>
                 <Select
-                  value={String(selectedPrompt.trigger_month || '')}
+                  value={String(selectedPrompt.trigger_month || "")}
                   onChange={(_, val) => {
                     if (val) {
-                      handleUpdateSelectedPrompt({ trigger_month: parseInt(val) });
+                      handleUpdateSelectedPrompt({
+                        trigger_month: parseInt(val),
+                      });
                     }
                   }}
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                     <Option key={m} value={String(m)}>
-                      {new Date(2024, m - 1).toLocaleString('default', {
-                        month: 'long',
+                      {new Date(2024, m - 1).toLocaleString("default", {
+                        month: "long",
                       })}
                     </Option>
                   ))}
@@ -313,10 +322,12 @@ export function PromptsTab() {
               <FormControl>
                 <FormLabel>Day</FormLabel>
                 <Select
-                  value={String(selectedPrompt.trigger_day || '')}
+                  value={String(selectedPrompt.trigger_day || "")}
                   onChange={(_, val) => {
                     if (val) {
-                      handleUpdateSelectedPrompt({ trigger_day: parseInt(val) });
+                      handleUpdateSelectedPrompt({
+                        trigger_day: parseInt(val),
+                      });
                     }
                   }}
                 >
@@ -345,12 +356,12 @@ export function PromptsTab() {
             </Select>
           </FormControl>
 
-          {selectedPrompt.prompt_type === 'interest_capture' && (
+          {selectedPrompt.prompt_type === "interest_capture" && (
             <>
               <FormControl>
                 <FormLabel>Interest Category Slug</FormLabel>
                 <Input
-                  value={selectedPrompt.interest_category_slug || ''}
+                  value={selectedPrompt.interest_category_slug || ""}
                   onChange={(e) =>
                     handleUpdateSelectedPrompt({
                       interest_category_slug: e.target.value || null,
@@ -364,7 +375,7 @@ export function PromptsTab() {
                 <FormLabel>Interest Capture Hint</FormLabel>
                 <Textarea
                   minRows={2}
-                  value={selectedPrompt.interest_capture_hint || ''}
+                  value={selectedPrompt.interest_capture_hint || ""}
                   onChange={(e) =>
                     handleUpdateSelectedPrompt({
                       interest_capture_hint: e.target.value || null,

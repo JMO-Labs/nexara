@@ -2,8 +2,8 @@
  * @file hooks/usePrompts.ts
  * @brief Query and mutation hooks for prompts (admin + feed).
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
 import {
   listPrompts,
   createPrompt,
@@ -13,7 +13,7 @@ import {
   getPromptPost,
   type PromptCreate,
   type PromptUpdate,
-} from '@/lib/api/prompts';
+} from "@/lib/api/prompts";
 
 /**
  * @brief Query hook to list all prompts (admin).
@@ -45,8 +45,13 @@ export function useCreatePrompt() {
 export function useUpdatePrompt() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ promptId, payload }: { promptId: string; payload: PromptUpdate }) =>
-      updatePrompt(promptId, payload),
+    mutationFn: ({
+      promptId,
+      payload,
+    }: {
+      promptId: string;
+      payload: PromptUpdate;
+    }) => updatePrompt(promptId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.prompts() });
     },
@@ -86,8 +91,9 @@ export function useSeedBuiltinPrompts() {
  */
 export function usePromptPost(promptPostId?: string) {
   return useQuery({
-    queryKey: qk.feed.promptPost(promptPostId ?? ''),
-    queryFn: () => (promptPostId ? getPromptPost(promptPostId) : Promise.reject('No ID')),
+    queryKey: qk.feed.promptPost(promptPostId ?? ""),
+    queryFn: () =>
+      promptPostId ? getPromptPost(promptPostId) : Promise.reject("No ID"),
     enabled: !!promptPostId,
     staleTime: 60_000,
   });

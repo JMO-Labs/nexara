@@ -1,68 +1,110 @@
 "use client";
 /**
  * @file components/home/widgets/ActivityWidget.tsx
- * @brief Activity digest widget — groups last 24h notifications by type
- *        and shows a summary line. Expands to show individual items.
+ * @brief Activity feed widget — displays aggregated community activities.
+ *        Groups posts, media uploads, RSVPs, comments, etc. by actor/target.
  */
 import * as React from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import Stack from "@mui/joy/Stack";
 import Typography from "@mui/joy/Typography";
 import Box from "@mui/joy/Box";
-import { listNotifications, type NotificationItem } from "@/lib/api/notifications";
+import { useActivityFeed, type ActivityItem } from "@/hooks/useActivityFeed";
 import { EmptyState, Skeleton, Button } from "@/components/ui";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import type { WidgetContext } from "@/lib/widgets/registry";
 
-const LIST_KEY = ["notifications", "activity-digest"] as const;
+/**
+ * @brief Format activity item into human-readable text.
+ *
+ * Maps verb + object_type to a template, substituting actor/container/object names.
+ * Examples:
+ *   "Sue posted in Family"
+ *   "John added 4 photos to Trip Album"
+ */
+function formatActivity(item: ActivityItem): string {
+  const {
+    actor_name,
+    verb,
+    object_type,
+    object_title,
+    container_title,
+    count,
+  } = item;
 
-const TYPE_LABELS: Record<string, string> = {
-  reaction: "reaction",
-  comment: "comment",
-  event_rsvp: "RSVP",
-  mention: "mention",
-  post: "post",
-  gallery_activity: "gallery update",
-  prompt: "prompt",
-  prompt_summary: "prompt summary",
-};
+  // Verb templates: verb -> (template_with_placeholders, use_count)
+  const templates: Record<string, [string, boolean]> = {
+    "post.created": ["{actor} posted", false],
+    "post.commented": ["{actor} commented on a post", false],
+    "post.reacted": ["{actor} reacted", false],
+    "event.created": ["{actor} created {object}", false],
+    "event.rsvp": ["{actor} RSVP'd", false],
+    "gallery.created": ["{actor} created gallery {object}", false],
+    "media.uploaded": [
+      "{actor} added {count} {obj_plural} to {container}",
+      true,
+    ],
+    "chat.posted": ["{actor} posted in {container}", false],
+    "member.joined": ["{actor} joined", false],
+    "subgroup.created": ["{actor} created subgroup {object}", false],
+    "prompt.responded": ["{actor} responded to {object}", false],
+  };
 
-function labelFor(type: string): string {
-  return TYPE_LABELS[type] ?? type.replace(/_/g, " ");
-}
+  const [template, useCount] = templates[verb] ?? ["{actor} {verb}", false];
 
-const ACTIVITY_WINDOW_DAYS = 7;
+  let text = template
+    .replace("{actor}", actor_name)
+    .replace("{object}", object_title || "it")
+    .replace("{container}", container_title || "community")
+    .replace("{verb}", verb);
 
-function summarise(items: NotificationItem[]): string {
-  const counts: Record<string, number> = {};
-  const cutoff = Date.now() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  for (const n of items) {
-    if (new Date(n.created_at).getTime() < cutoff) continue;
-    counts[n.type] = (counts[n.type] ?? 0) + 1;
+  if (useCount && count > 1) {
+    text = text.replace("{count}", String(count));
+    // Pluralize "photo" -> "photos"
+    if (object_title) {
+      const singular = object_type === "media" ? "photo" : object_type;
+      text = text.replace("{obj_plural}", `${singular}s`);
+    }
+  } else {
+    text = text.replace("{count}", "1");
   }
-  const parts = Object.entries(counts).map(
-    ([type, count]) => `${count} ${labelFor(type)}${count !== 1 ? "s" : ""}`,
-  );
-  return parts.length > 0 ? parts.join(", ") : "";
+
+  return text;
 }
 
-function formatTime(iso: string): string {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86_400) return `${Math.floor(diff / 3600)}h ago`;
-  return new Date(iso).toLocaleDateString();
+/**
+ * @brief Resolve the click-through link for an activity item.
+ *
+ * Maps object_type + object_id to a route.
+ */
+function resolveObjectRoute(objectType: string, objectId: string): string {
+  switch (objectType) {
+    case "post":
+      return `/app/posts/${objectId}`;
+    case "event":
+      return `/app/events/${objectId}`;
+    case "gallery":
+      return `/app/galleries/${objectId}`;
+    case "media":
+      // Media typically links to the source (post/gallery/event)
+      return `/app/galleries/${objectId}`;
+    case "comment":
+      // Links to the commented-on post (object_id is actually the post id in metadata)
+      return `/app/posts/${objectId}`;
+    case "subgroup":
+      return `/app/subgroups/${objectId}`;
+    default:
+      return `/app`;
+  }
 }
 
 export function ActivityWidget(_ctx: WidgetContext) {
   const [expanded, setExpanded] = React.useState(false);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: LIST_KEY,
-    queryFn: () => listNotifications(undefined, 50),
-    staleTime: 60_000,
-  });
+  const { data, isLoading, isError, hasNextPage, fetchNextPage } =
+    useActivityFeed({
+      limit: 10,
+    });
 
   if (isLoading) {
     return (
@@ -77,66 +119,74 @@ export function ActivityWidget(_ctx: WidgetContext) {
     return (
       <EmptyState
         title="Activity unavailable"
-        description="Couldn't load notifications. Try again later."
+        description="Couldn't load activity feed. Try again later."
       />
     );
   }
 
-  const items = data?.items ?? [];
-  const summary = summarise(items);
-  const recentItems = items.slice(0, 5);
+  // Flatten paginated results (usually just the first page)
+  const items = data?.pages.flatMap((page) => page.items).slice(0, 5) ?? [];
 
-  if (!summary) {
-    // No grouped summary — fall back to showing the most recent few items
-    // directly so the widget never sits silently empty if any items exist.
-    if (recentItems.length === 0) {
-      return (
-        <EmptyState
-          title="No recent activity"
-          description={`Activity from the last ${ACTIVITY_WINDOW_DAYS} days will appear here.`}
-        />
-      );
-    }
+  function formatTime(iso: string): string {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86_400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(iso).toLocaleDateString();
   }
 
-  const recent = recentItems;
-  const showItems = !summary || expanded;
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        title="No recent activity"
+        description="Community activity will appear here."
+      />
+    );
+  }
+
+  const showItems = expanded || items.length > 0;
 
   return (
     <Stack spacing={1.25}>
-      {summary && (
-        <Typography
-          level="body-sm"
-          sx={{ color: "text.primary", lineHeight: 1.5 }}
-        >
-          {summary}
-        </Typography>
-      )}
+      {items.length > 0 && (
+        <>
+          <Typography
+            level="body-sm"
+            sx={{ color: "text.primary", lineHeight: 1.5 }}
+          >
+            Recent activity
+          </Typography>
 
-      {summary && (
-        <Button
-          variant="plain"
-          size="sm"
-          color="neutral"
-          onClick={() => setExpanded((v) => !v)}
-          startDecorator={
-            expanded ? <ChevronUpIcon width={12} /> : <ChevronDownIcon width={12} />
-          }
-          sx={{
-            alignSelf: "flex-start",
-            fontSize: 11,
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            color: "text.tertiary",
-            minHeight: 0,
-            py: 0.25,
-            px: 0.75,
-            "&:hover": { color: "text.primary", bgcolor: "transparent" },
-          }}
-        >
-          {expanded ? "Hide" : "Recent"}
-        </Button>
+          {items.length > 1 && (
+            <Button
+              variant="plain"
+              size="sm"
+              color="neutral"
+              onClick={() => setExpanded((v) => !v)}
+              startDecorator={
+                expanded ? (
+                  <ChevronUpIcon width={12} />
+                ) : (
+                  <ChevronDownIcon width={12} />
+                )
+              }
+              sx={{
+                alignSelf: "flex-start",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "text.tertiary",
+                minHeight: 0,
+                py: 0.25,
+                px: 0.75,
+                "&:hover": { color: "text.primary", bgcolor: "transparent" },
+              }}
+            >
+              {expanded ? "Hide" : "Details"}
+            </Button>
+          )}
+        </>
       )}
 
       {showItems && (
@@ -144,13 +194,9 @@ export function ActivityWidget(_ctx: WidgetContext) {
           spacing={0}
           sx={{ borderTop: "1px solid", borderColor: "divider" }}
         >
-          {recent.map((n) => {
-            const message =
-              typeof n.payload?.message === "string"
-                ? n.payload.message
-                : labelFor(n.type);
-            const link =
-              typeof n.payload?.link === "string" ? n.payload.link : null;
+          {items.map((item) => {
+            const message = formatActivity(item);
+            const link = resolveObjectRoute(item.object_type, item.object_id);
 
             const Row = (
               <Box
@@ -164,20 +210,6 @@ export function ActivityWidget(_ctx: WidgetContext) {
                   position: "relative",
                   transition: "background-color 120ms",
                   "&:hover": { bgcolor: "background.level1" },
-                  ...(n.read_at
-                    ? {}
-                    : {
-                        "&::before": {
-                          content: '""',
-                          position: "absolute",
-                          left: -8,
-                          top: "calc(50% - 3px)",
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          bgcolor: "primary.500",
-                        },
-                      }),
                 }}
               >
                 <Typography
@@ -189,7 +221,7 @@ export function ActivityWidget(_ctx: WidgetContext) {
                     width: 64,
                   }}
                 >
-                  {formatTime(n.created_at)}
+                  {formatTime(item.created_at)}
                 </Typography>
                 <Typography
                   level="body-sm"
@@ -207,18 +239,19 @@ export function ActivityWidget(_ctx: WidgetContext) {
               </Box>
             );
 
-            if (link) {
-              return (
-                <Link
-                  key={n.id}
-                  href={link}
-                  style={{ display: "block", color: "inherit", textDecoration: "none" }}
-                >
-                  {Row}
-                </Link>
-              );
-            }
-            return <div key={n.id}>{Row}</div>;
+            return (
+              <Link
+                key={item.id}
+                href={link}
+                style={{
+                  display: "block",
+                  color: "inherit",
+                  textDecoration: "none",
+                }}
+              >
+                {Row}
+              </Link>
+            );
           })}
         </Stack>
       )}

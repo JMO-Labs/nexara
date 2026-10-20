@@ -1,19 +1,19 @@
-'use client';
+"use client";
 /**
  * @file components/subgroups/SubgroupCard.tsx
  * @brief Editorial group tile. Per-slug deterministic gradient gives each
  *        group a stable color identity (no cover-media field exists on
  *        Subgroup). Click selects, secondary button joins/leaves.
  */
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { Button, Chip } from '@/components/ui';
-import { MediaThumb } from '@/components/galleries/MediaThumb';
-import type { Subgroup } from '@/lib/api/subgroups';
-import { gradientFor, monogram } from '@/lib/groupVisuals';
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { Button, Chip } from "@/components/ui";
+import { MediaThumb } from "@/components/galleries/MediaThumb";
+import type { Subgroup } from "@/lib/api/subgroups";
+import { gradientFor, monogram } from "@/lib/groupVisuals";
 
 export interface SubgroupCardProps {
   subgroup: Subgroup;
@@ -57,9 +57,9 @@ export function SubgroupCard({
             onLeave?.(subgroup.slug);
           }}
           sx={{
-            bgcolor: 'rgba(255,255,255,0.14)',
-            color: '#fff',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
+            bgcolor: "rgba(255,255,255,0.14)",
+            color: "#fff",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
           }}
         >
           Leave
@@ -67,15 +67,15 @@ export function SubgroupCard({
       );
     }
 
-    if (subgroup.join_policy === 'invite_only') {
+    if (subgroup.join_policy === "invite_only") {
       return (
         <Button
           size="sm"
           disabled
           sx={{
-            bgcolor: 'rgba(255,255,255,0.14)',
-            color: '#fff',
-            '&:disabled': { opacity: 0.5 },
+            bgcolor: "rgba(255,255,255,0.14)",
+            color: "#fff",
+            "&:disabled": { opacity: 0.5 },
           }}
         >
           Invite required
@@ -83,7 +83,7 @@ export function SubgroupCard({
       );
     }
 
-    if (subgroup.join_policy === 'admin_approval') {
+    if (subgroup.join_policy === "admin_approval") {
       return (
         <Button
           size="sm"
@@ -93,9 +93,9 @@ export function SubgroupCard({
             onJoin?.(subgroup.slug);
           }}
           sx={{
-            bgcolor: '#fff',
-            color: 'rgba(0,0,0,0.85)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.88)' },
+            bgcolor: "#fff",
+            color: "rgba(0,0,0,0.85)",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.88)" },
           }}
         >
           Request to join
@@ -112,9 +112,9 @@ export function SubgroupCard({
           onJoin?.(subgroup.slug);
         }}
         sx={{
-          bgcolor: '#fff',
-          color: 'rgba(0,0,0,0.85)',
-          '&:hover': { bgcolor: 'rgba(255,255,255,0.88)' },
+          bgcolor: "#fff",
+          color: "rgba(0,0,0,0.85)",
+          "&:hover": { bgcolor: "rgba(255,255,255,0.88)" },
         }}
       >
         Join
@@ -128,46 +128,50 @@ export function SubgroupCard({
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleClick();
         }
       }}
       sx={{
-        position: 'relative',
+        position: "relative",
         minHeight: anchor ? { xs: 320, md: 420 } : { xs: 220, md: 260 },
-        height: '100%',
-        borderRadius: 'lg',
-        overflow: 'hidden',
-        cursor: 'pointer',
+        height: "100%",
+        borderRadius: "lg",
+        overflow: "hidden",
+        cursor: "pointer",
         background,
-        color: 'rgba(255,255,255,0.92)',
-        boxShadow: '0 10px 36px -18px rgba(0,0,0,0.55)',
+        color: "rgba(255,255,255,0.92)",
+        boxShadow: "0 10px 36px -18px rgba(0,0,0,0.55)",
         transition:
-          'transform 600ms cubic-bezier(0.22,1,0.36,1), box-shadow 400ms ease',
-        '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: '0 22px 60px -22px rgba(0,0,0,0.65)',
+          "transform 600ms cubic-bezier(0.22,1,0.36,1), box-shadow 400ms ease",
+        "&:hover": {
+          transform: "translateY(-3px)",
+          boxShadow: "0 22px 60px -22px rgba(0,0,0,0.65)",
         },
-        '&:hover .nx-grain': { opacity: 0.18 },
-        '&:hover .nx-mono': { transform: 'rotate(-3deg) scale(1.04)' },
-        '&:hover .nx-thumb': { transform: 'scale(1.04)' },
+        "&:hover .nx-grain": { opacity: 0.18 },
+        "&:hover .nx-mono": { transform: "rotate(-3deg) scale(1.04)" },
+        "&:hover .nx-thumb": { transform: "scale(1.04)" },
       }}
     >
       {/* cover image (replaces gradient when present) */}
       {subgroup.cover_media_id && (
-        <MediaThumb mediaId={subgroup.cover_media_id} alt={subgroup.name} zoomOnHover />
+        <MediaThumb
+          mediaId={subgroup.cover_media_id}
+          alt={subgroup.name}
+          zoomOnHover
+        />
       )}
       {/* darker scrim to keep text legible over photo backgrounds */}
       {subgroup.cover_media_id && (
         <Box
           aria-hidden
           sx={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.65) 100%)',
-            pointerEvents: 'none',
+              "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.65) 100%)",
+            pointerEvents: "none",
           }}
         />
       )}
@@ -176,11 +180,11 @@ export function SubgroupCard({
         aria-hidden
         className="nx-grain"
         sx={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
           opacity: 0.1,
-          mixBlendMode: 'overlay',
-          transition: 'opacity 400ms ease',
+          mixBlendMode: "overlay",
+          transition: "opacity 400ms ease",
           backgroundImage:
             "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>\")",
         }}
@@ -190,21 +194,21 @@ export function SubgroupCard({
         className="nx-mono"
         aria-hidden
         sx={{
-          position: 'absolute',
+          position: "absolute",
           top: anchor ? 24 : 18,
           left: anchor ? 24 : 18,
           width: anchor ? 64 : 48,
           height: anchor ? 64 : 48,
-          borderRadius: '999px',
+          borderRadius: "999px",
           background: monogramBg,
-          color: 'rgba(0,0,0,0.78)',
-          display: 'grid',
-          placeItems: 'center',
-          fontFamily: 'var(--font-display)',
+          color: "rgba(0,0,0,0.78)",
+          display: "grid",
+          placeItems: "center",
+          fontFamily: "var(--font-display)",
           fontWeight: 500,
           fontSize: anchor ? 22 : 17,
-          letterSpacing: '0.02em',
-          transition: 'transform 400ms cubic-bezier(0.22,1,0.36,1)',
+          letterSpacing: "0.02em",
+          transition: "transform 400ms cubic-bezier(0.22,1,0.36,1)",
         }}
       >
         {monogram(subgroup.name)}
@@ -214,20 +218,24 @@ export function SubgroupCard({
       <Stack
         direction="row"
         spacing={0.75}
-        sx={{ position: 'absolute', top: anchor ? 28 : 22, right: anchor ? 24 : 18 }}
+        sx={{
+          position: "absolute",
+          top: anchor ? 28 : 22,
+          right: anchor ? 24 : 18,
+        }}
       >
         {subgroup.is_private && (
           <Chip
             size="sm"
             variant="soft"
             sx={{
-              bgcolor: 'rgba(255,255,255,0.16)',
-              color: '#fff',
-              backdropFilter: 'blur(6px)',
-              fontFamily: 'var(--font-mono, var(--font-body))',
-              fontSize: '10px',
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
+              bgcolor: "rgba(255,255,255,0.16)",
+              color: "#fff",
+              backdropFilter: "blur(6px)",
+              fontFamily: "var(--font-mono, var(--font-body))",
+              fontSize: "10px",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
             }}
           >
             Private
@@ -238,47 +246,47 @@ export function SubgroupCard({
       {/* footer block */}
       <Box
         sx={{
-          position: 'absolute',
+          position: "absolute",
           left: 0,
           right: 0,
           bottom: 0,
           p: anchor ? { xs: 3, md: 4 } : { xs: 2.25, md: 2.75 },
           background:
-            'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0.7) 100%)',
+            "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0.7) 100%)",
         }}
       >
         <Typography
           level="body-xs"
           sx={{
-            fontFamily: 'var(--font-mono, var(--font-body))',
-            fontSize: '10px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.6)',
+            fontFamily: "var(--font-mono, var(--font-body))",
+            fontSize: "10px",
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.6)",
             mb: 0.75,
           }}
         >
-          {subgroup.join_policy.replace('_', ' ')}
-          {typeof memberCount === 'number' && (
+          {subgroup.join_policy.replace("_", " ")}
+          {typeof memberCount === "number" && (
             <>
               <Box component="span" sx={{ mx: 0.75, opacity: 0.4 }}>
                 ·
               </Box>
-              {memberCount} {memberCount === 1 ? 'member' : 'members'}
+              {memberCount} {memberCount === 1 ? "member" : "members"}
             </>
           )}
         </Typography>
         <Typography
           sx={{
-            fontFamily: 'var(--font-display)',
+            fontFamily: "var(--font-display)",
             fontWeight: 400,
             fontSize: anchor
-              ? { xs: '34px', md: '52px' }
-              : { xs: '22px', md: '28px' },
+              ? { xs: "34px", md: "52px" }
+              : { xs: "22px", md: "28px" },
             lineHeight: 1.02,
-            letterSpacing: '-0.02em',
-            color: '#fff',
-            textShadow: '0 2px 22px rgba(0,0,0,0.35)',
+            letterSpacing: "-0.02em",
+            color: "#fff",
+            textShadow: "0 2px 22px rgba(0,0,0,0.35)",
             mb: subgroup.description ? 1 : 0,
           }}
         >
@@ -288,12 +296,12 @@ export function SubgroupCard({
           <Typography
             level="body-sm"
             sx={{
-              color: 'rgba(255,255,255,0.78)',
-              display: '-webkit-box',
+              color: "rgba(255,255,255,0.78)",
+              display: "-webkit-box",
               WebkitLineClamp: anchor ? 3 : 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              maxWidth: anchor ? '78%' : '100%',
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              maxWidth: anchor ? "78%" : "100%",
             }}
           >
             {subgroup.description}
@@ -309,8 +317,8 @@ export function SubgroupCard({
               router.push(`/app/subgroups/${subgroup.slug}`);
             }}
             sx={{
-              color: 'rgba(255,255,255,0.78)',
-              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' },
+              color: "rgba(255,255,255,0.78)",
+              "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.08)" },
             }}
           >
             Open →

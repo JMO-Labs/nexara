@@ -82,7 +82,8 @@ export default function EventsPage() {
 
   const fetchEnd = React.useMemo(() => {
     if (view === "week") return addDays(weekStart, 7);
-    if (view === "day") return addDays(selectedDay ?? startOfDay(new Date()), 1);
+    if (view === "day")
+      return addDays(selectedDay ?? startOfDay(new Date()), 1);
     return monthEnd;
   }, [view, weekStart, selectedDay, monthEnd]);
 

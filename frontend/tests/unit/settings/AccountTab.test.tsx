@@ -2,17 +2,17 @@
  * @file tests/unit/settings/AccountTab.test.tsx
  * @brief AccountTab component tests. Verify email form submission.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { CssVarsProvider } from '@mui/joy/styles';
-import joyTheme from '@/theme/joy-theme';
-import { AccountTab } from '@/components/settings/AccountTab';
-import * as settingsHooks from '@/hooks/useSettings';
-import { useToasts } from '@/stores/toasts';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CssVarsProvider } from "@mui/joy/styles";
+import joyTheme from "@/theme/joy-theme";
+import { AccountTab } from "@/components/settings/AccountTab";
+import * as settingsHooks from "@/hooks/useSettings";
+import { useToasts } from "@/stores/toasts";
 
-vi.mock('@/hooks/useSettings');
+vi.mock("@/hooks/useSettings");
 
 const createWrapper = () => {
   const queryClient = new QueryClient();
@@ -23,7 +23,7 @@ const createWrapper = () => {
   );
 };
 
-describe('AccountTab', () => {
+describe("AccountTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useToasts.getState().clear();
@@ -35,13 +35,13 @@ describe('AccountTab', () => {
     } as any);
   });
 
-  it('renders email form', () => {
+  it("renders email form", () => {
     render(<AccountTab />, { wrapper: createWrapper() });
 
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
   });
 
-  it('submits email form with new email', async () => {
+  it("submits email form with new email", async () => {
     const user = userEvent.setup();
     const mockMutate = vi.fn();
     vi.mocked(settingsHooks.useUpdateEmail).mockReturnValue({
@@ -55,16 +55,16 @@ describe('AccountTab', () => {
 
     const input = screen.getByLabelText(/email address/i) as HTMLInputElement;
     await user.clear(input);
-    await user.type(input, 'new@example.com');
-    const button = screen.getByRole('button', { name: /update email/i });
+    await user.type(input, "new@example.com");
+    const button = screen.getByRole("button", { name: /update email/i });
     await user.click(button);
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith('new@example.com');
+      expect(mockMutate).toHaveBeenCalledWith("new@example.com");
     });
   });
 
-  it('shows loading state while submitting', async () => {
+  it("shows loading state while submitting", async () => {
     const user = userEvent.setup();
     vi.mocked(settingsHooks.useUpdateEmail).mockReturnValue({
       mutate: vi.fn(),
@@ -75,7 +75,7 @@ describe('AccountTab', () => {
 
     render(<AccountTab />, { wrapper: createWrapper() });
 
-    const button = screen.getByRole('button', { name: /update email/i });
+    const button = screen.getByRole("button", { name: /update email/i });
     expect(button).toBeDisabled();
   });
 });

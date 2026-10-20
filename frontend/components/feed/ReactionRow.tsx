@@ -1,19 +1,19 @@
-'use client';
+"use client";
 /**
  * @file components/feed/ReactionRow.tsx
  * @brief Reactions chip strip + add-reaction trigger + comment count.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Box from '@mui/joy/Box';
-import Typography from '@mui/joy/Typography';
-import Popover from '@mui/joy/Tooltip';
-import { motion } from 'framer-motion';
-import { ChatBubbleLeftIcon, FaceSmileIcon } from '@heroicons/react/24/outline';
-import { IconButton } from '@/components/ui';
-import type { ReactionSummary } from '@/lib/api/posts';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Box from "@mui/joy/Box";
+import Typography from "@mui/joy/Typography";
+import Popover from "@mui/joy/Tooltip";
+import { motion } from "framer-motion";
+import { ChatBubbleLeftIcon, FaceSmileIcon } from "@heroicons/react/24/outline";
+import { IconButton } from "@/components/ui";
+import type { ReactionSummary } from "@/lib/api/posts";
 
-const QUICK = ['👍', '❤️', '😂', '🎉', '😮', '🙏'];
+const QUICK = ["👍", "❤️", "😂", "🎉", "😮", "🙏"];
 
 export interface ReactionRowProps {
   reactions: ReactionSummary[];
@@ -26,10 +26,19 @@ interface ReactionScaleState {
   [emoji: string]: boolean;
 }
 
-export function ReactionRow({ reactions, commentCount, onReact, onCommentClick }: ReactionRowProps) {
+export function ReactionRow({
+  reactions,
+  commentCount,
+  onReact,
+  onCommentClick,
+}: ReactionRowProps) {
   const [open, setOpen] = React.useState(false);
-  const [scalingEmoji, setScalingEmoji] = React.useState<ReactionScaleState>({});
-  const [displayCounts, setDisplayCounts] = React.useState<Record<string, number>>({});
+  const [scalingEmoji, setScalingEmoji] = React.useState<ReactionScaleState>(
+    {},
+  );
+  const [displayCounts, setDisplayCounts] = React.useState<
+    Record<string, number>
+  >({});
 
   const handleReact = (emoji: string) => {
     setScalingEmoji((s) => ({ ...s, [emoji]: true }));
@@ -72,30 +81,36 @@ export function ReactionRow({ reactions, commentCount, onReact, onCommentClick }
       {reactions.map((r) => (
         <motion.div
           key={r.emoji}
-          animate={scalingEmoji[r.emoji] ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-          transition={{ duration: 0.2, type: 'spring', stiffness: 400 }}
+          animate={
+            scalingEmoji[r.emoji] ? { scale: [1, 1.2, 1] } : { scale: 1 }
+          }
+          transition={{ duration: 0.2, ease: "easeOut" }}
         >
           <Box
             role="button"
             aria-pressed={r.reacted_by_me}
-            aria-label={`${r.emoji} reaction, ${r.count} ${r.count === 1 ? 'person' : 'people'}`}
+            aria-label={`${r.emoji} reaction, ${r.count} ${r.count === 1 ? "person" : "people"}`}
             onClick={() => handleReact(r.emoji)}
             sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: "inline-flex",
+              alignItems: "center",
               px: 0.75,
               py: 0.25,
-              borderRadius: 'sm',
-              cursor: 'pointer',
+              borderRadius: "sm",
+              cursor: "pointer",
               gap: 0.5,
-              bgcolor: r.reacted_by_me ? 'primary.softBg' : 'background.level1',
-              color: r.reacted_by_me ? 'primary.plainColor' : 'text.primary',
-              border: '1px solid',
-              borderColor: r.reacted_by_me ? 'primary.outlinedBorder' : 'divider',
-              fontSize: '0.875rem',
-              transition: 'background 200ms',
-              '&:hover': {
-                bgcolor: r.reacted_by_me ? 'primary.plainHoverBg' : 'background.level2',
+              bgcolor: r.reacted_by_me ? "primary.softBg" : "background.level1",
+              color: r.reacted_by_me ? "primary.plainColor" : "text.primary",
+              border: "1px solid",
+              borderColor: r.reacted_by_me
+                ? "primary.outlinedBorder"
+                : "divider",
+              fontSize: "0.875rem",
+              transition: "background 200ms",
+              "&:hover": {
+                bgcolor: r.reacted_by_me
+                  ? "primary.plainHoverBg"
+                  : "background.level2",
               },
             }}
           >
@@ -103,7 +118,7 @@ export function ReactionRow({ reactions, commentCount, onReact, onCommentClick }
           </Box>
         </motion.div>
       ))}
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: "relative" }}>
         <Popover title="Add reaction" placement="top">
           <IconButton
             aria-label="Add reaction"
@@ -117,16 +132,16 @@ export function ReactionRow({ reactions, commentCount, onReact, onCommentClick }
         {open ? (
           <Box
             sx={{
-              position: 'absolute',
-              bottom: '100%',
+              position: "absolute",
+              bottom: "100%",
               left: 0,
               mb: 0.5,
               p: 0.5,
-              display: 'flex',
+              display: "flex",
               gap: 0.25,
-              backgroundColor: 'background.popup',
-              borderRadius: 'md',
-              boxShadow: 'md',
+              backgroundColor: "background.popup",
+              borderRadius: "md",
+              boxShadow: "md",
               zIndex: 10,
             }}
             onMouseLeave={() => setOpen(false)}

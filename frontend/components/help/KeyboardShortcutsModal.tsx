@@ -1,16 +1,16 @@
-'use client';
+"use client";
 /**
  * @file components/help/KeyboardShortcutsModal.tsx
  * @brief Modal displaying available keyboard shortcuts in sections.
  */
-import * as React from 'react';
-import Modal from '@mui/joy/Modal';
-import ModalDialog from '@mui/joy/ModalDialog';
-import ModalClose from '@mui/joy/ModalClose';
-import Typography from '@mui/joy/Typography';
-import Stack from '@mui/joy/Stack';
-import Box from '@mui/joy/Box';
-import { useModals } from '@/stores/modals';
+import * as React from "react";
+import Modal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import ModalClose from "@mui/joy/ModalClose";
+import Typography from "@mui/joy/Typography";
+import Stack from "@mui/joy/Stack";
+import Box from "@mui/joy/Box";
+import { useModals } from "@/stores/modals";
 
 interface Shortcut {
   keys: string;
@@ -24,26 +24,26 @@ interface ShortcutSection {
 
 const SHORTCUTS: ShortcutSection[] = [
   {
-    name: 'Navigation',
+    name: "Navigation",
     shortcuts: [
-      { keys: 'Ctrl+K', action: 'Open command palette' },
-      { keys: '?', action: 'Open this help' },
+      { keys: "Ctrl+K", action: "Open command palette" },
+      { keys: "?", action: "Open this help" },
     ],
   },
   {
-    name: 'Actions',
+    name: "Actions",
     shortcuts: [
-      { keys: 'Enter', action: 'Send message' },
-      { keys: 'Shift+Enter', action: 'New line in message' },
-      { keys: 'Esc', action: 'Close modal or popover' },
+      { keys: "Enter", action: "Send message" },
+      { keys: "Shift+Enter", action: "New line in message" },
+      { keys: "Esc", action: "Close modal or popover" },
     ],
   },
   {
-    name: 'Gallery',
+    name: "Gallery",
     shortcuts: [
-      { keys: '←', action: 'Previous image' },
-      { keys: '→', action: 'Next image' },
-      { keys: 'Esc', action: 'Close lightbox' },
+      { keys: "←", action: "Previous image" },
+      { keys: "→", action: "Next image" },
+      { keys: "Esc", action: "Close lightbox" },
     ],
   },
 ];
@@ -62,7 +62,10 @@ export function KeyboardShortcutsModal() {
           </Typography>
           {SHORTCUTS.map((section) => (
             <Stack key={section.name} spacing={1.5}>
-              <Typography level="title-sm" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Typography
+                level="title-sm"
+                sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
+              >
                 {section.name}
               </Typography>
               <Stack spacing={1}>
@@ -70,9 +73,9 @@ export function KeyboardShortcutsModal() {
                   <Box
                     key={idx}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
                       gap: 2,
                     }}
                   >
@@ -84,10 +87,10 @@ export function KeyboardShortcutsModal() {
                         py: 0.375,
                         borderRadius: 4,
                         fontSize: 12,
-                        bgcolor: 'neutral.softBg',
-                        color: 'neutral.softColor',
-                        fontFamily: 'monospace',
-                        whiteSpace: 'nowrap',
+                        bgcolor: "neutral.softBg",
+                        color: "neutral.softColor",
+                        fontFamily: "monospace",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {shortcut.keys}

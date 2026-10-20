@@ -2,10 +2,14 @@
  * @file hooks/useSubgroupMedia.ts
  * @brief Infinite query hook for subgroup media with source filtering.
  */
-'use client';
+"use client";
 
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { getSubgroupMedia, MediaListResponse, type GetSubgroupMediaParams } from '@/lib/api/subgroups';
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  getSubgroupMedia,
+  MediaListResponse,
+  type GetSubgroupMediaParams,
+} from "@/lib/api/subgroups";
 
 interface UseSubgroupMediaOptions extends GetSubgroupMediaParams {
   slug: string;
@@ -23,15 +27,15 @@ interface UseSubgroupMediaOptions extends GetSubgroupMediaParams {
  */
 export function useSubgroupMedia({
   slug,
-  source = 'all',
+  source = "all",
   limit = 60,
   enabled = true,
 }: UseSubgroupMediaOptions) {
   return useInfiniteQuery<MediaListResponse>({
-    queryKey: ['subgroup-media', slug, source],
+    queryKey: ["subgroup-media", slug, source],
     queryFn: async ({ pageParam = null }) => {
       const params: GetSubgroupMediaParams = {
-        source: source as 'all' | 'post' | 'gallery' | 'event',
+        source: source as "all" | "post" | "gallery" | "event",
         limit,
         cursor: pageParam as string | null,
       };

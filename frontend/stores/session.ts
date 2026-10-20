@@ -4,10 +4,14 @@
  *        details that change frequently) lives in TanStack Query; this
  *        store carries the identity scaffolding the whole shell depends on.
  */
-import { create } from 'zustand';
-import type { CurrentUser } from '@/lib/api/users';
+import { create } from "zustand";
+import type { CurrentUser } from "@/lib/api/users";
 
-export type SessionStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
+export type SessionStatus =
+  | "idle"
+  | "loading"
+  | "authenticated"
+  | "unauthenticated";
 
 interface SessionState {
   status: SessionStatus;
@@ -18,10 +22,10 @@ interface SessionState {
 }
 
 export const useSession = create<SessionState>((set) => ({
-  status: 'idle',
+  status: "idle",
   user: null,
   setUser: (user) =>
-    set({ user, status: user ? 'authenticated' : 'unauthenticated' }),
+    set({ user, status: user ? "authenticated" : "unauthenticated" }),
   setStatus: (status) => set({ status }),
-  reset: () => set({ user: null, status: 'unauthenticated' }),
+  reset: () => set({ user: null, status: "unauthenticated" }),
 }));

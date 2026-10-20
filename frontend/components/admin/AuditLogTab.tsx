@@ -1,28 +1,32 @@
-'use client';
+"use client";
 /**
  * @file components/admin/AuditLogTab.tsx
  * @brief Paginated audit log viewer with filter rail.
  */
-import { useState } from 'react';
-import { useAuditLog } from '@/hooks/useAdmin';
-import Stack from '@mui/joy/Stack';
-import Grid from '@mui/joy/Grid';
-import Card from '@mui/joy/Card';
-import Table from '@mui/joy/Table';
-import Typography from '@mui/joy/Typography';
-import Button from '@mui/joy/Button';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import Input from '@mui/joy/Input';
-import { format } from 'date-fns';
-import { ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useState } from "react";
+import { useAuditLog } from "@/hooks/useAdmin";
+import Stack from "@mui/joy/Stack";
+import Grid from "@mui/joy/Grid";
+import Card from "@mui/joy/Card";
+import Table from "@mui/joy/Table";
+import Typography from "@mui/joy/Typography";
+import Button from "@mui/joy/Button";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import Input from "@mui/joy/Input";
+import { format } from "date-fns";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export function AuditLogTab() {
   const [cursor, setCursor] = useState<string | null>(null);
-  const [actionFilter, setActionFilter] = useState<string>('');
-  const [actorFilter, setActorFilter] = useState<string>('');
+  const [actionFilter, setActionFilter] = useState<string>("");
+  const [actorFilter, setActorFilter] = useState<string>("");
 
-  const { data: auditLog, isLoading, error } = useAuditLog({
+  const {
+    data: auditLog,
+    isLoading,
+    error,
+  } = useAuditLog({
     limit: 50,
     cursor,
   });
@@ -61,7 +65,7 @@ export function AuditLogTab() {
     }
     if (
       actorFilter &&
-      !(entry.actor_display_name || '')
+      !(entry.actor_display_name || "")
         .toLowerCase()
         .includes(actorFilter.toLowerCase())
     ) {
@@ -73,8 +77,8 @@ export function AuditLogTab() {
   return (
     <Grid container spacing={2}>
       {/* Filter Rail: 3/12 on desktop, hidden on mobile */}
-      <Grid xs={0} md={3} sx={{ display: { xs: 'none', md: 'flex' } }}>
-        <Card variant="outlined" sx={{ width: '100%' }}>
+      <Grid xs={0} md={3} sx={{ display: { xs: "none", md: "flex" } }}>
+        <Card variant="outlined" sx={{ width: "100%" }}>
           <Stack spacing={1.5}>
             <Typography level="title-sm">Filters</Typography>
             <Stack spacing={1}>
@@ -95,8 +99,8 @@ export function AuditLogTab() {
                   variant="plain"
                   size="sm"
                   onClick={() => {
-                    setActionFilter('');
-                    setActorFilter('');
+                    setActionFilter("");
+                    setActorFilter("");
                   }}
                 >
                   Clear Filters
@@ -114,9 +118,9 @@ export function AuditLogTab() {
             stripe="odd"
             hoverRow
             sx={{
-              '--TableCell-paddingX': '0.75rem',
-              '--TableCell-paddingY': '0.375rem',
-              fontSize: '0.85rem',
+              "--TableCell-paddingX": "0.75rem",
+              "--TableCell-paddingY": "0.375rem",
+              fontSize: "0.85rem",
             }}
           >
             <thead>
@@ -136,17 +140,17 @@ export function AuditLogTab() {
                     </td>
                     <td>
                       <Typography level="body-xs">
-                        {entry.actor_display_name || '(system)'}
+                        {entry.actor_display_name || "(system)"}
                       </Typography>
                     </td>
                     <td>
                       <Typography level="body-xs">
-                        {entry.target_display || entry.target_type || '-'}
+                        {entry.target_display || entry.target_type || "-"}
                       </Typography>
                     </td>
                     <td>
-                      <Typography level="body-xs" sx={{ whiteSpace: 'nowrap' }}>
-                        {format(new Date(entry.created_at), 'MMM d HH:mm')}
+                      <Typography level="body-xs" sx={{ whiteSpace: "nowrap" }}>
+                        {format(new Date(entry.created_at), "MMM d HH:mm")}
                       </Typography>
                     </td>
                   </tr>

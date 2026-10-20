@@ -2,24 +2,24 @@
  * @file tests/unit/subgroups/useSubgroups.test.tsx
  * @brief Verify list query + join mutation invalidates the list key.
  */
-import * as React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
-import { useToasts } from '@/stores/toasts';
+import * as React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
+import { useToasts } from "@/stores/toasts";
 
-vi.mock('next-intl', () => ({
+vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      'toasts.subgroups.joined': 'Joined subgroup',
-      'toasts.errors.generic': 'Something went wrong',
+      "toasts.subgroups.joined": "Joined subgroup",
+      "toasts.errors.generic": "Something went wrong",
     };
     return translations[key] || key;
   },
 }));
 
-vi.mock('@/lib/api/subgroups', () => ({
+vi.mock("@/lib/api/subgroups", () => ({
   listSubgroups: vi.fn(),
   joinSubgroup: vi.fn(),
   leaveSubgroup: vi.fn(),
@@ -33,8 +33,8 @@ vi.mock('@/lib/api/subgroups', () => ({
   removeMember: vi.fn(),
 }));
 
-import * as api from '@/lib/api/subgroups';
-import { useSubgroupList, useJoinSubgroup } from '@/hooks/useSubgroups';
+import * as api from "@/lib/api/subgroups";
+import { useSubgroupList, useJoinSubgroup } from "@/hooks/useSubgroups";
 
 function wrapper(qc: QueryClient) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -42,7 +42,7 @@ function wrapper(qc: QueryClient) {
   };
 }
 
-describe('useSubgroups', () => {
+describe("useSubgroups", () => {
   let qc: QueryClient;
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,20 +50,24 @@ describe('useSubgroups', () => {
     qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
-  it('useSubgroupList returns api result', async () => {
+  it("useSubgroupList returns api result", async () => {
     (api.listSubgroups as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: '1', slug: 'a', name: 'A' },
+      { id: "1", slug: "a", name: "A" },
     ]);
-    const { result } = renderHook(() => useSubgroupList(), { wrapper: wrapper(qc) });
+    const { result } = renderHook(() => useSubgroupList(), {
+      wrapper: wrapper(qc),
+    });
     await waitFor(() => expect(result.current.data?.length).toBe(1));
   });
 
-  it('useJoinSubgroup invalidates list key', async () => {
+  it("useJoinSubgroup invalidates list key", async () => {
     (api.joinSubgroup as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    const spy = vi.spyOn(qc, 'invalidateQueries');
-    const { result } = renderHook(() => useJoinSubgroup(), { wrapper: wrapper(qc) });
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useJoinSubgroup(), {
+      wrapper: wrapper(qc),
+    });
     await act(async () => {
-      await result.current.mutateAsync('hiking');
+      await result.current.mutateAsync("hiking");
     });
     expect(spy).toHaveBeenCalledWith({ queryKey: qk.subgroups.list() });
   });

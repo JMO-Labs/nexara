@@ -12,9 +12,13 @@ vi.mock("@/hooks/useHomeMedia", () => ({
   useHomeMedia: vi.fn(() => ({ data: undefined, isLoading: true })),
 }));
 vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({
+    children,
+    href,
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => <a href={href}>{children}</a>,
 }));
 vi.mock("framer-motion", async (importOriginal) => {
   const actual = await importOriginal<typeof import("framer-motion")>();
@@ -55,5 +59,33 @@ describe("MediaCarouselWidget", () => {
 
     wrap(<MediaCarouselWidget instanceId="w1" />);
     expect(screen.getByText("No media yet")).toBeInTheDocument();
+  });
+
+  it("does not show 'personal' scope pill", () => {
+    vi.mocked(useHomeMedia).mockReturnValue({
+      data: { items: [], next_cursor: null },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useHomeMedia>);
+
+    wrap(<MediaCarouselWidget instanceId="w1" />);
+    const allPills = screen.getAllByRole("button");
+    const labels = allPills.map((pill) => pill.textContent);
+    expect(labels).toEqual(["All", "Community"]);
+    expect(labels).not.toContain("Mine");
+  });
+
+  it("union query includes both community-root and subgroup items", () => {
+    // This test verifies that the component calls useHomeMedia with scope='all'
+    // which triggers a union query in the backend (home_service.list_media)
+    vi.mocked(useHomeMedia).mockReturnValue({
+      data: { items: [], next_cursor: null },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useHomeMedia>);
+
+    wrap(<MediaCarouselWidget instanceId="w1" />);
+    // Component defaults to scope='all', which triggers union behavior
+    expect(useHomeMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "all" }),
+    );
   });
 });

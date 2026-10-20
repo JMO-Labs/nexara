@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/subgroups/hub/GroupChatPanel.tsx
  * @brief Scoped, single-channel chat for a group hub. Renders message list +
@@ -6,15 +6,15 @@
  *        DM list. Designed to live in a right-side drawer so the user can
  *        keep using the rest of the hub while chatting.
  */
-import * as React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { IconButton, Skeleton } from '@/components/ui';
-import { MessageList } from '@/components/chat/MessageList';
-import { Composer } from '@/components/chat/Composer';
+import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { IconButton, Skeleton } from "@/components/ui";
+import { MessageList } from "@/components/chat/MessageList";
+import { Composer } from "@/components/chat/Composer";
 import {
   useSubgroupChannel,
   useMessages,
@@ -22,10 +22,10 @@ import {
   optimisticAddMessage,
   sendChatMessage,
   sendChatTyping,
-} from '@/hooks/useChat';
-import { useSession } from '@/stores/session';
-import type { ChatMessage } from '@/lib/api/chat';
-import type { SubgroupDetail } from '@/lib/api/subgroups';
+} from "@/hooks/useChat";
+import { useSession } from "@/stores/session";
+import type { ChatMessage } from "@/lib/api/chat";
+import type { SubgroupDetail } from "@/lib/api/subgroups";
 
 export interface GroupChatPanelProps {
   subgroup: SubgroupDetail;
@@ -35,7 +35,9 @@ export interface GroupChatPanelProps {
 export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
   const qc = useQueryClient();
   const sessionUser = useSession((s) => s.user);
-  const { data: channel, isLoading: channelLoading } = useSubgroupChannel(subgroup.id);
+  const { data: channel, isLoading: channelLoading } = useSubgroupChannel(
+    subgroup.id,
+  );
   const channelId = channel?.id;
   const messagesQ = useMessages(channelId);
   const { typing, markRead } = useChatRealtime();
@@ -55,8 +57,8 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
       if (!channelId) return;
       let content = raw;
       if (replyTo) {
-        const author = replyTo.author?.display_name ?? 'someone';
-        const excerpt = replyTo.content.slice(0, 140).replace(/\n/g, ' ');
+        const author = replyTo.author?.display_name ?? "someone";
+        const excerpt = replyTo.content.slice(0, 140).replace(/\n/g, " ");
         content = `> @${author}: ${excerpt}\n\n${raw}`;
         setReplyTo(null);
       }
@@ -93,11 +95,11 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
   return (
     <Stack
       sx={{
-        height: '100%',
+        height: "100%",
         minHeight: 0,
-        bgcolor: 'background.body',
-        borderLeft: '1px solid',
-        borderColor: 'divider',
+        bgcolor: "background.body",
+        borderLeft: "1px solid",
+        borderColor: "divider",
       }}
     >
       <Stack
@@ -107,8 +109,8 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
         sx={{
           px: 2,
           py: 1.5,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderBottom: "1px solid",
+          borderColor: "divider",
           flexShrink: 0,
         }}
       >
@@ -116,11 +118,11 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
           <Typography
             level="title-sm"
             sx={{
-              fontFamily: 'var(--font-display)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.14em',
-              color: 'text.tertiary',
-              fontSize: '10px',
+              fontFamily: "var(--font-display)",
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+              color: "text.tertiary",
+              fontSize: "10px",
             }}
           >
             Group chat
@@ -140,7 +142,9 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
         </IconButton>
       </Stack>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      >
         {channelLoading || !channelId ? (
           <Box sx={{ p: 2 }}>
             <Skeleton height={300} />
@@ -161,13 +165,17 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
       {typingCount > 0 && (
         <Typography
           level="body-xs"
-          sx={{ px: 2, py: 0.5, color: 'text.tertiary', flexShrink: 0 }}
+          sx={{ px: 2, py: 0.5, color: "text.tertiary", flexShrink: 0 }}
         >
-          {typingCount === 1 ? 'Someone is typing…' : `${typingCount} people typing…`}
+          {typingCount === 1
+            ? "Someone is typing…"
+            : `${typingCount} people typing…`}
         </Typography>
       )}
 
-      <Box sx={{ flexShrink: 0, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Box
+        sx={{ flexShrink: 0, borderTop: "1px solid", borderColor: "divider" }}
+      >
         <Composer
           disabled={!channelId}
           onSend={handleSend}
@@ -176,7 +184,7 @@ export function GroupChatPanel({ subgroup, onClose }: GroupChatPanelProps) {
           replyTo={
             replyTo
               ? {
-                  authorName: replyTo.author?.display_name ?? 'someone',
+                  authorName: replyTo.author?.display_name ?? "someone",
                   excerpt: replyTo.content.slice(0, 100),
                 }
               : null

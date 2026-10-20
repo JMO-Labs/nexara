@@ -1,16 +1,16 @@
-'use client';
+"use client";
 /**
  * @file components/chat/ChannelList.tsx
  * @brief Sidebar list of channels + DM threads. Highlights active item,
  *        shows unread badge per channel.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Box from '@mui/joy/Box';
-import { TrashIcon } from '@heroicons/react/24/outline';
-import { Avatar, Badge, IconButton, Skeleton } from '@/components/ui';
-import type { ChatChannel, DmThread } from '@/lib/api/chat';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Box from "@mui/joy/Box";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { Avatar, Badge, IconButton, Skeleton } from "@/components/ui";
+import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
 export interface ChannelListProps {
   channels: ChatChannel[];
@@ -45,21 +45,21 @@ function ChannelRow({
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
+        display: "flex",
+        alignItems: "center",
         gap: 1.25,
         px: 1.25,
         py: 1,
-        borderRadius: 'md',
-        cursor: 'pointer',
-        bgcolor: active ? 'background.level1' : 'transparent',
-        '&:hover': { bgcolor: 'background.level1' },
-        outline: 'none',
-        '&:focus-visible': { boxShadow: 'sm' },
+        borderRadius: "md",
+        cursor: "pointer",
+        bgcolor: active ? "background.level1" : "transparent",
+        "&:hover": { bgcolor: "background.level1" },
+        outline: "none",
+        "&:focus-visible": { boxShadow: "sm" },
       }}
     >
       {avatar}
@@ -111,16 +111,24 @@ export function ChannelList({
     );
   }
 
-  const grouped = channels.filter((c) => c.channel_type !== 'direct');
+  const grouped = channels.filter((c) => c.channel_type !== "direct");
 
   return (
     <Stack spacing={2} p={1}>
       <Stack spacing={0.5}>
-        <Typography level="title-sm" textColor="text.tertiary" sx={{ px: 1.25, mb: 0.5 }}>
+        <Typography
+          level="title-sm"
+          textColor="text.tertiary"
+          sx={{ px: 1.25, mb: 0.5 }}
+        >
           Channels
         </Typography>
         {grouped.length === 0 && (
-          <Typography level="body-xs" textColor="text.tertiary" sx={{ px: 1.25 }}>
+          <Typography
+            level="body-xs"
+            textColor="text.tertiary"
+            sx={{ px: 1.25 }}
+          >
             No channels
           </Typography>
         )}
@@ -131,20 +139,26 @@ export function ChannelList({
             unread={unread[c.id] ?? 0}
             primary={`# ${c.name}`}
             secondary={c.channel_type}
-            avatar={
-              <Avatar size="sm">{c.name.charAt(0).toUpperCase()}</Avatar>
-            }
+            avatar={<Avatar size="sm">{c.name.charAt(0).toUpperCase()}</Avatar>}
             onClick={() => onSelect(c.id)}
           />
         ))}
       </Stack>
 
       <Stack spacing={0.5}>
-        <Typography level="title-sm" textColor="text.tertiary" sx={{ px: 1.25, mb: 0.5 }}>
+        <Typography
+          level="title-sm"
+          textColor="text.tertiary"
+          sx={{ px: 1.25, mb: 0.5 }}
+        >
           Direct messages
         </Typography>
         {dms.length === 0 && (
-          <Typography level="body-xs" textColor="text.tertiary" sx={{ px: 1.25 }}>
+          <Typography
+            level="body-xs"
+            textColor="text.tertiary"
+            sx={{ px: 1.25 }}
+          >
             No conversations
           </Typography>
         )}

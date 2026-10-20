@@ -1,21 +1,21 @@
-'use client';
+"use client";
 /**
  * @file components/layout/TopBar.tsx
  * @brief Sticky top bar. Brand mark, command palette trigger (⌘K),
  *        notifications bell, avatar dropdown. The palette itself owns
  *        its open state and ⌘K listener (see CommandPalette).
  */
-import Link from 'next/link';
-import Box from '@mui/joy/Box';
-import Sheet from '@mui/joy/Sheet';
-import Typography from '@mui/joy/Typography';
-import Stack from '@mui/joy/Stack';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { IconButton } from '@/components/ui/IconButton';
-import { NotificationsBell } from '@/components/notifications/NotificationsBell';
-import { AvatarMenu } from './AvatarMenu';
-import { GroupContextSwitcher } from './GroupContextSwitcher';
-import { useUI } from '@/stores/ui';
+import Link from "next/link";
+import Box from "@mui/joy/Box";
+import Sheet from "@mui/joy/Sheet";
+import Typography from "@mui/joy/Typography";
+import Stack from "@mui/joy/Stack";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { IconButton } from "@/components/ui/IconButton";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { AvatarMenu } from "./AvatarMenu";
+import { GroupContextSwitcher } from "./GroupContextSwitcher";
+import { useUI } from "@/stores/ui";
 
 export function TopBar() {
   const openPalette = useUI((s) => s.setCommandPaletteOpen);
@@ -24,7 +24,7 @@ export function TopBar() {
       component="header"
       variant="outlined"
       sx={{
-        position: 'sticky',
+        position: "sticky",
         top: 0,
         zIndex: 50,
         px: { xs: 2, md: 3 },
@@ -32,15 +32,19 @@ export function TopBar() {
         borderLeft: 0,
         borderRight: 0,
         borderTop: 0,
-        display: 'flex',
-        alignItems: 'center',
+        display: "flex",
+        alignItems: "center",
         gap: 2,
       }}
     >
-      <Box component={Link} href="/app" sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box
+        component={Link}
+        href="/app"
+        sx={{ display: "flex", alignItems: "center" }}
+      >
         <Typography
           level="title-md"
-          sx={{ fontFamily: 'var(--font-display)', letterSpacing: '0.02em' }}
+          sx={{ fontFamily: "var(--font-display)", letterSpacing: "0.02em" }}
         >
           Nexara
         </Typography>
@@ -53,30 +57,30 @@ export function TopBar() {
           aria-label="Open command palette"
           data-tour="topbar-search"
           sx={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: { xs: 'none', sm: 'flex' },
-            alignItems: 'center',
+            all: "unset",
+            cursor: "pointer",
+            display: { xs: "none", sm: "flex" },
+            alignItems: "center",
             gap: 1,
             maxWidth: 480,
-            width: '100%',
+            width: "100%",
             px: 1.5,
             py: 0.75,
-            borderRadius: 'md',
-            border: '1px solid',
-            borderColor: 'neutral.outlinedBorder',
-            color: 'text.tertiary',
-            fontSize: '0.85rem',
-            '&:hover': { background: 'neutral.softBg' },
+            borderRadius: "md",
+            border: "1px solid",
+            borderColor: "neutral.outlinedBorder",
+            color: "text.tertiary",
+            fontSize: "0.85rem",
+            "&:hover": { background: "neutral.softBg" },
           }}
         >
           <MagnifyingGlassIcon aria-hidden width={16} height={16} />
           <span>Search Nexara…</span>
-          <span style={{ marginLeft: 'auto', opacity: 0.6 }}>⌘K</span>
+          <span style={{ marginLeft: "auto", opacity: 0.6 }}>⌘K</span>
         </Box>
       </Box>
       <Stack direction="row" spacing={1} alignItems="center">
-        <Box sx={{ display: { sm: 'none' } }}>
+        <Box sx={{ display: { sm: "none" } }}>
           <IconButton
             tooltip="Search"
             shortcut="Ctrl+K"

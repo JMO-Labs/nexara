@@ -1,39 +1,45 @@
-'use client';
+"use client";
 /**
  * @file components/admin/UsersTab.tsx
  * @brief Admin user management table with search, role editing, and actions.
  */
-import { useState } from 'react';
+import { useState } from "react";
 import {
   useAdminUsers,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
-} from '@/hooks/useAdmin';
-import Stack from '@mui/joy/Stack';
-import Input from '@mui/joy/Input';
-import Button from '@mui/joy/Button';
-import Select from '@mui/joy/Select';
-import Chip from '@mui/joy/Chip';
-import { IconButton } from '@/components/ui/IconButton';
-import Option from '@mui/joy/Option';
-import Table from '@mui/joy/Table';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import Modal from '@mui/joy/Modal';
-import ModalDialog from '@mui/joy/ModalDialog';
-import ModalClose from '@mui/joy/ModalClose';
-import Typography from '@mui/joy/Typography';
-import Card from '@mui/joy/Card';
-import { TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+} from "@/hooks/useAdmin";
+import Stack from "@mui/joy/Stack";
+import Input from "@mui/joy/Input";
+import Button from "@mui/joy/Button";
+import Select from "@mui/joy/Select";
+import Chip from "@mui/joy/Chip";
+import { IconButton } from "@/components/ui/IconButton";
+import Option from "@mui/joy/Option";
+import Table from "@mui/joy/Table";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import Modal from "@mui/joy/Modal";
+import ModalDialog from "@mui/joy/ModalDialog";
+import ModalClose from "@mui/joy/ModalClose";
+import Typography from "@mui/joy/Typography";
+import Card from "@mui/joy/Card";
+import { TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 export function UsersTab() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [density, setDensity] = useState<"comfortable" | "compact">(
+    "comfortable",
+  );
 
-  const { data: usersPage, isLoading, error } = useAdminUsers({
+  const {
+    data: usersPage,
+    isLoading,
+    error,
+  } = useAdminUsers({
     q: searchQuery || undefined,
     limit: 50,
   });
@@ -83,7 +89,12 @@ export function UsersTab() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        spacing={2}
+        alignItems="center"
+        justifyContent="space-between"
+      >
         <Input
           placeholder="Search by name or email..."
           value={searchQuery}
@@ -92,7 +103,9 @@ export function UsersTab() {
         />
         <Select
           value={density}
-          onChange={(_, val) => val && setDensity(val as 'comfortable' | 'compact')}
+          onChange={(_, val) =>
+            val && setDensity(val as "comfortable" | "compact")
+          }
           size="sm"
           variant="soft"
           sx={{ minWidth: 120 }}
@@ -112,9 +125,11 @@ export function UsersTab() {
             stripe="odd"
             hoverRow
             sx={{
-              '--TableCell-paddingX': density === 'compact' ? '0.75rem' : '1rem',
-              '--TableCell-paddingY': density === 'compact' ? '0.375rem' : '0.5rem',
-              fontSize: density === 'compact' ? '0.85rem' : 'inherit',
+              "--TableCell-paddingX":
+                density === "compact" ? "0.75rem" : "1rem",
+              "--TableCell-paddingY":
+                density === "compact" ? "0.375rem" : "0.5rem",
+              fontSize: density === "compact" ? "0.85rem" : "inherit",
             }}
           >
             <thead>
@@ -130,47 +145,51 @@ export function UsersTab() {
               {usersPage.items.map((user) => (
                 <tr key={user.id}>
                   <td>
-                    <Typography level={density === 'compact' ? 'body-xs' : 'body-sm'}>
+                    <Typography
+                      level={density === "compact" ? "body-xs" : "body-sm"}
+                    >
                       {user.display_name || user.username}
                     </Typography>
                   </td>
                   <td>
-                    <Typography level={density === 'compact' ? 'body-xs' : 'body-sm'}>
+                    <Typography
+                      level={density === "compact" ? "body-xs" : "body-sm"}
+                    >
                       {user.email}
                     </Typography>
                   </td>
                   <td>
                     <Chip
-                      size={density === 'compact' ? 'sm' : 'md'}
+                      size={density === "compact" ? "sm" : "md"}
                       color={
-                        user.role === 'admin'
-                          ? 'danger'
-                          : user.role === 'member'
-                            ? 'primary'
-                            : 'neutral'
+                        user.role === "admin"
+                          ? "danger"
+                          : user.role === "member"
+                            ? "primary"
+                            : "neutral"
                       }
                       variant="soft"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {user.role === 'admin' && 'Admin'}
-                      {user.role === 'member' && 'Member'}
-                      {user.role === 'viewer' && 'Viewer'}
+                      {user.role === "admin" && "Admin"}
+                      {user.role === "member" && "Member"}
+                      {user.role === "viewer" && "Viewer"}
                     </Chip>
                   </td>
                   <td>
                     <Typography
-                      level={density === 'compact' ? 'body-xs' : 'body-sm'}
-                      color={user.status === 'active' ? 'success' : 'warning'}
+                      level={density === "compact" ? "body-xs" : "body-sm"}
+                      color={user.status === "active" ? "success" : "warning"}
                     >
                       {user.status}
                     </Typography>
                   </td>
                   <td>
                     <Stack direction="row" spacing={0.25}>
-                      {user.status === 'active' ? (
+                      {user.status === "active" ? (
                         <IconButton
                           tooltip="Suspend user"
-                          size={density === 'compact' ? 'sm' : 'md'}
+                          size={density === "compact" ? "sm" : "md"}
                           variant="soft"
                           color="warning"
                           aria-label="Suspend user"
@@ -181,7 +200,7 @@ export function UsersTab() {
                       ) : (
                         <IconButton
                           tooltip="Restore user"
-                          size={density === 'compact' ? 'sm' : 'md'}
+                          size={density === "compact" ? "sm" : "md"}
                           variant="soft"
                           color="success"
                           aria-label="Restore user"
@@ -192,7 +211,7 @@ export function UsersTab() {
                       )}
                       <IconButton
                         tooltip="Delete user"
-                        size={density === 'compact' ? 'sm' : 'md'}
+                        size={density === "compact" ? "sm" : "md"}
                         variant="soft"
                         color="danger"
                         aria-label="Delete user"

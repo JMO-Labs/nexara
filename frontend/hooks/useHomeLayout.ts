@@ -124,14 +124,13 @@ export interface UseHomeLayoutResult {
   widgets: WidgetInstance[];
   isLoading: boolean;
   isError: boolean;
-  addWidget(
-    defId: string,
-    opts?: { props?: Record<string, unknown> },
-  ): void;
+  addWidget(defId: string, opts?: { props?: Record<string, unknown> }): void;
   removeWidget(instanceId: string): void;
   toggleCollapsed(instanceId: string): void;
   /** Persist new x/y/w/h coordinates from react-grid-layout. */
-  applyLayout(items: Array<{ i: string; x: number; y: number; w: number; h: number }>): void;
+  applyLayout(
+    items: Array<{ i: string; x: number; y: number; w: number; h: number }>,
+  ): void;
   resetToDefault(): void;
 }
 
@@ -158,7 +157,8 @@ export function useHomeLayout(): UseHomeLayoutResult {
   });
 
   const widgets: WidgetInstance[] = React.useMemo(() => {
-    if (!settings?.widgets || settings.widgets.length === 0) return defaultLayout;
+    if (!settings?.widgets || settings.widgets.length === 0)
+      return defaultLayout;
     const norm = normaliseWidgets(settings.widgets as unknown);
     return norm && norm.length > 0 ? norm : defaultLayout;
   }, [settings, defaultLayout]);
@@ -246,7 +246,8 @@ export function useHomeLayout(): UseHomeLayoutResult {
     const next = current.map((w) => {
       const it = byId.get(w.id);
       if (!it) return w;
-      if (w.x === it.x && w.y === it.y && w.w === it.w && w.h === it.h) return w;
+      if (w.x === it.x && w.y === it.y && w.w === it.w && w.h === it.h)
+        return w;
       return { ...w, x: it.x, y: it.y, w: it.w, h: it.h };
     });
     const changed = next.some((w, i) => w !== current[i]);

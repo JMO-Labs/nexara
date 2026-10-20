@@ -2,27 +2,27 @@
  * @file tests/unit/settings/NotificationsTab.test.tsx
  * @brief NotificationsTab component tests. Verify toggle switches.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { CssVarsProvider } from '@mui/joy/styles';
-import joyTheme from '@/theme/joy-theme';
-import { NotificationsTab } from '@/components/settings/NotificationsTab';
-import * as settingsHooks from '@/hooks/useSettings';
-import { useToasts } from '@/stores/toasts';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CssVarsProvider } from "@mui/joy/styles";
+import joyTheme from "@/theme/joy-theme";
+import { NotificationsTab } from "@/components/settings/NotificationsTab";
+import * as settingsHooks from "@/hooks/useSettings";
+import { useToasts } from "@/stores/toasts";
 
-vi.mock('next-intl', () => ({
+vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      'toasts.settings.saved': 'Settings saved',
-      'toasts.errors.generic': 'Something went wrong',
+      "toasts.settings.saved": "Settings saved",
+      "toasts.errors.generic": "Something went wrong",
     };
     return translations[key] || key;
   },
 }));
 
-vi.mock('@/hooks/useSettings');
+vi.mock("@/hooks/useSettings");
 
 const mockPrefs = {
   notif_mention_inapp: true,
@@ -49,7 +49,7 @@ const createWrapper = () => {
   );
 };
 
-describe('NotificationsTab', () => {
+describe("NotificationsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useToasts.getState().clear();
@@ -66,14 +66,14 @@ describe('NotificationsTab', () => {
     } as any);
   });
 
-  it('renders notification preference toggles', () => {
+  it("renders notification preference toggles", () => {
     render(<NotificationsTab />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/mention/i)).toBeInTheDocument();
     expect(screen.getByText(/comment/i)).toBeInTheDocument();
   });
 
-  it('toggles a notification preference', async () => {
+  it("toggles a notification preference", async () => {
     const user = userEvent.setup();
     const mockMutate = vi.fn();
     vi.mocked(settingsHooks.useUpdateNotificationPrefs).mockReturnValue({
@@ -85,7 +85,7 @@ describe('NotificationsTab', () => {
 
     render(<NotificationsTab />, { wrapper: createWrapper() });
 
-    const switches = screen.getAllByRole('switch');
+    const switches = screen.getAllByRole("switch");
     await user.click(switches[0]);
 
     await waitFor(() => {
@@ -93,7 +93,7 @@ describe('NotificationsTab', () => {
     });
   });
 
-  it('shows mute all email toggle', () => {
+  it("shows mute all email toggle", () => {
     render(<NotificationsTab />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/mute all email/i)).toBeInTheDocument();

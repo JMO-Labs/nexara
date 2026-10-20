@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/events/EventMiniMap.tsx
  * @brief Read-only Leaflet mini-map for an event location.
@@ -6,10 +6,10 @@
  * Tiles via Carto basemap CDN — no API key required.
  * Attribution: © OpenStreetMap contributors © CARTO.
  */
-import * as React from 'react';
-import { useColorScheme } from '@mui/joy/styles';
-import { MapContainer, TileLayer, CircleMarker, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import * as React from "react";
+import { useColorScheme } from "@mui/joy/styles";
+import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface EventMiniMapProps {
   lat: number;
@@ -21,12 +21,12 @@ interface EventMiniMapProps {
 
 const TILES = {
   light: {
-    url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    url: "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   },
   dark: {
-    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   },
@@ -61,24 +61,24 @@ export function EventMiniMap({
   lon,
   height = 200,
   zoom = 14,
-  ariaLabel = 'Event location map',
+  ariaLabel = "Event location map",
 }: EventMiniMapProps) {
   const { mode, systemMode } = useColorScheme();
-  const effective = mode === 'system' ? systemMode : mode;
-  const tiles = effective === 'dark' ? TILES.dark : TILES.light;
+  const effective = mode === "system" ? systemMode : mode;
+  const tiles = effective === "dark" ? TILES.dark : TILES.light;
 
   return (
     <div
       role="img"
       aria-label={ariaLabel}
       style={{
-        position: 'relative',
-        width: '100%',
+        position: "relative",
+        width: "100%",
         height,
         borderRadius: 8,
-        overflow: 'hidden',
-        border: '1px solid var(--joy-palette-divider)',
-        backgroundColor: 'var(--joy-palette-background-level1)',
+        overflow: "hidden",
+        border: "1px solid var(--joy-palette-divider)",
+        backgroundColor: "var(--joy-palette-background-level1)",
       }}
     >
       <MapContainer
@@ -87,7 +87,7 @@ export function EventMiniMap({
         scrollWheelZoom={false}
         zoomControl={false}
         attributionControl
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
         key={effective}
       >
         <InvalidateOnMount />
@@ -96,9 +96,9 @@ export function EventMiniMap({
           center={[lat, lon]}
           radius={8}
           pathOptions={{
-            color: '#fff',
+            color: "#fff",
             weight: 2,
-            fillColor: 'var(--joy-palette-primary-solidBg, #1f6feb)',
+            fillColor: "var(--joy-palette-primary-solidBg, #1f6feb)",
             fillOpacity: 1,
           }}
         />

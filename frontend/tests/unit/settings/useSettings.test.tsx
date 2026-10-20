@@ -2,9 +2,9 @@
  * @file tests/unit/settings/useSettings.test.tsx
  * @brief Settings hooks tests. Verify queries + mutations invalidate correctly.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useUserSettings,
   useNotificationPrefs,
@@ -12,42 +12,42 @@ import {
   useUpdateProfile,
   useUpdateEmail,
   useUpdateNotificationPrefs,
-} from '@/hooks/useSettings';
-import * as settingsApi from '@/lib/api/settings';
-import { useToasts } from '@/stores/toasts';
+} from "@/hooks/useSettings";
+import * as settingsApi from "@/lib/api/settings";
+import { useToasts } from "@/stores/toasts";
 
-vi.mock('next-intl', () => ({
+vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
-      'toasts.settings.saved': 'Settings saved',
-      'toasts.errors.generic': 'Something went wrong',
+      "toasts.settings.saved": "Settings saved",
+      "toasts.errors.generic": "Something went wrong",
     };
     return translations[key] || key;
   },
 }));
 
-vi.mock('@/lib/api/settings');
+vi.mock("@/lib/api/settings");
 
 const createWrapper = () => {
   const queryClient = new QueryClient();
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  Wrapper.displayName = 'Wrapper';
+  Wrapper.displayName = "Wrapper";
   return Wrapper;
 };
 
-describe('Settings hooks', () => {
+describe("Settings hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useToasts.getState().clear();
   });
 
-  describe('useUserSettings', () => {
-    it('fetches settings on mount', async () => {
+  describe("useUserSettings", () => {
+    it("fetches settings on mount", async () => {
       const mockSettings = {
-        theme: 'system' as const,
-        locale: 'en-US',
+        theme: "system" as const,
+        locale: "en-US",
         notif_mention_inapp: true,
         notif_mention_email: false,
         notif_comment_inapp: true,
@@ -75,8 +75,8 @@ describe('Settings hooks', () => {
     });
   });
 
-  describe('useNotificationPrefs', () => {
-    it('fetches notification preferences', async () => {
+  describe("useNotificationPrefs", () => {
+    it("fetches notification preferences", async () => {
       const mockPrefs = {
         notif_mention_inapp: true,
         notif_mention_email: false,
@@ -105,9 +105,9 @@ describe('Settings hooks', () => {
     });
   });
 
-  describe('useUpdateSettings', () => {
-    it('calls updateSettings and shows success toast', async () => {
-      const mockResp = { theme: 'dark' as const, locale: 'en-US' };
+  describe("useUpdateSettings", () => {
+    it("calls updateSettings and shows success toast", async () => {
+      const mockResp = { theme: "dark" as const, locale: "en-US" };
       vi.mocked(settingsApi.updateSettings).mockResolvedValue({
         ...mockResp,
         notif_mention_inapp: true,
@@ -130,23 +130,25 @@ describe('Settings hooks', () => {
       });
 
       act(() => {
-        result.current.mutate({ theme: 'dark' });
+        result.current.mutate({ theme: "dark" });
       });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(settingsApi.updateSettings).toHaveBeenCalledWith({ theme: 'dark' });
+      expect(settingsApi.updateSettings).toHaveBeenCalledWith({
+        theme: "dark",
+      });
       const toasts = useToasts.getState().items;
-      expect(toasts.some((t) => t.variant === 'success')).toBe(true);
+      expect(toasts.some((t) => t.variant === "success")).toBe(true);
     });
   });
 
-  describe('useUpdateProfile', () => {
-    it('calls updateProfile and shows success toast', async () => {
-      const body = { display_name: 'New Name' };
-      const mockResp = { message: 'Profile updated' };
+  describe("useUpdateProfile", () => {
+    it("calls updateProfile and shows success toast", async () => {
+      const body = { display_name: "New Name" };
+      const mockResp = { message: "Profile updated" };
       vi.mocked(settingsApi.updateProfile).mockResolvedValue(mockResp);
 
       const { result } = renderHook(() => useUpdateProfile(), {
@@ -163,14 +165,14 @@ describe('Settings hooks', () => {
 
       expect(settingsApi.updateProfile).toHaveBeenCalledWith(body);
       const toasts = useToasts.getState().items;
-      expect(toasts.some((t) => t.variant === 'success')).toBe(true);
+      expect(toasts.some((t) => t.variant === "success")).toBe(true);
     });
   });
 
-  describe('useUpdateEmail', () => {
-    it('calls updateEmail and shows success toast', async () => {
-      const email = 'new@example.com';
-      const mockResp = { message: 'Email updated' };
+  describe("useUpdateEmail", () => {
+    it("calls updateEmail and shows success toast", async () => {
+      const email = "new@example.com";
+      const mockResp = { message: "Email updated" };
       vi.mocked(settingsApi.updateEmail).mockResolvedValue(mockResp);
 
       const { result } = renderHook(() => useUpdateEmail(), {
@@ -187,16 +189,16 @@ describe('Settings hooks', () => {
 
       expect(settingsApi.updateEmail).toHaveBeenCalledWith(email);
       const toasts = useToasts.getState().items;
-      expect(toasts.some((t) => t.variant === 'success')).toBe(true);
+      expect(toasts.some((t) => t.variant === "success")).toBe(true);
     });
   });
 
-  describe('useUpdateNotificationPrefs', () => {
-    it('calls updateNotificationPrefs and shows success toast', async () => {
+  describe("useUpdateNotificationPrefs", () => {
+    it("calls updateNotificationPrefs and shows success toast", async () => {
       const body = { notif_mention_inapp: false };
       const mockResp = {
-        theme: 'system' as const,
-        locale: 'en-US',
+        theme: "system" as const,
+        locale: "en-US",
         notif_mention_inapp: false,
         notif_mention_email: true,
         notif_comment_inapp: true,
@@ -211,7 +213,9 @@ describe('Settings hooks', () => {
         notif_invite_accepted_email: false,
         mute_all_email: false,
       };
-      vi.mocked(settingsApi.updateNotificationPrefs).mockResolvedValue(mockResp);
+      vi.mocked(settingsApi.updateNotificationPrefs).mockResolvedValue(
+        mockResp,
+      );
 
       const { result } = renderHook(() => useUpdateNotificationPrefs(), {
         wrapper: createWrapper(),
@@ -227,7 +231,7 @@ describe('Settings hooks', () => {
 
       expect(settingsApi.updateNotificationPrefs).toHaveBeenCalledWith(body);
       const toasts = useToasts.getState().items;
-      expect(toasts.some((t) => t.variant === 'success')).toBe(true);
+      expect(toasts.some((t) => t.variant === "success")).toBe(true);
     });
   });
 });

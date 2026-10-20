@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file hooks/useMutationWithToast.ts
  * @brief Wrapper around useMutation that auto-handles success/error toasts.
  */
-import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
-import { useToasts } from '@/stores/toasts';
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { useToasts } from "@/stores/toasts";
 
 interface ToastOpts {
   successKey?: string;
@@ -20,7 +20,10 @@ export function useMutationWithToast<
   TVars = unknown,
   TContext = unknown,
 >(
-  options: Omit<UseMutationOptions<TData, TError, TVars, TContext>, 'onSuccess' | 'onError'> &
+  options: Omit<
+    UseMutationOptions<TData, TError, TVars, TContext>,
+    "onSuccess" | "onError"
+  > &
     ToastOpts & {
       onSuccess?: (data: TData, variables: TVars, context: TContext) => void;
       onError?: (error: TError, variables: TVars, context: TContext) => void;
@@ -42,7 +45,7 @@ export function useMutationWithToast<
     ...rest,
     onSuccess: (data, variables, context) => {
       if (!silentSuccess && successKey) {
-        push({ variant: 'success', message: t(successKey) });
+        push({ variant: "success", message: t(successKey) });
       }
       if (onSuccess) {
         onSuccess(data, variables, context as TContext);
@@ -53,8 +56,8 @@ export function useMutationWithToast<
         const apiError = error as { body?: { error?: { message?: string } } };
         const msg =
           apiError?.body?.error?.message ??
-          (errorKey ? t(errorKey) : t('toasts.errors.generic'));
-        push({ variant: 'danger', message: msg });
+          (errorKey ? t(errorKey) : t("toasts.errors.generic"));
+        push({ variant: "danger", message: msg });
       }
       if (onError) {
         onError(error, variables, context as TContext);

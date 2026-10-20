@@ -1,15 +1,22 @@
-'use client';
+"use client";
 /**
  * @file components/galleries/GalleryUploadModal.tsx
  * @brief Two-step modal: gallery selector + uploader.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
-import { Modal, Input, Textarea, Select, Option, Button } from '@/components/ui';
-import { GalleryUpload } from './GalleryUpload';
-import { useGalleryList, useCreateGallery } from '@/hooks/useGalleries';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import FormControl from "@mui/joy/FormControl";
+import FormLabel from "@mui/joy/FormLabel";
+import {
+  Modal,
+  Input,
+  Textarea,
+  Select,
+  Option,
+  Button,
+} from "@/components/ui";
+import { GalleryUpload } from "./GalleryUpload";
+import { useGalleryList, useCreateGallery } from "@/hooks/useGalleries";
 
 export interface GalleryUploadModalProps {
   open: boolean;
@@ -25,11 +32,13 @@ export function GalleryUploadModal({
   const create = useCreateGallery();
   const { data: galleriesData } = useGalleryList({ subgroup_id: subgroupId });
 
-  const [step, setStep] = React.useState<'select' | 'upload'>('select');
-  const [selectedGalleryId, setSelectedGalleryId] = React.useState<string | null>(null);
+  const [step, setStep] = React.useState<"select" | "upload">("select");
+  const [selectedGalleryId, setSelectedGalleryId] = React.useState<
+    string | null
+  >(null);
   const [showNewGalleryForm, setShowNewGalleryForm] = React.useState(false);
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
 
   const galleries = galleriesData?.items ?? [];
 
@@ -39,30 +48,30 @@ export function GalleryUploadModal({
       const result = await create.mutateAsync({
         title,
         description: description || null,
-        visibility: 'subgroup',
+        visibility: "subgroup",
         subgroup_id: subgroupId,
       });
       setSelectedGalleryId(result.id);
-      setTitle('');
-      setDescription('');
+      setTitle("");
+      setDescription("");
       setShowNewGalleryForm(false);
-      setStep('upload');
+      setStep("upload");
     } catch (err) {
-      console.error('Failed to create gallery', err);
+      console.error("Failed to create gallery", err);
     }
   };
 
   const handleSelectExisting = (galleryId: string) => {
     setSelectedGalleryId(galleryId);
-    setStep('upload');
+    setStep("upload");
   };
 
   const handleClose = () => {
-    setStep('select');
+    setStep("select");
     setSelectedGalleryId(null);
     setShowNewGalleryForm(false);
-    setTitle('');
-    setDescription('');
+    setTitle("");
+    setDescription("");
     onClose();
   };
 
@@ -70,24 +79,24 @@ export function GalleryUploadModal({
     <Modal
       open={open}
       onClose={handleClose}
-      title={step === 'select' ? 'Upload media' : 'Upload media'}
+      title={step === "select" ? "Upload media" : "Upload media"}
     >
-      {step === 'select' ? (
+      {step === "select" ? (
         <Stack spacing={2}>
           {!showNewGalleryForm ? (
             <>
               <FormControl>
                 <FormLabel>Select a gallery</FormLabel>
                 <Select
-                  value={selectedGalleryId ?? ''}
+                  value={selectedGalleryId ?? ""}
                   onChange={(_e, v) => {
-                    if (v === 'new') {
+                    if (v === "new") {
                       setShowNewGalleryForm(true);
                     } else if (v) {
                       handleSelectExisting(v as string);
                     }
                   }}
-                  slotProps={{ listbox: { sx: { maxHeight: '300px' } } }}
+                  slotProps={{ listbox: { sx: { maxHeight: "300px" } } }}
                 >
                   {galleries.map((g) => (
                     <Option key={g.id} value={g.id}>

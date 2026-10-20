@@ -104,7 +104,11 @@ export function WidgetGallery({ open, onClose }: WidgetGalleryProps) {
                       {def.title}
                     </Typography>
                     {def.description && (
-                      <Typography level="body-xs" textColor="text.tertiary" sx={{ mt: 0.25 }}>
+                      <Typography
+                        level="body-xs"
+                        textColor="text.tertiary"
+                        sx={{ mt: 0.25 }}
+                      >
                         {def.description}
                       </Typography>
                     )}
@@ -124,7 +128,12 @@ export function WidgetGallery({ open, onClose }: WidgetGalleryProps) {
         </Box>
         <Box sx={{ p: 2, borderTop: "1px solid", borderColor: "divider" }}>
           <Divider sx={{ mb: 2 }} />
-          <Button fullWidth variant="soft" color="neutral" onClick={handleReset}>
+          <Button
+            fullWidth
+            variant="soft"
+            color="neutral"
+            onClick={handleReset}
+          >
             Reset to default
           </Button>
         </Box>

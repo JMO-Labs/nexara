@@ -1,18 +1,18 @@
-'use client';
+"use client";
 /**
  * @file components/subgroups/hub/OverviewTab.tsx
  * @brief Overview tab: pinned post, upcoming events, recent posts.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { EmptyState } from '@/components/ui';
-import { EventCard } from '@/components/events/EventCard';
-import { PostCard } from '@/components/feed/PostCard';
-import { useUpcomingEvents } from '@/hooks/useEvents';
-import { useFeed } from '@/hooks/usePosts';
-import { usePost } from '@/hooks/usePosts';
-import type { SubgroupDetail } from '@/lib/api/subgroups';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { EmptyState } from "@/components/ui";
+import { EventCard } from "@/components/events/EventCard";
+import { PostCard } from "@/components/feed/PostCard";
+import { useUpcomingEvents } from "@/hooks/useEvents";
+import { useFeed } from "@/hooks/usePosts";
+import { usePost } from "@/hooks/usePosts";
+import type { SubgroupDetail } from "@/lib/api/subgroups";
 
 export interface OverviewTabProps {
   subgroup: SubgroupDetail;

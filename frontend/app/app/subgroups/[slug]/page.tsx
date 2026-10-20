@@ -2,10 +2,10 @@
  * @file app/app/subgroups/[slug]/page.tsx
  * @brief Group hub detail page shell.
  */
-'use client';
+"use client";
 
-import { use } from 'react';
-import { GroupHub } from '@/components/subgroups/hub/GroupHub';
+import { use } from "react";
+import { GroupHub } from "@/components/subgroups/hub/GroupHub";
 
 export default function SubgroupHubPage({
   params,

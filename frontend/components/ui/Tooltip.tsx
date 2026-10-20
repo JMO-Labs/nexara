@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file components/ui/Tooltip.tsx
  * @brief Tooltip primitive with optional shortcut badge display.
  */
-import { Tooltip as JoyTooltip, type TooltipProps } from '@mui/joy';
-import { Box } from '@mui/joy';
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { Tooltip as JoyTooltip, type TooltipProps } from "@mui/joy";
+import { Box } from "@mui/joy";
+import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 
 /**
  * Anchor element used by JoyTooltip. Joy clones the child and injects an
@@ -16,13 +16,16 @@ const TooltipAnchor = forwardRef<
   HTMLAttributes<HTMLSpanElement> & { ownerState?: unknown }
 >(function TooltipAnchor({ ownerState: _ownerState, children, ...rest }, ref) {
   return (
-    <span ref={ref} {...rest} style={{ display: 'inline-flex', ...rest.style }}>
+    <span ref={ref} {...rest} style={{ display: "inline-flex", ...rest.style }}>
       {children}
     </span>
   );
 });
 
-export interface AppTooltipProps extends Omit<TooltipProps, 'title' | 'children'> {
+export interface AppTooltipProps extends Omit<
+  TooltipProps,
+  "title" | "children"
+> {
   title: ReactNode;
   shortcut?: string;
   children: ReactNode;
@@ -34,7 +37,7 @@ export function Tooltip({
   shortcut,
   children,
   disabled,
-  placement = 'top',
+  placement = "top",
   enterDelay = 400,
   enterNextDelay,
   ...rest
@@ -44,7 +47,7 @@ export function Tooltip({
   // delay instead of inheriting the shared shorter "next" timer.
   const nextDelay = enterNextDelay ?? enterDelay;
   const body = shortcut ? (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <span>{title}</span>
       <Box
         component="kbd"
@@ -53,9 +56,9 @@ export function Tooltip({
           py: 0.125,
           borderRadius: 4,
           fontSize: 11,
-          bgcolor: 'neutral.softBg',
-          color: 'neutral.softColor',
-          fontFamily: 'monospace',
+          bgcolor: "neutral.softBg",
+          color: "neutral.softColor",
+          fontFamily: "monospace",
         }}
       >
         {shortcut}

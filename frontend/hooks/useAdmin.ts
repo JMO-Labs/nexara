@@ -1,13 +1,13 @@
-'use client';
+"use client";
 /**
  * @file hooks/useAdmin.ts
  * @brief TanStack Query hooks for admin panel operations (queries + mutations).
  *        Mutations invalidate their sibling queries on success.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
-import * as adminApi from '@/lib/api/admin';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
+import * as adminApi from "@/lib/api/admin";
 
 /**
  * @brief Fetch community/system/WAF metrics.
@@ -46,7 +46,10 @@ export const useAdminSettings = () =>
 /**
  * @brief Fetch audit log entries.
  */
-export const useAuditLog = (filters?: { limit?: number; cursor?: string | null }) =>
+export const useAuditLog = (filters?: {
+  limit?: number;
+  cursor?: string | null;
+}) =>
   useQuery({
     queryKey: qk.admin.auditLog(),
     queryFn: () => adminApi.getAuditLog(filters),
@@ -59,14 +62,9 @@ export const useAuditLog = (filters?: { limit?: number; cursor?: string | null }
 export const useChangeUserRole = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
-    mutationFn: ({
-      userId,
-      role,
-    }: {
-      userId: string;
-      role: string;
-    }) => adminApi.changeUserRole(userId, role),
-    successKey: 'toasts.admin.user.updated',
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      adminApi.changeUserRole(userId, role),
+    successKey: "toasts.admin.user.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.users() });
     },
@@ -80,7 +78,7 @@ export const useSuspendUser = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
     mutationFn: (userId: string) => adminApi.suspendUser(userId),
-    successKey: 'toasts.admin.user.deactivated',
+    successKey: "toasts.admin.user.deactivated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.users() });
     },

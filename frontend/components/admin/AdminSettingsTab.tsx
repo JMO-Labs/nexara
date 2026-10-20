@@ -1,21 +1,18 @@
-'use client';
+"use client";
 /**
  * @file components/admin/AdminSettingsTab.tsx
  * @brief Global admin settings form.
  */
-import { useState, useEffect } from 'react';
-import {
-  useAdminSettings,
-  useUpdateAdminSettings,
-} from '@/hooks/useAdmin';
-import Stack from '@mui/joy/Stack';
-import Button from '@mui/joy/Button';
-import Switch from '@mui/joy/Switch';
-import Input from '@mui/joy/Input';
-import Typography from '@mui/joy/Typography';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
-import { Card, SettingsRow } from '@/components/ui';
+import { useState, useEffect } from "react";
+import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/useAdmin";
+import Stack from "@mui/joy/Stack";
+import Button from "@mui/joy/Button";
+import Switch from "@mui/joy/Switch";
+import Input from "@mui/joy/Input";
+import Typography from "@mui/joy/Typography";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
+import { Card, SettingsRow } from "@/components/ui";
 
 export function AdminSettingsTab() {
   const [enableReg, setEnableReg] = useState(true);

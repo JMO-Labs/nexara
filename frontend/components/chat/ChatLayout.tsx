@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/chat/ChatLayout.tsx
  * @brief Two-pane chat shell: scrollable channel/DM list (left) + active
@@ -7,16 +7,23 @@
  *        controls (emoji/media/poll). Toast on incoming messages for
  *        non-active channels.
  */
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { ArrowLeftIcon, PencilSquareIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { useQueryClient } from '@tanstack/react-query';
-import { IconButton, EmptyState, Button } from '@/components/ui';
-import { useToasts } from '@/stores/toasts';
-import { useSession } from '@/stores/session';
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import {
+  ArrowLeftIcon,
+  PencilSquareIcon,
+  ChevronRightIcon,
+  BellIcon,
+  BellSlashIcon,
+} from "@heroicons/react/24/outline";
+import { useQueryClient } from "@tanstack/react-query";
+import { IconButton, EmptyState, Button } from "@/components/ui";
+import { useToasts } from "@/stores/toasts";
+import { useSession } from "@/stores/session";
+import { useUI } from "@/stores/ui";
 import {
   useChannels,
   useDmThreads,
@@ -27,18 +34,54 @@ import {
   optimisticAddMessage,
   sendChatMessage,
   sendChatTyping,
-} from '@/hooks/useChat';
-import { chatWs } from '@/lib/realtime/chat-ws';
-import { ChannelList } from './ChannelList';
-import { MessageList } from './MessageList';
-import { Composer } from './Composer';
-import { TypingIndicator } from './TypingIndicator';
-import { NewDmModal } from './NewDmModal';
-import { useConfirmDialog } from '@/stores/confirmDialog';
-import type { ChatChannel, ChatMessage, DmThread } from '@/lib/api/chat';
+} from "@/hooks/useChat";
+import { chatWs } from "@/lib/realtime/chat-ws";
+import { ChannelList } from "./ChannelList";
+import { MessageList } from "./MessageList";
+import { Composer } from "./Composer";
+import { TypingIndicator } from "./TypingIndicator";
+import { NewDmModal } from "./NewDmModal";
+import { useConfirmDialog } from "@/stores/confirmDialog";
+import type { ChatChannel, ChatMessage, DmThread } from "@/lib/api/chat";
 
 export interface ChatLayoutProps {
   activeId: string | null;
+}
+
+const LAST_CHANNEL_KEY = "chat.lastChannelId";
+
+function readLastChannel(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LAST_CHANNEL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeLastChannel(id: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_CHANNEL_KEY, id);
+  } catch {
+    /* storage unavailable (private mode, quota) — silently skip */
+  }
+}
+
+function pickDefaultChannel(
+  channels: ChatChannel[],
+  dms: DmThread[],
+  preferred: string | null,
+): string | null {
+  if (preferred) {
+    const inChannels = channels.some((c) => c.id === preferred);
+    const inDms = dms.some((d) => d.channel_id === preferred);
+    if (inChannels || inDms) return preferred;
+  }
+  const community = channels.find(
+    (c) => c.channel_type === "community" && c.subgroup_id === null,
+  );
+  return community?.id ?? null;
 }
 
 function resolveTitle(
@@ -49,15 +92,15 @@ function resolveTitle(
   const dm = dms.find((d) => d.channel_id === id);
   if (dm) return dm.peer.display_name;
   const ch = channels.find((c) => c.id === id);
-  if (ch) return ch.channel_type === 'direct' ? ch.name : `# ${ch.name}`;
-  return 'Conversation';
+  if (ch) return ch.channel_type === "direct" ? ch.name : `# ${ch.name}`;
+  return "Conversation";
 }
 
 function statusLabel(status: string, fallback?: string): string | undefined {
-  if (status === 'open') return undefined;
-  if (status === 'connecting') return 'Connecting…';
-  if (status === 'error') return 'Connection error — retrying.';
-  if (status === 'closed') return fallback ?? 'Disconnected — reconnecting.';
+  if (status === "open") return undefined;
+  if (status === "connecting") return "Connecting…";
+  if (status === "error") return "Connection error — retrying.";
+  if (status === "closed") return fallback ?? "Disconnected — reconnecting.";
   return undefined;
 }
 
@@ -70,6 +113,8 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   const messagesQ = useMessages(activeId ?? undefined);
   const { typing, unread, markRead, status } = useChatRealtime();
   const pushToast = useToasts((s) => s.push);
+  const chatToastsMuted = useUI((s) => s.chatToastsMuted);
+  const toggleChatToastsMuted = useUI((s) => s.toggleChatToastsMuted);
   const createDm = useCreateDm();
   const deleteDm = useDeleteDm();
   const confirm = useConfirmDialog((s) => s.confirm);
@@ -91,9 +136,9 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         router.push(`/app/chat/${channel.id}`);
       } catch (err) {
         pushToast({
-          variant: 'danger',
-          title: 'Could not open DM',
-          message: err instanceof Error ? err.message : 'Try again later.',
+          variant: "danger",
+          title: "Could not open DM",
+          message: err instanceof Error ? err.message : "Try again later.",
           ttl: 5000,
         });
       }
@@ -106,8 +151,8 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
       if (!activeId) return;
       let content = rawContent;
       if (replyTo) {
-        const author = replyTo.author?.display_name ?? 'someone';
-        const excerpt = replyTo.content.slice(0, 140).replace(/\n/g, ' ');
+        const author = replyTo.author?.display_name ?? "someone";
+        const excerpt = replyTo.content.slice(0, 140).replace(/\n/g, " ");
         content = `> @${author}: ${excerpt}\n\n${rawContent}`;
         setReplyTo(null);
       }
@@ -131,22 +176,32 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
       }
 
       sendChatMessage(activeId, content);
+      writeLastChannel(activeId);
     },
     [activeId, replyTo, sessionUser, qc],
   );
 
-  const channels = React.useMemo(
-    () => channelsQ.data ?? [],
-    [channelsQ.data],
-  );
+  const channels = React.useMemo(() => channelsQ.data ?? [], [channelsQ.data]);
   const dms = React.useMemo(() => dmsQ.data ?? [], [dmsQ.data]);
+
+  // Auto-select last-used channel (or community default) on bare /app/chat.
+  const channelsLoaded = !channelsQ.isLoading;
+  const dmsLoaded = !dmsQ.isLoading;
+  React.useEffect(() => {
+    if (activeId) return;
+    if (!channelsLoaded || !dmsLoaded) return;
+    const target = pickDefaultChannel(channels, dms, readLastChannel());
+    if (target) router.replace(`/app/chat/${target}`);
+  }, [activeId, channelsLoaded, dmsLoaded, channels, dms, router]);
 
   // Tell realtime hook which channel is active so unread doesn't bump.
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const setter = (window as unknown as {
-      __nx_chat_active?: (id: string | null) => void;
-    }).__nx_chat_active;
+    if (typeof window === "undefined") return;
+    const setter = (
+      window as unknown as {
+        __nx_chat_active?: (id: string | null) => void;
+      }
+    ).__nx_chat_active;
     setter?.(activeId);
     if (activeId) markRead(activeId);
     return () => setter?.(null);
@@ -157,34 +212,38 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   // initiated by another user) so it appears live in the sidebar.
   React.useEffect(() => {
     return chatWs.subscribe((frame) => {
-      if (frame.type !== 'chat.message') return;
+      if (frame.type !== "chat.message") return;
       const msg = (frame.payload ?? {}) as unknown as ChatMessage;
       if (!msg?.channel_id) return;
 
       const isKnownDm = dms.some((d) => d.channel_id === msg.channel_id);
       const isKnownChannel = channels.some((c) => c.id === msg.channel_id);
       if (!isKnownDm && !isKnownChannel) {
-        qc.invalidateQueries({ queryKey: ['chat', 'dms'] });
-        qc.invalidateQueries({ queryKey: ['chat', 'channels'] });
+        qc.invalidateQueries({ queryKey: ["chat", "dms"] });
+        qc.invalidateQueries({ queryKey: ["chat", "channels"] });
       }
 
-      if (msg.channel_id === activeId) return;
+      if (msg.channel_id === activeId) {
+        writeLastChannel(activeId);
+        return;
+      }
+      if (chatToastsMuted) return;
       const title =
         dms.find((d) => d.channel_id === msg.channel_id)?.peer.display_name ??
         channels.find((c) => c.id === msg.channel_id)?.name ??
         msg.author?.display_name ??
-        'New message';
+        "New message";
       pushToast({
-        variant: 'info',
+        variant: "info",
         title,
         message: msg.content.slice(0, 120),
         ttl: 5000,
       });
     });
-  }, [activeId, channels, dms, pushToast, qc]);
+  }, [activeId, channels, dms, pushToast, qc, chatToastsMuted]);
 
   const select = (id: string) => router.push(`/app/chat/${id}`);
-  const back = () => router.push('/app/chat');
+  const back = () => router.push("/app/chat");
 
   const messages = React.useMemo(
     () => messagesQ.data?.pages.flatMap((p) => p.items) ?? [],
@@ -200,34 +259,37 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
       sx={{
         flex: 1,
         minHeight: 0,
-        display: 'grid',
+        display: "grid",
         gridTemplateColumns: {
-          xs: '1fr',
-          md: threadPaneOpen ? '320px 1fr 320px' : '320px 1fr',
+          xs: "1fr",
+          md: threadPaneOpen ? "320px 1fr 320px" : "320px 1fr",
         },
-        gridTemplateRows: '1fr',
-        bgcolor: 'background.body',
-        overflow: 'hidden',
+        gridTemplateRows: "1fr",
+        bgcolor: "background.body",
+        overflow: "hidden",
       }}
     >
       <Box
         sx={{
           display: {
-            xs: showThread ? 'none' : 'flex',
-            md: 'flex',
+            xs: showThread ? "none" : "flex",
+            md: "flex",
           },
-          flexDirection: 'column',
-          borderRight: { md: '1px solid' },
-          borderColor: { md: 'divider' },
+          flexDirection: "column",
+          borderRight: { md: "1px solid" },
+          borderColor: { md: "divider" },
           minHeight: 0,
         }}
       >
         <Box
           sx={{
             p: 1,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            borderBottom: "1px solid",
+            borderColor: "divider",
             flexShrink: 0,
+            display: "flex",
+            gap: 0.5,
+            alignItems: "center",
           }}
         >
           <Button
@@ -235,12 +297,39 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             variant="soft"
             onClick={() => setDmModalOpen(true)}
             startDecorator={<PencilSquareIcon width={16} />}
-            sx={{ width: '100%' }}
+            sx={{ flex: 1 }}
           >
             New direct message
           </Button>
+          <IconButton
+            aria-label={
+              chatToastsMuted
+                ? "Unmute chat notifications"
+                : "Mute chat notifications"
+            }
+            aria-pressed={chatToastsMuted}
+            onClick={toggleChatToastsMuted}
+            tooltip={
+              chatToastsMuted ? "Notifications muted" : "Mute notifications"
+            }
+            color={chatToastsMuted ? "warning" : "neutral"}
+          >
+            {chatToastsMuted ? (
+              <BellSlashIcon width={18} />
+            ) : (
+              <BellIcon width={18} />
+            )}
+          </IconButton>
         </Box>
-        <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           <ChannelList
             channels={channels}
             dms={dms}
@@ -249,26 +338,26 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             onSelect={select}
             onDeleteDm={async (channelId) => {
               const ok = await confirm({
-                title: 'Remove conversation?',
-                message: 'This conversation will be removed from your inbox.',
-                confirmLabel: 'Remove',
-                tone: 'neutral',
+                title: "Remove conversation?",
+                message: "This conversation will be removed from your inbox.",
+                confirmLabel: "Remove",
+                tone: "neutral",
               });
               if (!ok) return;
               try {
                 await deleteDm.mutateAsync(channelId);
-                if (channelId === activeId) router.push('/app/chat');
+                if (channelId === activeId) router.push("/app/chat");
                 pushToast({
-                  variant: 'success',
-                  message: 'Conversation removed.',
+                  variant: "success",
+                  message: "Conversation removed.",
                   ttl: 3000,
                 });
               } catch (err) {
                 pushToast({
-                  variant: 'danger',
-                  title: 'Could not delete',
+                  variant: "danger",
+                  title: "Could not delete",
                   message:
-                    err instanceof Error ? err.message : 'Try again later.',
+                    err instanceof Error ? err.message : "Try again later.",
                   ttl: 5000,
                 });
               }
@@ -283,9 +372,9 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           sx={{
             minWidth: 0,
             minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <Stack
@@ -295,15 +384,15 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             sx={{
               px: 2,
               py: 1.25,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.surface',
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.surface",
             }}
           >
             <IconButton
               aria-label="Back to channel list"
               onClick={back}
-              sx={{ display: { md: 'none' } }}
+              sx={{ display: { md: "none" } }}
             >
               <ArrowLeftIcon width={18} />
             </IconButton>
@@ -311,10 +400,12 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
               {resolveTitle(channels, dms, activeId)}
             </Typography>
             <IconButton
-              aria-label={threadPaneOpen ? 'Close thread panel' : 'Open thread panel'}
+              aria-label={
+                threadPaneOpen ? "Close thread panel" : "Open thread panel"
+              }
               onClick={() => setThreadPaneOpen(!threadPaneOpen)}
-              sx={{ display: { xs: 'none', md: 'flex' } }}
-              tooltip={threadPaneOpen ? 'Close details' : 'Open details'}
+              sx={{ display: { xs: "none", md: "flex" } }}
+              tooltip={threadPaneOpen ? "Close details" : "Open details"}
             >
               <ChevronRightIcon width={18} />
             </IconButton>
@@ -334,17 +425,15 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           <TypingIndicator count={typingCount} />
 
           <Composer
-            disabled={status !== 'open'}
+            disabled={status !== "open"}
             connectionLabel={connLabel}
             onSend={handleSend}
             onTyping={() => sendChatTyping(activeId)}
-            placeholder={
-              status === 'open' ? 'Write a message…' : 'Connecting…'
-            }
+            placeholder={status === "open" ? "Write a message…" : "Connecting…"}
             replyTo={
               replyTo
                 ? {
-                    authorName: replyTo.author?.display_name ?? 'someone',
+                    authorName: replyTo.author?.display_name ?? "someone",
                     excerpt: replyTo.content.slice(0, 80),
                   }
                 : null
@@ -355,15 +444,19 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
       ) : (
         <Box
           sx={{
-            display: { xs: 'none', md: 'flex' },
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: { xs: "none", md: "flex" },
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <EmptyState
             title="Select a conversation"
             description="Choose a channel or direct message from the list to start chatting."
-            action={<Button variant="solid" onClick={() => setDmModalOpen(true)}>Start conversation</Button>}
+            action={
+              <Button variant="solid" onClick={() => setDmModalOpen(true)}>
+                Start conversation
+              </Button>
+            }
           />
         </Box>
       )}
@@ -372,11 +465,11 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
       {threadPaneOpen && activeId && showThread && (
         <Box
           sx={{
-            display: { xs: 'none', md: 'flex' },
-            flexDirection: 'column',
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.surface',
+            display: { xs: "none", md: "flex" },
+            flexDirection: "column",
+            borderLeft: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.surface",
             minHeight: 0,
             minWidth: 0,
           }}
@@ -385,9 +478,9 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
             sx={{
               px: 2,
               py: 1.25,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.body',
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.body",
               flexShrink: 0,
             }}
           >
@@ -396,7 +489,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           <Stack
             sx={{
               flex: 1,
-              overflow: 'auto',
+              overflow: "auto",
               px: 2,
               py: 2,
               minHeight: 0,

@@ -18,9 +18,16 @@ import Chip from "@mui/joy/Chip";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Avatar, Button, IconButton } from "@/components/ui";
+import {
+  Avatar,
+  Button,
+  IconButton,
+  ScopeSelect,
+  type ScopeValue,
+} from "@/components/ui";
 import { useSession } from "@/stores/session";
 import { useCreatePost } from "@/hooks/usePosts";
+import { useCalendars } from "@/hooks/useCalendars";
 import { addInterest } from "@/lib/api/users";
 import {
   PhotoIcon,
@@ -35,7 +42,7 @@ export interface PostComposerProps {
   onClearReplyPrompt?: () => void;
   promptType?: "standard" | "interest_capture";
   interestCategorySlug?: string;
-  subgroupId?: string | null;
+  defaultSubgroupId?: string | null;
 }
 
 export function PostComposer({
@@ -45,14 +52,27 @@ export function PostComposer({
   onClearReplyPrompt,
   promptType = "standard",
   interestCategorySlug,
-  subgroupId,
+  defaultSubgroupId,
 }: PostComposerProps) {
   const me = useSession((s) => s.user);
   const createMut = useCreatePost();
+  const { data: calendars } = useCalendars();
   const [expanded, setExpanded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showInterestToast, setShowInterestToast] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
+  const [scope, setScope] = React.useState<ScopeValue>({
+    visibility: defaultSubgroupId ? "subgroup" : "community",
+    subgroup_id: defaultSubgroupId ?? null,
+  });
+
+  const myGroups = React.useMemo(
+    () =>
+      (calendars ?? [])
+        .filter((c) => c.kind === "subgroup" && c.subgroup_id)
+        .map((c) => ({ id: c.subgroup_id as string, name: c.name })),
+    [calendars],
+  );
 
   const editor = useEditor({
     extensions: [
@@ -98,6 +118,7 @@ export function PostComposer({
       const payload: {
         content: string;
         reply_to_prompt_id?: string;
+        visibility?: string;
         subgroup_id?: string | null;
       } = {
         content: text,
@@ -105,8 +126,11 @@ export function PostComposer({
       if (replyToPromptId) {
         payload.reply_to_prompt_id = replyToPromptId;
       }
-      if (subgroupId) {
-        payload.subgroup_id = subgroupId;
+      payload.visibility = scope.visibility;
+      if (scope.visibility === "subgroup" && scope.subgroup_id) {
+        payload.subgroup_id = scope.subgroup_id;
+      } else {
+        payload.subgroup_id = null;
       }
       await createMut.mutateAsync(payload);
       editor.commands.clearContent();
@@ -128,7 +152,7 @@ export function PostComposer({
     replyToPromptId,
     promptType,
     interestCategorySlug,
-    subgroupId,
+    scope,
   ]);
 
   if (!me) return null;
@@ -243,6 +267,15 @@ export function PostComposer({
               {error}
             </Typography>
           ) : null}
+          {!defaultSubgroupId && (
+            <Box sx={{ mt: 1.5, mb: 1 }}>
+              <ScopeSelect
+                value={scope}
+                onChange={setScope}
+                subgroups={myGroups}
+              />
+            </Box>
+          )}
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
             <IconButton
               aria-label="Attach media"
@@ -300,9 +333,10 @@ export function PostComposer({
               size="sm"
               variant="soft"
               color="primary"
-              label={interestCategorySlug}
               sx={{ alignSelf: "flex-start" }}
-            />
+            >
+              {interestCategorySlug}
+            </Chip>
           )}
           <Stack direction="row" spacing={1}>
             <Button

@@ -4,9 +4,9 @@
  *        `await confirm({ title, message, tone })` returns true on confirm,
  *        false on cancel or Escape.
  */
-import { create } from 'zustand';
+import { create } from "zustand";
 
-export type ConfirmTone = 'neutral' | 'danger';
+export type ConfirmTone = "neutral" | "danger";
 
 export interface ConfirmOptions {
   title: string;
@@ -35,11 +35,11 @@ interface ConfirmDialogState {
 
 export const useConfirmDialog = create<ConfirmDialogState>((set, get) => ({
   isOpen: false,
-  title: '',
-  message: '',
-  confirmLabel: 'Confirm',
-  cancelLabel: 'Cancel',
-  tone: 'neutral',
+  title: "",
+  message: "",
+  confirmLabel: "Confirm",
+  cancelLabel: "Cancel",
+  tone: "neutral",
   _resolve: null,
 
   confirm: (opts) => {
@@ -50,9 +50,9 @@ export const useConfirmDialog = create<ConfirmDialogState>((set, get) => ({
         isOpen: true,
         title: opts.title,
         message: opts.message,
-        confirmLabel: opts.confirmLabel ?? 'Confirm',
-        cancelLabel: opts.cancelLabel ?? 'Cancel',
-        tone: opts.tone ?? 'neutral',
+        confirmLabel: opts.confirmLabel ?? "Confirm",
+        cancelLabel: opts.cancelLabel ?? "Cancel",
+        tone: opts.tone ?? "neutral",
         _resolve: resolve,
       });
     });

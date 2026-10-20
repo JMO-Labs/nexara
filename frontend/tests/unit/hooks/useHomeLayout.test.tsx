@@ -15,6 +15,9 @@ import type { WidgetInstance } from "@/lib/widgets/registry";
 
 vi.mock("@/lib/api/settings");
 vi.mock("@/lib/api/home");
+vi.mock("@/lib/auth/session", () => ({
+  getAccessToken: () => "test-token",
+}));
 
 function createWrapper() {
   const qc = new QueryClient({
@@ -42,9 +45,9 @@ function makeWidget(overrides: Partial<WidgetInstance> = {}): WidgetInstance {
 function mockSettings(home_layout: { widgets: WidgetInstance[] } | null) {
   vi.mocked(settingsApi.getSettings).mockResolvedValue({
     home_layout,
-  } as unknown as ReturnType<
-    typeof settingsApi.getSettings
-  > extends Promise<infer T>
+  } as unknown as ReturnType<typeof settingsApi.getSettings> extends Promise<
+    infer T
+  >
     ? T
     : never);
 }
@@ -90,9 +93,7 @@ describe("useHomeLayout", () => {
     act(() => {
       result.current.addWidget("activity");
     });
-    await waitFor(() =>
-      expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1),
-    );
+    await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1));
     const call = vi.mocked(homeApi.putHomeLayout).mock.calls[0][0];
     expect(call.widgets).toHaveLength(2);
     expect(call.widgets[1].defId).toBe("activity");
@@ -109,9 +110,7 @@ describe("useHomeLayout", () => {
     act(() => {
       result.current.removeWidget("w-1");
     });
-    await waitFor(() =>
-      expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1),
-    );
+    await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1));
     const call = vi.mocked(homeApi.putHomeLayout).mock.calls[0][0];
     expect(call.widgets).toHaveLength(1);
     expect(call.widgets[0].id).toBe("w-2");
@@ -125,9 +124,7 @@ describe("useHomeLayout", () => {
     act(() => {
       result.current.toggleCollapsed("w-1");
     });
-    await waitFor(() =>
-      expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1),
-    );
+    await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1));
     const call = vi.mocked(homeApi.putHomeLayout).mock.calls[0][0];
     expect(call.widgets[0].collapsed).toBe(true);
   });
@@ -140,9 +137,7 @@ describe("useHomeLayout", () => {
     act(() => {
       result.current.applyLayout([{ i: "w-1", x: 4, y: 2, w: 6, h: 5 }]);
     });
-    await waitFor(() =>
-      expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1),
-    );
+    await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1));
     const call = vi.mocked(homeApi.putHomeLayout).mock.calls[0][0];
     expect(call.widgets[0].x).toBe(4);
     expect(call.widgets[0].w).toBe(6);
@@ -156,9 +151,7 @@ describe("useHomeLayout", () => {
     act(() => {
       result.current.resetToDefault();
     });
-    await waitFor(() =>
-      expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1),
-    );
+    await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1));
     const call = vi.mocked(homeApi.putHomeLayout).mock.calls[0][0];
     expect(call.widgets).toHaveLength(6);
   });
@@ -177,6 +170,9 @@ describe("useHomeLayout", () => {
       defId: "feed",
       w: 8,
     });
-    expect(result.current.widgets[1]).toMatchObject({ id: "b", defId: "activity" });
+    expect(result.current.widgets[1]).toMatchObject({
+      id: "b",
+      defId: "activity",
+    });
   });
 });

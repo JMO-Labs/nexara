@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file hooks/useSession.ts
  * @brief Bootstraps the auth session on cold load: tries to refresh the
@@ -6,15 +6,15 @@
  *        Skips entirely when the session store already holds a user
  *        (e.g. immediately after a successful login flow).
  */
-import { useEffect } from 'react';
-import { useSession } from '@/stores/session';
+import { useEffect } from "react";
+import { useSession } from "@/stores/session";
 import {
   getAccessToken,
   refreshAccessToken,
   setAccessToken,
   onAuthChange,
-} from '@/lib/auth/session';
-import { getMe } from '@/lib/api/users';
+} from "@/lib/auth/session";
+import { getMe } from "@/lib/api/users";
 
 export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
   const state = useSession();
@@ -23,10 +23,10 @@ export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
 
   useEffect(() => {
     // Already populated (e.g. just logged in)? Don't re-bootstrap.
-    if (useSession.getState().status === 'authenticated') return;
+    if (useSession.getState().status === "authenticated") return;
 
     (async () => {
-      setStatus('loading');
+      setStatus("loading");
       try {
         let token = getAccessToken();
         if (!token) token = await refreshAccessToken();

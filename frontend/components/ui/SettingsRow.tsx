@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file components/ui/SettingsRow.tsx
  * @brief Two-column settings control layout (label left, input right on md+).
@@ -6,8 +6,8 @@
  * @param description Optional descriptive text below label
  * @param children Form control(s) to display
  */
-import React, { type ReactNode } from 'react';
-import { Grid, Typography } from '@mui/joy';
+import React, { type ReactNode } from "react";
+import { Grid, Typography } from "@mui/joy";
 
 export interface SettingsRowProps {
   label: string;
@@ -23,9 +23,9 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
         container
         spacing={2}
         sx={{
-          alignItems: 'flex-start',
+          alignItems: "flex-start",
           py: 1.5,
-          borderBottom: '1px solid var(--joy-palette-divider)',
+          borderBottom: "1px solid var(--joy-palette-divider)",
         }}
       >
         <Grid xs={12} md={4}>
@@ -33,7 +33,10 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
             {label}
           </Typography>
           {description && (
-            <Typography level="body-xs" sx={{ color: 'text.tertiary', mt: 0.5 }}>
+            <Typography
+              level="body-xs"
+              sx={{ color: "text.tertiary", mt: 0.5 }}
+            >
               {description}
             </Typography>
           )}
@@ -43,7 +46,7 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
         </Grid>
       </Grid>
     );
-  }
+  },
 );
 
 export default SettingsRow;

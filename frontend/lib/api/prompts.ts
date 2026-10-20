@@ -2,7 +2,7 @@
  * @file lib/api/prompts.ts
  * @brief Prompts API endpoints for admin CRUD, seeding, and feed posts.
  */
-import { apiGet, apiPost, apiPut, apiDelete } from './client';
+import { apiGet, apiPost, apiPut, apiDelete } from "./client";
 
 /**
  * @brief Prompt detail within a prompt post.
@@ -11,7 +11,7 @@ export interface PromptDetail {
   id: string;
   title: string;
   body: string;
-  prompt_type: 'standard' | 'interest_capture';
+  prompt_type: "standard" | "interest_capture";
   interest_category_slug: string | null;
   interest_capture_hint: string | null;
 }
@@ -88,7 +88,7 @@ export interface PromptUpdate {
  * @return Array of PromptResponse
  */
 export const listPrompts = () =>
-  apiGet<PromptResponse[]>('/api/v1/admin/prompts');
+  apiGet<PromptResponse[]>("/api/v1/admin/prompts");
 
 /**
  * @brief Create a new prompt (admin only).
@@ -96,7 +96,7 @@ export const listPrompts = () =>
  * @return PromptResponse
  */
 export const createPrompt = (payload: PromptCreate) =>
-  apiPost<PromptResponse>('/api/v1/admin/prompts', payload);
+  apiPost<PromptResponse>("/api/v1/admin/prompts", payload);
 
 /**
  * @brief Update a prompt (admin only).
@@ -120,7 +120,7 @@ export const deletePrompt = (promptId: string) =>
  * @return Array of created prompts
  */
 export const seedBuiltinPrompts = () =>
-  apiPost<PromptResponse[]>('/api/v1/admin/prompts/seed', {});
+  apiPost<PromptResponse[]>("/api/v1/admin/prompts/seed", {});
 
 /**
  * @brief Get a prompt post (feed view).
@@ -136,4 +136,6 @@ export const getPromptPost = (promptPostId: string) =>
  * @return Response count
  */
 export const getPromptResponseCount = (promptPostId: string) =>
-  apiGet<{ response_count: number }>(`/api/v1/prompts/posts/${promptPostId}/responses`);
+  apiGet<{ response_count: number }>(
+    `/api/v1/prompts/posts/${promptPostId}/responses`,
+  );

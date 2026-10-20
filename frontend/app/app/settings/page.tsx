@@ -2,7 +2,7 @@
  * @file app/app/settings/page.tsx
  * @brief Settings page: server component shell that mounts SettingsTabs client component.
  */
-import { SettingsTabs } from '@/components/settings/SettingsTabs';
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
 
 /**
  * @brief Render the settings page.

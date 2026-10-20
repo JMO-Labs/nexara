@@ -1,11 +1,11 @@
-'use client';
+"use client";
 /**
  * @file hooks/useEvents.ts
  * @brief TanStack hooks for event window queries + CRUD/RSVP mutations.
  */
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMutationWithToast } from './useMutationWithToast';
-import { qk } from '@/lib/query-keys';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutationWithToast } from "./useMutationWithToast";
+import { qk } from "@/lib/query-keys";
 import {
   listEvents,
   getEvent,
@@ -17,7 +17,7 @@ import {
   type CreateEventBody,
   type EventItem,
   type ListEventsParams,
-} from '@/lib/api/events';
+} from "@/lib/api/events";
 
 /** Round to start-of-hour so the query key is stable across renders. */
 function bucketHour(d: Date): Date {
@@ -43,14 +43,15 @@ export function useEventsInRange(start: Date, end: Date, subgroup_id?: string) {
   const endIso = end.toISOString();
   return useQuery({
     queryKey: qk.events.list({ from: startIso, to: endIso, subgroup_id }),
-    queryFn: () => listEvents({ start: startIso, end: endIso, limit: 500, subgroup_id }),
+    queryFn: () =>
+      listEvents({ start: startIso, end: endIso, limit: 500, subgroup_id }),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useEventDetail(id: string | null | undefined) {
   return useQuery({
-    queryKey: qk.events.detail(id ?? ''),
+    queryKey: qk.events.detail(id ?? ""),
     queryFn: () => getEvent(id as string),
     enabled: !!id,
   });
@@ -65,7 +66,7 @@ export function useCreateEvent() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (body: CreateEventBody) => createEvent(body),
-    successKey: 'toasts.events.created',
+    successKey: "toasts.events.created",
     onSuccess: () => invalidate(qc),
   });
 }
@@ -74,7 +75,7 @@ export function useUpdateEvent(id: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (body: Partial<CreateEventBody>) => updateEvent(id, body),
-    successKey: 'toasts.events.updated',
+    successKey: "toasts.events.updated",
     onSuccess: () => invalidate(qc, id),
   });
 }
@@ -83,7 +84,7 @@ export function useDeleteEvent() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (id: string) => deleteEvent(id),
-    successKey: 'toasts.events.cancelled',
+    successKey: "toasts.events.cancelled",
     onSuccess: () => invalidate(qc),
   });
 }
@@ -98,18 +99,21 @@ export function useRsvp(eventId: string) {
       }
       return await rsvpEvent(eventId, status);
     },
-    successKey: 'toasts.events.rsvp.saved',
+    successKey: "toasts.events.rsvp.saved",
     silentSuccess: true,
     onMutate: async (status) => {
       await qc.cancelQueries({ queryKey: qk.events.all() });
       const prevEvent = qc.getQueryData<EventItem>(qk.events.detail(eventId));
-      qc.setQueryData<EventItem | undefined>(qk.events.detail(eventId), (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          user_rsvp: status ? { status } : null,
-        };
-      });
+      qc.setQueryData<EventItem | undefined>(
+        qk.events.detail(eventId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            user_rsvp: status ? { status } : null,
+          };
+        },
+      );
       return { prevEvent };
     },
     onError: (_e, _v, ctx) => {

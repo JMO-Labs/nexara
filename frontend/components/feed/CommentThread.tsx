@@ -1,16 +1,16 @@
-'use client';
+"use client";
 /**
  * @file components/feed/CommentThread.tsx
  * @brief Threaded comments list with a single inline reply input.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Box from '@mui/joy/Box';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { Avatar, Button, Textarea, Skeleton, Markdown } from '@/components/ui';
-import { useComments, useCreateComment } from '@/hooks/usePosts';
-import type { Comment } from '@/lib/api/posts';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Box from "@mui/joy/Box";
+import { formatDistanceToNowStrict } from "date-fns";
+import { Avatar, Button, Textarea, Skeleton, Markdown } from "@/components/ui";
+import { useComments, useCreateComment } from "@/hooks/usePosts";
+import type { Comment } from "@/lib/api/posts";
 
 const COLLAPSED_MAX = 280;
 const EXPANDED_MAX = 600;
@@ -24,9 +24,11 @@ interface CommentNodeProps {
 function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
   const time = React.useMemo(() => {
     try {
-      return formatDistanceToNowStrict(new Date(comment.created_at), { addSuffix: true });
+      return formatDistanceToNowStrict(new Date(comment.created_at), {
+        addSuffix: true,
+      });
     } catch {
-      return '';
+      return "";
     }
   }, [comment.created_at]);
   return (
@@ -41,29 +43,41 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Box
           sx={{
-            backgroundColor: 'background.level1',
-            borderRadius: 'md',
+            backgroundColor: "background.level1",
+            borderRadius: "md",
             px: 1.5,
             py: 1,
           }}
         >
-          <Typography level="title-sm">{comment.author.display_name}</Typography>
+          <Typography level="title-sm">
+            {comment.author.display_name}
+          </Typography>
           <Markdown content={comment.content} size="sm" />
         </Box>
-        <Stack direction="row" spacing={1.5} sx={{ mt: 0.5, ml: 1 }} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ mt: 0.5, ml: 1 }}
+          alignItems="center"
+        >
           <Typography level="body-xs" textColor="text.tertiary">
             {time}
           </Typography>
           <Typography
             level="body-xs"
-            sx={{ cursor: 'pointer' }}
+            sx={{ cursor: "pointer" }}
             onClick={() => onReply(comment.id)}
           >
             Reply
           </Typography>
         </Stack>
         {comment.replies?.map((r) => (
-          <CommentNode key={r.id} comment={r} depth={depth + 1} onReply={onReply} />
+          <CommentNode
+            key={r.id}
+            comment={r}
+            depth={depth + 1}
+            onReply={onReply}
+          />
         ))}
       </Box>
     </Stack>
@@ -76,11 +90,15 @@ export interface CommentThreadProps {
   onOverflowChange?: (overflowing: boolean) => void;
 }
 
-export function CommentThread({ postId, expanded = false, onOverflowChange }: CommentThreadProps) {
+export function CommentThread({
+  postId,
+  expanded = false,
+  onOverflowChange,
+}: CommentThreadProps) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useComments(postId);
   const createMut = useCreateComment(postId);
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -103,7 +121,7 @@ export function CommentThread({ postId, expanded = false, onOverflowChange }: Co
         content,
         parent_id: replyTo ?? undefined,
       });
-      setText('');
+      setText("");
       setReplyTo(null);
     } catch {
       /* surface via toast in caller */
@@ -116,12 +134,12 @@ export function CommentThread({ postId, expanded = false, onOverflowChange }: Co
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={replyTo ? 'Write a reply…' : 'Add a comment…'}
+          placeholder={replyTo ? "Write a reply…" : "Add a comment…"}
           minRows={1}
           maxRows={6}
           sx={{ flexGrow: 1 }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               submit();
             }
@@ -137,7 +155,11 @@ export function CommentThread({ postId, expanded = false, onOverflowChange }: Co
         </Button>
       </Stack>
       {replyTo ? (
-        <Typography level="body-xs" sx={{ cursor: 'pointer' }} onClick={() => setReplyTo(null)}>
+        <Typography
+          level="body-xs"
+          sx={{ cursor: "pointer" }}
+          onClick={() => setReplyTo(null)}
+        >
           Cancel reply
         </Typography>
       ) : null}
@@ -155,12 +177,12 @@ export function CommentThread({ postId, expanded = false, onOverflowChange }: Co
           ref={scrollRef}
           sx={{
             maxHeight: expanded ? EXPANDED_MAX : COLLAPSED_MAX,
-            overflowY: 'auto',
+            overflowY: "auto",
             pr: 0.5,
-            transition: 'max-height 200ms ease',
-            borderTop: '1px solid',
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            transition: "max-height 200ms ease",
+            borderTop: "1px solid",
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           {flat.map((c) => (

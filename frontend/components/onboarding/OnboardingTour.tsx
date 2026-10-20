@@ -5,21 +5,21 @@
  * Manages tour lifecycle, persistence to backend, and SSR-safe dynamic import.
  */
 
-'use client';
+"use client";
 
-import * as React from 'react';
-import dynamic from 'next/dynamic';
-import { useSession } from '@/stores/session';
-import { memberTour, adminTour } from '@/lib/onboarding/tours';
-import * as usersApi from '@/lib/api/users';
+import * as React from "react";
+import dynamic from "next/dynamic";
+import { useSession } from "@/stores/session";
+import { memberTour, adminTour } from "@/lib/onboarding/tours";
+import * as usersApi from "@/lib/api/users";
 
 const Joyride = dynamic(
-  () => import('react-joyride').then((mod) => mod.Joyride),
-  { ssr: false }
+  () => import("react-joyride").then((mod) => mod.Joyride),
+  { ssr: false },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as any;
 
-const TERMINAL = new Set(['finished', 'skipped', 'error']);
+const TERMINAL = new Set(["finished", "skipped", "error"]);
 
 export function OnboardingTour() {
   const user = useSession((s) => s.user);
@@ -42,9 +42,9 @@ export function OnboardingTour() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTourCallback = (data: any) => {
-    const status: string = data?.status ?? '';
-    const action: string = data?.action ?? '';
-    if (TERMINAL.has(status) || action === 'close' || action === 'reset') {
+    const status: string = data?.status ?? "";
+    const action: string = data?.action ?? "";
+    if (TERMINAL.has(status) || action === "close" || action === "reset") {
       setRun(false);
       setDone(true);
       setUser({ ...user, tour_completed_at: new Date().toISOString() });

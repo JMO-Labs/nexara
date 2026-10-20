@@ -622,17 +622,49 @@
     "empty": "No members yet."
   },
   "toasts": {
-    "posts": { "created": "Post published", "deleted": "Post removed", "reaction": { "added": "Reacted" } },
+    "posts": {
+      "created": "Post published",
+      "deleted": "Post removed",
+      "reaction": { "added": "Reacted" }
+    },
     "comments": { "added": "Comment posted" },
-    "events": { "created": "Event created", "updated": "Event updated", "rsvp": { "saved": "RSVP saved" }, "cancelled": "Event cancelled" },
-    "galleries": { "created": "Gallery created", "item": { "added": "Added to gallery" }, "deleted": "Gallery deleted" },
+    "events": {
+      "created": "Event created",
+      "updated": "Event updated",
+      "rsvp": { "saved": "RSVP saved" },
+      "cancelled": "Event cancelled"
+    },
+    "galleries": {
+      "created": "Gallery created",
+      "item": { "added": "Added to gallery" },
+      "deleted": "Gallery deleted"
+    },
     "media": { "uploaded": "Upload complete", "deleted": "Media removed" },
-    "subgroups": { "created": "Subgroup created", "joined": "Joined subgroup", "left": "Left subgroup", "member": { "added": "Member added", "removed": "Member removed" } },
-    "settings": { "saved": "Settings saved", "password": { "changed": "Password updated" } },
+    "subgroups": {
+      "created": "Subgroup created",
+      "joined": "Joined subgroup",
+      "left": "Left subgroup",
+      "member": { "added": "Member added", "removed": "Member removed" }
+    },
+    "settings": {
+      "saved": "Settings saved",
+      "password": { "changed": "Password updated" }
+    },
     "invites": { "sent": "Invite sent", "revoked": "Invite revoked" },
-    "admin": { "user": { "updated": "User updated", "deactivated": "User deactivated" }, "audit": { "exported": "Audit log exported" } },
-    "auth": { "login": { "failed": "Login failed" }, "register": { "failed": "Registration failed" }, "reset": { "sent": "Reset email sent" } },
-    "errors": { "generic": "Something went wrong", "network": "Network error", "unauthorized": "Not authorized" }
+    "admin": {
+      "user": { "updated": "User updated", "deactivated": "User deactivated" },
+      "audit": { "exported": "Audit log exported" }
+    },
+    "auth": {
+      "login": { "failed": "Login failed" },
+      "register": { "failed": "Registration failed" },
+      "reset": { "sent": "Reset email sent" }
+    },
+    "errors": {
+      "generic": "Something went wrong",
+      "network": "Network error",
+      "unauthorized": "Not authorized"
+    }
   },
   "onboarding": {
     "welcome": {

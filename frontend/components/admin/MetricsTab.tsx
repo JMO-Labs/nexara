@@ -1,18 +1,18 @@
-'use client';
+"use client";
 /**
  * @file components/admin/MetricsTab.tsx
  * @brief Admin metrics display with community, system, and WAF stats.
  */
-import { useAdminMetrics } from '@/hooks/useAdmin';
-import Stack from '@mui/joy/Stack';
-import Grid from '@mui/joy/Grid';
-import Card from '@mui/joy/Card';
-import Typography from '@mui/joy/Typography';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
+import { useAdminMetrics } from "@/hooks/useAdmin";
+import Stack from "@mui/joy/Stack";
+import Grid from "@mui/joy/Grid";
+import Card from "@mui/joy/Card";
+import Typography from "@mui/joy/Typography";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
 
 function formatBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
   let unitIdx = 0;
   while (size >= 1024 && unitIdx < units.length - 1) {
@@ -189,19 +189,15 @@ export function MetricsTab() {
         </Typography>
         <Grid container spacing={1.5}>
           <Grid xs={6} sm={3} md={3}>
-            <MetricCard
-              label="Blocks Today"
-              value={metrics.waf.blocks_today}
-            />
+            <MetricCard label="Blocks Today" value={metrics.waf.blocks_today} />
           </Grid>
-          {Object.entries(metrics.waf.blocks_by_reason).map(([reason, count]) => (
-            <Grid key={reason} xs={6} sm={3} md={3}>
-              <MetricCard
-                label={`${reason} blocks`}
-                value={count}
-              />
-            </Grid>
-          ))}
+          {Object.entries(metrics.waf.blocks_by_reason).map(
+            ([reason, count]) => (
+              <Grid key={reason} xs={6} sm={3} md={3}>
+                <MetricCard label={`${reason} blocks`} value={count} />
+              </Grid>
+            ),
+          )}
         </Grid>
       </div>
     </Stack>

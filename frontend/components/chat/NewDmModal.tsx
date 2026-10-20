@@ -1,16 +1,16 @@
-'use client';
+"use client";
 /**
  * @file components/chat/NewDmModal.tsx
  * @brief User-picker modal that lists community members, filters by query,
  *        and opens (or creates) a DM channel on selection.
  */
-import * as React from 'react';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import Box from '@mui/joy/Box';
-import { Modal, Input, Avatar, Skeleton } from '@/components/ui';
-import { useQuery } from '@tanstack/react-query';
-import { listUsers, type UserSummary } from '@/lib/api/users';
+import * as React from "react";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import Box from "@mui/joy/Box";
+import { Modal, Input, Avatar, Skeleton } from "@/components/ui";
+import { useQuery } from "@tanstack/react-query";
+import { listUsers, type UserSummary } from "@/lib/api/users";
 
 export interface NewDmModalProps {
   open: boolean;
@@ -26,10 +26,10 @@ export function NewDmModal({
   onSelect,
   excludeUserId,
 }: NewDmModalProps) {
-  const [q, setQ] = React.useState('');
+  const [q, setQ] = React.useState("");
 
   const usersQ = useQuery({
-    queryKey: ['users', 'list', 'all'],
+    queryKey: ["users", "list", "all"],
     queryFn: () => listUsers(null, 100),
     enabled: open,
     staleTime: 60_000,
@@ -50,20 +50,20 @@ export function NewDmModal({
 
   const select = (u: UserSummary) => {
     onSelect(u.id);
-    setQ('');
+    setQ("");
     onClose();
   };
 
   return (
     <Modal open={open} onClose={onClose} title="New direct message">
-      <Stack spacing={1.5} sx={{ width: { xs: '100%', sm: 420 } }}>
+      <Stack spacing={1.5} sx={{ width: { xs: "100%", sm: 420 } }}>
         <Input
           autoFocus
           placeholder="Search by name or @username"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <Box sx={{ maxHeight: 360, overflowY: 'auto', mx: -1 }}>
+        <Box sx={{ maxHeight: 360, overflowY: "auto", mx: -1 }}>
           {usersQ.isLoading ? (
             <Stack spacing={1} px={1}>
               {Array.from({ length: 5 }).map((_, i) => (
@@ -74,7 +74,7 @@ export function NewDmModal({
             <Typography
               level="body-sm"
               textColor="text.tertiary"
-              sx={{ p: 2, textAlign: 'center' }}
+              sx={{ p: 2, textAlign: "center" }}
             >
               No matching users.
             </Typography>
@@ -87,19 +87,19 @@ export function NewDmModal({
                   tabIndex={0}
                   onClick={() => select(u)}
                   onKeyDown={(e) =>
-                    (e.key === 'Enter' || e.key === ' ') && select(u)
+                    (e.key === "Enter" || e.key === " ") && select(u)
                   }
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 1.5,
                     px: 2,
                     py: 1,
-                    cursor: 'pointer',
-                    borderRadius: 'sm',
-                    '&:hover': { bgcolor: 'background.level1' },
-                    outline: 'none',
-                    '&:focus-visible': { boxShadow: 'sm' },
+                    cursor: "pointer",
+                    borderRadius: "sm",
+                    "&:hover": { bgcolor: "background.level1" },
+                    outline: "none",
+                    "&:focus-visible": { boxShadow: "sm" },
                   }}
                 >
                   <Avatar size="sm" src={u.avatar_url ?? undefined}>
@@ -109,7 +109,11 @@ export function NewDmModal({
                     <Typography level="title-sm" noWrap>
                       {u.display_name}
                     </Typography>
-                    <Typography level="body-xs" textColor="text.tertiary" noWrap>
+                    <Typography
+                      level="body-xs"
+                      textColor="text.tertiary"
+                      noWrap
+                    >
                       @{u.username}
                     </Typography>
                   </Stack>

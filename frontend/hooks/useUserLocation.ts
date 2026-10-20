@@ -1,4 +1,4 @@
-'use client';
+"use client";
 /**
  * @file hooks/useUserLocation.ts
  * @brief Best-effort user latitude/longitude for biasing autocompletes.
@@ -10,19 +10,19 @@
  *
  * Resolves to ``null`` when all sources fail or the user denies.
  */
-import * as React from 'react';
+import * as React from "react";
 
 export interface UserLocation {
   lat: number;
   lon: number;
-  source: 'browser' | 'ip';
+  source: "browser" | "ip";
 }
 
-const CACHE_KEY = 'nx.userLocation.v1';
+const CACHE_KEY = "nx.userLocation.v1";
 const GEO_TIMEOUT_MS = 4_000;
 
 function readCache(): UserLocation | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -42,7 +42,7 @@ function writeCache(loc: UserLocation): void {
 
 function tryBrowserGeo(): Promise<UserLocation | null> {
   return new Promise((resolve) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
       resolve(null);
       return;
     }
@@ -54,9 +54,17 @@ function tryBrowserGeo(): Promise<UserLocation | null> {
     };
     navigator.geolocation.getCurrentPosition(
       (pos) =>
-        finish({ lat: pos.coords.latitude, lon: pos.coords.longitude, source: 'browser' }),
+        finish({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          source: "browser",
+        }),
       () => finish(null),
-      { timeout: GEO_TIMEOUT_MS, maximumAge: 5 * 60_000, enableHighAccuracy: false },
+      {
+        timeout: GEO_TIMEOUT_MS,
+        maximumAge: 5 * 60_000,
+        enableHighAccuracy: false,
+      },
     );
     setTimeout(() => finish(null), GEO_TIMEOUT_MS + 250);
   });
@@ -64,15 +72,16 @@ function tryBrowserGeo(): Promise<UserLocation | null> {
 
 async function tryIpGeo(signal: AbortSignal): Promise<UserLocation | null> {
   try {
-    const res = await fetch('https://ipwho.is/', { signal });
+    const res = await fetch("https://ipwho.is/", { signal });
     if (!res.ok) return null;
     const data = (await res.json()) as {
       success?: boolean;
       latitude?: number;
       longitude?: number;
     };
-    if (!data.success || data.latitude == null || data.longitude == null) return null;
-    return { lat: data.latitude, lon: data.longitude, source: 'ip' };
+    if (!data.success || data.latitude == null || data.longitude == null)
+      return null;
+    return { lat: data.latitude, lon: data.longitude, source: "ip" };
   } catch {
     return null;
   }

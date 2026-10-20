@@ -30,7 +30,8 @@ export const qk = {
     channels: () => ["chat", "channels"] as const,
     messages: (channelId: string) => ["chat", "messages", channelId] as const,
     dms: () => ["chat", "dms"] as const,
-    subgroupChannel: (subgroupId: string) => ["chat", "subgroup-channel", subgroupId] as const,
+    subgroupChannel: (subgroupId: string) =>
+      ["chat", "subgroup-channel", subgroupId] as const,
   },
   subgroups: {
     all: () => ["subgroups"] as const,
@@ -93,5 +94,6 @@ export const qk = {
     layout: () => ["home-layout"] as const,
     summary: () => ["home-summary"] as const,
     media: (limit?: number) => ["home-media", limit ?? 24] as const,
+    activity: (limit?: number) => ["home-activity", limit ?? 30] as const,
   },
 } as const;

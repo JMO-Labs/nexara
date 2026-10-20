@@ -1,23 +1,23 @@
-'use client';
+"use client";
 /**
  * @file components/galleries/GalleryUpload.tsx
  * @brief Drag-drop bulk uploader. 240px min-height, dashed border, progress queue.
  */
-import * as React from 'react';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import LinearProgress from '@mui/joy/LinearProgress';
-import Button from '@mui/joy/Button';
-import IconButton from '@mui/joy/IconButton';
-import { keyframes } from '@emotion/react';
+import * as React from "react";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import LinearProgress from "@mui/joy/LinearProgress";
+import Button from "@mui/joy/Button";
+import IconButton from "@mui/joy/IconButton";
+import { keyframes } from "@emotion/react";
 import {
   PhotoIcon,
   CheckIcon,
   XMarkIcon,
   ArrowPathIcon,
-} from '@heroicons/react/24/solid';
-import { useGalleryUpload } from '@/hooks/useGalleryUpload';
+} from "@heroicons/react/24/solid";
+import { useGalleryUpload } from "@/hooks/useGalleryUpload";
 
 const pulseAnimation = keyframes`
   0% { opacity: 0.04; }
@@ -42,7 +42,7 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) void enqueue(Array.from(e.target.files));
-    e.target.value = '';
+    e.target.value = "";
   };
 
   return (
@@ -60,30 +60,41 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
         tabIndex={0}
         aria-label="Upload photos — drop files or click"
         sx={{
-          minHeight: '240px',
+          minHeight: "240px",
           p: 4,
-          borderRadius: 'lg',
-          border: dragOver ? '2px solid' : '1.5px dashed',
-          borderColor: dragOver ? 'var(--joy-palette-primary-500)' : 'var(--joy-palette-neutral-outlinedBorder)',
+          borderRadius: "lg",
+          border: dragOver ? "2px solid" : "1.5px dashed",
+          borderColor: dragOver
+            ? "var(--joy-palette-primary-500)"
+            : "var(--joy-palette-neutral-outlinedBorder)",
           background: dragOver
             ? `linear-gradient(rgba(var(--joy-palette-primary-200)/0.04), rgba(var(--joy-palette-primary-200)/0.04))`
-            : 'background.level1',
-          textAlign: 'center',
-          cursor: 'pointer',
-          transition: 'all 200ms ease-out',
-          transform: dragOver ? 'scale(1.01)' : 'scale(1)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          animation: dragOver ? `${pulseAnimation} 1.5s ease-in-out infinite` : undefined,
+            : "background.level1",
+          textAlign: "center",
+          cursor: "pointer",
+          transition: "all 200ms ease-out",
+          transform: dragOver ? "scale(1.01)" : "scale(1)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          animation: dragOver
+            ? `${pulseAnimation} 1.5s ease-in-out infinite`
+            : undefined,
         }}
       >
-        <PhotoIcon style={{ width: '40px', height: '40px', marginBottom: '1rem', opacity: 0.7 }} />
-        <Typography level="title-md" sx={{ fontFamily: 'var(--font-display)' }}>
+        <PhotoIcon
+          style={{
+            width: "40px",
+            height: "40px",
+            marginBottom: "1rem",
+            opacity: 0.7,
+          }}
+        />
+        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
           Drop photos to upload
         </Typography>
-        <Typography level="body-sm" sx={{ color: 'text.tertiary', mt: 1 }}>
+        <Typography level="body-sm" sx={{ color: "text.tertiary", mt: 1 }}>
           or click to browse
         </Typography>
         <Button sx={{ mt: 2 }} size="sm" variant="outlined" type="button">
@@ -107,17 +118,22 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
                 {/* Thumbnail placeholder */}
                 <Box
                   sx={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: 'sm',
-                    background: 'background.level2',
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "sm",
+                    background: "background.level2",
                     flexShrink: 0,
                   }}
                 />
 
                 {/* Filename + status */}
                 <Stack spacing={0.5} sx={{ flex: 1 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
                     <Typography
                       data-testid="upload-filename"
                       level="body-sm"
@@ -128,31 +144,56 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
                     </Typography>
 
                     {/* Status icon / text */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                      {job.status === 'uploading' && (
-                        <ArrowPathIcon style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {job.status === "uploading" && (
+                        <ArrowPathIcon
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            animation: "spin 1s linear infinite",
+                          }}
+                        />
                       )}
-                      {job.status === 'done' && (
-                        <CheckIcon style={{ width: '16px', height: '16px', color: 'var(--joy-palette-success-500)' }} />
+                      {job.status === "done" && (
+                        <CheckIcon
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            color: "var(--joy-palette-success-500)",
+                          }}
+                        />
                       )}
-                      {job.status === 'error' && (
-                        <XMarkIcon style={{ width: '16px', height: '16px', color: 'var(--joy-palette-danger-500)' }} />
+                      {job.status === "error" && (
+                        <XMarkIcon
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            color: "var(--joy-palette-danger-500)",
+                          }}
+                        />
                       )}
                       <Typography
                         level="body-xs"
                         sx={{
                           color:
-                            job.status === 'error'
-                              ? 'danger.500'
-                              : job.status === 'done'
-                                ? 'success.500'
-                                : 'text.tertiary',
+                            job.status === "error"
+                              ? "danger.500"
+                              : job.status === "done"
+                                ? "success.500"
+                                : "text.tertiary",
                         }}
                       >
-                        {job.status === 'error'
-                          ? job.error || 'Error'
-                          : job.status === 'done'
-                            ? 'Done'
+                        {job.status === "error"
+                          ? job.error || "Error"
+                          : job.status === "done"
+                            ? "Done"
                             : `${Math.round(job.progress)}%`}
                       </Typography>
                     </Box>
@@ -162,23 +203,33 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
                   <LinearProgress
                     determinate
                     value={job.progress}
-                    color={job.status === 'error' ? 'danger' : job.status === 'done' ? 'success' : 'primary'}
+                    color={
+                      job.status === "error"
+                        ? "danger"
+                        : job.status === "done"
+                          ? "success"
+                          : "primary"
+                    }
                     sx={{
-                      height: '1px',
-                      '& .MuiLinearProgress-bar': {
+                      height: "1px",
+                      "& .MuiLinearProgress-bar": {
                         backgroundImage:
-                          job.status === 'uploading'
-                            ? 'linear-gradient(90deg, var(--joy-palette-primary-500) 25%, transparent 25%, transparent 50%, var(--joy-palette-primary-500) 50%, var(--joy-palette-primary-500) 75%, transparent 75%, transparent)'
+                          job.status === "uploading"
+                            ? "linear-gradient(90deg, var(--joy-palette-primary-500) 25%, transparent 25%, transparent 50%, var(--joy-palette-primary-500) 50%, var(--joy-palette-primary-500) 75%, transparent 75%, transparent)"
                             : undefined,
-                        backgroundSize: job.status === 'uploading' ? '20px 1px' : undefined,
-                        animation: job.status === 'uploading' ? 'slide 2s linear infinite' : undefined,
+                        backgroundSize:
+                          job.status === "uploading" ? "20px 1px" : undefined,
+                        animation:
+                          job.status === "uploading"
+                            ? "slide 2s linear infinite"
+                            : undefined,
                       },
                     }}
                   />
                 </Stack>
 
                 {/* Retry button */}
-                {job.status === 'error' && (
+                {job.status === "error" && (
                   <IconButton
                     data-testid="retry-button"
                     size="sm"
@@ -186,7 +237,7 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
                     onClick={() => retry(job.id)}
                     sx={{ flexShrink: 0 }}
                   >
-                    <ArrowPathIcon style={{ width: '16px', height: '16px' }} />
+                    <ArrowPathIcon style={{ width: "16px", height: "16px" }} />
                   </IconButton>
                 )}
               </Stack>

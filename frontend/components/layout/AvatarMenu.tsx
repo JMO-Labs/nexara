@@ -1,20 +1,20 @@
-'use client';
+"use client";
 /**
  * @file components/layout/AvatarMenu.tsx
  * @brief Avatar dropdown with profile / settings / sign-out.
  */
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Menu from '@mui/joy/Menu';
-import MenuItem from '@mui/joy/MenuItem';
-import MenuButton from '@mui/joy/MenuButton';
-import Dropdown from '@mui/joy/Dropdown';
-import ListDivider from '@mui/joy/ListDivider';
-import { Avatar } from '@/components/ui/Avatar';
-import { useSession } from '@/stores/session';
-import { useModals } from '@/stores/modals';
-import { logout as apiLogout } from '@/lib/api/auth';
-import { setAccessToken } from '@/lib/auth/session';
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Menu from "@mui/joy/Menu";
+import MenuItem from "@mui/joy/MenuItem";
+import MenuButton from "@mui/joy/MenuButton";
+import Dropdown from "@mui/joy/Dropdown";
+import ListDivider from "@mui/joy/ListDivider";
+import { Avatar } from "@/components/ui/Avatar";
+import { useSession } from "@/stores/session";
+import { useModals } from "@/stores/modals";
+import { logout as apiLogout } from "@/lib/api/auth";
+import { setAccessToken } from "@/lib/auth/session";
 
 export function AvatarMenu() {
   const router = useRouter();
@@ -30,33 +30,45 @@ export function AvatarMenu() {
     }
     setAccessToken(null);
     reset();
-    router.replace('/login');
+    router.replace("/login");
   };
 
   return (
     <Dropdown>
       <MenuButton
-        slots={{ root: 'button' }}
+        slots={{ root: "button" }}
         slotProps={{
           root: {
-            'aria-label': 'Account menu',
-            'aria-haspopup': 'menu',
-            style: { background: 'transparent', border: 0, padding: 4, cursor: 'pointer' },
+            "aria-label": "Account menu",
+            "aria-haspopup": "menu",
+            style: {
+              background: "transparent",
+              border: 0,
+              padding: 4,
+              cursor: "pointer",
+            },
           },
         }}
       >
         <Avatar
           src={user?.avatar_url ?? undefined}
-          alt={user?.display_name ?? 'You'}
+          alt={user?.display_name ?? "You"}
           size="sm"
         >
-          {user?.display_name?.[0] ?? '?'}
+          {user?.display_name?.[0] ?? "?"}
         </Avatar>
       </MenuButton>
       <Menu placement="bottom-end" sx={{ minWidth: 220 }}>
-        <MenuItem disabled sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-          <span style={{ fontWeight: 600 }}>{user?.display_name ?? 'Signed in'}</span>
-          <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>{user?.email}</span>
+        <MenuItem
+          disabled
+          sx={{ flexDirection: "column", alignItems: "flex-start" }}
+        >
+          <span style={{ fontWeight: 600 }}>
+            {user?.display_name ?? "Signed in"}
+          </span>
+          <span style={{ fontSize: "0.78rem", opacity: 0.7 }}>
+            {user?.email}
+          </span>
         </MenuItem>
         <ListDivider />
         <MenuItem component={Link} href="/app/settings" data-tour="settings">

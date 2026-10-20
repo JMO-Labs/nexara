@@ -1,26 +1,37 @@
-'use client';
+"use client";
 /**
  * @file app/app/galleries/page.tsx
  * @brief Editorial galleries page — oversized serif masthead, sticky glass
  *        toolbar, magazine-style hero spread, bento mosaic of cards. Drawer +
  *        lightbox routing preserved (?gallery= / ?item=).
  */
-import * as React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Box from '@mui/joy/Box';
-import Stack from '@mui/joy/Stack';
-import Typography from '@mui/joy/Typography';
-import { motion } from 'framer-motion';
-import { Button, Drawer, EmptyState, Skeleton, Avatar, Chip, IconButton } from '@/components/ui';
-import { TrashIcon } from '@heroicons/react/24/outline';
-import { GalleryCard } from '@/components/galleries/GalleryCard';
-import { GalleryCreateModal } from '@/components/galleries/GalleryCreateModal';
-import { GallerySearchBar } from '@/components/galleries/GallerySearchBar';
-import { GallerySortSelect, type SortOption } from '@/components/galleries/GallerySortSelect';
-import { GalleryUpload } from '@/components/galleries/GalleryUpload';
-import { MediaThumb } from '@/components/galleries/MediaThumb';
-import { Lightbox } from '@/components/galleries/Lightbox';
-import { PageMasthead } from '@/components/layout/PageMasthead';
+import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Box from "@mui/joy/Box";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
+import { motion } from "framer-motion";
+import {
+  Button,
+  Drawer,
+  EmptyState,
+  Skeleton,
+  Avatar,
+  Chip,
+  IconButton,
+} from "@/components/ui";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { GalleryCard } from "@/components/galleries/GalleryCard";
+import { GalleryCreateModal } from "@/components/galleries/GalleryCreateModal";
+import { GallerySearchBar } from "@/components/galleries/GallerySearchBar";
+import {
+  GallerySortSelect,
+  type SortOption,
+} from "@/components/galleries/GallerySortSelect";
+import { GalleryUpload } from "@/components/galleries/GalleryUpload";
+import { MediaThumb } from "@/components/galleries/MediaThumb";
+import { Lightbox } from "@/components/galleries/Lightbox";
+import { PageMasthead } from "@/components/layout/PageMasthead";
 import {
   useGalleryDetail,
   useGalleryItems,
@@ -28,48 +39,48 @@ import {
   useUpdateGallery,
   useDeleteGallery,
   useRemoveItem,
-} from '@/hooks/useGalleries';
-import { useSession } from '@/stores/session';
-import { useConfirmDialog } from '@/stores/confirmDialog';
-import { API_BASE } from '@/lib/auth/session';
-import type { Gallery, ListGalleriesParams } from '@/lib/api/galleries';
+} from "@/hooks/useGalleries";
+import { useSession } from "@/stores/session";
+import { useConfirmDialog } from "@/stores/confirmDialog";
+import { API_BASE } from "@/lib/auth/session";
+import type { Gallery, ListGalleriesParams } from "@/lib/api/galleries";
 
 export default function GalleriesPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const galleryId = params.get('gallery');
-  const itemIdx = params.get('item');
+  const galleryId = params.get("gallery");
+  const itemIdx = params.get("item");
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [sort, setSort] = React.useState<SortOption>('recent');
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [sort, setSort] = React.useState<SortOption>("recent");
 
   const setParam = (next: URLSearchParams) =>
-    router.push(next.toString() ? `/app/galleries?${next}` : '/app/galleries');
+    router.push(next.toString() ? `/app/galleries?${next}` : "/app/galleries");
 
   const select = (id: string) => {
     const next = new URLSearchParams(params.toString());
-    next.set('gallery', id);
+    next.set("gallery", id);
     setParam(next);
   };
   const closeDrawer = () => {
     const next = new URLSearchParams(params.toString());
-    next.delete('gallery');
-    next.delete('item');
+    next.delete("gallery");
+    next.delete("item");
     setParam(next);
   };
   const openItem = (idx: number) => {
     const next = new URLSearchParams(params.toString());
-    next.set('item', String(idx));
+    next.set("item", String(idx));
     setParam(next);
   };
   const closeItem = () => {
     const next = new URLSearchParams(params.toString());
-    next.delete('item');
+    next.delete("item");
     setParam(next);
   };
   const setItemIndex = (idx: number) => {
     const next = new URLSearchParams(params.toString());
-    next.set('item', String(idx));
+    next.set("item", String(idx));
     setParam(next);
   };
 
@@ -78,8 +89,15 @@ export default function GalleriesPage() {
     sort,
   };
 
-  const { data: featuredData } = useGalleryList({ featured: true, sort: 'popular' });
-  const { data: listData, isLoading: listLoading, error: listError } = useGalleryList(listParams);
+  const { data: featuredData } = useGalleryList({
+    featured: true,
+    sort: "popular",
+  });
+  const {
+    data: listData,
+    isLoading: listLoading,
+    error: listError,
+  } = useGalleryList(listParams);
 
   const featured = featuredData?.items ?? [];
   const featuredHero = featured[0];
@@ -90,49 +108,50 @@ export default function GalleriesPage() {
   return (
     <Box
       sx={{
-        position: 'relative',
-        minHeight: '100vh',
+        position: "relative",
+        minHeight: "100vh",
         px: { xs: 2, md: 6, lg: 8 },
         pb: 10,
-        width: '100%',
+        width: "100%",
       }}
     >
-      <Box sx={{ position: 'relative', zIndex: 1 }}>
+      <Box sx={{ position: "relative", zIndex: 1 }}>
         <PageMasthead
           title="Galleries"
-          meta={`${totalCount} ${totalCount === 1 ? 'collection' : 'collections'} on file`}
-          right={<Button onClick={() => setCreateOpen(true)}>+ New gallery</Button>}
+          meta={`${totalCount} ${totalCount === 1 ? "collection" : "collections"} on file`}
+          right={
+            <Button onClick={() => setCreateOpen(true)}>+ New gallery</Button>
+          }
         />
-
 
         {/* ─── Sticky toolbar ───────────────────────────────────── */}
         <Box
           sx={{
-            position: 'sticky',
+            position: "sticky",
             top: 0,
             zIndex: 5,
             mx: { xs: -2, md: -6, lg: -8 },
             px: { xs: 2, md: 6, lg: 8 },
             py: 1.5,
-            backdropFilter: 'saturate(140%) blur(12px)',
-            WebkitBackdropFilter: 'saturate(140%) blur(12px)',
+            backdropFilter: "saturate(140%) blur(12px)",
+            WebkitBackdropFilter: "saturate(140%) blur(12px)",
             background:
-              'color-mix(in srgb, var(--joy-palette-background-body) 78%, transparent)',
-            borderTop: '1px solid var(--joy-palette-divider)',
-            borderBottom: '1px solid var(--joy-palette-divider)',
+              "color-mix(in srgb, var(--joy-palette-background-body) 78%, transparent)",
+            borderTop: "1px solid var(--joy-palette-divider)",
+            borderBottom: "1px solid var(--joy-palette-divider)",
             mb: { xs: 4, md: 6 },
           }}
         >
           <Stack
-            direction={{ xs: 'column', sm: 'row' }}
+            direction={{ xs: "column", sm: "row" }}
             spacing={{ xs: 1, sm: 3 }}
-            alignItems={{ sm: 'center' }}
+            alignItems={{ sm: "center" }}
             justifyContent="space-between"
           >
-            <Box sx={{ flex: 1, minWidth: 0, '& > *': { mb: '0 !important' } }}>
+            <Box sx={{ flex: 1, minWidth: 0, "& > *": { mb: "0 !important" } }}>
               <GallerySearchBar onSearch={setSearchQuery} />
             </Box>
-            <Box sx={{ '& > *': { mb: '0 !important' } }}>
+            <Box sx={{ "& > *": { mb: "0 !important" } }}>
               <GallerySortSelect sort={sort} onSortChange={setSort} />
             </Box>
           </Stack>
@@ -145,10 +164,10 @@ export default function GalleriesPage() {
             <Box
               sx={{
                 mt: 3,
-                display: 'grid',
+                display: "grid",
                 gap: { xs: 1.5, md: 2.5 },
-                gridTemplateColumns: { xs: '1fr', md: '7fr 5fr' },
-                gridTemplateRows: { md: 'repeat(3, 1fr)' },
+                gridTemplateColumns: { xs: "1fr", md: "7fr 5fr" },
+                gridTemplateRows: { md: "repeat(3, 1fr)" },
                 minHeight: { md: 540 },
               }}
             >
@@ -164,8 +183,8 @@ export default function GalleriesPage() {
         <Box>
           <SectionLabel
             index="02"
-            label={searchQuery ? 'Results' : 'All collections'}
-            italic={searchQuery ? `for "${searchQuery}"` : 'most recent first'}
+            label={searchQuery ? "Results" : "All collections"}
+            italic={searchQuery ? `for "${searchQuery}"` : "most recent first"}
           />
           <Box sx={{ mt: 3 }}>
             <GalleryMosaic
@@ -173,13 +192,17 @@ export default function GalleriesPage() {
               isLoading={listLoading}
               error={listError}
               onSelect={select}
-              onEmptyAction={() => router.push('/app/media')}
+              onEmptyAction={() => router.push("/app/media")}
             />
           </Box>
         </Box>
       </Box>
 
-      <GalleryDrawer galleryId={galleryId} onClose={closeDrawer} onOpenItem={openItem} />
+      <GalleryDrawer
+        galleryId={galleryId}
+        onClose={closeDrawer}
+        onOpenItem={openItem}
+      />
       {galleryId && itemIdx !== null && (
         <LightboxConnected
           galleryId={galleryId}
@@ -188,7 +211,10 @@ export default function GalleriesPage() {
           onIndexChange={setItemIndex}
         />
       )}
-      <GalleryCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <GalleryCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
     </Box>
   );
 }
@@ -196,26 +222,39 @@ export default function GalleriesPage() {
 /* ─────────────────────────────────────────────────────────────────
  * Section label — small caps numeral + italic kicker
  * ───────────────────────────────────────────────────────────────── */
-function SectionLabel({ index, label, italic }: { index: string; label: string; italic?: string }) {
+function SectionLabel({
+  index,
+  label,
+  italic,
+}: {
+  index: string;
+  label: string;
+  italic?: string;
+}) {
   return (
-    <Stack direction="row" alignItems="baseline" spacing={2} sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
+    <Stack
+      direction="row"
+      alignItems="baseline"
+      spacing={2}
+      sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1.5 }}
+    >
       <Typography
         sx={{
-          fontFamily: 'var(--font-display)',
-          fontVariantNumeric: 'tabular-nums',
-          fontSize: '11px',
-          letterSpacing: '0.2em',
-          color: 'text.tertiary',
+          fontFamily: "var(--font-display)",
+          fontVariantNumeric: "tabular-nums",
+          fontSize: "11px",
+          letterSpacing: "0.2em",
+          color: "text.tertiary",
         }}
       >
         {index}
       </Typography>
       <Typography
         sx={{
-          fontFamily: 'var(--font-display)',
-          fontSize: { xs: '22px', md: '28px' },
+          fontFamily: "var(--font-display)",
+          fontSize: { xs: "22px", md: "28px" },
           fontWeight: 400,
-          letterSpacing: '-0.01em',
+          letterSpacing: "-0.01em",
         }}
       >
         {label}
@@ -223,11 +262,11 @@ function SectionLabel({ index, label, italic }: { index: string; label: string; 
       {italic && (
         <Typography
           sx={{
-            fontFamily: 'var(--font-display)',
-            fontStyle: 'italic',
-            fontSize: { xs: '14px', md: '16px' },
-            color: 'text.tertiary',
-            ml: 'auto !important',
+            fontFamily: "var(--font-display)",
+            fontStyle: "italic",
+            fontSize: { xs: "14px", md: "16px" },
+            color: "text.tertiary",
+            ml: "auto !important",
           }}
         >
           {italic}
@@ -240,69 +279,88 @@ function SectionLabel({ index, label, italic }: { index: string; label: string; 
 /* ─────────────────────────────────────────────────────────────────
  * Featured hero — large dominant tile (spans 3 rows on md)
  * ───────────────────────────────────────────────────────────────── */
-function FeaturedHero({ gallery, onSelect }: { gallery: Gallery; onSelect: (id: string) => void }) {
+function FeaturedHero({
+  gallery,
+  onSelect,
+}: {
+  gallery: Gallery;
+  onSelect: (id: string) => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      style={{ gridRow: 'span 3', display: 'flex' }}
+      style={{ gridRow: "span 3", display: "flex" }}
     >
       <Box
         role="button"
         tabIndex={0}
         onClick={() => onSelect(gallery.id)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onSelect(gallery.id);
           }
         }}
         sx={{
-          position: 'relative',
+          position: "relative",
           flex: 1,
           minHeight: 360,
-          borderRadius: 'lg',
-          overflow: 'hidden',
-          cursor: 'pointer',
+          borderRadius: "lg",
+          overflow: "hidden",
+          cursor: "pointer",
           background:
-            'linear-gradient(135deg, var(--joy-palette-neutral-200) 0%, var(--joy-palette-neutral-100) 100%)',
-          boxShadow: '0 12px 40px -16px rgba(0,0,0,0.35)',
-          transition: 'transform 600ms cubic-bezier(0.22,1,0.36,1), box-shadow 400ms',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 20px 60px -20px rgba(0,0,0,0.45)',
+            "linear-gradient(135deg, var(--joy-palette-neutral-200) 0%, var(--joy-palette-neutral-100) 100%)",
+          boxShadow: "0 12px 40px -16px rgba(0,0,0,0.35)",
+          transition:
+            "transform 600ms cubic-bezier(0.22,1,0.36,1), box-shadow 400ms",
+          "&:hover": {
+            transform: "translateY(-4px)",
+            boxShadow: "0 20px 60px -20px rgba(0,0,0,0.45)",
           },
-          '&:hover .nx-thumb': { transform: 'scale(1.04)' },
+          "&:hover .nx-thumb": { transform: "scale(1.04)" },
         }}
       >
-        <MediaThumb mediaId={gallery.cover_media_id} alt={`${gallery.title} cover`} zoomOnHover />
+        <MediaThumb
+          mediaId={gallery.cover_media_id}
+          alt={`${gallery.title} cover`}
+          zoomOnHover
+        />
 
         {/* gradient veil */}
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.0) 35%, rgba(0,0,0,0.65) 100%)',
+              "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.0) 35%, rgba(0,0,0,0.65) 100%)",
           }}
         />
         {/* corner badge */}
         {gallery.is_featured && (
-          <Box sx={{ position: 'absolute', top: 20, left: 20 }}>
+          <Box sx={{ position: "absolute", top: 20, left: 20 }}>
             <Chip size="sm" color="warning" variant="solid">
               Featured
             </Chip>
           </Box>
         )}
         {/* footer */}
-        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: { xs: 3, md: 4 } }}>
+        <Box
+          sx={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            p: { xs: 3, md: 4 },
+          }}
+        >
           <Typography
             level="body-xs"
             sx={{
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              color: 'rgba(255,255,255,0.78)',
+              fontFamily: "var(--font-display)",
+              fontStyle: "italic",
+              color: "rgba(255,255,255,0.78)",
               mb: 0.5,
             }}
           >
@@ -310,32 +368,39 @@ function FeaturedHero({ gallery, onSelect }: { gallery: Gallery; onSelect: (id: 
           </Typography>
           <Typography
             sx={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: "var(--font-display)",
               fontWeight: 400,
-              fontSize: { xs: '32px', md: '46px' },
+              fontSize: { xs: "32px", md: "46px" },
               lineHeight: 1.02,
-              letterSpacing: '-0.02em',
-              color: '#fff',
+              letterSpacing: "-0.02em",
+              color: "#fff",
               mb: 1.5,
-              textShadow: '0 2px 24px rgba(0,0,0,0.35)',
+              textShadow: "0 2px 24px rgba(0,0,0,0.35)",
             }}
           >
             {gallery.title}
           </Typography>
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Avatar
-              sx={{ width: 22, height: 22, fontSize: '0.7rem' }}
+              sx={{ width: 22, height: 22, fontSize: "0.7rem" }}
               src={`${API_BASE}/api/v1/users/${gallery.owner_id}/avatar`}
               alt={gallery.owner_id}
             />
-            <Typography level="body-xs" sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+            <Typography
+              level="body-xs"
+              sx={{ color: "rgba(255,255,255,0.85)", fontWeight: 500 }}
+            >
               {gallery.owner_id}
             </Typography>
-            <Typography level="body-xs" sx={{ color: 'rgba(255,255,255,0.55)' }}>
+            <Typography
+              level="body-xs"
+              sx={{ color: "rgba(255,255,255,0.55)" }}
+            >
               ·
             </Typography>
-            <Typography level="body-xs" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              {gallery.item_count} {gallery.item_count === 1 ? 'piece' : 'pieces'}
+            <Typography level="body-xs" sx={{ color: "rgba(255,255,255,0.7)" }}>
+              {gallery.item_count}{" "}
+              {gallery.item_count === 1 ? "piece" : "pieces"}
             </Typography>
           </Stack>
         </Box>
@@ -347,61 +412,74 @@ function FeaturedHero({ gallery, onSelect }: { gallery: Gallery; onSelect: (id: 
 /* ─────────────────────────────────────────────────────────────────
  * Featured side — smaller stacked tile
  * ───────────────────────────────────────────────────────────────── */
-function FeaturedSide({ gallery, onSelect }: { gallery: Gallery; onSelect: (id: string) => void }) {
+function FeaturedSide({
+  gallery,
+  onSelect,
+}: {
+  gallery: Gallery;
+  onSelect: (id: string) => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
-      style={{ display: 'flex' }}
+      style={{ display: "flex" }}
     >
       <Box
         role="button"
         tabIndex={0}
         onClick={() => onSelect(gallery.id)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onSelect(gallery.id);
           }
         }}
         sx={{
-          position: 'relative',
+          position: "relative",
           flex: 1,
           minHeight: 0,
-          borderRadius: 'md',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          background: 'var(--joy-palette-neutral-100)',
-          transition: 'transform 400ms ease',
-          '&:hover .nx-thumb': { transform: 'scale(1.05)' },
+          borderRadius: "md",
+          overflow: "hidden",
+          cursor: "pointer",
+          background: "var(--joy-palette-neutral-100)",
+          transition: "transform 400ms ease",
+          "&:hover .nx-thumb": { transform: "scale(1.05)" },
         }}
       >
-        <MediaThumb mediaId={gallery.cover_media_id} alt={`${gallery.title} cover`} zoomOnHover />
+        <MediaThumb
+          mediaId={gallery.cover_media_id}
+          alt={`${gallery.title} cover`}
+          zoomOnHover
+        />
 
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
             background:
-              'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.62) 100%)',
+              "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.62) 100%)",
           }}
         />
-        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: 2 }}>
+        <Box sx={{ position: "absolute", left: 0, right: 0, bottom: 0, p: 2 }}>
           <Typography
             sx={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '20px',
+              fontFamily: "var(--font-display)",
+              fontSize: "20px",
               lineHeight: 1.1,
-              color: '#fff',
+              color: "#fff",
               fontWeight: 500,
             }}
             noWrap
           >
             {gallery.title}
           </Typography>
-          <Typography level="body-xs" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.25 }}>
-            {gallery.item_count} {gallery.item_count === 1 ? 'piece' : 'pieces'}
+          <Typography
+            level="body-xs"
+            sx={{ color: "rgba(255,255,255,0.7)", mt: 0.25 }}
+          >
+            {gallery.item_count} {gallery.item_count === 1 ? "piece" : "pieces"}
           </Typography>
         </Box>
       </Box>
@@ -442,9 +520,13 @@ function GalleryMosaic({
     return (
       <Box
         sx={{
-          display: 'grid',
+          display: "grid",
           gap: 2,
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+          gridTemplateColumns: {
+            xs: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+            lg: "repeat(4, 1fr)",
+          },
         }}
       >
         {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -470,15 +552,15 @@ function GalleryMosaic({
   return (
     <Box
       sx={{
-        display: 'grid',
+        display: "grid",
         gap: { xs: 1.5, md: 2.5 },
         gridTemplateColumns: {
-          xs: 'repeat(2, 1fr)',
-          md: 'repeat(3, 1fr)',
-          lg: 'repeat(4, 1fr)',
-          xl: 'repeat(5, 1fr)',
+          xs: "repeat(2, 1fr)",
+          md: "repeat(3, 1fr)",
+          lg: "repeat(4, 1fr)",
+          xl: "repeat(5, 1fr)",
         },
-        gridAutoFlow: 'dense',
+        gridAutoFlow: "dense",
       }}
     >
       {data.items.map((g, idx) => {
@@ -490,13 +572,15 @@ function GalleryMosaic({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.32, delay: Math.min(idx * 0.02, 0.3) }}
-            style={{ gridColumn: wide ? 'span 2' : undefined }}
+            style={{ gridColumn: wide ? "span 2" : undefined }}
           >
             <Box
               sx={
                 wide
                   ? {
-                      '& > div > div:first-of-type': { aspectRatio: '16/9 !important' },
+                      "& > div > div:first-of-type": {
+                        aspectRatio: "16/9 !important",
+                      },
                     }
                   : undefined
               }
@@ -528,22 +612,23 @@ function GalleryDrawer({
   const confirm = useConfirmDialog((s) => s.confirm);
   const updateMut = useUpdateGallery();
   const deleteMut = useDeleteGallery();
-  const removeItemMut = useRemoveItem(galleryId ?? '');
+  const removeItemMut = useRemoveItem(galleryId ?? "");
 
-  const isOwner = !!gallery && !!sessionUser && gallery.owner_id === sessionUser.id;
+  const isOwner =
+    !!gallery && !!sessionUser && gallery.owner_id === sessionUser.id;
   const canContribute =
     isOwner ||
     (!!gallery &&
-      (gallery.contribution_policy === 'community' ||
-        gallery.contribution_policy === 'collaborators'));
+      (gallery.contribution_policy === "community" ||
+        gallery.contribution_policy === "collaborators"));
 
   const handleDelete = async () => {
     if (!gallery) return;
     const ok = await confirm({
       title: `Delete gallery?`,
       message: `Delete "${gallery.title}"? This cannot be undone.`,
-      confirmLabel: 'Delete',
-      tone: 'danger',
+      confirmLabel: "Delete",
+      tone: "danger",
     });
     if (!ok) return;
     deleteMut.mutate(gallery.id, { onSuccess: () => onClose() });
@@ -552,24 +637,33 @@ function GalleryDrawer({
   const handleRemoveItem = async (e: React.MouseEvent, itemId: string) => {
     e.stopPropagation();
     const ok = await confirm({
-      title: 'Remove item?',
-      message: 'Remove this item from the gallery?',
-      confirmLabel: 'Remove',
-      tone: 'danger',
+      title: "Remove item?",
+      message: "Remove this item from the gallery?",
+      confirmLabel: "Remove",
+      tone: "danger",
     });
     if (!ok) return;
     removeItemMut.mutate(itemId);
   };
 
-  const visibilityOpts: Array<Gallery['visibility']> = ['private', 'subgroup', 'community'];
-  const policyOpts: Array<Gallery['contribution_policy']> = [
-    'owner_only',
-    'collaborators',
-    'community',
+  const visibilityOpts: Array<Gallery["visibility"]> = [
+    "private",
+    "subgroup",
+    "community",
+  ];
+  const policyOpts: Array<Gallery["contribution_policy"]> = [
+    "owner_only",
+    "collaborators",
+    "community",
   ];
 
   return (
-    <Drawer open={!!galleryId} onClose={onClose} title={gallery?.title ?? 'Gallery'} width={680}>
+    <Drawer
+      open={!!galleryId}
+      onClose={onClose}
+      title={gallery?.title ?? "Gallery"}
+      width={680}
+    >
       {!gallery ? (
         <Skeleton height={200} />
       ) : (
@@ -585,8 +679,9 @@ function GalleryDrawer({
               <Typography level="body-sm" sx={{ fontWeight: 500 }} noWrap>
                 {gallery.owner_id}
               </Typography>
-              <Typography level="body-xs" sx={{ color: 'text.tertiary' }}>
-                {items?.length ?? 0} {(items?.length ?? 0) === 1 ? 'item' : 'items'}
+              <Typography level="body-xs" sx={{ color: "text.tertiary" }}>
+                {items?.length ?? 0}{" "}
+                {(items?.length ?? 0) === 1 ? "item" : "items"}
               </Typography>
             </Box>
             {isOwner && (
@@ -605,7 +700,7 @@ function GalleryDrawer({
 
           {/* Description */}
           {gallery.description && (
-            <Typography level="body-sm" sx={{ color: 'text.secondary' }}>
+            <Typography level="body-sm" sx={{ color: "text.secondary" }}>
               {gallery.description}
             </Typography>
           )}
@@ -615,9 +710,9 @@ function GalleryDrawer({
             <Typography
               level="body-xs"
               sx={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
-                color: 'text.tertiary',
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: "text.tertiary",
                 mb: 1,
               }}
             >
@@ -630,15 +725,18 @@ function GalleryDrawer({
                   <Chip
                     key={v}
                     size="sm"
-                    color={active ? 'primary' : 'neutral'}
-                    variant={active ? 'solid' : 'soft'}
+                    color={active ? "primary" : "neutral"}
+                    variant={active ? "solid" : "soft"}
                     onClick={
                       isOwner && !active
                         ? () =>
-                            updateMut.mutate({ id: gallery.id, body: { visibility: v } })
+                            updateMut.mutate({
+                              id: gallery.id,
+                              body: { visibility: v },
+                            })
                         : undefined
                     }
-                    sx={{ cursor: isOwner && !active ? 'pointer' : 'default' }}
+                    sx={{ cursor: isOwner && !active ? "pointer" : "default" }}
                   >
                     {v}
                   </Chip>
@@ -649,9 +747,9 @@ function GalleryDrawer({
             <Typography
               level="body-xs"
               sx={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
-                color: 'text.tertiary',
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: "text.tertiary",
                 mb: 1,
                 mt: 2,
               }}
@@ -665,8 +763,8 @@ function GalleryDrawer({
                   <Chip
                     key={p}
                     size="sm"
-                    color={active ? 'primary' : 'neutral'}
-                    variant={active ? 'solid' : 'soft'}
+                    color={active ? "primary" : "neutral"}
+                    variant={active ? "solid" : "soft"}
                     onClick={
                       isOwner && !active
                         ? () =>
@@ -676,9 +774,9 @@ function GalleryDrawer({
                             })
                         : undefined
                     }
-                    sx={{ cursor: isOwner && !active ? 'pointer' : 'default' }}
+                    sx={{ cursor: isOwner && !active ? "pointer" : "default" }}
                   >
-                    {p.replace('_', ' ')}
+                    {p.replace("_", " ")}
                   </Chip>
                 );
               })}
@@ -691,9 +789,9 @@ function GalleryDrawer({
               <Typography
                 level="body-xs"
                 sx={{
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.16em',
-                  color: 'text.tertiary',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.16em",
+                  color: "text.tertiary",
                   mb: 1,
                 }}
               >
@@ -708,9 +806,9 @@ function GalleryDrawer({
             <Typography
               level="body-xs"
               sx={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.16em',
-                color: 'text.tertiary',
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: "text.tertiary",
                 mb: 1,
               }}
             >
@@ -718,42 +816,48 @@ function GalleryDrawer({
             </Typography>
             {isLoading && <Skeleton height={200} />}
             {!isLoading && (!items || items.length === 0) && (
-              <EmptyState title="No items yet" description="Add media to this gallery." />
+              <EmptyState
+                title="No items yet"
+                description="Add media to this gallery."
+              />
             )}
             {items && items.length > 0 && (
               <Box
                 sx={{
-                  display: 'grid',
+                  display: "grid",
                   gap: 1,
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: "repeat(3, 1fr)",
                 }}
               >
                 {items.map((it, idx) => (
                   <Box
                     key={it.id}
                     sx={{
-                      position: 'relative',
-                      aspectRatio: '1',
-                      borderRadius: 'sm',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      background: 'var(--joy-palette-neutral-100)',
-                      transition: 'transform 240ms ease, opacity 240ms ease',
-                      '&:hover': { transform: 'scale(1.02)', opacity: 0.95 },
-                      '&:hover .nx-item-del': { opacity: 1 },
+                      position: "relative",
+                      aspectRatio: "1",
+                      borderRadius: "sm",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      background: "var(--joy-palette-neutral-100)",
+                      transition: "transform 240ms ease, opacity 240ms ease",
+                      "&:hover": { transform: "scale(1.02)", opacity: 0.95 },
+                      "&:hover .nx-item-del": { opacity: 1 },
                     }}
                     role="button"
                     tabIndex={0}
                     onClick={() => onOpenItem(idx)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         onOpenItem(idx);
                       }
                     }}
                     aria-label={it.caption ?? `Item ${idx + 1}`}
                   >
-                    <MediaThumb mediaId={it.media_id} alt={it.caption ?? `Item ${idx + 1}`} />
+                    <MediaThumb
+                      mediaId={it.media_id}
+                      alt={it.caption ?? `Item ${idx + 1}`}
+                    />
                     {isOwner && (
                       <IconButton
                         className="nx-item-del"
@@ -763,14 +867,14 @@ function GalleryDrawer({
                         onClick={(e) => handleRemoveItem(e, it.id)}
                         aria-label="Remove item"
                         sx={{
-                          position: 'absolute',
+                          position: "absolute",
                           top: 4,
                           right: 4,
                           opacity: 0,
-                          transition: 'opacity 180ms ease',
+                          transition: "opacity 180ms ease",
                           minHeight: 24,
                           minWidth: 24,
-                          padding: '4px',
+                          padding: "4px",
                         }}
                       >
                         <TrashIcon style={{ width: 14, height: 14 }} />
@@ -800,5 +904,12 @@ function LightboxConnected({
 }) {
   const { data: items } = useGalleryItems(galleryId);
   if (!items || items.length === 0) return null;
-  return <Lightbox items={items} index={index} onClose={onClose} onIndexChange={onIndexChange} />;
+  return (
+    <Lightbox
+      items={items}
+      index={index}
+      onClose={onClose}
+      onIndexChange={onIndexChange}
+    />
+  );
 }

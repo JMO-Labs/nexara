@@ -22,7 +22,7 @@ export default function AppHome() {
   const unreadNotifications = summary.data?.unread_notifications ?? 0;
 
   return (
-    <main className="flex flex-col gap-4 px-4 md:px-6 py-6 max-w-[1440px] mx-auto w-full">
+    <main className="flex flex-col px-4 md:px-6 py-6 max-w-[1440px] mx-auto w-full">
       <WelcomeBanner
         userName={userName}
         newPosts={newPosts}
@@ -30,6 +30,33 @@ export default function AppHome() {
         unreadNotifications={unreadNotifications}
         isLoading={summary.isLoading}
       />
+
+      {/* Editorial break — fading hairline with a terracotta diamond
+          marker, framing the dashboard as the "section break" of the page. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "relative",
+          marginTop: 28,
+          marginBottom: 16,
+          height: 1,
+          background:
+            "linear-gradient(90deg, transparent 0%, var(--joy-palette-divider) 18%, var(--joy-palette-divider) 82%, transparent 100%)",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: 8,
+            height: 8,
+            transform: "translate(-50%, -50%) rotate(45deg)",
+            background: "var(--joy-palette-primary-500)",
+            boxShadow: "0 0 0 4px var(--joy-palette-background-body)",
+          }}
+        />
+      </div>
 
       <WidgetGrid
         widgets={layout.widgets}

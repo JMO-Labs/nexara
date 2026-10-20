@@ -1,16 +1,20 @@
-'use client';
+"use client";
 /**
  * @file components/auth/OAuthButtons.tsx
  * @brief Lists configured OAuth providers as link buttons that kick off the
  *        provider's login redirect (handled entirely by the backend).
  */
-import { useEffect, useState } from 'react';
-import Stack from '@mui/joy/Stack';
-import Divider from '@mui/joy/Divider';
-import Typography from '@mui/joy/Typography';
-import JoyButton from '@mui/joy/Button';
-import { getAuthConfig, oauthLoginUrl, type OAuthProvider } from '@/lib/api/auth';
-import { API_BASE } from '@/lib/auth/session';
+import { useEffect, useState } from "react";
+import Stack from "@mui/joy/Stack";
+import Divider from "@mui/joy/Divider";
+import Typography from "@mui/joy/Typography";
+import JoyButton from "@mui/joy/Button";
+import {
+  getAuthConfig,
+  oauthLoginUrl,
+  type OAuthProvider,
+} from "@/lib/api/auth";
+import { API_BASE } from "@/lib/auth/session";
 
 export function OAuthButtons() {
   const [providers, setProviders] = useState<OAuthProvider[] | null>(null);

@@ -1,20 +1,24 @@
-'use client';
+"use client";
 /**
  * @file components/admin/InterestsTab.tsx
  * @brief Interest analytics display with chip-style categories.
  */
-import { useQuery } from '@tanstack/react-query';
-import { qk } from '@/lib/query-keys';
-import { getInterestAnalytics } from '@/lib/api/interests';
-import Stack from '@mui/joy/Stack';
-import Card from '@mui/joy/Card';
-import Chip from '@mui/joy/Chip';
-import Typography from '@mui/joy/Typography';
-import CircularProgress from '@mui/joy/CircularProgress';
-import Alert from '@mui/joy/Alert';
+import { useQuery } from "@tanstack/react-query";
+import { qk } from "@/lib/query-keys";
+import { getInterestAnalytics } from "@/lib/api/interests";
+import Stack from "@mui/joy/Stack";
+import Card from "@mui/joy/Card";
+import Chip from "@mui/joy/Chip";
+import Typography from "@mui/joy/Typography";
+import CircularProgress from "@mui/joy/CircularProgress";
+import Alert from "@mui/joy/Alert";
 
 export function InterestsTab() {
-  const { data: analytics, isLoading, error } = useQuery({
+  const {
+    data: analytics,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: qk.admin.interestsAnalytics(),
     queryFn: getInterestAnalytics,
     staleTime: 5 * 60 * 1000,
@@ -59,7 +63,7 @@ export function InterestsTab() {
       {Object.entries(grouped).map(([category, items]) => (
         <Card key={category} variant="outlined">
           <Stack spacing={1}>
-            <Typography level="title-sm" sx={{ textTransform: 'capitalize' }}>
+            <Typography level="title-sm" sx={{ textTransform: "capitalize" }}>
               {category}
             </Typography>
             <Stack
