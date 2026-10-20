@@ -74,7 +74,7 @@ Linear chain `0001 → 0007 → ...`. Two-tier filename style: ordinal `000N_*.p
 
 ### Frontend
 
-Nuxt 3 + Pinia stores (`stores/`) + Tailwind + Flowbite. i18n via `@nuxtjs/i18n` — wrap user-facing strings in `$t()` (backend uses `_()` from `babel`). PWA via `@vite-pwa/nuxt`. Tests: Vitest + happy-dom; e2e: Playwright. Pages auto-routed from `pages/`.
+React/Next.js - need more details
 
 ## Conventions
 
