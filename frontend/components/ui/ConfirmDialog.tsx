@@ -8,7 +8,7 @@
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { Modal } from "./Modal";
-import { Button } from "./button";
+import { Button } from "./shadcn/button";
 
 export function ConfirmDialog() {
   const s = useConfirmDialog();

@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./dialog";
+} from "./shadcn/dialog";
 
 export interface ModalProps {
   open: boolean;

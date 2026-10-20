@@ -10,7 +10,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./select";
+} from "./shadcn/select";
 
 export interface SelectProps {
   value?: string;

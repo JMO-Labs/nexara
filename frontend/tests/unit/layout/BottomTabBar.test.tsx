@@ -11,15 +11,20 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/app/chat",
   useRouter: () => ({ replace: vi.fn() }),
 }));
-vi.mock("@/lib/api/auth", () => ({ logout: (...a: unknown[]) => logout(...a) }));
+vi.mock("@/lib/api/auth", () => ({
+  logout: (...a: unknown[]) => logout(...a),
+}));
 vi.mock("@/lib/auth/session", () => ({ setAccessToken: vi.fn() }));
 
 import { useSession } from "@/stores/session";
-import { BottomTabBar, TAB_BAR_CLEARANCE } from "@/components/layout/BottomTabBar";
+import {
+  BottomTabBar,
+  TAB_BAR_CLEARANCE,
+} from "@/components/layout/BottomTabBar";
 
 function setAdmin(isAdmin: boolean) {
   useSession.setState({
-    user: { is_admin: isAdmin, role: isAdmin ? "admin" : "member" } as never,
+    user: { role: isAdmin ? "admin" : "member" } as never,
     status: "authenticated",
   });
 }
@@ -46,7 +51,14 @@ describe("BottomTabBar", () => {
     render(<BottomTabBar />);
     await userEvent.click(screen.getByRole("button", { name: "More" }));
     const dlg = screen.getByRole("dialog", { name: "More" });
-    for (const n of ["Galleries", "Media", "Members", "Notifications", "Settings", "Help"])
+    for (const n of [
+      "Galleries",
+      "Media",
+      "Members",
+      "Notifications",
+      "Settings",
+      "Help",
+    ])
       expect(dlg).toContainElement(screen.getByRole("link", { name: n }));
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
   });

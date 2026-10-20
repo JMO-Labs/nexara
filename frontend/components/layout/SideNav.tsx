@@ -11,6 +11,7 @@ import { useSession } from "@/stores/session";
 import {
   MORE_NAV,
   PRIMARY_NAV,
+  isAdmin,
   isNavActive,
   visibleNav,
   type NavItem,
@@ -52,11 +53,11 @@ function NavLink({
 export function SideNav() {
   const pathname = usePathname();
   const user = useSession((s) => s.user);
-  const isAdmin = !!(user?.is_admin ?? user?.role === "admin");
+  const admin = isAdmin(user);
   const [open, setOpen] = useState(false);
 
   const render = (items: NavItem[]) =>
-    visibleNav(items, isAdmin).map((i) => (
+    visibleNav(items, admin).map((i) => (
       <NavLink
         key={i.href}
         item={i}

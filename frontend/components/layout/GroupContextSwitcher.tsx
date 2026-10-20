@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/shadcn/dropdown-menu";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { gradientFor, monogram } from "@/lib/groupVisuals";
 

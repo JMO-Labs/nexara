@@ -15,7 +15,6 @@ const user = (admin: boolean) =>
   ({
     id: "1",
     role: admin ? "admin" : "member",
-    is_admin: admin,
   }) as CurrentUser;
 
 describe("SideNav", () => {

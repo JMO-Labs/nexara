@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/shadcn/dropdown-menu";
 import { useSession } from "@/stores/session";
 import { useModals } from "@/stores/modals";
 import { logout as apiLogout } from "@/lib/api/auth";

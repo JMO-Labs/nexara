@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./shadcn/sheet";
 
 export interface DrawerProps {
   open: boolean;

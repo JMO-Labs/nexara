@@ -4,9 +4,13 @@
  * @brief Radix tooltip wrapper. Mount TooltipProvider once in Shell.
  */
 import type { ReactElement, ReactNode } from "react";
-import { Tooltip as RTooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+import {
+  Tooltip as RTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./shadcn/tooltip";
 
-export { TooltipProvider } from "./tooltip";
+export { TooltipProvider } from "./shadcn/tooltip";
 
 export interface TooltipProps {
   content: ReactNode;

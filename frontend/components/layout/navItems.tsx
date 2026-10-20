@@ -41,6 +41,15 @@ export function isNavActive(pathname: string, href: string): boolean {
  * @param isAdmin viewer is admin
  * @return visible items
  */
+/**
+ * @brief Admin check. Backend exposes only `role`, never `is_admin`.
+ * @param user session user or null
+ * @return true when role is admin
+ */
+export function isAdmin(user?: { role?: string } | null): boolean {
+  return user?.role === "admin";
+}
+
 export function visibleNav(items: NavItem[], isAdmin: boolean): NavItem[] {
   return items.filter((i) => !i.adminOnly || isAdmin);
 }

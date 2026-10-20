@@ -26,3 +26,10 @@ describe("navItems", () => {
     expect(isNavActive("/app/chat", "/app")).toBe(false);
   });
 });
+
+test("isAdmin is role-based", async () => {
+  const { isAdmin } = await import("@/components/layout/navItems");
+  expect(isAdmin({ role: "admin" })).toBe(true);
+  expect(isAdmin({ role: "member" })).toBe(false);
+  expect(isAdmin(null)).toBe(false);
+});

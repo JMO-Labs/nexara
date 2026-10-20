@@ -10,10 +10,10 @@ import { Drawer } from "@/components/ui/Drawer";
 import { useSession } from "@/stores/session";
 import { logout as apiLogout } from "@/lib/api/auth";
 import { setAccessToken } from "@/lib/auth/session";
-import { MORE_NAV, visibleNav } from "./navItems";
+import { MORE_NAV, isAdmin, visibleNav } from "./navItems";
 
 const ROW =
-  "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-ink hover:bg-surface-strong";
+  "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-ink hover:bg-accent/40";
 
 /**
  * @brief More sheet.
@@ -28,7 +28,7 @@ export function MoreSheet({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const isAdmin = useSession((s) => !!s.user?.is_admin);
+  const admin = useSession((s) => isAdmin(s.user));
   const reset = useSession((s) => s.reset);
 
   const onLogout = async () => {
@@ -46,7 +46,7 @@ export function MoreSheet({
   return (
     <Drawer open={open} onClose={onClose} title="More" side="bottom">
       <ul className="m-0 list-none p-0">
-        {visibleNav(MORE_NAV, isAdmin).map(({ label, href, Icon }) => (
+        {visibleNav(MORE_NAV, admin).map(({ label, href, Icon }) => (
           <li key={href}>
             <Link href={href} onClick={onClose} className={ROW}>
               <Icon aria-hidden className="size-5" />
