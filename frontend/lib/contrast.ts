@@ -5,7 +5,7 @@
 
 /** Relative luminance of a #RRGGBB color. */
 function luminance(hex: string): number {
-  const n = parseInt(hex.replace('#', ''), 16);
+  const n = parseInt(hex.replace("#", ""), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
     const c = v / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;

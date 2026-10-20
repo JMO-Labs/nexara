@@ -62,7 +62,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : (
           <>
             {loading && (
-              <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
+              <Loader2
+                aria-hidden
+                className="size-4 motion-safe:animate-spin"
+              />
             )}
             {children}
           </>

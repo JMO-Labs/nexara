@@ -7,7 +7,8 @@ import * as React from "react";
 import { Field, controlClass, type FieldProps } from "./Field";
 import { cn } from "@/lib/utils";
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & FieldProps;
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement> &
+  FieldProps;
 
 /**
  * @brief Input primitive.

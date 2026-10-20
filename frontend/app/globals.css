@@ -7,14 +7,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --nx-bg: #E9F1E4;
-  --nx-surface: #FFFFFF;
-  --nx-surface-strong: #14301E;
-  --nx-ink: #14301E;
-  --nx-accent: #C6B4F5;
-  --nx-sun: #F2D16B;
-  --nx-leaf: #7BAE7F;
-  --nx-muted: #9DB8A2;
+  --nx-bg: #e9f1e4;
+  --nx-surface: #ffffff;
+  --nx-surface-strong: #14301e;
+  --nx-ink: #14301e;
+  --nx-accent: #c6b4f5;
+  --nx-sun: #f2d16b;
+  --nx-leaf: #7bae7f;
+  --nx-muted: #9db8a2;
 
   --background: var(--nx-bg);
   --foreground: var(--nx-ink);
@@ -36,14 +36,14 @@
 }
 
 .dark {
-  --nx-bg: #0E1F15;
-  --nx-surface: #16291D;
-  --nx-surface-strong: #1B3524;
-  --nx-ink: #DCE9D8;
-  --nx-accent: #C6B4F5;
-  --nx-sun: #C9A94A;
-  --nx-leaf: #4E7F56;
-  --nx-muted: #86A38C;
+  --nx-bg: #0e1f15;
+  --nx-surface: #16291d;
+  --nx-surface-strong: #1b3524;
+  --nx-ink: #dce9d8;
+  --nx-accent: #c6b4f5;
+  --nx-sun: #c9a94a;
+  --nx-leaf: #4e7f56;
+  --nx-muted: #86a38c;
 }
 
 @theme inline {
