@@ -9,13 +9,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import FormHelperText from "@mui/joy/FormHelperText";
-import Alert from "@mui/joy/Alert";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { register as apiRegister } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
@@ -61,80 +55,55 @@ export default function RegisterPage() {
       subtitle={
         <>
           Already a member?{" "}
-          <Link href="/login" style={{ textDecoration: "underline" }}>
+          <Link href="/login" className="underline">
             Sign in
           </Link>
         </>
       }
     >
       {error && (
-        <Alert color="danger" variant="soft">
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {error}
-        </Alert>
+        </p>
       )}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Stack spacing={2.5}>
-          <FormControl error={!!formState.errors.display_name}>
-            <FormLabel>Display name</FormLabel>
-            <Input
-              autoFocus
-              slotProps={{ input: { ...register("display_name") } }}
-            />
-            {formState.errors.display_name && (
-              <FormHelperText>
-                {formState.errors.display_name.message}
-              </FormHelperText>
-            )}
-          </FormControl>
-          <FormControl error={!!formState.errors.username}>
-            <FormLabel>Username</FormLabel>
-            <Input
-              slotProps={{
-                input: { autoComplete: "username", ...register("username") },
-              }}
-            />
-            {formState.errors.username && (
-              <FormHelperText>
-                {formState.errors.username.message}
-              </FormHelperText>
-            )}
-          </FormControl>
-          <FormControl error={!!formState.errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              slotProps={{
-                input: { autoComplete: "email", ...register("email") },
-              }}
-            />
-            {formState.errors.email && (
-              <FormHelperText>{formState.errors.email.message}</FormHelperText>
-            )}
-          </FormControl>
-          <FormControl error={!!formState.errors.password}>
-            <FormLabel>Password</FormLabel>
-            <Input
-              type="password"
-              slotProps={{
-                input: {
-                  autoComplete: "new-password",
-                  ...register("password"),
-                },
-              }}
-            />
-            <FormHelperText>
-              {formState.errors.password?.message ?? "At least 12 characters."}
-            </FormHelperText>
-          </FormControl>
-          <Button
-            type="submit"
-            size="lg"
-            loading={formState.isSubmitting}
-            fullWidth
-          >
-            Create account
-          </Button>
-        </Stack>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-4"
+      >
+        <Input
+          label="Display name"
+          autoFocus
+          error={formState.errors.display_name?.message}
+          {...register("display_name")}
+        />
+        <Input
+          label="Username"
+          autoComplete="username"
+          error={formState.errors.username?.message}
+          {...register("username")}
+        />
+        <Input
+          label="Email"
+          type="email"
+          autoComplete="email"
+          error={formState.errors.email?.message}
+          {...register("email")}
+        />
+        <Input
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          hint="At least 12 characters."
+          error={formState.errors.password?.message}
+          {...register("password")}
+        />
+        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+          Create account
+        </Button>
       </form>
     </AuthCard>
   );

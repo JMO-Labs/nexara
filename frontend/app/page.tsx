@@ -1,72 +1,29 @@
 /**
  * @file app/page.tsx
- * @brief Phase 0 placeholder landing. Confirms theme/fonts/providers
- *        wire up. Replaced by (marketing)/page.tsx in Phase 2.
+ * @brief Public landing. Signed-in users (session hint cookie) go to /app;
+ *        everyone else sees a minimal welcome with a sign-in link.
  */
-"use client";
-import { Box, Stack, Typography, Button, Sheet, Chip } from "@mui/joy";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui";
 
-export default function Home() {
+/**
+ * @brief Landing page server component.
+ * @return welcome screen, or a redirect to /app
+ */
+export default async function Home() {
+  if ((await cookies()).has("nx_session")) redirect("/app");
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        px: 3,
-        py: 8,
-      }}
-    >
-      <Sheet
-        variant="outlined"
-        sx={{
-          maxWidth: 720,
-          width: "100%",
-          p: { xs: 4, sm: 6 },
-          borderRadius: "lg",
-          boxShadow: "md",
-          display: "flex",
-          flexDirection: "column",
-          gap: 3,
-        }}
-      >
-        <Chip
-          size="sm"
-          variant="soft"
-          color="warning"
-          sx={{ alignSelf: "flex-start" }}
-        >
-          Phase 0 · bootstrap
-        </Chip>
-        <Typography level="h1" sx={{ fontFamily: "display" }}>
-          Nexara, rewritten.
-        </Typography>
-        <Typography level="body-md" color="neutral">
-          Warm Editorial palette online. Fraunces &amp; Geist served via{" "}
-          <Typography component="code" fontFamily="code">
-            next/font
-          </Typography>
-          . Joy CSS-vars, TanStack Query, Zustand, Framer Motion, next-themes
-          mounted.
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <Button component={Link} href="/login" size="lg">
-            Sign in
-          </Button>
-          <Button
-            component={Link}
-            href="/app"
-            size="lg"
-            variant="outlined"
-            color="neutral"
-          >
-            Enter app
-          </Button>
-        </Stack>
-      </Sheet>
-    </Box>
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-bg px-4 py-8 text-center text-ink">
+      <p className="text-3xl font-black">Nexara</p>
+      <h1 className="text-2xl font-semibold">Welcome to the Garden Club</h1>
+      <p className="max-w-sm text-sm opacity-80">
+        A private home for your family and friends.
+      </p>
+      <Button asChild size="lg">
+        <Link href="/login">Sign in</Link>
+      </Button>
+    </main>
   );
 }

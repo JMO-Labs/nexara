@@ -8,10 +8,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Stack from "@mui/joy/Stack";
-import Alert from "@mui/joy/Alert";
-import Typography from "@mui/joy/Typography";
+import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { oauthExchange } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
@@ -46,10 +43,13 @@ export default function OAuthCallbackPage() {
   if (missingCode || error) {
     return (
       <AuthCard title="Sign-in failed">
-        <Alert color="danger" variant="soft">
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {error ?? "Missing OAuth code."}
-        </Alert>
-        <Link href="/login" style={{ textDecoration: "underline" }}>
+        </p>
+        <Link href="/login" className="underline">
           Back to sign-in
         </Link>
       </AuthCard>
@@ -58,12 +58,10 @@ export default function OAuthCallbackPage() {
 
   return (
     <AuthCard title="Finishing sign-in…">
-      <Stack direction="row" spacing={2} alignItems="center">
-        <CircularProgress size="sm" />
-        <Typography level="body-md" color="neutral">
-          Trading codes with the identity provider.
-        </Typography>
-      </Stack>
+      <div role="status" className="flex items-center gap-3 text-sm opacity-80">
+        <Loader2 aria-hidden className="size-5 motion-safe:animate-spin" />
+        <span>Trading codes with the identity provider.</span>
+      </div>
     </AuthCard>
   );
 }
