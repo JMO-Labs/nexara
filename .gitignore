@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -288,7 +288,7 @@ Thumbs.db
 # =============================================================================
 # Plans (local planning documents, not part of the application source)
 # =============================================================================
-plans/
+/plans/
 
 node_modules/
 
