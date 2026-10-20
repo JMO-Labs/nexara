@@ -4,6 +4,7 @@
  * @brief Email/password login. Routes through 2FA when required, otherwise
  *        lands on /app (or the `next` query param).
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -33,7 +34,7 @@ type FormData = z.infer<typeof Schema>;
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/app";
+  const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({

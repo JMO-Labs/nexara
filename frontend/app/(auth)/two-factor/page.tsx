@@ -5,6 +5,7 @@
  *        with `requires_2fa: true`. The two_factor_token rides in the URL
  *        so a refresh on this page still recovers the flow.
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -35,7 +36,7 @@ export default function TwoFactorPage() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
-  const next = params.get("next") ?? "/app";
+  const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({

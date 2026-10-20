@@ -390,3 +390,33 @@ class TestGetHistory:
         channel_repo.get_for_user.return_value = None
         with pytest.raises(NotFoundError):
             await service.get_history(_make_user(), CHANNEL_ID)
+
+
+class TestChatActivityPrivacy:
+    """@brief DM messages must never become community-visible activity."""
+
+    @pytest.mark.parametrize(("channel_type", "recorded"), [("direct", False), ("community", True)])
+    async def test_activity_only_for_public_channels(
+        self, channel_repo, message_repo, broadcaster, link_preview_enqueue, channel_type, recorded
+    ) -> None:
+        activity_repo = AsyncMock()
+        limiter = AsyncMock()
+        limiter.set.return_value = True
+        limiter.incr.return_value = 1
+        svc = ChatService(
+            channel_repo=channel_repo,
+            message_repo=message_repo,
+            community_id=COMMUNITY_ID,
+            broadcaster=broadcaster,
+            link_preview_enqueue=link_preview_enqueue,
+            rate_limiter=limiter,
+            activity_repo=activity_repo,
+        )
+        user = _make_user()
+        channel_repo.get_for_user.return_value = _make_channel(channel_type)
+        channel_repo.list_member_ids.return_value = [user.id]
+        message_repo.create_message.return_value = _make_message()
+
+        await svc.send_message(user, CHANNEL_ID, "hi")
+
+        assert activity_repo.record.await_count == (1 if recorded else 0)
