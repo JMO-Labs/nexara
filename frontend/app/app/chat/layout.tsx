@@ -1,23 +1,14 @@
 /**
  * @file app/app/chat/layout.tsx
- * @brief Strips the Shell main padding for chat. Chat pane fills the
- *        viewport's main area exactly; composer cannot be scrolled past.
+ * @brief Cancels Shell main padding so the chat fills the viewport below the
+ *        top bar (and above the phone tab bar).
  */
 import type { ReactNode } from "react";
-import Box from "@mui/joy/Box";
 
-export default function ChatLayout({ children }: { children: ReactNode }) {
+export default function ChatRouteLayout({ children }: { children: ReactNode }) {
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        mx: { xs: -2, md: -3 },
-        my: { xs: -2, md: -3 },
-      }}
-    >
+    <div className="-mx-4 flex h-[calc(100dvh-3.5rem-84px-env(safe-area-inset-bottom))] min-h-0 md:-mx-8 md:h-[calc(100dvh-3.5rem)]">
       {children}
-    </Box>
+    </div>
   );
 }

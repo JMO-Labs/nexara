@@ -34,3 +34,6 @@ export {
   type Subgroup,
 } from "./ScopeSelect";
 export * as motionPrimitives from "./motion";
+export { Switch } from "./Switch";
+export { Checkbox } from "./Checkbox";
+export { Popover, PopoverTrigger, PopoverContent } from "./Popover";
