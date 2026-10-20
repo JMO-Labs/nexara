@@ -20,13 +20,18 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
+from app.repositories.interest_repo import InterestCategoryRepository, InterestRepository
 from app.repositories.notification_repo import NotificationRepository
+from app.repositories.poll_repo import PollRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.post import CommentCreate, PostCreate, PostUpdate, ReactionResponse, ReactionToggle
+from app.services.interest_service import InterestService
 from app.services.media_service import MediaService
 from app.services.notification_service import NotificationService
+from app.services.poll_service import PollService
 from app.services.post_service import PostService
 from app.services.realtime.event_bus import event_bus
 
@@ -71,6 +76,16 @@ def _build_service(
         event_bus=event_bus,
     )
     media_svc = _build_media_service(db, community_id, settings)
+    poll_svc = PollService(
+        poll_repo=PollRepository(db),
+        community_id=community_id,
+        event_bus=event_bus,
+    )
+    interest_svc = InterestService(
+        interest_repo=InterestRepository(db),
+        category_repo=InterestCategoryRepository(db),
+        community_id=community_id,
+    )
 
     return PostService(
         post_repo=PostRepository(db),
@@ -80,6 +95,9 @@ def _build_service(
         community_id=community_id,
         event_bus=event_bus,
         media_attacher=media_svc.attach_to_post,
+        poll_service=poll_svc,
+        prompt_repo=PromptRepository(db),
+        interest_service=interest_svc,
     )
 
 
@@ -89,9 +107,12 @@ async def list_feed(
     service: PostService = Depends(_build_service),
     limit: int = Query(20, ge=1, le=50),
     cursor: str | None = Query(None),
+    subgroup_id: uuid.UUID | None = None,
 ) -> dict[str, Any]:
     """@brief Return paginated activity feed for the authenticated user."""
-    return await service.list_feed(viewer_id=user.id, cursor=cursor, limit=limit)
+    return await service.list_feed(
+        viewer_id=user.id, cursor=cursor, limit=limit, subgroup_id=subgroup_id
+    )
 
 
 @router.post("", status_code=201)
@@ -105,6 +126,9 @@ async def create_post(
         user=user,
         content=body.content,
         media_ids=body.media_ids,
+        poll=body.poll,
+        reply_to_prompt_id=body.reply_to_prompt_id,
+        subgroup_id=body.subgroup_id,
     )
 
 

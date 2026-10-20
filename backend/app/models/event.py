@@ -11,8 +11,10 @@ from sqlalchemy import (
     Boolean,
     Computed,
     DateTime,
+    Float,
     ForeignKey,
     Index,
+    Integer,
     Text,
     UniqueConstraint,
     func,
@@ -56,18 +58,37 @@ class Event(Base):
         UUID(as_uuid=True),
         ForeignKey("events.id"),
     )
+    original_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ical_uid: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
     subgroup_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("subgroups.id", ondelete="SET NULL"),
     )
+    calendar_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("calendars.id", ondelete="SET NULL"),
+    )
     source_subscription_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("calendar_subscriptions.id", ondelete="SET NULL"),
     )
     source_removed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    color: Mapped[str | None] = mapped_column(Text)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
     rsvp_labels: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    contribution_slots: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[]",
+    )
+    reminder_offsets_minutes: Mapped[list[int]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[60]",
+    )
+    locally_modified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     search_fts = mapped_column(
         TSVECTOR,
         Computed(
@@ -166,6 +187,9 @@ class CalendarSubscription(Base):
     sync_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sync_error: Mapped[str | None] = mapped_column(Text)
+    locally_modified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    shared_by_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    sync_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

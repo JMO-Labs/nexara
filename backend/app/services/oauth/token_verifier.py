@@ -1,118 +1,138 @@
 """
 @file token_verifier.py
-@brief ID token verification and claim extraction for OAuth/OIDC.
+@brief OIDC ID token verification and claim extraction.
 
-Verifies JWT id_tokens using provider JWKS and extracts claims
-using provider-specific claim mappings.
+Uses authlib for JWKS fetching and JWT verification. Caches JWKS per URI.
 """
 
 from __future__ import annotations
 
-import time
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 import structlog
 from authlib.jose import JsonWebKey, JsonWebToken
 
 from app.core.exceptions import AuthenticationError
-from app.models.oauth_provider import OAuthProvider
-from app.services.oauth.user_provisioner import OAuthAuthResult
+
+from .user_provisioner import OAuthAuthResult
+
+if TYPE_CHECKING:
+    from app.models.oauth_provider import OAuthProvider
 
 logger = structlog.get_logger(__name__)
 
-_JWKS_CACHE: dict[str, tuple[dict[str, Any], float]] = {}
-"""@brief Module-level JWKS cache: jwks_uri -> (jwks_dict, timestamp)."""
-_JWKS_TTL = 3600
+_JWKS_CACHE: dict[str, dict[str, Any]] = {}
+"""@brief Module-level cache for JWKS by URI."""
 
 
 async def _fetch_jwks(jwks_uri: str) -> dict[str, Any]:
     """
-    @brief Fetch JWKS from URI (cached).
+    @brief Fetch JWKS from URI with caching.
 
-    @param jwks_uri JWKS endpoint URL.
-    @return JWKS dict.
+    @param jwks_uri URL of the JWKS endpoint.
+    @return JWKS dict (keys, etc.).
     """
-    now = time.monotonic()
     if jwks_uri in _JWKS_CACHE:
-        cached, ts = _JWKS_CACHE[jwks_uri]
-        if now - ts < _JWKS_TTL:
-            return cached
-        del _JWKS_CACHE[jwks_uri]
+        return _JWKS_CACHE[jwks_uri]
     async with httpx.AsyncClient() as client:
         resp = await client.get(jwks_uri)
         resp.raise_for_status()
-        jwks: dict[str, Any] = resp.json()
-    _JWKS_CACHE[jwks_uri] = (jwks, now)
+        jwks = cast(dict[str, Any], resp.json())
+    _JWKS_CACHE[jwks_uri] = jwks
     return jwks
 
 
-async def verify_id_token(id_token: str, provider: OAuthProvider) -> dict[str, Any]:
+def _get_claim(claims: dict[str, Any], key: str | None, fallback: str) -> Any:
+    """@brief Get claim by key or fallback."""
+    if key and key in claims:
+        return claims.get(key)
+    return claims.get(fallback)
+
+
+async def verify_id_token(
+    id_token: str,
+    provider: OAuthProvider,
+) -> dict[str, Any]:
     """
-    @brief Verify and decode an OIDC id_token.
+    @brief Verify OIDC ID token using provider JWKS.
 
-    If provider has jwks_uri: fetch JWKS, verify signature with authlib.
-    If no jwks_uri: decode without verification (log warning).
+    If provider has jwks_uri: fetches JWKS, verifies signature.
+    If no jwks_uri: decodes without verification (logs warning).
+    On exception: raises AuthenticationError.
 
-    @param id_token Raw id_token string.
-    @param provider OAuth provider config.
-    @return Decoded claims dict.
+    @param id_token Raw ID token JWT string.
+    @param provider OAuth provider with optional jwks_uri.
+    @return Verified claims dict.
     @raises AuthenticationError If verification fails.
     """
     try:
-        if provider.jwks_uri:
-            jwks_data = await _fetch_jwks(provider.jwks_uri)
-            jwks = JsonWebKey.import_key_set(jwks_data)
-            jwt = JsonWebToken(["RS256", "ES256"])
-            raw_claims = jwt.decode(id_token, jwks)
-            if hasattr(raw_claims, "validate"):
-                raw_claims.validate()
-            decoded: dict[str, Any] = dict(raw_claims)
-            return decoded
-        from authlib.jose import jwt as authlib_jwt
+        jwks_uri = getattr(provider, "jwks_uri", None) or (
+            provider.jwks_uri if hasattr(provider, "jwks_uri") else None
+        )
+        if jwks_uri:
+            jwks = await _fetch_jwks(jwks_uri)
+            key_set = JsonWebKey.import_key_set(jwks)
+            jwt_instance = JsonWebToken(["RS256", "ES256"])
+            claims = jwt_instance.decode(
+                id_token,
+                key_set,
+                claims_options={"aud": {"essential": False}},
+            )
+            if hasattr(claims, "validate"):
+                claims.validate()
+            return dict(claims) if not isinstance(claims, dict) else claims
+        logger.warning("Provider has no jwks_uri, decoding id_token without verification")
+        import base64
+        import json
 
-        logger.warning("oauth_id_token_no_jwks", provider_slug=getattr(provider, "slug", "?"))
-        raw_claims = authlib_jwt.decode(id_token, options={"verify_signature": False})
-        result: dict[str, Any] = dict(raw_claims)
-        return result
+        from authlib.jose import jwt
+
+        try:
+            claims = jwt.decode(id_token, key=None)
+        except Exception:
+            parts = id_token.split(".")
+            if len(parts) != 3:
+                raise AuthenticationError(message="Invalid OIDC id_token")
+            payload_b64 = parts[1]
+            payload_b64 += "=" * (4 - len(payload_b64) % 4)
+            claims = json.loads(base64.urlsafe_b64decode(payload_b64))
+        return dict(claims) if not isinstance(claims, dict) else claims
     except Exception as exc:
-        raise AuthenticationError(
-            message="Invalid OIDC id_token",
-            details={"error": str(exc)},
-        ) from exc
+        raise AuthenticationError(message="Invalid OIDC id_token") from exc
 
 
-def extract_claims(claims: dict[str, Any], provider: OAuthProvider) -> OAuthAuthResult:
+def extract_claims(
+    claims: dict[str, Any],
+    provider: OAuthProvider,
+) -> OAuthAuthResult:
     """
-    @brief Extract OAuthAuthResult from id_token claims using provider mapping.
+    @brief Extract sub, email, display_name, avatar_url, groups from claims.
 
-    @param claims Decoded id_token claims.
-    @param provider OAuth provider with claim name config.
-    @return OAuthAuthResult with sub, email, name, groups, avatar.
+    Uses provider's claim mapping (sub_claim, email_claim, etc.).
+
+    @param claims Verified ID token claims.
+    @param provider OAuth provider with claim mappings.
+    @return OAuthAuthResult with extracted values.
     """
-    sub_claim = getattr(provider, "sub_claim", "sub") or "sub"
-    email_claim = getattr(provider, "email_claim", "email") or "email"
-    name_claim = getattr(provider, "name_claim", "name") or "name"
-    group_claim = getattr(provider, "group_claim", "groups") or "groups"
-    avatar_claim = getattr(provider, "avatar_claim", "picture") or "picture"
+    sub = str(_get_claim(claims, getattr(provider, "sub_claim", None), "sub") or "")
+    email = _get_claim(claims, getattr(provider, "email_claim", None), "email")
+    display_name = _get_claim(claims, getattr(provider, "name_claim", None), "name")
+    avatar_url = _get_claim(claims, getattr(provider, "avatar_claim", None), "picture")
 
-    def _get(key: str, default: Any = None) -> Any:
-        val = claims.get(key)
-        return val if val is not None else default
-
-    groups_raw = _get(group_claim)
+    group_claim = getattr(provider, "group_claim", "groups")
+    groups_raw = _get_claim(claims, group_claim, "groups")
     if isinstance(groups_raw, list):
         groups = [str(g) for g in groups_raw]
-    elif groups_raw is not None:
-        groups = [str(groups_raw)]
+    elif isinstance(groups_raw, str):
+        groups = [groups_raw]
     else:
         groups = []
 
     return OAuthAuthResult(
-        sub=str(_get(sub_claim, "")),
-        email=_get(email_claim),
-        display_name=_get(name_claim),
-        avatar_url=_get(avatar_claim),
+        sub=sub,
+        email=str(email) if email else None,
+        display_name=str(display_name) if display_name else None,
+        avatar_url=str(avatar_url) if avatar_url else None,
         groups=groups,
-        raw_claims=claims,
     )

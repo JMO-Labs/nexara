@@ -18,10 +18,14 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
+from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.notification_service import NotificationService
+from app.services.poll_service import PollService
 from app.services.realtime import events
 from app.services.realtime.event_bus import EventBus
 
@@ -41,6 +45,10 @@ class PostService:
         *,
         event_bus: EventBus | None = None,
         media_attacher: Callable[[uuid.UUID, list[uuid.UUID], User], Awaitable[None]] | None = None,
+        poll_service: PollService | None = None,
+        prompt_repo: PromptRepository | None = None,
+        interest_service: Any | None = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -49,12 +57,17 @@ class PostService:
         self._community_id = community_id
         self._event_bus = event_bus
         self._media_attacher = media_attacher
+        self._poll_service = poll_service
+        self._prompt_repo = prompt_repo
+        self._interest_service = interest_service
+        self._activity_repo = activity_repo
 
     async def list_feed(
         self,
         viewer_id: uuid.UUID | None = None,
         cursor: str | None = None,
         limit: int = 20,
+        subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Fetch paginated activity feed.
         @return Dict with items, cursor, and has_more.
@@ -64,6 +77,7 @@ class PostService:
             viewer_id=viewer_id,
             cursor=cursor,
             limit=limit,
+            subgroup_id=subgroup_id,
         )
         return {
             "items": items,
@@ -93,16 +107,56 @@ class PostService:
         user: User,
         content: str,
         media_ids: list[uuid.UUID] | None = None,
+        poll: PollCreate | None = None,
+        *,
+        reply_to_prompt_id: uuid.UUID | None = None,
+        subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
-        """@brief Create a new post, attach media, send notifications, and publish SSE."""
+        """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
         post = await self._post_repo.create_post(
             author_id=user.id,
             content=content,
             community_id=self._community_id,
+            reply_to_prompt_id=reply_to_prompt_id,
+            subgroup_id=subgroup_id,
         )
 
         if media_ids and self._media_attacher:
             await self._media_attacher(post.id, media_ids, user)
+
+        if poll and self._poll_service:
+            await self._poll_service.create_poll(user.id, poll, post.id)
+
+        if reply_to_prompt_id and self._prompt_repo:
+            await self._prompt_repo.increment_response_count(reply_to_prompt_id)
+            prompt = await self._prompt_repo.get_by_id(reply_to_prompt_id)
+            if prompt:
+                if self._activity_repo is not None:
+                    response_id = uuid.uuid4()
+                    await self._activity_repo.record(
+                        community_id=self._community_id,
+                        actor_id=user.id,
+                        verb="prompt.responded",
+                        object_type="prompt_response",
+                        object_id=response_id,
+                        subgroup_id=None,
+                        visibility="community",
+                        target_type="prompt",
+                        target_id=reply_to_prompt_id,
+                        metadata={
+                            "actor_name": user.display_name,
+                            "object_title": prompt.title,
+                        },
+                    )
+
+                if (
+                    prompt.prompt_type == "interest_capture"
+                    and prompt.interest_category_slug
+                    and self._interest_service
+                ):
+                    await self._interest_service.suggest_for_user(
+                        user.id, prompt.interest_category_slug, content
+                    )
 
         enriched = await self._post_repo.get_post_detail(
             post.id,
@@ -116,6 +170,23 @@ class PostService:
             post.id,
             self._post_repo._session,
         )
+
+        if self._activity_repo is not None:
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="post.created",
+                object_type="post",
+                object_id=post.id,
+                subgroup_id=post.subgroup_id,
+                visibility=post.visibility,
+                target_type="subgroup" if post.subgroup_id else "community",
+                target_id=post.subgroup_id or self._community_id,
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": post.content[:60],
+                },
+            )
 
         if enriched and self._event_bus:
             await self._event_bus.emit(
@@ -168,6 +239,8 @@ class PostService:
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("post", post_id)
 
     async def list_comments(
         self,
@@ -258,6 +331,23 @@ class PostService:
             "reactions": [],
         }
 
+        if self._activity_repo is not None:
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="post.commented",
+                object_type="comment",
+                object_id=comment.id,
+                subgroup_id=post.subgroup_id,
+                visibility=post.visibility,
+                target_type="post",
+                target_id=post_id,
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": content[:60],
+                },
+            )
+
         if self._event_bus:
             await self._event_bus.emit(
                 events.comment_created(
@@ -305,6 +395,24 @@ class PostService:
                     "link": f"/app/post/{post_id}",
                 },
                 actor_id=user.id,
+            )
+
+        if action == "added" and self._activity_repo is not None:
+            reaction_id = uuid.uuid4()
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="post.reacted",
+                object_type="reaction",
+                object_id=reaction_id,
+                subgroup_id=post.subgroup_id,
+                visibility=post.visibility,
+                target_type="post",
+                target_id=post_id,
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": emoji,
+                },
             )
 
         await self._publish_reaction_event(
@@ -360,6 +468,24 @@ class PostService:
                     "link": f"/app/post/{post_id}",
                 },
                 actor_id=user.id,
+            )
+
+        if action == "added" and self._activity_repo is not None:
+            reaction_id = uuid.uuid4()
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="post.reacted",
+                object_type="reaction",
+                object_id=reaction_id,
+                subgroup_id=post.subgroup_id,
+                visibility=post.visibility,
+                target_type="comment",
+                target_id=comment_id,
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": emoji,
+                },
             )
 
         await self._publish_reaction_event(

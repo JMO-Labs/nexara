@@ -108,6 +108,7 @@ class User(Base):
         nullable=False,
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    tour_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         Index("users_email_idx", "email"),

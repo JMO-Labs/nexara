@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # --- Application ---
     APP_NAME: str = "Nexara"
+    APP_BASE_URL: str = "http://localhost:8000"
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "production"
     DEBUG: bool = False
@@ -51,6 +52,10 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = "nexara"
+
+    # --- VAPID (Web Push) ---
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
 
     # --- SMTP ---
     SMTP_HOST: str = ""
@@ -86,6 +91,12 @@ class Settings(BaseSettings):
     # --- Community ---
     COMMUNITY_ID: str = "00000000-0000-0000-0000-000000000001"
 
+    # --- Subgroups ---
+    MAX_SUBGROUP_MEMBERSHIPS_PER_USER: int = 5
+
+    # --- Calendar subscriptions ---
+    CALENDAR_SUBS_PER_USER_MAX: int = 10
+
     # --- WAF ---
     WAF_ENABLED: bool = True
 
@@ -97,7 +108,7 @@ class Settings(BaseSettings):
     CF_ACCESS_TEAM_DOMAIN: str = ""
 
     # --- Rate Limiting ---
-    RATE_LIMIT_DEFAULT: str = "60/minute"
+    RATE_LIMIT_DEFAULT: str = "600/minute"
     RATE_LIMIT_AUTH: str = "10/minute"
 
     @property

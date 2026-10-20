@@ -6,9 +6,12 @@ Importing this module ensures all models are registered with Base.metadata,
 which Alembic needs for autogenerate to detect all tables.
 """
 
+from app.models.activity_event import ActivityEvent  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
-from app.models.auth import RefreshToken, UserBackupCode  # noqa: F401
+from app.models.auth import MagicLinkToken, RefreshToken, UserBackupCode  # noqa: F401
 from app.models.branding import CommunityBranding  # noqa: F401
+from app.models.calendar import Calendar  # noqa: F401
+from app.models.calendar_token import CalendarToken  # noqa: F401
 from app.models.chat import ChatMessage  # noqa: F401
 from app.models.community import Community  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401

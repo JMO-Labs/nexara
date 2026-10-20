@@ -46,6 +46,42 @@ class TestLoginRequest:
         with pytest.raises(ValidationError):
             LoginRequest(email="user@example.com", password="")
 
+    def test_local_tld_accepted(self):
+        req = LoginRequest(email="admin@myserver.local", password="pass")
+        assert req.email == "admin@myserver.local"
+
+    def test_lan_tld_accepted(self):
+        req = LoginRequest(email="user@nas.lan", password="pass")
+        assert req.email == "user@nas.lan"
+
+    def test_internal_tld_accepted(self):
+        req = LoginRequest(email="ops@gateway.internal", password="pass")
+        assert req.email == "ops@gateway.internal"
+
+    def test_home_tld_accepted(self):
+        req = LoginRequest(email="user@homelab.home", password="pass")
+        assert req.email == "user@homelab.home"
+
+    def test_bare_hostname_accepted(self):
+        req = LoginRequest(email="user@mailserver", password="pass")
+        assert req.email == "user@mailserver"
+
+    def test_email_normalized_to_lowercase(self):
+        req = LoginRequest(email="User@Example.COM", password="pass")
+        assert req.email == "user@example.com"
+
+    def test_missing_at_rejected(self):
+        with pytest.raises(ValidationError):
+            LoginRequest(email="userexample.com", password="pass")
+
+    def test_missing_local_part_rejected(self):
+        with pytest.raises(ValidationError):
+            LoginRequest(email="@example.com", password="pass")
+
+    def test_missing_domain_rejected(self):
+        with pytest.raises(ValidationError):
+            LoginRequest(email="user@", password="pass")
+
 
 class TestRegisterRequest:
     """@brief Registration request validation."""

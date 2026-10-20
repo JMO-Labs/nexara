@@ -1,15 +1,16 @@
 """
 @file oauth_repo.py
-@brief Repositories for OAuth providers and user OAuth links.
+@brief Repositories for OAuthProvider and UserOAuthLink models.
 
-OAuthProviderRepository: per-community OAuth config lookups.
-UserOAuthLinkRepository: user-to-provider identity links.
+Provides OAuthProviderRepository and UserOAuthLinkRepository with
+community-scoped queries and soft-delete filtering.
 """
 
 from __future__ import annotations
 
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.oauth_provider import OAuthProvider
@@ -19,14 +20,20 @@ from app.repositories.base import BaseRepository
 
 class OAuthProviderRepository(BaseRepository[OAuthProvider]):
     """
-    @brief Async repository for OAuth provider configuration.
+    @brief Repository for OAuth provider configuration.
 
-    Provides find_by_slug, list_enabled, and find_seeded queries.
+    Supports find_by_slug, list_enabled, find_seeded, plus inherited
+    list, create, get_by_id, update, soft_delete.
     """
 
     model = OAuthProvider
 
     def __init__(self, session: AsyncSession) -> None:
+        """
+        @brief Initialize the repository.
+
+        @param session Async SQLAlchemy session.
+        """
         super().__init__(session)
 
     async def find_by_slug(
@@ -35,11 +42,11 @@ class OAuthProviderRepository(BaseRepository[OAuthProvider]):
         slug: str,
     ) -> OAuthProvider | None:
         """
-        @brief Look up a provider by community and slug.
+        @brief Fetch a provider by community and slug.
 
         @param community_id Community scope.
         @param slug Provider slug (e.g. "google").
-        @return The OAuthProvider or None.
+        @return The provider or None.
         """
         stmt = (
             self._base_query()
@@ -54,10 +61,10 @@ class OAuthProviderRepository(BaseRepository[OAuthProvider]):
         community_id: uuid.UUID,
     ) -> list[OAuthProvider]:
         """
-        @brief List enabled OAuth providers for a community.
+        @brief List enabled providers for a community.
 
         @param community_id Community scope.
-        @return List of enabled OAuthProvider instances.
+        @return List of enabled providers.
         """
         stmt = (
             self._base_query()
@@ -72,10 +79,10 @@ class OAuthProviderRepository(BaseRepository[OAuthProvider]):
         community_id: uuid.UUID,
     ) -> OAuthProvider | None:
         """
-        @brief Find the provider seeded from environment (if any).
+        @brief Fetch the seeded-from-env provider for a community.
 
         @param community_id Community scope.
-        @return The seeded OAuthProvider or None.
+        @return The seeded provider or None.
         """
         stmt = (
             self._base_query()
@@ -88,14 +95,19 @@ class OAuthProviderRepository(BaseRepository[OAuthProvider]):
 
 class UserOAuthLinkRepository(BaseRepository[UserOAuthLink]):
     """
-    @brief Async repository for user OAuth identity links.
+    @brief Repository for UserOAuthLink (user-to-provider links).
 
-    Provides find_by_provider_and_sub and find_links_for_user.
+    Supports find_by_provider_and_sub, find_links_for_user, create.
     """
 
     model = UserOAuthLink
 
     def __init__(self, session: AsyncSession) -> None:
+        """
+        @brief Initialize the repository.
+
+        @param session Async SQLAlchemy session.
+        """
         super().__init__(session)
 
     async def find_by_provider_and_sub(
@@ -104,16 +116,15 @@ class UserOAuthLinkRepository(BaseRepository[UserOAuthLink]):
         sub: str,
     ) -> UserOAuthLink | None:
         """
-        @brief Look up a link by provider and subject identifier.
+        @brief Find link by provider and subject claim.
 
         @param provider_id OAuth provider UUID.
-        @param sub The ``sub`` claim from the provider.
-        @return The UserOAuthLink or None.
+        @param sub Subject claim from ID token.
+        @return The link or None.
         """
-        stmt = (
-            self._base_query()
-            .where(UserOAuthLink.provider_id == provider_id)
-            .where(UserOAuthLink.sub == sub)
+        stmt = select(UserOAuthLink).where(
+            UserOAuthLink.provider_id == provider_id,
+            UserOAuthLink.sub == sub,
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
@@ -126,8 +137,8 @@ class UserOAuthLinkRepository(BaseRepository[UserOAuthLink]):
         @brief List all OAuth links for a user.
 
         @param user_id User UUID.
-        @return List of UserOAuthLink instances.
+        @return List of UserOAuthLink.
         """
-        stmt = self._base_query().where(UserOAuthLink.user_id == user_id)
+        stmt = select(UserOAuthLink).where(UserOAuthLink.user_id == user_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

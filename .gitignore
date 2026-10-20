@@ -211,7 +211,7 @@ __marimo__/
 # =============================================================================
 
 # Dependencies
-frontend/node_modules/
+node_modules/
 frontend/.pnp
 frontend/.pnp.js
 
@@ -289,3 +289,8 @@ Thumbs.db
 # Plans (local planning documents, not part of the application source)
 # =============================================================================
 plans/
+
+node_modules/
+
+CLAUDE.md
+.superpowers/

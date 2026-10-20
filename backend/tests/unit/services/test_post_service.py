@@ -36,7 +36,7 @@ class TestListFeed:
         assert result["cursor"] == "cursor-123"
         assert result["has_more"] is True
         post_repo.list_feed.assert_awaited_once_with(
-            COMMUNITY_ID, viewer_id=None, cursor=None, limit=20
+            COMMUNITY_ID, viewer_id=None, cursor=None, limit=20, subgroup_id=None
         )
 
     @pytest.mark.asyncio
@@ -45,7 +45,7 @@ class TestListFeed:
         post_repo.list_feed.return_value = ([], None)
         await service.list_feed(viewer_id=VIEWER_ID, cursor="c", limit=10)
         post_repo.list_feed.assert_awaited_once_with(
-            COMMUNITY_ID, viewer_id=VIEWER_ID, cursor="c", limit=10
+            COMMUNITY_ID, viewer_id=VIEWER_ID, cursor="c", limit=10, subgroup_id=None
         )
 
 
@@ -83,7 +83,11 @@ class TestCreatePost:
         result = await service.create_post(user, "Hello world")
         assert result == enriched
         post_repo.create_post.assert_awaited_once_with(
-            author_id=user.id, content="Hello world", community_id=COMMUNITY_ID
+            author_id=user.id,
+            content="Hello world",
+            community_id=COMMUNITY_ID,
+            reply_to_prompt_id=None,
+            subgroup_id=None,
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
 
@@ -131,6 +135,60 @@ class TestCreatePost:
             user,
             post.id,
             post_repo._session,
+        )
+
+    @pytest.mark.asyncio
+    async def test_reply_to_prompt_increments_count(self, service, post_repo, prompt_repo):
+        """create_post() with reply_to_prompt_id calls prompt_repo.increment_response_count."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {"id": str(post.id), "content": "reply"}
+        prompt_id = uuid.uuid4()
+        await service.create_post(user, "Great prompt!", reply_to_prompt_id=prompt_id)
+        prompt_repo.increment_response_count.assert_awaited_once_with(prompt_id)
+
+    @pytest.mark.asyncio
+    async def test_reply_to_interest_prompt_suggests_interest(
+        self,
+        service,
+        post_repo,
+        prompt_repo,
+    ):
+        """create_post() with interest_capture prompt calls interest_service.suggest_for_user."""
+        user = _make_user()
+        post = _make_post()
+        prompt_id = uuid.uuid4()
+        prompt = MagicMock(
+            id=prompt_id,
+            prompt_type="interest_capture",
+            interest_category_slug="cooking",
+        )
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {"id": str(post.id), "content": "I love Thai food"}
+        prompt_repo.get_by_id.return_value = prompt
+        await service.create_post(user, "I love Thai food", reply_to_prompt_id=prompt_id)
+        service._interest_service.suggest_for_user.assert_awaited_once_with(
+            user.id, "cooking", "I love Thai food"
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_post_with_subgroup_id(self, service, post_repo):
+        """create_post() persists subgroup_id when provided."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        enriched = {"id": str(post.id), "content": "Subgroup post"}
+        post_repo.get_post_detail.return_value = enriched
+        subgroup_id = uuid.uuid4()
+        result = await service.create_post(user, "Subgroup post", subgroup_id=subgroup_id)
+        assert result == enriched
+        post_repo.create_post.assert_awaited_once_with(
+            author_id=user.id,
+            content="Subgroup post",
+            community_id=COMMUNITY_ID,
+            reply_to_prompt_id=None,
+            subgroup_id=subgroup_id,
         )
 
 
@@ -290,3 +348,119 @@ class TestToggleReaction:
         assert event.payload["emoji"] == "\U0001f44d"
         assert event.payload["count"] == 1
         assert event.payload["action"] == "added"
+
+
+class TestActivityRecording:
+    """@brief Tests for activity repo wiring in PostService."""
+
+    @pytest.mark.asyncio
+    async def test_create_post_records_activity(
+        self, service_with_activity_repo, post_repo, activity_repo
+    ):
+        """create_post() records post.created activity."""
+        user = _make_user(user_id=AUTHOR_ID, display_name="Alice")
+        post = _make_post()
+        post.visibility = "community"
+        post.subgroup_id = None
+        post_repo.create_post.return_value = post
+        enriched = {"id": str(post.id), "content": "Hello world"}
+        post_repo.get_post_detail.return_value = enriched
+
+        await service_with_activity_repo.create_post(user, "Hello world")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["community_id"] == COMMUNITY_ID
+        assert call_kwargs["actor_id"] == AUTHOR_ID
+        assert call_kwargs["verb"] == "post.created"
+        assert call_kwargs["object_type"] == "post"
+        assert call_kwargs["object_id"] == post.id
+        assert call_kwargs["visibility"] == "community"
+        assert call_kwargs["metadata"]["actor_name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_add_comment_records_activity(
+        self, service_with_activity_repo, post_repo, comment_repo, activity_repo
+    ):
+        """add_comment() records post.commented activity."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Bob")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.content = "Great post!"
+        comment.parent_id = None
+        comment.created_at = MagicMock()
+        comment.created_at.isoformat.return_value = "2025-01-01T00:00:00"
+
+        post_repo.get_by_id.return_value = post
+        comment_repo.create_comment.return_value = comment
+
+        await service_with_activity_repo.add_comment(POST_ID, user, "Great post!")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.commented"
+        assert call_kwargs["object_type"] == "comment"
+        assert call_kwargs["object_id"] == comment.id
+        assert call_kwargs["metadata"]["actor_name"] == "Bob"
+
+    @pytest.mark.asyncio
+    async def test_toggle_post_reaction_records_activity(
+        self, service_with_activity_repo, post_repo, reaction_repo, activity_repo
+    ):
+        """toggle_reaction() on post records post.reacted activity when added."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Charlie")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        post_repo.get_by_id.return_value = post
+        reaction_repo.toggle.return_value = ("added", 1)
+
+        await service_with_activity_repo.toggle_reaction(POST_ID, user, "👍")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.reacted"
+        assert call_kwargs["object_type"] == "reaction"
+        assert call_kwargs["metadata"]["actor_name"] == "Charlie"
+
+    @pytest.mark.asyncio
+    async def test_toggle_comment_reaction_records_activity(
+        self, service_with_activity_repo, post_repo, comment_repo, reaction_repo, activity_repo
+    ):
+        """toggle_comment_reaction() records post.reacted activity when added."""
+        user = _make_user(user_id=VIEWER_ID, display_name="Diana")
+        post = _make_post(author_id=AUTHOR_ID)
+        post.visibility = "community"
+        post.subgroup_id = None
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.post_id = POST_ID
+        comment.author_id = AUTHOR_ID
+
+        post_repo.get_by_id.return_value = post
+        comment_repo.get_by_id.return_value = comment
+        reaction_repo.toggle.return_value = ("added", 2)
+
+        await service_with_activity_repo.toggle_comment_reaction(POST_ID, comment.id, user, "❤️")
+
+        activity_repo.record.assert_awaited_once()
+        call_kwargs = activity_repo.record.call_args[1]
+        assert call_kwargs["verb"] == "post.reacted"
+        assert call_kwargs["object_type"] == "reaction"
+        assert call_kwargs["metadata"]["actor_name"] == "Diana"
+
+    @pytest.mark.asyncio
+    async def test_delete_post_invalidates_activity(
+        self, service_with_activity_repo, post_repo, activity_repo
+    ):
+        """delete_post() invalidates post activity."""
+        user = _make_user(user_id=AUTHOR_ID)
+        post = _make_post(author_id=AUTHOR_ID)
+        post_repo.get_by_id.return_value = post
+
+        await service_with_activity_repo.delete_post(POST_ID, user)
+
+        activity_repo.invalidate.assert_awaited_once_with("post", POST_ID)

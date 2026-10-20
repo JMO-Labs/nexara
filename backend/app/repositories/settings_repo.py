@@ -28,6 +28,17 @@ class SettingsRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def get_by_user_id(self, user_id: uuid.UUID) -> UserSettings | None:
+        """
+        @brief Fetch settings for a user by user_id.
+
+        @param user_id UUID of the user.
+        @return The UserSettings instance or None if not found.
+        """
+        stmt = select(UserSettings).where(UserSettings.user_id == user_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_or_create(
         self,
         user_id: uuid.UUID,
@@ -74,7 +85,7 @@ class SettingsRepository:
             raise ValueError(msg)
 
         for key, value in data.items():
-            if hasattr(settings, key) and value is not None:
+            if hasattr(settings, key):
                 setattr(settings, key, value)
 
         await self._session.flush()

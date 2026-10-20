@@ -38,6 +38,7 @@ class FeedEvent(StrEnum):
     POST_CREATED = "created"
     COMMENT_CREATED = "comment_created"
     REACTION_TOGGLED = "reaction_toggled"
+    POLL_VOTED = "poll_voted"
 
 
 # ── Routing targets ──────────────────────────────────────────────────────
@@ -189,6 +190,32 @@ def user_notification(
             "type": notification_type,
             "payload": payload,
             "created_at": created_at,
+        },
+    )
+
+
+def poll_voted(
+    community_id: UUID,
+    post_id: UUID | None,
+    poll_id: UUID,
+    results: dict[str, Any],
+) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a poll vote.
+
+    @param community_id Community to broadcast to.
+    @param post_id ID of the parent post (if any).
+    @param poll_id ID of the poll.
+    @param results Serialized poll results.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=CommunityTarget(community_id=community_id),
+        payload={
+            "event": FeedEvent.POLL_VOTED,
+            "post_id": str(post_id) if post_id else None,
+            "poll_id": str(poll_id),
+            "results": results,
         },
     )
 

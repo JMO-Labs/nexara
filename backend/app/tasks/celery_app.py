@@ -40,6 +40,10 @@ celery_app.conf.update(
         "app.tasks.media_tasks.*": {"queue": "media"},
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
+        "app.tasks.poll_tasks.*": {"queue": "maintenance"},
+        "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
+        "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
+        "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
     },
     # ── Reliability ───────────────────────────────────────────────────
@@ -55,6 +59,10 @@ celery_app.conf.update(
     beat_schedule={
         "refresh-prometheus-gauges": {
             "task": "app.tasks.maintenance_tasks.refresh_prometheus_gauges",
+            "schedule": 60.0,
+        },
+        "close-expired-polls": {
+            "task": "app.tasks.poll_tasks.close_expired_polls",
             "schedule": 60.0,
         },
         "cleanup-expired-tokens": {
@@ -74,8 +82,20 @@ celery_app.conf.update(
             "schedule": crontab(hour="*/6"),
         },
         "dispatch-event-reminders": {
-            "task": "app.tasks.notification_tasks.dispatch_event_reminders",
+            "task": "app.tasks.event_tasks.dispatch_event_reminders",
             "schedule": crontab(minute="*/15"),
+        },
+        "sync-calendar-subscriptions": {
+            "task": "app.tasks.event_tasks.sync_subscriptions",
+            "schedule": crontab(minute="0"),
+        },
+        "fire-tradition-prompts": {
+            "task": "app.tasks.prompt_tasks.fire_prompts",
+            "schedule": crontab(hour="6", minute="0"),
+        },
+        "generate-prompt-summaries": {
+            "task": "app.tasks.prompt_tasks.generate_summaries",
+            "schedule": crontab(hour="7", minute="0"),
         },
         "storage-snapshot": {
             "task": "app.tasks.retention_tasks.take_storage_snapshot",
@@ -116,6 +136,18 @@ celery_app.conf.update(
         "age-posts": {
             "task": "app.tasks.retention_tasks.age_posts",
             "schedule": crontab(day_of_week="sat", hour="4", minute="30"),
+        },
+        "gallery-post-event-reminders": {
+            "task": "app.tasks.gallery_tasks.gallery_post_event_reminders",
+            "schedule": crontab(hour="9", minute="0"),
+        },
+        "gallery-batch-notifications": {
+            "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
+            "schedule": 60.0 * 60,
+        },
+        "prune-activity-events": {
+            "task": "app.tasks.maintenance_tasks.prune_activity_events",
+            "schedule": crontab(hour="1", minute="0"),
         },
     },
 )

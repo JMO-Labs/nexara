@@ -21,6 +21,9 @@ class InboundType(StrEnum):
     AUTH = "auth"
     PING = "ping"
     TYPING = "typing"
+    CHAT_MESSAGE = "chat.message"
+    CHAT_TYPING = "chat.typing"
+    CHAT_READ = "chat.read"
 
 
 class OutboundType(StrEnum):
@@ -33,6 +36,12 @@ class OutboundType(StrEnum):
     FEED_UPDATE = "feed_update"
     PRESENCE = "presence"
     TYPING = "typing"
+    CHAT_MESSAGE = "chat.message"
+    CHAT_TYPING = "chat.typing"
+    CHAT_READ = "chat.read"
+    CHAT_UPDATED = "chat.updated"
+    CHAT_DELETED = "chat.deleted"
+    CHAT_ERROR = "chat.error"
 
 
 class BaseMessage(BaseModel):

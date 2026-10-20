@@ -11,17 +11,24 @@ from __future__ import annotations
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
-from app.schemas.media import MediaResponse
+from app.schemas.media import (
+    MediaResponse,
+    MultipartCompleteResponse,
+    MultipartInitRequest,
+    MultipartInitResponse,
+    MultipartPartResponse,
+)
 from app.schemas.post import ReactionResponse, ReactionToggle
 from app.services.media_service import MediaService
 from app.services.storage.factory import get_storage_backend
@@ -43,12 +50,68 @@ def _build_service(
 ) -> MediaService:
     """@brief Build the MediaService with injected dependencies."""
     storage = get_storage_backend(settings)
+    valkey = get_pool(settings, DB_CACHE)
     return MediaService(
         media_repo=MediaRepository(db),
         storage_backend=storage,
         user_repo=UserRepository(db),
         community_id=community_id,
+        valkey_client=valkey,
     )
+
+
+@router.post("/upload/init", response_model=MultipartInitResponse, status_code=201)
+async def init_multipart_upload(
+    body: MultipartInitRequest,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MultipartInitResponse:
+    """@brief Initialize a multipart upload session for large files (e.g. video)."""
+    result = await service.init_multipart_upload(
+        user=user,
+        filename=body.filename,
+        content_type=body.content_type,
+        total_size=body.total_size,
+    )
+    return MultipartInitResponse(
+        upload_id=result["upload_id"],
+        part_size=result["part_size"],
+    )
+
+
+@router.put("/upload/{upload_id}/part/{part_number}", response_model=MultipartPartResponse)
+async def upload_part(
+    upload_id: str,
+    part_number: int,
+    request: Request,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MultipartPartResponse:
+    """@brief Upload a single part of a multipart upload (binary body)."""
+    body = await request.body()
+    result = await service.upload_part(
+        upload_id=upload_id,
+        part_number=part_number,
+        data=bytes(body),
+    )
+    return MultipartPartResponse(
+        part_number=result["part_number"],
+        etag=result["etag"],
+    )
+
+
+@router.post("/upload/{upload_id}/complete", response_model=MultipartCompleteResponse)
+async def complete_multipart_upload(
+    upload_id: str,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MultipartCompleteResponse:
+    """@brief Complete multipart upload, assemble parts, create media record."""
+    media = await service.complete_multipart_upload(
+        upload_id=upload_id,
+        user=user,
+    )
+    return MultipartCompleteResponse(media_id=media.id)
 
 
 @router.post("/upload", response_model=MediaResponse, status_code=201)

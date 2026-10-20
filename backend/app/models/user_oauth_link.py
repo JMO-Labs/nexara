@@ -1,32 +1,38 @@
 """
 @file user_oauth_link.py
-@brief Links a User to an OAuth provider identity (sub claim).
+@brief Links a user account to their OAuth provider identity.
 
-Stores the provider-specific subject identifier and cached claims for
-account linking and SSO login.
+Stores the provider's ``sub`` claim and optional profile data.
+Unique on (provider_id, sub) to prevent duplicate links.
 """
+
+from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, UUIDPrimaryKeyMixin
+from app.db.base import Base
 
 
-class UserOAuthLink(Base, UUIDPrimaryKeyMixin):
+class UserOAuthLink(Base):
     """
     @brief Links a user account to an OAuth provider identity.
 
-    One user can have multiple links (e.g. Google + GitHub). The combination
-    (provider_id, sub) is unique.
+    Tracks the provider's subject claim, email, avatar, and raw claims.
     """
 
     __tablename__ = "user_oauth_links"
-    __table_args__ = (UniqueConstraint("provider_id", "sub", name="uq_oauth_link_provider_sub"),)
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=func.gen_random_uuid(),
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -40,9 +46,15 @@ class UserOAuthLink(Base, UUIDPrimaryKeyMixin):
     sub: Mapped[str] = mapped_column(String(256), nullable=False)
     email_from_provider: Mapped[str | None] = mapped_column(String(256))
     avatar_url: Mapped[str | None] = mapped_column(Text)
-    raw_claims: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    raw_claims: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     linked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("provider_id", "sub", name="uq_oauth_link_provider_sub"),
+        Index("user_oauth_links_user_idx", "user_id"),
+        Index("user_oauth_links_provider_idx", "provider_id"),
     )

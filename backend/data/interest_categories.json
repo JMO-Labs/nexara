@@ -1,0 +1,12 @@
+[
+  {"slug": "hobbies", "label": "Hobbies", "description": "Activities and pastimes", "icon": "puzzle-piece", "multi_value": true, "sort_order": 10},
+  {"slug": "music", "label": "Music", "description": "Musical tastes and instruments", "icon": "musical-note", "multi_value": true, "sort_order": 20},
+  {"slug": "food", "label": "Food & Cooking", "description": "Favorite foods and cuisines", "icon": "cake", "multi_value": true, "sort_order": 30},
+  {"slug": "sports", "label": "Sports", "description": "Sports and fitness activities", "icon": "trophy", "multi_value": true, "sort_order": 40},
+  {"slug": "travel", "label": "Travel", "description": "Places visited and dream destinations", "icon": "globe-americas", "multi_value": true, "sort_order": 50},
+  {"slug": "books", "label": "Books & Reading", "description": "Favorite genres and authors", "icon": "book-open", "multi_value": true, "sort_order": 60},
+  {"slug": "movies", "label": "Movies & TV", "description": "Film and television preferences", "icon": "film", "multi_value": true, "sort_order": 70},
+  {"slug": "tech", "label": "Technology", "description": "Tech interests and skills", "icon": "cpu-chip", "multi_value": true, "sort_order": 80},
+  {"slug": "pets", "label": "Pets & Animals", "description": "Pets and animal interests", "icon": "heart", "multi_value": true, "sort_order": 90},
+  {"slug": "creative", "label": "Creative Arts", "description": "Art, crafts, and creative pursuits", "icon": "paint-brush", "multi_value": true, "sort_order": 100}
+]

@@ -153,6 +153,20 @@ class SearchService:
                     ),
                 )
             )
+        if "subgroups" in content_types:
+            tasks.append(
+                (
+                    "subgroups",
+                    self._repo.search_subgroups(
+                        q,
+                        prefix_q,
+                        self._community_id,
+                        user.id,
+                        cursor,
+                        limit,
+                    ),
+                )
+            )
         if "comments" in content_types:
             tasks.append(
                 (
@@ -218,6 +232,17 @@ class SearchService:
                         title=entity.title,
                         snippet=_snippet(entity.description),
                         created_at=entity.created_at,
+                    )
+                )
+            elif result_type == "subgroups":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="subgroups",
+                        title=entity.name,
+                        snippet=_snippet(entity.description),
+                        created_at=entity.created_at,
+                        slug=entity.slug,
                     )
                 )
             elif result_type == "comments":

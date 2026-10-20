@@ -1,0 +1,129 @@
+/**
+ * @file lib/api/events.ts
+ * @brief Events REST endpoints (list window) + RSVP, contributions, CRUD.
+ */
+import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+
+export interface EventItem {
+  id: string;
+  author_id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  starts_at: string;
+  ends_at: string;
+  is_all_day: boolean;
+  recurrence_rule: string | null;
+  visibility: string;
+  subgroup_id: string | null;
+  subgroup_slug: string | null;
+  calendar_id: string | null;
+  color: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rsvp_labels: Record<string, string> | null;
+  rsvp_counts: Record<string, number>;
+  contribution_slots: ContributionSlot[];
+  user_rsvp: { status: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContributionSlot {
+  id: string | null;
+  title: string;
+  quantity_needed: number;
+  quantity_claimed: number;
+  claimed_by: string[];
+}
+
+export interface EventListResponse {
+  items: EventItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface CreateEventBody {
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  starts_at: string;
+  ends_at: string;
+  is_all_day?: boolean;
+  visibility?: "community" | "subgroup" | "private";
+  subgroup_id?: string | null;
+  color?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rsvp_labels?: Record<string, string> | null;
+  contribution_slots?: ContributionSlot[];
+}
+
+const BASE = "/api/v1/events";
+
+export interface ListEventsParams {
+  start?: string;
+  end?: string;
+  limit?: number;
+  subgroup_id?: string;
+}
+
+export const listEvents = (params: ListEventsParams = {}) => {
+  const qs = new URLSearchParams();
+  if (params.start) qs.set("start", params.start);
+  if (params.end) qs.set("end", params.end);
+  qs.set("limit", String(params.limit ?? 100));
+  if (params.subgroup_id) qs.set("subgroup_id", params.subgroup_id);
+  return apiGet<EventListResponse>(`${BASE}?${qs}`);
+};
+
+export const getEvent = (id: string) => apiGet<EventItem>(`${BASE}/${id}`);
+export const createEvent = (body: CreateEventBody) =>
+  apiPost<EventItem>(BASE, body);
+export const updateEvent = (id: string, body: Partial<CreateEventBody>) =>
+  apiPatch<EventItem>(`${BASE}/${id}`, body);
+export const deleteEvent = (id: string) =>
+  apiDelete<{ message: string }>(`${BASE}/${id}`);
+export const rsvpEvent = (id: string, status: string, note?: string) =>
+  apiPost<{ id: string; event_id: string; user_id: string; status: string }>(
+    `${BASE}/${id}/rsvp`,
+    { status, note },
+  );
+export const unrsvpEvent = (id: string) =>
+  apiDelete<{ message: string }>(`${BASE}/${id}/rsvp`);
+export const claimContribution = (
+  eventId: string,
+  slotId: string,
+  quantity = 1,
+) =>
+  apiPost<EventItem>(`${BASE}/${eventId}/contributions/${slotId}/claim`, {
+    quantity,
+  });
+export const unclaimContribution = (eventId: string, slotId: string) =>
+  apiDelete<EventItem>(`${BASE}/${eventId}/contributions/${slotId}/claim`);
+
+export interface CalendarSubscription {
+  id: string;
+  title: string;
+  source_url: string;
+  last_synced_at: string | null;
+  sync_error: string | null;
+  sync_interval_minutes: number;
+}
+
+export interface CreateSubscriptionBody {
+  title: string;
+  source_url: string;
+  sync_interval_minutes?: number;
+}
+
+const SUBS_BASE = "/api/v1/events/calendar-subscriptions";
+
+export const listSubscriptions = () =>
+  apiGet<CalendarSubscription[]>(SUBS_BASE);
+export const createSubscription = (body: CreateSubscriptionBody) =>
+  apiPost<CalendarSubscription>(SUBS_BASE, body);
+export const deleteSubscription = (id: string) =>
+  apiDelete<{ message: string }>(`${SUBS_BASE}/${id}`);
+export const syncNowSubscription = (id: string) =>
+  apiPost<{ synced_count: number }>(`${SUBS_BASE}/${id}/sync`, {});

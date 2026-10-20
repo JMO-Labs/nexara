@@ -36,6 +36,7 @@ def _make_settings_row():
     row.mute_all_email = False
     row.theme = "system"
     row.locale = "en-US"
+    row.home_layout = None
     return row
 
 

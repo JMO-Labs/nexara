@@ -151,6 +151,10 @@ async def _message_loop(ws: WebSocket, user_id: UUID) -> None:
                     user_id=user_id,
                 ),
             )
+        elif isinstance(msg_type, str) and msg_type.startswith("chat."):
+            from app.services.realtime.handlers.chat_handler import handle_chat_inbound
+
+            await handle_chat_inbound(ws, user_id, msg_type, data)
         else:
             logger.debug("ws_unknown_message_type", type=msg_type, user_id=str(user_id))
 

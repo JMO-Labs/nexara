@@ -48,6 +48,7 @@ class SearchResultItem(BaseModel):
     snippet: str
     created_at: datetime
     parent_id: UUID | None = None
+    slug: str | None = None
 
     model_config = {"from_attributes": True}
 

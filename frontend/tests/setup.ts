@@ -1,85 +1,14 @@
 /**
  * @file tests/setup.ts
- * @brief Global test setup for Vitest.
- *
- * Configures the happy-dom environment, provides global mocks for
- * Nuxt auto-imports and Vue composables used across all test files.
+ * @brief Vitest setup. RTL matchers + cleanup.
  */
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
-import { vi } from "vitest";
-import { config } from "@vue/test-utils";
-
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key, te: () => true }),
-}));
-
-/* Stub useI18n globally for Nuxt auto-imported components */
-(globalThis as Record<string, unknown>).useI18n = () => ({
-  t: (key: string) => key,
-  te: () => true,
-});
-
-/* Provide global $t mock for i18n in component tests */
-config.global.mocks = {
-  $t: (key: string) => key,
-};
-
-/* Provide Nuxt auto-import stubs globally */
-(globalThis as Record<string, unknown>).definePageMeta = (
-  _meta: Record<string, unknown>,
-) => {
-  /* no-op */
-};
-(globalThis as Record<string, unknown>).defineNuxtRouteMiddleware = (
-  fn: (...args: unknown[]) => unknown,
-) => fn;
-(globalThis as Record<string, unknown>).navigateTo = (
-  to: unknown,
-  _opts?: unknown,
-) => to;
-(globalThis as Record<string, unknown>).useRoute = () => ({
-  path: "/",
-  params: {},
-  query: {},
-  fullPath: "/",
-});
-(globalThis as Record<string, unknown>).useRouter = () => ({
-  push: vi.fn(),
-  replace: vi.fn(),
-});
-
-/*
- * Always replace localStorage with a complete in-memory implementation.
- * happy-dom provides a partial localStorage that omits clear() when no
- * --localstorage-file path is configured, causing tests to fail.
- */
-const _localStore: Record<string, string> = {};
-Object.defineProperty(globalThis, "localStorage", {
-  value: {
-    getItem: (key: string) => _localStore[key] ?? null,
-    setItem: (key: string, value: string) => {
-      _localStore[key] = value;
-    },
-    removeItem: (key: string) => {
-      Reflect.deleteProperty(_localStore, key);
-    },
-    clear: () => {
-      Object.keys(_localStore).forEach((k) =>
-        Reflect.deleteProperty(_localStore, k),
-      );
-    },
-    get length() {
-      return Object.keys(_localStore).length;
-    },
-    key: (index: number) => Object.keys(_localStore)[index] ?? null,
-  } satisfies Storage,
-  writable: true,
-  configurable: true,
-});
-
-/* Provide a minimal matchMedia stub */
-if (typeof globalThis.matchMedia === "undefined") {
-  globalThis.matchMedia = vi.fn().mockImplementation((query: string) => ({
+// jsdom lacks matchMedia (used by MUI Joy color-scheme + reduced-motion).
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -89,4 +18,34 @@ if (typeof globalThis.matchMedia === "undefined") {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
+}
+
+afterEach(() => cleanup());
+
+// jsdom lacks layout APIs that prosemirror-view calls on DOM mutations.
+if (typeof document !== "undefined") {
+  const emptyRects = () => ({
+    length: 0,
+    item: () => null,
+    [Symbol.iterator]: function* () {},
+  });
+  const zeroRect = () => ({
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON() {},
+  });
+  if (!Range.prototype.getClientRects)
+    Range.prototype.getClientRects = emptyRects as never;
+  if (!Range.prototype.getBoundingClientRect)
+    Range.prototype.getBoundingClientRect = zeroRect as never;
+  if (!("getClientRects" in Text.prototype))
+    (Text.prototype as unknown as { getClientRects: unknown }).getClientRects =
+      emptyRects;
+  if (!document.elementFromPoint) document.elementFromPoint = () => null;
 }

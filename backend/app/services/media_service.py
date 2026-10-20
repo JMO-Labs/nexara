@@ -9,16 +9,28 @@ storage and database operations.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
+from app.services.media.multipart import (
+    complete_multipart_upload as _complete_multipart_upload_impl,
+)
+from app.services.media.multipart import (
+    init_multipart_upload as _init_multipart_upload_impl,
+)
+from app.services.media.multipart import (
+    upload_part as _upload_part_impl,
+)
 from app.services.storage.base import StorageBackend
 from app.services.storage.quota import (
     QuotaExceededError,
@@ -53,11 +65,16 @@ class MediaService:
         storage_backend: StorageBackend,
         user_repo: UserRepository,
         community_id: uuid.UUID,
+        *,
+        valkey_client: Redis | None = None,
+        activity_repo: ActivityRepository | None = None,
     ) -> None:
         self._repo = media_repo
         self._storage = storage_backend
         self._user_repo = user_repo
         self._community_id = community_id
+        self._valkey = valkey_client
+        self._activity_repo = activity_repo
 
     def _session(self) -> AsyncSession:
         """@brief Get the session from the media repo for quota operations."""
@@ -127,6 +144,21 @@ class MediaService:
         )
         await increment_storage_used(self._session(), user.id, size)
 
+        if self._activity_repo is not None:
+            await self._activity_repo.record(
+                community_id=self._community_id,
+                actor_id=user.id,
+                verb="media.uploaded",
+                object_type="media",
+                object_id=media.id,
+                subgroup_id=None,
+                visibility="private",
+                metadata={
+                    "actor_name": user.display_name,
+                    "object_title": filename,
+                },
+            )
+
         generate_thumbnail.delay(str(media.id))
 
         return MediaResponse.model_validate(media)
@@ -139,8 +171,6 @@ class MediaService:
         @return MediaResponse with metadata.
         @raises NotFoundError If media does not exist.
         """
-        from app.core.exceptions import NotFoundError
-
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
@@ -175,8 +205,6 @@ class MediaService:
         @return Tuple of (content bytes, content_type).
         @raises NotFoundError If media does not exist.
         """
-        from app.core.exceptions import NotFoundError
-
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
@@ -191,8 +219,6 @@ class MediaService:
         @return Tuple of (content bytes, content_type).
         @raises NotFoundError If media or thumbnail does not exist.
         """
-        from app.core.exceptions import NotFoundError
-
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
@@ -210,7 +236,7 @@ class MediaService:
         @raises NotFoundError If media does not exist.
         @raises AuthorizationError If user is not the owner.
         """
-        from app.core.exceptions import AuthorizationError, NotFoundError
+        from app.core.exceptions import AuthorizationError
 
         media = await self._repo.get(media_id)
         if media is None:
@@ -223,6 +249,8 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
+        if self._activity_repo is not None:
+            await self._activity_repo.invalidate("media", media_id)
 
     async def attach_to_post(
         self,
@@ -238,7 +266,7 @@ class MediaService:
         @param user Requesting user (must own all media).
         @raises ValueError If validation fails.
         """
-        from app.core.exceptions import AuthorizationError, NotFoundError
+        from app.core.exceptions import AuthorizationError
 
         if len(media_ids) > 10:
             raise AppError(
@@ -262,3 +290,75 @@ class MediaService:
                 )
 
         await self._repo.attach_to_post(post_id, media_ids)
+
+    def _get_valkey(self) -> Redis:
+        """@brief Get Valkey client, creating from settings if not injected."""
+        if self._valkey is not None:
+            return self._valkey
+        from app.core.config import get_settings
+        from app.core.valkey import DB_CACHE, get_pool
+
+        return get_pool(get_settings(), DB_CACHE)
+
+    async def init_multipart_upload(
+        self,
+        user: User,
+        filename: str,
+        content_type: str,
+        total_size: int,
+    ) -> dict[str, Any]:
+        """
+        @brief Initialize a multipart upload session.
+
+        Delegates to :mod:`app.services.media.multipart`.
+        """
+        return await _init_multipart_upload_impl(
+            self._session(),
+            self._storage,
+            self._repo,
+            self._community_id,
+            self._get_valkey(),
+            user,
+            filename,
+            content_type,
+            total_size,
+        )
+
+    async def upload_part(
+        self,
+        upload_id: str,
+        part_number: int,
+        data: bytes,
+    ) -> dict[str, Any]:
+        """
+        @brief Store a single part of a multipart upload.
+
+        Delegates to :mod:`app.services.media.multipart`.
+        """
+        return await _upload_part_impl(
+            self._storage,
+            self._get_valkey(),
+            upload_id,
+            part_number,
+            data,
+        )
+
+    async def complete_multipart_upload(
+        self,
+        upload_id: str,
+        user: User,
+    ) -> MediaResponse:
+        """
+        @brief Assemble parts, create Media record, enqueue transcode if video.
+
+        Delegates to :mod:`app.services.media.multipart`.
+        """
+        return await _complete_multipart_upload_impl(
+            self._session(),
+            self._storage,
+            self._repo,
+            self._community_id,
+            self._get_valkey(),
+            user,
+            upload_id,
+        )

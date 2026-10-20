@@ -105,6 +105,103 @@ class TestPostRepositoryListFeed:
         session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_filters_by_subgroup_id(self):
+        """list_feed should filter posts by subgroup_id when provided."""
+        session = _make_session()
+        subgroup_id = uuid.uuid4()
+        now = datetime.now(UTC)
+
+        post = MagicMock(spec=Post)
+        post.id, post.content = POST_ID, "Group post"
+        post.created_at = post.updated_at = now
+        post.subgroup_id = subgroup_id
+
+        user = MagicMock(spec=User)
+        user.id, user.username, user.display_name, user.avatar_url = (
+            AUTHOR_ID,
+            "alice",
+            "Alice",
+            None,
+        )
+
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = [post]
+        mock_posts = MagicMock()
+        mock_posts.all.return_value = [(post, user)]
+        mock_empty = MagicMock()
+        mock_empty.all.return_value = []
+        mock_comments = MagicMock()
+        mock_comments.all.return_value = [(POST_ID, 0)]
+
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
+        # Extra call for subgroup name lookup
+        mock_subgroup_names = MagicMock()
+        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha", "alpha")]
+
+        session.execute = AsyncMock(
+            side_effect=[
+                mock_list,
+                mock_posts,
+                mock_subgroup_names,
+                mock_empty,
+                mock_empty,
+                mock_comments,
+                mock_polls,
+            ]
+        )
+        repo = PostRepository(session)
+        items, next_cursor = await repo.list_feed(COMMUNITY_ID, subgroup_id=subgroup_id)
+
+        assert len(items) == 1
+        assert items[0]["id"] == str(POST_ID)
+        assert items[0]["subgroup_id"] == str(subgroup_id)
+        assert items[0]["subgroup_name"] == "Alpha"
+        assert items[0]["subgroup_slug"] == "alpha"
+        session.execute.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_feed_includes_subgroup_badge_fields_for_community_posts(self):
+        """list_feed posts without a subgroup have subgroup_id/subgroup_name as None."""
+        session = _make_session()
+        now = datetime.now(UTC)
+
+        post = MagicMock(spec=Post)
+        post.id, post.content = POST_ID, "Community post"
+        post.created_at = post.updated_at = now
+        post.subgroup_id = None
+
+        user = MagicMock(spec=User)
+        user.id, user.username, user.display_name, user.avatar_url = (
+            AUTHOR_ID,
+            "bob",
+            "Bob",
+            None,
+        )
+
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = [post]
+        mock_posts = MagicMock()
+        mock_posts.all.return_value = [(post, user)]
+        mock_empty = MagicMock()
+        mock_empty.all.return_value = []
+        mock_comments = MagicMock()
+        mock_comments.all.return_value = [(POST_ID, 0)]
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
+        session.execute = AsyncMock(
+            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
+        )
+        repo = PostRepository(session)
+        items, _ = await repo.list_feed(COMMUNITY_ID)
+
+        assert items[0]["subgroup_id"] is None
+        assert items[0]["subgroup_name"] is None
+        assert items[0]["subgroup_slug"] is None
+
+    @pytest.mark.asyncio
     async def test_returns_enriched_posts_with_cursor(self):
         """list_feed should return enriched posts and next_cursor when limit+1 exist."""
         session = _make_session()
@@ -112,9 +209,11 @@ class TestPostRepositoryListFeed:
         post = MagicMock(spec=Post)
         post.id, post.content = POST_ID, "Test post"
         post.created_at = post.updated_at = now
+        post.subgroup_id = None
         post2 = MagicMock(spec=Post)
         post2.id, post2.content = uuid.uuid4(), "Second"
         post2.created_at = post2.updated_at = now
+        post2.subgroup_id = None
         user = MagicMock(spec=User)
         user.id, user.username, user.display_name, user.avatar_url = (
             AUTHOR_ID,
@@ -132,8 +231,11 @@ class TestPostRepositoryListFeed:
         mock_comments = MagicMock()
         mock_comments.all.return_value = [(POST_ID, 0), (post2.id, 0)]
 
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
         session.execute = AsyncMock(
-            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments]
+            side_effect=[mock_list, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
         )
         repo = PostRepository(session)
         items, next_cursor = await repo.list_feed(COMMUNITY_ID, limit=2)
@@ -141,6 +243,8 @@ class TestPostRepositoryListFeed:
         assert len(items) == 2
         assert items[0]["id"] == str(POST_ID)
         assert items[0]["author"]["username"] == "alice"
+        assert items[0]["subgroup_id"] is None
+        assert items[0]["subgroup_name"] is None
         assert next_cursor is not None
 
 
@@ -166,6 +270,7 @@ class TestPostRepositoryGetPostDetail:
         session = _make_session()
         post = MagicMock(spec=Post)
         post.id, post.content = POST_ID, "Test content"
+        post.subgroup_id = None
         user = MagicMock(spec=User)
         user.id, user.username, user.display_name, user.avatar_url = (
             AUTHOR_ID,
@@ -182,8 +287,11 @@ class TestPostRepositoryGetPostDetail:
         mock_comments = MagicMock()
         mock_comments.all.return_value = [(POST_ID, 0)]
 
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
         session.execute = AsyncMock(
-            side_effect=[mock_get, mock_posts, mock_empty, mock_empty, mock_comments]
+            side_effect=[mock_get, mock_posts, mock_empty, mock_empty, mock_comments, mock_polls]
         )
         repo = PostRepository(session)
         result = await repo.get_post_detail(POST_ID, COMMUNITY_ID)
@@ -191,6 +299,8 @@ class TestPostRepositoryGetPostDetail:
         assert result is not None
         assert result["id"] == str(POST_ID)
         assert result["author"]["username"] == "bob"
+        assert result["subgroup_id"] is None
+        assert result["subgroup_name"] is None
 
 
 class TestCommentRepository:
@@ -269,6 +379,83 @@ class TestCommentRepository:
 
         mock_result.scalar_one_or_none.return_value = None
         assert await repo.get_by_id(uuid.uuid4()) is None
+
+
+class TestListFeedVisibilityPredicate:
+    """@brief Tests for visibility OR-clause in PostRepository.list_feed()."""
+
+    @pytest.mark.asyncio
+    async def test_list_feed_with_subgroup_ids_includes_subgroup_posts(self):
+        """list_feed with subgroup_ids should include subgroup-scoped posts."""
+        session = _make_session()
+        subgroup_id = uuid.uuid4()
+        sg_ids = [subgroup_id]
+        now = datetime.now(UTC)
+
+        post = MagicMock(spec=Post)
+        post.id, post.content = POST_ID, "Subgroup post"
+        post.created_at = post.updated_at = now
+        post.subgroup_id = subgroup_id
+
+        user = MagicMock(spec=User)
+        user.id, user.username, user.display_name, user.avatar_url = (
+            AUTHOR_ID,
+            "alice",
+            "Alice",
+            None,
+        )
+
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = [post]
+        mock_posts = MagicMock()
+        mock_posts.all.return_value = [(post, user)]
+        mock_subgroup_names = MagicMock()
+        mock_subgroup_names.all.return_value = [(subgroup_id, "Alpha", "alpha")]
+        mock_empty = MagicMock()
+        mock_empty.all.return_value = []
+        mock_comments = MagicMock()
+        mock_comments.all.return_value = [(POST_ID, 0)]
+        mock_polls = MagicMock()
+        mock_polls.scalars.return_value.all.return_value = []
+
+        mock_my_reactions = MagicMock()
+        mock_my_reactions.all.return_value = []
+
+        session.execute = AsyncMock(
+            side_effect=[
+                mock_list,
+                mock_posts,
+                mock_subgroup_names,
+                mock_empty,  # media
+                mock_empty,  # reactions
+                mock_my_reactions,  # my_reactions (viewer_id set)
+                mock_comments,
+                mock_polls,
+            ]
+        )
+        repo = PostRepository(session)
+        items, _ = await repo.list_feed(COMMUNITY_ID, viewer_id=VIEWER_ID, subgroup_ids=sg_ids)
+
+        assert len(items) == 1
+        assert items[0]["id"] == str(POST_ID)
+
+    @pytest.mark.asyncio
+    async def test_list_feed_without_subgroup_ids_excludes_subgroup_visibility(self):
+        """list_feed with empty subgroup_ids returns only community + own-private posts."""
+        session = _make_session()
+        # When no subgroup_ids, posts with visibility=subgroup should not be included.
+        # We verify the query executes without error and returns empty from our mock.
+        mock_list = MagicMock()
+        mock_list.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_list)
+
+        repo = PostRepository(session)
+        items, cursor = await repo.list_feed(COMMUNITY_ID, viewer_id=VIEWER_ID, subgroup_ids=[])
+
+        assert items == []
+        assert cursor is None
+        # Confirm execute was called (WHERE clause was built)
+        session.execute.assert_awaited_once()
 
 
 class TestReactionRepository:

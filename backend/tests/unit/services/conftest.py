@@ -12,8 +12,10 @@ import pytest
 
 from app.models.post import Post
 from app.models.user import User
+from app.repositories.activity_repo import ActivityRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.prompt_repo import PromptRepository
 from app.services.post_service import PostService
 from app.services.realtime.event_bus import EventBus
 
@@ -69,8 +71,20 @@ def reaction_repo():
 
 
 @pytest.fixture
+def prompt_repo():
+    """@brief Mock PromptRepository."""
+    return AsyncMock(spec=PromptRepository)
+
+
+@pytest.fixture
 def notification_svc():
     """@brief Mock NotificationService."""
+    return AsyncMock()
+
+
+@pytest.fixture
+def interest_svc():
+    """@brief Mock InterestService."""
     return AsyncMock()
 
 
@@ -87,15 +101,33 @@ def media_attacher():
 
 
 @pytest.fixture
-def service(post_repo, comment_repo, reaction_repo, notification_svc):
+def activity_repo():
+    """@brief Mock ActivityRepository."""
+    return AsyncMock(spec=ActivityRepository)
+
+
+@pytest.fixture
+def service(
+    post_repo,
+    comment_repo,
+    reaction_repo,
+    notification_svc,
+    prompt_repo,
+    interest_svc,
+    activity_repo,
+):
     """@brief PostService with mocked dependencies."""
-    return PostService(
+    svc = PostService(
         post_repo=post_repo,
         comment_repo=comment_repo,
         reaction_repo=reaction_repo,
         notification_service=notification_svc,
         community_id=COMMUNITY_ID,
+        prompt_repo=prompt_repo,
+        interest_service=interest_svc,
+        activity_repo=activity_repo,
     )
+    return svc
 
 
 @pytest.fixture
@@ -109,4 +141,11 @@ def service_with_event_bus(service, mock_event_bus):
 def service_with_media(service, media_attacher):
     """@brief PostService with media_attacher injected."""
     service._media_attacher = media_attacher
+    return service
+
+
+@pytest.fixture
+def service_with_activity_repo(service, activity_repo):
+    """@brief PostService with activity_repo injected."""
+    service._activity_repo = activity_repo
     return service

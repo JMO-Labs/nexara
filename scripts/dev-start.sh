@@ -7,9 +7,10 @@
 # and Nuxt frontend with proper proxy configuration.
 #
 # Usage:
-#   ./scripts/dev-start.sh          # start everything
-#   ./scripts/dev-start.sh --stop   # tear down running services
-#   ./scripts/dev-start.sh --reset  # stop + start fresh
+#   ./scripts/dev-start.sh           # start (reuse healthy services if running)
+#   ./scripts/dev-start.sh --stop    # tear down running services
+#   ./scripts/dev-start.sh --reset   # stop + start fresh
+#   ./scripts/dev-start.sh --restart # alias for --reset (force kill + restart)
 
 set -euo pipefail
 
@@ -46,6 +47,19 @@ kill_port() {
     echo "${pids}" | xargs kill -9 2>/dev/null || true
     log "Killed processes on port ${port}"
   fi
+}
+
+# Probe whether a port responds to a 200/3xx HTTP request quickly.
+# Used to detect a still-healthy dev process so we skip the restart and
+# avoid killing connections held by the browser.
+port_alive() {
+  local port=$1
+  curl -sf -m 2 -o /dev/null "http://127.0.0.1:${port}/" 2>/dev/null \
+    || curl -sf -m 2 -o /dev/null "http://127.0.0.1:${port}" 2>/dev/null
+}
+
+backend_alive() {
+  curl -sf -m 2 -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/healthz" 2>/dev/null
 }
 
 wait_for_port() {
@@ -96,9 +110,23 @@ do_stop() {
 do_start() {
   log "=== Nexara Dev Environment ==="
 
-  # 1) Kill stale processes on dev ports
-  kill_port ${BACKEND_PORT}
-  kill_port ${FRONTEND_PORT}
+  # 1) Detect already-running healthy services so re-running this script does
+  #    not interrupt connected browsers. Force kill+restart with --restart.
+  local skip_backend=0
+  local skip_frontend=0
+  if backend_alive; then
+    ok "Backend already healthy on :${BACKEND_PORT} (skipping restart)"
+    skip_backend=1
+  else
+    kill_port ${BACKEND_PORT}
+  fi
+  if port_alive ${FRONTEND_PORT}; then
+    ok "Frontend already serving on :${FRONTEND_PORT} (skipping restart)"
+    skip_frontend=1
+  else
+    kill_port ${FRONTEND_PORT}
+  fi
+  # Always reap stray secondary ports (never the active dev ones).
   kill_port 3001
   kill_port 3002
 
@@ -155,24 +183,26 @@ do_start() {
     alembic upgrade head 2>&1 | tail -3
   ok "Migrations complete"
 
-  # 8) Start backend
-  log "Starting FastAPI backend on :${BACKEND_PORT}..."
-  cd "${BACKEND_DIR}"
-  JWT_PRIVATE_KEY_PATH="${jwt_priv}" \
-  JWT_PUBLIC_KEY_PATH="${jwt_pub}" \
-  LOCAL_STORAGE_PATH="${DATA_DIR}/media" \
-  HIBP_CHECK_ENABLED=false \
-  APP_ENV=development \
-  DEBUG=true \
-  ENABLE_METRICS=false \
-  ALLOWED_ORIGINS="http://localhost:${FRONTEND_PORT},http://$(hostname).local:${FRONTEND_PORT},http://$(hostname -I 2>/dev/null | awk '{print $1}'):${FRONTEND_PORT}" \
-    nohup .venv/bin/python -m uvicorn app.main:app \
-      --host 0.0.0.0 --port ${BACKEND_PORT} \
-      > "${DATA_DIR}/backend.log" 2>&1 &
-  local backend_pid=$!
-  echo "${backend_pid}" > "${DATA_DIR}/backend.pid"
-  wait_for_port ${BACKEND_PORT} 15
-  ok "Backend running (PID ${backend_pid})"
+  # 8) Start backend (skip if already healthy)
+  if [[ ${skip_backend} -eq 0 ]]; then
+    log "Starting FastAPI backend on :${BACKEND_PORT}..."
+    cd "${BACKEND_DIR}"
+    JWT_PRIVATE_KEY_PATH="${jwt_priv}" \
+    JWT_PUBLIC_KEY_PATH="${jwt_pub}" \
+    LOCAL_STORAGE_PATH="${DATA_DIR}/media" \
+    HIBP_CHECK_ENABLED=false \
+    APP_ENV=development \
+    DEBUG=true \
+    ENABLE_METRICS=false \
+    ALLOWED_ORIGINS="http://localhost:${FRONTEND_PORT},http://$(hostname).local:${FRONTEND_PORT},http://$(hostname -I 2>/dev/null | awk '{print $1}'):${FRONTEND_PORT}" \
+      nohup .venv/bin/python -m uvicorn app.main:app \
+        --host 0.0.0.0 --port ${BACKEND_PORT} --reload \
+        > "${DATA_DIR}/backend.log" 2>&1 &
+    local backend_pid=$!
+    echo "${backend_pid}" > "${DATA_DIR}/backend.pid"
+    wait_for_port ${BACKEND_PORT} 15
+    ok "Backend running (PID ${backend_pid})"
+  fi
 
   # 9) Frontend deps
   if [[ ! -d "${FRONTEND_DIR}/node_modules" ]]; then
@@ -182,15 +212,17 @@ do_start() {
     ok "Frontend deps installed"
   fi
 
-  # 10) Start frontend
-  log "Starting Nuxt frontend on :${FRONTEND_PORT}..."
-  cd "${FRONTEND_DIR}"
-  nohup npx nuxt dev --host 0.0.0.0 --port ${FRONTEND_PORT} \
-    > "${DATA_DIR}/frontend.log" 2>&1 &
-  local frontend_pid=$!
-  echo "${frontend_pid}" > "${DATA_DIR}/frontend.pid"
-  wait_for_port ${FRONTEND_PORT} 30
-  ok "Frontend running (PID ${frontend_pid})"
+  # 10) Start frontend (skip if already running)
+  if [[ ${skip_frontend} -eq 0 ]]; then
+    log "Starting Next.js frontend on :${FRONTEND_PORT}..."
+    cd "${FRONTEND_DIR}"
+    nohup npm run dev -- --hostname 0.0.0.0 --port ${FRONTEND_PORT} \
+      > "${DATA_DIR}/frontend.log" 2>&1 &
+    local frontend_pid=$!
+    echo "${frontend_pid}" > "${DATA_DIR}/frontend.pid"
+    wait_for_port ${FRONTEND_PORT} 30
+    ok "Frontend running (PID ${frontend_pid})"
+  fi
 
   # 11) Health check
   log "Running health check..."
@@ -217,7 +249,7 @@ case "${1:-}" in
   --stop)
     do_stop
     ;;
-  --reset)
+  --reset|--restart)
     do_stop
     sleep 1
     do_start

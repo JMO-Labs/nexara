@@ -15,6 +15,7 @@ import structlog
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.auth_magic_link import router as magic_link_router
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, get_optional_user
 from app.core.i18n import _
@@ -395,3 +396,6 @@ async def oidc_callback_deprecated(
 async def jwks(settings: Settings = Depends(get_settings)) -> Any:
     """@brief Serve the JSON Web Key Set for JWT verification by external services."""
     return get_jwks(settings)
+
+
+router.include_router(magic_link_router, prefix="/magic-link")

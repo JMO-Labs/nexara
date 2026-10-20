@@ -1,0 +1,760 @@
+"""
+@file test_subgroup_service.py
+@brief Unit tests for SubgroupService covering the six plan cases.
+
+The six cases from the Phase 2 plan are:
+  1. Create subgroup with valid data
+  2. Creator becomes owner
+  3. Chat channel auto-created
+  4. Join with open policy succeeds
+  5. Join with invite-only policy creates pending request
+  6. Membership limit enforced
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from app.core.exceptions import AuthorizationError, ConflictError
+from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember
+from app.models.user import User
+from app.repositories.post_repo import PostRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+from app.services.subgroup_service import SubgroupService
+
+COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+def _make_user(
+    *,
+    role: str = "member",
+    user_id: uuid.UUID | None = None,
+) -> MagicMock:
+    """@brief Build a mock User with the requested role."""
+    user = MagicMock(spec=User)
+    user.id = user_id or uuid.uuid4()
+    user.role = role
+    user.display_name = "Alice"
+    user.username = "alice"
+    user.avatar_url = None
+    return user
+
+
+def _make_subgroup(
+    *,
+    slug: str = "family",
+    is_private: bool = False,
+    join_policy: str = "open",
+    archived: bool = False,
+    created_by: uuid.UUID | None = None,
+) -> MagicMock:
+    """@brief Build a mock Subgroup ORM row."""
+    sg = MagicMock(spec=Subgroup)
+    sg.id = uuid.uuid4()
+    sg.community_id = COMMUNITY_ID
+    sg.name = "Family"
+    sg.slug = slug
+    sg.description = None
+    sg.avatar_url = None
+    sg.is_private = is_private
+    sg.join_policy = join_policy
+    sg.created_by = created_by or uuid.uuid4()
+    sg.archived_at = datetime.now(UTC) if archived else None
+    sg.created_at = datetime.now(UTC)
+    sg.updated_at = datetime.now(UTC)
+    return sg
+
+
+@pytest.fixture
+def subgroup_repo() -> AsyncMock:
+    return AsyncMock(spec=SubgroupRepository)
+
+
+@pytest.fixture
+def member_repo() -> AsyncMock:
+    return AsyncMock(spec=SubgroupMemberRepository)
+
+
+@pytest.fixture
+def post_repo() -> AsyncMock:
+    return AsyncMock(spec=PostRepository)
+
+
+@pytest.fixture
+def service(subgroup_repo, member_repo, post_repo) -> SubgroupService:
+    return SubgroupService(
+        subgroup_repo=subgroup_repo,
+        member_repo=member_repo,
+        post_repo=post_repo,
+        community_id=COMMUNITY_ID,
+        max_memberships_per_user=5,
+    )
+
+
+class TestCreateSubgroup:
+    """@brief Cases 1, 2, and 3 from the plan."""
+
+    @pytest.mark.asyncio
+    async def test_creates_subgroup_with_valid_data(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 1 — creates with valid data and returns the row."""
+        user = _make_user()
+        subgroup_repo.get_by_slug.return_value = None
+        created = _make_subgroup(slug="family")
+        subgroup_repo.create_subgroup.return_value = created
+        channel = MagicMock(spec=ChatChannel)
+        subgroup_repo.create_chat_channel.return_value = channel
+
+        subgroup, chat = await service.create_subgroup(
+            user,
+            name="Family",
+            slug="family",
+            description="Family branch",
+            is_private=False,
+            join_policy="open",
+        )
+
+        assert subgroup is created
+        assert chat is channel
+        subgroup_repo.create_subgroup.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_creator_becomes_owner(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 2 — creator auto-added as owner."""
+        user = _make_user()
+        subgroup_repo.get_by_slug.return_value = None
+        created = _make_subgroup()
+        subgroup_repo.create_subgroup.return_value = created
+        subgroup_repo.create_chat_channel.return_value = MagicMock(spec=ChatChannel)
+
+        await service.create_subgroup(
+            user,
+            name="Family",
+            slug="family",
+        )
+
+        member_repo.add_member.assert_awaited_once()
+        kwargs = member_repo.add_member.await_args.kwargs
+        assert kwargs["role"] == "owner"
+        assert kwargs["user_id"] == user.id
+        assert kwargs["subgroup_id"] == created.id
+
+    @pytest.mark.asyncio
+    async def test_chat_channel_auto_created(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 3 — chat channel row is inserted on creation."""
+        user = _make_user()
+        subgroup_repo.get_by_slug.return_value = None
+        created = _make_subgroup(slug="trip-italy")
+        subgroup_repo.create_subgroup.return_value = created
+        channel = MagicMock(spec=ChatChannel)
+        subgroup_repo.create_chat_channel.return_value = channel
+
+        _, chat = await service.create_subgroup(
+            user,
+            name="Trip Italy",
+            slug="trip-italy",
+        )
+
+        subgroup_repo.create_chat_channel.assert_awaited_once()
+        kwargs = subgroup_repo.create_chat_channel.await_args.kwargs
+        assert kwargs["subgroup_id"] == created.id
+        assert kwargs["community_id"] == COMMUNITY_ID
+        assert chat is channel
+
+    @pytest.mark.asyncio
+    async def test_duplicate_slug_rejected(
+        self,
+        service,
+        subgroup_repo,
+    ):
+        """Sanity — duplicate slug raises ConflictError."""
+        user = _make_user()
+        subgroup_repo.get_by_slug.return_value = _make_subgroup(slug="family")
+
+        with pytest.raises(ConflictError):
+            await service.create_subgroup(user, name="Family", slug="family")
+
+
+class TestJoinSubgroup:
+    """@brief Cases 4, 5, and 6 from the plan."""
+
+    @pytest.mark.asyncio
+    async def test_join_with_open_policy_succeeds(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 4 — open policy adds membership immediately."""
+        user = _make_user()
+        subgroup = _make_subgroup(slug="family", join_policy="open")
+        subgroup_repo.get_by_slug.return_value = subgroup
+        member_repo.get_membership.return_value = None
+        member_repo.count_for_user.return_value = 0
+
+        result = await service.join_subgroup("family", user)
+
+        assert result["status"] == "joined"
+        assert result["role"] == "member"
+        member_repo.add_member.assert_awaited_once()
+        kwargs = member_repo.add_member.await_args.kwargs
+        assert kwargs["role"] == "member"
+        assert kwargs["user_id"] == user.id
+
+    @pytest.mark.asyncio
+    async def test_join_with_invite_only_creates_pending_request(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 5 — invite-only policy returns pending status without adding."""
+        user = _make_user()
+        subgroup = _make_subgroup(slug="vip", join_policy="invite_only")
+        subgroup_repo.get_by_slug.return_value = subgroup
+        member_repo.get_membership.return_value = None
+        member_repo.count_for_user.return_value = 0
+
+        result = await service.join_subgroup("vip", user)
+
+        assert result["status"] == "pending"
+        assert result["policy"] == "invite_only"
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_membership_limit_enforced(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Case 6 — exceeding max memberships raises ConflictError."""
+        user = _make_user()
+        subgroup = _make_subgroup(slug="family", join_policy="open")
+        subgroup_repo.get_by_slug.return_value = subgroup
+        member_repo.get_membership.return_value = None
+        member_repo.count_for_user.return_value = 5  # at cap
+
+        with pytest.raises(ConflictError):
+            await service.join_subgroup("family", user)
+
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_admin_bypasses_membership_limit(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Admin bypass — admins ignore the per-user cap."""
+        admin = _make_user(role="admin")
+        subgroup = _make_subgroup(slug="family", join_policy="open")
+        subgroup_repo.get_by_slug.return_value = subgroup
+        member_repo.get_membership.return_value = None
+        member_repo.count_for_user.return_value = 999
+
+        result = await service.join_subgroup("family", admin)
+
+        assert result["status"] == "joined"
+        member_repo.add_member.assert_awaited_once()
+
+
+class TestAdminVisibility:
+    """@brief Admin oversight — private subgroups visible to admins."""
+
+    @pytest.mark.asyncio
+    async def test_admin_can_view_private_subgroup(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Admin bypass — private subgroups are visible even without membership."""
+        admin = _make_user(role="admin")
+        subgroup = _make_subgroup(slug="secret", is_private=True)
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        result = await service.get_subgroup("secret", admin)
+
+        assert result is subgroup
+        # Admin path should NOT consult membership for visibility.
+        member_repo.get_membership.assert_not_awaited()
+
+
+class TestParentHierarchy:
+    """@brief Validate parent_id semantics on create/update."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_parent(self, service, subgroup_repo, member_repo):
+        """Create with valid parent stores parent_id on the new subgroup."""
+        owner = _make_user()
+        parent = _make_subgroup(slug="root")
+        parent.parent_id = None
+        subgroup_repo.get_by_slug.return_value = None
+        subgroup_repo.get_by_id.return_value = parent
+
+        created = _make_subgroup(slug="child")
+        created.parent_id = parent.id
+        subgroup_repo.create_subgroup.return_value = created
+
+        channel = MagicMock(spec=ChatChannel)
+        subgroup_repo.create_chat_channel.return_value = channel
+
+        await service.create_subgroup(
+            owner,
+            name="Child",
+            slug="child",
+            parent_id=parent.id,
+        )
+
+        subgroup_repo.create_subgroup.assert_awaited_once()
+        kwargs = subgroup_repo.create_subgroup.await_args.kwargs
+        assert kwargs["parent_id"] == parent.id
+
+    @pytest.mark.asyncio
+    async def test_create_with_unknown_parent_rejected(self, service, subgroup_repo, member_repo):
+        """Unknown parent_id raises NotFoundError before insert."""
+        from app.core.exceptions import NotFoundError
+
+        owner = _make_user()
+        subgroup_repo.get_by_slug.return_value = None
+        subgroup_repo.get_by_id.return_value = None
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                owner,
+                name="Child",
+                slug="child",
+                parent_id=uuid.uuid4(),
+            )
+
+        subgroup_repo.create_subgroup.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_self_parent_rejected_on_update(self, service, subgroup_repo, member_repo):
+        """Setting parent_id to self raises ConflictError."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="solo")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        with pytest.raises(ConflictError):
+            await service.update_subgroup("solo", owner, {"parent_id": subgroup.id})
+
+        subgroup_repo.update_fields.assert_not_awaited()
+
+
+class TestRoleInheritance:
+    """@brief Parent → child role/membership cascade via effective_membership."""
+
+    @pytest.mark.asyncio
+    async def test_ancestor_owner_grants_inherited_access(self, subgroup_repo, member_repo):
+        """Owner of parent has effective owner role on child with no direct membership."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        owner_m = MagicMock(spec=SubgroupMember)
+        owner_m.role = "owner"
+        # First call (direct on child) → None; second (ancestor parent) → owner.
+        member_repo.get_membership.side_effect = [None, owner_m]
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is owner_m
+
+    @pytest.mark.asyncio
+    async def test_direct_role_outranks_weaker_ancestor(self, subgroup_repo, member_repo):
+        """Direct owner beats ancestor moderator (highest rank wins)."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        direct = MagicMock(spec=SubgroupMember)
+        direct.role = "owner"
+        ancestor = MagicMock(spec=SubgroupMember)
+        ancestor.role = "moderator"
+        member_repo.get_membership.side_effect = [direct, ancestor]
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is direct
+
+    @pytest.mark.asyncio
+    async def test_no_membership_anywhere_returns_none(self, subgroup_repo, member_repo):
+        """No direct + no ancestor membership → effective is None."""
+        from app.services.subgroups.helpers import effective_membership
+
+        parent = _make_subgroup(slug="root")
+        child = _make_subgroup(slug="child")
+        user = _make_user()
+
+        member_repo.get_membership.return_value = None
+        subgroup_repo.get_ancestor_ids.return_value = [parent.id]
+
+        result = await effective_membership(member_repo, subgroup_repo, child, user)
+        assert result is None
+
+
+class TestAddMember:
+    """@brief Direct add-member by owner/admin (bypasses join policy)."""
+
+    @pytest.mark.asyncio
+    async def test_owner_can_add_member(self, service, subgroup_repo, member_repo):
+        """Owner adds another user; repo.add_member is called."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        # First lookup: acting user's role; second: target's existing membership.
+        member_repo.get_membership.side_effect = [owner_membership, None]
+
+        created = MagicMock(spec=SubgroupMember)
+        member_repo.add_member.return_value = created
+
+        target_id = uuid.uuid4()
+        result = await service.add_member("family", target_id, "member", owner)
+
+        assert result is created
+        member_repo.add_member.assert_awaited_once()
+        kwargs = member_repo.add_member.await_args.kwargs
+        assert kwargs["user_id"] == target_id
+        assert kwargs["role"] == "member"
+        assert kwargs["invited_by"] == owner.id
+
+    @pytest.mark.asyncio
+    async def test_non_owner_rejected(self, service, subgroup_repo, member_repo):
+        """Member-role caller cannot add members."""
+        member = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        my_membership = MagicMock(spec=SubgroupMember)
+        my_membership.role = "member"
+        member_repo.get_membership.return_value = my_membership
+
+        with pytest.raises(AuthorizationError):
+            await service.add_member("family", uuid.uuid4(), "member", member)
+
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_duplicate_rejected(self, service, subgroup_repo, member_repo):
+        """Adding existing member raises ConflictError."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        existing_target = MagicMock(spec=SubgroupMember)
+        member_repo.get_membership.side_effect = [owner_membership, existing_target]
+
+        with pytest.raises(ConflictError):
+            await service.add_member("family", uuid.uuid4(), "member", owner)
+
+        member_repo.add_member.assert_not_awaited()
+
+
+class TestPinPost:
+    """@brief Pinning an announcement post clears previous pin."""
+
+    @pytest.mark.asyncio
+    async def test_pin_post_unsets_previous_pin(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+        post_repo,
+    ):
+        """Pinning a post clears the existing pin in the same subgroup."""
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        # Owner membership so role check passes.
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        post_id = uuid.uuid4()
+        post = MagicMock()
+        post.id = post_id
+        post.subgroup_id = subgroup.id
+        post.is_pinned = False
+        post_repo.get_by_id.return_value = post
+
+        # post_repo._session has an execute AsyncMock so the UPDATE runs.
+        session = AsyncMock()
+        session.execute = AsyncMock()
+        session.flush = AsyncMock()
+        post_repo._session = session
+
+        result = await service.pin_post("family", post_id, owner)
+
+        assert result["post_id"] == str(post_id)
+        assert post.is_pinned is True
+        # One UPDATE was issued to clear prior pins.
+        session.execute.assert_awaited()
+
+
+class TestCoverMedia:
+    """@brief Cover media ID update and cross-community validation."""
+
+    @pytest.mark.asyncio
+    async def test_update_with_valid_cover_media_persists_value(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """(a) update with valid cover_media_id persists value."""
+        from app.models.media import Media
+
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup.cover_media_id = None
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        media_id = uuid.uuid4()
+        # Mock media in same community
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = COMMUNITY_ID
+        subgroup_repo.get_media_by_id.return_value = media
+
+        updated = _make_subgroup(slug="family")
+        updated.cover_media_id = media_id
+        subgroup_repo.update_fields.return_value = updated
+
+        result = await service.update_subgroup(
+            "family",
+            owner,
+            {"cover_media_id": media_id},
+        )
+
+        assert result.cover_media_id == media_id
+        subgroup_repo.update_fields.assert_awaited_once()
+        args = subgroup_repo.update_fields.await_args[0]
+        data_dict = args[1]
+        assert data_dict["cover_media_id"] == media_id
+
+    @pytest.mark.asyncio
+    async def test_cross_community_media_id_raises_error(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """(b) cross-community media_id raises error and does NOT persist."""
+        from app.core.exceptions import NotFoundError
+        from app.models.media import Media
+
+        owner = _make_user()
+        subgroup = _make_subgroup(slug="family")
+        subgroup_repo.get_by_slug.return_value = subgroup
+
+        owner_membership = MagicMock(spec=SubgroupMember)
+        owner_membership.role = "owner"
+        member_repo.get_membership.return_value = owner_membership
+
+        media_id = uuid.uuid4()
+        # Mock media from different community
+        other_community_id = uuid.UUID("00000000-0000-0000-0000-000000000999")
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = other_community_id
+        subgroup_repo.get_media_by_id.return_value = media
+
+        with pytest.raises(NotFoundError):
+            await service.update_subgroup(
+                "family",
+                owner,
+                {"cover_media_id": media_id},
+            )
+
+        # Verify update was NOT called.
+        subgroup_repo.update_fields.assert_not_awaited()
+
+
+class TestCreateWithInitialOwner:
+    """@brief Initial owner assignment on create."""
+
+    @pytest.mark.asyncio
+    async def test_create_with_initial_owner_assigns_owner_and_creator_moderator(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Designated initial_owner_id becomes owner, creator becomes moderator."""
+        creator = _make_user(user_id=uuid.UUID("00000000-0000-0000-0000-000000000010"))
+        owner_id = uuid.UUID("00000000-0000-0000-0000-000000000011")
+
+        subgroup_repo.get_by_slug.return_value = None
+        created = _make_subgroup(slug="family")
+        subgroup_repo.create_subgroup.return_value = created
+        subgroup_repo.create_chat_channel.return_value = MagicMock(spec=ChatChannel)
+
+        # Mock session to validate user exists in community
+        session = AsyncMock()
+        # Mock execute for user query (simulating User fetch)
+        user_result = MagicMock()
+        user_result.scalar_one_or_none.return_value = MagicMock(
+            spec=User, id=owner_id, community_id=COMMUNITY_ID
+        )
+        session.execute = AsyncMock(return_value=user_result)
+        subgroup_repo._session = session
+
+        await service.create_subgroup(
+            creator,
+            name="Family",
+            slug="family",
+            initial_owner_id=owner_id,
+        )
+
+        # Should add two members: owner_id as owner, creator as moderator
+        assert member_repo.add_member.await_count == 2
+
+        calls = member_repo.add_member.await_args_list
+        # First call: target user as owner
+        assert calls[0].kwargs["user_id"] == owner_id
+        assert calls[0].kwargs["role"] == "owner"
+        # Second call: creator as moderator
+        assert calls[1].kwargs["user_id"] == creator.id
+        assert calls[1].kwargs["role"] == "moderator"
+
+    @pytest.mark.asyncio
+    async def test_create_with_initial_owner_invalid_raises(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Non-existent initial_owner_id raises NotFoundError; subgroup not created."""
+        from app.core.exceptions import NotFoundError
+
+        creator = _make_user()
+        invalid_owner_id = uuid.uuid4()
+
+        subgroup_repo.get_by_slug.return_value = None
+
+        # Mock session for user query that returns None
+        session = AsyncMock()
+        user_result = MagicMock()
+        user_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=user_result)
+        subgroup_repo._session = session
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                creator,
+                name="Family",
+                slug="family",
+                initial_owner_id=invalid_owner_id,
+            )
+
+        # Verify subgroup was NOT created
+        subgroup_repo.create_subgroup.assert_not_awaited()
+        member_repo.add_member.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_with_cover_media_id_persists(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """cover_media_id provided on create is persisted."""
+        from app.models.media import Media
+
+        creator = _make_user()
+        media_id = uuid.uuid4()
+
+        subgroup_repo.get_by_slug.return_value = None
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = COMMUNITY_ID
+        subgroup_repo.get_media_by_id.return_value = media
+
+        created = _make_subgroup(slug="family")
+        created.cover_media_id = media_id
+        subgroup_repo.create_subgroup.return_value = created
+        subgroup_repo.create_chat_channel.return_value = MagicMock(spec=ChatChannel)
+
+        subgroup, _channel = await service.create_subgroup(
+            creator,
+            name="Family",
+            slug="family",
+            cover_media_id=media_id,
+        )
+
+        assert subgroup.cover_media_id == media_id
+        subgroup_repo.create_subgroup.assert_awaited_once()
+        kwargs = subgroup_repo.create_subgroup.await_args.kwargs
+        assert kwargs["cover_media_id"] == media_id
+
+    @pytest.mark.asyncio
+    async def test_create_with_invalid_cover_media_id_raises(
+        self,
+        service,
+        subgroup_repo,
+        member_repo,
+    ):
+        """Cross-community cover_media_id raises NotFoundError; subgroup not created."""
+        from app.core.exceptions import NotFoundError
+        from app.models.media import Media
+
+        creator = _make_user()
+        media_id = uuid.uuid4()
+        other_community_id = uuid.UUID("00000000-0000-0000-0000-000000000999")
+
+        subgroup_repo.get_by_slug.return_value = None
+        media = MagicMock(spec=Media)
+        media.id = media_id
+        media.community_id = other_community_id
+        subgroup_repo.get_media_by_id.return_value = media
+
+        with pytest.raises(NotFoundError):
+            await service.create_subgroup(
+                creator,
+                name="Family",
+                slug="family",
+                cover_media_id=media_id,
+            )
+
+        # Verify subgroup was NOT created
+        subgroup_repo.create_subgroup.assert_not_awaited()
+        member_repo.add_member.assert_not_awaited()

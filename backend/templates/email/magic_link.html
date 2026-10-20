@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Sign in - {{ community_name }}{% endblock %}
+{% block content %}
+<h2 style="color: {{ color_primary }};">Sign in to {{ community_name }}</h2>
+<p>Click the button below to sign in to your account.</p>
+<p>
+  <a href="{{ magic_link_url | default('#') }}" style="display: inline-block; padding: 12px 24px; background: {{ color_primary }}; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Sign in</a>
+</p>
+<p>This link expires in 15 minutes.</p>
+{% endblock %}
+{% block footer %}
+<p>You received this email because a magic link was requested for your account on {{ community_name }}.</p>
+{% endblock %}

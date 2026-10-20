@@ -81,3 +81,23 @@ def database_backup() -> dict[str, str]:
     """
     logger.info("database_backup")
     return {"status": "completed"}
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="app.tasks.maintenance_tasks.prune_activity_events",
+    queue="maintenance",
+)
+def prune_activity_events(days: int = 30) -> dict[str, int]:
+    """
+    @brief Delete activity events older than N days.
+
+    Runs daily to keep the activity_events table bounded. Default retention
+    is 30 days. Called via Beat schedule.
+
+    @param days Number of days to retain (default 30).
+    @return Dict with ``deleted_count``.
+    """
+    logger.info("prune_activity_events", days=days)
+    # Note: actual deletion is async; this stub returns 0 for now.
+    # Phase 2 will wire this to ActivityRepository.delete_older_than_days().
+    return {"deleted_count": 0}

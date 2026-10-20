@@ -29,6 +29,24 @@ def _make_branding_row():
     row.color_primary_dark = "#2563eb"
     row.logo_light_media_id = None
     row.logo_dark_media_id = None
+    # Full palette (for BrandingResponse compatibility)
+    row.color_accent = "#8b5cf6"
+    row.color_surface_light = "#ffffff"
+    row.color_surface_dark = "#1f2937"
+    row.color_text_light = "#111827"
+    row.color_text_dark = "#f9fafb"
+    row.font_family = "Inter"
+    row.font_family_mono = "JetBrains Mono"
+    row.email_logo_media_id = None
+    row.email_footer_text = None
+    row.email_sender_name = None
+    row.landing_cta_text = "Join our community"
+    row.landing_show_feature_list = True
+    row.pwa_icon_192_media_id = None
+    row.pwa_icon_512_media_id = None
+    row.about_short = None
+    row.custom_css = None
+    row.custom_css_enabled = False
     return row
 
 

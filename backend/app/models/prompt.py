@@ -14,6 +14,7 @@ from sqlalchemy import (
     Index,
     Integer,
     SmallInteger,
+    String,
     Text,
     UniqueConstraint,
     func,
@@ -66,6 +67,9 @@ class Prompt(Base):
         ForeignKey("events.id", ondelete="SET NULL"),
     )
     generate_summary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    prompt_type: Mapped[str] = mapped_column(String(32), default="standard", nullable=False)
+    interest_category_slug: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    interest_capture_hint: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

@@ -26,6 +26,7 @@ from app.db.session import async_session_factory
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.repositories.activity_repo import ActivityRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -211,3 +212,17 @@ async def get_optional_user(
 
     result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
     return result.scalar_one_or_none()
+
+
+async def get_activity_repo(
+    db: AsyncSession = Depends(get_db),
+) -> ActivityRepository:
+    """
+    @brief Provide an ActivityRepository instance.
+
+    @param db Async database session.
+    @return ActivityRepository instance for recording activity events.
+    """
+    from app.repositories.activity_repo import ActivityRepository
+
+    return ActivityRepository(db)
