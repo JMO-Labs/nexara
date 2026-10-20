@@ -3,6 +3,7 @@
  * @file components/notifications/NotificationRow.tsx
  * @brief Single notification row: type icon, time, message, acknowledge.
  */
+import { safeInternalLink } from "@/lib/safeLink";
 import type { ComponentType, SVGProps } from "react";
 import Link from "next/link";
 import {
@@ -71,8 +72,7 @@ export function NotificationRow({
   const { label, icon: Icon } = metaFor(item.type);
   const message =
     typeof item.payload?.message === "string" ? item.payload.message : label;
-  const link =
-    typeof item.payload?.link === "string" ? item.payload.link : null;
+  const link = safeInternalLink(item.payload?.link);
 
   const body = (
     <div
