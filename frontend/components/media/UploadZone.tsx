@@ -5,10 +5,6 @@
  *        per-file progress.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import LinearProgress from "@mui/joy/LinearProgress";
 import { Button } from "@/components/ui";
 import { uploadFile, type MediaItem } from "@/lib/api/media";
 
@@ -70,36 +66,25 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
   };
 
   return (
-    <Stack spacing={2}>
-      <Box
+    <div className="flex flex-col gap-4">
+      <div
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload media — drop files or click"
-        sx={{
-          p: 4,
-          borderRadius: "lg",
-          border: "2px dashed",
-          borderColor: dragOver ? "primary.outlinedBorder" : "divider",
-          background: dragOver ? "primary.softBg" : "background.level1",
-          textAlign: "center",
-          cursor: "pointer",
-          transition: "background 120ms",
-        }}
+        className={`rounded-2xl border-2 border-dashed p-8 text-center motion-safe:transition-colors ${dragOver ? "border-accent bg-surface-strong/10" : "border-current/30 bg-surface"}`}
       >
-        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
-          Drop files here
-        </Typography>
-        <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
-          or click to browse
-        </Typography>
-        <Button sx={{ mt: 2 }} size="sm" variant="outlined" type="button">
+        <p className="text-lg font-semibold">Drop files here</p>
+        <p className="text-sm text-muted">or choose them from your device</p>
+        <Button
+          className="mt-4 min-h-11"
+          size="sm"
+          variant="outline"
+          type="button"
+          onClick={() => inputRef.current?.click()}
+        >
           Choose files
         </Button>
         <input
@@ -107,41 +92,48 @@ export function UploadZone({ onComplete }: UploadZoneProps) {
           type="file"
           multiple
           hidden
+          aria-label="Upload media files"
           onChange={(e) => {
             if (e.target.files) void start(Array.from(e.target.files));
             e.target.value = "";
           }}
         />
-      </Box>
+      </div>
       {jobs.length > 0 && (
-        <Stack spacing={1}>
+        <ul className="flex flex-col gap-2">
           {jobs.map((j, i) => (
-            <Stack key={i} spacing={0.5}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography level="body-sm" noWrap sx={{ flex: 1, mr: 1 }}>
-                  {j.file.name}
-                </Typography>
-                <Typography
-                  level="body-xs"
-                  sx={{ color: j.error ? "danger.500" : "text.tertiary" }}
+            <li key={i} className="flex flex-col gap-1">
+              <div className="flex justify-between gap-2 text-sm">
+                <span className="flex-1 truncate">{j.file.name}</span>
+                <span
+                  className={j.error ? "text-destructive" : "text-muted"}
+                  role={j.error ? "alert" : undefined}
                 >
                   {j.error
                     ? j.error
                     : j.done
                       ? "Done"
                       : `${Math.round(j.progress)}%`}
-                </Typography>
-              </Stack>
-              <LinearProgress
-                determinate
-                value={j.progress}
-                color={j.error ? "danger" : j.done ? "success" : "primary"}
-              />
-            </Stack>
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label={`Upload progress for ${j.file.name}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(j.progress)}
+                className="h-1.5 overflow-hidden rounded-full bg-surface"
+              >
+                <div
+                  className={`h-full ${j.error ? "bg-destructive" : "bg-accent"}`}
+                  style={{ width: `${j.progress}%` }}
+                />
+              </div>
+            </li>
           ))}
-        </Stack>
+        </ul>
       )}
-    </Stack>
+    </div>
   );
 }
 

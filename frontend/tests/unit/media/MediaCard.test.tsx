@@ -5,8 +5,6 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { MediaCard } from "@/components/media/MediaCard";
 import type { MediaItem } from "@/lib/api/media";
 
@@ -26,7 +24,7 @@ const m: MediaItem = {
 };
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("MediaCard", () => {
