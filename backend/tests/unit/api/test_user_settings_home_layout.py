@@ -15,34 +15,17 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user
-from app.schemas.settings import HomeLayoutSchema, WidgetInstanceSchema
+from app.schemas.settings import HomeLayoutSchema
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 USER_ID = uuid.uuid4()
 
 HOME_LAYOUT_PAYLOAD = {
-    "widgets": [
-        {"id": "abc-123", "defId": "feed", "x": 0, "y": 0, "w": 6, "h": 2, "collapsed": False},
-        {
-            "id": "def-456",
-            "defId": "upcoming-events",
-            "x": 6,
-            "y": 0,
-            "w": 6,
-            "h": 2,
-            "collapsed": False,
-        },
-    ]
+    "order": ["upcoming-events", "my-groups", "media", "quick-actions"],
+    "hidden": ["media"],
 }
 
-HOME_LAYOUT_SCHEMA = HomeLayoutSchema(
-    widgets=[
-        WidgetInstanceSchema(id="abc-123", defId="feed", x=0, y=0, w=6, h=2, collapsed=False),
-        WidgetInstanceSchema(
-            id="def-456", defId="upcoming-events", x=6, y=0, w=6, h=2, collapsed=False
-        ),
-    ]
-)
+HOME_LAYOUT_SCHEMA = HomeLayoutSchema(**HOME_LAYOUT_PAYLOAD)
 
 
 def _mock_user() -> MagicMock:
@@ -154,13 +137,12 @@ async def test_patch_home_layout_round_trip(test_app):
             )
         assert resp.status_code == 200
         data = resp.json()
-        assert "widgets" in data["home_layout"]
-        assert len(data["home_layout"]["widgets"]) == 2
+        assert data["home_layout"] == HOME_LAYOUT_PAYLOAD
         # confirm service was called with the layout
         mock_svc.update_settings.assert_called_once()
         call_arg = mock_svc.update_settings.call_args[0][1]
         assert call_arg.home_layout is not None
-        assert len(call_arg.home_layout.widgets) == 2
+        assert call_arg.home_layout.hidden == ["media"]
     finally:
         _clear_overrides(test_app)
 
@@ -261,3 +243,24 @@ async def test_patch_malformed_home_layout_returns_422(test_app):
         assert resp.status_code == 422
     finally:
         _clear_overrides(test_app)
+
+
+def test_legacy_grid_layout_reads_as_default():
+    """A stored legacy {widgets:[{x,y,w,h}]} value loads the default order."""
+    from app.schemas.settings import DEFAULT_WIDGET_ORDER, UserSettingsResponse
+
+    kwargs = {
+        f"notif_{t}_{c}": True
+        for t in ("mention", "comment", "reaction", "new_post", "system", "invite_accepted")
+        for c in ("inapp", "email")
+    }
+    resp = UserSettingsResponse(
+        **kwargs,
+        mute_all_email=False,
+        theme="system",
+        locale="en-US",
+        home_layout={"widgets": [{"id": "a", "defId": "feed", "x": 0, "y": 0, "w": 6, "h": 2}]},
+    )
+    assert resp.home_layout is not None
+    assert resp.home_layout.order == DEFAULT_WIDGET_ORDER
+    assert resp.home_layout.hidden == []
