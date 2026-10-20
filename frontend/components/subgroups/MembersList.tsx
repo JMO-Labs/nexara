@@ -4,23 +4,22 @@
  * @brief List subgroup members with role pills + admin actions.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
-import Menu from "@mui/joy/Menu";
-import MenuItem from "@mui/joy/MenuItem";
-import MenuButton from "@mui/joy/MenuButton";
-import Dropdown from "@mui/joy/Dropdown";
-import Divider from "@mui/joy/Divider";
+import { MoreVertical } from "lucide-react";
 import {
   Avatar,
-  Chip,
+  Badge,
   Button,
   IconButton,
   Skeleton,
   EmptyState,
 } from "@/components/ui";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcn/dropdown-menu";
 import {
   useSubgroupMembers,
   useRemoveMember,
@@ -67,91 +66,82 @@ function MemberRow({
     m.role === "owner" && viewerRole === "owner" && !isOnlyOwner;
 
   return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      spacing={1.5}
-      sx={{ py: 1, borderBottom: "1px solid", borderColor: "divider" }}
-    >
+    <div className="flex items-center gap-3 border-b border-current/10 py-2">
       <Avatar
         src={m.avatar_url ?? undefined}
-        alt={m.display_name ?? m.username ?? ""}
+        name={m.display_name ?? m.username ?? m.user_id}
       />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography level="body-md">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-base">
           {m.display_name ?? m.username ?? m.user_id}
-        </Typography>
+        </p>
         {m.username && m.display_name && (
-          <Typography level="body-xs" sx={{ color: "text.tertiary" }}>
-            @{m.username}
-          </Typography>
+          <p className="text-sm text-muted">@{m.username}</p>
         )}
-      </Box>
-      <Chip
-        size="sm"
-        color={
+      </div>
+      <Badge
+        tone={
           m.role === "owner"
-            ? "primary"
+            ? "accent"
             : m.role === "moderator"
-              ? "warning"
+              ? "sun"
               : "neutral"
         }
       >
         {m.role}
-      </Chip>
-      {canManage && (canPromote || canDemote || canDemoteOwner || true) && (
-        <Dropdown>
-          <MenuButton
-            slots={{ root: IconButton }}
-            aria-label="actions"
-            variant="plain"
-            color="neutral"
-            size="sm"
-            loading={busy}
-          >
-            <EllipsisVerticalIcon width={18} height={18} />
-          </MenuButton>
-          <Menu placement="bottom-end" size="sm">
+      </Badge>
+      {canManage && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <IconButton
+              aria-label="actions"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              aria-busy={busy || undefined}
+              className="min-h-11 min-w-11"
+            >
+              <MoreVertical className="size-[18px]" aria-hidden="true" />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
             {m.role === "member" && canManage && (
-              <MenuItem onClick={() => onPromote?.("moderator")}>
+              <DropdownMenuItem onSelect={() => onPromote?.("moderator")}>
                 Promote to moderator
-              </MenuItem>
+              </DropdownMenuItem>
             )}
             {m.role === "moderator" && canPromoteToOwner && (
-              <MenuItem onClick={() => onPromote?.("owner")}>
+              <DropdownMenuItem onSelect={() => onPromote?.("owner")}>
                 Promote to owner
-              </MenuItem>
+              </DropdownMenuItem>
             )}
             {m.role === "moderator" && canManage && (
-              <MenuItem onClick={() => onDemote?.("moderator")}>
+              <DropdownMenuItem onSelect={() => onDemote?.("moderator")}>
                 Demote to member
-              </MenuItem>
+              </DropdownMenuItem>
             )}
             {m.role === "owner" && canDemoteOwner && (
-              <MenuItem onClick={() => onDemote?.("moderator")}>
+              <DropdownMenuItem onSelect={() => onDemote?.("moderator")}>
                 Demote to moderator
-              </MenuItem>
+              </DropdownMenuItem>
             )}
             {m.role === "owner" && isOnlyOwner && (
-              <MenuItem
-                disabled
-                aria-disabled="true"
-                title="At least one owner required"
-              >
+              <DropdownMenuItem disabled title="At least one owner required">
                 Demote to moderator
-              </MenuItem>
+              </DropdownMenuItem>
             )}
-            {(canPromote || canDemote || canDemoteOwner) && <Divider />}
-            <MenuItem
-              color="danger"
+            {(canPromote || canDemote || canDemoteOwner) && (
+              <DropdownMenuSeparator />
+            )}
+            <DropdownMenuItem
+              variant="destructive"
               disabled={isOnlyOwner && m.role === "owner"}
-              aria-disabled={isOnlyOwner && m.role === "owner"}
               title={
                 isOnlyOwner && m.role === "owner"
                   ? "At least one owner required"
-                  : ""
+                  : undefined
               }
-              onClick={async () => {
+              onSelect={async () => {
                 const ok = await confirm({
                   title: "Remove member?",
                   message: "Remove this member from the group?",
@@ -162,11 +152,11 @@ function MemberRow({
               }}
             >
               Remove from group
-            </MenuItem>
-          </Menu>
-        </Dropdown>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -181,20 +171,20 @@ export function MembersList({
   const changeRole = useChangeRole(slug);
 
   return (
-    <Stack spacing={1}>
+    <div className="flex flex-col gap-2">
       {canManage && (
-        <Stack direction="row" justifyContent="flex-end">
-          <Button size="sm" onClick={onAdd}>
+        <div className="flex justify-end">
+          <Button size="sm" className="min-h-11" onClick={onAdd}>
             Add member
           </Button>
-        </Stack>
+        </div>
       )}
       {isLoading && (
-        <Stack spacing={1}>
+        <div className="flex flex-col gap-2">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} height={48} />
           ))}
-        </Stack>
+        </div>
       )}
       {error && (
         <EmptyState title="Couldn't load members" description={String(error)} />
@@ -221,7 +211,7 @@ export function MembersList({
           }
         />
       ))}
-    </Stack>
+    </div>
   );
 }
 
