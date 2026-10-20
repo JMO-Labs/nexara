@@ -16,6 +16,7 @@ import { InterestsTab } from "./InterestsTab";
 import { AuditLogTab } from "./AuditLogTab";
 import { AdminSettingsTab } from "./AdminSettingsTab";
 import { PromptsTab } from "./PromptsTab";
+import { BrandingTab } from "./BrandingTab";
 
 const TABS = [
   { id: "metrics", label: "Metrics" },
@@ -24,6 +25,7 @@ const TABS = [
   { id: "sso", label: "SSO" },
   { id: "interests", label: "Interests" },
   { id: "prompts", label: "Prompts" },
+  { id: "branding", label: "Branding" },
   { id: "audit-log", label: "Audit log" },
   { id: "settings", label: "Settings" },
 ];
@@ -86,6 +88,9 @@ export function AdminTabs() {
       </TabPanel>
       <TabPanel value="prompts">
         <PromptsTab />
+      </TabPanel>
+      <TabPanel value="branding">
+        <BrandingTab />
       </TabPanel>
       <TabPanel value="audit-log">
         <AuditLogTab />

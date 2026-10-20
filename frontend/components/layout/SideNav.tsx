@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
+import { useBrandingStore } from "@/stores/branding";
 import {
   MORE_NAV,
   PRIMARY_NAV,
@@ -55,6 +56,7 @@ export function SideNav() {
   const user = useSession((s) => s.user);
   const admin = isAdmin(user);
   const [open, setOpen] = useState(false);
+  const { name, logoUrl } = useBrandingStore();
 
   const render = (items: NavItem[]) =>
     visibleNav(items, admin).map((i) => (
@@ -94,7 +96,21 @@ export function SideNav() {
           aria-hidden
           className="grid size-10 shrink-0 place-items-center rounded-2xl bg-sun font-black text-surface-strong"
         >
-          N
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              className="size-10 rounded-2xl object-cover"
+            />
+          ) : (
+            name.charAt(0).toUpperCase()
+          )}
+        </span>
+        <span
+          className={open ? "truncate font-black text-nav-muted" : "sr-only"}
+        >
+          {name}
         </span>
       </div>
       <ul className="flex flex-col gap-1">{render(PRIMARY_NAV)}</ul>
