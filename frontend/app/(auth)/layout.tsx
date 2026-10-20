@@ -3,7 +3,7 @@
  * @brief Split-screen auth shell: editorial brand panel (left) + form (right).
  *        Collapses to single column on mobile.
  */
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Box from "@mui/joy/Box";
 import Stack from "@mui/joy/Stack";
 import Typography from "@mui/joy/Typography";
@@ -84,7 +84,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           p: { xs: 3, sm: 5 },
         }}
       >
-        <Box sx={{ width: "100%", maxWidth: 440 }}>{children}</Box>
+        <Box sx={{ width: "100%", maxWidth: 440 }}>
+          <Suspense>{children}</Suspense>
+        </Box>
       </Box>
 
       <ToastRoot />
