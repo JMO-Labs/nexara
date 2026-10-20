@@ -5,13 +5,11 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { ChannelList } from "@/components/chat/ChannelList";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 const channels: ChatChannel[] = [
@@ -77,5 +75,39 @@ describe("ChannelList", () => {
     );
     fireEvent.click(screen.getByText("Alex"));
     expect(onSelect).toHaveBeenCalledWith("d1");
+  });
+
+  it("marks the active row", () => {
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId="d1"
+        unread={{}}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getByText("Alex").closest("button")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("deletes a DM without selecting it", () => {
+    const onSelect = vi.fn();
+    const onDeleteDm = vi.fn();
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId={null}
+        unread={{}}
+        onSelect={onSelect}
+        onDeleteDm={onDeleteDm}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Delete conversation"));
+    expect(onDeleteDm).toHaveBeenCalledWith("d1");
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });
