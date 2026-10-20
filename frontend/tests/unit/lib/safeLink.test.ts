@@ -7,6 +7,10 @@ test.each([
   ["//evil.com", null],
   ["/\\evil.com", null],
   [42, null],
+  ["/.//evil.com", null],
+  ["/..//evil.com", null],
+  ["/./\\evil.com", null],
+  ["/\t/evil.com", null],
 ])("safeInternalLink(%s)", (input, expected) => {
   expect(safeInternalLink(input)).toBe(expected);
 });

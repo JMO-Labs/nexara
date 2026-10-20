@@ -13,9 +13,10 @@ export function safeInternalLink(v: unknown): string | null {
   if (v.startsWith("//") || v.startsWith("/\\")) return null;
   try {
     const u = new URL(v, "http://x.invalid");
-    return u.origin === "http://x.invalid"
-      ? u.pathname + u.search + u.hash
-      : null;
+    if (u.origin !== "http://x.invalid") return null;
+    const out = u.pathname + u.search + u.hash;
+    // normalization can turn "/.//evil.com" into protocol-relative "//evil.com"
+    return out[1] === "/" || out[1] === "\\" ? null : out;
   } catch {
     return null;
   }
