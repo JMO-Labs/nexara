@@ -30,7 +30,7 @@ export function BottomTabBar() {
     <>
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] rounded-3xl bg-surface-strong text-muted shadow-lg md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] rounded-3xl bg-surface-strong text-nav-muted shadow-lg md:hidden"
       >
         {PRIMARY_NAV.map(({ label, href, Icon }) => {
           const active = isNavActive(pathname, href);

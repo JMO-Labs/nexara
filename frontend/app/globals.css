@@ -14,7 +14,9 @@
   --nx-accent: #c6b4f5;
   --nx-sun: #f2d16b;
   --nx-leaf: #7bae7f;
-  --nx-muted: #9db8a2;
+  --nx-muted: #4f6b57;
+  --nx-nav-muted: #9db8a2;
+  --nx-danger: #b3261e;
 
   --background: var(--nx-bg);
   --foreground: var(--nx-ink);
@@ -44,6 +46,8 @@
   --nx-sun: #c9a94a;
   --nx-leaf: #4e7f56;
   --nx-muted: #86a38c;
+  --nx-nav-muted: #86a38c;
+  --nx-danger: #f2b8b5;
 }
 
 @theme inline {
@@ -55,6 +59,9 @@
   --color-sun: var(--nx-sun);
   --color-leaf: var(--nx-leaf);
   --color-muted: var(--nx-muted);
+  --color-nav-muted: var(--nx-nav-muted);
+  --color-danger: var(--nx-danger);
+  --color-destructive: var(--nx-danger);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

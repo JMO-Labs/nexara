@@ -122,6 +122,7 @@ export function GalleriesPage() {
         galleryId={galleryId}
         onClose={closeDrawer}
         onOpenItem={setItemIndex}
+        suspended={itemIdx !== null}
       />
       {galleryId && itemIdx !== null && (
         <LightboxConnected

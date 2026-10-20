@@ -36,7 +36,7 @@ function NavLink({
           "flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold",
           active
             ? "bg-accent text-surface-strong"
-            : "text-muted hover:bg-white/10",
+            : "text-nav-muted hover:bg-white/10",
         )}
       >
         <Icon aria-hidden className="size-5 shrink-0" />

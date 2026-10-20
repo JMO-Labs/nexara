@@ -94,6 +94,8 @@ export interface GalleryDrawerProps {
   galleryId: string | null;
   onClose: () => void;
   onOpenItem: (idx: number) => void;
+  /** True while the Lightbox is open: only one Radix modal layer may be mounted. */
+  suspended?: boolean;
 }
 
 /**
@@ -105,6 +107,7 @@ export interface GalleryDrawerProps {
  */
 export function GalleryDrawer({
   galleryId,
+  suspended = false,
   onClose,
   onOpenItem,
 }: GalleryDrawerProps) {
@@ -150,7 +153,7 @@ export function GalleryDrawer({
 
   return (
     <Drawer
-      open={!!galleryId}
+      open={!!galleryId && !suspended}
       onClose={onClose}
       title={gallery?.title ?? "Gallery"}
     >
