@@ -1,21 +1,28 @@
 "use client";
 /**
  * @file components/layout/AvatarMenu.tsx
- * @brief Avatar dropdown with profile / settings / sign-out.
+ * @brief Avatar dropdown with settings / admin / shortcuts / sign-out.
  */
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Menu from "@mui/joy/Menu";
-import MenuItem from "@mui/joy/MenuItem";
-import MenuButton from "@mui/joy/MenuButton";
-import Dropdown from "@mui/joy/Dropdown";
-import ListDivider from "@mui/joy/ListDivider";
 import { Avatar } from "@/components/ui/Avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSession } from "@/stores/session";
 import { useModals } from "@/stores/modals";
 import { logout as apiLogout } from "@/lib/api/auth";
 import { setAccessToken } from "@/lib/auth/session";
 
+/**
+ * @brief Account menu.
+ * @return dropdown menu with avatar trigger
+ */
 export function AvatarMenu() {
   const router = useRouter();
   const user = useSession((s) => s.user);
@@ -26,7 +33,7 @@ export function AvatarMenu() {
     try {
       await apiLogout();
     } catch {
-      /* ignore — local state is what matters */
+      /* ignore: local state is what matters */
     }
     setAccessToken(null);
     reset();
@@ -34,58 +41,44 @@ export function AvatarMenu() {
   };
 
   return (
-    <Dropdown>
-      <MenuButton
-        slots={{ root: "button" }}
-        slotProps={{
-          root: {
-            "aria-label": "Account menu",
-            "aria-haspopup": "menu",
-            style: {
-              background: "transparent",
-              border: 0,
-              padding: 4,
-              cursor: "pointer",
-            },
-          },
-        }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Account menu"
+        className="focus-visible:outline-accent rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Avatar
           src={user?.avatar_url ?? undefined}
-          alt={user?.display_name ?? "You"}
-          size="sm"
-        >
-          {user?.display_name?.[0] ?? "?"}
-        </Avatar>
-      </MenuButton>
-      <Menu placement="bottom-end" sx={{ minWidth: 220 }}>
-        <MenuItem
-          disabled
-          sx={{ flexDirection: "column", alignItems: "flex-start" }}
-        >
-          <span style={{ fontWeight: 600 }}>
+          name={user?.display_name ?? "You"}
+          size="md"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-56">
+        <DropdownMenuLabel className="flex flex-col">
+          <span className="font-semibold">
             {user?.display_name ?? "Signed in"}
           </span>
-          <span style={{ fontSize: "0.78rem", opacity: 0.7 }}>
-            {user?.email}
-          </span>
-        </MenuItem>
-        <ListDivider />
-        <MenuItem component={Link} href="/app/settings" data-tour="settings">
-          Settings
-        </MenuItem>
-        <MenuItem component={Link} href="/app/admin" data-tour="admin-link">
-          Admin
-        </MenuItem>
-        <ListDivider />
-        <MenuItem onClick={() => setKeyboardShortcutsOpen(true)}>
+          <span className="text-muted text-xs font-normal">{user?.email}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/app/settings" data-tour="settings">
+            Settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/app/admin" data-tour="admin-link">
+            Admin
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setKeyboardShortcutsOpen(true)}>
           Keyboard shortcuts
-        </MenuItem>
-        <ListDivider />
-        <MenuItem color="danger" onClick={onLogout}>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onSelect={onLogout}>
           Sign out
-        </MenuItem>
-      </Menu>
-    </Dropdown>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

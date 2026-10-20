@@ -5,12 +5,7 @@
  */
 import type { ReactNode } from "react";
 import { Shell } from "@/components/layout/Shell";
-import { PageTransition } from "@/components/layout/PageTransition";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return (
-    <Shell>
-      <PageTransition>{children}</PageTransition>
-    </Shell>
-  );
+  return <Shell>{children}</Shell>;
 }
