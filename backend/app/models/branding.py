@@ -67,7 +67,7 @@ class CommunityBranding(Base):
     )
     color_primary: Mapped[str] = mapped_column(Text, nullable=False, server_default="#3b82f6")
     color_primary_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#2563eb")
-    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#8b5cf6")
+    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#C6B4F5")
     color_surface_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#ffffff")
     color_surface_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#1f2937")
     color_text_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#111827")

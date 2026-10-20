@@ -20,7 +20,12 @@ function BrandingForm({ initial }: { initial: Branding }) {
   const [accent, setAccent] = useState(initial.color_accent);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const accentError = accentPassesAA(accent) ? undefined : ACCENT_ERROR;
+  // Only a changed accent is validated/sent, so a legacy low-contrast value
+  // never blocks editing the name or tagline.
+  const accentChanged =
+    accent.toLowerCase() !== initial.color_accent.toLowerCase();
+  const accentError =
+    accentChanged && !accentPassesAA(accent) ? ACCENT_ERROR : undefined;
   const canSave = !accentError && name.trim().length > 0 && !update.isPending;
 
   const submit = (e: React.FormEvent) => {
@@ -28,7 +33,11 @@ function BrandingForm({ initial }: { initial: Branding }) {
     if (!canSave) return;
     setServerError(null);
     update.mutate(
-      { community_name: name.trim(), tagline, color_accent: accent },
+      {
+        community_name: name.trim(),
+        tagline,
+        ...(accentChanged ? { color_accent: accent } : {}),
+      },
       { onError: (err) => setServerError(formatApiError(err)) },
     );
   };

@@ -39,6 +39,28 @@ beforeEach(() => {
 });
 
 describe("BrandingTab", () => {
+  it("saves name when the stored accent is legacy low-contrast, without resending it", async () => {
+    vi.mocked(api.getBranding).mockResolvedValue({
+      ...base,
+      color_accent: "#8b5cf6",
+    });
+    vi.mocked(api.updateBranding).mockResolvedValue({
+      ...base,
+      community_name: "Soto crew",
+    });
+    wrap(<BrandingTab />);
+    const name = await screen.findByLabelText("Community name");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Soto crew");
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).toBeEnabled();
+    await userEvent.click(save);
+    await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
+    expect(vi.mocked(api.updateBranding).mock.calls[0][0]).not.toHaveProperty(
+      "color_accent",
+    );
+  });
+
   it("rejects low-contrast accent and disables save", async () => {
     wrap(<BrandingTab />);
     const input = await screen.findByLabelText("Accent color");

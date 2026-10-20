@@ -51,7 +51,7 @@ class BrandingResponse(BaseModel):
     logo_light_url: str | None = None
     logo_dark_url: str | None = None
     # Full palette
-    color_accent: str = "#8b5cf6"
+    color_accent: str = "#C6B4F5"
     color_surface_light: str = "#ffffff"
     color_surface_dark: str = "#1f2937"
     color_text_light: str = "#111827"

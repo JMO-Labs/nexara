@@ -66,7 +66,7 @@ def _row_to_response(row: CommunityBranding) -> BrandingResponse:
         color_primary_dark=row.color_primary_dark,
         logo_light_url=None,
         logo_dark_url=None,
-        color_accent=getattr(row, "color_accent", "#8b5cf6"),
+        color_accent=getattr(row, "color_accent", "#C6B4F5"),
         color_surface_light=getattr(row, "color_surface_light", "#ffffff"),
         color_surface_dark=getattr(row, "color_surface_dark", "#1f2937"),
         color_text_light=getattr(row, "color_text_light", "#111827"),
