@@ -175,8 +175,9 @@ Expect the branch's UI to be partly broken mid-way; `main` keeps the old UI unti
    merge `feat/frontend-overhaul` to `main` (minor version bump).
 
 Each step: tests for that area rewritten (behavior assertions kept, Joy-markup assertions replaced).
-Lint/type checks must pass on every sub-branch merge; tests of not-yet-migrated areas may fail on
-the overhaul branch until their step. At final merge: all tests green, coverage ≥ `main`.
+Each sub-branch merge: that area's tests + `eslint` on touched files pass. ~202 files import
+Joy/Emotion today, so full `tsc`, full test suite and `next build` stay red until the last area
+moves. At final merge: everything green, coverage ≥ `main`, full GitLab CI passes.
 
 ## 9. Cleanup (decided)
 
