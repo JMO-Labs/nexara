@@ -4,18 +4,19 @@
  * @brief Paginated audit log viewer with filter rail.
  */
 import { useState } from "react";
-import { useAuditLog } from "@/hooks/useAdmin";
-import Stack from "@mui/joy/Stack";
-import Grid from "@mui/joy/Grid";
-import Card from "@mui/joy/Card";
-import Table from "@mui/joy/Table";
-import Typography from "@mui/joy/Typography";
-import Button from "@mui/joy/Button";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
-import Input from "@mui/joy/Input";
+import { ChevronRight } from "lucide-react";
 import { format } from "date-fns";
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+import { useAuditLog } from "@/hooks/useAdmin";
+import { Button, Card, Input } from "@/components/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/shadcn/table";
+import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
 
 export function AuditLogTab() {
   const [cursor, setCursor] = useState<string | null>(null);
@@ -31,31 +32,16 @@ export function AuditLogTab() {
     cursor,
   });
 
-  if (isLoading) {
-    return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
+  if (isLoading) return <AdminLoading />;
 
   if (error) {
-    return (
-      <Alert color="danger" variant="soft">
-        Failed to load audit log
-      </Alert>
-    );
+    return <AdminNotice tone="error">Failed to load audit log</AdminNotice>;
   }
 
   if (!auditLog || auditLog.items.length === 0) {
-    return (
-      <Alert color="primary" variant="soft">
-        No audit log entries
-      </Alert>
-    );
+    return <AdminNotice>No audit log entries</AdminNotice>;
   }
 
-  // Filter items
   const filtered = auditLog.items.filter((entry) => {
     if (
       actionFilter &&
@@ -75,111 +61,87 @@ export function AuditLogTab() {
   });
 
   return (
-    <Grid container spacing={2}>
-      {/* Filter Rail: 3/12 on desktop, hidden on mobile */}
-      <Grid xs={0} md={3} sx={{ display: { xs: "none", md: "flex" } }}>
-        <Card variant="outlined" sx={{ width: "100%" }}>
-          <Stack spacing={1.5}>
-            <Typography level="title-sm">Filters</Typography>
-            <Stack spacing={1}>
-              <Input
-                placeholder="Filter by action"
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                size="sm"
-              />
-              <Input
-                placeholder="Filter by actor"
-                value={actorFilter}
-                onChange={(e) => setActorFilter(e.target.value)}
-                size="sm"
-              />
-              {(actionFilter || actorFilter) && (
-                <Button
-                  variant="plain"
-                  size="sm"
-                  onClick={() => {
-                    setActionFilter("");
-                    setActorFilter("");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </Stack>
-          </Stack>
-        </Card>
-      </Grid>
-
-      {/* Log Stream: 9/12 on desktop, full width on mobile */}
-      <Grid xs={12} md={9}>
-        <Card variant="outlined">
-          <Table
-            stripe="odd"
-            hoverRow
-            sx={{
-              "--TableCell-paddingX": "0.75rem",
-              "--TableCell-paddingY": "0.375rem",
-              fontSize: "0.85rem",
+    <div className="grid gap-4 md:grid-cols-12">
+      <Card className="flex flex-col gap-3 p-4 md:col-span-3 md:self-start">
+        <h3 className="text-sm font-semibold">Filters</h3>
+        <Input
+          label="Action"
+          placeholder="Filter by action"
+          value={actionFilter}
+          onChange={(e) => setActionFilter(e.target.value)}
+        />
+        <Input
+          label="Actor"
+          placeholder="Filter by actor"
+          value={actorFilter}
+          onChange={(e) => setActorFilter(e.target.value)}
+        />
+        {(actionFilter || actorFilter) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setActionFilter("");
+              setActorFilter("");
             }}
           >
-            <thead>
-              <tr>
-                <th>Action</th>
-                <th>Actor</th>
-                <th>Target</th>
-                <th>Timestamp</th>
-              </tr>
-            </thead>
-            <tbody>
+            Clear filters
+          </Button>
+        )}
+      </Card>
+
+      <div className="md:col-span-9">
+        <Card className="p-2">
+          <Table>
+            <TableHeader className={stackTable.head}>
+              <TableRow>
+                <TableHead>Action</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Target</TableHead>
+                <TableHead>Timestamp</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.length > 0 ? (
                 filtered.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>
-                      <Typography level="body-xs">{entry.action}</Typography>
-                    </td>
-                    <td>
-                      <Typography level="body-xs">
-                        {entry.actor_display_name || "(system)"}
-                      </Typography>
-                    </td>
-                    <td>
-                      <Typography level="body-xs">
-                        {entry.target_display || entry.target_type || "-"}
-                      </Typography>
-                    </td>
-                    <td>
-                      <Typography level="body-xs" sx={{ whiteSpace: "nowrap" }}>
-                        {format(new Date(entry.created_at), "MMM d HH:mm")}
-                      </Typography>
-                    </td>
-                  </tr>
+                  <TableRow key={entry.id} className={stackTable.row}>
+                    <TableCell data-label="Action" className={stackTable.cell}>
+                      {entry.action}
+                    </TableCell>
+                    <TableCell data-label="Actor" className={stackTable.cell}>
+                      {entry.actor_display_name || "(system)"}
+                    </TableCell>
+                    <TableCell data-label="Target" className={stackTable.cell}>
+                      {entry.target_display || entry.target_type || "-"}
+                    </TableCell>
+                    <TableCell
+                      data-label="Timestamp"
+                      className={`${stackTable.cell} whitespace-nowrap`}
+                    >
+                      {format(new Date(entry.created_at), "MMM d HH:mm")}
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={4}>
-                    <Typography level="body-xs" color="neutral">
-                      No entries match filters
-                    </Typography>
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted">
+                    No entries match filters
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
+            </TableBody>
           </Table>
         </Card>
 
         {auditLog.has_more && (
-          <Stack direction="row" justifyContent="center" sx={{ mt: 2 }}>
-            <Button
-              size="sm"
-              onClick={() => setCursor(auditLog.next_cursor)}
-              endDecorator={<ChevronRightIcon width={16} height={16} />}
-            >
-              Load More
+          <div className="mt-4 flex justify-center">
+            <Button size="sm" onClick={() => setCursor(auditLog.next_cursor)}>
+              Load more
+              <ChevronRight className="size-4" aria-hidden="true" />
             </Button>
-          </Stack>
+          </div>
         )}
-      </Grid>
-    </Grid>
+      </div>
+    </div>
   );
 }
