@@ -4,11 +4,12 @@
  * @brief Active conversation: header (back, title, details toggle), messages,
  *        typing indicator and composer. Optional details side pane.
  */
+import * as React from "react";
 import type { ComponentProps } from "react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Rows2, Rows3 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { MessageList } from "../MessageList";
-import { Composer } from "../Composer";
+import { Composer, type ComposerHandle } from "../Composer";
 import { TypingIndicator } from "../TypingIndicator";
 
 export interface ThreadPaneProps {
@@ -35,6 +36,15 @@ export function ThreadPane({
   typingCount,
   composer,
 }: ThreadPaneProps) {
+  const composerRef = React.useRef<ComposerHandle | null>(null);
+  const [density, setDensity] = React.useState<"comfortable" | "compact">(
+    "comfortable",
+  );
+  const compact = density === "compact";
+  const startConversation = () => {
+    composerRef.current?.focus();
+    list.onStartConversation?.();
+  };
   return (
     <section
       aria-label={title}
@@ -53,6 +63,20 @@ export function ThreadPane({
           {title}
         </h2>
         <IconButton
+          aria-label={
+            compact ? "Use comfortable density" : "Use compact density"
+          }
+          aria-pressed={compact}
+          variant="ghost"
+          onClick={() => setDensity(compact ? "comfortable" : "compact")}
+        >
+          {compact ? (
+            <Rows3 className="size-5" aria-hidden="true" />
+          ) : (
+            <Rows2 className="size-5" aria-hidden="true" />
+          )}
+        </IconButton>
+        <IconButton
           aria-label={detailsOpen ? "Close thread panel" : "Open thread panel"}
           aria-pressed={detailsOpen}
           variant="ghost"
@@ -65,9 +89,13 @@ export function ThreadPane({
           />
         </IconButton>
       </header>
-      <MessageList {...list} />
+      <MessageList
+        {...list}
+        density={density}
+        onStartConversation={startConversation}
+      />
       <TypingIndicator count={typingCount} />
-      <Composer {...composer} />
+      <Composer ref={composerRef} {...composer} />
     </section>
   );
 }

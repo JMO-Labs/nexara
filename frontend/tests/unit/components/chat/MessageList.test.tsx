@@ -6,8 +6,21 @@ import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MessageList } from "@/components/chat/MessageList";
-import { dayLabel, isGrouped } from "@/components/chat/grouping";
+import { dayLabel, isGrouped, startsNewDay } from "@/components/chat/grouping";
 import type { ChatMessage } from "@/lib/api/chat";
+
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (o: { count: number }) => ({
+    getTotalSize: () => o.count * 64,
+    getVirtualItems: () =>
+      Array.from({ length: o.count }, (_, index) => ({
+        index,
+        key: index,
+        start: index * 64,
+      })),
+    measureElement: () => {},
+  }),
+}));
 
 const msg = (id: string, author: string, iso: string): ChatMessage =>
   ({
@@ -73,5 +86,57 @@ describe("MessageList states", () => {
     expect(screen.getByRole("alert")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(onRetry).toHaveBeenCalled();
+  });
+});
+
+describe("startsNewDay", () => {
+  it("is true for the first message and on day change only", () => {
+    const a = msg("a", "u1", "2026-11-11T23:58:00");
+    expect(startsNewDay(undefined, a)).toBe(true);
+    expect(startsNewDay(a, msg("b", "u1", "2026-11-11T23:59:00"))).toBe(false);
+    expect(startsNewDay(a, msg("c", "u1", "2026-11-12T00:01:00"))).toBe(true);
+  });
+});
+
+describe("MessageList rendering", () => {
+  // Backend order is newest-first; the list reverses it.
+  const two = [
+    msg("new", "u1", "2026-11-12T09:00:00"),
+    msg("old", "u1", "2026-11-11T09:00:00"),
+  ];
+  it("renders a separator between messages on different days", () => {
+    render(<MessageList {...base} messages={two} />);
+    expect(screen.getAllByRole("separator")).toHaveLength(2);
+  });
+  it("renders no extra separator within one day", () => {
+    render(
+      <MessageList
+        {...base}
+        messages={[
+          msg("b", "u1", "2026-11-12T09:05:00"),
+          msg("a", "u1", "2026-11-12T09:00:00"),
+        ]}
+      />,
+    );
+    expect(screen.getAllByRole("separator")).toHaveLength(1);
+  });
+  it("applies compact density spacing", () => {
+    const { container } = render(
+      <MessageList {...base} messages={two} density="compact" />,
+    );
+    expect(container.querySelector("[data-density='compact']")).not.toBeNull();
+  });
+  it("animates only messages that arrive after first render", () => {
+    const { container, rerender } = render(
+      <MessageList {...base} messages={two} />,
+    );
+    expect(container.querySelector(".nx-slide-up")).toBeNull();
+    rerender(
+      <MessageList
+        {...base}
+        messages={[msg("live", "u2", "2026-11-12T09:10:00"), ...two]}
+      />,
+    );
+    expect(container.querySelectorAll(".nx-slide-up")).toHaveLength(1);
   });
 });

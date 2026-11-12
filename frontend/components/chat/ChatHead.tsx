@@ -10,7 +10,7 @@ import { Minus, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconButton } from "@/components/ui";
 import { MessageList, type MessageListHandle } from "./MessageList";
-import { Composer } from "./Composer";
+import { Composer, type ComposerHandle } from "./Composer";
 import { useChatDock } from "@/stores/chatDock";
 import {
   useMessages,
@@ -71,6 +71,7 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
     return data.pages.flatMap((p) => p.items);
   }, [data]);
 
+  const composerRef = React.useRef<ComposerHandle | null>(null);
   const listRef = React.useRef<MessageListHandle | null>(null);
 
   const handleSend = (content: string) => {
@@ -159,10 +160,15 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
               isFetchingMore={isFetchingNextPage}
               onLoadMore={fetchNextPage}
               selfId={selfId}
+              onStartConversation={() => composerRef.current?.focus()}
             />
           </div>
           <div className="shrink-0 border-t border-border">
-            <Composer onSend={handleSend} onTyping={handleTyping} />
+            <Composer
+              ref={composerRef}
+              onSend={handleSend}
+              onTyping={handleTyping}
+            />
           </div>
         </div>
       )}

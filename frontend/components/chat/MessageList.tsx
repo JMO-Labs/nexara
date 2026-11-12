@@ -30,6 +30,8 @@ export interface MessageListProps {
   onRetry?: () => void;
   /** CTA in the empty state (e.g. focus the composer). */
   onStartConversation?: () => void;
+  /** Row density. */
+  density?: "comfortable" | "compact";
 }
 
 export const MessageList = React.forwardRef<
@@ -48,6 +50,7 @@ export const MessageList = React.forwardRef<
     isError,
     onRetry,
     onStartConversation,
+    density = "comfortable",
   },
   forwardedRef,
 ) {
@@ -71,6 +74,20 @@ export const MessageList = React.forwardRef<
 
   // Render oldest -> newest. Backend returns newest-first, so reverse once.
   const ordered = React.useMemo(() => [...messages].reverse(), [messages]);
+
+  // Ids present at first render don't animate; later arrivals slide up.
+  const seen = React.useRef<Set<string> | null>(null);
+  const fresh = React.useRef<Set<string>>(new Set());
+  if (seen.current === null) {
+    seen.current = new Set(ordered.map((m) => m.id));
+  } else {
+    for (const m of ordered) {
+      if (!seen.current.has(m.id)) {
+        seen.current.add(m.id);
+        fresh.current.add(m.id);
+      }
+    }
+  }
 
   const virtualizer = useVirtualizer({
     count: ordered.length,
@@ -143,6 +160,7 @@ export const MessageList = React.forwardRef<
     <div
       ref={parentRef}
       onScroll={onScroll}
+      data-density={density}
       className="relative min-h-0 flex-1 overflow-y-auto"
     >
       {isFetchingMore && (
@@ -180,6 +198,8 @@ export const MessageList = React.forwardRef<
                 isSelf={Boolean(selfId && m.author?.id === selfId)}
                 onReply={onReply}
                 onSendDm={onSendDm}
+                density={density}
+                animate={fresh.current.has(m.id)}
               />
             </div>
           );

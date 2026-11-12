@@ -20,6 +20,10 @@ export interface MessageItemProps {
   isSelf?: boolean;
   onReply?: (message: ChatMessage) => void;
   onSendDm?: (userId: string) => void;
+  /** Spacing/font density. */
+  density?: "comfortable" | "compact";
+  /** Play the slide-up entrance (live messages only). */
+  animate?: boolean;
 }
 
 /**
@@ -33,6 +37,8 @@ export function MessageItem({
   isSelf,
   onReply,
   onSendDm,
+  density = "comfortable",
+  animate,
 }: MessageItemProps) {
   let time = "";
   try {
@@ -46,9 +52,17 @@ export function MessageItem({
 
   return (
     <div
+      data-density={density}
       className={cn(
         "group relative flex items-start gap-3 px-4",
-        compact ? "py-0.5" : "py-1.5",
+        density === "compact"
+          ? compact
+            ? "py-0"
+            : "py-0.5"
+          : compact
+            ? "py-0.5"
+            : "py-1.5",
+        animate && "nx-slide-up",
         isSelf && "flex-row-reverse",
         message.id.startsWith("optimistic-") && "opacity-60",
       )}
@@ -79,7 +93,8 @@ export function MessageItem({
         )}
         <div
           className={cn(
-            "rounded-2xl px-3 py-2 text-sm",
+            "rounded-2xl px-3 text-sm",
+            density === "compact" ? "py-1 text-xs" : "py-2",
             isSelf
               ? "rounded-tr-sm bg-surface-strong text-bg"
               : "rounded-tl-sm bg-surface",

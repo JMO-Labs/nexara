@@ -81,3 +81,14 @@ export function isDesktop(): boolean {
     window.matchMedia("(min-width: 768px)").matches
   );
 }
+
+/**
+ * @brief Grid classes for chat panes: stacked < md, 2 panes at md, 3 with details.
+ * @param showDetails whether the details pane is open
+ * @return class string
+ */
+export function gridClass(showDetails: boolean): string {
+  return `bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
+    showDetails ? "md:grid-cols-[280px_1fr_320px]" : "md:grid-cols-[280px_1fr]"
+  }`;
+}

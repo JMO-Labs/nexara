@@ -1,6 +1,8 @@
 /**
  * @file components/chat/grouping.ts
  * @brief Pure helpers for chat message grouping and day separators.
+ *        Note: grouping requires same day AND <5 min, so a 23:58 -> 00:01
+ *        run from one sender is split by a day separator (intended).
  */
 import { format, isSameDay, subDays } from "date-fns";
 import type { ChatMessage } from "@/lib/api/chat";
