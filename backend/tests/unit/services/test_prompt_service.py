@@ -61,6 +61,9 @@ def _make_prompt(
     p.notification_body = None
     p.linked_event_id = None
     p.generate_summary = generate_summary
+    p.prompt_type = "standard"
+    p.interest_category_slug = None
+    p.interest_capture_hint = None
     p.created_by = uuid.uuid4()
     p.created_at = datetime.now(UTC)
     p.updated_at = datetime.now(UTC)
@@ -389,3 +392,58 @@ class TestSeedBuiltinPrompts:
                 assert entry.get("interest_capture_hint") is not None, (
                     f"interest_capture_hint missing in {entry['title']}"
                 )
+
+
+def _make_prompt_post(prompt_id: uuid.UUID) -> MagicMock:
+    pp = MagicMock(spec=PromptPost)
+    pp.id = uuid.uuid4()
+    pp.prompt_id = prompt_id
+    pp.post_id = uuid.uuid4()
+    pp.fired_at = date(2026, 1, 1)
+    pp.expires_at = datetime.now(UTC) + timedelta(days=1)
+    pp.response_count = 2
+    pp.is_finalised = False
+    pp.summary_post_id = None
+    return pp
+
+
+class TestPromptPostDetail:
+    async def test_list_active_includes_prompt(
+        self, service: PromptService, prompt_repo: AsyncMock
+    ) -> None:
+        prompt = _make_prompt()
+        pp = _make_prompt_post(prompt.id)
+        prompt_repo.list_active.return_value = [pp]
+        prompt_repo.get_by_ids.return_value = [prompt]
+        out = await service.list_active()
+        assert len(out) == 1
+        assert out[0].id == pp.id
+        assert out[0].prompt.id == prompt.id
+        assert out[0].prompt.title == "Sample"
+
+    async def test_list_active_skips_missing_prompt(
+        self, service: PromptService, prompt_repo: AsyncMock
+    ) -> None:
+        prompt_repo.list_active.return_value = [_make_prompt_post(uuid.uuid4())]
+        prompt_repo.get_by_ids.return_value = []
+        assert await service.list_active() == []
+
+    async def test_get_prompt_post_detail(
+        self, service: PromptService, prompt_repo: AsyncMock
+    ) -> None:
+        prompt = _make_prompt()
+        pp = _make_prompt_post(prompt.id)
+        prompt_repo.get_prompt_post.return_value = pp
+        prompt_repo.get_by_id.return_value = prompt
+        out = await service.get_prompt_post(pp.id)
+        assert out.prompt.id == prompt.id
+        prompt_repo.get_prompt_post.assert_awaited_once_with(pp.id, community_id=COMMUNITY_ID)
+
+    async def test_get_prompt_post_not_found(
+        self, service: PromptService, prompt_repo: AsyncMock
+    ) -> None:
+        from app.core.exceptions import NotFoundError
+
+        prompt_repo.get_prompt_post.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.get_prompt_post(uuid.uuid4())

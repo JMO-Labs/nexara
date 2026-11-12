@@ -21,8 +21,10 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.prompt import (
     PromptCreate,
+    PromptPostDetail,
     PromptPostResponse,
     PromptResponse,
+    PromptSummary,
     PromptUpdate,
 )
 
@@ -317,7 +319,28 @@ class PromptService:
             f"Thank you to everyone who shared!"
         )
 
-    async def list_active(self) -> list[PromptPostResponse]:
-        """@brief List currently-pinned prompt posts."""
+    async def list_active(self) -> list[PromptPostDetail]:
+        """@brief List currently-pinned prompt posts with prompt details."""
         rows = await self._repo.list_active(self._community_id, datetime.now(UTC))
-        return [PromptPostResponse.model_validate(r) for r in rows]
+        prompts = await self._repo.get_by_ids(
+            list({r.prompt_id for r in rows}), community_id=self._community_id
+        )
+        by_id = {p.id: p for p in prompts}
+        return [self._detail(r, by_id[r.prompt_id]) for r in rows if r.prompt_id in by_id]
+
+    async def get_prompt_post(self, prompt_post_id: uuid.UUID) -> PromptPostDetail:
+        """@brief Get one prompt post with prompt details; 404 if absent."""
+        pp = await self._repo.get_prompt_post(prompt_post_id, community_id=self._community_id)
+        prompt = (
+            await self._repo.get_by_id(pp.prompt_id, community_id=self._community_id)
+            if pp is not None
+            else None
+        )
+        if pp is None or prompt is None:
+            raise NotFoundError(_("Prompt post not found"))
+        return self._detail(pp, prompt)
+
+    @staticmethod
+    def _detail(pp: PromptPost, prompt: Prompt) -> PromptPostDetail:
+        base = PromptPostResponse.model_validate(pp).model_dump()
+        return PromptPostDetail(**base, prompt=PromptSummary.model_validate(prompt))

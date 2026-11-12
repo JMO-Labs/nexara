@@ -22,7 +22,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.prompt import (
     PromptCreate,
-    PromptPostResponse,
+    PromptPostDetail,
     PromptResponse,
     PromptUpdate,
 )
@@ -80,13 +80,23 @@ async def create_prompt(
     return await service.create_prompt(user.id, body)
 
 
-@router.get("/active", response_model=list[PromptPostResponse])
+@router.get("/active", response_model=list[PromptPostDetail])
 async def list_active(
     user: User = Depends(get_current_user),
     service: PromptService = Depends(_build_service),
-) -> list[PromptPostResponse]:
-    """@brief List currently-pinned prompt posts."""
+) -> list[PromptPostDetail]:
+    """@brief List currently-pinned prompt posts with prompt details."""
     return await service.list_active()
+
+
+@router.get("/posts/{prompt_post_id}", response_model=PromptPostDetail)
+async def get_prompt_post(
+    prompt_post_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: PromptService = Depends(_build_service),
+) -> PromptPostDetail:
+    """@brief Get one fired prompt post with prompt details (any member)."""
+    return await service.get_prompt_post(prompt_post_id)
 
 
 @router.get("/{prompt_id}", response_model=PromptResponse)
