@@ -44,12 +44,12 @@ describe("ExportIcalButton", () => {
     URL.createObjectURL = createUrl;
     URL.revokeObjectURL = revokeUrl;
     const clicked: { download: string; href: string | null }[] = [];
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
-      function (this: HTMLAnchorElement) {
-        const href = this.getAttribute("href");
-        clicked.push({ download: this.download, href });
-      },
-    );
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      const href = this.getAttribute("href");
+      clicked.push({ download: this.download, href });
+    });
 
     wrap(<ExportIcalButton eventId="ev 1" title="Team BBQ" />);
     fireEvent.click(screen.getByRole("button", { name: /export as ical/i }));
