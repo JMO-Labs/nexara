@@ -15,8 +15,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.models  # noqa: F401
@@ -62,9 +62,7 @@ def notifier() -> AsyncMock:
 
 @pytest.fixture
 def ctx(session, notifier) -> PluginContext:
-    return PluginContext(
-        "example-trivia", load_manifest(PLUGIN_DIR), session, C1, None, notifier
-    )
+    return PluginContext("example-trivia", load_manifest(PLUGIN_DIR), session, C1, None, notifier)
 
 
 async def _user(session: AsyncSession) -> User:
@@ -78,7 +76,11 @@ async def _user(session: AsyncSession) -> User:
 def test_manifest_declares_required_permissions():
     m = load_manifest(PLUGIN_DIR)
     assert {p.value for p in m.permissions} >= {
-        "db_read", "db_write", "celery_tasks", "hooks_on_user_joined", "send_notifications",
+        "db_read",
+        "db_write",
+        "celery_tasks",
+        "hooks_on_user_joined",
+        "send_notifications",
     }
     assert "on_user_joined" in m.hooks
 
@@ -227,9 +229,7 @@ def test_celery_tasks_registered_and_executable():
     ):
         assert name in celery_app.tasks
     sched = celery_app.conf.beat_schedule
-    assert any(
-        v["task"] == "plugins.example_trivia.select_daily_question" for v in sched.values()
-    )
+    assert any(v["task"] == "plugins.example_trivia.select_daily_question" for v in sched.values())
     assert any(v["task"] == "plugins.example_trivia.reset_streaks" for v in sched.values())
     with patch.object(tasks, "_select", new=AsyncMock(return_value={"id": "q1"})):
         assert tasks.select_daily_question.apply().get() == {"id": "q1"}
