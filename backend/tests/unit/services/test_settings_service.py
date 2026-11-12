@@ -167,7 +167,12 @@ class TestFullNotificationPreferences:
         for t in NOTIF_TYPES:
             for c in NOTIF_CHANNELS:
                 assert f"notif_{t}_{c}" in fields
-        for name in ("mute_all_email", "mute_all_push", "email_digest_enabled", "email_digest_hour"):
+        for name in (
+            "mute_all_email",
+            "mute_all_push",
+            "email_digest_enabled",
+            "email_digest_hour",
+        ):
             assert name in fields
         assert NotificationPreferences().model_dump(exclude_none=True) == {}
 
