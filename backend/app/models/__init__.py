@@ -52,5 +52,6 @@ from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot 
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401
 from app.models.suggestion import Suggestion  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.user_export import UserExport  # noqa: F401
 from app.models.user_oauth_link import UserOAuthLink  # noqa: F401
 from app.models.user_settings import UserSettings  # noqa: F401
