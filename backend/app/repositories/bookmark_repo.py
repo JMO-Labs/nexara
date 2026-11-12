@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import and_, delete, or_, select
 
+from app.core.exceptions import AppError
 from app.models.bookmark import Bookmark
 from app.models.moderation import UserBlock
 from app.models.post import Post
@@ -60,6 +61,7 @@ class BookmarkRepository(BaseRepository[Bookmark]):
         @brief List a user's bookmarks newest first; soft-deleted, blocked and
                no-longer-visible posts are excluded.
         @param cursor ISO timestamp of the last bookmark seen.
+        @throws AppError INVALID_CURSOR (400) if cursor is not ISO-8601.
         @return (rows of (Bookmark, enriched post dict), next cursor or None).
         """
         member_sgs = select(SubgroupMember.subgroup_id).where(SubgroupMember.user_id == user_id)
@@ -87,9 +89,10 @@ class BookmarkRepository(BaseRepository[Bookmark]):
         stmt = stmt.where(~blocked.exists())
         if cursor:
             try:
-                stmt = stmt.where(Bookmark.created_at < datetime.fromisoformat(cursor))
-            except ValueError:
-                pass
+                before = datetime.fromisoformat(cursor)
+            except ValueError as exc:
+                raise AppError("INVALID_CURSOR", "Invalid pagination cursor", 400) from exc
+            stmt = stmt.where(Bookmark.created_at < before)
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         next_cursor: str | None = None
         if len(rows) > limit:
