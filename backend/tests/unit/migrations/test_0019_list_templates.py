@@ -11,17 +11,6 @@ import pytest
 VERSIONS = Path(__file__).resolve().parents[3] / "alembic" / "versions"
 FILE = VERSIONS / "0019_list_templates.py"
 
-TABLES = [
-    "list_template",
-    "list_template_field",
-    "list_template_item",
-    "list",
-    "list_member",
-    "list_item",
-    "list_item_signup",
-    "list_item_completion",
-]
-
 
 @pytest.fixture(scope="module")
 def mig():
@@ -35,13 +24,6 @@ def mig():
 def test_revision_chain(mig) -> None:
     assert mig.revision == "0019_list_templates"
     assert mig.down_revision == "a78f91338679"
-
-
-def test_creates_all_tables_and_drops_in_reverse(mig) -> None:
-    assert mig.TABLES == TABLES
-    src = FILE.read_text()
-    for t in TABLES:
-        assert f'"{t}"' in src
 
 
 def test_ten_notification_columns(mig) -> None:

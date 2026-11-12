@@ -6,6 +6,7 @@ Revises: a78f91338679
 """
 
 import json
+from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
@@ -114,7 +115,7 @@ def _id() -> sa.Column:
     )
 
 
-def _fk(name: str, target: str, ondelete: str | None, nullable: bool = True, **kw) -> sa.Column:
+def _fk(name: str, target: str, ondelete: str | None, nullable: bool = True, **kw: Any) -> sa.Column:
     return sa.Column(
         name, UUID(as_uuid=True), sa.ForeignKey(target, ondelete=ondelete), nullable=nullable, **kw
     )
@@ -129,7 +130,7 @@ def _ts() -> list[sa.Column]:
     ]
 
 
-def _fts(table: str, expr: str) -> sa.Column:
+def _fts(expr: str) -> sa.Column:
     return sa.Column("search_fts", TSVECTOR, sa.Computed(expr, persisted=True))
 
 
@@ -162,7 +163,6 @@ def _created_tables() -> None:
         _bool("is_shared"),
         *_ts(),
         _fts(
-            "list_template",
             "to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,''))",
         ),
     )
@@ -204,7 +204,7 @@ def _created_tables() -> None:
         _int("signup_count"),
         *_ts(),
         _fts(
-            "list", "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"
+            "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"
         ),
         sa.CheckConstraint(
             "visibility IN ('community','subgroup','private','members')", name="ck_list_visibility"
