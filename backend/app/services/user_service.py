@@ -102,7 +102,7 @@ class UserService:
         @param data Dict of field names to new values.
         @return The updated User.
         """
-        allowed = {"display_name", "bio", "title", "location", "website_url", "birthday"}
+        allowed = {"display_name", "bio", "title", "location", "website_url", "birthday", "pronouns"}
         filtered = {k: v for k, v in data.items() if k in allowed and v is not None}
         if not filtered:
             return user
