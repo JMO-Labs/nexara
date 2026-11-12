@@ -370,3 +370,50 @@ class TestAttachToPost:
         assert exc_info.value.status_code == 400
         mock_repo.get_by_ids.assert_not_awaited()
         mock_repo.attach_to_post.assert_not_awaited()
+
+
+class TestEnqueueOcr:
+    """@brief enqueue_ocr guards and failure handling."""
+
+    def test_skips_non_image(self):
+        from app.services.media_service import enqueue_ocr
+
+        with patch("app.services.media_service.ocr_process_image") as task:
+            enqueue_ocr(uuid.uuid4(), COMMUNITY_ID, "video/mp4")
+        task.apply_async.assert_not_called()
+
+    def test_skips_when_ai_disabled(self):
+        from app.services.media_service import enqueue_ocr
+
+        with (
+            patch("app.services.media_service.get_settings") as gs,
+            patch("app.services.media_service.ocr_process_image") as task,
+        ):
+            gs.return_value.AI_PROVIDER = ""
+            enqueue_ocr(uuid.uuid4(), COMMUNITY_ID, "image/png")
+        task.apply_async.assert_not_called()
+
+    def test_enqueues_on_media_queue(self):
+        from app.services.media_service import enqueue_ocr
+
+        mid = uuid.uuid4()
+        with (
+            patch("app.services.media_service.get_settings") as gs,
+            patch("app.services.media_service.ocr_process_image") as task,
+        ):
+            gs.return_value.AI_PROVIDER = "fake"
+            enqueue_ocr(mid, COMMUNITY_ID, "image/png")
+        task.apply_async.assert_called_once_with(
+            args=[str(mid), str(COMMUNITY_ID)], queue="media", time_limit=3600
+        )
+
+    def test_enqueue_failure_is_swallowed(self):
+        from app.services.media_service import enqueue_ocr
+
+        with (
+            patch("app.services.media_service.get_settings") as gs,
+            patch("app.services.media_service.ocr_process_image") as task,
+        ):
+            gs.return_value.AI_PROVIDER = "fake"
+            task.apply_async.side_effect = RuntimeError("broker down")
+            enqueue_ocr(uuid.uuid4(), COMMUNITY_ID, "image/png")
