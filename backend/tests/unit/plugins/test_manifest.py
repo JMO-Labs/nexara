@@ -5,6 +5,9 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from packaging.version import InvalidVersion
+
+import app.plugins.manifest as manifest_mod
 from app.plugins.manifest import (
     PluginManifest,
     PluginPermission,
@@ -39,6 +42,16 @@ class TestManifest:
     def test_bad_semver(self, field, bad):
         with pytest.raises(ValidationError):
             PluginManifest.model_validate({**VALID, field: bad})
+
+    def test_invalid_version_from_packaging_is_wrapped(self, monkeypatch):
+        """Defensive branch: packaging rejecting a digit-only triple."""
+
+        def boom(_value):
+            raise InvalidVersion("rejected")
+
+        monkeypatch.setattr(manifest_mod, "Version", boom)
+        with pytest.raises(ValidationError, match="rejected"):
+            PluginManifest.model_validate(VALID)
 
     def test_unknown_permission(self):
         with pytest.raises(ValidationError):
