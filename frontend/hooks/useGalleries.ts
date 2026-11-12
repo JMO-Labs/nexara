@@ -3,7 +3,11 @@
  * @file hooks/useGalleries.ts
  * @brief Gallery CRUD + items hooks.
  */
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
 import { qk } from "@/lib/query-keys";
 import {
@@ -24,6 +28,28 @@ export function useGalleryList(params?: ListGalleriesParams | null) {
       (params as Record<string, unknown> | undefined) ?? {},
     ),
     queryFn: () => listGalleries(params ?? undefined),
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * @brief Cursor-paginated gallery list (next_cursor / has_more).
+ * @param params list filters (cursor is managed by the query)
+ * @return TanStack infinite query result
+ */
+export function useGalleryListInfinite(
+  params?: Omit<ListGalleriesParams, "cursor"> | null,
+) {
+  return useInfiniteQuery({
+    queryKey: [
+      ...qk.galleries.list((params as Record<string, unknown>) ?? {}),
+      "infinite",
+    ] as const,
+    queryFn: ({ pageParam }) =>
+      listGalleries({ ...(params ?? {}), cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.has_more && last.next_cursor ? last.next_cursor : undefined,
     staleTime: 30_000,
   });
 }

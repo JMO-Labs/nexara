@@ -4,7 +4,11 @@
  * @brief TanStack Query hooks for admin panel operations (queries + mutations).
  *        Mutations invalidate their sibling queries on success.
  */
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
 import { qk } from "@/lib/query-keys";
 import * as adminApi from "@/lib/api/admin";
@@ -31,6 +35,28 @@ export const useAdminUsers = (filters?: {
     queryKey: qk.admin.users(filters),
     queryFn: () => adminApi.listAdminUsers(filters),
     staleTime: 30 * 1000, // 30 seconds
+  });
+
+/**
+ * @brief Paged admin users; pages are flattened into `data.items`.
+ * @param filters search query and page size
+ */
+export const useAdminUsersInfinite = (filters?: {
+  q?: string;
+  limit?: number;
+}) =>
+  useInfiniteQuery({
+    queryKey: qk.admin.users({ ...filters, infinite: true }),
+    queryFn: ({ pageParam }) =>
+      adminApi.listAdminUsers({ ...filters, cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.has_more ? last.next_cursor : undefined),
+    staleTime: 30 * 1000,
+    select: (d) => ({
+      items: d.pages.flatMap((p) => p.items),
+      has_more: d.pages[d.pages.length - 1]?.has_more ?? false,
+      next_cursor: d.pages[d.pages.length - 1]?.next_cursor ?? null,
+    }),
   });
 
 /**

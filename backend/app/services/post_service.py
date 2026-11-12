@@ -14,10 +14,12 @@ from typing import Any
 
 import structlog
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
+from app.plugins.hooks import HookRegistry
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
@@ -25,6 +27,7 @@ from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.activity_publish import record_activity
+from app.services.ai.sassybot_service import wants_sassybot
 from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
@@ -117,6 +120,14 @@ class PostService:
         subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
+        await HookRegistry.emit(
+            "before_post_created",
+            community_id=self._community_id,
+            session=self._post_repo.session,
+            user_id=user.id,
+            content=content,
+            subgroup_id=subgroup_id,
+        )
         post = await self._post_repo.create_post(
             author_id=user.id,
             content=content,
@@ -193,6 +204,18 @@ class PostService:
                 },
             )
 
+        await HookRegistry.emit(
+            "after_post_created",
+            community_id=self._community_id,
+            session=self._post_repo.session,
+            user_id=user.id,
+            post_id=post.id,
+            content=content,
+            subgroup_id=subgroup_id,
+        )
+        await invalidate_search_cache_for_community(self._community_id)
+        self._enqueue_sassybot(post.id, content)
+
         if enriched and self._event_bus:
             await self._emit_scoped(
                 events.post_created(self._target, enriched),
@@ -221,6 +244,7 @@ class PostService:
             raise AuthorizationError(_("You can only edit your own posts"))
 
         await self._post_repo.update_content(post, content)
+        await invalidate_search_cache_for_community(self._community_id)
         enriched = await self._post_repo.get_post_detail(
             post_id,
             self._community_id,
@@ -245,6 +269,7 @@ class PostService:
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("post", post_id)
 
@@ -316,6 +341,8 @@ class PostService:
         )
 
         await self._notify_mentions(content, user, post_id)
+        if wants_sassybot(content):
+            self._enqueue_sassybot(post_id, content)
 
         comment_dict: dict[str, Any] = {
             "id": str(comment.id),
@@ -507,6 +534,18 @@ class PostService:
         )
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
+
+    def _enqueue_sassybot(self, post_id: uuid.UUID, content: str) -> None:
+        """@brief Enqueue the Sassybot task (forced on @sassybot); never fails the request."""
+        try:
+            from app.tasks.ai_tasks import sassybot_comment_task
+
+            sassybot_comment_task.apply_async(
+                args=(str(post_id), str(self._community_id), wants_sassybot(content)),
+                countdown=5,  # let the request transaction commit first
+            )
+        except Exception:
+            logger.warning("sassybot_enqueue_failed", post_id=str(post_id))
 
     @property
     def _target(self) -> CommunityTarget:

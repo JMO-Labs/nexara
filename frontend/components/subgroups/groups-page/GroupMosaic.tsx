@@ -20,6 +20,10 @@ export interface GroupMosaicProps {
   joinBusy: string | null | undefined;
   leaveBusy: string | null | undefined;
   onCreate: () => void;
+  /** Retry handler for the error state (defaults to page reload). */
+  onRetry?: () => void;
+  /** True when a search/filter hid otherwise existing groups. */
+  isFiltered?: boolean;
 }
 
 const GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-5 lg:grid-cols-3";
@@ -39,14 +43,19 @@ export function GroupMosaic({
   joinBusy,
   leaveBusy,
   onCreate,
+  onRetry,
+  isFiltered = false,
 }: GroupMosaicProps) {
   if (error) {
     return (
       <EmptyState
         title="Couldn't load groups"
-        description={String(error)}
+        description={error instanceof Error ? error.message : String(error)}
         action={
-          <Button variant="secondary" onClick={() => window.location.reload()}>
+          <Button
+            variant="secondary"
+            onClick={onRetry ?? (() => window.location.reload())}
+          >
             Retry
           </Button>
         }
@@ -55,7 +64,12 @@ export function GroupMosaic({
   }
   if (isLoading) {
     return (
-      <div className={GRID} role="status" aria-label="Loading groups">
+      <div
+        className={GRID}
+        role="status"
+        aria-busy="true"
+        aria-label="Loading groups"
+      >
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} height={i % 5 === 0 ? 360 : 240} />
         ))}
@@ -63,11 +77,17 @@ export function GroupMosaic({
     );
   }
   if (data.length === 0) {
-    return (
+    return isFiltered ? (
       <EmptyState
         title="No groups match"
         description="Try a different filter or start a new circle."
-        action={<Button onClick={onCreate}>New group</Button>}
+        action={<Button onClick={onCreate}>Create group</Button>}
+      />
+    ) : (
+      <EmptyState
+        title="No groups yet"
+        description="Create one to organize conversations and events around a smaller circle."
+        action={<Button onClick={onCreate}>Create group</Button>}
       />
     );
   }
