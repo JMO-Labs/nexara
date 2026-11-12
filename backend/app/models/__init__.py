@@ -15,6 +15,7 @@ from app.models.calendar import Calendar  # noqa: F401
 from app.models.calendar_token import CalendarToken  # noqa: F401
 from app.models.chat import ChatMessage  # noqa: F401
 from app.models.community import Community  # noqa: F401
+from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem  # noqa: F401
 from app.models.interest import InterestCategory, UserInterest  # noqa: F401
