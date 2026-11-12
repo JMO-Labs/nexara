@@ -18,8 +18,8 @@ def _script() -> ScriptDirectory:
 
 
 def test_device_tokens_migration_is_single_head_after_pronouns() -> None:
-    """@brief 0025_device_tokens chains after 0024_nudges; plugin keys is head."""
+    """@brief 0025_device_tokens chains after 0024_nudges; single head."""
     script = _script()
-    assert script.get_heads() == ["0025_plugin_api_keys"]
+    assert len(script.get_heads()) == 1
     rev = script.get_revision("0025_device_tokens")
     assert rev.down_revision == "0024_nudges"

@@ -44,6 +44,7 @@ def deps():
     users.get_by_id.return_value = target
     repo.is_blocked.return_value = False
     repo.has_recent_user_nudge.return_value = False
+    repo.accepts_user_nudges.return_value = True
     repo.create_nudge.return_value = _nudge()
     return repo, users, notify
 
@@ -124,3 +125,15 @@ async def test_gentle_nudges_none(service, deps):
     deps[0].find_gentle_candidates.return_value = []
     assert await service.send_gentle_nudges(COMMUNITY_ID) == 0
     deps[2].notify.assert_not_awaited()
+
+
+async def test_opted_out_target_rejected(service, deps):
+    """Targets with receive_nudges=False cannot be nudged (nexara#62)."""
+    repo, _, notify = deps
+    repo.accepts_user_nudges.return_value = False
+    with pytest.raises(AppError) as exc:
+        await service.send(MagicMock(spec=User, id=SENDER, display_name="A"), TARGET)
+    assert exc.value.code == "NUDGE_OPTED_OUT"
+    assert exc.value.status_code == 403
+    repo.create_nudge.assert_not_awaited()
+    notify.notify.assert_not_awaited()
