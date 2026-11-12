@@ -62,7 +62,6 @@ PREF_MAP = {
 }
 
 
-
 class NotificationService:
     """
     @brief Service layer for notification creation and delivery.

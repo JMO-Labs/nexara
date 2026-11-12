@@ -28,8 +28,8 @@ from app.db.session import async_session_factory
 if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
-    from app.services.notifications.dispatcher import Dispatcher
     from app.services.ai.suggestion_service import SuggestionService
+    from app.services.notifications.dispatcher import Dispatcher
 
 logger = structlog.get_logger(__name__)
 
@@ -227,7 +227,6 @@ async def get_activity_repo(
     @return ActivityRepository instance for recording activity events.
     """
     from app.repositories.activity_repo import ActivityRepository
-    from app.services.notifications.dispatcher import Dispatcher
 
     return ActivityRepository(db)
 
