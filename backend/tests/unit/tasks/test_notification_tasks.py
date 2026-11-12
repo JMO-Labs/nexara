@@ -11,7 +11,10 @@ PAYLOAD = {"title": "T", "body": "B", "url": "/x"}
 def _run(subs: list, send_side_effect: Exception | None = None) -> tuple[dict, AsyncMock]:
     uid = uuid4()
     session_cm = MagicMock()
-    session_cm.__aenter__ = AsyncMock(return_value=MagicMock())
+    session = MagicMock()
+    session.scalar = AsyncMock(return_value=uuid4())
+    session.commit = AsyncMock()
+    session_cm.__aenter__ = AsyncMock(return_value=session)
     session_cm.__aexit__ = AsyncMock(return_value=False)
     repo = MagicMock()
     repo.list_for_user = AsyncMock(return_value=subs)
