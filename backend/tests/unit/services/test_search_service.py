@@ -61,7 +61,7 @@ class TestSearch:
     @pytest.fixture
     def mock_user(self):
         """@brief Create a mock User with id."""
-        user = type("User", (), {"id": uuid.uuid4()})()
+        user = type("User", (), {"id": uuid.uuid4(), "birthday": None})()
         return user
 
     @pytest.fixture
@@ -83,6 +83,7 @@ class TestSearch:
             {
                 "id": uuid.uuid4(),
                 "content": "Test post content",
+                "is_nsfw": False,
                 "created_at": datetime.now(UTC),
             },
         )()

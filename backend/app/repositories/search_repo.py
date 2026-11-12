@@ -95,6 +95,7 @@ class SearchRepository:
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Post, float]], str | None, int]:
         """
         @brief Search posts by content using FTS with prefix support.
@@ -105,6 +106,7 @@ class SearchRepository:
         @param viewer_id    Current user (for block filter).
         @param cursor       Opaque pagination cursor (offset).
         @param limit        Max items to return.
+        @param include_nsfw Include NSFW-flagged posts (adult viewers only).
         @return Tuple of (items with rank, next_cursor, total).
         """
         if not query or not query.strip():
@@ -127,6 +129,8 @@ class SearchRepository:
             .where(Post.deleted_at.is_(None))
             .where(match_expr)
         )
+        if not include_nsfw:
+            stmt = stmt.where(Post.is_nsfw.is_(False))
         stmt = BaseRepository.apply_block_filter(stmt, viewer_id)
         stmt = stmt.order_by(rank_expr.desc(), Post.created_at.desc())
 
@@ -137,6 +141,8 @@ class SearchRepository:
             .where(Post.deleted_at.is_(None))
             .where(match_expr)
         )
+        if not include_nsfw:
+            count_stmt = count_stmt.where(Post.is_nsfw.is_(False))
         count_stmt = BaseRepository.apply_block_filter(
             count_stmt,
             viewer_id,
