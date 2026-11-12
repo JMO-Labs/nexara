@@ -1,12 +1,12 @@
 /**
  * @file hooks/useGalleryUpload.ts
  * @brief Queue management for gallery bulk uploads. XMLHttpRequest for progress,
- *        Promise pool semaphore (max 5 workers), auto-add items to gallery.
+ *        Promise pool semaphore (max 5 workers), one bulk call to add items.
  */
 import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMediaUpload } from "./useMediaUpload";
-import { addItem } from "@/lib/api/galleries";
+import { bulkAddItems } from "@/lib/api/galleries";
 import { qk } from "@/lib/query-keys";
 
 export interface UploadJob {
@@ -16,6 +16,8 @@ export interface UploadJob {
   status: "pending" | "uploading" | "done" | "error";
   error: string | null;
 }
+
+const BULK_MAX = 100;
 
 export function useGalleryUpload(galleryId: string) {
   const qc = useQueryClient();
@@ -27,11 +29,48 @@ export function useGalleryUpload(galleryId: string) {
   const drainingRef = useRef(false);
 
   /**
+   * Add uploaded media to the gallery with bulk calls (backend max 100 each).
+   */
+  const addToGallery = useCallback(
+    async (uploaded: { file: File; mediaId: string }[]) => {
+      let added = false;
+      for (let i = 0; i < uploaded.length; i += BULK_MAX) {
+        const chunk = uploaded.slice(i, i + BULK_MAX);
+        try {
+          await bulkAddItems(
+            galleryId,
+            chunk.map((u) => u.mediaId),
+          );
+          added = true;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const files = new Set(chunk.map((u) => u.file));
+          setJobs((js) =>
+            js.map((j) =>
+              files.has(j.file) ? { ...j, status: "error", error: msg } : j,
+            ),
+          );
+        }
+      }
+      if (added) {
+        // Refresh items list + gallery detail (item_count) + list view
+        qc.invalidateQueries({
+          queryKey: [...qk.galleries.detail(galleryId), "items"],
+        });
+        qc.invalidateQueries({ queryKey: qk.galleries.detail(galleryId) });
+        qc.invalidateQueries({ queryKey: qk.galleries.all() });
+      }
+    },
+    [galleryId, qc],
+  );
+
+  /**
    * Drain the queue: start uploads up to max concurrency.
    */
   const drainQueue = useCallback(async () => {
     if (drainingRef.current) return;
     drainingRef.current = true;
+    const succeeded: { file: File; mediaId: string }[] = [];
 
     try {
       while (
@@ -53,22 +92,12 @@ export function useGalleryUpload(galleryId: string) {
 
         try {
           const mediaId = await mediaUpload.mutateAsync(file);
-
-          // Add to gallery
-          await addItem(galleryId, mediaId);
-
+          succeeded.push({ file, mediaId });
           setJobs((js) =>
             js.map((j) =>
               j.file === file ? { ...j, status: "done", progress: 100 } : j,
             ),
           );
-
-          // Refresh items list + gallery detail (item_count) + list view
-          qc.invalidateQueries({
-            queryKey: [...qk.galleries.detail(galleryId), "items"],
-          });
-          qc.invalidateQueries({ queryKey: qk.galleries.detail(galleryId) });
-          qc.invalidateQueries({ queryKey: qk.galleries.all() });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           setJobs((js) =>
@@ -80,10 +109,12 @@ export function useGalleryUpload(galleryId: string) {
           inFlightRef.current--;
         }
       }
+
+      await addToGallery(succeeded);
     } finally {
       drainingRef.current = false;
     }
-  }, [galleryId, qc, mediaUpload]);
+  }, [addToGallery, galleryId, qc, mediaUpload]);
 
   const enqueue = useCallback(
     async (files: File[]) => {

@@ -96,6 +96,11 @@ export const listItems = (id: string) =>
   apiGet<GalleryItem[]>(`${BASE}/${seg(id)}/items`);
 export const addItem = (id: string, media_id: string, caption?: string) =>
   apiPost<GalleryItem>(`${BASE}/${seg(id)}/items`, { media_id, caption });
+/** @brief Add many media items in one request (backend max 100). */
+export const bulkAddItems = (id: string, mediaIds: string[]) =>
+  apiPost<GalleryItem[]>(`${BASE}/${seg(id)}/items/bulk`, {
+    media_ids: mediaIds,
+  });
 export const removeItem = (id: string, itemId: string) =>
   apiDelete<{ message: string }>(`${BASE}/${seg(id)}/items/${seg(itemId)}`);
 export const listCollaborators = (id: string) =>
