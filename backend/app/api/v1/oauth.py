@@ -31,7 +31,12 @@ from app.schemas.oauth import OAuthExchangeRequest
 from app.services.auth_service import AuthService
 from app.services.oauth.claim_mapper import map_claims
 from app.services.oauth.flow import OAuthFlow
-from app.services.oauth.group_mapper import map_groups_to_role
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+from app.services.oauth.group_mapper import (
+    apply_subgroup_mappings,
+    global_role_mappings,
+    map_groups_to_role,
+)
 from app.services.oauth.provider_manager import ProviderManager
 from app.services.oauth.token_verifier import extract_claims, verify_id_token
 from app.services.oauth.user_provisioner import UserProvisioner
@@ -204,11 +209,19 @@ async def oauth_callback(
         auth_result = extract_claims(claims, provider)
     role = map_groups_to_role(
         auth_result.groups or [],
-        provider.group_mappings or {},
+        {**(provider.group_mappings or {}), **global_role_mappings(provider.claim_mapping)},
         provider.default_role or "member",
     )
     provisioner = UserProvisioner(db, community_id)
     user = await provisioner.provision_user(auth_result, provider, role)
+    await apply_subgroup_mappings(
+        SubgroupRepository(db),
+        SubgroupMemberRepository(db),
+        community_id,
+        user.id,
+        auth_result.groups or [],
+        provider.claim_mapping,
+    )
 
     exchange_code = secrets.token_urlsafe(48)
     valkey = _get_valkey_client(settings)

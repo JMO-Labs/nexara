@@ -22,6 +22,7 @@ from app.models.user_oauth_link import UserOAuthLink
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
 from app.repositories.user_repo import UserRepository
+from app.services.oauth.group_mapper import global_role_mappings
 
 if TYPE_CHECKING:
     from app.models.oauth_provider import OAuthProvider
@@ -112,7 +113,9 @@ class UserProvisioner:
         @param role Resolved role (from group mapping or default).
         @return The user (created or updated).
         """
-        has_group_mappings = bool(provider.group_mappings)
+        has_group_mappings = bool(provider.group_mappings) or bool(
+            global_role_mappings(provider.claim_mapping)
+        )
 
         link = await self._link_repo.find_by_provider_and_sub(provider.id, auth_result.sub)
         if link:

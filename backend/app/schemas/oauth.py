@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -28,7 +30,7 @@ class OAuthProviderCreate(BaseModel):
     client_secret: str = Field(..., min_length=1)
     issuer: str | None = None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: dict[str, Any] = Field(default_factory=dict)
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -61,7 +63,7 @@ class OAuthProviderUpdate(BaseModel):
     client_secret: str | None = None
     issuer: str | None = None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] | None = None
+    claim_mapping: dict[str, Any] | None = None
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -95,7 +97,7 @@ class OAuthProviderResponse(BaseModel):
     provider_type: str
     issuer: str | None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: dict[str, Any] = Field(default_factory=dict)
     client_id: str
     scopes: str
     authorization_endpoint: str | None
@@ -134,7 +136,7 @@ class OIDCProviderCreate(BaseModel):
     client_id: str = Field(..., min_length=1, max_length=256)
     client_secret: str = Field(..., min_length=1)
     scopes: str = "openid profile email"
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: dict[str, Any] = Field(default_factory=dict)
 
 
 class OIDCTestResult(BaseModel):
@@ -144,3 +146,19 @@ class OIDCTestResult(BaseModel):
     issuer: str | None = None
     token_endpoint_reachable: bool = False
     error: str | None = None
+
+
+class GroupMappingPreviewEntry(BaseModel):
+    """@brief One configured group rule resolved against local subgroups."""
+
+    group: str
+    subgroup_id: str | None
+    role: str | None
+    subgroup_exists: bool | None
+    matched: bool
+
+
+class GroupMappingPreview(BaseModel):
+    """@brief Sandbox preview of a provider group mapping (no writes)."""
+
+    entries: list[GroupMappingPreviewEntry]
