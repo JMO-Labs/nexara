@@ -252,7 +252,7 @@ class TestGalleryPollSearch:
     @pytest.fixture
     def mock_user(self):
         """@brief Mock user."""
-        return type("User", (), {"id": uuid.uuid4()})()
+        return type("User", (), {"id": uuid.uuid4(), "birthday": None})()
 
     @pytest.mark.asyncio
     async def test_galleries_and_polls_with_counts_and_cursor(self, mock_user):
