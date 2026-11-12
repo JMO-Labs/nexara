@@ -4,7 +4,9 @@
  * @brief Compact month calendar; clicking a day expands its events inline.
  */
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -22,7 +24,12 @@ import type { EventItem } from "@/lib/api/events";
 export interface CalendarWidgetProps {
   events: EventItem[];
   month: Date;
+  onMonthChange: (m: Date) => void;
+  onSelectEvent: (ev: EventItem) => void;
 }
+
+const NAV_BTN =
+  "text-muted hover:text-ink hover:bg-ink/10 active:bg-ink/15 grid size-11 place-items-center rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-accent";
 
 function onDay(events: EventItem[], day: Date): EventItem[] {
   return events.filter((e) => {
@@ -37,7 +44,12 @@ function onDay(events: EventItem[], day: Date): EventItem[] {
  * @param props see CalendarWidgetProps
  * @return calendar element
  */
-export function CalendarWidget({ events, month }: CalendarWidgetProps) {
+export function CalendarWidget({
+  events,
+  month,
+  onMonthChange,
+  onSelectEvent,
+}: CalendarWidgetProps) {
   const [open, setOpen] = React.useState<Date | null>(null);
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(month)),
@@ -48,9 +60,27 @@ export function CalendarWidget({ events, month }: CalendarWidgetProps) {
 
   return (
     <div className="w-full">
-      <h2 className="mb-2 text-base font-black">
-        {format(month, "MMMM yyyy")}
-      </h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-base font-black">{format(month, "MMMM yyyy")}</h2>
+        <div className="flex">
+          <button
+            type="button"
+            aria-label="Previous month"
+            onClick={() => onMonthChange(addMonths(month, -1))}
+            className={NAV_BTN}
+          >
+            <ChevronLeft aria-hidden="true" className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next month"
+            onClick={() => onMonthChange(addMonths(month, 1))}
+            className={NAV_BTN}
+          >
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-7 gap-0.5">
         {days.map((d) => {
           const expanded = !!open && isSameDay(open, d);
@@ -86,12 +116,18 @@ export function CalendarWidget({ events, month }: CalendarWidgetProps) {
             {format(open, "EEEE, MMM d")}
           </p>
           {dayEvents.length === 0 ? (
-            <p className="text-xs">No events</p>
+            <p className="text-muted text-sm">No events</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {dayEvents.map((e) => (
-                <li key={e.id} className="text-sm font-semibold">
-                  {e.title}
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectEvent(e)}
+                    className="hover:bg-ink/10 active:bg-ink/15 min-h-11 w-full rounded-lg px-2 text-left text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    {e.title}
+                  </button>
                 </li>
               ))}
             </ul>

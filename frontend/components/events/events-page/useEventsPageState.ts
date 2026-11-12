@@ -74,7 +74,10 @@ export function useEventsPageState() {
     return monthEnd;
   }, [view, weekStart, selectedDay, monthEnd]);
 
-  const { data, isLoading } = useEventsInRange(fetchStart, fetchEnd);
+  const { data, isLoading, isError, refetch } = useEventsInRange(
+    fetchStart,
+    fetchEnd,
+  );
   const { data: subgroups } = useSubgroupList();
   const { data: calendars } = useCalendars();
   const calendarList = React.useMemo(() => calendars ?? [], [calendars]);
@@ -177,6 +180,8 @@ export function useEventsPageState() {
     setSelectedSources,
     calendarList,
     isLoading,
+    isError,
+    refetch,
     filtered,
     subgroupNames,
     railEvents,
