@@ -10,6 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import or_, select
 
+from app.core.exceptions import AppError
 from app.models.post import Post
 from app.models.subgroup import SubgroupMember
 from app.models.user import User
@@ -58,8 +59,16 @@ class KudosRepository(BaseRepository[Post]):
         member_subgroups = select(SubgroupMember.subgroup_id).where(
             SubgroupMember.user_id == viewer_id
         )
+        before: datetime | None = None
+        if cursor:
+            try:
+                before = datetime.fromisoformat(cursor)
+            except ValueError as exc:
+                raise AppError("INVALID_CURSOR", "Invalid pagination cursor", 400) from exc
+        # Block filter needs a plain single-entity select (no Join in FROM).
+        stmt = self.apply_block_filter(select(Post), viewer_id)
         stmt = (
-            select(Post, User)
+            stmt.add_columns(User)
             .outerjoin(User, User.id == Post.recipient_id)
             .where(
                 Post.community_id == community_id,
@@ -70,9 +79,8 @@ class KudosRepository(BaseRepository[Post]):
         )
         if recipient_id is not None:
             stmt = stmt.where(Post.recipient_id == recipient_id)
-        if cursor:
-            stmt = stmt.where(Post.created_at < datetime.fromisoformat(cursor))
-        stmt = self.apply_block_filter(stmt, viewer_id)
+        if before is not None:
+            stmt = stmt.where(Post.created_at < before)
         stmt = stmt.order_by(Post.created_at.desc()).limit(limit + 1)
         rows = [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
         next_cursor = None

@@ -61,8 +61,11 @@ class KudosService:
         recipient = await self._users.get_by_id(body.recipient_id, self._community_id)
         if recipient is None:
             raise NotFoundError(_("Recipient not found"))
-        if body.subgroup_id and not await self._subgroups.is_member(body.subgroup_id, author.id):
-            raise AuthorizationError(_("You are not a member of this subgroup"))
+        if body.subgroup_id:
+            if not await self._subgroups.is_member(body.subgroup_id, author.id):
+                raise AuthorizationError(_("You are not a member of this subgroup"))
+            if not await self._subgroups.is_member(body.subgroup_id, recipient.id):
+                raise AuthorizationError(_("Recipient is not a member of this subgroup"))
         post = await self._repo.create_kudos(
             author.id, body.recipient_id, body.message or "", self._community_id, body.subgroup_id
         )

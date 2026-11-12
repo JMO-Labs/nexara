@@ -121,3 +121,11 @@ async def test_missing_kudos_404(service, repos):
 
 def test_pref_map_has_kudos():
     assert "kudos_received" in PREF_MAP
+
+
+async def test_subgroup_requires_recipient_membership(service, repos):
+    repos[2].is_member.side_effect = [True, False]  # author yes, recipient no
+    with pytest.raises(AuthorizationError):
+        await service.create(
+            _author(), KudosCreate(recipient_id=RECIPIENT_ID, subgroup_id=uuid.uuid4())
+        )
