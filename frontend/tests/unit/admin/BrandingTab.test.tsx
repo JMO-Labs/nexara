@@ -57,7 +57,7 @@ describe("BrandingTab", () => {
     const name = await screen.findByLabelText("Community name");
     await userEvent.clear(name);
     await userEvent.type(name, "Soto crew");
-    const save = screen.getByRole("button", { name: /save/i });
+    const save = screen.getByRole("button", { name: /save branding/i });
     expect(save).toBeEnabled();
     await userEvent.click(save);
     await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());

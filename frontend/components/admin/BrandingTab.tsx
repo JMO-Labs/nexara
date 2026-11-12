@@ -15,6 +15,7 @@ import {
   type ColorKey,
 } from "@/lib/branding-palette";
 import { BrandingPreview } from "./BrandingPreview";
+import { CSSEditor } from "./CSSEditor";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
 import { AdminLoading, AdminNotice } from "./AdminState";
@@ -131,5 +132,18 @@ export function BrandingTab() {
   if (isLoading) return <AdminLoading />;
   if (error || !data)
     return <AdminNotice tone="error">Failed to load branding.</AdminNotice>;
-  return <BrandingForm initial={data} />;
+  return (
+    <div className="flex flex-col gap-10">
+      <BrandingForm initial={data} />
+      <section
+        aria-labelledby="custom-css-heading"
+        className="flex flex-col gap-4"
+      >
+        <h2 id="custom-css-heading" className="text-lg font-semibold">
+          Custom CSS
+        </h2>
+        <CSSEditor initial={data.custom_css ?? ""} />
+      </section>
+    </div>
+  );
 }
