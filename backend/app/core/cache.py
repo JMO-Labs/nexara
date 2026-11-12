@@ -104,6 +104,8 @@ async def invalidate_search_cache_for_community(
     Keys are hashed, so entries cannot be filtered per community; all
     ``search:*:*`` keys are removed (safe: the cache is rebuildable).
     Never raises: on Valkey errors returns 0 and entries expire via TTL.
+    Runs before the request transaction commits, so a concurrent search may
+    re-cache pre-commit results; staleness is bounded by the 60s TTL.
 
     @param community_id Community whose content changed.
     @param client Optional Redis client (defaults to the cache pool).
@@ -130,5 +132,5 @@ async def invalidate_search_cache_for_community(
         logger.warning("search_cache_invalidate_failed", exc_info=True)
         return 0
     search_cache_invalidations_total.labels(community_id=str(community_id)).inc()
-    logger.info("Invalidated %d search cache entries for community %s", deleted, community_id)
+    logger.info("search_cache_invalidated", deleted=deleted, community_id=str(community_id))
     return deleted

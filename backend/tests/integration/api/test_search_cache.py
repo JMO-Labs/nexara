@@ -172,31 +172,154 @@ class TestInvalidation:
         assert await invalidate_search_cache_for_community(CID, client=BrokenRedis()) == 0
 
 
+def _inv(module: str):
+    """@brief Patch the invalidator as imported by a service module."""
+    return patch(f"app.services.{module}.invalidate_search_cache_for_community", new=AsyncMock())
+
+
+def _post_service():
+    from app.services.post_service import PostService
+
+    repo = AsyncMock()
+    repo.create_post.return_value = MagicMock(subgroup_id=None)
+    repo.get_post_detail.return_value = {"id": "p"}
+    return PostService(repo, AsyncMock(), AsyncMock(), AsyncMock(), CID), repo
+
+
+def _event_service(owner):
+    from app.services.event_service import EventService
+
+    repo = AsyncMock()
+    repo.get_by_id.return_value = MagicMock(author_id=owner)
+    svc = EventService(repo, CID, AsyncMock(), calendar_service=AsyncMock(), token_repo=AsyncMock())
+    svc._build_response = AsyncMock()  # type: ignore[method-assign]
+    return svc
+
+
+def _gallery_service(owner):
+    from app.services.gallery_service import GalleryService
+
+    repo = AsyncMock()
+    repo.get_by_id.return_value = MagicMock(owner_id=owner)
+    return GalleryService(repo, CID, AsyncMock())
+
+
+def _media_service(owner):
+    from app.services.media_service import MediaService
+
+    repo = AsyncMock()
+    repo.get.return_value = MagicMock(uploader_id=owner, thumbnail_key=None)
+    return MediaService(repo, AsyncMock(), AsyncMock(), CID)
+
+
 class TestInvocationPoints:
-    """@brief Mutating service methods trigger invalidation."""
+    """@brief Each mutating service method awaits the invalidator once."""
 
-    def test_services_import_invalidator(self):
-        import app.services.event_service as e
-        import app.services.gallery_service as g
-        import app.services.media_service as m
-        import app.services.post_service as p
+    async def test_create_post_invalidates(self):
+        svc, _ = _post_service()
+        with _inv("post_service") as inv:
+            await svc.create_post(_user(), "hello")
+        inv.assert_awaited_once_with(CID)
 
-        for mod in (e, g, m, p):
-            assert hasattr(mod, "invalidate_search_cache_for_community")
+    async def test_update_post_invalidates(self):
+        svc, repo = _post_service()
+        user = _user()
+        repo.get_by_id.return_value = MagicMock(author_id=user.id)
+        with _inv("post_service") as inv:
+            await svc.update_post(uuid.uuid4(), user, "edited")
+        inv.assert_awaited_once_with(CID)
 
     async def test_delete_post_invalidates(self):
-        from app.services.post_service import PostService
-
-        post = MagicMock(author_id=uuid.uuid4())
-        user = MagicMock(id=post.author_id, role="member")
-        svc = PostService.__new__(PostService)
-        svc._post_repo = AsyncMock()
-        svc._post_repo.get_by_id.return_value = post
-        svc._community_id = CID
-        svc._activity_repo = None
-        with patch(
-            "app.services.post_service.invalidate_search_cache_for_community",
-            new=AsyncMock(),
-        ) as inv:
+        svc, repo = _post_service()
+        user = _user()
+        repo.get_by_id.return_value = MagicMock(author_id=user.id)
+        with _inv("post_service") as inv:
             await svc.delete_post(uuid.uuid4(), user)
         inv.assert_awaited_once_with(CID)
+
+    async def test_create_event_invalidates(self):
+        uid = uuid.uuid4()
+        svc = _event_service(uid)
+        data = MagicMock(recurrence_rule=None, visibility="community", contribution_slots=[])
+        with _inv("event_service") as inv:
+            await svc.create_event(uid, data)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_update_event_invalidates(self):
+        uid = uuid.uuid4()
+        svc = _event_service(uid)
+        data = MagicMock()
+        data.model_dump.return_value = {"title": "x"}
+        with _inv("event_service") as inv:
+            await svc.update_event(uuid.uuid4(), uid, data)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_delete_event_invalidates(self):
+        uid = uuid.uuid4()
+        svc = _event_service(uid)
+        with _inv("event_service") as inv:
+            await svc.delete_event(uuid.uuid4(), uid)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_create_gallery_invalidates(self):
+        uid = uuid.uuid4()
+        svc = _gallery_service(uid)
+        data = MagicMock(visibility="community")
+        with _inv("gallery_service") as inv, patch("app.services.gallery_service.GalleryResponse"):
+            await svc.create_gallery(uid, data)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_update_gallery_invalidates(self):
+        uid = uuid.uuid4()
+        svc = _gallery_service(uid)
+        data = MagicMock()
+        data.model_dump.return_value = {"title": "x"}
+        with _inv("gallery_service") as inv, patch("app.services.gallery_service.GalleryResponse"):
+            await svc.update_gallery(uuid.uuid4(), uid, data)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_upload_media_invalidates(self):
+        user = _user()
+        svc = _media_service(user.id)
+        mod = "app.services.media_service"
+        with (
+            _inv("media_service") as inv,
+            patch(f"{mod}.check_quota", new=AsyncMock()),
+            patch(f"{mod}.increment_storage_used", new=AsyncMock()),
+            patch(f"{mod}.generate_thumbnail"),
+            patch(f"{mod}.enqueue_ocr"),
+            patch(f"{mod}.MediaResponse"),
+        ):
+            await svc.upload(user, b"img", "a.png", "image/png", 3)
+        inv.assert_awaited_once_with(CID)
+
+    async def test_delete_media_invalidates(self):
+        user = _user()
+        svc = _media_service(user.id)
+        with (
+            _inv("media_service") as inv,
+            patch("app.services.media_service.decrement_storage_used", new=AsyncMock()),
+        ):
+            await svc.delete(uuid.uuid4(), user)
+        inv.assert_awaited_once_with(CID)
+
+
+class TestEndToEnd:
+    async def test_new_post_invalidates_cached_search(self):
+        redis = FakeRedis()
+        search, repo = _service(redis)
+        user = _user()
+        await _search(search, user)
+        await _search(search, user)
+        assert repo.search_posts.await_count == 1
+
+        async def real_inv(cid):
+            return await invalidate_search_cache_for_community(cid, client=redis)
+
+        posts, _ = _post_service()
+        with patch("app.services.post_service.invalidate_search_cache_for_community", new=real_inv):
+            await posts.create_post(user, "new content")
+        assert redis.data == {}
+
+        await _search(search, user)
+        assert repo.search_posts.await_count == 2
