@@ -10,12 +10,25 @@ used by all content queries in Phase 1.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.chat import ChatMessage
+from app.models.media import Media
 from app.models.moderation import ContentReport, UserBlock
+from app.models.post import Comment, Post
+from app.models.user import User
 from app.repositories.base import BaseRepository
+
+_CONTENT_AUTHORS: dict[str, tuple[type, str]] = {
+    "post": (Post, "author_id"),
+    "comment": (Comment, "author_id"),
+    "message": (ChatMessage, "author_id"),
+    "media": (Media, "uploader_id"),
+}
+"""@brief Map of report target_type to (model, author column)."""
 
 
 class ModerationRepository(BaseRepository[UserBlock]):
@@ -135,10 +148,114 @@ class ModerationRepository(BaseRepository[UserBlock]):
             status="pending",
             community_id=community_id,
         )
-        self._session.add(report)
+        # Savepoint keeps the outer transaction usable if UNIQUE is violated.
+        async with self._session.begin_nested():
+            self._session.add(report)
+            await self._session.flush()
+        await self._session.refresh(report)
+        return report
+
+    async def get_report(
+        self, report_id: uuid.UUID, community_id: uuid.UUID
+    ) -> ContentReport | None:
+        """
+        @brief Fetch a report by id within a community.
+
+        @param report_id Report UUID.
+        @param community_id Community scope.
+        @return The report or None.
+        """
+        stmt = select(ContentReport).where(
+            ContentReport.id == report_id,
+            ContentReport.community_id == community_id,
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def mark_reviewed(
+        self,
+        report: ContentReport,
+        *,
+        status: str,
+        action_taken: str,
+        admin_notes: str | None,
+        reviewed_by: uuid.UUID,
+    ) -> ContentReport:
+        """
+        @brief Record an admin decision on a report.
+
+        @param report The report to update.
+        @param status New status (reviewed or dismissed).
+        @param action_taken Admin action key.
+        @param admin_notes Optional admin note.
+        @param reviewed_by Admin user UUID.
+        @return The updated report.
+        """
+        report.status = status
+        report.action_taken = action_taken
+        report.admin_notes = admin_notes
+        report.reviewed_by = reviewed_by
+        report.reviewed_at = datetime.now(UTC)
         await self._session.flush()
         await self._session.refresh(report)
         return report
+
+    async def list_blocks(
+        self, blocker_id: uuid.UUID, community_id: uuid.UUID
+    ) -> list[UserBlock]:
+        """
+        @brief List blocks created by a user, newest first.
+
+        @param blocker_id Blocking user UUID.
+        @param community_id Community scope.
+        @return List of UserBlock rows.
+        """
+        stmt = (
+            select(UserBlock)
+            .where(
+                UserBlock.blocker_id == blocker_id,
+                UserBlock.community_id == community_id,
+            )
+            .order_by(UserBlock.created_at.desc())
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def get_content_author_id(
+        self, target_type: str, target_id: uuid.UUID
+    ) -> uuid.UUID | None:
+        """
+        @brief Resolve the author/owner of reported content.
+
+        @param target_type post, comment, message or media.
+        @param target_id Content UUID.
+        @return Author UUID or None if unknown.
+        """
+        model, column = _CONTENT_AUTHORS[target_type]
+        stmt = select(getattr(model, column)).where(model.id == target_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def soft_delete_content(self, target_type: str, target_id: uuid.UUID) -> None:
+        """
+        @brief Soft-delete reported content (only models with ``deleted_at``).
+
+        @param target_type post, comment, message or media.
+        @param target_id Content UUID.
+        """
+        model, _col = _CONTENT_AUTHORS[target_type]
+        if not hasattr(model, "deleted_at"):
+            return
+        await self._session.execute(
+            update(model).where(model.id == target_id).values(deleted_at=datetime.now(UTC))
+        )
+
+    async def deactivate_user(self, user_id: uuid.UUID) -> None:
+        """
+        @brief Deactivate (ban) a user account.
+
+        @param user_id User UUID.
+        """
+        await self._session.execute(
+            update(User).where(User.id == user_id).values(is_active=False)
+        )
 
     async def list_reports(
         self,

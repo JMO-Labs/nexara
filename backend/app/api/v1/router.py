@@ -22,6 +22,7 @@ from app.api.v1.home import router as home_router
 from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.media import router as media_router
+from app.api.v1.moderation import router as moderation_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.oauth import router as oauth_router
 from app.api.v1.oauth_admin import router as oauth_admin_router
@@ -51,6 +52,8 @@ api_v1_router.include_router(events_router)
 api_v1_router.include_router(calendar_subscriptions_router)
 api_v1_router.include_router(galleries_router)
 api_v1_router.include_router(home_router)
+# Before users_router so /users/blocked is not captured by /users/{user_id}.
+api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
