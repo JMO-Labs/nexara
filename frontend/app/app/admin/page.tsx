@@ -2,6 +2,7 @@
  * @file app/app/admin/page.tsx
  * @brief Admin panel server page wrapper.
  */
+import Link from "next/link";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 
 export const metadata = {
@@ -16,6 +17,9 @@ export default function AdminPage() {
         <p className="text-sm text-muted">
           Manage community, users, settings, and integrations.
         </p>
+        <Link href="/app/admin/retention" className="text-sm underline">
+          Data retention policies
+        </Link>
       </div>
       <AdminTabs />
     </div>

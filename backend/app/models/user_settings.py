@@ -94,6 +94,10 @@ class UserSettings(Base):
     notif_invite_accepted_inapp: Mapped[bool] = _bool_col()
     notif_invite_accepted_push: Mapped[bool] = _bool_col()
     notif_invite_accepted_email: Mapped[bool] = _bool_col("false")
+    notif_nudge_inapp: Mapped[bool] = _bool_col()
+    notif_nudge_push: Mapped[bool] = _bool_col("false")
+    notif_nudge_email: Mapped[bool] = _bool_col("false")
+    receive_gentle_nudges: Mapped[bool] = _bool_col()
 
     # Email digest
     email_digest_enabled: Mapped[bool] = _bool_col("false")

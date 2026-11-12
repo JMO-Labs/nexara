@@ -109,3 +109,56 @@ describe("BrandingStyle", () => {
     );
   });
 });
+
+describe("BrandingTab full palette", () => {
+  it("renders all 7 palette color inputs", async () => {
+    wrap(<BrandingTab />);
+    for (const l of [
+      "Primary",
+      "Primary (dark)",
+      "Accent color",
+      "Surface (light)",
+      "Surface (dark)",
+      "Text (light)",
+      "Text (dark)",
+    ])
+      expect(await screen.findByLabelText(l)).toBeInTheDocument();
+  });
+
+  it("warns, not blocks, on low text contrast", async () => {
+    wrap(<BrandingTab />);
+    const input = await screen.findByLabelText("Text (light)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "#eeeeee");
+    expect((await screen.findAllByRole("status")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Save branding" })).toBeEnabled();
+  });
+
+  it("updates live preview and submits only changed colors", async () => {
+    vi.mocked(api.updateBranding).mockResolvedValue({ branding: base });
+    wrap(<BrandingTab />);
+    const input = await screen.findByLabelText("Surface (dark)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "#101010");
+    expect(screen.getByTestId("branding-preview-dark")).toHaveStyle({
+      backgroundColor: "#101010",
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save branding" }),
+    );
+    await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
+    const body = vi.mocked(api.updateBranding).mock.calls[0][0];
+    expect(body.color_surface_dark).toBe("#101010");
+    expect(body).not.toHaveProperty("color_primary");
+  });
+
+  it("disables save on invalid hex", async () => {
+    wrap(<BrandingTab />);
+    const input = await screen.findByLabelText("Primary");
+    await userEvent.clear(input);
+    await userEvent.type(input, "zzz");
+    expect(
+      screen.getByRole("button", { name: "Save branding" }),
+    ).toBeDisabled();
+  });
+});
