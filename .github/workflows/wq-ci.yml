@@ -1,0 +1,13 @@
+name: wq-ci
+on:
+  pull_request: {branches: [dev], paths-ignore: ["docs/**", "plans/**", "**/*.md"]}
+  push: {branches: [dev], paths-ignore: ["docs/**", "plans/**", "**/*.md"]}
+permissions: {contents: read, pull-requests: write}
+jobs:
+  wq:
+    uses: JMO-Labs/wq-ci/.github/workflows/wq-ci.yml@v1
+    with:
+      test-cmd: scripts/wq-ci-test.sh
+      fix-cmd: "cd backend && pipx run ruff==0.15.3 format . && pipx run ruff==0.15.3 check --fix . ; cd ../frontend && npx --yes prettier@3.8.3 --write . >/dev/null"
+      reruns: 2
+    secrets: inherit

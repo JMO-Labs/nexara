@@ -294,3 +294,7 @@ node_modules/
 
 CLAUDE.md
 .superpowers/
+
+# wq-ci outputs
+/junit.xml
+/coverage.xml
