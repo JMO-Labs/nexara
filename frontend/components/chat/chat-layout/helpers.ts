@@ -5,6 +5,31 @@
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
 const LAST_CHANNEL_KEY = "chat.lastChannelId";
+const DENSITY_KEY = "chat.density";
+
+export type Density = "comfortable" | "compact";
+
+/** @brief Read the saved message density; "comfortable" by default. */
+export function readDensity(): Density {
+  if (typeof window === "undefined") return "comfortable";
+  try {
+    return window.localStorage.getItem(DENSITY_KEY) === "compact"
+      ? "compact"
+      : "comfortable";
+  } catch {
+    return "comfortable";
+  }
+}
+
+/** @brief Persist the message density; silently skips on failure. */
+export function writeDensity(d: Density): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DENSITY_KEY, d);
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 /** @brief Read the last-used channel id; null when storage is unavailable. */
 export function readLastChannel(): string | null {
@@ -83,12 +108,13 @@ export function isDesktop(): boolean {
 }
 
 /**
- * @brief Grid classes for chat panes: stacked < md, 2 panes at md, 3 with details.
+ * @brief Grid classes for chat panes: stacked < md, 2 panes at md,
+ *        3 panes (with details) only at lg.
  * @param showDetails whether the details pane is open
  * @return class string
  */
 export function gridClass(showDetails: boolean): string {
-  return `bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
-    showDetails ? "md:grid-cols-[280px_1fr_320px]" : "md:grid-cols-[280px_1fr]"
-  }`;
+  const base =
+    "bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[280px_1fr]";
+  return showDetails ? `${base} lg:grid-cols-[280px_1fr_320px]` : base;
 }

@@ -11,6 +11,7 @@ import { IconButton } from "@/components/ui";
 import { MessageList } from "../MessageList";
 import { Composer, type ComposerHandle } from "../Composer";
 import { TypingIndicator } from "../TypingIndicator";
+import { readDensity, writeDensity, type Density } from "./helpers";
 
 export interface ThreadPaneProps {
   title: string;
@@ -37,9 +38,12 @@ export function ThreadPane({
   composer,
 }: ThreadPaneProps) {
   const composerRef = React.useRef<ComposerHandle | null>(null);
-  const [density, setDensity] = React.useState<"comfortable" | "compact">(
-    "comfortable",
-  );
+  // Persisted so the choice survives the per-channel remount (key={id}).
+  const [density, setDensityState] = React.useState<Density>(readDensity);
+  const setDensity = (d: Density) => {
+    setDensityState(d);
+    writeDensity(d);
+  };
   const compact = density === "compact";
   const startConversation = () => {
     composerRef.current?.focus();
@@ -80,7 +84,7 @@ export function ThreadPane({
           aria-label={detailsOpen ? "Close thread panel" : "Open thread panel"}
           aria-pressed={detailsOpen}
           variant="ghost"
-          className="hidden md:inline-flex"
+          className="hidden lg:inline-flex"
           onClick={onToggleDetails}
         >
           <ChevronRight
@@ -101,14 +105,14 @@ export function ThreadPane({
 }
 
 /**
- * @brief Placeholder details column (desktop only).
+ * @brief Placeholder details column (lg and up only).
  * @return aside element
  */
 export function DetailsPane() {
   return (
     <aside
       aria-label="Details"
-      className="bg-surface hidden min-h-0 min-w-0 flex-col border-l border-border md:flex"
+      className="bg-surface hidden min-h-0 min-w-0 flex-col border-l border-border lg:flex"
     >
       <h2 className="shrink-0 border-b border-border px-4 py-3 text-sm font-semibold">
         Details

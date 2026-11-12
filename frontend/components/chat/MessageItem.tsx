@@ -24,6 +24,8 @@ export interface MessageItemProps {
   density?: "comfortable" | "compact";
   /** Play the slide-up entrance (live messages only). */
   animate?: boolean;
+  /** Called once the entrance finished or the row unmounted mid-way. */
+  onAnimationDone?: (id: string) => void;
 }
 
 /**
@@ -39,7 +41,15 @@ export function MessageItem({
   onSendDm,
   density = "comfortable",
   animate,
+  onAnimationDone,
 }: MessageItemProps) {
+  // Clear the "fresh" flag on unmount so a virtualized remount never replays.
+  const id = message.id;
+  React.useEffect(
+    () => (animate ? () => onAnimationDone?.(id) : undefined),
+    [animate, id, onAnimationDone],
+  );
+
   let time = "";
   try {
     time = format(new Date(message.created_at), "p");
@@ -53,6 +63,10 @@ export function MessageItem({
   return (
     <div
       data-density={density}
+      data-message-id={message.id}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) onAnimationDone?.(message.id);
+      }}
       className={cn(
         "group relative flex items-start gap-3 px-4",
         density === "compact"

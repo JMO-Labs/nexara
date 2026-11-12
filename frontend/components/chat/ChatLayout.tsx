@@ -242,6 +242,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
 
       {activeId ? (
         <ThreadPane
+          key={activeId}
           title={resolveTitle(channels, dms, activeId)}
           onBack={back}
           detailsOpen={threadPaneOpen}

@@ -75,19 +75,29 @@ export const MessageList = React.forwardRef<
   // Render oldest -> newest. Backend returns newest-first, so reverse once.
   const ordered = React.useMemo(() => [...messages].reverse(), [messages]);
 
-  // Ids present at first render don't animate; later arrivals slide up.
+  // Seed once real history has loaded; afterwards only messages newer than
+  // the previous newest slide up (older pages and history never animate).
   const seen = React.useRef<Set<string> | null>(null);
+  const newest = React.useRef(0);
   const fresh = React.useRef<Set<string>>(new Set());
+  const ts = (m: ChatMessage) => Date.parse(m.created_at) || 0;
   if (seen.current === null) {
-    seen.current = new Set(ordered.map((m) => m.id));
+    if (!isLoading && !isError && ordered.length > 0) {
+      seen.current = new Set(ordered.map((m) => m.id));
+      newest.current = Math.max(...ordered.map(ts));
+    }
   } else {
+    const prevNewest = newest.current;
     for (const m of ordered) {
-      if (!seen.current.has(m.id)) {
-        seen.current.add(m.id);
-        fresh.current.add(m.id);
-      }
+      if (seen.current.has(m.id)) continue;
+      seen.current.add(m.id);
+      if (ts(m) > prevNewest) fresh.current.add(m.id);
+      newest.current = Math.max(newest.current, ts(m));
     }
   }
+  const animationDone = React.useCallback((id: string) => {
+    fresh.current.delete(id);
+  }, []);
 
   const virtualizer = useVirtualizer({
     count: ordered.length,
@@ -200,6 +210,7 @@ export const MessageList = React.forwardRef<
                 onSendDm={onSendDm}
                 density={density}
                 animate={fresh.current.has(m.id)}
+                onAnimationDone={animationDone}
               />
             </div>
           );
