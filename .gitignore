@@ -298,3 +298,7 @@ CLAUDE.md
 # wq-ci outputs
 /junit.xml
 /coverage.xml
+
+# Docs build output
+docs/site/
+html/
