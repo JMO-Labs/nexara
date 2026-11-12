@@ -6,6 +6,7 @@ import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { MonthCalendar } from "@/components/events/MonthCalendar";
+import { TooltipProvider } from "@/components/ui";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 
 const NOW = new Date(2026, 3, 15, 12, 0, 0);
@@ -13,7 +14,9 @@ const MONTH = new Date(2026, 3, 1);
 
 function setup(onMonthChange = vi.fn()) {
   renderWithProviders(
-    <MonthCalendar events={[]} month={MONTH} onMonthChange={onMonthChange} />,
+    <TooltipProvider>
+      <MonthCalendar events={[]} month={MONTH} onMonthChange={onMonthChange} />
+    </TooltipProvider>,
   );
   return onMonthChange;
 }
