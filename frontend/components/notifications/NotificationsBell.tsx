@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Bell, BellOff, AlertCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
@@ -30,6 +30,7 @@ const LIST_KEY = ["notifications", "list"] as const;
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion();
   const [pulse, setPulse] = useState(false);
   const [badgeKey, setBadgeKey] = useState(0);
   const prevCountRef = useRef(0);
@@ -133,7 +134,7 @@ export function NotificationsBell() {
   return (
     <div ref={wrapperRef} className="relative">
       <motion.div
-        animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
+        animate={pulse && !reduced ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
         transition={{ duration: 0.35, ease: "easeInOut" }}
       >
         <IconButton
@@ -150,13 +151,21 @@ export function NotificationsBell() {
         </IconButton>
       </motion.div>
       {unread > 0 && (
-        <span
+        <motion.span
           key={`badge-${badgeKey}`}
+          data-testid="unread-badge"
+          {...(reduced
+            ? {}
+            : {
+                initial: { scale: 0.6, opacity: 0 },
+                animate: { scale: 1, opacity: 1 },
+                transition: { duration: 0.2, ease: "easeOut" as const },
+              })}
           aria-hidden
           className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-destructive-foreground"
         >
           {unread > 99 ? "99+" : unread}
-        </span>
+        </motion.span>
       )}
 
       {open && (
