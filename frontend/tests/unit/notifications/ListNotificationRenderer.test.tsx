@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { List, CircleCheck, Check, Clock, User } from "lucide-react";
 import userEvent from "@testing-library/user-event";
 import {
   ListNotification,
@@ -25,7 +26,37 @@ const mk = (type: string) => ({
   createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
 });
 
+const EXPECTED_ICON = {
+  "list.item": List,
+  "list.signup": CircleCheck,
+  "list.completed": Check,
+  "list.expiring": Clock,
+  "list.member": User,
+} as const;
+
 describe("ListNotification", () => {
+  it.each(Object.entries(EXPECTED_ICON))(
+    "renders the %s icon at 20px",
+    (type, Expected) => {
+      const { container: ref } = render(<Expected />);
+      const refClass = ref.querySelector("svg")!.getAttribute("class");
+      const { container } = render(
+        <ListNotification
+          notification={mk(type)}
+          onDismiss={vi.fn()}
+          onNavigate={vi.fn()}
+          href="/app/lists/L1"
+        />,
+      );
+      const svg = container.querySelector("svg")!;
+      expect(svg.getAttribute("class")).toContain(
+        refClass!.split(" ").find((c) => c !== "lucide")!,
+      );
+      expect(svg).toHaveAttribute("width", "20");
+      expect(svg).toHaveAttribute("height", "20");
+    },
+  );
+
   it.each([
     ["list.item", "New item in My Gift List"],
     ["list.signup", "Ann claimed"],
