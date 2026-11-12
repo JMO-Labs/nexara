@@ -120,3 +120,46 @@ def test_generate_api_ref_script_is_executable_and_uses_redoc():
 def test_developer_pages_list_api_reference():
     pages = (DOCS / "developer" / ".pages").read_text()
     assert "api-reference.md" in pages
+
+
+def test_api_reference_relative_links_resolve():
+    import re
+
+    page = DOCS / "developer" / "api-reference.md"
+    for target in re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", page.read_text()):
+        if re.match(r"^[a-z]+:", target):
+            continue
+        assert (page.parent / target).resolve().exists(), target
+
+
+def test_generate_api_ref_script_writes_output_with_stub_npx(tmp_path):
+    import os
+    import subprocess
+
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "npx").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo stub > "$out"\n'
+    )
+    (stub / "npx").chmod(0o755)
+    (stub / "curl").write_text('#!/usr/bin/env bash\necho "{}" > "$4"\n')
+    (stub / "curl").chmod(0o755)
+    out = tmp_path / "ref.html"
+    env = {
+        **os.environ,
+        "PATH": f"{stub}:{os.environ['PATH']}",
+        "OPENAPI_URL": "http://x/openapi.json",
+        "OUT": str(out),
+    }
+    subprocess.run([str(ROOT / "scripts" / "generate-api-ref.sh")], env=env, check=True)
+    assert out.read_text().strip() == "stub"
+
+
+def test_alembic_has_single_head():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    cfg = Config()
+    cfg.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
+    assert len(ScriptDirectory.from_config(cfg).get_heads()) == 1
