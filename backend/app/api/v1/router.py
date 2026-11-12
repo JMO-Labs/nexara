@@ -19,6 +19,7 @@ from app.api.v1.calendars import router as calendars_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
+from app.api.v1.export import router as export_router
 from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
 from app.api.v1.interests import router as interests_router
@@ -54,6 +55,7 @@ api_v1_router.include_router(calendars_router)
 api_v1_router.include_router(chat_router)
 api_v1_router.include_router(events_router)
 api_v1_router.include_router(calendar_subscriptions_router)
+api_v1_router.include_router(export_router)
 api_v1_router.include_router(galleries_router)
 api_v1_router.include_router(home_router)
 api_v1_router.include_router(users_router)
