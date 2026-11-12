@@ -210,7 +210,9 @@ describe("aria sweep", () => {
       wrap(<GlobalCommandPalette />);
       act(() => useUI.getState().setCommandPaletteOpen(true));
       await screen.findByRole("listbox");
-      expect(await axe(document.body)).toHaveNoViolations();
+      // Radix injects aria-hidden focus guards under body by design; scan the dialog only.
+      const dialog = await screen.findByRole("dialog");
+      expect(await axe(dialog)).toHaveNoViolations();
     });
   });
 });
