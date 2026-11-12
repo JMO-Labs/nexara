@@ -3,9 +3,14 @@
  * @file components/admin/MetricsTab.tsx
  * @brief Admin metrics display with community, system, and WAF stats.
  */
+import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAdminMetrics } from "@/hooks/useAdmin";
 import { Card } from "@/components/ui";
+import { listItem, listStagger } from "@/components/ui/motion";
 import { AdminLoading, AdminNotice } from "./AdminState";
+
+const MotionCard = motion.create(Card);
 
 function formatBytes(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -34,11 +39,37 @@ function MetricCard({
   label: string;
   value: string | number;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <Card className="flex flex-col gap-1 p-4">
+    <MotionCard
+      data-testid="metric-card"
+      className="flex flex-col gap-1 p-4"
+      {...(reduced ? {} : { variants: listItem })}
+    >
       <span className="text-sm text-muted">{label}</span>
       <span className="text-2xl font-black">{value}</span>
-    </Card>
+    </MotionCard>
+  );
+}
+
+/** @brief Grid that staggers its MetricCards in on mount. */
+function MetricGrid({
+  className,
+  children,
+}: {
+  className: string;
+  children: React.ReactNode;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      {...(reduced
+        ? {}
+        : { variants: listStagger, initial: "hidden", animate: "show" })}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -61,7 +92,7 @@ export function MetricsTab() {
         <h3 className="mb-3 text-lg font-semibold">
           Key performance indicators
         </h3>
-        <div className={`${GRID} md:grid-cols-4`}>
+        <MetricGrid className={`${GRID} md:grid-cols-4`}>
           <MetricCard
             label="Total users"
             value={metrics.community.users_total}
@@ -78,13 +109,13 @@ export function MetricsTab() {
             label="Storage"
             value={formatBytes(metrics.community.media_storage_bytes)}
           />
-        </div>
+        </MetricGrid>
       </section>
 
       <div className="grid gap-6 md:grid-cols-2">
         <section>
           <h4 className="mb-3 font-semibold">Community</h4>
-          <div className={GRID}>
+          <MetricGrid className={GRID}>
             <MetricCard
               label="Online now"
               value={metrics.community.users_online_now}
@@ -97,12 +128,12 @@ export function MetricsTab() {
               label="Media files"
               value={metrics.community.media_files}
             />
-          </div>
+          </MetricGrid>
         </section>
 
         <section>
           <h4 className="mb-3 font-semibold">System</h4>
-          <div className={GRID}>
+          <MetricGrid className={GRID}>
             <MetricCard label="Version" value={metrics.system.version} />
             <MetricCard
               label="Uptime"
@@ -126,13 +157,13 @@ export function MetricsTab() {
                 value={metrics.system.celery_queue_depth ?? 0}
               />
             )}
-          </div>
+          </MetricGrid>
         </section>
       </div>
 
       <section>
         <h4 className="mb-3 font-semibold">Security (WAF)</h4>
-        <div className={`${GRID} md:grid-cols-4`}>
+        <MetricGrid className={`${GRID} md:grid-cols-4`}>
           <MetricCard label="Blocks today" value={metrics.waf.blocks_today} />
           {Object.entries(metrics.waf.blocks_by_reason).map(
             ([reason, count]) => (
@@ -143,7 +174,7 @@ export function MetricsTab() {
               />
             ),
           )}
-        </div>
+        </MetricGrid>
       </section>
     </div>
   );

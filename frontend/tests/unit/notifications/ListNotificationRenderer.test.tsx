@@ -3,14 +3,23 @@
  * @brief List notification renderers: title, details, dismiss, navigate.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen, render as rtlRender } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 import { List, CircleCheck, Check, Clock, User } from "lucide-react";
 import userEvent from "@testing-library/user-event";
 import {
   ListNotification,
   isListNotificationType,
-  LIST_TITLES,
 } from "@/components/notifications/ListNotificationRenderer";
+
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 const ctx = {
   listId: "L1",
@@ -59,7 +68,7 @@ describe("ListNotification", () => {
 
   it.each([
     ["list.item", "New item in My Gift List"],
-    ["list.signup", "Ann claimed"],
+    ["list.signup", "Ann claimed an item"],
     ["list.completed", "Item marked done"],
     ["list.expiring", "Expires in 1 day"],
     ["list.member", "Added by Bob"],
@@ -110,6 +119,17 @@ describe("ListNotification", () => {
   it("detects list types", () => {
     expect(isListNotificationType("list.item")).toBe(true);
     expect(isListNotificationType("mention")).toBe(false);
-    expect(Object.keys(LIST_TITLES)).toHaveLength(5);
+    expect(isListNotificationType("list.signup")).toBe(true);
+  });
+
+  it("uses translated fallbacks when context is empty", () => {
+    render(
+      <ListNotification
+        notification={{ ...mk("list.member"), context: {} }}
+        onDismiss={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Added by a member")).toBeInTheDocument();
   });
 });
