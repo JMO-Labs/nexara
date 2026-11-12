@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = ""
     VAPID_PUBLIC_KEY: str = ""
 
+    # --- FCM (native mobile push); unset disables the channel ---
+    FCM_CREDENTIALS_FILE: str | None = None
+
     # --- SMTP ---
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

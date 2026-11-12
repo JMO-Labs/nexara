@@ -71,3 +71,20 @@ async def test_sends_run_in_parallel() -> None:
     start = loop.time()
     await d.dispatch(_N, _T, {"inapp": True, "email": True})
     assert loop.time() - start < 0.35
+
+
+async def test_fcm_gated_by_push_preference() -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.services.notifications.channels.base import ChannelResult
+    from app.services.notifications.dispatcher import Dispatcher
+
+    d = Dispatcher(MagicMock())
+    fcm = MagicMock()
+    fcm.key = "fcm"
+    fcm.send = AsyncMock(return_value=ChannelResult(ok=True))
+    d.register_channel(fcm)
+    await d.dispatch(MagicMock(), MagicMock(key="t"), {"push": False})
+    fcm.send.assert_not_called()
+    await d.dispatch(MagicMock(), MagicMock(key="t"), {"push": True})
+    fcm.send.assert_awaited_once()
