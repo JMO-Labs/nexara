@@ -4,26 +4,23 @@
 
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from packaging.version import Version
-from pydantic import ValidationError as PydanticValidationError
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.i18n import _
 from app.models.plugin import Plugin
 from app.plugins.api_keys import generate_api_key
-from app.plugins.manifest import PluginManifest, is_compatible, load_manifest
-from app.plugins.utils import validate_plugin_dir
+from app.plugins.manifest import PluginManifest, is_compatible
+from app.plugins.utils import validate_plugin_dir, validate_plugin_id
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
 from app.repositories.plugin_repo import PluginRepository
 
 SECRET_MASK = "********"
-_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 _TYPES: dict[str, tuple[type, ...]] = {
     "string": (str,),
     "integer": (int,),
@@ -52,20 +49,14 @@ class PluginService:
     def read_manifest(self, plugin_id: str) -> PluginManifest:
         """
         @brief Load and validate a plugin manifest from the plugins directory.
-        @throws NotFoundError if the id is malformed or the directory/manifest is missing.
-        @throws ValidationError if the manifest is invalid or id mismatches.
+        @throws NotFoundError if the plugin directory is missing.
+        @throws ValidationError if the id, layout or manifest is invalid, or id mismatches.
         """
+        validate_plugin_id(plugin_id)
         pdir = self._dir / plugin_id
-        if not _ID_RE.match(plugin_id) or not pdir.is_dir():
+        if not pdir.is_dir():
             raise NotFoundError(message=_("Plugin not found"))
-        try:
-            manifest = load_manifest(pdir)
-        except FileNotFoundError:
-            raise NotFoundError(message=_("Plugin not found")) from None
-        except (PydanticValidationError, ValueError) as exc:
-            raise ValidationError(
-                message=_("Invalid plugin manifest"), details={"error": str(exc)}
-            ) from exc
+        manifest = validate_plugin_dir(pdir)
         if manifest.id != plugin_id:
             raise ValidationError(message=_("Manifest id does not match directory"))
         return manifest
@@ -174,6 +165,7 @@ class PluginService:
                 message=_("Plugin requires core version >= %(v)s")
                 % {"v": manifest.min_core_version}
             )
+        # Deferred: running plugin data migrations on upgrade (follow-up).
         row.version = manifest.version
         row.permissions_granted = [p.value for p in manifest.permissions]
         return await self._repo.save(row)

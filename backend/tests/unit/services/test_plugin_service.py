@@ -139,3 +139,17 @@ async def test_upgrade_missing_not_found(svc, repo):
     repo.get.return_value = None
     with pytest.raises(NotFoundError):
         await svc.upgrade("hello", "1.1.0")
+
+
+async def test_install_without_init_rejected(svc, tmp_path):
+    _write(tmp_path)
+    (tmp_path / "hello" / "__init__.py").unlink()
+    with pytest.raises(ValidationError):
+        await svc.install("hello")
+
+
+@pytest.mark.parametrize("pid", ["bad_id", "a-"])
+async def test_install_invalid_id_rejected(svc, tmp_path, pid):
+    _write(tmp_path, pid=pid)
+    with pytest.raises(ValidationError):
+        await svc.install(pid)
