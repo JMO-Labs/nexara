@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from alembic import op
 
 revision: str = "0024_nudges"
-down_revision: str | Sequence[str] | None = "0023_bookmarks"
+down_revision: str | Sequence[str] | None = "0024_add_user_pronouns"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
