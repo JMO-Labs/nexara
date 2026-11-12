@@ -57,3 +57,21 @@ def contrast_ratio(color1: str, color2: str) -> float:
     lighter = max(l1, l2)
     darker = min(l1, l2)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+ACCENT_TEXT_COLOR = "#14301E"
+"""Dark text color (palette.light["surface-strong"]) accents are checked against."""
+
+
+def accent_passes_aa(accent: str) -> bool:
+    """
+    @brief Check an accent color meets WCAG AA (4.5:1) against dark text.
+
+    Mirrors ``accentPassesAA`` in ``frontend/lib/api/branding.ts``.
+
+    @param accent 6-digit hex string (#RRGGBB).
+    @return True if valid hex and contrast >= 4.5.
+    """
+    if not _HEX_COLOR_RE.match(accent):
+        return False
+    return contrast_ratio(ACCENT_TEXT_COLOR, accent) >= 4.5

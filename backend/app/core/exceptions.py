@@ -105,6 +105,18 @@ class ConflictError(AppError):
         )
 
 
+class ValidationError(AppError):
+    """@brief Raised when a field value fails business-rule validation (422)."""
+
+    def __init__(self, message: str = "", details: dict[str, Any] | None = None) -> None:
+        super().__init__(
+            code="VALIDATION_ERROR",
+            message=message or _("Invalid value"),
+            status_code=422,
+            details=details,
+        )
+
+
 class RateLimitError(AppError):
     """@brief Raised when a client exceeds the rate limit."""
 
