@@ -5,6 +5,10 @@
 // Mock the hook BEFORE importing the component
 import { vi } from "vitest";
 
+vi.mock("@/hooks/usePosts", () => ({
+  useCreatePost: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 vi.mock("@/hooks/usePromptResponses", () => ({
   usePromptResponses: () => ({
     data: { response_count: 12 },
@@ -54,14 +58,12 @@ describe("PromptPostCard", () => {
     expect(screen.getByText("12 responses")).toBeInTheDocument();
   });
 
-  it("clicking Reply triggers onReply callback with prompt id", async () => {
-    const onReply = vi.fn();
+  it("clicking Respond opens the response modal", async () => {
     const post = createPromptPost();
     const user = userEvent.setup();
-    wrap(<PromptPostCard post={post} onReply={onReply} />);
-    const replyBtn = screen.getByRole("button", { name: /reply/i });
-    await user.click(replyBtn);
-    expect(onReply).toHaveBeenCalledWith(post.prompt.id);
+    wrap(<PromptPostCard post={post} />);
+    await user.click(screen.getByRole("button", { name: /respond/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("renders aria-live region for response count updates", () => {

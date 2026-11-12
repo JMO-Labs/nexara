@@ -1,7 +1,7 @@
 """add sassybot settings to communities
 
-Revision ID: 0027_sassybot_settings
-Revises: 0026_list_templates
+Revision ID: 0028_sassybot_settings
+Revises: 0027_add_sso_only_to_branding
 Create Date: 2026-11-12 00:00:00
 """
 
@@ -9,8 +9,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "0027_sassybot_settings"
-down_revision = "0026_list_templates"
+revision = "0028_sassybot_settings"
+down_revision = "0027_add_sso_only_to_branding"
 branch_labels = None
 depends_on = None
 

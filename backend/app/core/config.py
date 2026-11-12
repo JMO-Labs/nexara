@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     #: User id of the Sassybot bot account (empty disables Sassybot comments)
     SASSYBOT_USER_ID: str = ""
 
+    AI_DAILY_BUDGET_CENTS: int = 100
+    AI_BUDGET_RESET_HOUR: int = 0
+
     # --- VAPID (Web Push) ---
     VAPID_PRIVATE_KEY: str = ""
     VAPID_PUBLIC_KEY: str = ""

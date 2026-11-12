@@ -79,6 +79,7 @@ def env(tmp_path: Path, test_app):
     d = tmp_path / "hello"
     d.mkdir()
     (d / "manifest.json").write_text(json.dumps(_manifest()))
+    (d / "__init__.py").write_text("")
     repo, keys = FakeRepo(), FakeKeyRepo()
     svc = PluginService(repo, keys, CID, tmp_path, "0.1.0")
     test_app.dependency_overrides[get_plugin_service] = lambda: svc
@@ -125,6 +126,7 @@ async def test_install_incompatible_core_version(env):
     d = env.dir / "future"
     d.mkdir()
     (d / "manifest.json").write_text(json.dumps(_manifest("future", min_core="9.0.0")))
+    (d / "__init__.py").write_text("")
     async with env.client() as c:
         r = await c.post("/api/v1/plugins/future/install")
     assert r.status_code == 422
@@ -134,6 +136,7 @@ async def test_install_invalid_manifest_422(env):
     d = env.dir / "bad"
     d.mkdir()
     (d / "manifest.json").write_text("{}")
+    (d / "__init__.py").write_text("")
     async with env.client() as c:
         r = await c.post("/api/v1/plugins/bad/install")
     assert r.status_code == 422
