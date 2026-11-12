@@ -147,3 +147,23 @@ class PwaManifest(BaseModel):
     display: str
     start_url: str
     icons: list[dict[str, Any]]
+
+
+class PresetTheme(BaseModel):
+    """@brief A named preset colour theme (all branding colours)."""
+
+    name: str
+    description: str
+    primary: str
+    primary_dark: str
+    accent: str
+    surface_light: str
+    surface_dark: str
+    text_light: str
+    text_dark: str
+
+
+class PresetThemeList(BaseModel):
+    """@brief Response for GET /branding/presets."""
+
+    themes: list[PresetTheme]
