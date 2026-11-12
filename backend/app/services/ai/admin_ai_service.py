@@ -86,9 +86,7 @@ class AdminAIService:
         cfg = dict(DEFAULTS)
         for k, default in DEFAULTS.items():
             if k in raw:
-                cfg[k] = (
-                    raw[k] == "1" if isinstance(default, bool) else int(raw[k])
-                )
+                cfg[k] = raw[k] == "1" if isinstance(default, bool) else int(raw[k])
         return {
             "provider": (self._settings.AI_PROVIDER or "").lower(),
             **cfg,

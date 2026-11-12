@@ -70,11 +70,20 @@ def env(test_app):
     session = MagicMock()
     session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one=lambda: 3))
     box = SimpleNamespace(provider=FakeProvider())
-    settings = SimpleNamespace(AI_PROVIDER="ollama", AI_DAILY_BUDGET_CENTS=200,
-                               AI_BUDGET_RESET_HOUR=0)
+    settings = SimpleNamespace(
+        AI_PROVIDER="ollama", AI_DAILY_BUDGET_CENTS=200, AI_BUDGET_RESET_HOUR=0
+    )
     budget = BudgetService(redis, 200, clock=lambda: NOW)
-    svc = AdminAIService(redis, session, CID, settings, budget, lambda: box.provider,
-                         clock=lambda: NOW, audit=AsyncMock())
+    svc = AdminAIService(
+        redis,
+        session,
+        CID,
+        settings,
+        budget,
+        lambda: box.provider,
+        clock=lambda: NOW,
+        audit=AsyncMock(),
+    )
     test_app.dependency_overrides[get_admin_ai_service] = lambda: svc
 
     def client(role="admin"):
@@ -91,15 +100,26 @@ async def test_get_config_defaults(env):
         r = await c.get("/api/v1/admin/ai/config")
     assert r.status_code == 200
     assert r.json() == {
-        "provider": "ollama", "sassybot_enabled": True, "sass_level": 2,
-        "probability": 20, "invoke_only": False, "opt_out_count": 3,
+        "provider": "ollama",
+        "sassybot_enabled": True,
+        "sass_level": 2,
+        "probability": 20,
+        "invoke_only": False,
+        "opt_out_count": 3,
     }
 
 
 async def test_put_config_persists(env):
     async with env.client() as c:
-        r = await c.put("/api/v1/admin/ai/config", json={
-            "sassybot_enabled": False, "sass_level": 3, "probability": 55, "invoke_only": True})
+        r = await c.put(
+            "/api/v1/admin/ai/config",
+            json={
+                "sassybot_enabled": False,
+                "sass_level": 3,
+                "probability": 55,
+                "invoke_only": True,
+            },
+        )
         assert r.status_code == 200
         assert r.json()["sass_level"] == 3
         got = (await c.get("/api/v1/admin/ai/config")).json()
@@ -108,8 +128,9 @@ async def test_put_config_persists(env):
     assert got["invoke_only"] is True
 
 
-@pytest.mark.parametrize("body", [{"sass_level": 4}, {"sass_level": 0}, {"probability": 101},
-                                  {"probability": -1}])
+@pytest.mark.parametrize(
+    "body", [{"sass_level": 4}, {"sass_level": 0}, {"probability": 101}, {"probability": -1}]
+)
 async def test_put_config_validates(env, body):
     async with env.client() as c:
         r = await c.put("/api/v1/admin/ai/config", json=body)

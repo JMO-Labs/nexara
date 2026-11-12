@@ -56,9 +56,7 @@ def get_admin_ai_service(
             ip_address=_client_ip(request),
         )
 
-    budget = BudgetService(
-        redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR
-    )
+    budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
     return AdminAIService(
         redis, db, community_id, settings, budget, lambda: get_ai_provider(settings), audit=audit
     )
