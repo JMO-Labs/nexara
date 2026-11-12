@@ -141,6 +141,9 @@ describe("CSSEditor", () => {
         "danger",
       ),
     );
+    expect(
+      useToasts.getState().items.filter((t) => t.variant === "danger"),
+    ).toHaveLength(1);
     expect(screen.getByRole("button", { name: /save css/i })).toBeEnabled();
   });
 
