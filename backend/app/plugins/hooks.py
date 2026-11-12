@@ -8,8 +8,11 @@ Events and the kwargs passed to handlers (after the leading ``ctx``):
 - ``after_post_created(user_id, post_id, content, subgroup_id)``
 - ``before_chat_sent(user_id, channel_id, content)``
 - ``after_chat_sent(user_id, channel_id, message_id, content)``
-- ``on_user_joined(user_id)``
-- ``on_community_created(community_id, owner_id)``
+- ``on_user_joined(user_id)`` — new member registered (local or OAuth)
+- ``on_community_created(user_id)`` — ``user_id`` is the creating owner
+
+Every event also receives the emit-level ``community_id`` and ``session`` via ``ctx``
+(``PluginContext``); ``emit`` is called with ``community_id``, ``session`` and ``user_id``.
 
 Handlers are ``async def handler(ctx: PluginContext, **kwargs)``. A plugin must list the
 event in ``manifest.hooks`` and hold the ``hooks_<event>`` permission.
