@@ -68,3 +68,42 @@ class TestSendNotConfigured:
 
             assert result is False
             mock_smtp.assert_not_called()
+
+
+def _send_with_name(sender_name):
+    """@brief Send one mail and return the captured message."""
+    settings = MagicMock()
+    settings.SMTP_HOST = "smtp.example.com"
+    settings.SMTP_PORT = 587
+    settings.SMTP_USER = ""
+    settings.SMTP_PASSWORD = ""
+    settings.SMTP_FROM = "noreply@example.com"
+    ctx = MagicMock()
+    ctx.send_message = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=ctx)
+    ctx.__aexit__ = AsyncMock(return_value=None)
+    return settings, ctx
+
+
+class TestSenderName:
+    """@brief From header display name handling."""
+
+    @pytest.mark.asyncio
+    async def test_sender_name_sets_display_name(self):
+        settings, ctx = _send_with_name("Família Silva")
+        with patch("app.services.email.sender.SMTP", return_value=ctx):
+            await EmailSender(settings=settings).send(
+                "u@example.com", "S", "<p>x</p>", sender_name="Família Silva"
+            )
+        from email.utils import formataddr
+
+        msg = ctx.send_message.call_args.args[0]
+        assert msg["From"] == formataddr(("Família Silva", "noreply@example.com"))
+        assert "noreply@example.com" in msg["From"]
+
+    @pytest.mark.asyncio
+    async def test_no_sender_name_keeps_plain_from(self):
+        settings, ctx = _send_with_name(None)
+        with patch("app.services.email.sender.SMTP", return_value=ctx):
+            await EmailSender(settings=settings).send("u@example.com", "S", "<p>x</p>")
+        assert ctx.send_message.call_args.args[0]["From"] == "noreply@example.com"
