@@ -1,7 +1,7 @@
 """notifications v2 foundation: JSONB prefs + grouped notification columns.
 
 Revision ID: b2c3d4e5f6a7
-Revises: 0028_plugin_pending_manifest
+Revises: 0029_suggestions
 Create Date: 2026-05-02
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "b2c3d4e5f6a7"
-down_revision: str | Sequence[str] | None = "0028_plugin_pending_manifest"
+down_revision: str | Sequence[str] | None = "0029_suggestions"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
