@@ -12,13 +12,27 @@ export type ToastVariant =
   | "danger"
   | "loading";
 
+/** @brief Optional action button rendered inside a toast. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: string;
   variant: ToastVariant;
   title?: string;
   message: string;
   ttl?: number | null;
+  action?: ToastAction;
+  /** Higher sorts first. */
+  priority?: number;
+  /** Pushes with the same key inside 5s return the existing toast id. */
+  dedupeKey?: string;
 }
+
+const DEDUPE_WINDOW_MS = 5000;
+const _recent = new Map<string, { id: string; at: number }>();
 
 interface ToastsState {
   items: Toast[];
@@ -59,12 +73,21 @@ export const selectVisible = (items: Toast[]): Toast[] =>
 export const useToasts = create<ToastsState>((set) => ({
   items: [],
   push: (t) => {
+    if (t.dedupeKey) {
+      const seen = _recent.get(t.dedupeKey);
+      if (seen && Date.now() - seen.at < DEDUPE_WINDOW_MS) return seen.id;
+    }
     const id =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const ttl = t.ttl !== undefined ? t.ttl : getDefaultTtl(t.variant);
-    set((s) => ({ items: [...s.items, { ...t, id, ttl }] }));
+    if (t.dedupeKey) _recent.set(t.dedupeKey, { id, at: Date.now() });
+    set((s) => ({
+      items: [...s.items, { ...t, id, ttl }].sort(
+        (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+      ),
+    }));
     return id;
   },
   dismiss: (id) => set((s) => ({ items: s.items.filter((x) => x.id !== id) })),
@@ -79,5 +102,8 @@ export const useToasts = create<ToastsState>((set) => ({
         return next;
       }),
     })),
-  clear: () => set({ items: [] }),
+  clear: () => {
+    _recent.clear();
+    set({ items: [] });
+  },
 }));
