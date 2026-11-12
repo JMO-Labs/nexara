@@ -19,6 +19,9 @@ const Joyride = dynamic(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as any;
 
+/** @brief v3 options: explicit buttons, responsive width capped at 380px. */
+const TOUR_BUTTONS = ["back", "skip", "primary"];
+
 /** @brief Token-based tooltip theme (CSS vars follow light/dark). */
 const TOUR_OPTIONS = {
   // hex: joyride derives the beacon rgba from it
@@ -28,6 +31,9 @@ const TOUR_OPTIONS = {
   textColor: "var(--nx-ink)",
   overlayColor: "rgba(0, 0, 0, 0.5)",
   zIndex: 1400,
+  width: "min(380px, calc(100vw - 2rem))",
+  buttons: TOUR_BUTTONS,
+  showProgress: true,
 };
 
 /** @brief AA pairs: lilac on forest for Next, ink for Back (accent fails on white). */
@@ -37,6 +43,16 @@ const TOUR_STYLES = {
     color: "var(--nx-accent)",
   },
   buttonBack: { color: "var(--nx-ink)" },
+};
+
+/** @brief Visible labels; progress is part of the Next button name. */
+const TOUR_LOCALE = {
+  back: "Back",
+  close: "Close",
+  last: "Finish",
+  next: "Next",
+  nextWithProgress: "Next (Step {current} of {total})",
+  skip: "Skip",
 };
 
 const TERMINAL = new Set(["finished", "skipped", "error"]);
@@ -77,11 +93,11 @@ export function OnboardingTour() {
       steps={steps}
       run={run}
       continuous
-      showSkipButton
       disableScrolling
       options={TOUR_OPTIONS}
       styles={TOUR_STYLES}
-      callback={handleTourCallback}
+      locale={TOUR_LOCALE}
+      onEvent={handleTourCallback}
     />
   );
 }
