@@ -9,6 +9,7 @@ import * as eventsApi from "@/lib/api/events";
 import {
   useCalendarSubscriptions,
   useAddSubscription,
+  useUpdateSubscription,
   useDeleteSubscription,
   useSyncNow,
 } from "@/hooks/useCalendarSubscriptions";
@@ -56,6 +57,20 @@ describe("subscription mutations", () => {
       await result.current.mutateAsync(body);
     });
     expect(vi.mocked(eventsApi.createSubscription).mock.calls[0][0]).toBe(body);
+    expect(spy).toHaveBeenCalledWith(listKey);
+  });
+
+  it("useUpdateSubscription updates by id with body and invalidates list", async () => {
+    vi.mocked(eventsApi.updateSubscription).mockResolvedValue({} as never);
+    const { result, queryClient } = renderHookWithProviders(() =>
+      useUpdateSubscription(),
+    );
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    const body = { name: "Renamed", enabled: false } as never;
+    await act(async () => {
+      await result.current.mutateAsync({ id: "s1", body });
+    });
+    expect(eventsApi.updateSubscription).toHaveBeenCalledWith("s1", body);
     expect(spy).toHaveBeenCalledWith(listKey);
   });
 
