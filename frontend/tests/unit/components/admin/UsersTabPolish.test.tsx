@@ -35,7 +35,7 @@ beforeEach(() => {
 describe("UsersTab polish", () => {
   it("retries on error", () => {
     const refetch = vi.fn();
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       error: new Error("x"),
       refetch,
@@ -47,12 +47,37 @@ describe("UsersTab polish", () => {
 
   it("reads density from the shared UI store", () => {
     useUI.setState({ density: "compact" });
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       data: mkUsers(1),
     } as any);
     render(<UsersTab />);
     expect(screen.getByText("User 0").className).toContain("text-xs");
+  });
+
+  it("density select changes the store immediately", () => {
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
+      isLoading: false,
+      data: mkUsers(1),
+    } as any);
+    render(<UsersTab />);
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("option", { name: "Compact" }));
+    expect(useUI.getState().density).toBe("compact");
+  });
+
+  it("requests the next page when more are available", () => {
+    const fetchNextPage = vi.fn();
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
+      isLoading: false,
+      data: { ...mkUsers(3), has_more: true, next_cursor: "c" },
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage,
+    } as any);
+    render(<UsersTab />);
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    expect(fetchNextPage).toHaveBeenCalled();
   });
 
   it("virtualizes large lists", () => {
@@ -69,7 +94,7 @@ describe("UsersTab polish", () => {
     });
     vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(600);
     vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(800);
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       data: mkUsers(1000),
     } as any);

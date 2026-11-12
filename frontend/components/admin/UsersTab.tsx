@@ -4,12 +4,12 @@
  * @brief Admin user management table with search and suspend/restore/delete.
  *        Rows stack into cards on phone.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUI } from "@/stores/ui";
 import { Check, Loader2, Trash2, X } from "lucide-react";
 import {
-  useAdminUsers,
+  useAdminUsersInfinite,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
@@ -58,7 +58,10 @@ export function UsersTab() {
     isLoading,
     error,
     refetch,
-  } = useAdminUsers({ q: searchQuery || undefined, limit: 50 });
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useAdminUsersInfinite({ q: searchQuery || undefined, limit: 50 });
 
   const suspendMutation = useSuspendUser();
   const restoreMutation = useRestoreUser();
@@ -73,6 +76,28 @@ export function UsersTab() {
     estimateSize: () => rowHeight,
     overscan: 10,
   });
+
+  // Fetch the next page when the window nears the end of loaded rows.
+  const lastVisible = virtual
+    ? (virtualizer.getVirtualItems().at(-1)?.index ?? -1)
+    : -1;
+  useEffect(() => {
+    if (
+      virtual &&
+      hasNextPage &&
+      !isFetchingNextPage &&
+      lastVisible >= items.length - 10
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    virtual,
+    hasNextPage,
+    isFetchingNextPage,
+    lastVisible,
+    items.length,
+    fetchNextPage,
+  ]);
 
   if (isLoading) {
     return (
@@ -170,6 +195,8 @@ export function UsersTab() {
               {visible.map((user) => (
                 <TableRow
                   key={user.id}
+                  data-index={virtual ? items.indexOf(user) : undefined}
+                  ref={virtual ? virtualizer.measureElement : undefined}
                   className="max-md:grid max-md:grid-cols-2 max-md:items-center max-md:gap-x-3"
                 >
                   <TableCell
@@ -227,6 +254,17 @@ export function UsersTab() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {hasNextPage && (
+        <Button
+          variant="ghost"
+          className="self-center"
+          loading={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        >
+          Load more
+        </Button>
       )}
 
       <Modal
