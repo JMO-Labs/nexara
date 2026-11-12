@@ -22,6 +22,14 @@ test.each(["light", "dark"] as const)("%s palette meets AA", (mode) => {
   expect(contrastRatio(p.danger, p.bg)).toBeGreaterThanOrEqual(4.5);
 });
 
+test.each(["light", "dark"] as const)(
+  "%s destructive bg vs foreground meets AA",
+  (mode) => {
+    const p = palette[mode];
+    expect(contrastRatio(p["danger-fg"], p.danger)).toBeGreaterThanOrEqual(4.5);
+  },
+);
+
 test("forest text on lilac fill meets AA", () => {
   expect(
     contrastRatio(palette.light["surface-strong"], palette.light.accent),

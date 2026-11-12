@@ -10,6 +10,7 @@ import { Markdown } from "@/components/ui";
 import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
+import { EventGalleryLink } from "./EventGalleryLink";
 import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
 
@@ -72,6 +73,7 @@ export function EventDetailBody({ event }: { event: EventItem }) {
         current={event.user_rsvp?.status ?? null}
         counts={event.rsvp_counts}
       />
+      <EventGalleryLink galleryId={event.gallery_id} />
       <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
     </div>
   );
