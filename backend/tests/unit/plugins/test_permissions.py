@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,6 +16,7 @@ from app.plugins.api_keys import (
 )
 from app.plugins.manifest import PluginManifest, PluginPermission
 from app.plugins.permissions import check_permission, enforce_permission
+from app.repositories.plugin_key_repo import PluginApiKeyRepository
 
 
 def _manifest(perms: list[str]) -> PluginManifest:
@@ -77,12 +78,24 @@ class TestApiKeyFormat:
         assert parse_api_key(bad) is None
 
 
+COMMUNITY = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
 def _session_with(rows: list[PluginApiKey]) -> AsyncMock:
+    """Session whose repo query yields rows (repo patched in resolve())."""
     session = AsyncMock()
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = rows
-    session.execute.return_value = result
+    session.rows = rows
     return session
+
+
+async def resolve(session: AsyncMock, key: str) -> str:
+    with patch("app.plugins.api_keys.PluginApiKeyRepository") as repo_cls:
+        repo = repo_cls.return_value
+        repo.active_keys_for_plugin = AsyncMock(return_value=session.rows)
+        try:
+            return await resolve_plugin_from_key(session, key, COMMUNITY)
+        finally:
+            session.repo = repo
 
 
 def _row(plain_hash: str, revoked: bool = False) -> MagicMock:
@@ -99,25 +112,51 @@ class TestResolve:
     async def test_valid_key_returns_plugin_and_touches(self) -> None:
         plain, hashed = generate_api_key("hello")
         row = _row(hashed)
-        assert await resolve_plugin_from_key(_session_with([row]), plain) == "hello"
+        assert await resolve(_session_with([row]), plain) == "hello"
         assert row.last_used_at is not None
 
     async def test_no_active_rows_rejected(self) -> None:
         plain, _h = generate_api_key("hello")
         with pytest.raises(AuthenticationError):
-            await resolve_plugin_from_key(_session_with([]), plain)
+            await resolve(_session_with([]), plain)
 
     async def test_wrong_hash_rejected(self) -> None:
         plain, _h = generate_api_key("hello")
         _p, other = generate_api_key("hello")
         with pytest.raises(AuthenticationError):
-            await resolve_plugin_from_key(_session_with([_row(other)]), plain)
+            await resolve(_session_with([_row(other)]), plain)
 
     async def test_revoked_rejected_even_if_hash_matches(self) -> None:
         plain, hashed = generate_api_key("hello")
         with pytest.raises(AuthenticationError):
-            await resolve_plugin_from_key(_session_with([_row(hashed, revoked=True)]), plain)
+            await resolve(_session_with([_row(hashed, revoked=True)]), plain)
 
     async def test_malformed_rejected(self) -> None:
         with pytest.raises(AuthenticationError):
-            await resolve_plugin_from_key(_session_with([]), "garbage")
+            await resolve(_session_with([]), "garbage")
+
+    async def test_lookup_scoped_to_community(self) -> None:
+        plain, hashed = generate_api_key("hello")
+        session = _session_with([_row(hashed)])
+        await resolve(session, plain)
+        session.repo.active_keys_for_plugin.assert_awaited_once_with("hello", COMMUNITY)
+
+    async def test_disabled_or_deleted_plugin_yields_no_keys_rejected(self) -> None:
+        # Repo returns nothing for disabled / soft-deleted plugins.
+        plain, _h = generate_api_key("hello")
+        with pytest.raises(AuthenticationError):
+            await resolve(_session_with([]), plain)
+
+
+class TestActiveKeysQuery:
+    async def test_filters_plugin_state_and_community(self) -> None:
+        session = AsyncMock()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        session.execute.return_value = result
+        await PluginApiKeyRepository(session).active_keys_for_plugin("hello", COMMUNITY)
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "plugins.deleted_at IS NULL" in sql
+        assert "plugins.is_enabled" in sql
+        assert "plugin_api_keys.revoked_at IS NULL" in sql
+        assert str(COMMUNITY) in sql or COMMUNITY.hex in sql

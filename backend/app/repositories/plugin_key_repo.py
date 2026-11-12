@@ -49,6 +49,27 @@ class PluginApiKeyRepository:
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def active_keys_for_plugin(
+        self, plugin_id: str, community_id: uuid.UUID
+    ) -> list[PluginApiKey]:
+        """@brief Non-revoked keys of an installed, enabled plugin in the community."""
+        stmt = (
+            select(PluginApiKey)
+            .join(
+                Plugin,
+                (Plugin.id == PluginApiKey.plugin_id)
+                & (Plugin.community_id == PluginApiKey.community_id),
+            )
+            .where(
+                PluginApiKey.plugin_id == plugin_id,
+                PluginApiKey.community_id == community_id,
+                PluginApiKey.revoked_at.is_(None),
+                Plugin.deleted_at.is_(None),
+                Plugin.is_enabled.is_(True),
+            )
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
     async def get(
         self, key_id: uuid.UUID, plugin_id: str, community_id: uuid.UUID
     ) -> PluginApiKey | None:

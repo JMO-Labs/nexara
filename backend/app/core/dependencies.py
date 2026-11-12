@@ -6,6 +6,7 @@ Provides injectable dependencies for database sessions, the current
 authenticated user, and role-based authorization guards.
 """
 
+import uuid
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Callable
@@ -231,6 +232,7 @@ async def get_activity_repo(
 async def get_plugin_from_api_key(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> str:
     """
     @brief Authenticate a plugin by API key (``X-Plugin-Api-Key`` or ``Bearer nxr_plugin_...``).
@@ -247,4 +249,4 @@ async def get_plugin_from_api_key(
         key = auth[7:] if auth.lower().startswith("bearer ") else ""
     if not key:
         raise AuthenticationError(message=_("Authentication required"))
-    return await resolve_plugin_from_key(db, key)
+    return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
