@@ -25,7 +25,9 @@ describe("LinkPreviewCard", () => {
     expect(screen.getByText("Example description")).toBeInTheDocument();
     expect(screen.getByText("Example")).toBeInTheDocument();
     const img = screen.getByRole("img", { name: "Example title" });
-    expect(img.getAttribute("src")).toContain("/api/v1/link-previews/lp1/image");
+    expect(img.getAttribute("src")).toContain(
+      "/api/v1/link-previews/lp1/image",
+    );
   });
 
   it("shows fallback icon without image", () => {
@@ -76,12 +78,16 @@ describe("LinkPreviewCard", () => {
 
   it("has screen reader text and focus ring", () => {
     render(<LinkPreviewCard preview={base} />);
-    expect(screen.getByText("External link: Example title")).toBeInTheDocument();
+    expect(
+      screen.getByText("External link: Example title"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link").className).toContain("focus-visible:");
   });
 
   it("uses generic alt when no title", () => {
     render(<LinkPreviewCard preview={{ ...base, og_title: null }} />);
-    expect(screen.getByRole("img", { name: "Link preview" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Link preview" }),
+    ).toBeInTheDocument();
   });
 });
