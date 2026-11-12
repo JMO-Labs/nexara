@@ -1,12 +1,12 @@
 /**
  * @file hooks/useGalleryUpload.ts
  * @brief Queue management for gallery bulk uploads. XMLHttpRequest for progress,
- *        Promise pool semaphore (max 5 workers), auto-add items to gallery.
+ *        Promise pool semaphore (max 5 workers), one bulk add to gallery.
  */
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMediaUpload } from "./useMediaUpload";
-import { addItem } from "@/lib/api/galleries";
+import { bulkAddItems } from "@/lib/api/galleries";
 import { qk } from "@/lib/query-keys";
 
 export interface UploadJob {
@@ -21,69 +21,64 @@ export function useGalleryUpload(galleryId: string) {
   const qc = useQueryClient();
   const mediaUpload = useMediaUpload();
   const [jobs, setJobs] = useState<UploadJob[]>([]);
-  const queueRef = useRef<File[]>([]);
-  const inFlightRef = useRef(0);
   const maxConcurrency = 5;
-  const drainingRef = useRef(false);
+
+  const setStatus = (file: File, patch: Partial<UploadJob>) =>
+    setJobs((js) => js.map((j) => (j.file === file ? { ...j, ...patch } : j)));
 
   /**
-   * Drain the queue: start uploads up to max concurrency.
+   * Upload files with a bounded worker pool, then add all successful media
+   * to the gallery with a single bulk call.
    */
-  const drainQueue = useCallback(async () => {
-    if (drainingRef.current) return;
-    drainingRef.current = true;
+  const processBatch = useCallback(
+    async (files: File[]) => {
+      const pending = [...files];
+      const uploaded: { file: File; mediaId: string }[] = [];
 
-    try {
-      while (
-        queueRef.current.length > 0 &&
-        inFlightRef.current < maxConcurrency
-      ) {
-        const file = queueRef.current.shift();
-        if (!file) break;
-
-        inFlightRef.current++;
-
-        setJobs((js) =>
-          js.map((j) =>
-            j.file === file && j.status === "pending"
-              ? { ...j, status: "uploading" }
-              : j,
-          ),
-        );
-
-        try {
-          const mediaId = await mediaUpload.mutateAsync(file);
-
-          // Add to gallery
-          await addItem(galleryId, mediaId);
-
-          setJobs((js) =>
-            js.map((j) =>
-              j.file === file ? { ...j, status: "done", progress: 100 } : j,
-            ),
-          );
-
-          // Refresh items list + gallery detail (item_count) + list view
-          qc.invalidateQueries({
-            queryKey: [...qk.galleries.detail(galleryId), "items"],
-          });
-          qc.invalidateQueries({ queryKey: qk.galleries.detail(galleryId) });
-          qc.invalidateQueries({ queryKey: qk.galleries.all() });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          setJobs((js) =>
-            js.map((j) =>
-              j.file === file ? { ...j, status: "error", error: msg } : j,
-            ),
-          );
-        } finally {
-          inFlightRef.current--;
+      const worker = async () => {
+        for (let file = pending.shift(); file; file = pending.shift()) {
+          setStatus(file, { status: "uploading" });
+          try {
+            uploaded.push({
+              file,
+              mediaId: await mediaUpload.mutateAsync(file),
+            });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setStatus(file, { status: "error", error: msg });
+          }
         }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(maxConcurrency, files.length) }, worker),
+      );
+      if (uploaded.length === 0) return;
+
+      try {
+        await bulkAddItems(
+          galleryId,
+          uploaded.map((u) => u.mediaId),
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        uploaded.forEach((u) =>
+          setStatus(u.file, { status: "error", error: msg }),
+        );
+        return;
       }
-    } finally {
-      drainingRef.current = false;
-    }
-  }, [galleryId, qc, mediaUpload]);
+      uploaded.forEach((u) =>
+        setStatus(u.file, { status: "done", progress: 100 }),
+      );
+
+      // Refresh items list + gallery detail (item_count) + list view
+      qc.invalidateQueries({
+        queryKey: [...qk.galleries.detail(galleryId), "items"],
+      });
+      qc.invalidateQueries({ queryKey: qk.galleries.detail(galleryId) });
+      qc.invalidateQueries({ queryKey: qk.galleries.all() });
+    },
+    [galleryId, qc, mediaUpload],
+  );
 
   const enqueue = useCallback(
     async (files: File[]) => {
@@ -94,20 +89,16 @@ export function useGalleryUpload(galleryId: string) {
         status: "pending",
         error: null,
       }));
-
       setJobs((js) => [...js, ...newJobs]);
-      queueRef.current.push(...files);
-      await drainQueue();
+      await processBatch(files);
     },
-    [drainQueue],
+    [processBatch],
   );
 
   const retry = useCallback(
     async (jobId: string) => {
       const job = jobs.find((j) => j.id === jobId);
       if (!job) return;
-
-      // Reset to pending and push back to queue
       setJobs((js) =>
         js.map((j) =>
           j.id === jobId
@@ -115,11 +106,9 @@ export function useGalleryUpload(galleryId: string) {
             : j,
         ),
       );
-
-      queueRef.current.unshift(job.file);
-      await drainQueue();
+      await processBatch([job.file]);
     },
-    [jobs, drainQueue],
+    [jobs, processBatch],
   );
 
   return { jobs, enqueue, retry };
