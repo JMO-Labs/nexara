@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 VisibilityType = Literal["community", "subgroup", "private"]
 RSVPStatus = Literal["attending", "maybe", "declined"]
@@ -207,3 +207,12 @@ class CalendarSubscriptionResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def next_sync_at(self) -> datetime | None:
+        """@brief Next scheduled sync (last sync + interval); None if disabled."""
+        if not self.sync_enabled:
+            return None
+        base = self.last_synced_at or self.created_at
+        return base + timedelta(minutes=self.sync_interval_minutes)
