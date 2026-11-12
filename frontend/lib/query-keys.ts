@@ -84,6 +84,7 @@ export const qk = {
     oauth: () => ["admin", "oauth"] as const,
     interestsAnalytics: () => ["admin", "interests-analytics"] as const,
     prompts: () => ["admin", "prompts"] as const,
+    retention: () => ["admin", "retention"] as const,
   },
   settings: {
     profile: () => ["settings", "profile"] as const,
