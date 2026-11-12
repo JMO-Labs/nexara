@@ -108,7 +108,7 @@ class TestCreatePost:
     """@brief Tests for create_post()."""
 
     @pytest.mark.asyncio
-    async def test_create_post_basic(self, service, post_repo):
+    async def test_create_post_basic(self, service, post_repo, sassybot_delay):
         """create_post() creates post and returns enriched dict."""
         user = _make_user()
         post = _make_post()
@@ -117,6 +117,7 @@ class TestCreatePost:
         post_repo.get_post_detail.return_value = enriched
         result = await service.create_post(user, "Hello world")
         assert result == enriched
+        sassybot_delay.assert_called_once()
         post_repo.create_post.assert_awaited_once_with(
             author_id=user.id,
             content="Hello world",

@@ -4,6 +4,8 @@
  */
 import * as React from "react";
 import { Tabs as T } from "radix-ui";
+import { motion } from "framer-motion";
+import { tabPanelVariants, useMotionProps } from "./motion";
 import { cn } from "@/lib/utils";
 
 export const Tabs = T.Root;
@@ -44,12 +46,18 @@ export function Tab({
 }
 
 /**
- * @brief Panel for a tab `value`.
+ * @brief Panel for a tab `value`; fades in on switch (skipped if reduced motion).
  * @return tabpanel
  */
 export function TabPanel({
   className,
+  children,
   ...p
 }: React.ComponentProps<typeof T.Content>) {
-  return <T.Content className={cn("mt-3", className)} {...p} />;
+  const mp = useMotionProps(tabPanelVariants);
+  return (
+    <T.Content className={cn("mt-3", className)} {...p} asChild>
+      <motion.div {...mp}>{children}</motion.div>
+    </T.Content>
+  );
 }
