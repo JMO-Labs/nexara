@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
@@ -41,7 +41,23 @@ class UserSettings(Base):
         server_default=COMMUNITY_DEFAULT,
     )
 
-    # --- Notification preferences (type x channel) ---
+    # --- Notification preferences v2: {type_key: {channel: bool}} ---
+    # Legacy notif_* / mute_all_* columns below are still the source of truth for
+    # readers; migration b2c3d4e5f6a7 only backfills prefs. Dropped in a follow-up.
+    notification_prefs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    dnd_schedule: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    dnd_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dnd_timezone: Mapped[str] = mapped_column(Text, nullable=False, server_default="UTC")
+    digest_cadence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    digest_last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # --- Legacy notification preferences (type x channel) ---
     notif_mention_inapp: Mapped[bool] = _bool_col()
     notif_mention_push: Mapped[bool] = _bool_col()
     notif_mention_email: Mapped[bool] = _bool_col()
@@ -72,6 +88,16 @@ class UserSettings(Base):
     notif_prompt_summary_inapp: Mapped[bool] = _bool_col()
     notif_prompt_summary_push: Mapped[bool] = _bool_col("false")
     notif_prompt_summary_email: Mapped[bool] = _bool_col("false")
+    notif_list_item_inapp: Mapped[bool] = _bool_col()
+    notif_list_item_email: Mapped[bool] = _bool_col("false")
+    notif_list_signup_inapp: Mapped[bool] = _bool_col()
+    notif_list_signup_email: Mapped[bool] = _bool_col("false")
+    notif_list_completed_inapp: Mapped[bool] = _bool_col()
+    notif_list_completed_email: Mapped[bool] = _bool_col("false")
+    notif_list_expiring_inapp: Mapped[bool] = _bool_col()
+    notif_list_expiring_email: Mapped[bool] = _bool_col("false")
+    notif_list_member_inapp: Mapped[bool] = _bool_col()
+    notif_list_member_email: Mapped[bool] = _bool_col("false")
     notif_birthday_inapp: Mapped[bool] = _bool_col()
     notif_birthday_push: Mapped[bool] = _bool_col("false")
     notif_birthday_email: Mapped[bool] = _bool_col("false")
@@ -84,6 +110,10 @@ class UserSettings(Base):
     notif_invite_accepted_inapp: Mapped[bool] = _bool_col()
     notif_invite_accepted_push: Mapped[bool] = _bool_col()
     notif_invite_accepted_email: Mapped[bool] = _bool_col("false")
+    notif_nudge_inapp: Mapped[bool] = _bool_col()
+    notif_nudge_push: Mapped[bool] = _bool_col("false")
+    notif_nudge_email: Mapped[bool] = _bool_col("false")
+    receive_gentle_nudges: Mapped[bool] = _bool_col()
 
     # Email digest
     email_digest_enabled: Mapped[bool] = _bool_col("false")

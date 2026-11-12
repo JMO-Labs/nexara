@@ -50,9 +50,12 @@ PREF_MAP = {
     "event_rsvp": ("notif_event_rsvp_inapp", "notif_event_rsvp_email"),
     "gallery_activity": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
     "gallery_reminder": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
+    "birthday_reminder": ("notif_birthday_inapp", "notif_birthday_email"),
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
+    "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
+    "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
 }
 
 
