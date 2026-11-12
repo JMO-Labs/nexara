@@ -63,6 +63,9 @@ export interface ListGalleriesParams {
   featured?: boolean;
   owner_id?: string;
   subgroup_id?: string;
+  event_id?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 export const listGalleries = (params?: ListGalleriesParams) => {
@@ -70,10 +73,14 @@ export const listGalleries = (params?: ListGalleriesParams) => {
   if (params?.q) searchParams.append("q", params.q);
   if (params?.sort) searchParams.append("sort", params.sort);
   if (params?.featured !== undefined)
-    searchParams.append("featured", String(params.featured));
+    searchParams.append("featured_only", String(params.featured));
   if (params?.owner_id) searchParams.append("owner_id", params.owner_id);
   if (params?.subgroup_id)
     searchParams.append("subgroup_id", params.subgroup_id);
+  if (params?.event_id) searchParams.append("event_id", params.event_id);
+  if (params?.cursor) searchParams.append("cursor", params.cursor);
+  if (params?.limit !== undefined)
+    searchParams.append("limit", String(params.limit));
   const query = searchParams.toString();
   return apiGet<GalleryListResponse>(`${BASE}${query ? `?${query}` : ""}`);
 };
