@@ -45,10 +45,20 @@ export function MessageItem({
 }: MessageItemProps) {
   // Clear the "fresh" flag on unmount so a virtualized remount never replays.
   const id = message.id;
-  React.useEffect(
-    () => (animate ? () => onAnimationDone?.(id) : undefined),
-    [animate, id, onAnimationDone],
-  );
+  // Native listener: React may bind a vendor-prefixed name instead.
+  const rowRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const el = rowRef.current;
+    if (!animate || !el) return undefined;
+    const end = (e: Event) => {
+      if (e.target === el) onAnimationDone?.(id);
+    };
+    el.addEventListener("animationend", end);
+    return () => {
+      el.removeEventListener("animationend", end);
+      onAnimationDone?.(id);
+    };
+  }, [animate, id, onAnimationDone]);
 
   let time = "";
   try {
@@ -64,9 +74,7 @@ export function MessageItem({
     <div
       data-density={density}
       data-message-id={message.id}
-      onAnimationEnd={(e) => {
-        if (e.target === e.currentTarget) onAnimationDone?.(message.id);
-      }}
+      ref={rowRef}
       className={cn(
         "group relative flex items-start gap-3 px-4",
         density === "compact"
