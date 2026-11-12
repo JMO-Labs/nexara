@@ -21,13 +21,23 @@ function monthKey(iso: string): string {
  */
 export function EventList() {
   const router = useRouter();
-  const { data, isLoading, error } = useUpcomingEvents(60);
+  const { data, isLoading, error, refetch } = useUpcomingEvents(60);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Loading events"
+        className="flex flex-col gap-3 p-4"
+      >
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} height={140} rounded="lg" />
+          <Skeleton
+            key={i}
+            height={140}
+            rounded="lg"
+            style={{ animationDelay: `${i * 80}ms` }}
+          />
         ))}
       </div>
     );
@@ -36,9 +46,9 @@ export function EventList() {
     return (
       <EmptyState
         title="Couldn't load events"
-        description={String(error)}
+        description="Something went wrong. Please try again."
         action={
-          <Button variant="ghost" onClick={() => router.refresh()}>
+          <Button variant="ghost" onClick={() => void refetch()}>
             Retry
           </Button>
         }
@@ -47,11 +57,11 @@ export function EventList() {
   if (!data || data.items.length === 0) {
     return (
       <EmptyState
-        title="No upcoming events"
+        title="No events. Create one!"
         description="Once events are scheduled they'll appear here."
         action={
           <Button onClick={() => router.push("/app/events")}>
-            View all events
+            Create event
           </Button>
         }
       />
