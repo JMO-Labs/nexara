@@ -566,8 +566,7 @@ class PostService:
                 type="mention",
                 payload={
                     "post_id": str(post_id),
-                    "message": _("%(user)s mentioned you in a post")
-                    % {"user": actor.display_name},
+                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
                     "link": f"/app/post/{post_id}",
                 },
                 actor_id=actor.id,
