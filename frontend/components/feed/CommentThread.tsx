@@ -158,7 +158,10 @@ export function CommentThread({
           <Skeleton height={48} />
         </div>
       ) : flat.length === 0 ? (
-        <p className="py-2 text-sm text-ink/75">No comments yet.</p>
+        <p className="py-2 text-sm text-ink/75">
+          <span className="font-semibold">Be first to comment</span>
+          {" — share your thoughts above."}
+        </p>
       ) : (
         <div
           ref={scrollRef}

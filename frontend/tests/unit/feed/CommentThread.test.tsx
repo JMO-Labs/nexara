@@ -24,7 +24,7 @@ describe("CommentThread", () => {
   it("shows empty state", () => {
     items = [];
     render(<CommentThread postId="p1" />);
-    expect(screen.getByText("No comments yet.")).toBeInTheDocument();
+    expect(screen.getByText("Be first to comment")).toBeInTheDocument();
   });
 
   it("renders comments and sends a new one", async () => {
