@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/galleries/Lightbox.test.tsx
- * @brief Lightbox keyboard nav: arrows advance, Esc closes.
+ * @brief Lightbox keyboard nav, close isolation and image fade-in.
  */
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
@@ -129,5 +129,38 @@ describe("Lightbox close isolation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(parent).not.toHaveBeenCalled();
+  });
+});
+
+describe("Lightbox image fade", () => {
+  const view = (index: number) => (
+    <Lightbox
+      items={items}
+      index={index}
+      onClose={() => {}}
+      onIndexChange={() => {}}
+    />
+  );
+
+  it("starts hidden and fades in on load", () => {
+    render(view(0));
+    const img = screen.getByAltText("one");
+    expect(img).toHaveClass("opacity-0");
+    fireEvent.load(img);
+    expect(img).toHaveClass("opacity-100");
+  });
+
+  it("becomes visible when the image fails to load", () => {
+    render(view(0));
+    const img = screen.getByAltText("one");
+    fireEvent.error(img);
+    expect(img).toHaveClass("opacity-100");
+  });
+
+  it("resets to hidden when the index changes", () => {
+    const { rerender } = render(view(0));
+    fireEvent.load(screen.getByAltText("one"));
+    rerender(view(1));
+    expect(screen.getByAltText("two")).toHaveClass("opacity-0");
   });
 });

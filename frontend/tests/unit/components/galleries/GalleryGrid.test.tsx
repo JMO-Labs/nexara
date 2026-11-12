@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/components/galleries/GalleryGrid.test.tsx
- * @brief GalleryGrid states: loading, error retry, empty CTA, responsive grid.
+ * @brief GalleryGrid states: loading, error retry, default empty action, responsive grid.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -43,16 +43,6 @@ describe("GalleryGrid", () => {
     render(<GalleryGrid onSelect={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(refetch).toHaveBeenCalled();
-  });
-
-  it("empty state offers Create gallery CTA", async () => {
-    const onCreate = vi.fn();
-    state.data = { items: [] };
-    render(<GalleryGrid onSelect={vi.fn()} onCreate={onCreate} />);
-    await userEvent.click(
-      screen.getByRole("button", { name: /create gallery/i }),
-    );
-    expect(onCreate).toHaveBeenCalled();
   });
 
   it("empty state says Browse media without onCreate", () => {

@@ -32,8 +32,9 @@ export function Lightbox({
 }: LightboxProps) {
   const item = items[index];
   const ref = React.useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = React.useState(false);
-  React.useEffect(() => setLoaded(false), [index]);
+  // Track which src finished (load or error) so a new src starts hidden
+  // in the same render, with no flash of the next image at full opacity.
+  const [settledSrc, setSettledSrc] = React.useState<string | null>(null);
 
   const next = React.useCallback(() => {
     if (index < items.length - 1) onIndexChange(index + 1);
@@ -82,6 +83,7 @@ export function Lightbox({
 
   if (!item) return null;
   const src = `${API_BASE}/api/v1/media/${item.media_id}/file`;
+  const loaded = settledSrc === src;
   const label = item.caption || `Image ${index + 1} of ${items.length}`;
 
   return (
@@ -129,7 +131,8 @@ export function Lightbox({
         <img
           src={src}
           alt={label}
-          onLoad={() => setLoaded(true)}
+          onLoad={() => setSettledSrc(src)}
+          onError={() => setSettledSrc(src)}
           className={`max-h-[80vh] max-w-[90vw] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         />
         <IconButton
