@@ -1,5 +1,6 @@
 {
   "plugin_id": "my-awesome-plugin",
+  "__plugin_module": "{{ cookiecutter.plugin_id|replace('-', '_') }}",
   "plugin_name": "My Awesome Plugin",
   "author_name": "Your Name",
   "author_email": "you@example.com",

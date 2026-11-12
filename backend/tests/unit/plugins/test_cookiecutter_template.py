@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,8 @@ from jinja2 import Environment
 
 from app.plugins.manifest import PluginPermission, load_manifest
 
-TEMPLATE = Path(__file__).resolve().parents[4] / "plugins" / "cookiecutter-nexara-plugin"
+BACKEND = Path(__file__).resolve().parents[3]
+TEMPLATE = BACKEND.parent / "plugins" / "cookiecutter-nexara-plugin"
 SLUG_RE = r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
 
 
@@ -30,9 +32,18 @@ def _render(text: str, ctx: dict[str, Any]) -> str:
     return Environment(keep_trailing_newline=True).from_string(text).render(cookiecutter=ctx)
 
 
+def _context(overrides: dict[str, Any]) -> dict[str, Any]:
+    """@brief Apply overrides, then render derived (templated) defaults in order."""
+    ctx: dict[str, Any] = {}
+    for key, default in _defaults().items():
+        value = overrides.get(key, default)
+        ctx[key] = _render(value, ctx) if isinstance(value, str) and "{{" in value else value
+    return ctx
+
+
 def generate(out: Path, **overrides: Any) -> Path:
     """@brief Render the template into ``out`` and run pre/post hooks."""
-    ctx = {**_defaults(), **overrides}
+    ctx = _context(overrides)
     project = out / ctx["plugin_id"]
     root = next(p for p in TEMPLATE.iterdir() if p.is_dir() and "cookiecutter" in p.name)
     hooks = TEMPLATE / "hooks"
@@ -93,7 +104,7 @@ class TestGeneration:
         for name in (
             "__init__.py", "router.py", "models.py", "tasks.py", "hooks.py", "README.md",
             "requirements.txt", ".gitignore", "LICENSE", "manifest.toml",
-            "tests/test_my-awesome-plugin.py",
+            "tests/test_my_awesome_plugin.py", "pyproject.toml",
         ):  # fmt: skip
             assert (project / name).is_file(), name
         assert not (project / "frontend").exists()
@@ -132,11 +143,30 @@ class TestGeneration:
         with pytest.raises(subprocess.CalledProcessError):
             generate(tmp_path, backend_permissions='["root_access"]')
 
-    def test_generated_python_passes_ruff(self, tmp_path: Path) -> None:
-        pytest.importorskip("ruff")
+    def test_plugin_module_derived_from_id(self) -> None:
+        assert _context({})["__plugin_module"] == "my_awesome_plugin"
+
+    def test_ruff_rules_match_backend(self, tmp_path: Path) -> None:
         project = generate(tmp_path)
+        plugin = tomllib.loads((project / "pyproject.toml").read_text())
+        core = tomllib.loads((BACKEND / "pyproject.toml").read_text())
+        assert plugin["tool"]["ruff"]["lint"]["select"] == core["tool"]["ruff"]["lint"]["select"]
+
+    @pytest.mark.parametrize("frontend", [False, True])
+    def test_generated_python_passes_ruff(self, tmp_path: Path, frontend: bool) -> None:
+        pytest.importorskip("ruff")
+        project = generate(tmp_path, has_frontend=frontend)
         res = subprocess.run(
-            [sys.executable, "-m", "ruff", "check", "--isolated", str(project)],
-            capture_output=True, text=True,
+            [sys.executable, "-m", "ruff", "check", "."],
+            capture_output=True, text=True, cwd=project,
         )  # fmt: skip
         assert res.returncode == 0, res.stdout
+
+    def test_generated_python_passes_mypy(self, tmp_path: Path) -> None:
+        pytest.importorskip("mypy")
+        project = generate(tmp_path, has_frontend=True)
+        res = subprocess.run(
+            [sys.executable, "-m", "mypy", "--strict", "."],
+            capture_output=True, text=True, cwd=project,
+        )  # fmt: skip
+        assert res.returncode == 0, res.stdout + res.stderr

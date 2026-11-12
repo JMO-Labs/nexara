@@ -1,0 +1,25 @@
+# Lint and type-check settings, aligned with Nexara core.
+# Run from this directory: `ruff check .` and `mypy .`
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# The plugin directory is named after the slug-case plugin id.
+"__init__.py" = ["N999"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+# Resolve modules from this directory; the slug-case dir is not a package name.
+explicit_package_bases = true
+exclude = ["^frontend/"]
+
+[[tool.mypy.overrides]]
+# Celery ships without type hints (same as Nexara core).
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
