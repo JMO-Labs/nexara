@@ -51,7 +51,7 @@ export function PostCard({
 
   const headline = post.content.split("\n")[0].trim().slice(0, 80);
   const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);
-  const cardLabel = `Post by ${post.author.display_name}: ${headline}. ${reactionTotal} ${reactionTotal === 1 ? "reaction" : "reactions"}, ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}.`;
+  const cardLabel = `Post by ${post.author.display_name}${headline ? `: ${headline}` : ""}. ${reactionTotal} ${reactionTotal === 1 ? "reaction" : "reactions"}, ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}.`;
 
   return (
     <Card
