@@ -63,6 +63,9 @@ export function AppriseEditModal({
         test,
       });
       onClose();
+    } catch {
+      setConfirm(false);
+      setError(t("save_failed"));
     } finally {
       setBusy(false);
     }

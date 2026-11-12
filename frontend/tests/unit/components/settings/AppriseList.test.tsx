@@ -98,6 +98,80 @@ describe("AppriseList", () => {
     expect(await screen.findByLabelText(/label/i)).toHaveValue("Team Slack");
   });
 
+  it("shows a service icon from the scheme with Bell fallback", async () => {
+    api.listAppriseUrls.mockResolvedValue([
+      ...ITEMS,
+      { id: "a3", label: "Odd", service: "zzz", enabled: true },
+    ]);
+    const { container } = renderList();
+    await screen.findByText("Team Slack");
+    const svc = (s: string) =>
+      container.querySelector(`[data-service="${s}"]`) as SVGElement;
+    expect(svc("slack")).toBeInTheDocument();
+    expect(svc("slack").getAttribute("class")).toContain(
+      "lucide-message-circle",
+    );
+    expect(svc("tgram").getAttribute("class")).toContain("lucide-send");
+    expect(svc("zzz").getAttribute("class")).toContain("lucide-bell");
+  });
+
+  it("toasts when toggle or delete fails", async () => {
+    api.updateAppriseUrl.mockRejectedValue(new Error("x"));
+    api.deleteAppriseUrl.mockRejectedValue(new Error("x"));
+    renderList();
+    await userEvent.click(
+      await screen.findByRole("switch", { name: /enable team slack/i }),
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "danger" }),
+      ),
+    );
+    push.mockClear();
+    await userEvent.click(
+      screen.getByRole("button", { name: /delete team slack/i }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "danger" }),
+      ),
+    );
+  });
+
+  it("create path: save, confirm test, calls create and test", async () => {
+    api.createAppriseUrl.mockResolvedValue({ id: "n1" });
+    api.testAppriseUrl.mockResolvedValue({ status: "ok", message: "Sent" });
+    renderList();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /add url/i }),
+    );
+    await userEvent.type(screen.getByLabelText(/^url/i), "slack://a/b/c");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /save and test/i }),
+    );
+    await waitFor(() => expect(api.createAppriseUrl).toHaveBeenCalled());
+    await waitFor(() => expect(api.testAppriseUrl).toHaveBeenCalledWith("n1"));
+  });
+
+  it("shows an error and returns to form when create rejects", async () => {
+    api.createAppriseUrl.mockRejectedValue(new Error("400"));
+    renderList();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /add url/i }),
+    );
+    await userEvent.type(screen.getByLabelText(/^url/i), "slack://a/b/c");
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /just save/i }),
+    );
+    expect(
+      await screen.findByText(en.settings.apprise.save_failed),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^url/i)).toBeInTheDocument();
+  });
+
   it("add opens modal and rejects invalid URL", async () => {
     renderList();
     await userEvent.click(

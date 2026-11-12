@@ -6,7 +6,17 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Bell, Loader2, Pencil, Send, Trash2 } from "lucide-react";
+import {
+  Bell,
+  Globe,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Pencil,
+  Send,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { Button, IconButton, Modal, Switch } from "@/components/ui";
 import {
   createAppriseUrl,
@@ -18,6 +28,18 @@ import {
 } from "@/lib/api/apprise";
 import { useToasts } from "@/stores/toasts";
 import { AppriseEditModal, type AppriseSubmit } from "./AppriseEditModal";
+
+/** Apprise URL scheme -> icon; Bell is the fallback. */
+const SERVICE_ICONS: Record<string, LucideIcon> = {
+  slack: MessageCircle,
+  discord: MessageCircle,
+  tgram: Send,
+  mailto: Mail,
+  mailtos: Mail,
+  ntfy: Bell,
+  json: Globe,
+  jsons: Globe,
+};
 
 export const APPRISE_KEY = ["settings", "apprise"] as const;
 
@@ -59,6 +81,7 @@ export function AppriseList() {
     mutationFn: (v: { id: string; enabled: boolean }) =>
       updateAppriseUrl(v.id, { enabled: v.enabled }),
     onSuccess: refresh,
+    onError: () => toast("danger", t("action_failed")),
   });
 
   const remove = useMutation({
@@ -67,6 +90,7 @@ export function AppriseList() {
       setDeleting(null);
       return refresh();
     },
+    onError: () => toast("danger", t("action_failed")),
   });
 
   const save = async (v: AppriseSubmit) => {
@@ -86,50 +110,60 @@ export function AppriseList() {
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
         <ul className="divide-y divide-current/10">
-          {items.map((it) => (
-            <li key={it.id} className="flex flex-wrap items-center gap-3 py-2">
-              <Bell aria-hidden className="size-5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{it.label}</p>
-                {it.service && (
-                  <p className="text-xs text-muted">{it.service}</p>
-                )}
-              </div>
-              <Switch
-                aria-label={`${t("enable")} ${it.label}`}
-                checked={it.enabled}
-                onCheckedChange={(enabled) =>
-                  toggle.mutate({ id: it.id, enabled })
-                }
-              />
-              <IconButton
-                variant="ghost"
-                aria-label={`${t("test")} ${it.label}`}
-                disabled={testingId === it.id}
-                onClick={() => void runTest(it.id)}
+          {items.map((it) => {
+            const Icon = SERVICE_ICONS[it.service ?? ""] ?? Bell;
+            return (
+              <li
+                key={it.id}
+                className="flex flex-wrap items-center gap-3 py-2"
               >
-                {testingId === it.id ? (
-                  <Loader2 aria-hidden className="size-4 animate-spin" />
-                ) : (
-                  <Send aria-hidden className="size-4" />
-                )}
-              </IconButton>
-              <IconButton
-                variant="ghost"
-                aria-label={`${t("edit")} ${it.label}`}
-                onClick={() => setEditing(it)}
-              >
-                <Pencil aria-hidden className="size-4" />
-              </IconButton>
-              <IconButton
-                variant="ghost"
-                aria-label={`${t("delete")} ${it.label}`}
-                onClick={() => setDeleting(it)}
-              >
-                <Trash2 aria-hidden className="size-4" />
-              </IconButton>
-            </li>
-          ))}
+                <Icon
+                  aria-hidden
+                  data-service={it.service ?? "generic"}
+                  className="size-5 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{it.label}</p>
+                  {it.service && (
+                    <p className="text-xs text-muted">{it.service}</p>
+                  )}
+                </div>
+                <Switch
+                  aria-label={`${t("enable")} ${it.label}`}
+                  checked={it.enabled}
+                  onCheckedChange={(enabled) =>
+                    toggle.mutate({ id: it.id, enabled })
+                  }
+                />
+                <IconButton
+                  variant="ghost"
+                  aria-label={`${t("test")} ${it.label}`}
+                  disabled={testingId === it.id}
+                  onClick={() => void runTest(it.id)}
+                >
+                  {testingId === it.id ? (
+                    <Loader2 aria-hidden className="size-4 animate-spin" />
+                  ) : (
+                    <Send aria-hidden className="size-4" />
+                  )}
+                </IconButton>
+                <IconButton
+                  variant="ghost"
+                  aria-label={`${t("edit")} ${it.label}`}
+                  onClick={() => setEditing(it)}
+                >
+                  <Pencil aria-hidden className="size-4" />
+                </IconButton>
+                <IconButton
+                  variant="ghost"
+                  aria-label={`${t("delete")} ${it.label}`}
+                  onClick={() => setDeleting(it)}
+                >
+                  <Trash2 aria-hidden className="size-4" />
+                </IconButton>
+              </li>
+            );
+          })}
         </ul>
       )}
       <Button variant="outline" onClick={() => setEditing("new")}>

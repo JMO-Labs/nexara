@@ -265,6 +265,8 @@
       "delete_title": "Delete this URL?",
       "delete_msg": "This removes the Apprise URL permanently.",
       "test_failed": "Test failed",
+      "save_failed": "Could not save the URL. Check it and try again.",
+      "action_failed": "Action failed. Please try again.",
       "matrix": "Apprise"
     },
     "profile": "Profile",
