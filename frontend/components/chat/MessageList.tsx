@@ -6,6 +6,8 @@
  */
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { motion } from "framer-motion";
+import { slideUp, useMotionProps } from "@/components/ui/motion";
 import { Skeleton, EmptyState } from "@/components/ui";
 import type { ChatMessage } from "@/lib/api/chat";
 import { MessageItem } from "./MessageItem";
@@ -54,6 +56,8 @@ export const MessageList = React.forwardRef<
 ) {
   const parentRef = React.useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = React.useRef(true);
+  const slide = useMotionProps(slideUp);
+  const seen = React.useRef<Set<string> | null>(null);
   const prevCount = React.useRef(0);
 
   React.useImperativeHandle(
@@ -89,6 +93,10 @@ export const MessageList = React.forwardRef<
     }
     prevCount.current = ordered.length;
   }, [ordered.length]);
+
+  React.useEffect(() => {
+    seen.current = new Set(ordered.map((x) => x.id));
+  });
 
   const onScroll = React.useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -141,6 +149,8 @@ export const MessageList = React.forwardRef<
         {virtualizer.getVirtualItems().map((vi) => {
           const m = ordered[vi.index];
           if (!m) return null;
+          // Only messages arriving after first paint slide in.
+          const isNew = seen.current !== null && !seen.current.has(m.id);
           return (
             <div
               key={vi.key}
@@ -149,13 +159,15 @@ export const MessageList = React.forwardRef<
               className="absolute top-0 left-0 w-full"
               style={{ transform: `translateY(${vi.start}px)` }}
             >
-              <MessageItem
-                message={m}
-                compact={isCompact(ordered[vi.index - 1], m)}
-                isSelf={Boolean(selfId && m.author?.id === selfId)}
-                onReply={onReply}
-                onSendDm={onSendDm}
-              />
+              <motion.div {...(isNew ? slide : {})}>
+                <MessageItem
+                  message={m}
+                  compact={isCompact(ordered[vi.index - 1], m)}
+                  isSelf={Boolean(selfId && m.author?.id === selfId)}
+                  onReply={onReply}
+                  onSendDm={onSendDm}
+                />
+              </motion.div>
             </div>
           );
         })}
