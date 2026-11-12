@@ -111,6 +111,14 @@ class TestSettings:
         with pytest.raises(KeyError):
             ctx.settings.set("undeclared", 1)
 
+    def test_mapping_protocol(self):
+        ctx = _ctx([], settings={"greeting": "hi", "undeclared": 1})
+        assert len(ctx.settings) == 1
+        assert list(ctx.settings) == ["greeting"]
+        del ctx.settings["greeting"]
+        assert len(ctx.settings) == 0
+        assert list(ctx.settings) == []
+
 
 class TestStorage:
     async def test_requires_permission(self):
@@ -130,6 +138,15 @@ class TestStorage:
         ka = a._storage.put.await_args[0][0]
         kb = b._storage.put.await_args[0][0]
         assert ka != kb and str(other) in kb
+
+    async def test_delete_and_exists_namespaced(self):
+        ctx = _ctx(["storage_access"])
+        ctx._storage.exists.return_value = 1
+        await ctx.storage.delete("a.txt")
+        assert await ctx.storage.exists("a.txt") is True
+        key = f"plugins/hello/{COMMUNITY}/a.txt"
+        ctx._storage.delete.assert_awaited_with(key)
+        ctx._storage.exists.assert_awaited_with(key)
 
     @pytest.mark.parametrize("key", ["../other/a", "/abs", "a/../../b", ""])
     async def test_rejects_escape(self, key):
