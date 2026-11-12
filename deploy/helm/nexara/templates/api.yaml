@@ -31,7 +31,7 @@ spec:
           {{- range $name, $path := dict "livenessProbe" "/livez" "readinessProbe" "/healthz" "startupProbe" "/livez" }}
           {{- $cfg := index $.Values.api.probes (trimSuffix "Probe" $name) }}
           {{ $name }}:
-            httpGet: {path: {{ $path }}, port: {{ $.Values.api.probes.port }}}
+            httpGet: {path: {{ $path }}, port: http}
             {{- toYaml $cfg | nindent 12 }}
           {{- end }}
           resources: {{- toYaml .Values.api.resources | nindent 12 }}

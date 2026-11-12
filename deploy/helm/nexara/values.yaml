@@ -15,9 +15,8 @@ api:
   resources:
     requests: {cpu: 250m, memory: 512Mi}
     limits: {cpu: "1", memory: 1Gi}
-  # Probes hit uvicorn directly (nginx on `port` does not proxy /livez).
+  # Probes hit nginx (named port `http`), which proxies /livez and /healthz to uvicorn.
   probes:
-    port: 8000
     liveness: {initialDelaySeconds: 0, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3}
     readiness: {initialDelaySeconds: 0, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 3}
     # Allows up to 30 x 5s = 150s of boot/migrations before liveness applies.
