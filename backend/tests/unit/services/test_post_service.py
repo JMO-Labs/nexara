@@ -541,3 +541,23 @@ class TestActivityRecording:
         await service_with_activity_repo.delete_post(POST_ID, user)
 
         activity_repo.invalidate.assert_awaited_once_with("post", POST_ID)
+
+
+class TestSassybotMentionOnComment:
+    """@brief add_comment() forces the Sassybot task on an @sassybot mention."""
+
+    @pytest.mark.asyncio
+    async def test_add_comment_enqueues_forced_sassybot(
+        self, service, post_repo, comment_repo, sassybot_delay
+    ):
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.content = "hey @sassybot"
+        comment.parent_id = None
+        comment.created_at.isoformat.return_value = "2026-02-28T10:00:00"
+        post_repo.get_by_id.return_value = _make_post(author_id=AUTHOR_ID)
+        comment_repo.create_comment.return_value = comment
+
+        await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "hey @sassybot")
+
+        assert sassybot_delay.call_args.kwargs["args"] == (str(POST_ID), str(COMMUNITY_ID), True)
