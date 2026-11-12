@@ -18,10 +18,11 @@ SYSTEM_TYPE = NotificationType(
     key="system",
     category="system",
     payload_schema=SystemPayload,
-    default_channels={"inapp": True, "email": True, "push": False},
+    default_channels={"inapp": True, "email": True, "push": True, "toast": True},
     group_window_seconds=None,
+    bypass_dnd=True,
     toast_on_arrival=True,
-    label_i18n="notifications.types.system",
+    label_i18n="notif.system.label",
     icon="info",
 )
 register(SYSTEM_TYPE)

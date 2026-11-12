@@ -23,10 +23,10 @@ EVENTREMINDER_TYPE = NotificationType(
     key="event_reminder",
     category="event",
     payload_schema=EventReminderPayload,
-    default_channels={"inapp": True, "email": True, "push": True},
+    default_channels={"inapp": True, "email": True, "push": True, "toast": True},
     group_window_seconds=None,
-    toast_on_arrival=False,
-    label_i18n="notifications.types.event_reminder",
+    toast_on_arrival=True,
+    label_i18n="notif.event_reminder.label",
     icon="calendar-clock",
 )
 register(EVENTREMINDER_TYPE)

@@ -21,10 +21,10 @@ NEWPOST_TYPE = NotificationType(
     key="new_post",
     category="social",
     payload_schema=NewPostPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
+    default_channels={"inapp": True, "email": False, "push": False, "toast": False},
     group_window_seconds=900,
     toast_on_arrival=False,
-    label_i18n="notifications.types.new_post",
+    label_i18n="notif.new_post.label",
     icon="file-text",
 )
 register(NEWPOST_TYPE)

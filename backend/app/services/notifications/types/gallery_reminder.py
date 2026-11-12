@@ -20,10 +20,10 @@ GALLERYREMINDER_TYPE = NotificationType(
     key="gallery_reminder",
     category="gallery",
     payload_schema=GalleryReminderPayload,
-    default_channels={"inapp": True, "email": False, "push": True},
+    default_channels={"inapp": True, "email": True, "push": False, "toast": False},
     group_window_seconds=None,
     toast_on_arrival=False,
-    label_i18n="notifications.types.gallery_reminder",
+    label_i18n="notif.gallery_reminder.label",
     icon="image-up",
 )
 register(GALLERYREMINDER_TYPE)

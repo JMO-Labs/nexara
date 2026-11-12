@@ -21,10 +21,10 @@ COMMENT_TYPE = NotificationType(
     key="comment",
     category="social",
     payload_schema=CommentPayload,
-    default_channels={"inapp": True, "email": False, "push": True},
+    default_channels={"inapp": True, "email": False, "push": False, "toast": True},
     group_window_seconds=300,
-    toast_on_arrival=False,
-    label_i18n="notifications.types.comment",
+    toast_on_arrival=True,
+    label_i18n="notif.comment.label",
     icon="message-circle",
 )
 register(COMMENT_TYPE)

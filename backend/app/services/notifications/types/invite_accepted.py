@@ -20,10 +20,10 @@ INVITEACCEPTED_TYPE = NotificationType(
     key="invite_accepted",
     category="social",
     payload_schema=InviteAcceptedPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
+    default_channels={"inapp": True, "email": True, "push": False, "toast": False},
     group_window_seconds=None,
     toast_on_arrival=False,
-    label_i18n="notifications.types.invite_accepted",
+    label_i18n="notif.invite_accepted.label",
     icon="user-plus",
 )
 register(INVITEACCEPTED_TYPE)

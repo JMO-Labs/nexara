@@ -22,10 +22,10 @@ EVENTRSVP_TYPE = NotificationType(
     key="event_rsvp",
     category="event",
     payload_schema=EventRsvpPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
-    group_window_seconds=None,
+    default_channels={"inapp": True, "email": False, "push": False, "toast": False},
+    group_window_seconds=600,
     toast_on_arrival=False,
-    label_i18n="notifications.types.event_rsvp",
+    label_i18n="notif.event_rsvp.label",
     icon="calendar-check",
 )
 register(EVENTRSVP_TYPE)

@@ -22,10 +22,10 @@ GALLERYACTIVITY_TYPE = NotificationType(
     key="gallery_activity",
     category="gallery",
     payload_schema=GalleryActivityPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
-    group_window_seconds=None,
+    default_channels={"inapp": True, "email": False, "push": False, "toast": False},
+    group_window_seconds=900,
     toast_on_arrival=False,
-    label_i18n="notifications.types.gallery_activity",
+    label_i18n="notif.gallery_activity.label",
     icon="images",
 )
 register(GALLERYACTIVITY_TYPE)

@@ -21,8 +21,30 @@ VALID = {
     "prompt": {"prompt_title": "P"},
     "prompt_summary": {"response_count": 3},
 }
-WINDOWS = {"reaction": 600, "comment": 300, "new_post": 900}
-TOASTS = {"mention", "system"}
+WINDOWS = {
+    "reaction": 600,
+    "comment": 300,
+    "new_post": 900,
+    "event_rsvp": 600,
+    "gallery_activity": 900,
+}
+TOASTS = {"mention", "comment", "system", "event_reminder", "prompt"}
+BYPASS_DND = {"system"}
+# (email, push, toast); inapp is always True.
+CHANNELS = {
+    "mention": (True, True, True),
+    "comment": (False, False, True),
+    "reaction": (False, False, False),
+    "new_post": (False, False, False),
+    "system": (True, True, True),
+    "invite_accepted": (True, False, False),
+    "event_reminder": (True, True, True),
+    "event_rsvp": (False, False, False),
+    "gallery_activity": (False, False, False),
+    "gallery_reminder": (True, False, False),
+    "prompt": (False, False, True),
+    "prompt_summary": (True, False, False),
+}
 
 
 def test_twelve_types_registered() -> None:
@@ -51,3 +73,21 @@ def test_group_window_and_toast(key: str) -> None:
     t = get(key)
     assert t.group_window_seconds == WINDOWS.get(key)
     assert t.toast_on_arrival is (key in TOASTS)
+
+
+@pytest.mark.parametrize("key", sorted(VALID))
+def test_bypass_dnd(key: str) -> None:
+    assert get(key).bypass_dnd is (key in BYPASS_DND)
+
+
+@pytest.mark.parametrize("key", sorted(VALID))
+def test_default_channels_and_label(key: str) -> None:
+    t = get(key)
+    email, push, toast = CHANNELS[key]
+    assert t.default_channels == {
+        "inapp": True,
+        "email": email,
+        "push": push,
+        "toast": toast,
+    }
+    assert t.label_i18n == f"notif.{key}.label"

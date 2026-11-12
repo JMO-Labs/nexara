@@ -20,10 +20,10 @@ PROMPT_TYPE = NotificationType(
     key="prompt",
     category="prompt",
     payload_schema=PromptPayload,
-    default_channels={"inapp": True, "email": False, "push": True},
+    default_channels={"inapp": True, "email": False, "push": False, "toast": True},
     group_window_seconds=None,
-    toast_on_arrival=False,
-    label_i18n="notifications.types.prompt",
+    toast_on_arrival=True,
+    label_i18n="notif.prompt.label",
     icon="help-circle",
 )
 register(PROMPT_TYPE)

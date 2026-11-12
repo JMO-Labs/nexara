@@ -20,10 +20,10 @@ PROMPTSUMMARY_TYPE = NotificationType(
     key="prompt_summary",
     category="prompt",
     payload_schema=PromptSummaryPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
+    default_channels={"inapp": True, "email": True, "push": False, "toast": False},
     group_window_seconds=None,
     toast_on_arrival=False,
-    label_i18n="notifications.types.prompt_summary",
+    label_i18n="notif.prompt_summary.label",
     icon="list-checks",
 )
 register(PROMPTSUMMARY_TYPE)

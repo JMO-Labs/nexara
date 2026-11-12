@@ -22,10 +22,10 @@ REACTION_TYPE = NotificationType(
     key="reaction",
     category="social",
     payload_schema=ReactionPayload,
-    default_channels={"inapp": True, "email": False, "push": False},
+    default_channels={"inapp": True, "email": False, "push": False, "toast": False},
     group_window_seconds=600,
     toast_on_arrival=False,
-    label_i18n="notifications.types.reaction",
+    label_i18n="notif.reaction.label",
     icon="smile",
 )
 register(REACTION_TYPE)
