@@ -11,10 +11,14 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from app.core.exceptions import NotFoundError
+from app.core.i18n import _
+from app.models.device_token import DeviceToken
 from app.models.notification import PushSubscription
 from app.schemas.push import PushSubscriptionResponse
 
 if TYPE_CHECKING:
+    from app.repositories.device_token_repo import DeviceTokenRepo
     from app.repositories.push_repo import PushSubscriptionRepository
     from app.repositories.settings_repo import SettingsRepository
 
@@ -38,6 +42,7 @@ class PushService:
     @param settings_repo SettingsRepository instance.
     @param community_id Community scope.
     @param settings Application settings (VAPID keys).
+    @param device_repo Optional DeviceTokenRepo for native device tokens.
     """
 
     def __init__(
@@ -47,11 +52,13 @@ class PushService:
         community_id: uuid.UUID,
         *,
         settings: object,
+        device_repo: DeviceTokenRepo | None = None,
     ) -> None:
         self._push_repo = push_repo
         self._settings_repo = settings_repo
         self._community_id = community_id
         self._settings = settings
+        self._device_repo = device_repo
 
     async def subscribe(
         self,
@@ -94,6 +101,48 @@ class PushService:
         @param endpoint Web Push endpoint URL.
         """
         await self._push_repo.delete_by_endpoint(endpoint)
+
+    async def register_device(
+        self, user_id: uuid.UUID, platform: str, token: str
+    ) -> DeviceToken:
+        """
+        @brief Upsert a native push device token for a user.
+
+        @param user_id Owner UUID.
+        @param platform ``android`` or ``ios``.
+        @param token FCM device token.
+        @return The stored DeviceToken.
+        """
+        assert self._device_repo is not None
+        existing = await self._device_repo.find_by_token(token)
+        if existing:
+            return await self._device_repo.reassign(
+                existing,
+                user_id=user_id,
+                community_id=self._community_id,
+                platform=platform,
+            )
+        device = DeviceToken(
+            user_id=user_id,
+            community_id=self._community_id,
+            platform=platform,
+            token=token,
+        )
+        return await self._device_repo.create(device)
+
+    async def unregister_device(self, user_id: uuid.UUID, token: str) -> None:
+        """
+        @brief Soft-delete the caller's device token.
+
+        @param user_id Owner UUID.
+        @param token Device token string.
+        @raise NotFoundError If the token is not an active token of the caller.
+        """
+        assert self._device_repo is not None
+        device = await self._device_repo.find_active(self._community_id, user_id, token)
+        if device is None:
+            raise NotFoundError(_("Device token not found"))
+        await self._device_repo.soft_delete(device)
 
     async def list_subscriptions(self, user_id: uuid.UUID) -> list[PushSubscriptionResponse]:
         """
