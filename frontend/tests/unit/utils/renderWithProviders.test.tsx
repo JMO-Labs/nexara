@@ -3,7 +3,7 @@
  * @brief Verifies the shared provider wrapper for components and hooks.
  */
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { useTheme } from "next-themes";
 import {
   renderHookWithProviders,
@@ -18,7 +18,7 @@ function ThemeProbe() {
 describe("renderWithProviders", () => {
   it("provides next-themes context", () => {
     renderWithProviders(<ThemeProbe />);
-    expect(screen.getByTestId("theme")).toBeInTheDocument();
+    expect(screen.getByTestId("theme")).toHaveTextContent("system");
   });
 
   it("uses a fresh client with retry disabled per call", () => {
@@ -56,6 +56,11 @@ describe("renderHookWithProviders", () => {
 
   it("exposes useTheme inside the wrapper", () => {
     const { result } = renderHookWithProviders(() => useTheme());
-    expect(typeof result.current.setTheme).toBe("function");
+    expect(result.current.theme).toBe("system");
+    expect(result.current.themes).toEqual(
+      expect.arrayContaining(["light", "dark"]),
+    );
+    act(() => result.current.setTheme("dark"));
+    expect(document.documentElement).toHaveClass("dark");
   });
 });
