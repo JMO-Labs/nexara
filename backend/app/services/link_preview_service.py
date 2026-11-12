@@ -200,9 +200,27 @@ def _client_kwargs() -> dict[str, object]:
     return {"timeout": HTTP_TIMEOUT, "follow_redirects": False}
 
 
+async def _read_capped(response: httpx.Response) -> tuple[bytes, str] | None:
+    """
+    @brief Read a streamed body, aborting once it exceeds IMAGE_MAX_BYTES.
+
+    @param response Open streaming response with a validated image content-type.
+    @return (body, content_type) or None if the body is too large.
+    """
+    ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
+    buf = bytearray()
+    async for chunk in response.aiter_bytes():
+        buf.extend(chunk)
+        if len(buf) > IMAGE_MAX_BYTES:
+            return None
+    return (bytes(buf), ctype)
+
+
 async def fetch_image(url: str) -> tuple[bytes, str] | None:
     """
     @brief Fetch a preview image for the proxy (SSRF-checked, 5s, size-capped).
+
+    The body is streamed and reading stops as soon as the cap is exceeded.
 
     Redirects are not followed so a public host cannot bounce to a private IP.
 
@@ -213,15 +231,16 @@ async def fetch_image(url: str) -> tuple[bytes, str] | None:
         return None
     try:
         async with httpx.AsyncClient(**_client_kwargs()) as client:  # type: ignore[arg-type]
-            response = await client.get(url, headers={"User-Agent": "NexaraLinkPreview/1.0"})
-            response.raise_for_status()
-            ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
-            if not ctype.startswith("image/") or ctype == "image/svg+xml":
-                return None
-            body = response.content
-            if len(body) > IMAGE_MAX_BYTES:
-                return None
-            return (body, ctype)
+            headers = {"User-Agent": "NexaraLinkPreview/1.0"}
+            async with client.stream("GET", url, headers=headers) as response:
+                response.raise_for_status()
+                ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
+                if not ctype.startswith("image/") or ctype == "image/svg+xml":
+                    return None
+                declared = response.headers.get("content-length")
+                if declared is not None and int(declared) > IMAGE_MAX_BYTES:
+                    return None
+                return await _read_capped(response)
     except Exception:
         return None
 
