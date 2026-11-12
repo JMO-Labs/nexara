@@ -49,9 +49,7 @@ def _ctx(
 
 
 def _sql(stmt) -> str:
-    return str(
-        stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
-    )
+    return str(stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
 
 
 MSG = "Plugin 'hello' does not have permission '{}'"
@@ -159,7 +157,6 @@ class TestNotify:
             await ctx.notify(uuid.uuid4(), "t", {})
         now[0] += 61
         await ctx.notify(uuid.uuid4(), "t", {})
-
 
     async def test_budget_shared_across_contexts(self):
         now = [1000.0]
