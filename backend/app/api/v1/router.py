@@ -26,6 +26,7 @@ from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
 from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.plugins import router as plugins_router
@@ -62,6 +63,7 @@ api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)
+api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(polls_router)

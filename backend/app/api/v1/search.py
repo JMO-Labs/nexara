@@ -51,7 +51,7 @@ def _build_service(
 
 
 """@brief All valid search content types."""
-_ALL_TYPES = ["posts", "users", "events", "subgroups", "comments"]
+_ALL_TYPES = ["posts", "users", "events", "subgroups", "comments", "galleries", "polls"]
 _VALID_TYPES = set(_ALL_TYPES)
 
 
@@ -72,7 +72,8 @@ def _parse_types(types_str: str | None) -> list[str]:
 async def search(
     q: str = Query(..., description="Search query (min 2 characters)"),
     types: str | None = Query(
-        default=None, description="Comma-separated: posts,users,events,subgroups,comments"
+        default=None,
+        description="Comma-separated: posts,users,events,subgroups,comments,galleries,polls",
     ),
     cursor: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
