@@ -108,3 +108,18 @@ describe("loadPlugins", () => {
     await expect(loadPlugins(vi.fn())).resolves.toBeUndefined();
   });
 });
+
+describe("loadPlugins idempotency", () => {
+  it("does not duplicate slot entries when called twice", async () => {
+    const r = PluginRegistry.getInstance();
+    r.reset();
+    vi.mocked(apiGet).mockResolvedValue([manifest("a")]);
+    const importer = async () => ({
+      registerPlugin: (reg: PluginRegistry) =>
+        reg.registerSlotComponent("sidebar-widget", "a", Comp),
+    });
+    await loadPlugins(importer);
+    await loadPlugins(importer);
+    expect(r.getSlotComponents("sidebar-widget")).toHaveLength(1);
+  });
+});

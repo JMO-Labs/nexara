@@ -7,6 +7,7 @@ import { render, screen, act } from "@testing-library/react";
 import { lazy } from "react";
 
 vi.mock("@/lib/api/client", () => ({ apiGet: vi.fn() }));
+import { useToasts } from "@/stores/toasts";
 import { PluginRegistry } from "@/lib/plugins/plugin-loader";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 
@@ -32,6 +33,7 @@ describe("PluginSlot", () => {
 
   it("catches crashes without breaking siblings", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    const push = vi.spyOn(useToasts.getState(), "push");
     reg().registerSlotComponent("sidebar-widget", "bad", () => {
       throw new Error("boom");
     });
@@ -41,6 +43,12 @@ describe("PluginSlot", () => {
     render(<PluginSlot slotName="sidebar-widget" />);
     expect(screen.getByRole("alert")).toHaveTextContent(/bad/);
     expect(screen.getByText("fine")).toBeInTheDocument();
+    expect(push).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: "danger",
+        message: expect.stringContaining("bad"),
+      }),
+    );
   });
 
   it("shows spinner fallback then lazy component", async () => {

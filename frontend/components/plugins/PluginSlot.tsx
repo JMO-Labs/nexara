@@ -6,6 +6,7 @@
  */
 import { Component, Suspense, useSyncExternalStore } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import { useToasts } from "@/stores/toasts";
 import {
   PluginRegistry,
   type PluginManifest,
@@ -21,6 +22,10 @@ class PluginErrorBoundary extends Component<
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(`plugin "${this.props.pluginId}" crashed`, error, info);
+    useToasts.getState().push({
+      variant: "danger",
+      message: `Plugin "${this.props.pluginId}" failed`,
+    });
   }
   render() {
     if (this.state.failed)

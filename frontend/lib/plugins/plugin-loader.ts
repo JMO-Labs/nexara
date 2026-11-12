@@ -52,6 +52,8 @@ export class PluginRegistry {
     component: ComponentType<any>,
   ): void {
     const list = this.slots.get(slotName) ?? [];
+    if (list.some((e) => e.pluginId === pluginId && e.component === component))
+      return;
     this.slots.set(slotName, [...list, { pluginId, component }]);
     this.emit();
   }
