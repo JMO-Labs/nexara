@@ -11,10 +11,10 @@ import uuid
 import structlog
 
 from app.core.config import get_settings
+from app.core.valkey import DB_CACHE, create_pool
 from app.db.session import async_session_factory
 from app.repositories.media_ai_repo import MediaAIRepository
 from app.repositories.media_repo import MediaRepository
-from app.core.valkey import DB_CACHE, create_pool
 from app.services.ai.budget_service import BudgetService
 from app.services.ai.ocr import run_ocr
 from app.services.ai.provider import get_ai_provider
@@ -27,9 +27,7 @@ logger = structlog.get_logger(__name__)
 async def _ocr_async(media_id: uuid.UUID, community_id: uuid.UUID) -> str:
     settings = get_settings()
     redis = create_pool(settings, DB_CACHE)
-    budget = BudgetService(
-        redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR
-    )
+    budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
     async with async_session_factory() as session:
         status = await run_ocr(
             media_id,

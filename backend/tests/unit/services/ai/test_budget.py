@@ -105,8 +105,13 @@ async def test_ocr_blocked_when_budget_exhausted() -> None:
     budget.check_budget = AsyncMock(return_value=False)
     budget.record_usage = AsyncMock()
     status = await run_ocr(
-        uuid.uuid4(), CID, media_repo=media_repo, ai_repo=ai_repo, storage=storage,
-        provider=provider, budget=budget,
+        uuid.uuid4(),
+        CID,
+        media_repo=media_repo,
+        ai_repo=ai_repo,
+        storage=storage,
+        provider=provider,
+        budget=budget,
     )
     assert status == "budget_exhausted"
     provider.vision.assert_not_called()
@@ -118,8 +123,13 @@ async def test_ocr_records_actual_cost() -> None:
     budget.check_budget = AsyncMock(return_value=True)
     budget.record_usage = AsyncMock()
     status = await run_ocr(
-        uuid.uuid4(), CID, media_repo=media_repo, ai_repo=ai_repo, storage=storage,
-        provider=provider, budget=budget,
+        uuid.uuid4(),
+        CID,
+        media_repo=media_repo,
+        ai_repo=ai_repo,
+        storage=storage,
+        provider=provider,
+        budget=budget,
     )
     assert status == "processed"
     assert budget.record_usage.await_args.args[:2] == (0.1, "ocr")
