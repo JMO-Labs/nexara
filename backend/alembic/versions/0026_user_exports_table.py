@@ -1,7 +1,7 @@
 """add user_exports table
 
 Revision ID: 0026_user_exports_table
-Revises: 0025_plugin_api_keys
+Revises: b2c3d4e5f6a7
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0026_user_exports_table"
-down_revision: str | None = "0025_plugin_api_keys"
+down_revision: str | None = "b2c3d4e5f6a7"
 branch_labels = None
 depends_on = None
 
