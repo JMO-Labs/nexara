@@ -26,6 +26,7 @@ class FakeRedis:
     def __init__(self) -> None:
         self.data: dict[str, float] = {}
         self.ttl: dict[str, int] = {}
+        self.hashes: dict[str, dict[str, float]] = {}
 
     async def get(self, key: str):
         return str(self.data[key]) if key in self.data else None
@@ -39,6 +40,11 @@ class FakeRedis:
 
     async def delete(self, key: str) -> None:
         self.data.pop(key, None)
+
+    async def hincrbyfloat(self, key: str, field: str, amount: float) -> float:
+        self.hashes.setdefault(key, {})
+        self.hashes[key][field] = self.hashes[key].get(field, 0.0) + amount
+        return self.hashes[key][field]
 
 
 def _svc(budget: int = 100, hour: int = 0, now: datetime | None = None):
@@ -57,6 +63,10 @@ async def test_record_usage_reduces_remaining_and_sets_ttl() -> None:
     await svc.record_usage(30, "ocr")
     assert await svc.get_daily_budget() == 70
     assert r.ttl["ai_budget:2026-01-05:cents"] == 48 * 3600
+    assert r.hashes["ai_budget:2026-01-05:cents:features"] == {
+        "ocr:cents": 30,
+        "ocr:calls": 1,
+    }
 
 
 async def test_check_budget_blocks_when_exhausted() -> None:

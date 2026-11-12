@@ -54,6 +54,24 @@ class BudgetService:
         raw = await self._redis.get(self._key())
         return float(raw) if raw is not None else 0.0
 
+    async def spent_cents(self, days_back: int = 0) -> float:
+        """@return Cents spent on the budget day ``days_back`` days ago."""
+        raw = await self._redis.get(self._key(days_back))
+        return float(raw) if raw is not None else 0.0
+
+    def budget_day(self, days_back: int = 0) -> str:
+        """@return ISO date of the budget day ``days_back`` days ago."""
+        return self._key(days_back).split(":")[1]
+
+    async def feature_totals(self) -> dict[str, dict[str, float]]:
+        """@return Today's ``{feature: {"calls", "cents"}}`` from the per-feature hash."""
+        raw = await self._redis.hgetall(f"{self._key()}:features")
+        out: dict[str, dict[str, float]] = {}
+        for field, value in raw.items():
+            name, _, kind = (field.decode() if isinstance(field, bytes) else field).rpartition(":")
+            out.setdefault(name, {})[kind] = float(value)
+        return out
+
     async def get_daily_budget(self) -> int:
         """@return Cents remaining today (never negative)."""
         return max(0, int(self._budget - await self._spent()))
@@ -80,6 +98,10 @@ class BudgetService:
         key = self._key()
         await self._redis.incrbyfloat(key, actual_cost_cents)
         await self._redis.expire(key, KEY_TTL_SECONDS)
+        fkey = f"{key}:features"
+        await self._redis.hincrbyfloat(fkey, f"{feature}:cents", actual_cost_cents)
+        await self._redis.hincrbyfloat(fkey, f"{feature}:calls", 1)
+        await self._redis.expire(fkey, KEY_TTL_SECONDS)
         labels = {"model": model, "provider": provider, "feature": feature}
         ai_usage_cents_total.labels(**labels).inc(actual_cost_cents)
         ai_calls_total.labels(**labels).inc()
