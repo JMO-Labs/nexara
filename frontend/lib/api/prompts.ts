@@ -1,8 +1,8 @@
 /**
  * @file lib/api/prompts.ts
- * @brief Prompts API endpoints for admin CRUD, seeding, and feed posts.
+ * @brief Prompts API endpoints for admin CRUD and feed posts.
  */
-import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 
 /**
  * @brief Prompt detail within a prompt post.
@@ -31,64 +31,101 @@ export interface PromptPost {
   expires_at: string;
 }
 
+/** @brief Prompt schedule frequency (mirrors backend FrequencyType). */
+export type FrequencyType =
+  | "annual_date"
+  | "weekly"
+  | "monthly"
+  | "one_time"
+  | "custom";
+
+/** @brief Prompt kind. */
+export type PromptType = "standard" | "interest_capture";
+
 /**
- * @brief Prompt response model (admin).
+ * @brief Prompt response model (admin); mirrors backend PromptResponse.
  */
 export interface PromptResponse {
   id: string;
   title: string;
   body: string;
-  frequency: string;
-  trigger_month?: number | null;
-  trigger_day?: number | null;
-  trigger_dow?: number | null;
-  enabled: boolean;
-  prompt_type: string;
-  interest_category_slug?: string | null;
-  interest_capture_hint?: string | null;
-  created_at: Date;
-  updated_at: Date;
-  next_fire_at?: Date | null;
-  response_count: number;
+  source: string;
+  is_enabled: boolean;
+  frequency_type: FrequencyType;
+  trigger_month: number | null;
+  trigger_day: number | null;
+  trigger_weekday: number | null;
+  trigger_week_interval: number | null;
+  trigger_month_day: number | null;
+  trigger_custom_rule: string | null;
+  trigger_one_time_date: string | null;
+  active_days: number;
+  scope: string;
+  subgroup_id: string | null;
+  notify_members: boolean;
+  notification_body: string | null;
+  linked_event_id: string | null;
+  generate_summary: boolean;
+  prompt_type: PromptType;
+  interest_category_slug: string | null;
+  interest_capture_hint: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
- * @brief Create prompt payload.
+ * @brief Create prompt payload; mirrors backend PromptCreate.
  */
 export interface PromptCreate {
   title: string;
   body: string;
-  frequency: string;
+  frequency_type: FrequencyType;
   trigger_month?: number | null;
   trigger_day?: number | null;
-  trigger_dow?: number | null;
-  prompt_type?: string;
+  trigger_weekday?: number | null;
+  trigger_week_interval?: number | null;
+  trigger_month_day?: number | null;
+  trigger_custom_rule?: string | null;
+  trigger_one_time_date?: string | null;
+  active_days?: number;
+  scope?: "community" | "subgroup";
+  subgroup_id?: string | null;
+  notify_members?: boolean;
+  notification_body?: string | null;
+  linked_event_id?: string | null;
+  generate_summary?: boolean;
+  prompt_type?: PromptType;
   interest_category_slug?: string | null;
   interest_capture_hint?: string | null;
 }
 
 /**
- * @brief Update prompt payload.
+ * @brief Update prompt payload; mirrors backend PromptUpdate.
  */
 export interface PromptUpdate {
   title?: string;
   body?: string;
-  frequency?: string;
+  is_enabled?: boolean;
+  frequency_type?: FrequencyType;
   trigger_month?: number | null;
   trigger_day?: number | null;
-  trigger_dow?: number | null;
-  enabled?: boolean;
-  prompt_type?: string;
-  interest_category_slug?: string | null;
-  interest_capture_hint?: string | null;
+  trigger_weekday?: number | null;
+  trigger_week_interval?: number | null;
+  trigger_month_day?: number | null;
+  trigger_custom_rule?: string | null;
+  trigger_one_time_date?: string | null;
+  active_days?: number;
+  notify_members?: boolean;
+  notification_body?: string | null;
+  generate_summary?: boolean;
 }
 
 /**
  * @brief List all prompts (admin only).
  * @return Array of PromptResponse
  */
-export const listPrompts = () =>
-  apiGet<PromptResponse[]>("/api/v1/admin/prompts");
+export const listPrompts = () => apiGet<PromptResponse[]>("/api/v1/prompts");
 
 /**
  * @brief Create a new prompt (admin only).
@@ -96,7 +133,7 @@ export const listPrompts = () =>
  * @return PromptResponse
  */
 export const createPrompt = (payload: PromptCreate) =>
-  apiPost<PromptResponse>("/api/v1/admin/prompts", payload);
+  apiPost<PromptResponse>("/api/v1/prompts", payload);
 
 /**
  * @brief Update a prompt (admin only).
@@ -105,22 +142,15 @@ export const createPrompt = (payload: PromptCreate) =>
  * @return PromptResponse
  */
 export const updatePrompt = (promptId: string, payload: PromptUpdate) =>
-  apiPut<PromptResponse>(`/api/v1/admin/prompts/${seg(promptId)}`, payload);
+  apiPatch<PromptResponse>(`/api/v1/prompts/${seg(promptId)}`, payload);
 
 /**
  * @brief Delete a prompt (admin only).
  * @param promptId Prompt ID
- * @return Empty response
+ * @return Message response
  */
 export const deletePrompt = (promptId: string) =>
-  apiDelete<void>(`/api/v1/admin/prompts/${seg(promptId)}`);
-
-/**
- * @brief Seed builtin prompts (admin only).
- * @return Array of created prompts
- */
-export const seedBuiltinPrompts = () =>
-  apiPost<PromptResponse[]>("/api/v1/admin/prompts/seed", {});
+  apiDelete<{ message: string }>(`/api/v1/prompts/${seg(promptId)}`);
 
 /**
  * @brief Get a prompt post (feed view).
