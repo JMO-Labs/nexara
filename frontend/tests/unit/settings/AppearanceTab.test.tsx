@@ -3,7 +3,7 @@
  * @brief AppearanceTab component tests. Verify theme and locale selectors.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppearanceTab } from "@/components/settings/AppearanceTab";
@@ -75,7 +75,11 @@ describe("AppearanceTab", () => {
     } as any);
     render(<AppearanceTab />, { wrapper: createWrapper() });
 
-    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(
+      within(screen.getByRole("radiogroup", { name: "Theme" })).getAllByRole(
+        "radio",
+      ),
+    ).toHaveLength(3);
     expect(screen.getByRole("radio", { name: "System" })).toBeChecked();
     await userEvent.setup().click(screen.getByRole("radio", { name: "Dark" }));
     await waitFor(() => expect(setTheme).toHaveBeenCalledWith("dark"));
