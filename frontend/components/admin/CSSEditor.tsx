@@ -28,7 +28,11 @@ export function CSSEditor({ value, onChange }: CSSEditorProps) {
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
       />
-      <p id="custom-css-warning" role="note" className="text-sm text-muted-foreground">
+      <p
+        id="custom-css-warning"
+        role="note"
+        className="text-sm text-muted-foreground"
+      >
         CSS can break site layout. Use carefully. XSS-dangerous patterns are
         blocked server-side.
       </p>

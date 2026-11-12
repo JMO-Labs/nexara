@@ -74,12 +74,12 @@ def test_rejects_too_large() -> None:
 
 
 async def test_service_sanitizes_before_save() -> None:
+    import uuid
     from unittest.mock import AsyncMock, MagicMock
 
     from app.repositories.branding_repo import BrandingRepository
     from app.schemas.branding import BrandingUpdate
     from app.services.branding_service import BrandingService
-    import uuid
 
     repo = AsyncMock(spec=BrandingRepository)
     repo.upsert.return_value = MagicMock()
@@ -99,8 +99,8 @@ async def test_service_sanitizes_before_save() -> None:
 
 
 async def test_service_rejects_when_too_much_removed() -> None:
-    from unittest.mock import AsyncMock
     import uuid
+    from unittest.mock import AsyncMock
 
     from app.repositories.branding_repo import BrandingRepository
     from app.schemas.branding import BrandingUpdate
