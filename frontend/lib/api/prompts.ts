@@ -35,7 +35,11 @@ export interface PromptPost {
  * @brief Prompt frequency type (matches backend FrequencyType).
  */
 export type FrequencyType =
-  "annual_date" | "weekly" | "monthly" | "one_time" | "custom";
+  | "annual_date"
+  | "weekly"
+  | "monthly"
+  | "one_time"
+  | "custom";
 
 /**
  * @brief Prompt response model (admin).
