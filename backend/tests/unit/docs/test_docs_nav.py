@@ -98,3 +98,25 @@ def test_pages_nav_has_rest_entry(d):
 def test_api_reference_link_is_relative():
     text = (DOCS / "developer" / "api-reference.md").read_text()
     assert "](/" not in text
+
+
+def test_api_reference_page_is_substantive_and_links_generated_html():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert len(text.split()) >= 300
+    assert "api-reference.html" in text
+    for call in ("GET /posts", "POST /posts", "PATCH /posts/{id}", "DELETE /posts/{id}"):
+        assert call in text
+
+
+def test_generate_api_ref_script_is_executable_and_uses_redoc():
+    script = ROOT / "scripts" / "generate-api-ref.sh"
+    assert script.is_file()
+    assert script.stat().st_mode & 0o111
+    body = script.read_text()
+    assert "redoc-cli" in body
+    assert "developer/api-reference.html" in body
+
+
+def test_developer_pages_list_api_reference():
+    pages = (DOCS / "developer" / ".pages").read_text()
+    assert "api-reference.md" in pages
