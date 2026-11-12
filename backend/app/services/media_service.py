@@ -15,6 +15,8 @@ import structlog
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
+from app.core.config import get_settings
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
@@ -39,6 +41,7 @@ from app.services.storage.quota import (
     decrement_storage_used,
     increment_storage_used,
 )
+from app.tasks.ai_tasks import ocr_process_image
 from app.tasks.media_tasks import generate_thumbnail
 
 logger = structlog.get_logger(__name__)
@@ -48,6 +51,23 @@ MAX_IMAGE_SIZE = 20 * 1024 * 1024
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 """@brief MIME types accepted for image uploads."""
+
+
+def enqueue_ocr(media_id: uuid.UUID, community_id: uuid.UUID, content_type: str) -> None:
+    """
+    @brief Enqueue OCR for ready images when an AI provider is configured.
+    @param media_id Media UUID.
+    @param community_id Tenant UUID.
+    @param content_type MIME type of the upload.
+    """
+    if not content_type.startswith("image/") or not get_settings().AI_PROVIDER:
+        return
+    try:
+        ocr_process_image.apply_async(
+            args=[str(media_id), str(community_id)], queue="media", time_limit=3600
+        )
+    except Exception:  # OCR is an enhancement; never fail the upload
+        logger.warning("ocr_enqueue_failed", media_id=str(media_id))
 
 
 class MediaService:
@@ -164,6 +184,8 @@ class MediaService:
             )
 
         generate_thumbnail.delay(str(media.id))
+        await invalidate_search_cache_for_community(self._community_id)
+        enqueue_ocr(media.id, self._community_id, media.content_type)
 
         return MediaResponse.model_validate(media)
 
@@ -253,6 +275,7 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("media", media_id)
 

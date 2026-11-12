@@ -4,6 +4,7 @@
 #
 # Assembles the public/ directory from multiple sources:
 #   - MkDocs Material site (project documentation)
+#   - Static Redoc API reference (scripts/generate-api-ref.sh)
 #   - Doxygen-generated Python API reference
 #   - Coverage HTML reports (backend + frontend)
 #   - Playwright reports (when available)
@@ -11,6 +12,24 @@
 #
 # The pages job name MUST be "pages" for GitLab Pages to deploy.
 ##
+
+docs:build:
+  stage: test
+  image: $PYTHON_IMAGE
+  script:
+    - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
+    - mkdocs build --strict -f docs/mkdocs.yml -d /tmp/site
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        paths:
+          - "docs/**"
+          - ".gitlab/ci/pages.yml"
+    - if: $CI_COMMIT_BRANCH == "dev"
+      changes:
+        paths:
+          - "docs/**"
+          - ".gitlab/ci/pages.yml"
 
 pages:
   stage: pages
@@ -32,11 +51,19 @@ pages:
     - apk add --no-cache doxygen graphviz
     - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
   script:
+    # -- Generate static API reference (non-fatal; keeps committed placeholder) --
+    - |
+      echo "Generating static API reference..."
+      { apk add --no-cache bash coreutils curl nodejs npm \
+        && pip install --quiet ./backend \
+        && scripts/generate-api-ref.sh; } \
+        || echo "API reference generation failed; publishing placeholder."
+
     # -- Build MkDocs site --
     - |
       if [ -f docs/mkdocs.yml ]; then
         echo "Building MkDocs documentation..."
-        mkdocs build -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
+        mkdocs build --strict -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
       else
         echo "No mkdocs.yml found, creating minimal index..."
         mkdir -p public
