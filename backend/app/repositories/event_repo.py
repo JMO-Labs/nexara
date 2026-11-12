@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import and_, delete, func, literal, or_, select
 
+from app.models.user import User
 from app.models.event import CalendarSubscription, Event, EventAttendance
 from app.repositories.base import BaseRepository
 
@@ -256,6 +257,31 @@ class EventRepository(BaseRepository[Event]):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_ical_people(self, events: list[Event]) -> dict[uuid.UUID, dict[str, Any]]:
+        """@brief Organizer (author) and attending/maybe RSVPs per event, for iCal."""
+        if not events:
+            return {}
+        ids = [e.id for e in events]
+        out: dict[uuid.UUID, dict[str, Any]] = {e.id: {"attendees": []} for e in events}
+        authors = {e.author_id for e in events}
+        rows = await self._session.execute(
+            select(User.id, User.display_name, User.email).where(User.id.in_(authors))
+        )
+        users = {r[0]: (r[1], r[2]) for r in rows.all()}
+        for e in events:
+            out[e.id]["organizer"] = users.get(e.author_id)
+        att = await self._session.execute(
+            select(EventAttendance.event_id, User.display_name, User.email, EventAttendance.status)
+            .join(User, User.id == EventAttendance.user_id)
+            .where(
+                EventAttendance.event_id.in_(ids),
+                EventAttendance.status.in_(["attending", "maybe"]),
+            )
+        )
+        for ev_id, name, email, status in att.all():
+            out[ev_id]["attendees"].append((name, email, status))
+        return out
 
     async def list_attendees(
         self, event_id: uuid.UUID, statuses: list[str] | None = None

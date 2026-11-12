@@ -41,11 +41,24 @@ export function SubscriptionRow({
           {sub.source_url}
         </span>
         <span className="text-xs text-muted">
-          {sub.last_synced_at
-            ? formatDistanceToNow(new Date(sub.last_synced_at), {
-                addSuffix: true,
-              })
-            : "—"}
+          <span className="block">
+            {t("events.lastSync", {
+              when: sub.last_synced_at
+                ? formatDistanceToNow(new Date(sub.last_synced_at), {
+                    addSuffix: true,
+                  })
+                : "—",
+            })}
+          </span>
+          <span className="block">
+            {t("events.nextSync", {
+              when: sub.next_sync_at
+                ? formatDistanceToNow(new Date(sub.next_sync_at), {
+                    addSuffix: true,
+                  })
+                : "—",
+            })}
+          </span>
         </span>
         <StatusBadge error={sub.sync_error} lastSynced={sub.last_synced_at} />
         <div className="min-w-24">

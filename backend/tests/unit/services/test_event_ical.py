@@ -11,7 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import NotFoundError
+import httpx
+
+from app.core.exceptions import AppError, NotFoundError
 from app.models.event import CalendarSubscription, Event
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import CalendarSubscriptionResponse
@@ -67,11 +69,22 @@ def _event() -> MagicMock:
     e.recurrence_rule = "FREQ=WEEKLY;COUNT=3"
     e.ical_uid = "uid@nexara"
     e.created_at = datetime(2026, 4, 1, tzinfo=UTC)
+    e.id = uuid.uuid4()
     return e
 
 
 def test_to_ical_has_vevent_fields(service: EventService) -> None:
-    body = service.to_ical([_event()]).decode()
+    ev = _event()
+    people = {
+        ev.id: {
+            "organizer": ("Olga", "olga@example.com"),
+            "attendees": [
+                ("Ann", "ann@example.com", "attending"),
+                ("Bob", "bob@example.com", "maybe"),
+            ],
+        }
+    }
+    body = service.to_ical([ev], people).decode()
     for token in (
         "BEGIN:VEVENT",
         "DTSTART",
@@ -81,6 +94,9 @@ def test_to_ical_has_vevent_fields(service: EventService) -> None:
         "DESCRIPTION:Bring food",
         "LOCATION:Park",
         "UID:uid@nexara",
+        "ORGANIZER;CN=Olga:mailto:olga@example.com",
+        "ATTENDEE;CN=Ann;PARTSTAT=ACCEPTED:mailto:ann@example.com",
+        "ATTENDEE;CN=Bob;PARTSTAT=TENTATIVE:mailto:bob@example.com",
     ):
         assert token in body
 
@@ -133,3 +149,32 @@ def test_response_next_sync_at() -> None:
     sub.created_at = last
     r = CalendarSubscriptionResponse.model_validate(sub)
     assert r.next_sync_at == last + timedelta(minutes=60)
+
+
+async def test_feed_rejects_start_after_end(service: EventService) -> None:
+    start = datetime(2026, 6, 2, tzinfo=UTC)
+    with pytest.raises(AppError) as ei:
+        await service.export_feed_ical(uuid.uuid4(), start=start, end=start - timedelta(days=1))
+    assert ei.value.status_code == 422
+
+
+async def test_feed_rejects_span_over_two_years(service: EventService) -> None:
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    with pytest.raises(AppError) as ei:
+        await service.export_feed_ical(uuid.uuid4(), start=start, end=start + timedelta(days=732))
+    assert ei.value.status_code == 422
+
+
+async def test_sync_now_fetch_failure_sets_error_and_commits(
+    service: EventService, repo: AsyncMock
+) -> None:
+    sub = _sub()
+    repo.get_subscription.return_value = sub
+    with patch(
+        "app.services.event_service.safe_fetch", side_effect=httpx.ConnectError("boom")
+    ):
+        with pytest.raises(AppError) as ei:
+            await service.sync_now(sub.id, sub.user_id)
+    assert ei.value.code == "sync_failed"
+    assert sub.sync_error.startswith("fetch_error")
+    service._session.commit.assert_awaited()

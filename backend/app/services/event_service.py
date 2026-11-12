@@ -54,6 +54,9 @@ DEFAULT_RSVP_LABELS: dict[str, str] = {
 # Maximum number of recurrence occurrences expanded per query window.
 MAX_OCCURRENCES = 200
 
+FEED_MAX_SPAN_DAYS = 731  # ~2 years
+_PARTSTAT = {"attending": "ACCEPTED", "maybe": "TENTATIVE"}
+
 
 class EventService:
     """@brief Service layer for events, RSVPs, and calendar subscriptions."""
@@ -541,7 +544,12 @@ class EventService:
 
     # ── iCal export ───────────────────────────────────────────────────
 
-    def to_ical(self, events: list[Event]) -> bytes:
+    def to_ical(
+        self,
+        events: list[Event],
+        people: dict[uuid.UUID, dict[str, Any]] | None = None,
+    ) -> bytes:
+        """@brief Serialize events; people maps event id -> organizer/attendees."""
         cal = ICalCalendar()  # type: ignore[no-untyped-call]
         cal.add("prodid", "-//Nexara//EN")
         cal.add("version", "2.0")
@@ -556,6 +564,17 @@ class EventService:
             ical_event.add("dtstart", event.starts_at)
             ical_event.add("dtend", event.ends_at)
             ical_event.add("dtstamp", event.created_at or datetime.now(UTC))
+            info = (people or {}).get(event.id)
+            if info:
+                if info.get("organizer"):
+                    name, email = info["organizer"]
+                    ical_event.add("organizer", f"mailto:{email}", parameters={"CN": name})
+                for name, email, status in info.get("attendees", []):
+                    ical_event.add(
+                        "attendee",
+                        f"mailto:{email}",
+                        parameters={"CN": name, "PARTSTAT": _PARTSTAT.get(status, "NEEDS-ACTION")},
+                    )
             if event.recurrence_rule:
                 # icalendar accepts a raw RRULE string via vRecur
                 from icalendar.prop import vRecur
@@ -570,7 +589,7 @@ class EventService:
             raise NotFoundError(_("Event not found"))
         if not await self._can_view(event, user_id):
             raise AuthorizationError(_("You cannot view this event"))
-        return self.to_ical([event])
+        return self.to_ical([event], await self._repo.get_ical_people([event]))
 
     async def export_feed_ical(
         self,
@@ -583,6 +602,14 @@ class EventService:
         now = datetime.now(UTC)
         start = start or now - timedelta(days=30)
         end = end or now + timedelta(days=365)
+        if start > end:
+            raise AppError(
+                code="invalid_range", message=_("start must not be after end"), status_code=422
+            )
+        if end - start > timedelta(days=FEED_MAX_SPAN_DAYS):
+            raise AppError(
+                code="range_too_large", message=_("Range must not exceed 2 years"), status_code=422
+            )
         subgroup_ids = await self._user_subgroup_ids(user_id)
         events = await self._repo.list_in_range(
             self._community_id,
@@ -591,7 +618,7 @@ class EventService:
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
         )
-        return self.to_ical(events)
+        return self.to_ical(events, await self._repo.get_ical_people(events))
 
     # ── RRULE exception occurrences ───────────────────────────────────
 
@@ -747,7 +774,7 @@ class EventService:
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
         )
-        return self.to_ical(events)
+        return self.to_ical(events, await self._repo.get_ical_people(events))
 
     # ── Subscriptions ─────────────────────────────────────────────────
 
@@ -803,7 +830,9 @@ class EventService:
             body = await safe_fetch(sub.source_url)
         except (UnsafeUrlError, httpx.HTTPError) as exc:
             sub.sync_error = f"fetch_error: {exc}"
-            await self._session.flush()
+            # Commit first: the raised error would roll back the request session
+            # and lose sync_error otherwise.
+            await self._session.commit()
             raise AppError(message="Could not fetch calendar", code="sync_failed") from exc
         return await self.sync_subscription(sub, body)
 

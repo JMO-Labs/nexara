@@ -559,6 +559,9 @@
   },
   "events": {
     "title": "Events",
+    "exportIcal": "Export as iCal",
+    "lastSync": "Last sync: {when}",
+    "nextSync": "Next sync: {when}",
     "create": "Create event",
     "empty": "No upcoming events.",
     "starts": "Starts",
