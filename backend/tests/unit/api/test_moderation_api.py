@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -133,3 +134,82 @@ async def test_block_unknown_user_404(test_app, as_role, repo):
     resp = await _call(test_app, "POST", f"/users/{uuid.uuid4()}/block")
     assert resp.status_code == 404
     repo.create_block.assert_not_awaited()
+
+
+def _report_row(status: str = "pending", action: str | None = None) -> SimpleNamespace:
+    now = datetime.now(UTC)
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        reporter_id=uuid.uuid4(),
+        target_type="post",
+        target_id=uuid.uuid4(),
+        reason="spam",
+        description=None,
+        status=status,
+        reviewed_by=None,
+        reviewed_at=now if action else None,
+        action_taken=action,
+        admin_notes=None,
+        created_at=now,
+    )
+
+
+async def test_create_report_201(test_app, as_role, repo):
+    as_role("member")
+    row = _report_row()
+    repo.content_exists = AsyncMock(return_value=True)
+    repo.create_report = AsyncMock(return_value=row)
+    resp = await _call(test_app, "POST", "/moderation/reports", _report_body())
+    assert resp.status_code == 201
+    assert resp.json()["id"] == str(row.id)
+    assert resp.json()["status"] == "pending"
+
+
+async def test_admin_lists_reports(test_app, as_role, repo):
+    as_role("admin")
+    row = _report_row()
+    repo.list_reports = AsyncMock(return_value=([row], "next"))
+    resp = await _call(test_app, "GET", "/admin/moderation/reports?status=pending&limit=5")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["items"][0]["id"] == str(row.id)
+    assert body["next_cursor"] == "next"
+    assert body["has_more"] is True
+    assert repo.list_reports.call_args.kwargs["status_filter"] == "pending"
+
+
+async def test_admin_dismisses_report(test_app, as_role, repo):
+    admin = as_role("admin")
+    row = _report_row()
+    done = _report_row(status="dismissed", action="dismiss")
+    done.reviewed_by = admin.id
+    repo.get_report = AsyncMock(return_value=row)
+    repo.mark_reviewed = AsyncMock(return_value=done)
+    url = f"/admin/moderation/reports/{row.id}/action"
+    resp = await _call(test_app, "POST", url, {"action": "dismiss"})
+    assert resp.status_code == 200
+    assert resp.json()["action_taken"] == "dismiss"
+    assert resp.json()["reviewed_by"] == str(admin.id)
+
+
+async def test_block_user_201(test_app, as_role, repo):
+    user = as_role("member")
+    target = uuid.uuid4()
+    block = SimpleNamespace(
+        id=uuid.uuid4(), blocker_id=user.id, blocked_id=target, created_at=datetime.now(UTC)
+    )
+    repo.user_exists = AsyncMock(return_value=True)
+    repo.is_blocked = AsyncMock(return_value=False)
+    repo.create_block = AsyncMock(return_value=block)
+    resp = await _call(test_app, "POST", f"/users/{target}/block")
+    assert resp.status_code == 201
+    assert resp.json()["blocked_id"] == str(target)
+
+
+async def test_unblock_user_204(test_app, as_role, repo):
+    user = as_role("member")
+    target = uuid.uuid4()
+    repo.is_blocked = AsyncMock(return_value=True)
+    resp = await _call(test_app, "DELETE", f"/users/{target}/block")
+    assert resp.status_code == 204
+    repo.remove_block.assert_awaited_once_with(user.id, target)

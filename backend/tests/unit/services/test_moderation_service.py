@@ -177,3 +177,17 @@ class TestBlocks:
         repo.is_blocked.return_value = False
         with pytest.raises(NotFoundError):
             await service.unblock_user(USER_ID, AUTHOR_ID)
+
+
+class TestListing:
+    async def test_list_reports_scoped_to_community(self, service, repo):
+        repo.list_reports.return_value = ([], None)
+        assert await service.list_reports("pending", 10, "c") == ([], None)
+        repo.list_reports.assert_awaited_once_with(
+            status_filter="pending", community_id=COMMUNITY_ID, limit=10, cursor="c"
+        )
+
+    async def test_list_blocks_scoped_to_community(self, service, repo):
+        repo.list_blocks.return_value = []
+        assert await service.list_blocks(USER_ID) == []
+        repo.list_blocks.assert_awaited_once_with(USER_ID, COMMUNITY_ID)
