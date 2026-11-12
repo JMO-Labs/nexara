@@ -1,7 +1,7 @@
 """add plugin_api_keys table
 
-Revision ID: 0024_plugin_api_keys
-Revises: 0023_bookmarks
+Revision ID: 0025_plugin_api_keys
+Revises: 0024_add_user_pronouns
 """
 
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from alembic import op
 
-revision: str = "0024_plugin_api_keys"
-down_revision: str | Sequence[str] | None = "0023_bookmarks"
+revision: str = "0025_plugin_api_keys"
+down_revision: str | Sequence[str] | None = "0024_add_user_pronouns"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
