@@ -23,7 +23,7 @@ def mig():
 
 def test_revision_chain(mig) -> None:
     assert mig.revision == "0019_list_templates"
-    assert mig.down_revision == "a78f91338679"
+    assert mig.down_revision == "0020_media_ai_metadata"
 
 
 def test_ten_notification_columns(mig) -> None:

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
-PREV = "a78f91338679"
+PREV = "0020_media_ai_metadata"
 TABLES = [
     "list_template",
     "list_template_field",
