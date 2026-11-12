@@ -54,7 +54,7 @@ export function GalleryGrid({ onSelect, params, onCreate }: GalleryGridProps) {
             variant="primary"
             onClick={() => (onCreate ? onCreate() : router.push("/app/media"))}
           >
-            Create gallery
+            {onCreate ? "Create gallery" : "Browse media"}
           </Button>
         }
       />

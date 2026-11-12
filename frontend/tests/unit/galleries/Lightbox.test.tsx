@@ -96,6 +96,7 @@ describe("Lightbox close isolation", () => {
   it("Esc does not propagate to outer listeners", () => {
     const outer = vi.fn();
     document.addEventListener("keydown", outer);
+    document.addEventListener("keydown", outer, true);
     const onClose = vi.fn();
     render(
       <Lightbox
@@ -105,9 +106,11 @@ describe("Lightbox close isolation", () => {
         onIndexChange={vi.fn()}
       />,
     );
-    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(outer).not.toHaveBeenCalled();
     document.removeEventListener("keydown", outer);
+    document.removeEventListener("keydown", outer, true);
   });
 
   it("close button click does not bubble to parents", () => {

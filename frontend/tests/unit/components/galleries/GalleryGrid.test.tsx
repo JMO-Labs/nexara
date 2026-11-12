@@ -33,8 +33,9 @@ describe("GalleryGrid", () => {
 
   it("shows skeleton busy region while loading", () => {
     state.isLoading = true;
-    render(<GalleryGrid onSelect={vi.fn()} />);
+    const { container } = render(<GalleryGrid onSelect={vi.fn()} />);
     expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   });
 
   it("retry refetches the query", async () => {
@@ -52,6 +53,14 @@ describe("GalleryGrid", () => {
       screen.getByRole("button", { name: /create gallery/i }),
     );
     expect(onCreate).toHaveBeenCalled();
+  });
+
+  it("empty state says Browse media without onCreate", () => {
+    state.data = { items: [] };
+    render(<GalleryGrid onSelect={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: /browse media/i }),
+    ).toBeInTheDocument();
   });
 
   it("grid is 2-col mobile, 3 md, 4 lg", () => {

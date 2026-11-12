@@ -54,7 +54,7 @@ describe("GalleryGrid", () => {
     } as Awaited<ReturnType<typeof api.listGalleries>>);
     renderWithProviders(<GalleryGrid onSelect={() => {}} />);
     expect(await screen.findByText("No galleries yet")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Create gallery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Browse media" }));
     expect(push).toHaveBeenCalledWith("/app/media");
   });
 
