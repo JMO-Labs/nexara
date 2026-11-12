@@ -15,6 +15,77 @@ When the backend is running, FastAPI serves generated OpenAPI documentation:
 These always match the running code and are the best source for request and
 response schemas.
 
+## Static reference
+
+A searchable single-page reference, generated from the OpenAPI schema with
+redoc-cli, is published with this site: [Open the API reference](api-reference.html).
+It lists every endpoint grouped by resource, with method and path, summary,
+request and response schemas, authentication requirements, and error codes.
+
+To regenerate it locally, run `scripts/generate-api-ref.sh`. By default it
+dumps the schema from the FastAPI app; set `OPENAPI_URL` (for example
+`http://localhost:8000/openapi.json`) to read it from a running server.
+
+The repository only contains a small placeholder `api-reference.html`. The
+GitLab Pages job runs `scripts/generate-api-ref.sh` before `mkdocs build`, so
+the published site gets a freshly generated reference on every deploy. If
+generation fails in CI, the job logs a warning and publishes the placeholder.
+Do not commit a locally generated file over the placeholder.
+
+## Base URL and authentication
+
+The API is REST over JSON. The base URL for a deployment is
+`https://api.nexara.example/v1` (substitute your own host). Authenticate with a
+JWT access token sent as `Authorization: Bearer <token>`. Obtain tokens from the
+auth endpoints and refresh them before they expire. Requests without a valid
+token receive a `401` in the standard error envelope.
+
+## Examples
+
+List posts:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://api.nexara.example/v1/posts
+```
+
+`GET /posts` returns the posts visible to the caller, newest first.
+
+Create a post:
+
+```bash
+curl -X POST https://api.nexara.example/v1/posts \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"body": "Hello everyone", "visibility": "community"}'
+```
+
+`POST /posts` returns the created post. Use `visibility` values `community`,
+`subgroup` (with `subgroup_id`), or `private`.
+
+Update a post:
+
+```bash
+curl -X PATCH https://api.nexara.example/v1/posts/123 \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"body": "Edited text"}'
+```
+
+`PATCH /posts/{id}` changes only the fields you send. Only the author, or a
+moderator, may edit a post.
+
+Delete a post:
+
+```bash
+curl -X DELETE -H "Authorization: Bearer $TOKEN" https://api.nexara.example/v1/posts/123
+```
+
+`DELETE /posts/{id}` soft-deletes the post.
+
+## Errors
+
+Failures use the envelope `{ "error": { "code", "message", "details" } }`.
+Typical codes are `not_found` (404), `forbidden` (403), and validation errors
+(422).
+
 ## Source documentation
 
 The Doxygen-generated reference for the source code is published with this site

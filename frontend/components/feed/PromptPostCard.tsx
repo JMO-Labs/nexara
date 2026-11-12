@@ -1,12 +1,14 @@
 "use client";
 /**
  * @file components/feed/PromptPostCard.tsx
- * @brief Card for prompt posts: live response count, interest hint, reply.
+ * @brief Card for prompt posts: live response count, interest hint, respond.
  */
 import * as React from "react";
+import Link from "next/link";
 import { Flag, Sparkles } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { usePromptResponses } from "@/hooks/usePromptResponses";
+import { PromptResponseModal } from "@/components/prompts/PromptResponseModal";
 import type { PromptPost } from "@/lib/api/prompts";
 
 export interface PromptPostCardProps {
@@ -24,6 +26,7 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
   post,
   onReply,
 }) => {
+  const [open, setOpen] = React.useState(false);
   const { data: responseData } = usePromptResponses(post.id);
   const displayCount = responseData?.response_count ?? post.response_count;
   const isInterestCapture = post.prompt.prompt_type === "interest_capture";
@@ -58,14 +61,31 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
 
       <div className="flex items-center justify-between gap-2">
         <div role="status" aria-live="polite" aria-atomic="true">
-          <Badge>
-            {`${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
-          </Badge>
+          <Link
+            href={`/app/prompts/${post.id}`}
+            aria-label={`View ${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
+          >
+            <Badge>
+              {`${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
+            </Badge>
+          </Link>
         </div>
-        <Button size="sm" onClick={() => onReply?.(post.prompt.id)}>
-          Reply
+        <Button
+          size="sm"
+          onClick={() => {
+            onReply?.(post.prompt.id);
+            setOpen(true);
+          }}
+        >
+          Respond
         </Button>
       </div>
+      <PromptResponseModal
+        open={open}
+        onClose={() => setOpen(false)}
+        promptPostId={post.id}
+        title={post.prompt.title}
+      />
     </Card>
   );
 };

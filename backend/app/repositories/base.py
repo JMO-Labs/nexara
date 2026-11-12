@@ -47,6 +47,11 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @property
+    def session(self) -> AsyncSession:
+        """@brief Public access to the underlying session (e.g. for plugin hooks)."""
+        return self._session
+
     def _base_query(self) -> Select[Any]:
         """
         @brief Return the base ``SELECT`` statement for this model.
