@@ -11,6 +11,8 @@ from app.models.branding import CommunityBranding
 from app.repositories.branding_repo import BrandingRepository
 from app.tasks import notification_tasks as nt
 
+BASE = "https://nexara.example"
+
 
 def _patches(branding):
     session = AsyncMock()
@@ -34,6 +36,7 @@ async def _run(branding):
         patch.object(nt, "BrandingRepository", return_value=repo),
         patch.object(nt, "EmailTemplateRenderer", return_value=renderer),
         patch.object(nt, "EmailSender", return_value=sender),
+        patch.object(nt, "get_settings", return_value=MagicMock(APP_BASE_URL=f"{BASE}/")),
     ):
         await nt._send_email_notification_async(uuid.uuid4(), "comment", {})
     return renderer.render.call_args.kwargs
@@ -51,7 +54,7 @@ async def test_branding_passed_to_renderer():
     assert kw["community_name"] == "Acme"
     assert kw["color_primary"] == "#112233"
     assert kw["footer_text"] == "Bye"
-    assert str(logo) in kw["logo_url"]
+    assert kw["logo_url"] == f"{BASE}/api/v1/media/{logo}/file"
 
 
 async def test_logo_falls_back_to_logo_light():
@@ -63,7 +66,7 @@ async def test_logo_falls_back_to_logo_light():
     b.logo_light_media_id = light
     b.email_footer_text = None
     kw = await _run(b)
-    assert str(light) in kw["logo_url"]
+    assert kw["logo_url"] == f"{BASE}/api/v1/media/{light}/file"
     assert kw["footer_text"] is None
 
 

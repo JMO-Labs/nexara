@@ -55,10 +55,11 @@ async def _send_email_notification_async(
     branding_kwargs: dict[str, Any] = {}
     if branding is not None:
         logo_id = branding.email_logo_media_id or branding.logo_light_media_id
+        base_url = get_settings().APP_BASE_URL.rstrip("/")
         branding_kwargs = {
             "community_name": branding.community_name,
             "color_primary": branding.color_primary,
-            "logo_url": f"/api/v1/media/{logo_id}/file" if logo_id else None,
+            "logo_url": f"{base_url}/api/v1/media/{logo_id}/file" if logo_id else None,
             "footer_text": branding.email_footer_text,
         }
 
