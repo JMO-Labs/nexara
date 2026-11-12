@@ -14,6 +14,8 @@ import {
   deleteEvent,
   rsvpEvent,
   unrsvpEvent,
+  claimContribution,
+  unclaimContribution,
   type CreateEventBody,
   type EventItem,
   type ListEventsParams,
@@ -125,5 +127,25 @@ export function useRsvp(eventId: string) {
       qc.invalidateQueries({ queryKey: qk.events.detail(eventId) });
       qc.invalidateQueries({ queryKey: qk.events.all() });
     },
+  });
+}
+
+/** @brief Claim a contribution slot; refreshes event queries. */
+export function useClaimContribution(eventId: string) {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: (slotId: string) => claimContribution(eventId, slotId),
+    silentSuccess: true,
+    onSuccess: () => invalidate(qc, eventId),
+  });
+}
+
+/** @brief Release the user's claim on a slot; refreshes event queries. */
+export function useUnclaimContribution(eventId: string) {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: (slotId: string) => unclaimContribution(eventId, slotId),
+    silentSuccess: true,
+    onSuccess: () => invalidate(qc, eventId),
   });
 }
