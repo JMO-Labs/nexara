@@ -5,6 +5,7 @@ Revises: 0020_media_ai_metadata
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0021_add_subgroup_accent_color"
