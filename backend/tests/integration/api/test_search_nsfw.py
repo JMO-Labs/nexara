@@ -80,8 +80,6 @@ class TestRepoSql:
         session.execute.return_value = result
         repo = SearchRepository(session)
         await repo.search_posts("hello", "", CID, uuid.uuid4(), None, 10, include_nsfw=include)
-        sql = str(
-            session.execute.call_args_list[0].args[0].compile(dialect=postgresql.dialect())
-        )
+        sql = str(session.execute.call_args_list[0].args[0].compile(dialect=postgresql.dialect()))
         where = sql.split("WHERE", 1)[1]
         assert ("posts.is_nsfw" in where) is expected

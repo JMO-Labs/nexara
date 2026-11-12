@@ -31,9 +31,7 @@ class ModerationService:
         self._audit = audit_repo
         self._community_id = community_id
 
-    async def mark_nsfw(
-        self, kind: str, target_id: uuid.UUID, admin: User, ip: str | None
-    ) -> None:
+    async def mark_nsfw(self, kind: str, target_id: uuid.UUID, admin: User, ip: str | None) -> None:
         """
         @brief Set is_nsfw=true, audit-log and invalidate the search cache.
 
