@@ -14,7 +14,9 @@ export type SearchType =
   | "users"
   | "events"
   | "subgroups"
-  | "comments";
+  | "comments"
+  | "galleries"
+  | "polls";
 
 export interface SearchResultItem {
   id: string;
