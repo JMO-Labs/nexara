@@ -1,7 +1,7 @@
-"""add_apprise_urls: encrypted per-user Apprise targets (also merges heads)
+"""add_apprise_urls: encrypted per-user Apprise targets
 
 Revision ID: b7c1d2e3f4a5
-Revises: 0020_add_recipient_to_posts, 0022_plugin_models
+Revises: 0023_bookmarks
 Create Date: 2026-11-12 00:00:00.000000
 
 """
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b7c1d2e3f4a5"
-down_revision: str | Sequence[str] | None = ("0020_add_recipient_to_posts", "0022_plugin_models")
+down_revision: str | Sequence[str] | None = "0023_bookmarks"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
