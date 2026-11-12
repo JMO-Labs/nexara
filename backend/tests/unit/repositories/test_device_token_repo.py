@@ -35,8 +35,10 @@ async def test_find_by_token_returns_row_ignoring_state():
 
     sql = str(session.execute.await_args.args[0])
     assert "device_tokens.token" in sql
-    assert "deleted_at" not in sql
-    assert "community_id" not in sql
+    where = sql.split("WHERE", 1)[1]
+    assert "device_tokens.token" in where
+    assert "deleted_at" not in where
+    assert "community_id" not in where
 
 
 async def test_reassign_updates_fields_revives_and_refreshes():
