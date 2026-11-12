@@ -96,11 +96,7 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
     engine = scratch_db
     command.upgrade(cfg, PREV)
     with engine.begin() as c:  # a second community, so seeding is per community
-        c.execute(
-            text(
-                "INSERT INTO communities (id, name, slug) VALUES (gen_random_uuid(), 'B', 'b-mig')"
-            )
-        )
+        c.execute(text("INSERT INTO communities (id, name) VALUES (gen_random_uuid(), 'B')"))
     command.upgrade(cfg, "head")
 
     assert _current(engine) == {REV}
