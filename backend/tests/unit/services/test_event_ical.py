@@ -161,6 +161,39 @@ async def test_sync_updates_existing_uid(service: EventService, repo: AsyncMock)
     repo.create.assert_not_awaited()
 
 
+async def test_sync_lookup_scoped_to_subscription(service: EventService, repo: AsyncMock) -> None:
+    sub = _sub()
+    await service.sync_subscription(sub, ICS)
+    call = repo.get_by_ical_uid.await_args
+    assert call.kwargs["subscription_id"] == sub.id
+    assert call.kwargs["community_id"] == COMMUNITY_ID
+    assert f"{sub.id}:ext-1@example.com" in call.args
+
+
+async def test_sync_foreign_uid_creates_namespaced_event(
+    service: EventService, repo: AsyncMock
+) -> None:
+    """A UID owned by another user/native event is never updated; a namespaced copy is made."""
+    sub = _sub()
+    assert await service.sync_subscription(sub, ICS) == 1
+    repo.update.assert_not_awaited()
+    created = repo.create.await_args.args[0]
+    assert created.ical_uid == f"{sub.id}:ext-1@example.com"
+    assert created.source_subscription_id == sub.id
+
+
+async def test_repo_ical_uid_lookup_filters_subscription_and_community() -> None:
+    session = AsyncMock()
+    session.execute.return_value = MagicMock()
+    sub_id = uuid.uuid4()
+    await EventRepository(session).get_by_ical_uid(
+        "a", "b", subscription_id=sub_id, community_id=COMMUNITY_ID
+    )
+    sql = str(session.execute.await_args.args[0]).lower()
+    assert "source_subscription_id" in sql
+    assert "community_id" in sql
+
+
 async def test_sync_now_fetches_and_upserts(service: EventService, repo: AsyncMock) -> None:
     uid = uuid.uuid4()
     sub = _sub(user_id=uid)

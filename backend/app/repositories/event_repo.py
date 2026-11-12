@@ -76,11 +76,32 @@ class EventRepository(BaseRepository[Event]):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_by_ical_uid(self, ical_uid: str) -> Event | None:
-        """@brief Look up an event by its iCal UID (used for sync upserts)."""
-        stmt = select(Event).where(Event.ical_uid == ical_uid)
+    async def get_by_ical_uid(
+        self, *ical_uids: str, subscription_id: uuid.UUID, community_id: uuid.UUID
+    ) -> Event | None:
+        """
+        @brief Find an event imported by one subscription via any of its UIDs.
+
+        Scoped to the subscription and community so a feed can never match
+        (and overwrite) native events or events imported by other users.
+        Soft-deleted rows are included on purpose: ``ical_uid`` is unique.
+
+        @param ical_uids Candidate UIDs (namespaced first, legacy raw second).
+        @param subscription_id Owning subscription.
+        @param community_id Tenant scope.
+        @return First matching event, or None.
+        """
+        stmt = (
+            select(Event)
+            .where(
+                Event.ical_uid.in_(ical_uids),
+                Event.source_subscription_id == subscription_id,
+                Event.community_id == community_id,
+            )
+            .limit(1)
+        )
         result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def get_attendance(
         self, event_id: uuid.UUID, user_id: uuid.UUID

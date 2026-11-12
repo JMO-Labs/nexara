@@ -208,7 +208,12 @@ class EventIcalMixin:
             uid = str(component.get("uid"))  # type: ignore[no-untyped-call]
             if not uid:
                 continue
-            existing = await self._repo.get_by_ical_uid(uid)
+            # Namespace imported UIDs per subscription: a feed must never match
+            # a native event or another user's import (ical_uid is unique).
+            local_uid = f"{sub.id}:{uid}"
+            existing = await self._repo.get_by_ical_uid(
+                local_uid, uid, subscription_id=sub.id, community_id=self._community_id
+            )
             # Skip upsert if event has been locally modified by user
             if existing is not None and existing.locally_modified:
                 continue
@@ -227,7 +232,7 @@ class EventIcalMixin:
                 event = Event(
                     community_id=self._community_id,
                     author_id=sub.user_id,
-                    ical_uid=uid,
+                    ical_uid=local_uid,
                     visibility=sub.visibility,
                     **data,
                 )
