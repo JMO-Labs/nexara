@@ -56,8 +56,15 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
     };
   }, []);
 
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useMessages(threadId);
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useMessages(threadId);
 
   const messages = React.useMemo<ChatMessage[]>(() => {
     if (!data) return [];
@@ -146,6 +153,8 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
               ref={listRef}
               messages={messages}
               isLoading={isLoading}
+              isError={isError}
+              onRetry={() => void refetch()}
               hasMore={Boolean(hasNextPage)}
               isFetchingMore={isFetchingNextPage}
               onLoadMore={fetchNextPage}

@@ -254,6 +254,8 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           list={{
             messages,
             isLoading: messagesQ.isLoading,
+            isError: messagesQ.isError,
+            onRetry: () => void messagesQ.refetch(),
             hasMore: messagesQ.hasNextPage ?? false,
             isFetchingMore: messagesQ.isFetchingNextPage,
             onLoadMore: () => messagesQ.fetchNextPage(),
