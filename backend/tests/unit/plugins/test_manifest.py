@@ -5,6 +5,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from app.plugins import manifest as manifest_mod
 from app.plugins.manifest import (
     PluginManifest,
     PluginPermission,
@@ -98,3 +99,15 @@ class TestLoad:
     def test_missing_file(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             load_manifest(tmp_path)
+
+
+class TestSemverInvalidVersionGuard:
+    def test_packaging_rejection_becomes_validation_error(self, monkeypatch):
+        """packaging.Version rejecting a well-formed triple is wrapped as ValueError."""
+
+        def boom(_value):
+            raise manifest_mod.InvalidVersion("rejected by packaging")
+
+        monkeypatch.setattr(manifest_mod, "Version", boom)
+        with pytest.raises(ValidationError, match="rejected by packaging"):
+            PluginManifest.model_validate(VALID)
