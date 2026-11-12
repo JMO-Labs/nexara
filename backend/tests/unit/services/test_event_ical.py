@@ -72,8 +72,16 @@ def _event() -> MagicMock:
 
 def test_to_ical_has_vevent_fields(service: EventService) -> None:
     body = service.to_ical([_event()]).decode()
-    for token in ("BEGIN:VEVENT", "DTSTART", "DTEND", "RRULE:FREQ=WEEKLY", "SUMMARY:Picnic",
-                  "DESCRIPTION:Bring food", "LOCATION:Park", "UID:uid@nexara"):
+    for token in (
+        "BEGIN:VEVENT",
+        "DTSTART",
+        "DTEND",
+        "RRULE:FREQ=WEEKLY",
+        "SUMMARY:Picnic",
+        "DESCRIPTION:Bring food",
+        "LOCATION:Park",
+        "UID:uid@nexara",
+    ):
         assert token in body
 
 

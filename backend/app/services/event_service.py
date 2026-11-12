@@ -10,9 +10,9 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+import httpx
 import structlog
 from dateutil.rrule import rrulestr
-import httpx
 from icalendar import Calendar as ICalCalendar
 from icalendar import Event as ICalEvent
 from sqlalchemy import select
@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
-from app.core.i18n import _
 from app.core.http_safe import UnsafeUrlError, safe_fetch
+from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
