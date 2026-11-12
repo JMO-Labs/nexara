@@ -1,10 +1,11 @@
 "use client";
 /**
  * @file components/ui/Tooltip.tsx
- * @brief Radix tooltip wrapper. Mount TooltipProvider once in Shell.
+ * @brief Radix tooltip wrapper; self-provides TooltipProvider so it works standalone.
  */
 import type { ReactElement, ReactNode } from "react";
 import {
+  TooltipProvider,
   Tooltip as RTooltip,
   TooltipContent,
   TooltipTrigger,
@@ -25,10 +26,12 @@ export interface TooltipProps {
  */
 export function Tooltip({ content, children, side = "top" }: TooltipProps) {
   return (
-    <RTooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side}>{content}</TooltipContent>
-    </RTooltip>
+    <TooltipProvider>
+      <RTooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent side={side}>{content}</TooltipContent>
+      </RTooltip>
+    </TooltipProvider>
   );
 }
 
