@@ -11,13 +11,13 @@ const BASE = "/api/v1/branding/";
 export interface Branding {
   community_name: string;
   tagline: string | null;
-  color_primary: string;
-  color_primary_dark: string;
   color_accent: string;
-  color_surface_light: string;
-  color_surface_dark: string;
-  color_text_light: string;
-  color_text_dark: string;
+  color_primary?: string;
+  color_primary_dark?: string;
+  color_surface_light?: string;
+  color_surface_dark?: string;
+  color_text_light?: string;
+  color_text_dark?: string;
   font_family?: string;
   font_family_mono?: string;
   logo_light_url: string | null;
@@ -28,6 +28,14 @@ export interface BrandingUpdate {
   community_name?: string;
   tagline?: string;
   color_accent?: string;
+  color_primary?: string;
+  color_primary_dark?: string;
+  color_surface_light?: string;
+  color_surface_dark?: string;
+  color_text_light?: string;
+  color_text_dark?: string;
+  font_family?: string;
+  font_family_mono?: string;
 }
 
 /** @brief Fetch current branding (public). */
