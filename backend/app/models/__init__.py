@@ -15,6 +15,7 @@ from app.models.calendar import Calendar  # noqa: F401
 from app.models.calendar_token import CalendarToken  # noqa: F401
 from app.models.chat import ChatMessage  # noqa: F401
 from app.models.community import Community  # noqa: F401
+from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem  # noqa: F401
 from app.models.interest import InterestCategory, UserInterest  # noqa: F401
@@ -24,10 +25,23 @@ from app.models.link_preview import (  # noqa: F401
     LinkPreview,
     PostLinkPreview,
 )
+from app.models.list import (  # noqa: F401
+    List,
+    ListItem,
+    ListItemCompletion,
+    ListItemSignup,
+    ListMember,
+)
+from app.models.list_template import (  # noqa: F401
+    ListTemplate,
+    ListTemplateField,
+    ListTemplateItem,
+)
 from app.models.media import Media  # noqa: F401
 from app.models.media_ai import MediaAIMetadata  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401
+from app.models.nudge import Nudge  # noqa: F401
 from app.models.oauth_provider import OAuthProvider  # noqa: F401
 from app.models.plugin import Plugin, PluginData  # noqa: F401
 from app.models.poll import Poll, PollOption, PollVote  # noqa: F401

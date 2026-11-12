@@ -156,7 +156,7 @@ export function NotificationsBell() {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           aria-hidden
-          className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-white"
+          className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-destructive-foreground"
         >
           {unread > 99 ? "99+" : unread}
         </motion.span>
