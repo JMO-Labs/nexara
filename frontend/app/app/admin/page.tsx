@@ -17,6 +17,9 @@ export default function AdminPage() {
         <p className="text-sm text-muted">
           Manage community, users, settings, and integrations.
         </p>
+        <Link href="/app/admin/storage" className="text-sm underline">
+          Storage analytics
+        </Link>
         <Link href="/app/admin/retention" className="text-sm underline">
           Data retention policies
         </Link>
