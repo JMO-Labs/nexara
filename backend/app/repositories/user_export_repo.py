@@ -19,7 +19,9 @@ class UserExportRepository(BaseRepository[UserExport]):
 
     model = UserExport
 
-    async def create(self, user_id: uuid.UUID, community_id: uuid.UUID) -> UserExport:
+    async def create(  # type: ignore[override]
+        self, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> UserExport:
         """@brief Insert a pending export. @return The persisted row."""
         row = UserExport(user_id=user_id, community_id=community_id, status="pending")
         self._session.add(row)
@@ -27,16 +29,13 @@ class UserExportRepository(BaseRepository[UserExport]):
         await self._session.refresh(row)
         return row
 
-    async def get_by_id(self, export_id: uuid.UUID) -> UserExport | None:
-        """@brief Fetch an export by id. @return Row or None."""
-        stmt = select(UserExport).where(UserExport.id == export_id)
-        return (await self._session.execute(stmt)).scalar_one_or_none()
-
-    async def get_latest_by_user(self, user_id: uuid.UUID) -> UserExport | None:
-        """@brief Most recent export for a user. @return Row or None."""
+    async def get_latest_by_user(
+        self, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> UserExport | None:
+        """@brief Most recent export for a user in a community. @return Row or None."""
         stmt = (
             select(UserExport)
-            .where(UserExport.user_id == user_id)
+            .where(UserExport.user_id == user_id, UserExport.community_id == community_id)
             .order_by(UserExport.created_at.desc())
             .limit(1)
         )

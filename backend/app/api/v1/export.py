@@ -60,9 +60,13 @@ async def request_export(
     key = f"export_request:{user.id}:{datetime.now(UTC).date().isoformat()}"
     if not await redis.set(key, "1", nx=True, ex=RATE_LIMIT_TTL_SECONDS):
         raise RateLimitError(_("You can request one export per day"))
-    row = await repo.create(user.id, user.community_id)
-    await repo.commit()
-    enqueue(str(row.id))
+    try:
+        row = await repo.create(user.id, user.community_id)
+        await repo.commit()
+        enqueue(str(row.id))
+    except Exception:
+        await redis.delete(key)  # no export exists; don't lock the user out
+        raise
     return ExportRequested(export_id=row.id, status=row.status, created_at=row.created_at)
 
 
@@ -73,7 +77,7 @@ async def export_status(
     repo: UserExportRepository = Depends(_get_repo),
 ) -> ExportStatus:
     """@brief Owner-only export status; download_url only when ready and unexpired."""
-    row = await repo.get_by_id(export_id)
+    row = await repo.get_by_id(export_id, user.community_id)
     if row is None:
         raise NotFoundError(_("Export not found"))
     if row.user_id != user.id:
