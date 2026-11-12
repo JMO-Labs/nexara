@@ -52,9 +52,10 @@ describe("BookmarkButton", () => {
     wrap(<BookmarkButton postId="p1" isBookmarked={false} />);
     fireEvent.click(screen.getByRole("button", { name: /bookmark/i }));
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /bookmark/i }),
-      ).toHaveAttribute("aria-pressed", "false"),
+      expect(screen.getByRole("button", { name: /bookmark/i })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      ),
     );
     expect(useToasts.getState().items.some((t) => t.variant === "danger")).toBe(
       true,
