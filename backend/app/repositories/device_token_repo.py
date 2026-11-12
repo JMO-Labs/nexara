@@ -70,3 +70,19 @@ class DeviceTokenRepo(BaseRepository[DeviceToken]):
         await self._session.flush()
         await self._session.refresh(device)
         return device
+
+    async def list_active_for_user(
+        self, community_id: uuid.UUID, user_id: uuid.UUID
+    ) -> list[DeviceToken]:
+        """
+        @brief List a user's live device tokens in a community.
+
+        @param community_id Community scope.
+        @param user_id Owner UUID.
+        @return Active tokens.
+        """
+        stmt = self._base_query().where(
+            DeviceToken.community_id == community_id, DeviceToken.user_id == user_id
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
