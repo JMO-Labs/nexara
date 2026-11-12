@@ -60,7 +60,7 @@ describe("OnboardingTour", () => {
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Next/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
-    expect(screen.getByText(/Step 1 of \d+/)).toBeInTheDocument();
+    expect(screen.getByText(/^Step 1 of \d+$/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Step 1 of \d+/ }),
     ).toBeInTheDocument();
@@ -68,13 +68,12 @@ describe("OnboardingTour", () => {
 
   it("is operable by keyboard only", async () => {
     render(<OnboardingTour />);
-    await userEvent.tab();
-    await userEvent.tab(); // Back disabled -> Skip
+    await userEvent.tab(); // Back is disabled, so first stop is Skip
     expect(screen.getByRole("button", { name: "Skip" })).toHaveFocus();
     await userEvent.tab();
     expect(screen.getByRole("button", { name: /^Next/ })).toHaveFocus();
     await userEvent.keyboard("{Enter}");
-    expect(screen.getByText(/Step 2 of/)).toBeInTheDocument();
+    expect(screen.getByText(/^Step 2 of/)).toBeInTheDocument();
   });
 
   it("Skip marks onboarding done and unmounts", async () => {
