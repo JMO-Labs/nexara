@@ -39,3 +39,16 @@ class TestTemplatesRender:
         assert "</html>" in html
         assert "<body" in html
         assert "</body>" in html
+
+
+class TestFooterText:
+    """@brief Footer text override in base template."""
+
+    def test_footer_text_shown_when_set(self):
+        html, _ = EmailTemplateRenderer().render("base.html", {}, footer_text="Custom footer line")
+        assert "Custom footer line" in html
+        assert "You received this email because" not in html
+
+    def test_default_footer_when_unset(self):
+        html, _ = EmailTemplateRenderer().render("base.html", {}, community_name="Acme")
+        assert "You received this email because you have an account on Acme." in html

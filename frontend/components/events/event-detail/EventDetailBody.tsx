@@ -10,7 +10,10 @@ import { Markdown } from "@/components/ui";
 import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
+import { EventGalleryLink } from "./EventGalleryLink";
+import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
+import { ExportIcalButton } from "./ExportIcalButton";
 
 const EventMiniMap = dynamic(
   () => import("../EventMiniMap").then((m) => m.EventMiniMap),
@@ -65,32 +68,17 @@ export function EventDetailBody({ event }: { event: EventItem }) {
           <Markdown content={event.description} size="sm" />
         </div>
       )}
+      <div className="mb-4">
+        <ExportIcalButton eventId={event.id} title={event.title} />
+      </div>
       <RsvpInline
         eventId={event.id}
         labels={event.rsvp_labels}
         current={event.user_rsvp?.status ?? null}
         counts={event.rsvp_counts}
       />
-      {event.contribution_slots.length > 0 && (
-        <div className="mt-4">
-          <h3 className="mb-1.5 text-xs font-semibold tracking-wider text-muted">
-            Contributions
-          </h3>
-          <ul className="flex flex-col gap-1">
-            {event.contribution_slots.map((slot) => (
-              <li
-                key={slot.id ?? slot.title}
-                className="flex items-center justify-between rounded-lg border border-ink/15 px-2 py-1.5"
-              >
-                <span className="text-sm">{slot.title}</span>
-                <span className="text-xs tabular-nums text-muted">
-                  {slot.quantity_claimed} / {slot.quantity_needed}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <EventGalleryLink galleryId={event.gallery_id} />
+      <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
     </div>
   );
 }

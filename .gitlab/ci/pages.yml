@@ -4,6 +4,7 @@
 #
 # Assembles the public/ directory from multiple sources:
 #   - MkDocs Material site (project documentation)
+#   - Static Redoc API reference (scripts/generate-api-ref.sh)
 #   - Doxygen-generated Python API reference
 #   - Coverage HTML reports (backend + frontend)
 #   - Playwright reports (when available)
@@ -50,6 +51,14 @@ pages:
     - apk add --no-cache doxygen graphviz
     - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
   script:
+    # -- Generate static API reference (non-fatal; keeps committed placeholder) --
+    - |
+      echo "Generating static API reference..."
+      { apk add --no-cache bash coreutils curl nodejs npm \
+        && pip install --quiet ./backend \
+        && scripts/generate-api-ref.sh; } \
+        || echo "API reference generation failed; publishing placeholder."
+
     # -- Build MkDocs site --
     - |
       if [ -f docs/mkdocs.yml ]; then
