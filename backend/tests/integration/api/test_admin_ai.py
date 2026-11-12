@@ -13,8 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.api.v1.admin_ai import get_admin_ai_service
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_admin_ai_service, get_current_user
 from app.services.ai.admin_ai_service import AdminAIService
 from app.services.ai.budget_service import BudgetService
 
@@ -53,42 +52,68 @@ class FakeRedis:
     async def hgetall(self, k):
         return dict(self.h.get(k, {}))
 
-    async def hset(self, k, mapping):
-        self.h.setdefault(k, {}).update({a: str(b) for a, b in mapping.items()})
+
+class FakeCommunityRepo:
+    """@brief In-memory stand-in for CommunityRepository (one community row)."""
+
+    def __init__(self) -> None:
+        self.row = SimpleNamespace(
+            id=CID,
+            sassybot_enabled=True,
+            sassybot_sass_level=2,
+            sassybot_probability=15,
+            sassybot_invoke_only=False,
+        )
+
+    async def get(self, cid):
+        return self.row if cid == CID else None
+
+    async def update_sassybot(self, cid, values):
+        if cid != CID:
+            return None
+        for k, v in values.items():
+            setattr(self.row, k, v)
+        return self.row
 
 
 class FakeProvider:
-    """@brief Provider whose count_tokens succeeds or raises."""
+    """@brief Provider whose ping succeeds or raises."""
 
     def __init__(self, fail: bool = False) -> None:
         self.fail = fail
+        self.pinged = 0
 
-    async def count_tokens(self, text):
+    async def ping(self):
+        self.pinged += 1
         if self.fail:
             raise RuntimeError("boom")
-        return 1, 0.0, 1
 
 
 @pytest.fixture
 def env(test_app):
     now = SimpleNamespace(value=NOW)
     redis = FakeRedis(clock=lambda: now.value)
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one=lambda: 3))
+    community_repo = FakeCommunityRepo()
+    settings_repo = MagicMock()
+    settings_repo.count_sassybot_opt_outs = AsyncMock(return_value=3)
+    audit_repo = MagicMock()
+    audit_repo.append = AsyncMock()
+    actor = uuid.uuid4()
     box = SimpleNamespace(provider=FakeProvider())
     settings = SimpleNamespace(
         AI_PROVIDER="ollama", AI_DAILY_BUDGET_CENTS=200, AI_BUDGET_RESET_HOUR=0
     )
     budget = BudgetService(redis, 200, clock=lambda: now.value)
     svc = AdminAIService(
-        redis,
-        session,
+        community_repo,
+        settings_repo,
         CID,
         settings,
         budget,
         lambda: box.provider,
-        clock=lambda: NOW,
-        audit=AsyncMock(),
+        audit_repo=audit_repo,
+        actor_id=actor,
+        ip_address="10.0.0.1",
     )
     test_app.dependency_overrides[get_admin_ai_service] = lambda: svc
 
@@ -98,7 +123,14 @@ def env(test_app):
         return AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test")
 
     yield SimpleNamespace(
-        now=now, session=session, client=client, budget=budget, box=box, redis=redis
+        now=now,
+        client=client,
+        budget=budget,
+        box=box,
+        community=community_repo,
+        settings_repo=settings_repo,
+        audit=audit_repo,
+        actor=actor,
     )
     test_app.dependency_overrides.clear()
 
@@ -111,7 +143,7 @@ async def test_get_config_defaults(env):
         "provider": "ollama",
         "sassybot_enabled": True,
         "sass_level": 2,
-        "probability": 20,
+        "probability": 15,
         "invoke_only": False,
         "opt_out_count": 3,
     }
@@ -120,10 +152,7 @@ async def test_get_config_defaults(env):
 async def test_opt_out_count_scoped_to_community(env):
     async with env.client() as c:
         await c.get("/api/v1/admin/ai/config")
-    stmt = env.session.execute.call_args.args[0]
-    compiled = stmt.compile()
-    assert "community_id" in str(compiled)
-    assert CID in compiled.params.values()
+    env.settings_repo.count_sassybot_opt_outs.assert_awaited_with(CID)
 
 
 async def test_put_config_persists(env):
@@ -143,6 +172,22 @@ async def test_put_config_persists(env):
     assert got["sassybot_enabled"] is False
     assert got["probability"] == 55
     assert got["invoke_only"] is True
+    row = env.community.row
+    assert row.sassybot_enabled is False
+    assert row.sassybot_sass_level == 3
+    assert row.sassybot_probability == 55
+    assert row.sassybot_invoke_only is True
+    kw = env.audit.append.await_args.kwargs
+    assert kw["action"] == "ai.config.updated"
+    assert kw["actor_id"] == env.actor and kw["target_id"] == CID
+    assert kw["ip_address"] == "10.0.0.1"
+
+
+async def test_empty_put_does_not_audit(env):
+    async with env.client() as c:
+        r = await c.put("/api/v1/admin/ai/config", json={})
+    assert r.status_code == 200
+    env.audit.append.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -191,10 +236,11 @@ async def test_metrics_include_earlier_days(env):
 async def test_test_connection_success_and_failure(env):
     async with env.client() as c:
         ok = (await c.post("/api/v1/admin/ai/test-connection")).json()
+        pinged = env.box.provider.pinged
         env.box.provider = FakeProvider(fail=True)
         bad = (await c.post("/api/v1/admin/ai/test-connection")).json()
         env.box.provider = None
         none = (await c.post("/api/v1/admin/ai/test-connection")).json()
-    assert ok["success"] is True
+    assert ok["success"] is True and pinged == 1
     assert bad["success"] is False and "boom" not in bad["message"]
     assert none["success"] is False

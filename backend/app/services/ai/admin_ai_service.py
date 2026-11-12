@@ -2,36 +2,31 @@
 @file admin_ai_service.py
 @brief Admin AI configuration (Sassybot settings), usage metrics and connection test.
 
-Settings are stored as a Valkey hash ``ai_config:<community_id>``; the provider
-itself is chosen by the ``AI_PROVIDER`` env var and is read-only here.
+Sassybot settings live on the ``Community`` row (the same columns Sassybot reads);
+the provider itself is chosen by the ``AI_PROVIDER`` env var and is read-only here.
 """
 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from collections.abc import Callable
 from typing import Any
 
 import structlog
-from sqlalchemy import func, select
 
-from app.models.user_settings import UserSettings
+from app.core.exceptions import NotFoundError
 from app.services.ai.budget_service import BudgetService
 
 logger = structlog.get_logger(__name__)
 
 FEATURES = ("ocr", "suggestion", "sassybot")
-DEFAULTS: dict[str, Any] = {
-    "sassybot_enabled": True,
-    "sass_level": 2,
-    "probability": 20,
-    "invoke_only": False,
+#: API field -> ``Community`` column.
+FIELD_TO_COLUMN = {
+    "sassybot_enabled": "sassybot_enabled",
+    "sass_level": "sassybot_sass_level",
+    "probability": "sassybot_probability",
+    "invoke_only": "sassybot_invoke_only",
 }
-
-
-def _decode(v: Any) -> str:
-    return v.decode() if isinstance(v, bytes) else str(v)
 
 
 class AdminAIService:
@@ -39,74 +34,79 @@ class AdminAIService:
 
     def __init__(
         self,
-        redis: Any,
-        session: Any,
+        community_repo: Any,
+        settings_repo: Any,
         community_id: uuid.UUID,
         settings: Any,
         budget: BudgetService,
         provider_factory: Callable[[], Any],
         *,
-        clock: Callable[[], datetime] | None = None,
-        audit: Callable[..., Awaitable[None]] | None = None,
+        audit_repo: Any | None = None,
+        actor_id: uuid.UUID | None = None,
+        ip_address: str | None = None,
     ) -> None:
         """
-        @param redis Async Redis client.
-        @param session Async DB session (opt-out count).
+        @param community_repo CommunityRepository (Sassybot columns).
+        @param settings_repo SettingsRepository (opt-out count).
         @param community_id Tenant id.
         @param settings App settings (provider, budget).
         @param budget Budget meter.
         @param provider_factory Returns the AI provider or None.
-        @param clock now() override (tests).
-        @param audit Async callable ``(action, extra)`` recording an audit entry.
+        @param audit_repo AuditRepository; config changes are recorded when set.
+        @param actor_id Admin performing the request (audit).
+        @param ip_address Client IP (audit).
         """
-        self._redis = redis
-        self._session = session
+        self._communities = community_repo
+        self._user_settings = settings_repo
         self._cid = community_id
         self._settings = settings
         self._budget = budget
         self._provider_factory = provider_factory
-        self._clock = clock or (lambda: datetime.now(UTC))
-        self._audit = audit
+        self._audit = audit_repo
+        self._actor_id = actor_id
+        self._ip = ip_address
 
-    @property
-    def _key(self) -> str:
-        return f"ai_config:{self._cid}"
-
-    async def _opt_out_count(self) -> int:
-        stmt = (
-            select(func.count())
-            .select_from(UserSettings)
-            .where(
-                UserSettings.community_id == self._cid,
-                UserSettings.allow_sassybot.is_(False),
-            )
-        )
-        return int((await self._session.execute(stmt)).scalar_one())
-
-    async def get_config(self) -> dict[str, Any]:
-        """@return Provider, Sassybot settings and opt-out count."""
-        raw = {_decode(k): _decode(v) for k, v in (await self._redis.hgetall(self._key)).items()}
-        cfg = dict(DEFAULTS)
-        for k, default in DEFAULTS.items():
-            if k in raw:
-                cfg[k] = raw[k] == "1" if isinstance(default, bool) else int(raw[k])
+    def _serialize(self, community: Any, opt_outs: int) -> dict[str, Any]:
         return {
             "provider": (self._settings.AI_PROVIDER or "").lower(),
-            **cfg,
-            "opt_out_count": await self._opt_out_count(),
+            **{field: getattr(community, col) for field, col in FIELD_TO_COLUMN.items()},
+            "opt_out_count": opt_outs,
         }
+
+    async def get_config(self) -> dict[str, Any]:
+        """
+        @return Provider, Sassybot settings and opt-out count.
+        @throws NotFoundError if the community row is missing.
+        """
+        community = await self._communities.get(self._cid)
+        if community is None:
+            raise NotFoundError()
+        opt_outs = await self._user_settings.count_sassybot_opt_outs(self._cid)
+        return self._serialize(community, opt_outs)
 
     async def update_config(self, changes: dict[str, Any]) -> dict[str, Any]:
         """
-        @param changes Validated partial update of Sassybot settings.
+        @param changes Validated partial update of Sassybot settings (API field names).
         @return The updated config.
+        @throws NotFoundError if the community row is missing.
         """
-        if changes:
-            mapping = {k: int(v) if isinstance(v, bool) else v for k, v in changes.items()}
-            await self._redis.hset(self._key, mapping=mapping)
-            if self._audit:
-                await self._audit("ai.config.updated", changes)
-        return await self.get_config()
+        if not changes:
+            return await self.get_config()
+        values = {FIELD_TO_COLUMN[k]: v for k, v in changes.items()}
+        community = await self._communities.update_sassybot(self._cid, values)
+        if community is None:
+            raise NotFoundError()
+        if self._audit is not None:
+            await self._audit.append(
+                actor_id=self._actor_id,
+                action="ai.config.updated",
+                target_type="community",
+                target_id=self._cid,
+                extra_data=changes,
+                ip_address=self._ip,
+            )
+        opt_outs = await self._user_settings.count_sassybot_opt_outs(self._cid)
+        return self._serialize(community, opt_outs)
 
     async def get_metrics(self) -> dict[str, Any]:
         """@return Today's usage, budget, 7-day series and per-feature breakdown."""
@@ -136,7 +136,7 @@ class AdminAIService:
         if provider is None:
             return {"success": False, "message": "No AI provider is configured"}
         try:
-            await provider.count_tokens("ping")
+            await provider.ping()
         except Exception as exc:  # noqa: BLE001 - any provider failure means "not reachable"
             logger.warning("ai_test_connection_failed", error=type(exc).__name__)
             return {"success": False, "message": "Could not reach the AI provider"}
