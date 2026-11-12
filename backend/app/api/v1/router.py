@@ -21,6 +21,7 @@ from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
 from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
+from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
@@ -56,6 +57,7 @@ api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
 api_v1_router.include_router(kudos_router)
+api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(polls_router)
