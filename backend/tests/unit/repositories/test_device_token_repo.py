@@ -25,6 +25,22 @@ async def test_find_active_filters_community_user_and_deleted():
     assert "device_tokens.deleted_at IS NULL" in sql
 
 
+async def test_find_by_token_returns_row_ignoring_state():
+    row = MagicMock(spec=DeviceToken)
+    session = AsyncMock()
+    session.execute.return_value = MagicMock(scalar_one_or_none=lambda: row)
+    repo = DeviceTokenRepo(session)
+
+    assert await repo.find_by_token("tok") is row
+
+    sql = str(session.execute.await_args.args[0])
+    assert "device_tokens.token" in sql
+    where = sql.split("WHERE", 1)[1]
+    assert "device_tokens.token" in where
+    assert "deleted_at" not in where
+    assert "community_id" not in where
+
+
 async def test_reassign_updates_owner_and_revives():
     session = AsyncMock()
     repo = DeviceTokenRepo(session)
