@@ -13,7 +13,7 @@ import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { requestPasswordReset, confirmPasswordReset } from "@/lib/api/auth";
-import { formatApiError } from "@/lib/api/errors";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const RequestSchema = z.object({ email: z.string().min(3) });
 const ConfirmSchema = z.object({
@@ -24,21 +24,17 @@ type ConfirmData = z.infer<typeof ConfirmSchema>;
 
 function RequestForm() {
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState } = useForm<RequestData>({
     resolver: zodResolver(RequestSchema),
     defaultValues: { email: "" },
   });
 
-  const onSubmit = async (data: RequestData) => {
-    setError(null);
-    try {
-      await requestPasswordReset(data.email);
-      setSent(true);
-    } catch (e) {
-      setError(formatApiError(e, "Could not send reset email."));
-    }
-  };
+  const requestMutation = useMutationWithToast({
+    mutationFn: (data: RequestData) => requestPasswordReset(data.email),
+    errorKey: "toasts.auth.reset.failed",
+    onSuccess: () => setSent(true),
+  });
+  const onSubmit = (data: RequestData) => requestMutation.mutate(data);
 
   if (sent) {
     return (
@@ -58,14 +54,6 @@ function RequestForm() {
       title="Reset your password"
       subtitle="Enter your email and we'll send a reset link."
     >
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -79,7 +67,7 @@ function RequestForm() {
           error={formState.errors.email?.message}
           {...register("email")}
         />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" loading={requestMutation.isPending}>
           Email reset link
         </Button>
         <Link href="/login" className="underline">
@@ -92,23 +80,23 @@ function RequestForm() {
 
 function ConfirmForm({ token }: { token: string }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const { register, handleSubmit, formState } = useForm<ConfirmData>({
     resolver: zodResolver(ConfirmSchema),
     defaultValues: { new_password: "" },
   });
 
-  const onSubmit = async (data: ConfirmData) => {
-    setError(null);
-    try {
-      await confirmPasswordReset(token, data.new_password);
+  const confirmMutation = useMutationWithToast({
+    mutationFn: (data: ConfirmData) =>
+      confirmPasswordReset(token, data.new_password),
+    successKey: "toasts.auth.reset.done",
+    errorKey: "toasts.auth.reset.failed",
+    onSuccess: () => {
       setDone(true);
       setTimeout(() => router.replace("/login"), 1200);
-    } catch (e) {
-      setError(formatApiError(e, "Reset failed."));
-    }
-  };
+    },
+  });
+  const onSubmit = (data: ConfirmData) => confirmMutation.mutate(data);
 
   if (done) {
     return (
@@ -120,14 +108,6 @@ function ConfirmForm({ token }: { token: string }) {
 
   return (
     <AuthCard title="Choose a new password">
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -142,7 +122,7 @@ function ConfirmForm({ token }: { token: string }) {
           error={formState.errors.new_password?.message}
           {...register("new_password")}
         />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" loading={confirmMutation.isPending}>
           Update password
         </Button>
       </form>

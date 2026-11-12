@@ -98,7 +98,7 @@ export function usePushNotifications() {
       const auth = json.keys?.auth ?? arrayBufferToBase64(sub.getKey("auth"));
       return subscribePush({ endpoint: sub.endpoint, keys: { p256dh, auth } });
     },
-    successKey: "toasts.settings.saved",
+    successKey: "toasts.push.subscribed",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: SUBS_KEY });
     },
@@ -116,7 +116,7 @@ export function usePushNotifications() {
         await sub.unsubscribe();
       }
     },
-    successKey: "toasts.settings.saved",
+    successKey: "toasts.push.unsubscribed",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: SUBS_KEY });
     },

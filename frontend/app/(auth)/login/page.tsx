@@ -5,7 +5,6 @@
  *        lands on /app (or the `next` query param).
  */
 import { safeInternalLink } from "@/lib/safeLink";
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -16,7 +15,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { login as apiLogin } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
-import { formatApiError } from "@/lib/api/errors";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
   email: z.string().min(3),
@@ -28,28 +27,29 @@ export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeInternalLink(params.get("next")) ?? "/app";
-  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    try {
+  const loginMutation = useMutationWithToast({
+    mutationFn: async (data: FormData) => {
       const resp = await apiLogin(data.email, data.password);
-      const out = await completeLogin(resp);
+      return completeLogin(resp);
+    },
+    errorKey: "toasts.auth.login.failed",
+    onSuccess: (out) => {
       if (out.kind === "two_factor") {
-        const url = `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent(next)}`;
-        router.push(url);
+        router.push(
+          `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent(next)}`,
+        );
       } else {
         router.push(next);
       }
-    } catch (e) {
-      setError(formatApiError(e, "Sign-in failed."));
-    }
-  };
+    },
+  });
+  const onSubmit = (data: FormData) => loginMutation.mutate(data);
 
   return (
     <AuthCard
@@ -63,14 +63,6 @@ export default function LoginPage() {
         </>
       }
     >
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -91,7 +83,7 @@ export default function LoginPage() {
           error={formState.errors.password?.message}
           {...register("password")}
         />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" loading={loginMutation.isPending}>
           Sign in
         </Button>
         <div className="flex justify-between text-sm">

@@ -62,7 +62,7 @@ export function useCreateDm() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (peerId: string) => createOrGetDm(peerId),
-    successKey: "toasts.subgroups.member.added",
+    successKey: "toasts.chat.dmCreated",
     silentSuccess: true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.chat.dms() });

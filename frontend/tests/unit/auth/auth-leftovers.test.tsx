@@ -5,11 +5,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "@/tests/utils/renderWithProviders";
+import { useToasts } from "@/stores/toasts";
 
 const push = vi.fn();
 const replace = vi.fn();
 let search = "";
 let hasCookie = false;
+vi.mock("next-intl", () => ({
+  useTranslations: () => (k: string) => k,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams(search),
@@ -53,7 +58,7 @@ describe("auth leftovers", () => {
   it("register submits with invite token", async () => {
     search = "invite=abc";
     vi.mocked(api.register).mockResolvedValue({} as never);
-    render(<RegisterPage />);
+    renderWithProviders(<RegisterPage />);
     const u = userEvent.setup();
     await u.type(screen.getByLabelText("Display name"), "Al");
     await u.type(screen.getByLabelText("Username"), "al_1");
@@ -69,11 +74,26 @@ describe("auth leftovers", () => {
 
   it("magic link shows confirmation after send", async () => {
     vi.mocked(api.requestMagicLink).mockResolvedValue(undefined as never);
-    render(<MagicLinkPage />);
+    renderWithProviders(<MagicLinkPage />);
     const u = userEvent.setup();
     await u.type(screen.getByLabelText("Email"), "a@b.co");
     await u.click(screen.getByRole("button", { name: "Email me a link" }));
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
+  });
+
+  it("register and magic-link failures raise error toasts", async () => {
+    vi.mocked(api.register).mockRejectedValue(new Error("x"));
+    vi.mocked(api.requestMagicLink).mockRejectedValue(new Error("x"));
+    useToasts.getState().clear();
+    const u = userEvent.setup();
+    renderWithProviders(<MagicLinkPage />);
+    await u.type(screen.getByLabelText("Email"), "a@b.co");
+    await u.click(screen.getByRole("button", { name: "Email me a link" }));
+    await waitFor(() =>
+      expect(useToasts.getState().items.at(-1)?.message).toBe(
+        "toasts.auth.magicLink.failed",
+      ),
+    );
   });
 
   it("two-factor without token shows expired state", () => {

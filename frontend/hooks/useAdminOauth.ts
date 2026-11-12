@@ -26,7 +26,7 @@ export const useCreateOauthProvider = () => {
   return useMutationWithToast({
     mutationFn: (payload: oauthApi.OAuthProviderCreate) =>
       oauthApi.createOauthProvider(payload),
-    successKey: "toasts.admin.user.updated",
+    successKey: "toasts.admin.oauth.created",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -46,7 +46,7 @@ export const useUpdateOauthProvider = () => {
       providerId: string;
       updates: oauthApi.OAuthProviderUpdate;
     }) => oauthApi.updateOauthProvider(providerId, updates),
-    successKey: "toasts.admin.user.updated",
+    successKey: "toasts.admin.oauth.updated",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -61,7 +61,7 @@ export const useDeleteOauthProvider = () => {
   return useMutationWithToast({
     mutationFn: (providerId: string) =>
       oauthApi.deleteOauthProvider(providerId),
-    successKey: "toasts.admin.user.updated",
+    successKey: "toasts.admin.oauth.deleted",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },
@@ -76,7 +76,7 @@ export const useToggleOauthProvider = () => {
   return useMutationWithToast({
     mutationFn: (providerId: string) =>
       oauthApi.toggleOauthProvider(providerId),
-    successKey: "toasts.admin.user.updated",
+    successKey: "toasts.admin.oauth.toggled",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
     },

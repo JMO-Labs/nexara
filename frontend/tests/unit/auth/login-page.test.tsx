@@ -1,14 +1,19 @@
 /**
  * @file tests/unit/auth/login-page.test.tsx
- * @brief Login page: submit calls login, error shown on the form, OAuth
+ * @brief Login page: submit calls login, error shown as a toast, OAuth
  *        buttons render from config.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "@/tests/utils/renderWithProviders";
+import { useToasts } from "@/stores/toasts";
 
 const push = vi.fn();
 let search = "";
+vi.mock("next-intl", () => ({
+  useTranslations: () => (k: string) => k,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(search),
@@ -36,6 +41,7 @@ import * as flow from "@/lib/auth/flow";
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useToasts.getState().clear();
     search = "";
     vi.mocked(api.getAuthConfig).mockResolvedValue({
       oidc_enabled: true,
@@ -48,7 +54,7 @@ describe("LoginPage", () => {
   it("submits credentials and navigates", async () => {
     vi.mocked(api.login).mockResolvedValue({} as never);
     vi.mocked(flow.completeLogin).mockResolvedValue({ kind: "ok" } as never);
-    render(<LoginPage />);
+    renderWithProviders(<LoginPage />);
     await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
     await userEvent.type(screen.getByLabelText("Password"), "pw");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -58,17 +64,23 @@ describe("LoginPage", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
   });
 
-  it("shows the error on failure", async () => {
+  it("shows an error toast on failure", async () => {
     vi.mocked(api.login).mockRejectedValue(new Error("nope"));
-    render(<LoginPage />);
+    renderWithProviders(<LoginPage />);
     await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
     await userEvent.type(screen.getByLabelText("Password"), "pw");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("alert")).toBeTruthy();
+    await waitFor(() =>
+      expect(useToasts.getState().items.at(-1)).toMatchObject({
+        variant: "danger",
+        message: "toasts.auth.login.failed",
+      }),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("renders OAuth providers from config", async () => {
-    render(<LoginPage />);
+    renderWithProviders(<LoginPage />);
     const link = await screen.findByRole("link", { name: "Google" });
     expect(link.getAttribute("href")).toBe("/oauth/g");
   });
@@ -81,7 +93,7 @@ describe("LoginPage", () => {
     search = `next=${encodeURIComponent(next)}`;
     vi.mocked(api.login).mockResolvedValue({} as never);
     vi.mocked(flow.completeLogin).mockResolvedValue({ kind: "ok" } as never);
-    render(<LoginPage />);
+    renderWithProviders(<LoginPage />);
     await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
     await userEvent.type(screen.getByLabelText("Password"), "pw");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
