@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 SCRIPT = ROOT / "scripts" / "build-docs-site.sh"
+CHECKER = ROOT / "scripts" / "check-site-links.py"
 
 
 def _stub(bin_dir: Path, name: str, body: str) -> None:
@@ -16,7 +17,13 @@ def _stub(bin_dir: Path, name: str, body: str) -> None:
     p.chmod(0o755)
 
 
-def _run(tmp_path: Path, mkdocs_rc: int = 0, doxygen: bool = True, cov: bool = True):
+def _run(
+    tmp_path: Path,
+    mkdocs_rc: int = 0,
+    doxygen: bool = True,
+    cov: bool = True,
+    index_html: str = "",
+):
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
     (repo / "docs").mkdir()
@@ -29,18 +36,21 @@ def _run(tmp_path: Path, mkdocs_rc: int = 0, doxygen: bool = True, cov: bool = T
         (repo / "coverage").mkdir()
         (repo / "coverage" / "index.html").write_text("c")
     (repo / "scripts" / "build-docs-site.sh").write_text(SCRIPT.read_text())
+    (repo / "scripts" / "check-site-links.py").write_text(CHECKER.read_text())
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     _stub(
         bin_dir,
         "mkdocs",
         f"[ {mkdocs_rc} -ne 0 ] && exit {mkdocs_rc}\n"
-        'while [ $# -gt 0 ]; do [ "$1" = -d ] && mkdir -p "$2" && touch "$2/index.html"; shift; done',
+        f'echo "$@" > "{tmp_path}/mkdocs-args"\n'
+        'while [ $# -gt 0 ]; do [ "$1" = -d ] && mkdir -p "$2" '
+        f"&& echo '{index_html}' > \"$2/index.html\"; shift; done",
     )
     if doxygen:
         _stub(bin_dir, "doxygen", "mkdir -p build/api && touch build/api/index.html")
     env = {
-        "PATH": f"{bin_dir}:/usr/bin:/bin",
+        "PATH": f"{bin_dir}:/usr/local/bin:/usr/bin:/bin",
         "SKIP_INSTALL": "1",
         "ROOT_MARK": str(tmp_path / "api-ran"),
     }
@@ -62,6 +72,18 @@ def test_success_builds_site_with_api_python_and_coverage(tmp_path):
     assert (site / "api-python" / "index.html").exists()
     assert (site / "coverage" / "index.html").exists()
     assert (tmp_path / "api-ran").exists()
+
+
+def test_mkdocs_runs_strict(tmp_path):
+    r, _ = _run(tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert "--strict" in (tmp_path / "mkdocs-args").read_text()
+
+
+def test_broken_internal_link_fails_build(tmp_path):
+    r, _ = _run(tmp_path, index_html='<a href="missing/">x</a>')
+    assert r.returncode != 0
+    assert "missing/" in r.stdout
 
 
 def test_mkdocs_failure_exits_nonzero(tmp_path):

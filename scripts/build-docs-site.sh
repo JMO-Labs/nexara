@@ -25,7 +25,7 @@ if [ -f scripts/generate-api-ref.sh ]; then
 fi
 
 echo "Building MkDocs..."
-mkdocs build -f docs/mkdocs.yml -d "$SITE"
+mkdocs build --strict -f docs/mkdocs.yml -d "$SITE"
 
 echo "Generating Python Doxygen docs..."
 if [ "$HAS_DOXYGEN" -eq 1 ] && [ -f docs/Doxyfile ]; then
@@ -43,5 +43,8 @@ if [ -d "$COV" ]; then
   mkdir -p "$SITE/coverage"
   cp -r "$COV"/. "$SITE/coverage/"
 fi
+
+echo "Checking internal links..."
+python3 scripts/check-site-links.py "$SITE"
 
 echo "Docs built to docs/site/"
