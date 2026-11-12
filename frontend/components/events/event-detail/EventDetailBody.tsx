@@ -11,6 +11,7 @@ import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
 import { EventGalleryLink } from "./EventGalleryLink";
+import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
 
 const EventMiniMap = dynamic(
@@ -73,26 +74,7 @@ export function EventDetailBody({ event }: { event: EventItem }) {
         counts={event.rsvp_counts}
       />
       <EventGalleryLink galleryId={event.gallery_id} />
-      {event.contribution_slots.length > 0 && (
-        <div className="mt-4">
-          <h3 className="mb-1.5 text-xs font-semibold tracking-wider text-muted">
-            Contributions
-          </h3>
-          <ul className="flex flex-col gap-1">
-            {event.contribution_slots.map((slot) => (
-              <li
-                key={slot.id ?? slot.title}
-                className="flex items-center justify-between rounded-lg border border-ink/15 px-2 py-1.5"
-              >
-                <span className="text-sm">{slot.title}</span>
-                <span className="text-xs tabular-nums text-muted">
-                  {slot.quantity_claimed} / {slot.quantity_needed}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
     </div>
   );
 }

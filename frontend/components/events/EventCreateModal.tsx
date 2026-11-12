@@ -15,9 +15,13 @@ import {
 } from "@/components/ui";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/useEvents";
 import { useCalendars } from "@/hooks/useCalendars";
-import type { EventItem } from "@/lib/api/events";
+import type { ContributionSlot, EventItem } from "@/lib/api/events";
 import { LocationField } from "./event-form/LocationField";
 import { ColorField } from "./event-form/ColorField";
+import {
+  ContributionSlotsField,
+  isValidQuantity,
+} from "./event-form/ContributionSlotsField";
 import {
   DateTimeFields,
   type DateTimeValue,
@@ -74,6 +78,7 @@ export function EventCreateModal({
   });
   const [color, setColor] = React.useState<string | null>(null);
   const [autoGallery, setAutoGallery] = React.useState(false);
+  const [slots, setSlots] = React.useState<ContributionSlot[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
   const { data: calendars } = useCalendars();
@@ -111,6 +116,7 @@ export function EventCreateModal({
         subgroup_id: event.subgroup_id ?? null,
       });
       setColor(event.color);
+      setSlots(event.contribution_slots ?? []);
     } else {
       const today = todayDate();
       setTitle("");
@@ -130,6 +136,7 @@ export function EventCreateModal({
       });
       setColor(null);
       setAutoGallery(false);
+      setSlots([]);
     }
   }, [open, event, defaultSubgroupId]);
 
@@ -137,6 +144,12 @@ export function EventCreateModal({
     e.preventDefault();
     if (scope.visibility === "subgroup" && !scope.subgroup_id) {
       setError("Choose a group to share with.");
+      return;
+    }
+    if (
+      slots.some((s) => !s.title.trim() || !isValidQuantity(s.quantity_needed))
+    ) {
+      setError("Each slot needs a title and a whole quantity of at least 1.");
       return;
     }
     setError(null);
@@ -155,6 +168,7 @@ export function EventCreateModal({
       color,
       latitude: coords?.lat ?? null,
       longitude: coords?.lon ?? null,
+      contribution_slots: slots,
     };
     if (isEdit) await update.mutateAsync(body);
     else
@@ -206,6 +220,7 @@ export function EventCreateModal({
             Create gallery for photos
           </label>
         )}
+        <ContributionSlotsField value={slots} onChange={setSlots} />
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

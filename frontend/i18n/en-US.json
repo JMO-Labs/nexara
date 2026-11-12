@@ -653,7 +653,8 @@
     "invites": { "sent": "Invite sent", "revoked": "Invite revoked" },
     "admin": {
       "user": { "updated": "User updated", "deactivated": "User deactivated" },
-      "audit": { "exported": "Audit log exported" }
+      "audit": { "exported": "Audit log exported" },
+      "retention": { "updated": "Retention policy saved" }
     },
     "auth": {
       "login": { "failed": "Login failed" },
