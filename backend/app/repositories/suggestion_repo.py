@@ -105,10 +105,15 @@ class SuggestionRepository(BaseRepository[Suggestion]):
         return list((await self._session.execute(stmt)).scalars().all())
 
     async def upcoming_event_titles(self, community_id: uuid.UUID, limit: int) -> list[str]:
-        """@brief Titles of the next upcoming events."""
+        """@brief Titles of the next upcoming community-visible events (no private/subgroup)."""
         stmt = (
             select(Event.title)
-            .where(Event.community_id == community_id, Event.starts_at >= datetime.now(UTC))
+            .where(
+                Event.community_id == community_id,
+                Event.starts_at >= datetime.now(UTC),
+                Event.visibility == "community",
+                Event.source_removed.is_(False),
+            )
             .order_by(Event.starts_at)
             .limit(limit)
         )

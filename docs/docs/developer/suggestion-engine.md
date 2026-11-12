@@ -14,8 +14,16 @@ Requires `AI_PROVIDER` to be configured; without it, generation is a no-op.
 3. **Decide** — `approve` sets `approved_at`/`approved_by`; `reject` sets `rejected_at`.
    A suggestion can be decided once (second attempt returns `409`).
 
-Approval records the decision only; the admin UI posts the approved content
-through the normal post/poll endpoints.
+Approval records the decision only; it does not create a post or poll. The
+admin UI posts the approved content through the normal post/poll endpoints
+(publishing on approval is a planned follow-up).
+
+## Privacy
+
+Only community-visible context is sent to the AI provider: posts with
+`visibility = community` (no DMs, not deleted) and upcoming events with
+`visibility = community` that are not removed from their source calendar.
+Private and subgroup posts/events are never included.
 
 If the AI call fails, returns malformed output, or no context exists, nothing is
 stored and the endpoint still returns `200` with `{"created": 0}`.
