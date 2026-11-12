@@ -40,6 +40,7 @@ class Subgroup(Base):
         nullable=True,
         index=True,
     )
+    accent_color: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     join_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="open")
     created_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -75,6 +76,11 @@ class Subgroup(Base):
         Index("subgroups_active_idx", "archived_at", postgresql_where=(archived_at.is_(None))),
         Index("subgroups_search_fts_idx", "search_fts", postgresql_using="gin"),
         Index("subgroups_parent_idx", "parent_id"),
+        Index(
+            "idx_subgroups_accent_color",
+            "accent_color",
+            postgresql_where=(accent_color.isnot(None)),
+        ),
     )
 
 
