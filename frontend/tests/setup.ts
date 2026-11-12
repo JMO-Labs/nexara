@@ -63,3 +63,12 @@ if (typeof document !== "undefined") {
       emptyRects;
   if (!document.elementFromPoint) document.elementFromPoint = () => null;
 }
+
+// jsdom lacks ResizeObserver (Radix Switch/Checkbox use it via useSize).
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}

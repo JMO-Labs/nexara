@@ -13,6 +13,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { GalleryUpload } from "@/components/galleries/GalleryUpload";
+import { EventGalleryBadge } from "@/components/galleries/EventGalleryBadge";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import {
   useGalleryDetail,
@@ -176,6 +177,11 @@ export function GalleryDrawer({
               <p className="text-muted text-sm">
                 {count} {count === 1 ? "item" : "items"}
               </p>
+              {gallery.event_id && (
+                <div className="mt-1">
+                  <EventGalleryBadge />
+                </div>
+              )}
             </div>
             {isOwner && (
               <IconButton

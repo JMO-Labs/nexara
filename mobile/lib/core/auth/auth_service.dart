@@ -4,6 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../api/api_client.dart';
+import 'biometric_pref.dart';
+
+export 'biometric_pref.dart';
 
 /// @brief Outcome of a password login.
 class LoginResult {
@@ -28,11 +31,17 @@ class LocalAuthBiometric implements BiometricAuthenticator {
 }
 
 class AuthService {
-  AuthService({required this.api, required this.tokens, BiometricAuthenticator? biometric})
-      : _bio = biometric ?? LocalAuthBiometric();
+  AuthService(
+      {required this.api,
+      required this.tokens,
+      BiometricAuthenticator? biometric,
+      BiometricPrefStore? biometricPref})
+      : _bio = biometric ?? LocalAuthBiometric(),
+        _bioPref = biometricPref ?? SecureBiometricPrefStore();
   final ApiClient api;
   final TokenStore tokens;
   final BiometricAuthenticator _bio;
+  final BiometricPrefStore _bioPref;
   String? _twoFactorToken;
 
   static final _cookieRe = RegExp(r'refresh_token=([^;]+)');
@@ -119,10 +128,26 @@ class AuthService {
     }
   }
 
-  /// @brief Unlocks the app with biometrics when a session exists.
+  /// @brief Unlocks the app with biometrics when enabled and a session exists.
   Future<bool> biometricUnlock() async {
+    if (!await _bioPref.read()) return false;
     if (await tokens.readRefresh() == null) return false;
     if (!await _bio.isAvailable()) return false;
     return _bio.authenticate('Unlock Nexara');
+  }
+
+  /// @brief Whether the device supports biometric unlock.
+  Future<bool> biometricAvailable() => _bio.isAvailable();
+
+  /// @brief Whether biometric unlock is enabled (persisted preference).
+  Future<bool> biometricEnabled() => _bioPref.read();
+
+  /// @brief Enables (after a successful confirm prompt) or disables biometric unlock.
+  /// @param value requested state.
+  /// @return resulting enabled state.
+  Future<bool> setBiometricEnabled(bool value) async {
+    if (value && !await _bio.authenticate('Enable biometric unlock')) return false;
+    await _bioPref.write(value);
+    return value;
   }
 }
