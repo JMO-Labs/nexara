@@ -62,7 +62,9 @@ def test_default_template_renders_expected_kinds() -> None:
     kinds_only = {k for k, _ in kinds}
     assert {"Deployment", "Secret", "ConfigMap", "Service", "HorizontalPodAutoscaler"} <= kinds_only
     assert "Ingress" not in kinds_only
-    assert len([k for k, _ in kinds if k == "Deployment"]) >= 5  # api, worker, beat, valkey, pg
+    assert (
+        len([k for k, _ in kinds if k in ("Deployment", "StatefulSet")]) >= 5
+    )  # api, worker, beat, valkey, pg
 
 
 def test_ingress_and_external_services() -> None:
@@ -135,3 +137,24 @@ def test_media_pvc_access_modes_configurable() -> None:
 
     assert modes() == ["ReadWriteMany"]
     assert modes("storage.local.accessModes={ReadWriteOnce}") == ["ReadWriteOnce"]
+
+
+def _by(docs: list[dict], kind: str, suffix: str) -> dict:
+    return next(d for d in docs if d["kind"] == kind and d["metadata"]["name"].endswith(suffix))
+
+
+def test_api_probes_use_healthz_with_periods() -> None:
+    c = _by(_render(), "Deployment", "-api")["spec"]["template"]["spec"]["containers"][0]
+    assert c["livenessProbe"]["httpGet"]["path"] == "/healthz"
+    assert c["livenessProbe"]["periodSeconds"] == 10
+    assert c["readinessProbe"]["httpGet"]["path"] == "/healthz"
+    assert c["readinessProbe"]["periodSeconds"] == 5
+
+
+def test_postgres_is_statefulset_with_headless_service() -> None:
+    docs = _render()
+    sts = _by(docs, "StatefulSet", "-postgresql")
+    headless = _by(docs, "Service", "-postgresql-headless")
+    assert headless["spec"]["clusterIP"] == "None"
+    assert sts["spec"]["serviceName"] == headless["metadata"]["name"]
+    assert sts["spec"]["replicas"] == 1

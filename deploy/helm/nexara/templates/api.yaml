@@ -30,8 +30,10 @@ spec:
           {{- include "nexara.env" . | nindent 10 }}
           readinessProbe:
             httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
           livenessProbe:
             httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
             initialDelaySeconds: 30
           resources: {{- toYaml .Values.api.resources | nindent 12 }}
           {{- if eq .Values.storage.backend "local" }}
