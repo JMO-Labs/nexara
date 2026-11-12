@@ -1,7 +1,7 @@
 """add user pronouns
 
-Revision ID: 0022_add_user_pronouns
-Revises: 0021_add_subgroup_accent_color
+Revision ID: 0023_add_user_pronouns
+Revises: 0022_plugin_models
 """
 
 from __future__ import annotations
