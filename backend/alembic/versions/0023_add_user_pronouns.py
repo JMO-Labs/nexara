@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision = "0022_add_user_pronouns"
-down_revision = "0021_add_subgroup_accent_color"
+revision = "0023_add_user_pronouns"
+down_revision = "0022_plugin_models"
 branch_labels = None
 depends_on = None
 
