@@ -177,6 +177,11 @@ export function GalleryDrawer({
               <p className="text-muted text-sm">
                 {count} {count === 1 ? "item" : "items"}
               </p>
+              {gallery.event_id && (
+                <div className="mt-1">
+                  <EventGalleryBadge />
+                </div>
+              )}
             </div>
             {isOwner && (
               <IconButton
@@ -190,12 +195,6 @@ export function GalleryDrawer({
               </IconButton>
             )}
           </div>
-
-          {gallery.event_id && (
-            <div>
-              <EventGalleryBadge />
-            </div>
-          )}
 
           <GalleryEventLink
             eventId={gallery.event_id}
