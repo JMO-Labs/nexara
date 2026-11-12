@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/en-US.json";
+import { useToasts } from "@/stores/toasts";
 
 const listUsers = vi.fn();
 const createKudos = vi.fn();
@@ -34,6 +35,7 @@ function wrap(ui: React.ReactElement) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  useToasts.getState().clear();
   listUsers.mockResolvedValue({
     items: [
       { id: "u2", username: "ana", display_name: "Ana Lima", avatar_url: null },
@@ -65,6 +67,15 @@ describe("KudosComposer", () => {
       }),
     );
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        useToasts
+          .getState()
+          .items.some(
+            (t) => t.variant === "success" && t.message === "Kudos sent",
+          ),
+      ).toBe(true),
+    );
   });
 
   it("filters out non-matching users", async () => {

@@ -4,7 +4,6 @@
     "tagline": "Your self-hosted community platform"
   },
   "nav": {
-    "kudos": "Kudos",
     "feed": "Feed",
     "events": "Events",
     "chat": "Chat",
@@ -672,7 +671,6 @@
     "loadMore": "Load more",
     "emptyTitle": "No kudos yet",
     "emptyDesc": "Be the first to cheer someone on.",
-    "from": "from {name}",
     "error": "Failed to load kudos"
   },
   "toasts": {

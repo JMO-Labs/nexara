@@ -6,6 +6,7 @@
  */
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { AlertCircle, MessageSquarePlus, Trophy } from "lucide-react";
 import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
@@ -34,6 +35,7 @@ export function HomeFeed() {
     refetch,
   } = useHomeFeed();
   const reduced = useReducedMotion();
+  const tk = useTranslations("kudos");
   const [kudosOpen, setKudosOpen] = React.useState(false);
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
@@ -81,7 +83,7 @@ export function HomeFeed() {
           onClick={() => setKudosOpen(true)}
         >
           <Trophy className="size-4" aria-hidden="true" />
-          Send Kudos
+          {tk("sendButton")}
         </Button>
       </div>
       {kudosOpen ? (
