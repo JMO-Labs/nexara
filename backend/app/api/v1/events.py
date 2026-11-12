@@ -27,6 +27,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     EventCreate,
     EventList,
@@ -319,6 +320,17 @@ async def sync_subscription_now(
 ) -> dict[str, int]:
     """@brief Fetch and import a subscription immediately."""
     return {"synced_count": await service.sync_now(sub_id, user.id)}
+
+
+@subs_router.put("/{sub_id}", response_model=CalendarSubscriptionResponse)
+async def update_subscription(
+    sub_id: uuid.UUID,
+    body: CalendarSubscriptionUpdate,
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> CalendarSubscriptionResponse:
+    """@brief Update a calendar subscription."""
+    return await service.update_subscription(sub_id, user.id, body)
 
 
 @subs_router.delete("/{sub_id}", response_model=MessageResponse)

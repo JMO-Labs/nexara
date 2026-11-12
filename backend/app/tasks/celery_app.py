@@ -42,6 +42,7 @@ celery_app.conf.update(
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
+        "app.tasks.birthday_tasks.*": {"queue": "notifications"},
         "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
         "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
@@ -147,6 +148,10 @@ celery_app.conf.update(
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
             "schedule": 60.0 * 60,
         },
+        "send-birthday-reminders": {
+            "task": "app.tasks.birthday_tasks.send_birthday_reminders",
+            "schedule": crontab(hour="6", minute="0"),
+        },
         "send-gentle-nudges": {
             "task": "app.tasks.nudge_tasks.send_gentle_nudges",
             "schedule": crontab(hour="10", minute="0"),
@@ -196,3 +201,11 @@ def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -
         exception=str(exception),
         exc_info=True,
     )
+
+
+@signals.import_modules.connect(sender=celery_app)  # type: ignore[untyped-decorator]
+def _load_plugin_tasks(**kwargs: object) -> None:
+    """@brief Register plugin Celery tasks and Beat entries when worker/beat start."""
+    from app.plugins.task_loader import load_plugin_tasks
+
+    logger.info("plugin_tasks_loaded", plugins=load_plugin_tasks())

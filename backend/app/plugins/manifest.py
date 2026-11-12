@@ -74,6 +74,7 @@ class SettingSpec(BaseModel):
     label: str
     required: bool = False
     secret: bool = False
+    default: Any = None
 
 
 class BackendSpec(BaseModel):

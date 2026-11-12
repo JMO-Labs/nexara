@@ -43,6 +43,7 @@ class EventCreate(BaseModel):
     rsvp_labels: dict[str, str] | None = None
     contribution_slots: list[ContributionSlot] = Field(default_factory=list)
     reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
+    auto_create_gallery: bool = False
 
     @field_validator("ends_at")
     @classmethod
@@ -139,6 +140,7 @@ class EventResponse(BaseModel):
     reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
     rsvp_counts: dict[str, int] = Field(default_factory=dict)
     user_rsvp: RSVPResponse | None = None
+    gallery_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -176,6 +178,16 @@ class CalendarSubscriptionCreate(BaseModel):
     source_url: str = Field(..., min_length=1, max_length=2000)
     visibility: Literal["private", "community"] = "private"
     shared_by_admin: bool = False
+    sync_interval_minutes: Literal[60, 1440, 10080] = 60
+
+
+class CalendarSubscriptionUpdate(BaseModel):
+    """@brief Partial update for a calendar subscription."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    source_url: str | None = Field(default=None, min_length=1, max_length=2000)
+    sync_enabled: bool | None = None
+    sync_interval_minutes: Literal[60, 1440, 10080] | None = None
 
 
 class CalendarSubscriptionResponse(BaseModel):
@@ -188,6 +200,7 @@ class CalendarSubscriptionResponse(BaseModel):
     source_url: str | None
     visibility: str
     sync_enabled: bool
+    sync_interval_minutes: int = 60
     last_synced_at: datetime | None
     sync_error: str | None
     shared_by_admin: bool = False
