@@ -11,6 +11,9 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
+vi.mock("@/components/events/EventCreateModal", () => ({
+  EventCreateModal: ({ open }: any) => (open ? <div>create-modal</div> : null),
+}));
 vi.mock("@/components/events/EventCard", () => ({
   EventCard: ({ event }: any) => <div>{event.title}</div>,
 }));
@@ -40,6 +43,12 @@ describe("EventList", () => {
     ).toBeTruthy();
   });
 
+  it("loading has exactly one status region", () => {
+    hook.mockReturnValue({ isLoading: true });
+    render(<EventList />);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
   it("empty state offers a Create event CTA", async () => {
     hook.mockReturnValue({ isLoading: false, data: { items: [] } });
     render(<EventList />);
@@ -47,7 +56,8 @@ describe("EventList", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /create event/i }),
     );
-    expect(push).toHaveBeenCalledWith("/app/events");
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByText("create-modal")).toBeTruthy();
   });
 
   it("error Retry calls refetch", async () => {
@@ -73,5 +83,14 @@ describe("EventList", () => {
     const heads = screen.getAllByRole("heading", { level: 3 });
     expect(heads).toHaveLength(2);
     expect(heads[0].className).toContain("sticky");
+  });
+
+  it("stacks cards in a single column container (390px) ", () => {
+    hook.mockReturnValue({
+      isLoading: false,
+      data: { items: [ev("1", "A", "2025-01-10T12:00:00Z")] },
+    });
+    const { container } = render(<EventList />);
+    expect(container.querySelector(".flex-col.gap-3")).toBeTruthy();
   });
 });

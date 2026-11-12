@@ -4,9 +4,9 @@
  * @brief Vertical list of EventCards grouped by month with sticky headers.
  */
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Skeleton, EmptyState, Button } from "@/components/ui";
 import { EventCard } from "./EventCard";
+import { EventCreateModal } from "./EventCreateModal";
 import { useUpcomingEvents } from "@/hooks/useEvents";
 import type { EventItem } from "@/lib/api/events";
 
@@ -20,7 +20,7 @@ function monthKey(iso: string): string {
  * @return list, skeleton or empty/error state
  */
 export function EventList() {
-  const router = useRouter();
+  const [createOpen, setCreateOpen] = React.useState(false);
   const { data, isLoading, error, refetch } = useUpcomingEvents(60);
 
   if (isLoading) {
@@ -34,6 +34,9 @@ export function EventList() {
         {[0, 1, 2].map((i) => (
           <Skeleton
             key={i}
+            role="presentation"
+            aria-busy={undefined}
+            aria-live={undefined}
             height={140}
             rounded="lg"
             style={{ animationDelay: `${i * 80}ms` }}
@@ -56,15 +59,19 @@ export function EventList() {
     );
   if (!data || data.items.length === 0) {
     return (
-      <EmptyState
-        title="No events. Create one!"
-        description="Once events are scheduled they'll appear here."
-        action={
-          <Button onClick={() => router.push("/app/events")}>
-            Create event
-          </Button>
-        }
-      />
+      <>
+        <EmptyState
+          title="No events. Create one!"
+          description="Once events are scheduled they'll appear here."
+          action={
+            <Button onClick={() => setCreateOpen(true)}>Create event</Button>
+          }
+        />
+        <EventCreateModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+        />
+      </>
     );
   }
 
