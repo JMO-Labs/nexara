@@ -64,6 +64,10 @@ celery_app.conf.update(
             "task": "app.tasks.maintenance_tasks.refresh_prometheus_gauges",
             "schedule": 60.0,
         },
+        "ai-budget-reset": {
+            "task": "app.tasks.maintenance_tasks.reset_ai_daily_budget",
+            "schedule": crontab(hour=settings.AI_BUDGET_RESET_HOUR, minute=0),
+        },
         "close-expired-polls": {
             "task": "app.tasks.poll_tasks.close_expired_polls",
             "schedule": 60.0,
@@ -201,3 +205,11 @@ def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -
         exception=str(exception),
         exc_info=True,
     )
+
+
+@signals.import_modules.connect(sender=celery_app)  # type: ignore[untyped-decorator]
+def _load_plugin_tasks(**kwargs: object) -> None:
+    """@brief Register plugin Celery tasks and Beat entries when worker/beat start."""
+    from app.plugins.task_loader import load_plugin_tasks
+
+    logger.info("plugin_tasks_loaded", plugins=load_plugin_tasks())
