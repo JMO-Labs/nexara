@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/galleries/galleries-page/GalleryDrawer.tsx
- * @brief Drawer showing one gallery: owner, access settings, upload, items.
+ * @brief Drawer showing one gallery: owner, access settings, contributors,
+ *        upload, items.
  */
 import * as React from "react";
 import { Trash2 } from "lucide-react";
@@ -13,8 +14,8 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { GalleryUpload } from "@/components/galleries/GalleryUpload";
-import { GalleryCollaborators } from "./GalleryCollaborators";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
+import { GalleryCollaborators } from "./GalleryCollaborators";
 import {
   useGalleryDetail,
   useGalleryItems,
@@ -217,7 +218,11 @@ export function GalleryDrawer({
           </div>
 
           {gallery.contribution_policy === "collaborators" && (
-            <GalleryCollaborators galleryId={gallery.id} isOwner={isOwner} />
+            <GalleryCollaborators
+              galleryId={gallery.id}
+              ownerId={gallery.owner_id}
+              isOwner={isOwner}
+            />
           )}
 
           {canContribute && (

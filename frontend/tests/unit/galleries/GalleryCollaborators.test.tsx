@@ -1,60 +1,99 @@
 /**
  * @file tests/unit/galleries/GalleryCollaborators.test.tsx
- * @brief Collaborator list, add and remove controls (owner vs non-owner).
+ * @brief GalleryCollaborators: list by display name, owner add/remove,
+ *        read-only for others.
  */
-import { render, screen, fireEvent } from "@testing-library/react";
-import { vi } from "vitest";
+import * as React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { vi, beforeEach, test, expect } from "vitest";
 import { GalleryCollaborators } from "@/components/galleries/galleries-page/GalleryCollaborators";
+import * as galleriesApi from "@/lib/api/galleries";
 
-const add = vi.fn();
-const remove = vi.fn();
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
 
-vi.mock("@/hooks/useGalleries", () => ({
-  useCollaborators: () => ({
-    data: [
-      { gallery_id: "g1", user_id: "u1", invited_by: null, invited_at: "" },
+vi.mock("@/lib/api/galleries", () => ({
+  listCollaborators: vi.fn(),
+  addCollaborator: vi.fn(),
+  removeCollaborator: vi.fn(),
+}));
+
+vi.mock("@/lib/api/users", () => ({
+  listUsers: vi.fn().mockResolvedValue({
+    items: [
+      { id: "u1", username: "o", display_name: "Ola Ode", avatar_url: null },
+      { id: "u2", username: "ann", display_name: "Ann Lee", avatar_url: null },
+      { id: "u3", username: "bo", display_name: "Bo Diaz", avatar_url: null },
     ],
-  }),
-  useAddCollaborator: () => ({ mutate: add, isPending: false }),
-  useRemoveCollaborator: () => ({ mutate: remove, isPending: false }),
-}));
-vi.mock("@tanstack/react-query", async (orig) => ({
-  ...(await orig<typeof import("@tanstack/react-query")>()),
-  useQuery: () => ({
-    data: {
-      items: [
-        { id: "u1", username: "al", display_name: "Alice" },
-        { id: "u2", username: "bo", display_name: "Bob" },
-      ],
-    },
+    next_cursor: null,
+    has_more: false,
   }),
 }));
 
-beforeEach(() => vi.clearAllMocks());
+const api = vi.mocked(galleriesApi);
 
-test("lists collaborators by display name", () => {
-  render(<GalleryCollaborators galleryId="g1" isOwner />);
-  expect(screen.getByText("Alice")).toBeInTheDocument();
+const collab = (user_id: string) => ({
+  gallery_id: "g1",
+  user_id,
+  invited_by: "u1",
+  invited_at: "2026-01-01",
 });
 
-test("owner can add a member", () => {
-  render(<GalleryCollaborators galleryId="g1" isOwner />);
-  fireEvent.change(screen.getByLabelText("Member"), {
-    target: { value: "u2" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Add" }));
-  expect(add).toHaveBeenCalledWith("u2");
+function renderIt(isOwner: boolean) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <GalleryCollaborators galleryId="g1" ownerId="u1" isOwner={isOwner} />
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  api.listCollaborators.mockResolvedValue([collab("u2")]);
+  api.addCollaborator.mockResolvedValue(collab("u3"));
+  api.removeCollaborator.mockResolvedValue({ message: "ok" });
 });
 
-test("owner can remove a collaborator", () => {
-  render(<GalleryCollaborators galleryId="g1" isOwner />);
-  fireEvent.click(screen.getByRole("button", { name: "Remove Alice" }));
-  expect(remove).toHaveBeenCalledWith("u1");
+test("lists collaborators by display name", async () => {
+  renderIt(false);
+  expect(await screen.findByText("Ann Lee")).toBeInTheDocument();
 });
 
-test("non-owner is read-only", () => {
-  render(<GalleryCollaborators galleryId="g1" isOwner={false} />);
-  expect(screen.getByText("Alice")).toBeInTheDocument();
-  expect(screen.queryByRole("button")).toBeNull();
-  expect(screen.queryByLabelText("Member")).toBeNull();
+test("owner adds a collaborator via select + Add", async () => {
+  renderIt(true);
+  await screen.findByText("Ann Lee");
+  const select = await screen.findByLabelText("Add contributor");
+  expect(
+    await screen.findByRole("option", { name: "Bo Diaz" }),
+  ).toBeInTheDocument();
+  // Existing collaborators and the owner are not offered.
+  expect(screen.queryByRole("option", { name: "Ann Lee" })).toBeNull();
+  expect(screen.queryByRole("option", { name: "Ola Ode" })).toBeNull();
+  await userEvent.selectOptions(select, "u3");
+  await userEvent.click(screen.getByRole("button", { name: "Add" }));
+  await waitFor(() =>
+    expect(api.addCollaborator).toHaveBeenCalledWith("g1", "u3"),
+  );
+});
+
+test("owner removes a collaborator", async () => {
+  renderIt(true);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Remove Ann Lee" }),
+  );
+  await waitFor(() =>
+    expect(api.removeCollaborator).toHaveBeenCalledWith("g1", "u2"),
+  );
+});
+
+test("non-owner sees no add/remove controls", async () => {
+  renderIt(false);
+  await screen.findByText("Ann Lee");
+  expect(screen.queryByLabelText("Add contributor")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
 });

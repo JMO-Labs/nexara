@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file hooks/useGalleries.ts
- * @brief Gallery CRUD + items hooks.
+ * @brief Gallery CRUD + items + collaborators hooks.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
