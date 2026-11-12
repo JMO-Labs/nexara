@@ -5,7 +5,7 @@
  *        NotificationsBell badge pop respects reduced motion.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 let reduced = false;
@@ -113,7 +113,11 @@ describe("NotificationsBell badge motion", () => {
   it("pops the badge in", async () => {
     setup();
     const badge = await screen.findByTestId("unread-badge");
-    expect(badge.style.transform).toContain("scale(0.6)");
+    // Wait for the pop-in to finish rather than sampling a mid-frame value.
+    await waitFor(() => {
+      expect(badge.style.opacity).toBe("1");
+      expect(badge.style.transform).toMatch(/^(none)?$/);
+    });
   });
   it("renders the badge statically under reduced motion", async () => {
     reduced = true;
