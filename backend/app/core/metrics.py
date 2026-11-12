@@ -116,3 +116,9 @@ search_cache_invalidations_total: Counter = Counter(
     ["community_id"],
 )
 """@brief Counter of search cache invalidations."""
+
+ocr_processed_total: Counter = Counter(
+    "nexara_ocr_processed_total",
+    "OCR task outcomes",
+    ["status"],
+)
