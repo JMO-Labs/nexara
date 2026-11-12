@@ -16,15 +16,15 @@ import structlog
 from celery import Task
 from PIL import Image, ImageOps
 
-from app.core.config import get_settings
 from app.core.cache import invalidate_search_cache_for_community
-from app.core.valkey import DB_CACHE, create_pool
+from app.core.config import get_settings
 from app.core.transcode import (
     build_ffmpeg_command,
     extract_thumbnail,
     extract_video_metadata,
     probe_and_set_encoder,
 )
+from app.core.valkey import DB_CACHE, create_pool
 from app.db.session import async_session_factory
 from app.repositories.media_repo import MediaRepository
 from app.services.storage.factory import get_storage_backend
