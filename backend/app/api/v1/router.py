@@ -41,6 +41,7 @@ from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
+from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.users import router as users_router
 from app.api.v1.ws import router as ws_router
 
@@ -70,6 +71,7 @@ api_v1_router.include_router(link_previews_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
+api_v1_router.include_router(suggestions_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(polls_router)
