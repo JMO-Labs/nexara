@@ -9,8 +9,16 @@ from pathlib import Path
 import pytest
 
 PATH = Path(__file__).resolve().parents[3] / "deploy" / "grafana" / "nexara-dashboard.json"
-ROWS = ["API Health", "Database", "Celery", "Infrastructure", "Real-time",
-        "Activity", "Storage", "Security"]
+ROWS = [
+    "API Health",
+    "Database",
+    "Celery",
+    "Infrastructure",
+    "Real-time",
+    "Activity",
+    "Storage",
+    "Security",
+]
 
 
 @pytest.fixture(scope="module")
@@ -66,10 +74,15 @@ def test_stat_have_thresholds(dash):
 
 def test_uses_real_app_metrics(dash):
     exprs = " ".join(t["expr"] for p in _panels(dash) for t in p["targets"])
-    for m in ("nexara_websocket_connections_active", "nexara_sse_connections_active",
-              "nexara_users_online", "nexara_celery_queue_depth",
-              "nexara_storage_used_bytes", "nexara_waf_blocks_total",
-              "http_requests_total"):
+    for m in (
+        "nexara_websocket_connections_active",
+        "nexara_sse_connections_active",
+        "nexara_users_online",
+        "nexara_celery_queue_depth",
+        "nexara_storage_used_bytes",
+        "nexara_waf_blocks_total",
+        "http_requests_total",
+    ):
         assert m in exprs
 
 
