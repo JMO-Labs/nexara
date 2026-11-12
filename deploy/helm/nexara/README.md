@@ -61,8 +61,10 @@ storage:
 ```
 
 Or set `accessKey` / `secretKey` inline (stored in a chart-managed Secret).
-With `backend: local`, media lives on a `ReadWriteOnce` PVC; running several API
-replicas across nodes requires an RWX storage class or S3.
+With `backend: local`, media lives on a PVC. The default access mode is
+`ReadWriteMany`, which needs an RWX-capable StorageClass. Use
+`storage.local.accessModes={ReadWriteOnce}` only on single-node clusters;
+otherwise use S3.
 
 ## External Valkey / Redis
 

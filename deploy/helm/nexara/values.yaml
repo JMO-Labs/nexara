@@ -8,9 +8,6 @@ image:
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 
-# -- Default replica count (used where a component does not override it)
-replicaCount: 1
-
 # -- API deployment (nginx + uvicorn on port 8080)
 api:
   replicas: 3
@@ -33,7 +30,7 @@ api:
 # -- Celery worker
 worker:
   replicas: 2
-  queues: default,email,notifications,media
+  queues: default,maintenance,email,notifications,media
   concurrency: 4
   resources:
     requests: {cpu: 250m, memory: 512Mi}
@@ -105,7 +102,7 @@ hpa:
   maxReplicas: 10
   targetCPUUtilization: 70
 
-# -- Secrets (generated when empty; regenerated on upgrade unless set explicitly)
+# -- Secrets (generated on first install when empty; reused on upgrade and kept on uninstall)
 secrets:
   existingSecret: ""   # secret with keys "secret-key" (JWT/signing); overrides below
   jwtSecret: ""
