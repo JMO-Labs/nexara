@@ -14,6 +14,7 @@ import { ProfileTab } from "./ProfileTab";
 import { NotificationsTab } from "./NotificationsTab";
 import { AppearanceTab } from "./AppearanceTab";
 import { StorageTab } from "./StorageTab";
+import { NudgePreferences } from "./NudgePreferences";
 
 const TABS = [
   { id: "account", label: "Account", Panel: AccountTab },
@@ -21,6 +22,7 @@ const TABS = [
   { id: "notifications", label: "Notifications", Panel: NotificationsTab },
   { id: "appearance", label: "Appearance", Panel: AppearanceTab },
   { id: "calendar", label: "Calendar", Panel: CalendarSubscriptionsPanel },
+  { id: "engagement", label: "Engagement", Panel: NudgePreferences },
   { id: "storage", label: "Storage", Panel: StorageTab },
 ];
 
