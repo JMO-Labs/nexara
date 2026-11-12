@@ -21,8 +21,12 @@ vi.mock("@/lib/api/events", async (orig) => ({
 
 describe("RsvpInline", () => {
   beforeEach(() => {
-    vi.mocked(rsvpEvent).mockReset().mockResolvedValue({} as never);
-    vi.mocked(unrsvpEvent).mockReset().mockResolvedValue(undefined as never);
+    vi.mocked(rsvpEvent)
+      .mockReset()
+      .mockResolvedValue({} as never);
+    vi.mocked(unrsvpEvent)
+      .mockReset()
+      .mockResolvedValue(undefined as never);
   });
 
   it("renders default options and marks the current one pressed", () => {
