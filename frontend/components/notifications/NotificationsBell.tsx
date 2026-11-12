@@ -152,9 +152,14 @@ export function NotificationsBell() {
       {unread > 0 && (
         <motion.span
           key={`badge-${badgeKey}`}
-          initial={reduced ? false : { scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          data-testid="unread-badge"
+          {...(reduced
+            ? {}
+            : {
+                initial: { scale: 0.6, opacity: 0 },
+                animate: { scale: 1, opacity: 1 },
+                transition: { duration: 0.2, ease: "easeOut" as const },
+              })}
           aria-hidden
           className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-destructive-foreground"
         >

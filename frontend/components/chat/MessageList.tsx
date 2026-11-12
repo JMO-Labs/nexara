@@ -38,6 +38,43 @@ function isCompact(prev: ChatMessage | undefined, cur: ChatMessage): boolean {
   return Math.abs(b - a) < GROUP_GAP_MS;
 }
 
+/**
+ * @brief Tracks ids appended after first paint (newer than the previous
+ *        newest message). Ids stay "fresh" until `done(id)` is called, so
+ *        re-renders never strip slide props mid-animation. Older pages
+ *        prepended at the top are never fresh.
+ * @param ordered messages oldest -> newest
+ * @param enabled false under reduced motion (nothing is marked fresh)
+ * @return `has(id)` and `done(id)`
+ */
+function useFreshIds(ordered: ChatMessage[], enabled: boolean) {
+  const known = React.useRef<Set<string> | null>(null);
+  const fresh = React.useRef(new Set<string>());
+  const newest = React.useRef<string | null>(null);
+  const [, bump] = React.useReducer((x: number) => x + 1, 0);
+
+  if (ordered.length > 0) {
+    const seen = known.current;
+    if (seen === null) {
+      known.current = new Set(ordered.map((m) => m.id));
+    } else {
+      // Index just past the previous newest; 0 when it is gone (no slide).
+      const from = ordered.findIndex((m) => m.id === newest.current) + 1;
+      ordered.forEach((m, i) => {
+        if (seen.has(m.id)) return;
+        seen.add(m.id);
+        if (enabled && from > 0 && i >= from) fresh.current.add(m.id);
+      });
+    }
+    newest.current = ordered[ordered.length - 1]?.id ?? null;
+  }
+
+  const done = React.useCallback((id: string) => {
+    if (fresh.current.delete(id)) bump();
+  }, []);
+  return { has: (id: string) => fresh.current.has(id), done };
+}
+
 export const MessageList = React.forwardRef<
   MessageListHandle,
   MessageListProps
@@ -55,10 +92,12 @@ export const MessageList = React.forwardRef<
   forwardedRef,
 ) {
   const parentRef = React.useRef<HTMLDivElement | null>(null);
+  // Render oldest -> newest. Backend returns newest-first, so reverse once.
+  const ordered = React.useMemo(() => [...messages].reverse(), [messages]);
   const pinnedToBottom = React.useRef(true);
   const slide = useMotionProps(slideUp);
   const fade = useMotionProps(fadeInOut);
-  const seen = React.useRef<Set<string> | null>(null);
+  const fresh = useFreshIds(ordered, Object.keys(slide).length > 0);
   const prevCount = React.useRef(0);
 
   React.useImperativeHandle(
@@ -74,9 +113,6 @@ export const MessageList = React.forwardRef<
     }),
     [],
   );
-
-  // Render oldest -> newest. Backend returns newest-first, so reverse once.
-  const ordered = React.useMemo(() => [...messages].reverse(), [messages]);
 
   const virtualizer = useVirtualizer({
     count: ordered.length,
@@ -94,10 +130,6 @@ export const MessageList = React.forwardRef<
     }
     prevCount.current = ordered.length;
   }, [ordered.length]);
-
-  React.useEffect(() => {
-    seen.current = new Set(ordered.map((x) => x.id));
-  });
 
   const onScroll = React.useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -154,8 +186,9 @@ export const MessageList = React.forwardRef<
         {virtualizer.getVirtualItems().map((vi) => {
           const m = ordered[vi.index];
           if (!m) return null;
-          // Only messages arriving after first paint slide in.
-          const isNew = seen.current !== null && !seen.current.has(m.id);
+          // Only messages appended after first paint slide in; props stay
+          // until the animation completes.
+          const isNew = fresh.has(m.id);
           return (
             <div
               key={vi.key}
@@ -164,7 +197,14 @@ export const MessageList = React.forwardRef<
               className="absolute top-0 left-0 w-full"
               style={{ transform: `translateY(${vi.start}px)` }}
             >
-              <motion.div {...(isNew ? slide : {})}>
+              <motion.div
+                data-testid="message-row"
+                data-new={isNew}
+                {...(isNew ? slide : {})}
+                onAnimationComplete={
+                  isNew ? () => fresh.done(m.id) : undefined
+                }
+              >
                 <MessageItem
                   message={m}
                   compact={isCompact(ordered[vi.index - 1], m)}
