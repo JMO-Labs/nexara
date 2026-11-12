@@ -101,7 +101,7 @@ export function SubscriptionRow({
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowDelete(false)}>
-              {t("actions.cancel")}
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -110,7 +110,7 @@ export function SubscriptionRow({
                 setShowDelete(false);
               }}
             >
-              {t("actions.delete")}
+              {t("common.delete")}
             </Button>
           </>
         }

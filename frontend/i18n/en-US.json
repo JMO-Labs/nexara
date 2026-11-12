@@ -694,5 +694,13 @@
       "docs": "Documentation",
       "support": "Contact support"
     }
+  },
+  "components": {
+    "calendar": {
+      "subscriptions": {
+        "delete_confirm": "Delete calendar subscription?",
+        "delete_confirm_text": "\"{title}\" and its imported events will be removed."
+      }
+    }
   }
 }
