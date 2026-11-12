@@ -7,7 +7,7 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { motion } from "framer-motion";
-import { slideUp, useMotionProps } from "@/components/ui/motion";
+import { slideUp, fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { Skeleton, EmptyState } from "@/components/ui";
 import type { ChatMessage } from "@/lib/api/chat";
 import { MessageItem } from "./MessageItem";
@@ -57,6 +57,7 @@ export const MessageList = React.forwardRef<
   const parentRef = React.useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = React.useRef(true);
   const slide = useMotionProps(slideUp);
+  const fade = useMotionProps(fadeInOut);
   const seen = React.useRef<Set<string> | null>(null);
   const prevCount = React.useRef(0);
 
@@ -112,11 +113,15 @@ export const MessageList = React.forwardRef<
 
   if (ordered.length === 0 && isLoading) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-4">
+      <motion.div
+        data-testid="message-skeleton"
+        className="flex min-h-0 flex-1 flex-col gap-2 p-4"
+        {...fade}
+      >
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} height={48} />
         ))}
-      </div>
+      </motion.div>
     );
   }
 
