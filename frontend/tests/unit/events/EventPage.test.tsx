@@ -59,4 +59,10 @@ describe("EventPage", () => {
     expect(screen.getByText("Event not found")).toBeTruthy();
     expect(screen.getByRole("link", { name: /back/i })).toBeTruthy();
   });
+
+  it("does not render its own main landmark (Shell provides it)", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    expect(screen.queryByRole("main")).toBeNull();
+  });
 });

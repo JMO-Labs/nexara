@@ -33,10 +33,10 @@ export function EventPage({ id }: { id: string }) {
   const notFound = error instanceof ApiError && error.status === 404;
 
   return (
-    <main className="mx-auto w-full max-w-3xl p-4 md:p-6">
+    <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
       <BackLink />
       {isLoading ? (
-        <div className="flex flex-col gap-3" aria-label="Loading event">
+        <div className="flex flex-col gap-3">
           <Skeleton height={32} width="60%" />
           <Skeleton height={20} width="40%" />
           <Skeleton height={160} />
@@ -58,6 +58,6 @@ export function EventPage({ id }: { id: string }) {
           <EventDetailBody event={event} />
         </>
       )}
-    </main>
+    </div>
   );
 }
