@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MotionGlobalConfig } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 let reduced = false;
@@ -111,16 +112,19 @@ describe("NotificationsBell badge motion", () => {
     );
   };
   it("pops the badge in", async () => {
-    setup();
-    const badge = await screen.findByTestId("unread-badge");
-    // Wait for the pop-in to finish rather than sampling a mid-frame value.
-    await waitFor(
-      () => {
+    // Skip animations so the final state applies immediately instead of
+    // depending on jsdom frame timing.
+    MotionGlobalConfig.skipAnimations = true;
+    try {
+      setup();
+      const badge = await screen.findByTestId("unread-badge");
+      await waitFor(() => {
         expect(badge.style.opacity).toBe("1");
         expect(badge.style.transform).toMatch(/^(none)?$/);
-      },
-      { timeout: 4000 },
-    );
+      });
+    } finally {
+      MotionGlobalConfig.skipAnimations = false;
+    }
   });
   it("renders the badge statically under reduced motion", async () => {
     reduced = true;
