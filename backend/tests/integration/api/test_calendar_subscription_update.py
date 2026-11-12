@@ -42,9 +42,7 @@ async def test_update_subscription_returns_service_result(test_app):
     test_app.dependency_overrides[get_current_user] = lambda: user
     test_app.dependency_overrides[_build_service] = lambda: service
 
-    async with AsyncClient(
-        transport=ASGITransport(app=test_app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         r = await client.put(
             f"/api/v1/calendar-subscriptions/{sub_id}",
             json={"name": "Renamed", "sync_enabled": False},
