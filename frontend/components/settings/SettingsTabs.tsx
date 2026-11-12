@@ -13,12 +13,14 @@ import { AccountTab } from "./AccountTab";
 import { ProfileTab } from "./ProfileTab";
 import { NotificationsTab } from "./NotificationsTab";
 import { AppearanceTab } from "./AppearanceTab";
+import { PrivacyTab } from "./PrivacyTab";
 import { StorageTab } from "./StorageTab";
 
 const TABS = [
   { id: "account", label: "Account", Panel: AccountTab },
   { id: "profile", label: "Profile", Panel: ProfileTab },
   { id: "notifications", label: "Notifications", Panel: NotificationsTab },
+  { id: "privacy", label: "Privacy", Panel: PrivacyTab },
   { id: "appearance", label: "Appearance", Panel: AppearanceTab },
   { id: "calendar", label: "Calendar", Panel: CalendarSubscriptionsPanel },
   { id: "storage", label: "Storage", Panel: StorageTab },
