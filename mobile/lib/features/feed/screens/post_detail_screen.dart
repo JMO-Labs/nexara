@@ -57,7 +57,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 for (final u in p.mediaUrls)
                   Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: CachedNetworkImage(imageUrl: u, semanticLabel: 'Post image')),
+                      child: Semantics(
+                          label: 'Post image', image: true, child: CachedNetworkImage(imageUrl: u))),
                 Row(children: [
                   IconButton(
                     tooltip: 'Like',
