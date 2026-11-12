@@ -34,9 +34,8 @@ class TestRouteRegistration:
         assert "/metrics" in paths
 
 
-async def test_load_plugins_failure_never_blocks_startup(caplog):
+async def test_load_plugins_failure_never_blocks_startup():
     """@brief A failing plugin load is logged and swallowed."""
-    import logging
     from unittest.mock import patch
 
     from fastapi import FastAPI
@@ -46,7 +45,7 @@ async def test_load_plugins_failure_never_blocks_startup(caplog):
 
     with (
         patch("app.plugins.loader.load_plugins", side_effect=RuntimeError("boom")),
-        caplog.at_level(logging.WARNING),
+        patch("app.main.logger") as log,
     ):
         await _load_plugins(FastAPI(), get_settings())
-    assert "plugins_load_failed" in caplog.text
+    log.warning.assert_called_once_with("plugins_load_failed", exc_info=True)
