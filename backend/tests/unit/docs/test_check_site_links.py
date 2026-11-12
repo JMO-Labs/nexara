@@ -12,9 +12,7 @@ CHECKER = ROOT / "scripts" / "check-site-links.py"
 
 
 def _run(site: Path):
-    return subprocess.run(
-        [sys.executable, str(CHECKER), str(site)], capture_output=True, text=True
-    )
+    return subprocess.run([sys.executable, str(CHECKER), str(site)], capture_output=True, text=True)
 
 
 def _page(site: Path, name: str, body: str) -> None:
@@ -24,7 +22,11 @@ def _page(site: Path, name: str, body: str) -> None:
 
 
 def test_clean_site_passes(tmp_path):
-    _page(tmp_path, "index.html", '<a href="a/">A</a><a href="a/#sec">S</a><a href="#top" >t</a><h1 id="top">x</h1>')
+    _page(
+        tmp_path,
+        "index.html",
+        '<a href="a/">A</a><a href="a/#sec">S</a><a href="#top" >t</a><h1 id="top">x</h1>',
+    )
     _page(tmp_path, "a/index.html", '<h2 id="sec">s</h2><a href="../">home</a>')
     r = _run(tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr

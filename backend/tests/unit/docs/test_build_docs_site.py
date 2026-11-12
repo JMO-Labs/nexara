@@ -43,7 +43,7 @@ def _run(
         bin_dir,
         "mkdocs",
         f"[ {mkdocs_rc} -ne 0 ] && exit {mkdocs_rc}\n"
-        f"echo \"$@\" > \"{tmp_path}/mkdocs-args\"\n"
+        f'echo "$@" > "{tmp_path}/mkdocs-args"\n'
         'while [ $# -gt 0 ]; do [ "$1" = -d ] && mkdir -p "$2" '
         f"&& echo '{index_html}' > \"$2/index.html\"; shift; done",
     )
