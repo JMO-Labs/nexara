@@ -5,6 +5,13 @@
  */
 
 export const qk = {
+  dataExport: {
+    status: (id: string) => ["data-export", "status", id] as const,
+    history: () => ["data-export", "history"] as const,
+  },
+  storage: {
+    user: (userId: string) => ["storage", userId] as const,
+  },
   auth: {
     me: () => ["auth", "me"] as const,
     session: () => ["auth", "session"] as const,
@@ -84,6 +91,7 @@ export const qk = {
     oauth: () => ["admin", "oauth"] as const,
     interestsAnalytics: () => ["admin", "interests-analytics"] as const,
     prompts: () => ["admin", "prompts"] as const,
+    retention: () => ["admin", "retention"] as const,
   },
   settings: {
     profile: () => ["settings", "profile"] as const,
