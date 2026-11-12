@@ -35,8 +35,14 @@ class NotificationsScreen extends ConsumerWidget {
                           style: TextStyle(fontWeight: n.unread ? FontWeight.bold : FontWeight.normal)),
                       subtitle: Text(n.type),
                       onTap: () async {
-                        if (n.unread) await ref.read(notificationsApiProvider).markRead(n.id);
-                        ref.invalidate(notificationsProvider);
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          if (n.unread) await ref.read(notificationsApiProvider).markRead(n.id);
+                          ref.invalidate(notificationsProvider);
+                        } catch (_) {
+                          messenger.showSnackBar(
+                              const SnackBar(content: Text('Could not mark as read')));
+                        }
                       },
                     );
                   },

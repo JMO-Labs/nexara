@@ -10,10 +10,14 @@ class FakeApi implements NotificationsApi {
   FakeApi(this.items);
   List<AppNotification> items;
   final read = <String>[];
+  bool fail = false;
   @override
   Future<List<AppNotification>> list() async => items;
   @override
-  Future<void> markRead(String id) async => read.add(id);
+  Future<void> markRead(String id) async {
+    if (fail) throw Exception('offline');
+    read.add(id);
+  }
 }
 
 AppNotification n(String id, String msg, DateTime at, {bool isRead = false}) =>
@@ -59,5 +63,15 @@ void main() {
     await t.pumpWidget(host(FakeApi([])));
     await t.pumpAndSettle();
     expect(find.text('No notifications'), findsOneWidget);
+  });
+
+  testWidgets('markRead failure shows snackbar', (t) async {
+    final api = FakeApi([n('2', 'newer', DateTime(2026, 1, 3))])..fail = true;
+    await t.pumpWidget(host(api));
+    await t.pumpAndSettle();
+    await t.tap(find.text('newer'));
+    await t.pumpAndSettle();
+    expect(find.text('Could not mark as read'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 }
