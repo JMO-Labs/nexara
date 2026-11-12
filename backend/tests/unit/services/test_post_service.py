@@ -157,19 +157,23 @@ class TestCreatePost:
         assert event.payload["post"] == enriched
 
     @pytest.mark.asyncio
-    async def test_create_post_delegates_mention_notifications(self, service, post_repo):
-        """create_post() delegates mention detection to notification_service.notify_mentions."""
+    async def test_create_post_notifies_mentioned_users(self, service, post_repo):
+        """create_post() extracts mentions and notifies each mentioned user."""
         user = _make_user()
+        bob = _make_user(user_id=uuid.uuid4(), username="bob")
         post = _make_post()
         post_repo.create_post.return_value = post
         post_repo.get_post_detail.return_value = {}
+        scalars = MagicMock()
+        scalars.all.return_value = [bob, user]
+        result = MagicMock()
+        result.scalars.return_value = scalars
+        post_repo._session.execute = AsyncMock(return_value=result)
         await service.create_post(user, "Hey @bob!")
-        service._notification.notify_mentions.assert_awaited_once_with(
-            "Hey @bob!",
-            user,
-            post.id,
-            post_repo._session,
-        )
+        service._notification.notify.assert_awaited_once()
+        kwargs = service._notification.notify.await_args.kwargs
+        assert kwargs["user_id"] == bob.id
+        assert kwargs["type"] == "mention"
 
     @pytest.mark.asyncio
     async def test_reply_to_prompt_increments_count(self, service, post_repo, prompt_repo):
