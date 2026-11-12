@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// @brief Server frame: `{type, payload, ts}`.
@@ -22,21 +23,24 @@ abstract class RealtimeClient {
   void dispose();
 }
 
+/// @brief Opens a channel to [Uri]; defaults to [WebSocketChannel.connect], tests pass a fake.
+typedef ChannelConnector = StreamChannel<dynamic> Function(Uri uri);
+
 /// @brief RealtimeClient over web_socket_channel. First frame is the JWT auth message.
 class WebSocketRealtimeClient implements RealtimeClient {
   WebSocketRealtimeClient({
     required this.url,
     required this.tokenReader,
-    WebSocketChannel Function(Uri)? connector,
+    ChannelConnector? connector,
     this.maxBackoff = const Duration(seconds: 30),
-  }) : _connector = connector ?? WebSocketChannel.connect;
+  }) : _connector = connector ?? ((uri) => WebSocketChannel.connect(uri));
 
   final String url;
   final Future<String?> Function() tokenReader;
-  final WebSocketChannel Function(Uri) _connector;
+  final ChannelConnector _connector;
   final Duration maxBackoff;
   final _out = StreamController<RealtimeMessage>.broadcast();
-  WebSocketChannel? _ch;
+  StreamChannel<dynamic>? _ch;
   Timer? _retry;
   int _attempts = 0;
   bool _disposed = false;

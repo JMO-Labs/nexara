@@ -4,8 +4,8 @@ publish_to: none
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
-  flutter: ">=3.22.0"
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.32.0"
 
 dependencies:
   flutter:
@@ -23,6 +23,7 @@ dependencies:
   local_auth: ^2.2.0
   json_annotation: ^4.9.0
   web_socket_channel: ^3.0.0
+  stream_channel: ^2.1.2
   cached_network_image: ^3.3.1
   intl: ^0.19.0
 
@@ -31,7 +32,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
   mockito: ^5.4.4
-  stream_channel: ^2.1.2
   build_runner: ^2.4.9
   json_serializable: ^6.8.0
 

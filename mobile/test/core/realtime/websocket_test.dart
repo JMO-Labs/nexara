@@ -1,6 +1,5 @@
 /// @file websocket_test.dart
 /// @brief WebSocket client: auth frame, message stream, auto-reconnect.
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
