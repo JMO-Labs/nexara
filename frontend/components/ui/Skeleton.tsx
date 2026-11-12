@@ -3,9 +3,20 @@
  * @brief Loading placeholder. Pulse only when motion is allowed.
  */
 import * as React from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export type SkeletonProps = React.HTMLAttributes<HTMLDivElement> & {
+/** Fade variants: 0->1 on mount, 1->0 on exit (parent AnimatePresence). */
+export const skeletonVariants: Variants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.15, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
+};
+
+export type SkeletonProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onAnimationStart" | "onAnimationEnd" | "onDrag" | "onDragStart" | "onDragEnd"
+> & {
   width?: number | string;
   height?: number | string;
   rounded?: "sm" | "md" | "lg" | "pill";
@@ -23,7 +34,7 @@ const rad = {
  * @param width css width (default 100%)
  * @param height css height (default 16)
  * @param rounded radius step
- * @return div
+ * @return motion.div (fade skipped under prefers-reduced-motion)
  */
 export function Skeleton({
   width = "100%",
@@ -33,8 +44,13 @@ export function Skeleton({
   style,
   ...rest
 }: SkeletonProps) {
+  const reduced = useReducedMotion();
   return (
-    <div
+    <motion.div
+      variants={skeletonVariants}
+      initial={reduced ? false : "initial"}
+      animate="animate"
+      exit={reduced ? undefined : "exit"}
       role="status"
       aria-busy="true"
       aria-live="polite"
