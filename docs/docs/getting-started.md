@@ -20,14 +20,18 @@ git clone https://github.com/JMO-Labs/nexara.git && cd nexara
 
 ## Backend Setup
 
+Run every command on this page from the repo root (`nexara/`). Commands that
+enter `backend/` or `frontend/` either use a `( ... )` subshell or `cd ..` back,
+so the blocks work when pasted top to bottom.
+
 ```bash
-cd backend && uv venv .venv && source .venv/bin/activate && uv sync
+cd backend && uv venv .venv && source .venv/bin/activate && uv sync && cd ..
 ```
 
 ## Frontend Setup
 
 ```bash
-cd frontend && npm install
+(cd frontend && npm install)
 ```
 
 ## Database
@@ -42,21 +46,21 @@ docker run -d --name nexara-valkey -p 6379:6379 valkey/valkey:8-alpine
 ```
 
 ```bash
-cd backend && alembic upgrade head
+(cd backend && alembic upgrade head)
 ```
 
 ## Run the Dev Servers
 
-Use two terminals.
+Use two terminals, each opened at the repo root.
 
 ```bash
 # Terminal 1 - backend
-cd backend && uvicorn app.main:app --reload --port 8000
+(cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 8000)
 ```
 
 ```bash
 # Terminal 2 - frontend
-cd frontend && npm run dev
+(cd frontend && npm run dev)
 ```
 
 Open <http://localhost:3000/app> in your browser.
@@ -64,11 +68,12 @@ Open <http://localhost:3000/app> in your browser.
 ## Run the Tests
 
 ```bash
-cd backend && pytest --cov=app --cov-report=html -v
-cd frontend && npm test
+(cd backend && pytest --cov=app --cov-report=html -v)
+(cd frontend && npm test)
 ```
 
-Backend tests need a real PostgreSQL instance (no SQLite).
+Backend commands (`alembic`, `pytest`) expect the venv activated in Backend
+Setup. Backend tests need a real PostgreSQL instance (no SQLite).
 
 ## Troubleshooting
 

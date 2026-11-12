@@ -35,3 +35,17 @@ def test_development_current_stack_and_no_stale() -> None:
         assert term in DEV
     for stale in ("Nuxt", "Pinia", "Flowbite", "Vue Test Utils"):
         assert stale not in DEV + START + README
+
+
+def test_getting_started_cd_steps_are_root_relative() -> None:
+    """Every cd into backend/frontend returns to root so blocks paste in order."""
+    lines = [ln.strip() for ln in START.splitlines()]
+    bare = [
+        ln
+        for ln in lines
+        if ln.startswith(("cd backend", "cd frontend")) and not ln.endswith("&& cd ..")
+    ]
+    assert not bare, f"use (cd ... && ...) subshells: {bare}"
+    assert "(cd backend && pytest --cov=app --cov-report=html -v)" in START
+    assert "(cd frontend && npm test)" in START
+    assert "from the repo root" in START
