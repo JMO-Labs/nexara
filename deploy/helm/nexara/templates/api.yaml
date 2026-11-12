@@ -1,0 +1,72 @@
+{{- $ctx := dict "root" . "component" "api" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexara.fullname" . }}-api
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.api.replicas }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "nexara.selector" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nexara.selector" $ctx | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ include "nexara.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - {name: http, containerPort: {{ .Values.api.port }}}
+          {{- include "nexara.env" . | nindent 10 }}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 30
+          resources: {{- toYaml .Values.api.resources | nindent 12 }}
+          {{- if eq .Values.storage.backend "local" }}
+          volumeMounts:
+            - {name: media, mountPath: /data/media}
+          {{- end }}
+      {{- if eq .Values.storage.backend "local" }}
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: {{ include "nexara.fullname" . }}-media
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexara.fullname" . }}-api
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "nexara.selector" $ctx | nindent 4 }}
+  ports:
+    - {name: http, port: 80, targetPort: http}
+{{- if eq .Values.storage.backend "local" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "nexara.fullname" . }}-media
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.storage.local.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.local.size }}
+{{- end }}
