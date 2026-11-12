@@ -281,7 +281,7 @@ def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-un
     instrumentator = Instrumentator(
         should_group_status_codes=True,
         should_ignore_untemplated=True,
-        excluded_handlers=["/healthz", "/metrics"],
+        excluded_handlers=["/healthz", "/livez", "/metrics"],
     )
     instrumentator.instrument(app)
 
