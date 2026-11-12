@@ -17,6 +17,17 @@ MSG = "Single sign-on only: password login is disabled"
 GUARD = "app.services.auth.sso_only.is_sso_only"
 
 
+@pytest.fixture(autouse=True)
+def _no_rate_limit():
+    """@brief Disable the import-bound limiter so no Valkey is needed."""
+    from app.core.rate_limit import limiter
+
+    prev = limiter.enabled
+    limiter.enabled = False
+    yield
+    limiter.enabled = prev
+
+
 @pytest.fixture
 def db_override(test_app):
     """@brief Override get_db with a mock session."""

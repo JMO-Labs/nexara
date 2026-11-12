@@ -39,6 +39,7 @@ def _sso_only_off():
 def _make_service(session=None, settings=None):
     session = session or AsyncMock()
     settings = settings or MagicMock()
+    settings.COMMUNITY_ID = str(uuid.uuid4())
     settings.APP_BASE_URL = "https://app.example.com"
     settings.SMTP_FROM = "noreply@example.com"
     settings.SECRET_KEY = "test-secret"
