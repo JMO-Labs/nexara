@@ -4,7 +4,18 @@
  */
 import { apiGet, apiPut } from "./client";
 
-export interface UserSettings {
+export interface PrivacyAppearanceSettings {
+  profile_visible_to: "community" | "admin_only";
+  show_online_status: boolean;
+  show_last_seen: boolean;
+  show_birthday_to: "nobody" | "community" | "admin_only";
+  show_birthday_year: boolean;
+  allow_sassybot: boolean;
+  font_size: "small" | "medium" | "large";
+  compact_feed: boolean;
+}
+
+export interface UserSettings extends PrivacyAppearanceSettings {
   theme: "system" | "light" | "dark";
   locale: string;
   notif_mention_inapp: boolean;
@@ -36,9 +47,11 @@ export interface NotificationPreferences {
   notif_invite_accepted_inapp: boolean;
   notif_invite_accepted_email: boolean;
   mute_all_email: boolean;
+  /** Per-type Apprise channel flags, e.g. notif_mention_apprise. */
+  [apprise: `notif_${string}_apprise`]: boolean | undefined;
 }
 
-export interface UserSettingsUpdate {
+export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   theme?: "system" | "light" | "dark";
   locale?: string;
 }
@@ -49,6 +62,7 @@ export interface ProfileUpdate {
   location?: string;
   website_url?: string;
   title?: string;
+  pronouns?: string;
 }
 
 export interface MessageResponse {

@@ -19,6 +19,11 @@ import {
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/utils";
+import {
+  ListNotification,
+  isListNotificationType,
+} from "./ListNotificationRenderer";
+import { formatTime } from "./formatTime";
 import type { NotificationItem } from "@/lib/api/notifications";
 
 type IconCmp = ComponentType<SVGProps<SVGSVGElement>>;
@@ -36,16 +41,6 @@ const TYPE_META: Record<string, { label: string; icon: IconCmp }> = {
 
 function metaFor(type: string): { label: string; icon: IconCmp } {
   return TYPE_META[type] ?? { label: type.replace(/_/g, " "), icon: Inbox };
-}
-
-/** @brief Relative time string. */
-export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86_400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString();
 }
 
 export interface NotificationRowProps {
@@ -68,6 +63,29 @@ export function NotificationRow({
   onNavigate,
   ackPending,
 }: NotificationRowProps) {
+  if (isListNotificationType(item.type)) {
+    const ctx = (item.payload ?? {}) as Record<string, unknown>;
+    const listId = typeof ctx.listId === "string" ? ctx.listId : "";
+    return (
+      <ListNotification
+        notification={{
+          id: item.id,
+          type: item.type,
+          context: ctx,
+          createdAt: item.created_at,
+        }}
+        href={listId ? `/app/lists/${encodeURIComponent(listId)}` : undefined}
+        unread={!item.read_at}
+        ackPending={ackPending}
+        onAck={onAck}
+        onDismiss={onDismiss}
+        onNavigate={() => {
+          onDismiss(item.id);
+          onNavigate();
+        }}
+      />
+    );
+  }
   const unread = !item.read_at;
   const { label, icon: Icon } = metaFor(item.type);
   const message =

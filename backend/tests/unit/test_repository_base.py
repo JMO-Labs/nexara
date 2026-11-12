@@ -3,6 +3,9 @@
 @brief Unit tests for the generic base repository.
 """
 
+from unittest.mock import MagicMock
+
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
@@ -34,3 +37,12 @@ class TestBaseRepositoryStructure:
 
     def test_count_exists(self):
         assert callable(getattr(BaseRepository, "count", None))
+
+
+class TestSessionProperty:
+    def test_session_exposes_underlying_session(self):
+        class Repo(BaseRepository[User]):
+            model = User
+
+        session = MagicMock()
+        assert Repo(session).session is session
