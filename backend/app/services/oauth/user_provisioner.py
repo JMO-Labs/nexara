@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AuthenticationError
 from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
 from app.repositories.calendar_repo import CalendarRepository
@@ -35,6 +36,7 @@ class OAuthAuthResult:
     display_name: str | None = None
     avatar_url: str | None = None
     groups: list[str] | None = None
+    email_verified: bool = False
 
     def __post_init__(self) -> None:
         """@brief Ensure groups is a list."""
@@ -95,7 +97,8 @@ class UserProvisioner:
         """
         @brief Create or update a user from OAuth claims.
 
-        Looks up by provider+sub via UserOAuthLink first, then by email.
+        Looks up by provider+sub via UserOAuthLink first, then by email
+        (case-insensitive, requires email_verified; else AuthenticationError).
         Creates UserOAuthLink for new users.
 
         Role handling:
@@ -132,7 +135,12 @@ class UserProvisioner:
                     await self._link_repo.update(link, link_updates)
                 return user
 
-        user = await self._user_repo.find_by_email(auth_result.email or "")
+        # No link yet: only a provider-verified email may create or link an account.
+        if not auth_result.email or not auth_result.email_verified:
+            raise AuthenticationError(message="Email not verified by identity provider")
+        email = auth_result.email.strip().lower()
+
+        user = await self._user_repo.find_by_email(email)
         if user:
             # First OAuth link for existing user — only set role when
             # the provider actively maps groups.
@@ -151,11 +159,11 @@ class UserProvisioner:
         username = _derive_username(auth_result.display_name, auth_result.email)
         user = User(
             community_id=self._community_id,
-            email=auth_result.email or f"{auth_result.sub}@oauth.local",
+            email=email,
             username=username,
             display_name=auth_result.display_name or username,
             role=role,
-            email_verified=bool(auth_result.email),
+            email_verified=True,
             avatar_url=auth_result.avatar_url,
         )
         user = await self._user_repo.create(user)

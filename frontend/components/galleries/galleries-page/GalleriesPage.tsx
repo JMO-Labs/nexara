@@ -15,7 +15,7 @@ import {
   type SortOption,
 } from "@/components/galleries/GallerySortSelect";
 import { PageMasthead } from "@/components/layout/PageMasthead";
-import { useGalleryList } from "@/hooks/useGalleries";
+import { useGalleryList, useGalleryListInfinite } from "@/hooks/useGalleries";
 import type { ListGalleriesParams } from "@/lib/api/galleries";
 import { FeaturedSpread } from "./FeaturedSpread";
 import { GalleryDrawer } from "./GalleryDrawer";
@@ -61,10 +61,20 @@ export function GalleriesPage() {
     sort: "popular",
   });
   const {
-    data: listData,
+    data: listPages,
     isLoading: listLoading,
     error: listError,
-  } = useGalleryList(listParams);
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useGalleryListInfinite(listParams);
+  const listData = React.useMemo(
+    () =>
+      listPages
+        ? { items: listPages.pages.flatMap((p) => p.items) }
+        : undefined,
+    [listPages],
+  );
 
   const featured = featuredData?.items ?? [];
   const totalCount = listData?.items.length ?? 0;
@@ -116,6 +126,17 @@ export function GalleriesPage() {
             onEmptyAction={() => router.push("/app/media")}
           />
         </div>
+        {hasNextPage && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="secondary"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </Button>
+          </div>
+        )}
       </section>
 
       <GalleryDrawer

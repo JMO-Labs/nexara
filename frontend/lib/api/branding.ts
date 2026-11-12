@@ -12,6 +12,14 @@ export interface Branding {
   community_name: string;
   tagline: string | null;
   color_accent: string;
+  color_primary?: string;
+  color_primary_dark?: string;
+  color_surface_light?: string;
+  color_surface_dark?: string;
+  color_text_light?: string;
+  color_text_dark?: string;
+  font_family?: string;
+  font_family_mono?: string;
   logo_light_url: string | null;
   logo_dark_url: string | null;
 }
@@ -20,6 +28,14 @@ export interface BrandingUpdate {
   community_name?: string;
   tagline?: string;
   color_accent?: string;
+  color_primary?: string;
+  color_primary_dark?: string;
+  color_surface_light?: string;
+  color_surface_dark?: string;
+  color_text_light?: string;
+  color_text_dark?: string;
+  font_family?: string;
+  font_family_mono?: string;
 }
 
 /** @brief Fetch current branding (public). */
@@ -42,3 +58,11 @@ export function accentPassesAA(accent: string): boolean {
   if (!/^#[0-9a-fA-F]{6}$/.test(accent)) return false;
   return contrastRatio(palette.light["surface-strong"], accent) >= 4.5;
 }
+
+/** @brief True if value is a #RRGGBB hex color. */
+export const isHex = (v: unknown): v is string =>
+  typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
+
+/** @brief True if value is a safe font family name (letters, digits, space, dash). */
+export const isFontName = (v: unknown): v is string =>
+  typeof v === "string" && /^[A-Za-z0-9][A-Za-z0-9 \-]{0,63}$/.test(v);
