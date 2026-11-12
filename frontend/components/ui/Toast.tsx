@@ -38,6 +38,7 @@ function ToastItem({ toast }: { toast: ToastT }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: reduce ? 0 : 8 }}
       transition={{ duration: reduce ? 0 : 0.18 }}
+      aria-live={toast.variant === "danger" ? "assertive" : "polite"}
       className={cn(
         "bg-surface text-ink flex w-full max-w-sm items-start gap-3 rounded-2xl border-l-4 p-3 shadow-lg",
         TONE[toast.variant],
@@ -53,6 +54,15 @@ function ToastItem({ toast }: { toast: ToastT }) {
         {toast.title ? <p className="font-semibold">{toast.title}</p> : null}
         <p className="text-sm">{toast.message}</p>
       </div>
+      {toast.action ? (
+        <button
+          type="button"
+          onClick={toast.action.onClick}
+          className="text-accent focus-visible:outline-accent rounded px-2 py-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          {toast.action.label}
+        </button>
+      ) : null}
       <button
         type="button"
         aria-label="Dismiss"
