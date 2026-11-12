@@ -1,6 +1,6 @@
 """@file Special list field types: signup and user_pull."""
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -36,7 +36,7 @@ class UserPullConfig(BaseModel):
     """@brief Config for user-data pull fields."""
 
     pull_from: Literal["email", "phone", "address", "birthday"]
-    target_user_field: Optional[str] = None
+    target_user_field: str | None = None
 
 
 class UserPullField(FieldTypeBase):
