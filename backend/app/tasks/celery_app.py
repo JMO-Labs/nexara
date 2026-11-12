@@ -41,6 +41,7 @@ celery_app.conf.update(
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
+        "app.tasks.birthday_tasks.*": {"queue": "notifications"},
         "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
         "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
@@ -144,6 +145,10 @@ celery_app.conf.update(
         "gallery-batch-notifications": {
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
             "schedule": 60.0 * 60,
+        },
+        "send-birthday-reminders": {
+            "task": "app.tasks.birthday_tasks.send_birthday_reminders",
+            "schedule": crontab(hour="6", minute="0"),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",
