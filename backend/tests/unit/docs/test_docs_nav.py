@@ -1,0 +1,45 @@
+"""
+@file test_docs_nav.py
+@brief Guards the directory-based MkDocs nav (awesome-pages) structure.
+"""
+
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[4]
+DOCS = ROOT / "docs" / "docs"
+PAGES = [
+    "user/index.md",
+    "user/self-hosting.md",
+    "user/features.md",
+    "user/faq.md",
+    "developer/index.md",
+    "developer/architecture.md",
+    "developer/contributing.md",
+]
+
+
+def test_mkdocs_has_no_explicit_nav_and_uses_awesome_pages():
+    text = (ROOT / "docs" / "mkdocs.yml").read_text()
+    assert not any(line.startswith("nav:") for line in text.splitlines())
+    assert "awesome-pages" in text
+
+
+@pytest.mark.parametrize("d", ["", "user", "developer"])
+def test_pages_files_exist(d):
+    assert (DOCS / d / ".pages").is_file()
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_content_pages_are_substantive(page):
+    path = DOCS / page
+    assert path.is_file()
+    assert len(path.read_text().split()) >= 150
+
+
+@pytest.mark.parametrize("d", ["user", "developer"])
+def test_pages_lists_reference_existing_entries(d):
+    for line in (DOCS / d / ".pages").read_text().splitlines():
+        if line.strip().startswith("- "):
+            assert (DOCS / d / line.strip()[2:]).exists()

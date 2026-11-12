@@ -1,0 +1,12 @@
+title: Nexara Documentation
+nav:
+  - index.md
+  - getting-started.md
+  - development.md
+  - deployment.md
+  - user
+  - developer
+  - References:
+      - API Docs (Doxygen): /api/
+      - Backend Coverage: /coverage/backend/
+      - Frontend Coverage: /coverage/frontend/
