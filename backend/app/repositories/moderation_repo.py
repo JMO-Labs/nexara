@@ -199,9 +199,7 @@ class ModerationRepository(BaseRepository[UserBlock]):
         await self._session.refresh(report)
         return report
 
-    async def list_blocks(
-        self, blocker_id: uuid.UUID, community_id: uuid.UUID
-    ) -> list[UserBlock]:
+    async def list_blocks(self, blocker_id: uuid.UUID, community_id: uuid.UUID) -> list[UserBlock]:
         """
         @brief List blocks created by a user, newest first.
 
@@ -253,9 +251,7 @@ class ModerationRepository(BaseRepository[UserBlock]):
 
         @param user_id User UUID.
         """
-        await self._session.execute(
-            update(User).where(User.id == user_id).values(is_active=False)
-        )
+        await self._session.execute(update(User).where(User.id == user_id).values(is_active=False))
 
     async def list_reports(
         self,
