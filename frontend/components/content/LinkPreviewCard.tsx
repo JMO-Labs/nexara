@@ -16,11 +16,20 @@ export interface LinkPreviewCardProps {
 const clip = (s: string, n: number) =>
   s.length > n ? `${s.slice(0, n - 1)}…` : s;
 
+/** @brief True only for http(s) URLs (blocks javascript:, data:, etc.). */
+const isHttpUrl = (url: string): boolean => {
+  try {
+    return ["http:", "https:"].includes(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+};
+
 /**
  * @brief Clickable preview card; opens the URL in a new tab.
  * @param preview link preview data
  * @param onClick optional callback (e.g. analytics)
- * @return anchor element
+ * @return anchor element, or null for non-http(s) URLs
  */
 export function LinkPreviewCard({ preview, onClick }: LinkPreviewCardProps) {
   const [imgFailed, setImgFailed] = React.useState(false);
@@ -29,6 +38,7 @@ export function LinkPreviewCard({ preview, onClick }: LinkPreviewCardProps) {
     ? clip(preview.og_description, 200)
     : null;
   const showImg = !!preview.og_image && !imgFailed;
+  if (!isHttpUrl(preview.url)) return null;
 
   return (
     <a
@@ -42,7 +52,7 @@ export function LinkPreviewCard({ preview, onClick }: LinkPreviewCardProps) {
         {showImg ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`${API_BASE}/api/v1/link-previews/${preview.id}/image`}
+            src={`${API_BASE}/api/v1/link-previews/${encodeURIComponent(preview.id)}/image`}
             alt={preview.og_title || "Link preview"}
             loading="lazy"
             onError={() => setImgFailed(true)}
