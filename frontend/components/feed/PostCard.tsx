@@ -16,6 +16,7 @@ import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
 import { SourceBadge } from "./SourceBadge";
+import { KudosCard } from "./KudosCard";
 import type { Post } from "@/lib/api/posts";
 
 export interface PostCardProps {
@@ -48,6 +49,17 @@ export function PostCard({
   const reactMut = useTogglePostReaction(post.id);
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
+
+  if (post.recipient_id && post.recipient) {
+    return (
+      <KudosCard
+        recipient={post.recipient}
+        message={post.content}
+        authorName={post.author.display_name}
+        createdAt={post.created_at}
+      />
+    );
+  }
 
   return (
     <Card className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-surface))] md:p-4">

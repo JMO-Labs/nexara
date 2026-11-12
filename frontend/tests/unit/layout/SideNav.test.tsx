@@ -32,6 +32,7 @@ describe("SideNav", () => {
       "Groups",
       "Galleries",
       "Media",
+      "Kudos",
       "Members",
       "Notifications",
       "Settings",

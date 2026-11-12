@@ -10,6 +10,7 @@ import {
   Images,
   Film,
   Contact,
+  Trophy,
   Bell,
   Settings,
   ShieldCheck,
@@ -64,6 +65,7 @@ export const PRIMARY_NAV: NavItem[] = [
 export const MORE_NAV: NavItem[] = [
   { label: "Galleries", href: "/app/galleries", Icon: Images },
   { label: "Media", href: "/app/media", Icon: Film },
+  { label: "Kudos", href: "/app/kudos", Icon: Trophy },
   { label: "Members", href: "/app/members", Icon: Contact },
   { label: "Notifications", href: "/app/notifications", Icon: Bell },
   { label: "Settings", href: "/app/settings", Icon: Settings },

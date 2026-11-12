@@ -6,9 +6,10 @@
  */
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertCircle, MessageSquarePlus } from "lucide-react";
+import { AlertCircle, MessageSquarePlus, Trophy } from "lucide-react";
 import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
+import { KudosComposer } from "@/components/feed/KudosComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
@@ -33,6 +34,7 @@ export function HomeFeed() {
     refetch,
   } = useHomeFeed();
   const reduced = useReducedMotion();
+  const [kudosOpen, setKudosOpen] = React.useState(false);
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const nextRef = React.useRef({ fetchNextPage, hasNextPage });
@@ -72,6 +74,17 @@ export function HomeFeed() {
       <div ref={composerRef}>
         <PostComposer />
       </div>
+      <div className="flex justify-end">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setKudosOpen(true)}
+        >
+          <Trophy className="size-4" aria-hidden="true" />
+          Send Kudos
+        </Button>
+      </div>
+      <KudosComposer open={kudosOpen} onClose={() => setKudosOpen(false)} />
       <AnimatePresence mode="wait" initial={false}>
         {isLoading ? (
           <motion.div

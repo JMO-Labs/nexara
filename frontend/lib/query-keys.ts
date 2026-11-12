@@ -90,6 +90,9 @@ export const qk = {
     notifications: () => ["settings", "notifications"] as const,
     security: () => ["settings", "security"] as const,
   },
+  kudos: {
+    wall: () => ["kudos", "wall"] as const,
+  },
   home: {
     layout: () => ["home-layout"] as const,
     summary: () => ["home-summary"] as const,
