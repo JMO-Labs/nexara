@@ -135,6 +135,35 @@ describe("HomeFeed", () => {
     expect(container.querySelector("ul")?.className).toContain("gap-2");
   });
 
+  it("skeletons use the same Card surface and padding as PostCard", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    for (const e of screen.getAllByTestId("feed-skeleton")) {
+      expect(e.className).toContain("bg-surface");
+      expect(e.className).toContain("p-3");
+      expect(e.className).toContain("md:p-4");
+    }
+  });
+
+  it("skips stagger fade-in under reduced motion", () => {
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: true,
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    window.matchMedia = mm;
+    for (const e of screen.getAllByTestId("feed-skeleton"))
+      expect((e as HTMLElement).style.opacity).not.toBe("0");
+  });
+
   it("staggers skeletons with per-item delay", () => {
     state.hook.items = [];
     state.hook.isLoading = true;

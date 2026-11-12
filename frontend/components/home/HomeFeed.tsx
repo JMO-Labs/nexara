@@ -5,14 +5,16 @@
  *        infinite scroll.
  */
 import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertCircle, MessageSquarePlus } from "lucide-react";
-import { Button, EmptyState, Skeleton } from "@/components/ui";
+import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import { NewItemsPill } from "./NewItemsPill";
+
+const MotionCard = motion.create(Card);
 
 /**
  * @brief Home feed column.
@@ -30,6 +32,7 @@ export function HomeFeed() {
     isError,
     refetch,
   } = useHomeFeed();
+  const reduced = useReducedMotion();
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const nextRef = React.useRef({ fetchNextPage, hasNextPage });
@@ -79,19 +82,19 @@ export function HomeFeed() {
             className="flex flex-col gap-2"
           >
             {[0, 1, 2].map((n) => (
-              <motion.div
+              <MotionCard
                 key={n}
                 data-testid="feed-skeleton"
                 data-delay={String(n * 0.08)}
                 aria-hidden="true"
-                initial={{ opacity: 0 }}
+                initial={reduced ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: n * 0.08, duration: 0.2 }}
-                className="flex flex-col gap-2 rounded-lg p-3 md:p-4"
+                className="flex flex-col gap-2 p-3 md:p-4"
               >
                 <Skeleton width="40%" height={16} role="presentation" />
                 <Skeleton height={64} rounded="md" role="presentation" />
-              </motion.div>
+              </MotionCard>
             ))}
           </motion.div>
         ) : isError && isEmpty ? (
