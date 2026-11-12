@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from packaging.version import Version
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -17,6 +18,7 @@ from app.core.i18n import _
 from app.models.plugin import Plugin
 from app.plugins.api_keys import generate_api_key
 from app.plugins.manifest import PluginManifest, is_compatible, load_manifest
+from app.plugins.utils import validate_plugin_dir
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
 from app.repositories.plugin_repo import PluginRepository
 
@@ -153,3 +155,25 @@ class PluginService:
         row.settings = {**row.settings, **values}
         await self._repo.save(row)
         return await self.get_settings(plugin_id)
+
+    async def upgrade(self, plugin_id: str, new_version: str) -> Plugin:
+        """
+        @brief Upgrade an installed plugin to the version found on disk.
+        @param new_version Expected target version; must equal the manifest version.
+        @throws NotFoundError if not installed.
+        @throws ValidationError on version mismatch, non-increase or core incompatibility.
+        """
+        row = await self._installed(plugin_id)
+        manifest = validate_plugin_dir(self._dir / plugin_id)
+        if manifest.id != plugin_id or manifest.version != new_version:
+            raise ValidationError(message=_("Plugin on disk does not match requested version"))
+        if Version(new_version) <= Version(row.version):
+            raise ValidationError(message=_("New version must be greater than installed"))
+        if not is_compatible(manifest, self._core):
+            raise ValidationError(
+                message=_("Plugin requires core version >= %(v)s")
+                % {"v": manifest.min_core_version}
+            )
+        row.version = manifest.version
+        row.permissions_granted = [p.value for p in manifest.permissions]
+        return await self._repo.save(row)
