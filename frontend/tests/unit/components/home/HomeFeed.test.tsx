@@ -108,6 +108,13 @@ describe("HomeFeed", () => {
     state.hook.isLoading = true;
     render(<HomeFeed />);
     expect(screen.getAllByTestId("feed-skeleton").length).toBe(3);
+    const status = screen.getByRole("status", { name: "Loading feed" });
+    expect(status.querySelectorAll('[role="status"]')).toHaveLength(0);
+    expect(
+      screen
+        .getAllByTestId("feed-skeleton")
+        .every((e) => e.getAttribute("aria-hidden") === "true"),
+    ).toBe(true);
     expect(screen.queryByText("No posts yet")).toBeNull();
   });
 
@@ -126,5 +133,20 @@ describe("HomeFeed", () => {
   it("uses 8px item gap", () => {
     const { container } = render(<HomeFeed />);
     expect(container.querySelector("ul")?.className).toContain("gap-2");
+  });
+
+  it("staggers skeletons with per-item delay", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    const delays = screen
+      .getAllByTestId("feed-skeleton")
+      .map((e) => e.getAttribute("data-delay"));
+    expect(delays).toEqual(["0", "0.08", "0.16"]);
+  });
+
+  it("uses shared radius token, not arbitrary values", () => {
+    const { container } = render(<HomeFeed />);
+    expect(container.innerHTML).not.toContain("rounded-[");
   });
 });

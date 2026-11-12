@@ -5,6 +5,7 @@
  *        infinite scroll.
  */
 import * as React from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, MessageSquarePlus } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
@@ -68,53 +69,69 @@ export function HomeFeed() {
       <div ref={composerRef}>
         <PostComposer />
       </div>
-      {isLoading ? (
-        <div className="flex flex-col gap-2" aria-label="Loading feed">
-          {[0, 1, 2].map((n) => (
-            <div
-              key={n}
-              data-testid="feed-skeleton"
-              style={{ animationDelay: `${n * 80}ms` }}
-              className="flex flex-col gap-2 rounded-[1.25rem] p-3 md:p-4"
-            >
-              <Skeleton width="40%" height={16} />
-              <Skeleton height={64} rounded="md" />
-            </div>
-          ))}
-        </div>
-      ) : isError && isEmpty ? (
-        <EmptyState
-          icon={AlertCircle}
-          title="Failed to load feed"
-          description="Something went wrong. Check your connection and try again."
-          action={<Button onClick={() => refetch()}>Retry</Button>}
-        />
-      ) : isEmpty ? (
-        <EmptyState
-          icon={MessageSquarePlus}
-          title="No posts yet"
-          description="Share an update with your community to get things started."
-          action={
-            <Button onClick={focusComposer}>Create your first post</Button>
-          }
-        />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {items.map((i) => (
-            <li
-              key={`${i.kind}:${i.id}`}
-              data-new={freshIds.has(`${i.kind}:${i.id}`) ? "true" : undefined}
-              className="rounded-[1.25rem] data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
-            >
-              {i.kind === "post" ? (
-                <PostCard post={i.post} />
-              ) : (
-                <ActivityLine item={i.activity} />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            exit={{ opacity: 0 }}
+            role="status"
+            aria-label="Loading feed"
+            className="flex flex-col gap-2"
+          >
+            {[0, 1, 2].map((n) => (
+              <motion.div
+                key={n}
+                data-testid="feed-skeleton"
+                data-delay={String(n * 0.08)}
+                aria-hidden="true"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: n * 0.08, duration: 0.2 }}
+                className="flex flex-col gap-2 rounded-lg p-3 md:p-4"
+              >
+                <Skeleton width="40%" height={16} role="presentation" />
+                <Skeleton height={64} rounded="md" role="presentation" />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : isError && isEmpty ? (
+          <EmptyState
+            key="error"
+            icon={AlertCircle}
+            title="Failed to load feed"
+            description="Something went wrong. Check your connection and try again."
+            action={<Button onClick={() => refetch()}>Retry</Button>}
+          />
+        ) : isEmpty ? (
+          <EmptyState
+            key="empty"
+            icon={MessageSquarePlus}
+            title="No posts yet"
+            description="Share an update with your community to get things started."
+            action={
+              <Button onClick={focusComposer}>Create your first post</Button>
+            }
+          />
+        ) : (
+          <ul key="list" className="flex flex-col gap-2">
+            {items.map((i) => (
+              <li
+                key={`${i.kind}:${i.id}`}
+                data-new={
+                  freshIds.has(`${i.kind}:${i.id}`) ? "true" : undefined
+                }
+                className="rounded-lg data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
+              >
+                {i.kind === "post" ? (
+                  <PostCard post={i.post} />
+                ) : (
+                  <ActivityLine item={i.activity} />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </AnimatePresence>
       <div ref={sentinelRef} aria-hidden="true" className="h-1" />
     </div>
   );
