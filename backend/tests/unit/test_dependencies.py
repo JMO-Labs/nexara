@@ -174,3 +174,18 @@ class TestGetOptionalUser:
         result = await get_optional_user(token=token, db=db, settings=settings)
         assert result is not None
         assert result.id == user_id
+
+
+class TestGetSuggestionService:
+    """@brief Wiring of get_suggestion_service."""
+
+    @pytest.mark.asyncio
+    async def test_wires_repo_and_provider(self):
+        from app.core.dependencies import get_suggestion_service
+        from app.repositories.suggestion_repo import SuggestionRepository
+
+        svc = await get_suggestion_service(
+            db=AsyncMock(), settings=Settings(SECRET_KEY="x", AI_PROVIDER="")
+        )
+        assert isinstance(svc._repo, SuggestionRepository)
+        assert svc._provider is None  # AI_PROVIDER unset by default
