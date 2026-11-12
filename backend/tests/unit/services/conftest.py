@@ -149,3 +149,12 @@ def service_with_activity_repo(service, activity_repo):
     """@brief PostService with activity_repo injected."""
     service._activity_repo = activity_repo
     return service
+
+
+@pytest.fixture(autouse=True)
+def sassybot_delay():
+    """@brief Stub the Sassybot Celery enqueue so unit tests never hit a broker."""
+    from unittest.mock import patch
+
+    with patch("app.tasks.ai_tasks.sassybot_comment_task.delay") as m:
+        yield m

@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = ""
     OLLAMA_MODEL: str = "llama2"
     AI_HTTP_TIMEOUT: float = 60.0
+    #: User id of the Sassybot bot account (empty disables Sassybot comments)
+    SASSYBOT_USER_ID: str = ""
 
     # --- VAPID (Web Push) ---
     VAPID_PRIVATE_KEY: str = ""
