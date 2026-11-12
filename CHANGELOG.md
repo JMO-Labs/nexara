@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Signups on list items: members claim and release items
 - List notifications (in-app, Web Push, email) via `NotificationService`
 - Lists UI pages in the frontend (index, detail, template and signup views)
-- Alembic migration adding the lists, list items, templates and signups tables
+- Alembic migration `0019_list_templates` adding list template, list, member, item, signup and completion tables
 
 ### Phase 1.5 -- OAuth2/OIDC Multi-Provider
 
