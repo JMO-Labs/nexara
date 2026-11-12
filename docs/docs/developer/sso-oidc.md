@@ -122,6 +122,9 @@ PUT /api/v1/admin/oauth/providers/{id}
 - Groups with no mapping, or whose subgroup no longer exists, are skipped and a
   warning is logged; login never fails because of them.
 - Memberships are only added, never removed, when a group disappears from the token.
+- Rules are validated on create/update (422 on error): with `subgroup_id`, `role`
+  must be `owner`, `moderator` or `member`; without it, `viewer`, `member` or
+  `admin`. Other `claim_mapping` keys must be strings.
 
 Preview the mapping (no writes). Optional `groups` simulates a token:
 

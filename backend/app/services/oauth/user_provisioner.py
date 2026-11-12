@@ -21,8 +21,9 @@ from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.repositories.user_repo import UserRepository
-from app.services.oauth.group_mapper import global_role_mappings
+from app.services.oauth.group_mapper import apply_subgroup_mappings, global_role_mappings
 
 if TYPE_CHECKING:
     from app.models.oauth_provider import OAuthProvider
@@ -90,6 +91,31 @@ class UserProvisioner:
         self._user_repo = UserRepository(db)
 
     async def provision_user(
+        self,
+        auth_result: OAuthAuthResult,
+        provider: OAuthProvider,
+        role: str,
+    ) -> User:
+        """
+        @brief Provision the user, then apply claim_mapping.group_mapping subgroups.
+
+        @param auth_result Extracted claims from token.
+        @param provider OAuth provider configuration.
+        @param role Resolved community role.
+        @return The user (created or updated).
+        """
+        user = await self._provision_identity(auth_result, provider, role)
+        await apply_subgroup_mappings(
+            SubgroupRepository(self._db),
+            SubgroupMemberRepository(self._db),
+            self._community_id,
+            user.id,
+            auth_result.groups or [],
+            provider.claim_mapping,
+        )
+        return user
+
+    async def _provision_identity(
         self,
         auth_result: OAuthAuthResult,
         provider: OAuthProvider,

@@ -6,6 +6,8 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
+from structlog.testing import capture_logs
+
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.oauth.group_mapper import (
@@ -119,6 +121,55 @@ class TestApplySubgroupMappings:
         subs, mem = _repos()
         cm = {"group_mapping": {"eng": {"subgroup_id": "nope", "role": "member"}}}
         assert await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], cm) == []
+
+
+class TestMappingWarningsAndGuards:
+    """@brief Log warnings, runtime role guard, and no-config behaviour."""
+
+    async def test_unmapped_group_logs_warning(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["other"], CM)
+        assert any(
+            e["event"] == "oauth_group_unmapped" and e["log_level"] == "warning" for e in logs
+        )
+
+    async def test_missing_subgroup_logs_warning(self):
+        subs, mem = _repos(existing=())
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], CM)
+        assert [e["event"] for e in logs] == ["oauth_group_subgroup_missing"]
+
+    async def test_global_role_group_not_reported_unmapped(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["admin"], CM)
+        assert logs == []
+
+    async def test_no_mapping_configured_logs_nothing(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            assert await apply_subgroup_mappings(subs, mem, CID, UID, ["a", "b"], None) == []
+        assert logs == []
+        subs.get_by_id.assert_not_called()
+
+    async def test_invalid_subgroup_role_skipped_with_warning(self):
+        subs, mem = _repos()
+        cm = {"group_mapping": {"eng": {"subgroup_id": str(ENG), "role": "admin"}}}
+        with capture_logs() as logs:
+            assert await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], cm) == []
+        mem.add_member.assert_not_called()
+        assert [e["event"] for e in logs] == ["oauth_group_invalid_role"]
+
+    async def test_role_conflict_highest_wins_and_membership_created(self):
+        """Subgroup member + global admin: both applied, highest community role wins."""
+        role = map_groups_to_role(
+            ["eng", "admin"], {**{"eng": "member"}, **global_role_mappings(CM)}, "viewer"
+        )
+        assert role == "admin"
+        subs, mem = _repos()
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["eng", "admin"], CM)
+        assert joined == [ENG]
 
 
 class TestPreview:

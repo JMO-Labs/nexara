@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from app.schemas.subgroup import SUBGROUP_ROLES
+
 if TYPE_CHECKING:
     from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 
@@ -99,6 +101,8 @@ async def apply_subgroup_mappings(
     @return Subgroup IDs the user was newly added to.
     """
     rules = _rules(claim_mapping)
+    if not rules:
+        return []
     joined: list[uuid.UUID] = []
     for group in groups:
         rule = rules.get(group)
@@ -106,6 +110,10 @@ async def apply_subgroup_mappings(
             logger.warning("oauth_group_unmapped", group=group)
             continue
         if not rule.get("subgroup_id"):
+            continue
+        role = str(rule.get("role") or "member")
+        if role not in SUBGROUP_ROLES:
+            logger.warning("oauth_group_invalid_role", group=group, role=role)
             continue
         try:
             sub_id = uuid.UUID(str(rule["subgroup_id"]))
@@ -121,7 +129,7 @@ async def apply_subgroup_mappings(
             community_id=community_id,
             subgroup_id=sub_id,
             user_id=user_id,
-            role=str(rule.get("role") or "member"),
+            role=role,
         )
         joined.append(sub_id)
     return joined
