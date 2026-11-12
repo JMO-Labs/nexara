@@ -97,6 +97,7 @@ export function Composer({
             size="sm"
             variant="ghost"
             aria-label="Cancel reply"
+            tooltip="Cancel reply"
             onClick={onCancelReply}
           >
             <X size={14} aria-hidden />
@@ -123,6 +124,7 @@ export function Composer({
         <div className="flex gap-0.5">
           <IconButton
             aria-label="Add emoji"
+            tooltip="Add emoji"
             variant="ghost"
             size="sm"
             disabled={disabled}
@@ -132,6 +134,7 @@ export function Composer({
           </IconButton>
           <IconButton
             aria-label="Attach media"
+            tooltip="Attach media"
             variant="ghost"
             size="sm"
             disabled={disabled || !onAttachMedia}
@@ -141,6 +144,7 @@ export function Composer({
           </IconButton>
           <IconButton
             aria-label="Create poll"
+            tooltip="Create poll"
             variant="ghost"
             size="sm"
             disabled={disabled || !onCreatePoll}
@@ -164,6 +168,8 @@ export function Composer({
 
         <IconButton
           aria-label="Send message"
+          tooltip="Send message"
+          shortcut="Enter"
           onClick={submit}
           disabled={disabled || !value.trim()}
         >

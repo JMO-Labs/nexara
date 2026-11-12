@@ -59,6 +59,7 @@ export function ReactionRow({
       >
         <IconButton
           aria-label="Add reaction"
+          tooltip="Add reaction"
           aria-expanded={open}
           size="sm"
           variant="ghost"
@@ -92,6 +93,7 @@ export function ReactionRow({
       <div className="grow" />
       <IconButton
         aria-label="Comments"
+        tooltip="Comments"
         size="sm"
         variant="ghost"
         onClick={onCommentClick}

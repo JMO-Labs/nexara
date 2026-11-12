@@ -97,7 +97,13 @@ export function Lightbox({
         <span className="text-sm text-white">
           {index + 1} / {items.length}
         </span>
-        <IconButton variant="ghost" aria-label="Close" onClick={onClose}>
+        <IconButton
+          variant="ghost"
+          aria-label="Close"
+          tooltip="Close"
+          shortcut="Esc"
+          onClick={onClose}
+        >
           <X className="size-6 text-white" aria-hidden="true" />
         </IconButton>
       </div>
@@ -108,6 +114,8 @@ export function Lightbox({
         <IconButton
           variant="ghost"
           aria-label="Previous"
+          tooltip="Previous"
+          shortcut="←"
           onClick={prev}
           disabled={index === 0}
           className="absolute left-2 z-10 bg-black/40 md:left-4"
@@ -123,6 +131,8 @@ export function Lightbox({
         <IconButton
           variant="ghost"
           aria-label="Next"
+          tooltip="Next"
+          shortcut="→"
           onClick={next}
           disabled={index >= items.length - 1}
           className="absolute right-2 z-10 bg-black/40 md:right-4"

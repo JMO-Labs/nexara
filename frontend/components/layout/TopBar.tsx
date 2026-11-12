@@ -41,6 +41,8 @@ export function TopBar() {
         <IconButton
           variant="ghost"
           aria-label="Search"
+          tooltip="Search"
+          shortcut="Ctrl+K"
           data-tour="topbar-search"
           onClick={() => openPalette(true)}
         >

@@ -159,6 +159,7 @@ export function UsersTab() {
                         <IconButton
                           variant="ghost"
                           aria-label="Suspend user"
+                          tooltip="Suspend user"
                           title="Suspend user"
                           onClick={() => suspendMutation.mutate(user.id)}
                         >
@@ -168,6 +169,7 @@ export function UsersTab() {
                         <IconButton
                           variant="ghost"
                           aria-label="Restore user"
+                          tooltip="Restore user"
                           title="Restore user"
                           onClick={() => restoreMutation.mutate(user.id)}
                         >
@@ -177,6 +179,7 @@ export function UsersTab() {
                       <IconButton
                         variant="ghost"
                         aria-label="Delete user"
+                        tooltip="Delete user"
                         title="Delete user"
                         onClick={() => setDeletingUserId(user.id)}
                       >

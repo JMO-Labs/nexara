@@ -3,6 +3,7 @@
  * @file components/layout/AvatarMenu.tsx
  * @brief Avatar dropdown with settings / admin / shortcuts / sign-out.
  */
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
@@ -42,16 +43,18 @@ export function AvatarMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label="Account menu"
-        className="focus-visible:outline-accent rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
-      >
-        <Avatar
-          src={user?.avatar_url ?? undefined}
-          name={user?.display_name ?? "You"}
-          size="md"
-        />
-      </DropdownMenuTrigger>
+      <Tooltip content="Account menu" side="bottom">
+        <DropdownMenuTrigger
+          aria-label="Account menu"
+          className="focus-visible:outline-accent rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <Avatar
+            src={user?.avatar_url ?? undefined}
+            name={user?.display_name ?? "You"}
+            size="md"
+          />
+        </DropdownMenuTrigger>
+      </Tooltip>
       <DropdownMenuContent align="end" className="min-w-56">
         <DropdownMenuLabel className="flex flex-col">
           <span className="font-semibold">
