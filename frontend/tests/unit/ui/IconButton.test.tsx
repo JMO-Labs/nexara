@@ -8,12 +8,6 @@ import userEvent from "@testing-library/user-event";
 import { IconButton } from "@/components/ui/IconButton";
 import { TooltipProvider } from "@/components/ui/Tooltip";
 
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-
 describe("IconButton", () => {
   it("is named by aria-label", () => {
     render(<IconButton aria-label="Close">x</IconButton>);

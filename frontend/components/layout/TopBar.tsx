@@ -42,6 +42,7 @@ export function TopBar() {
           variant="ghost"
           aria-label="Search"
           tooltip="Search"
+          tooltipSide="bottom"
           shortcut="Ctrl+K"
           data-tour="topbar-search"
           onClick={() => openPalette(true)}

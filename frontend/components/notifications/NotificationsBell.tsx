@@ -143,6 +143,8 @@ export function NotificationsBell() {
           }
           aria-expanded={open}
           aria-haspopup="dialog"
+          tooltip="Notifications"
+          tooltipSide="bottom"
           onClick={() => setOpen((v) => !v)}
           data-tour="bell"
         >
