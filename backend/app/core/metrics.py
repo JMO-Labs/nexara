@@ -93,3 +93,9 @@ celery_queue_depth: Gauge = Gauge(
     ["queue"],
 )
 """@brief Gauge with ``queue`` label refreshed by periodic task."""
+
+ocr_processed_total: Counter = Counter(
+    "nexara_ocr_processed_total",
+    "OCR task outcomes",
+    ["status"],
+)
