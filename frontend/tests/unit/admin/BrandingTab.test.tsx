@@ -12,6 +12,13 @@ import * as api from "@/lib/api/branding";
 import { BrandingTab } from "@/components/admin/BrandingTab";
 import { BrandingStyle } from "@/components/layout/BrandingStyle";
 
+// jsdom lacks ResizeObserver (used by Radix Select).
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("@/lib/api/branding", async (orig) => ({
   ...(await orig<typeof api>()),
