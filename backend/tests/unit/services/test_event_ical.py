@@ -72,18 +72,18 @@ def _event() -> MagicMock:
     return e
 
 
+OLGA, ANN, BOB = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+
+
 def test_to_ical_has_vevent_fields(service: EventService) -> None:
     ev = _event()
     people = {
         ev.id: {
-            "organizer": ("Olga", "olga@example.com"),
-            "attendees": [
-                ("Ann", "ann@example.com", "attending"),
-                ("Bob", "bob@example.com", "maybe"),
-            ],
+            "organizer": (OLGA, "Olga"),
+            "attendees": [(ANN, "Ann", "attending"), (BOB, "Bob", "maybe")],
         }
     }
-    body = service.to_ical([ev], people).decode()
+    body = service.to_ical([ev], people).decode().replace("\r\n ", "")
     for token in (
         "BEGIN:VEVENT",
         "DTSTART",
@@ -93,11 +93,47 @@ def test_to_ical_has_vevent_fields(service: EventService) -> None:
         "DESCRIPTION:Bring food",
         "LOCATION:Park",
         "UID:uid@nexara",
-        "ORGANIZER;CN=Olga:mailto:olga@example.com",
-        "ATTENDEE;CN=Ann;PARTSTAT=ACCEPTED:mailto:ann@example.com",
-        "ATTENDEE;CN=Bob;PARTSTAT=TENTATIVE:mailto:bob@example.com",
+        f"ORGANIZER;CN=Olga:urn:uuid:{OLGA}",
+        f"ATTENDEE;CN=Ann;PARTSTAT=ACCEPTED:urn:uuid:{ANN}",
+        f"ATTENDEE;CN=Bob;PARTSTAT=TENTATIVE:urn:uuid:{BOB}",
     ):
         assert token in body
+    assert "mailto:" not in body
+
+
+async def test_export_never_leaks_emails(service: EventService, repo: AsyncMock) -> None:
+    """Real repo rows carry no email; output must not contain any address."""
+    ev = _event()
+    viewer = uuid.uuid4()
+    repo.get_by_id.return_value = ev
+    service._can_view = AsyncMock(return_value=True)  # type: ignore[method-assign]
+    repo.get_ical_people.return_value = {
+        ev.id: {"organizer": (OLGA, "Olga"), "attendees": [(ANN, "Ann", "attending")]}
+    }
+    body = (await service.export_event_ical(ev.id, viewer)).decode()
+    assert "@example.com" not in body and "mailto:" not in body
+    assert repo.get_ical_people.await_args.kwargs["viewer_id"] == viewer
+
+
+async def test_repo_ical_people_selects_no_email_and_filters_blocks() -> None:
+    session = AsyncMock()
+    rows = MagicMock()
+    rows.all.return_value = []
+    session.execute.return_value = rows
+    ev = _event()
+    ev.author_id = OLGA
+    await EventRepository(session).get_ical_people([ev], viewer_id=uuid.uuid4())
+    sqls = [str(c.args[0]).lower() for c in session.execute.await_args_list]
+    assert all("email" not in q for q in sqls)
+    assert "user_blocks" in sqls[-1]
+
+
+async def test_feed_treats_naive_datetimes_as_utc(service: EventService, repo: AsyncMock) -> None:
+    repo.list_in_range.return_value = []
+    service._user_subgroup_ids = AsyncMock(return_value=[])  # type: ignore[method-assign]
+    await service.export_feed_ical(uuid.uuid4(), start=datetime(2026, 6, 1))
+    start = repo.list_in_range.await_args.args[1]
+    assert start == datetime(2026, 6, 1, tzinfo=UTC)
 
 
 async def test_feed_uses_given_range(service: EventService, repo: AsyncMock) -> None:

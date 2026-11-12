@@ -59,6 +59,11 @@ FEED_MAX_SPAN_DAYS = 731  # ~2 years
 _PARTSTAT = {"attending": "ACCEPTED", "maybe": "TENTATIVE"}
 
 
+def _as_utc(dt: datetime) -> datetime:
+    """@brief Treat naive datetimes as UTC so they compare with aware ones."""
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
+
+
 class EventService:
     """@brief Service layer for events, RSVPs, and calendar subscriptions."""
 
@@ -571,13 +576,16 @@ class EventService:
             info = (people or {}).get(event.id)
             if info:
                 if info.get("organizer"):
-                    name, email = info["organizer"]
-                    ical_event.add("organizer", f"mailto:{email}", parameters={"CN": name})
-                for name, email, status in info.get("attendees", []):
+                    uid, name = info["organizer"]
+                    ical_event.add("organizer", f"urn:uuid:{uid}", parameters={"CN": str(name)})
+                for uid, name, status in info.get("attendees", []):
                     ical_event.add(
                         "attendee",
-                        f"mailto:{email}",
-                        parameters={"CN": name, "PARTSTAT": _PARTSTAT.get(status, "NEEDS-ACTION")},
+                        f"urn:uuid:{uid}",
+                        parameters={
+                            "CN": str(name),
+                            "PARTSTAT": _PARTSTAT.get(status, "NEEDS-ACTION"),
+                        },
                     )
             if event.recurrence_rule:
                 # icalendar accepts a raw RRULE string via vRecur
@@ -593,7 +601,7 @@ class EventService:
             raise NotFoundError(_("Event not found"))
         if not await self._can_view(event, user_id):
             raise AuthorizationError(_("You cannot view this event"))
-        return self.to_ical([event], await self._repo.get_ical_people([event]))
+        return self.to_ical([event], await self._repo.get_ical_people([event], viewer_id=user_id))
 
     async def export_feed_ical(
         self,
@@ -604,8 +612,8 @@ class EventService:
     ) -> bytes:
         """@brief Export visible events in [start, end] (default -30d..+365d)."""
         now = datetime.now(UTC)
-        start = start or now - timedelta(days=30)
-        end = end or now + timedelta(days=365)
+        start = _as_utc(start) if start else now - timedelta(days=30)
+        end = _as_utc(end) if end else now + timedelta(days=365)
         if start > end:
             raise AppError(
                 code="invalid_range", message=_("start must not be after end"), status_code=422
@@ -622,7 +630,7 @@ class EventService:
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
         )
-        return self.to_ical(events, await self._repo.get_ical_people(events))
+        return self.to_ical(events, await self._repo.get_ical_people(events, viewer_id=user_id))
 
     # ── RRULE exception occurrences ───────────────────────────────────
 
@@ -778,7 +786,7 @@ class EventService:
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
         )
-        return self.to_ical(events, await self._repo.get_ical_people(events))
+        return self.to_ical(events, await self._repo.get_ical_people(events, viewer_id=user_id))
 
     # ── Subscriptions ─────────────────────────────────────────────────
 
