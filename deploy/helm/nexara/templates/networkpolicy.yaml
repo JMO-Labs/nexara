@@ -1,6 +1,3 @@
-{{- if .Values.networkPolicy.enabled }}
-{{- $np := .Values.networkPolicy }}
-{{- $apps := list "api" "worker" "beat" }}
 {{- /* Egress shared by API, worker and beat: DNS, data stores, external APIs */ -}}
 {{- define "nexara.egress" }}
 - ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
@@ -26,6 +23,9 @@
     - {port: {{ . }}}
   {{- end }}
 {{- end }}
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $apps := list "api" "worker" "beat" }}
 {{- range $name := $apps }}
 ---
 apiVersion: networking.k8s.io/v1
