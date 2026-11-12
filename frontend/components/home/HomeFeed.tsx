@@ -117,7 +117,7 @@ export function HomeFeed() {
           />
         ) : (
           <ul key="list" className="flex flex-col gap-2">
-            <AnimatePresence initial={false}>
+            <AnimatePresence>
               {items.map((i) => {
                 const key = `${i.kind}:${i.id}`;
                 const fresh = freshIds.has(key);
