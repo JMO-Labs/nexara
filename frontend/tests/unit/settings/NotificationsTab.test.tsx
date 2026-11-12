@@ -21,6 +21,10 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/hooks/useSettings");
+vi.mock("@/components/settings/AppriseList", () => ({
+  AppriseList: () => null,
+  useAppriseUrls: () => ({ data: [] }),
+}));
 
 const mockPrefs = {
   notif_mention_inapp: true,
