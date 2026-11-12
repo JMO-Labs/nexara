@@ -671,13 +671,9 @@
       "revoked": "Invite revoked"
     },
     "admin": {
-      "user": {
-        "updated": "User updated",
-        "deactivated": "User deactivated"
-      },
-      "audit": {
-        "exported": "Audit log exported"
-      }
+      "user": { "updated": "User updated", "deactivated": "User deactivated" },
+      "audit": { "exported": "Audit log exported" },
+      "retention": { "updated": "Retention policy saved" }
     },
     "auth": {
       "login": {
