@@ -46,9 +46,7 @@ class TestStorageByType:
         await repo.get_user_storage_by_type(USER_ID, COMMUNITY_ID)
         stmt = session.execute.await_args.args[0]
         sql = str(
-            stmt.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
+            stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
         )
         flat = " ".join(sql.split()).replace("%%", "%")
         assert "media.content_type LIKE 'image/%') THEN 'photos'" in flat
