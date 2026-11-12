@@ -11,6 +11,7 @@ Applies soft-delete and block filters where applicable.
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from typing import Any
 
 from sqlalchemy import bindparam, func, select
@@ -21,6 +22,7 @@ from app.models.event import Event
 from app.models.post import Comment, Post
 from app.models.subgroup import Subgroup
 from app.models.user import User
+from app.models.user_settings import UserSettings
 from app.repositories.base import BaseRepository
 
 
@@ -73,6 +75,27 @@ def _fts_expressions(fts_col: Any, prefix_query: str | None) -> tuple[Any, Any, 
     return match, rank, {}
 
 
+ADULT_AGE: int = 18
+"""@brief Minimum age (years) to view NSFW content."""
+
+
+def is_adult(birthday: date | None, mark_as_adult: bool) -> bool:
+    """
+    @brief Whether a viewer may see NSFW content.
+
+    Non-adult when age < 18, birthday unknown, or mark_as_adult is false.
+
+    @param birthday      User birthday (may be None).
+    @param mark_as_adult Explicit adult opt-in from user settings.
+    @return True when the viewer is an adult.
+    """
+    if birthday is None or not mark_as_adult:
+        return False
+    today = date.today()
+    age = today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
+    return age >= ADULT_AGE
+
+
 class SearchRepository:
     """
     @brief Async repository for full-text search.
@@ -95,6 +118,7 @@ class SearchRepository:
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Post, float]], str | None, int]:
         """
         @brief Search posts by content using FTS with prefix support.
@@ -105,6 +129,7 @@ class SearchRepository:
         @param viewer_id    Current user (for block filter).
         @param cursor       Opaque pagination cursor (offset).
         @param limit        Max items to return.
+        @param include_nsfw Include NSFW posts (adult viewers only).
         @return Tuple of (items with rank, next_cursor, total).
         """
         if not query or not query.strip():
@@ -128,6 +153,8 @@ class SearchRepository:
             .where(match_expr)
         )
         stmt = BaseRepository.apply_block_filter(stmt, viewer_id)
+        if not include_nsfw:
+            stmt = stmt.where(Post.is_nsfw.is_(False))
         stmt = stmt.order_by(rank_expr.desc(), Post.created_at.desc())
 
         count_stmt = (
@@ -141,6 +168,8 @@ class SearchRepository:
             count_stmt,
             viewer_id,
         )
+        if not include_nsfw:
+            count_stmt = count_stmt.where(Post.is_nsfw.is_(False))
 
         result = await self._session.execute(
             stmt.offset(offset).limit(limit + 1),
@@ -156,6 +185,24 @@ class SearchRepository:
             next_cursor = str(offset + limit)
 
         return [(r[0], r[1]) for r in rows], next_cursor, total
+
+    async def viewer_is_adult(self, user_id: uuid.UUID) -> bool:
+        """
+        @brief Resolve whether the viewer may see NSFW content.
+
+        @param user_id Viewer UUID.
+        @return True when birthday-derived age >= 18 and mark_as_adult is set.
+        """
+        row = (
+            await self._session.execute(
+                select(User.birthday, UserSettings.mark_as_adult)
+                .outerjoin(UserSettings, UserSettings.user_id == User.id)
+                .where(User.id == user_id)
+            )
+        ).first()
+        if row is None:
+            return False
+        return is_adult(row[0], bool(row[1]))
 
     async def search_users(
         self,

@@ -181,6 +181,7 @@ class SearchService:
     ) -> SearchResponse:
         """@brief Run the repository searches and build the response."""
         prefix_q = build_prefix_tsquery(q)
+        adult = await self._repo.viewer_is_adult(user.id)
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
@@ -194,6 +195,7 @@ class SearchService:
                         user.id,
                         cursor,
                         limit,
+                        include_nsfw=adult,
                     ),
                 )
             )
@@ -258,18 +260,21 @@ class SearchService:
 
         results: dict[str, SearchTypeResults] = {}
         for name, (rows, next_cursor, total) in zip(type_names, raw_results):
-            items = self._format_results(name, rows)
+            items = self._format_results(name, rows, adult)
             results[name] = SearchTypeResults(items=items, total=total, next_cursor=next_cursor)
 
         return SearchResponse(query=query, results=results)
 
     @staticmethod
-    def _format_results(result_type: str, rows: list[tuple[Any, float]]) -> list[SearchResultItem]:
+    def _format_results(
+        result_type: str, rows: list[tuple[Any, float]], adult: bool = False
+    ) -> list[SearchResultItem]:
         """
         @brief Convert raw DB rows into SearchResultItem list.
 
         @param result_type Content type name (posts, users, events, comments).
         @param rows List of (model, rank) tuples from the repository.
+        @param adult Viewer may see NSFW content unblurred.
         @return List of SearchResultItem.
         """
         items: list[SearchResultItem] = []
@@ -282,6 +287,8 @@ class SearchService:
                         title=_snippet(entity.content, 80),
                         snippet=_snippet(entity.content),
                         created_at=entity.created_at,
+                        is_nsfw=bool(entity.is_nsfw),
+                        blur=bool(entity.is_nsfw) and not adult,
                     )
                 )
             elif result_type == "users":

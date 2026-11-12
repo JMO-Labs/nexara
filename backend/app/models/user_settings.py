@@ -103,6 +103,7 @@ class UserSettings(Base):
     show_last_seen: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     show_birthday_year: Mapped[bool] = _bool_col("false")
     show_birthday_to: Mapped[str] = mapped_column(Text, nullable=False, server_default="community")
+    mark_as_adult: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     allow_sassybot: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
 
     # Appearance

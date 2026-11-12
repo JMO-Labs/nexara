@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, Numeric, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,6 +45,7 @@ class Media(Base):
     content_type: Mapped[str] = mapped_column(Text, nullable=False)
     storage_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     thumbnail_key: Mapped[str | None] = mapped_column(Text)
+    is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     width: Mapped[int | None] = mapped_column(Integer)
     height: Mapped[int | None] = mapped_column(Integer)
