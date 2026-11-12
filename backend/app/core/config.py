@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = ""
     OLLAMA_MODEL: str = "llama2"
     AI_HTTP_TIMEOUT: float = 60.0
+    AI_DAILY_BUDGET_CENTS: int = 100
+    AI_BUDGET_RESET_HOUR: int = 0
 
     # --- VAPID (Web Push) ---
     VAPID_PRIVATE_KEY: str = ""
