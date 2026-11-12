@@ -14,6 +14,23 @@ spec:
         name: cpu
         target: {type: Utilization, averageUtilization: {{ .Values.hpa.targetCPUUtilization }}}
 {{- end }}
+{{- if .Values.hpa.worker.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "nexara.fullname" . }}-worker
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ include "nexara.fullname" . }}-worker}
+  minReplicas: {{ .Values.hpa.worker.minReplicas }}
+  maxReplicas: {{ .Values.hpa.worker.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: {{ .Values.hpa.worker.targetCPUUtilization }}}
+{{- end }}
 {{- if .Values.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
