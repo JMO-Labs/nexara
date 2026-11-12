@@ -45,9 +45,7 @@ def parse_api_key(key: str) -> str | None:
     return plugin_id
 
 
-async def resolve_plugin_from_key(
-    session: AsyncSession, key: str, community_id: uuid.UUID
-) -> str:
+async def resolve_plugin_from_key(session: AsyncSession, key: str, community_id: uuid.UUID) -> str:
     """
     @brief Validate a plugin API key against stored hashes.
     @return The plugin_id the key belongs to.
