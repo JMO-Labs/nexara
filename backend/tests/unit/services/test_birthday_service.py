@@ -78,3 +78,10 @@ async def test_no_post_for_admin_only_or_when_disabled():
     svc, _, posts = _svc([(_user(), "community")], [], [], auto_post=False)
     await svc.send_reminders(TODAY)
     posts.create_post.assert_not_called()
+
+
+async def test_unknown_visibility_fails_closed():
+    svc, notif, posts = _svc([(_user(), "bogus")], [uuid.uuid4()], [uuid.uuid4()], auto_post=True)
+    assert await svc.send_reminders(TODAY) == 0
+    notif.notify.assert_not_called()
+    posts.create_post.assert_not_called()

@@ -46,19 +46,21 @@ class BirthdayService:
         """
         @brief Notify eligible members about birthdays on ``today``.
 
-        'nobody' skips entirely; 'admin_only' notifies admins; anything else
-        ('community') notifies all members. The birthday user is never notified.
+        'admin_only' notifies admins; only an exact 'community' notifies all
+        members; 'nobody' and unknown values are skipped (fail closed). The birthday user is never notified.
         @return Number of notifications sent.
         """
         users = await self._repo.list_birthday_users(self._community_id, today.month, today.day)
         sent = 0
         for user, show_to in users:
-            if show_to == "nobody":
-                continue
             if show_to == "admin_only":
                 recipients = await self._repo.list_admin_ids(self._community_id)
-            else:
+            elif show_to == "community":
                 recipients = await self._repo.list_member_ids(self._community_id)
+            else:
+                if show_to != "nobody":
+                    logger.warning("birthday_unknown_visibility", value=show_to)
+                continue
             message = f"{user.display_name}'s birthday is today!"
             for rid in recipients:
                 if rid == user.id:
