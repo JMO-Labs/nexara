@@ -7,6 +7,7 @@ Uses authlib for JWKS fetching and JWT verification. Caches JWKS per URI.
 
 from __future__ import annotations
 
+import secrets
 from typing import TYPE_CHECKING, Any, cast
 
 import httpx
@@ -53,51 +54,42 @@ def _get_claim(claims: dict[str, Any], key: str | None, fallback: str) -> Any:
 async def verify_id_token(
     id_token: str,
     provider: OAuthProvider,
+    nonce: str | None = None,
 ) -> dict[str, Any]:
     """
-    @brief Verify OIDC ID token using provider JWKS.
+    @brief Verify OIDC ID token signature (JWKS), expiry and nonce.
 
-    If provider has jwks_uri: fetches JWKS, verifies signature.
-    If no jwks_uri: decodes without verification (logs warning).
-    On exception: raises AuthenticationError.
+    Providers without a jwks_uri are rejected: unsigned tokens are never accepted.
+    The exp claim is mandatory and checked against the current time.
 
     @param id_token Raw ID token JWT string.
-    @param provider OAuth provider with optional jwks_uri.
+    @param provider OAuth provider with jwks_uri (and optional issuer).
+    @param nonce Expected nonce; when given the token's nonce must match.
     @return Verified claims dict.
     @raises AuthenticationError If verification fails.
     """
     try:
-        jwks_uri = getattr(provider, "jwks_uri", None) or (
-            provider.jwks_uri if hasattr(provider, "jwks_uri") else None
-        )
-        if jwks_uri:
-            jwks = await _fetch_jwks(jwks_uri)
-            key_set = JsonWebKey.import_key_set(jwks)
-            jwt_instance = JsonWebToken(["RS256", "ES256"])
-            claims = jwt_instance.decode(
-                id_token,
-                key_set,
-                claims_options={"aud": {"essential": False}},
-            )
-            if hasattr(claims, "validate"):
-                claims.validate()
-            return dict(claims) if not isinstance(claims, dict) else claims
-        logger.warning("Provider has no jwks_uri, decoding id_token without verification")
-        import base64
-        import json
-
-        from authlib.jose import jwt
-
-        try:
-            claims = jwt.decode(id_token, key=None)
-        except Exception:
-            parts = id_token.split(".")
-            if len(parts) != 3:
-                raise AuthenticationError(message="Invalid OIDC id_token")
-            payload_b64 = parts[1]
-            payload_b64 += "=" * (4 - len(payload_b64) % 4)
-            claims = json.loads(base64.urlsafe_b64decode(payload_b64))
-        return dict(claims) if not isinstance(claims, dict) else claims
+        jwks_uri = getattr(provider, "jwks_uri", None)
+        if not jwks_uri:
+            raise AuthenticationError(message="Provider has no jwks_uri")
+        jwks = await _fetch_jwks(jwks_uri)
+        key_set = JsonWebKey.import_key_set(jwks)
+        options: dict[str, Any] = {
+            "aud": {"essential": False},
+            "exp": {"essential": True},
+        }
+        issuer = getattr(provider, "issuer", None)
+        if isinstance(issuer, str) and issuer:
+            options["iss"] = {"essential": True, "value": issuer}
+        claims = JsonWebToken(["RS256", "ES256"]).decode(id_token, key_set, claims_options=options)
+        if hasattr(claims, "validate"):
+            claims.validate()
+        result = dict(claims)
+        if nonce is not None and not secrets.compare_digest(str(result.get("nonce", "")), nonce):
+            raise AuthenticationError(message="Invalid OIDC id_token nonce")
+        return result
+    except AuthenticationError:
+        raise
     except Exception as exc:
         raise AuthenticationError(message="Invalid OIDC id_token") from exc
 

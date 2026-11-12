@@ -88,6 +88,8 @@ async def create_provider(
         client_id=body.client_id,
         client_secret_encrypted=encrypted,
         issuer=body.issuer,
+        discovery_url=body.discovery_url,
+        claim_mapping=body.claim_mapping,
         icon_url=body.icon_url,
         scopes=body.scopes or "openid profile email groups",
         authorization_endpoint=(

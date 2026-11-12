@@ -24,6 +24,7 @@ from app.api.v1.invites import router as invites_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.oauth import router as oauth_router
+from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
 from app.api.v1.prompts import router as prompts_router
@@ -39,6 +40,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
+api_v1_router.include_router(oauth_admin_router)
 api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(oauth_router)

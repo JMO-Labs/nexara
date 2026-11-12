@@ -68,6 +68,8 @@ class TestAdminOAuthProvidersList:
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
+        mock_provider.discovery_url = None
+        mock_provider.claim_mapping = {}
         mock_provider.created_at = datetime.now(UTC)
         mock_provider.updated_at = mock_provider.created_at
 
@@ -122,6 +124,8 @@ class TestAdminOAuthProviderCreate:
             mock_provider.enabled = True
             mock_provider.auto_create_users = True
             mock_provider.seeded_from_env = False
+            mock_provider.discovery_url = None
+            mock_provider.claim_mapping = {}
             mock_provider.created_at = datetime.now(UTC)
             mock_provider.updated_at = mock_provider.created_at
 
@@ -182,6 +186,8 @@ class TestAdminOAuthProviderUpdate:
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
+        mock_provider.discovery_url = None
+        mock_provider.claim_mapping = {}
         mock_provider.created_at = datetime.now(UTC)
         mock_provider.updated_at = mock_provider.created_at
 
@@ -272,6 +278,8 @@ class TestAdminOAuthProviderToggle:
         mock_provider.enabled = False
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
+        mock_provider.discovery_url = None
+        mock_provider.claim_mapping = {}
         mock_provider.created_at = datetime.now(UTC)
         mock_provider.updated_at = mock_provider.created_at
 

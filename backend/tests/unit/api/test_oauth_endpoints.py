@@ -110,6 +110,7 @@ class TestOAuthCallbackEndpoint:
                     "oauth_state": "state-123",
                     "oauth_verifier": "verifier-456",
                     "oauth_provider": "oidc",
+                    "oauth_nonce": "nonce-789",
                 },
             ) as client:
                 resp = await client.get(

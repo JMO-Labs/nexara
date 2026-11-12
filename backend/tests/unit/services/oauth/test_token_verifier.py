@@ -147,24 +147,11 @@ class TestVerifyIdToken:
         assert result["email"] == "user@example.com"
 
     @pytest.mark.asyncio
-    async def test_without_jwks_uri_decodes_without_verification(self):
-        """verify_id_token without jwks_uri decodes without verification (log warning)."""
+    async def test_without_jwks_uri_is_rejected(self):
+        """verify_id_token never accepts unsigned tokens (no jwks_uri)."""
         provider = _make_provider(jwks_uri=None)
-        mock_decoded = {"sub": "user-2"}
-
-        with patch("authlib.jose.jwt.decode", return_value=mock_decoded):
-            result = await verify_id_token("header.payload.sig", provider)
-
-        assert result["sub"] == "user-2"
-
-    @pytest.mark.asyncio
-    async def test_raises_authentication_error_on_invalid_token(self):
-        """verify_id_token raises AuthenticationError on invalid token."""
-        provider = _make_provider(jwks_uri=None)
-
-        with patch("authlib.jose.jwt.decode", side_effect=Exception("Invalid token")):
-            with pytest.raises(AuthenticationError, match="Invalid OIDC id_token"):
-                await verify_id_token("invalid.token", provider)
+        with pytest.raises(AuthenticationError):
+            await verify_id_token("header.payload.sig", provider)
 
 
 class TestFetchJwks:
@@ -191,3 +178,80 @@ class TestFetchJwks:
 
         assert result1 == result2 == mock_jwks
         mock_client.get.assert_called_once()
+
+
+def _signed(claims, key=None):
+    from authlib.jose import JsonWebKey, jwt
+
+    key = key or JsonWebKey.generate_key("RSA", 2048, is_private=True, options={"kid": "k1"})
+    tok = jwt.encode({"alg": "RS256", "kid": "k1"}, claims, key).decode()
+    return tok, {"keys": [key.as_dict(is_private=False)]}
+
+
+class TestStrictVerification:
+    """@brief Signature, expiry, nonce and issuer enforcement."""
+
+    @pytest.fixture(autouse=True)
+    def _clear(self):
+        tv._JWKS_CACHE.clear()
+
+    def _run(self, tok, jwks, provider, **kw):
+        import time as _t  # noqa: F401
+
+        async def go():
+            with patch.object(tv, "_fetch_jwks", AsyncMock(return_value=jwks)):
+                return await verify_id_token(tok, provider, **kw)
+
+        return go()
+
+    @pytest.mark.asyncio
+    async def test_valid_token_with_nonce(self):
+        import time
+
+        provider = _make_provider(jwks_uri="https://idp/jwks")
+        tok, jwks = _signed({"sub": "u", "nonce": "n1", "exp": int(time.time()) + 300})
+        out = await self._run(tok, jwks, provider, nonce="n1")
+        assert out["sub"] == "u"
+
+    @pytest.mark.asyncio
+    async def test_expired_rejected(self):
+        import time
+
+        provider = _make_provider(jwks_uri="https://idp/jwks")
+        tok, jwks = _signed({"sub": "u", "nonce": "n1", "exp": int(time.time()) - 300})
+        with pytest.raises(AuthenticationError):
+            await self._run(tok, jwks, provider, nonce="n1")
+
+    @pytest.mark.asyncio
+    async def test_missing_exp_rejected(self):
+        provider = _make_provider(jwks_uri="https://idp/jwks")
+        tok, jwks = _signed({"sub": "u", "nonce": "n1"})
+        with pytest.raises(AuthenticationError):
+            await self._run(tok, jwks, provider, nonce="n1")
+
+    @pytest.mark.asyncio
+    async def test_nonce_mismatch_rejected(self):
+        import time
+
+        provider = _make_provider(jwks_uri="https://idp/jwks")
+        tok, jwks = _signed({"sub": "u", "nonce": "bad", "exp": int(time.time()) + 300})
+        with pytest.raises(AuthenticationError):
+            await self._run(tok, jwks, provider, nonce="n1")
+
+    @pytest.mark.asyncio
+    async def test_invalid_signature_rejected(self):
+        import time
+
+        from authlib.jose import JsonWebKey
+
+        provider = _make_provider(jwks_uri="https://idp/jwks")
+        tok, _ = _signed({"sub": "u", "exp": int(time.time()) + 300})
+        other = JsonWebKey.generate_key("RSA", 2048, is_private=True, options={"kid": "k1"})
+        with pytest.raises(AuthenticationError):
+            await self._run(tok, {"keys": [other.as_dict(is_private=False)]}, provider)
+
+    @pytest.mark.asyncio
+    async def test_no_jwks_uri_rejected_when_strict(self):
+        provider = _make_provider(jwks_uri=None)
+        with pytest.raises(AuthenticationError):
+            await verify_id_token("a.b.c", provider, nonce="n1")

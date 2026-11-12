@@ -29,6 +29,7 @@ from app.repositories.user_repo import UserRepository
 from app.schemas.auth import LoginResponse
 from app.schemas.oauth import OAuthExchangeRequest
 from app.services.auth_service import AuthService
+from app.services.oauth.claim_mapper import map_claims
 from app.services.oauth.flow import OAuthFlow
 from app.services.oauth.group_mapper import map_groups_to_role
 from app.services.oauth.provider_manager import ProviderManager
@@ -42,6 +43,7 @@ router = APIRouter(prefix="/oauth", tags=["oauth"])
 OAUTH_STATE_COOKIE = "oauth_state"
 OAUTH_VERIFIER_COOKIE = "oauth_verifier"
 OAUTH_PROVIDER_COOKIE = "oauth_provider"
+OAUTH_NONCE_COOKIE = "oauth_nonce"
 COOKIE_MAX_AGE = 600
 REFRESH_COOKIE = "refresh_token"
 REFRESH_MAX_AGE = 30 * 24 * 3600
@@ -76,13 +78,17 @@ def _set_oauth_cookies(
     state: str,
     verifier: str,
     provider_slug: str,
+    nonce: str | None = None,
 ) -> None:
-    """@brief Set OAuth state, verifier, and provider cookies."""
+    """@brief Set OAuth state, verifier, provider (and nonce) cookies."""
     for name, value in (
         (OAUTH_STATE_COOKIE, state),
         (OAUTH_VERIFIER_COOKIE, verifier),
         (OAUTH_PROVIDER_COOKIE, provider_slug),
+        (OAUTH_NONCE_COOKIE, nonce or ""),
     ):
+        if not value:
+            continue
         response.set_cookie(
             name,
             value,
@@ -94,7 +100,12 @@ def _set_oauth_cookies(
 
 def _clear_oauth_cookies(response: Response) -> None:
     """@brief Clear OAuth cookies after callback."""
-    for name in (OAUTH_STATE_COOKIE, OAUTH_VERIFIER_COOKIE, OAUTH_PROVIDER_COOKIE):
+    for name in (
+        OAUTH_STATE_COOKIE,
+        OAUTH_VERIFIER_COOKIE,
+        OAUTH_PROVIDER_COOKIE,
+        OAUTH_NONCE_COOKIE,
+    ):
         response.delete_cookie(name)
 
 
@@ -130,9 +141,10 @@ async def oauth_login(
 
     redirect_uri = _build_redirect_uri(request, slug, settings)
     flow = OAuthFlow()
-    url, state, verifier = flow.build_authorize_url(provider, redirect_uri)
+    nonce = secrets.token_urlsafe(32) if provider.provider_type == "oidc" else None
+    url, state, verifier = flow.build_authorize_url(provider, redirect_uri, nonce=nonce)
     redir = RedirectResponse(url=url, status_code=302)
-    _set_oauth_cookies(redir, state, verifier, slug)
+    _set_oauth_cookies(redir, state, verifier, slug, nonce)
     return redir
 
 
@@ -146,6 +158,7 @@ async def oauth_callback(
     oauth_state: str | None = Cookie(None, alias=OAUTH_STATE_COOKIE),
     oauth_verifier: str | None = Cookie(None, alias=OAUTH_VERIFIER_COOKIE),
     oauth_provider: str | None = Cookie(None, alias=OAUTH_PROVIDER_COOKIE),
+    oauth_nonce: str | None = Cookie(None, alias=OAUTH_NONCE_COOKIE),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> RedirectResponse:
@@ -171,7 +184,9 @@ async def oauth_callback(
 
     claims: dict[str, Any]
     if provider.provider_type == "oidc" and token_data.get("id_token"):
-        claims = await verify_id_token(token_data["id_token"], provider)
+        if not oauth_nonce:
+            raise AuthenticationError(message=_("Missing OAuth session"))
+        claims = await verify_id_token(token_data["id_token"], provider, nonce=oauth_nonce)
     elif provider.userinfo_endpoint and token_data.get("access_token"):
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -183,7 +198,10 @@ async def oauth_callback(
     else:
         raise AuthenticationError(message=_("OAuth response missing identity"))
 
-    auth_result = extract_claims(claims, provider)
+    if isinstance(provider.claim_mapping, dict) and provider.claim_mapping:
+        auth_result = map_claims(claims, provider.claim_mapping)
+    else:
+        auth_result = extract_claims(claims, provider)
     role = map_groups_to_role(
         auth_result.groups or [],
         provider.group_mappings or {},
