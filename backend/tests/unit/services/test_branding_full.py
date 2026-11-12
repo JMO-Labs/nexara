@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.services.branding.contrast import contrast_ratio, relative_luminance
+from app.services.branding.contrast import accent_passes_aa, contrast_ratio, relative_luminance
 
 
 class TestContrastRatio:
@@ -86,3 +86,14 @@ class TestFontValidation:
 
         service = BrandingService(repo=AsyncMock(), cache_client=None, community_id=MagicMock())
         assert service.validate_font_family("Comic Sans MS") is False
+
+
+class TestAccentPassesAA:
+    """@brief accent_passes_aa input validation."""
+
+    @pytest.mark.parametrize("bad", ["", "red", "#FFF", "C6B4F5", "#GGGGGG"])
+    def test_invalid_hex_rejected(self, bad):
+        assert accent_passes_aa(bad) is False
+
+    def test_light_accent_passes(self):
+        assert accent_passes_aa("#C6B4F5") is True
