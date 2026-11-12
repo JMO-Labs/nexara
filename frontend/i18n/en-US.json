@@ -747,5 +747,86 @@
         "delete_confirm_text": "Delete “{title}” and its imported events?"
       }
     }
+  },
+  "lists": {
+    "title": "Lists",
+    "create": "Create list",
+    "edit": "Edit list",
+    "delete": "Delete list",
+    "archive": "Archive list",
+    "unarchive": "Restore list",
+    "description": "Description",
+    "name": "List name",
+    "visibility": "Visibility",
+    "loading": "Loading lists...",
+    "items": {
+      "title": "Items",
+      "add": "Add item",
+      "edit": "Edit item",
+      "delete": "Delete item",
+      "complete": "Mark done",
+      "uncomplete": "Mark not done",
+      "count": "{count, plural, one {# item} other {# items}}",
+      "name": "Item name"
+    },
+    "signups": {
+      "claim": "Claim",
+      "release": "Release",
+      "claimed_by": "Claimed by {userName}",
+      "slots_left": "{count, plural, one {# spot left} other {# spots left}}",
+      "full": "Full"
+    },
+    "members": {
+      "title": "Members",
+      "add": "Add member",
+      "remove": "Remove member",
+      "share": "Share list",
+      "count": "{count, plural, one {# member} other {# members}}",
+      "role": "Role"
+    },
+    "templates": {
+      "title": "Templates",
+      "create": "Create template",
+      "clone": "Clone template",
+      "gallery": "Template gallery",
+      "use": "Use template",
+      "from_list": "Save as template"
+    },
+    "fields": {
+      "title": "Fields",
+      "add": "Add field",
+      "delete": "Delete field",
+      "name": "Field name",
+      "type": "Field type",
+      "required": "Required"
+    },
+    "notifications": {
+      "item": "New item in {listName}",
+      "signup": "{userName} claimed an item",
+      "completed": "Item marked done",
+      "expiring": "Expires in 1 day",
+      "member": "Added by {inviterName}",
+      "fallback_list": "your list",
+      "fallback_user": "Someone",
+      "fallback_inviter": "a member"
+    },
+    "placeholders": {
+      "no_lists": "No lists yet",
+      "no_items": "No items in {listName} yet",
+      "no_members": "No members yet",
+      "search": "Search lists"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm_delete": "Delete {listName}? This cannot be undone."
+    },
+    "messages": {
+      "created": "List created successfully",
+      "updated": "List updated",
+      "deleted": "List deleted",
+      "archived": "List archived",
+      "error": "Something went wrong. Please try again."
+    }
   }
 }
