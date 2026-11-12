@@ -4,9 +4,10 @@
 
 import json
 
-from . import _contract as c
 from contract_tests import code_structure_tests as st  # noqa: E402
 from contract_tests import manifest_tests as mt  # noqa: E402
+
+from . import _contract as c
 
 
 def _fails(checks):

@@ -3,10 +3,10 @@
 """
 
 import pytest
-
-from . import _contract as c
 from contract_tests import permission_tests as pt  # noqa: E402
 from contract_tests import security_tests as sec  # noqa: E402
+
+from . import _contract as c
 
 
 def _status(checks, name):
@@ -55,7 +55,9 @@ def test_nested_import_detected(tmp_path):
     ['API_KEY = "abcd1234efgh5678"', 'x = "AKIAABCDEFGHIJKLMNOP"', 'password = "hunter2hunter2"'],
 )
 def test_hardcoded_secret_fails(tmp_path, line):
-    assert "fail" in _status(sec.run(c.make(tmp_path, code=line + "\n")), "security.hardcoded_secret")
+    assert "fail" in _status(
+        sec.run(c.make(tmp_path, code=line + "\n")), "security.hardcoded_secret"
+    )
 
 
 def test_secret_in_comment_or_short_value_ignored(tmp_path):

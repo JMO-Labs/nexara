@@ -4,11 +4,12 @@
 
 import json
 
-from . import _contract as c
 import contract_tester as ct  # noqa: E402
 from contract_tests import integration_tests as it  # noqa: E402
 from contract_tests import reporting  # noqa: E402
 from contract_tests.common import fail, ok, warn  # noqa: E402
+
+from . import _contract as c
 
 
 def test_example_plugins_exit_ok_or_warnings():
@@ -29,7 +30,17 @@ def test_exit_codes_and_strict():
 
 
 def test_test_flag_repeatable(capsys):
-    ct.main([str(c.FIXTURES / "broken-manifest"), "--test", "manifest", "--test", "security", "--format", "json"])
+    ct.main(
+        [
+            str(c.FIXTURES / "broken-manifest"),
+            "--test",
+            "manifest",
+            "--test",
+            "security",
+            "--format",
+            "json",
+        ]
+    )
     names = {x["name"].split(".")[0] for x in json.loads(capsys.readouterr().out)["checks"]}
     assert names <= {"manifest", "security"}
 
@@ -53,7 +64,9 @@ def test_integration_missing_router_fails(tmp_path):
 
 def test_integration_valid_router_and_import_error(tmp_path):
     ok_dir = c.make(
-        tmp_path, code="from fastapi import APIRouter\nrouter = APIRouter()\n", backend={"routes": "router.py"}
+        tmp_path,
+        code="from fastapi import APIRouter\nrouter = APIRouter()\n",
+        backend={"routes": "router.py"},
     )
     assert c.by_name(it.run(ok_dir), "integration.router")[0].status == "pass"
 
@@ -64,7 +77,11 @@ def test_integration_import_error_fails(tmp_path):
 
 
 def test_integration_hooks_signature(tmp_path):
-    d = c.make(tmp_path, code="from fastapi import APIRouter\nrouter = APIRouter()\n", backend={"routes": "router.py"})
+    d = c.make(
+        tmp_path,
+        code="from fastapi import APIRouter\nrouter = APIRouter()\n",
+        backend={"routes": "router.py"},
+    )
     (d / "hooks.py").write_text("def register_hooks(a): ...\n")
     (d / "router.py").write_text(
         "from fastapi import APIRouter\nfrom .hooks import register_hooks\nrouter = APIRouter()\n"
