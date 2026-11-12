@@ -1,0 +1,15 @@
+{{- if .Values.pdb.enabled }}
+{{- range $name := list "api" "worker" }}
+{{- $ctx := dict "root" $ "component" $name }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "nexara.fullname" $ }}-{{ $name }}
+  labels: {{- include "nexara.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ $.Values.pdb.minAvailable }}
+  selector:
+    matchLabels: {{- include "nexara.selector" $ctx | nindent 6 }}
+{{- end }}
+{{- end }}
