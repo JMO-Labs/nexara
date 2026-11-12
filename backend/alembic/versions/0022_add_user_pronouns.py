@@ -7,6 +7,7 @@ Revises: 0021_add_subgroup_accent_color
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0022_add_user_pronouns"
