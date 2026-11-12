@@ -89,6 +89,20 @@ export const listItems = (id: string) =>
   apiGet<GalleryItem[]>(`${BASE}/${seg(id)}/items`);
 export const addItem = (id: string, media_id: string, caption?: string) =>
   apiPost<GalleryItem>(`${BASE}/${seg(id)}/items`, { media_id, caption });
+/** @brief Body of POST /items/bulk (backend GalleryItemBulkCreate). */
+export interface GalleryItemBulkCreate {
+  media_ids: string[];
+}
+/**
+ * @brief Add many media items to a gallery in one request.
+ * @param id Gallery id.
+ * @param mediaIds Media ids to add (backend accepts 1..100).
+ * @return Created gallery items.
+ */
+export const bulkAddItems = (id: string, mediaIds: string[]) =>
+  apiPost<GalleryItem[]>(`${BASE}/${seg(id)}/items/bulk`, {
+    media_ids: mediaIds,
+  } satisfies GalleryItemBulkCreate);
 export const removeItem = (id: string, itemId: string) =>
   apiDelete<{ message: string }>(`${BASE}/${seg(id)}/items/${seg(itemId)}`);
 export const listCollaborators = (id: string) =>
