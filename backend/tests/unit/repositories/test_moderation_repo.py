@@ -28,6 +28,10 @@ def _make_session() -> AsyncMock:
     session.flush = AsyncMock()
     session.refresh = AsyncMock()
     session.execute = AsyncMock()
+    nested = MagicMock()
+    nested.__aenter__ = AsyncMock(return_value=None)
+    nested.__aexit__ = AsyncMock(return_value=False)
+    session.begin_nested = MagicMock(return_value=nested)
     return session
 
 
