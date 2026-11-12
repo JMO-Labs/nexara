@@ -104,8 +104,12 @@ hpa:
 
 # -- Secrets (generated on first install when empty; reused on upgrade and kept on uninstall)
 secrets:
-  existingSecret: ""   # secret with keys "secret-key" (JWT/signing); overrides below
+  existingSecret: ""   # secret with keys "secret-key" (JWT/signing) and optional "apprise-encryption-key"; overrides below
   jwtSecret: ""
+  # Fernet key encrypting users' Apprise URLs at rest. Required for the Apprise
+  # notification channel (not auto-generated; must be a valid Fernet key).
+  # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  appriseEncryptionKey: ""
 
 # -- Application environment variables
 env:

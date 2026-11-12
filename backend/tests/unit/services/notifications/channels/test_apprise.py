@@ -91,12 +91,32 @@ async def test_dispatcher_registers_apprise() -> None:
     assert "apprise" in Dispatcher(MagicMock())._channels
 
 
-def _run_task(status: int | None, ok: bool, failures: int = 0) -> tuple[MagicMock, MagicMock]:
+async def test_effective_channels_route_through_dispatcher_to_apprise() -> None:
+    from app.services.notifications import NotificationPayload, NotificationType
+    from app.services.notifications.prefs import effective_channels
+
+    t = NotificationType(
+        key="new_post",
+        category="social",
+        payload_schema=NotificationPayload,
+        default_channels={"inapp": True},
+    )
+    d = Dispatcher(MagicMock())
+    for k in list(d._channels):
+        if k != "apprise":
+            d._channels[k] = AsyncMock(send=AsyncMock(return_value=ChannelResult(ok=True)))
+    ok = AsyncMock(return_value=ChannelResult(ok=True))
+    with patch.object(AppriseChannel, "send", new=ok) as send:
+        await d.dispatch(_notif(), t, dict(effective_channels(t, {})))
+    send.assert_awaited_once()
+
+
+def _run_task(ok: bool, enabled: bool = True) -> tuple[AsyncMock, MagicMock]:
     repo = AsyncMock(spec=AppriseRepository)
-    row = _row()
+    row = _row(enabled)
     row.apprise_url = "discord://a/b"
     repo.get.return_value = row
-    repo.record_failure.return_value = failures
+    repo.record_failure.return_value = 1
     apobj = MagicMock()
     apobj.notify.return_value = ok
     return repo, apobj
@@ -105,7 +125,7 @@ def _run_task(status: int | None, ok: bool, failures: int = 0) -> tuple[MagicMoc
 async def test_deliver_success_records_success() -> None:
     from app.tasks.notification_tasks import _apprise_deliver_async
 
-    repo, apobj = _run_task(None, True)
+    repo, apobj = _run_task(True)
     with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
         out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
     assert out == "sent"
@@ -116,7 +136,7 @@ async def test_deliver_success_records_success() -> None:
 async def test_deliver_failure_increments_and_does_not_retry() -> None:
     from app.tasks.notification_tasks import _apprise_deliver_async
 
-    repo, apobj = _run_task(None, False)
+    repo, apobj = _run_task(False)
     with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
         out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
     assert out == "failed"
@@ -126,7 +146,7 @@ async def test_deliver_failure_increments_and_does_not_retry() -> None:
 async def test_deliver_transient_raises_for_retry() -> None:
     from app.tasks.notification_tasks import TransientDeliveryError, _apprise_deliver_async
 
-    repo, apobj = _run_task(None, False)
+    repo, apobj = _run_task(False)
     apobj.notify.side_effect = TimeoutError("slow")
     with (
         patch(f"{TASKS}.apprise.Apprise", return_value=apobj),
@@ -134,3 +154,40 @@ async def test_deliver_transient_raises_for_retry() -> None:
     ):
         await _apprise_deliver_async(repo, uuid4(), "T", "B")
     repo.record_failure.assert_not_awaited()
+
+
+async def test_deliver_disabled_row_skipped() -> None:
+    from app.tasks.notification_tasks import _apprise_deliver_async
+
+    repo, apobj = _run_task(True, enabled=False)
+    with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
+        out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
+    assert out == "skipped"
+    apobj.notify.assert_not_called()
+
+
+@pytest.mark.parametrize("retries", [0, 2])
+def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
+    from app.tasks.notification_tasks import TransientDeliveryError, apprise_deliver
+
+    assert apprise_deliver.max_retries == 5
+
+    class _Retry(Exception):
+        pass
+
+    apprise_deliver.push_request(retries=retries)
+    try:
+        with (
+            patch(
+                f"{TASKS}._apprise_deliver_run",
+                new=AsyncMock(side_effect=TransientDeliveryError("timeout")),
+            ),
+            patch.object(apprise_deliver, "retry", side_effect=_Retry()) as retry,
+            pytest.raises(_Retry),
+        ):
+            apprise_deliver.run(str(uuid4()), str(uuid4()), "T", "B")
+    finally:
+        apprise_deliver.pop_request()
+    retry.assert_called_once()
+    countdown = retry.call_args.kwargs["countdown"]
+    assert 0 <= countdown <= 2**retries * 30

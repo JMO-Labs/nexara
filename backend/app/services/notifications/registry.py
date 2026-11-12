@@ -41,7 +41,7 @@ class NotificationType:
     category: Category
     payload_schema: type[NotificationPayload]
     default_channels: dict[Channel, bool]
-    user_configurable: tuple[Channel, ...] = ("inapp", "email", "push", "toast")
+    user_configurable: tuple[Channel, ...] = ("inapp", "email", "push", "toast", "apprise")
     group_window_seconds: int | None = None
     toast_on_arrival: bool = False
     bypass_dnd: bool = False
