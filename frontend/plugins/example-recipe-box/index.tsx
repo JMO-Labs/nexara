@@ -5,7 +5,9 @@
 import { lazy } from "react";
 import type { PluginRegistry } from "@/lib/plugins/plugin-loader";
 
-export const RecipeBoxWidget = lazy(() => import("./components/RecipeBoxWidget"));
+export const RecipeBoxWidget = lazy(
+  () => import("./components/RecipeBoxWidget"),
+);
 
 /** @brief Register this plugin's slot components. */
 export function registerPlugin(registry: PluginRegistry): void {
