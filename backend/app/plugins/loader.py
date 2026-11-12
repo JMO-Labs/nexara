@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib.util
 import logging
 import re
+import sys
 import uuid
 from pathlib import Path
 from types import ModuleType
@@ -25,28 +26,59 @@ logger = logging.getLogger(__name__)
 DEFAULT_PLUGINS_DIR = Path(__file__).resolve().parents[2] / "plugins"
 
 
-def _import_module(plugin_dir: Path, manifest: PluginManifest) -> ModuleType | None:
+def import_entry(
+    plugin_dir: Path, manifest: PluginManifest, rel: str, *, fresh: bool = True
+) -> ModuleType:
     """
-    @brief Import the plugin's backend entry file, if declared.
+    @brief Import one backend file of a plugin (routes, tasks, ...).
     @param plugin_dir Plugin directory.
     @param manifest Validated manifest.
-    @return Imported module or None when no entry is declared.
+    @param rel Entry path relative to the plugin directory.
+    @param fresh Drop previously imported plugin modules first (routes reload);
+                 False reuses them (tasks loaded next to routes).
+    @return Imported module.
     @throws ValueError if the entry path escapes the plugin directory.
     """
-    rel = manifest.backend.routes
-    if not rel:
-        return None
     root = plugin_dir.resolve()
     path = (root / rel).resolve()
     if not path.is_relative_to(root) or not path.is_file():
         raise ValueError(f"invalid backend entry '{rel}'")
     name = "nexara_plugin_" + re.sub(r"\W", "_", manifest.id)
+    init = root / "__init__.py"
+    if path.parent == root and init.is_file():
+        # Package mode: lets entry files use relative imports (``from . import x``).
+        if fresh:
+            for mod in [m for m in sys.modules if m == name or m.startswith(name + ".")]:
+                del sys.modules[mod]
+        if name not in sys.modules:
+            pkg_spec = importlib.util.spec_from_file_location(
+                name, init, submodule_search_locations=[str(root)]
+            )
+            if pkg_spec is None or pkg_spec.loader is None:
+                raise ValueError(f"cannot import package '{manifest.id}'")
+            pkg = importlib.util.module_from_spec(pkg_spec)
+            sys.modules[name] = pkg
+            pkg_spec.loader.exec_module(pkg)
+        name = f"{name}.{path.stem}"
+        if name in sys.modules:
+            return sys.modules[name]
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise ValueError(f"cannot import '{rel}'")
     module = importlib.util.module_from_spec(spec)
+    if "." in name:
+        sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _import_module(plugin_dir: Path, manifest: PluginManifest) -> ModuleType | None:
+    """
+    @brief Import the plugin's routes entry file, if declared.
+    @return Imported module or None when no entry is declared.
+    """
+    rel = manifest.backend.routes
+    return import_entry(plugin_dir, manifest, rel) if rel else None
 
 
 async def load_plugins(
@@ -86,6 +118,9 @@ async def load_plugins(
                 continue
             module = _import_module(plugin_dir, manifest)
             PluginRegistry.register(manifest, module, app)
+            register_hooks = getattr(module, "register_hooks", None)
+            if callable(register_hooks):
+                register_hooks(community_id, manifest)
             logger.info("plugin %s loaded (v%s)", pid, manifest.version)
         except Exception:
             logger.error("plugin %s failed to load; skipped", pid, exc_info=True)

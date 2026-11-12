@@ -189,3 +189,41 @@ class TestPostAuthorResponse:
         assert resp.username == "charlie"
         assert resp.display_name == "Charlie"
         assert resp.avatar_url == "https://example.com/avatar.png"
+
+
+class TestPostResponsePromptFlags:
+    """@brief PostResponse prompt flag fields."""
+
+    @staticmethod
+    def _base() -> dict:
+        now = datetime.now(UTC)
+        return {
+            "id": uuid4(),
+            "content": "x",
+            "author": {"id": uuid4(), "username": "a", "display_name": "A"},
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def test_defaults(self):
+        """Prompt flags default to false/null."""
+        resp = PostResponse(**self._base())
+        assert resp.is_prompt_post is False
+        assert resp.is_prompt_summary is False
+        assert resp.reply_to_prompt_id is None
+        assert resp.source_prompt_post_id is None
+
+    def test_values_roundtrip(self):
+        """Prompt flags are accepted and serialized."""
+        pid = uuid4()
+        resp = PostResponse(
+            **self._base(),
+            is_prompt_post=True,
+            is_prompt_summary=True,
+            reply_to_prompt_id=pid,
+            source_prompt_post_id=pid,
+        )
+        dumped = resp.model_dump()
+        assert dumped["is_prompt_post"] is True
+        assert dumped["reply_to_prompt_id"] == pid
+        assert dumped["source_prompt_post_id"] == pid

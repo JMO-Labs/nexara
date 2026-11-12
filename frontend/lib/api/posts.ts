@@ -80,6 +80,10 @@ export interface Post {
   subgroup_id: string | null;
   subgroup_name: string | null;
   subgroup_slug: string | null;
+  is_prompt_post?: boolean;
+  is_prompt_summary?: boolean;
+  reply_to_prompt_id?: string | null;
+  source_prompt_post_id?: string | null;
   link_previews?: LinkPreview[];
 }
 
