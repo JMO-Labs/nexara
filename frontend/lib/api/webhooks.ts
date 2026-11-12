@@ -11,8 +11,7 @@ import type {
 } from "@/lib/notifications/types";
 
 const USER_BASE = "/api/v1/notifications/webhooks";
-const communityBase = (id: string) =>
-  `/api/v1/communities/${seg(id)}/webhooks`;
+const communityBase = (id: string) => `/api/v1/communities/${seg(id)}/webhooks`;
 
 export const listWebhooks = () => apiGet<WebhookListItem[]>(USER_BASE);
 
