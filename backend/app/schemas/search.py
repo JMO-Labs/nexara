@@ -41,6 +41,7 @@ class SearchResultItem(BaseModel):
     @param snippet Excerpt or summary for preview.
     @param created_at When the entity was created.
     @param parent_id Optional parent entity UUID (e.g. post_id for comments).
+    @param is_nsfw True when the content is flagged NSFW (only shown to adults).
     """
 
     id: UUID
@@ -50,6 +51,7 @@ class SearchResultItem(BaseModel):
     created_at: datetime
     parent_id: UUID | None = None
     slug: str | None = None
+    is_nsfw: bool = False
 
     model_config = {"from_attributes": True}
 
