@@ -44,6 +44,7 @@ export function AvatarMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
+        aria-haspopup="menu"
         className="focus-visible:outline-accent rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Avatar
