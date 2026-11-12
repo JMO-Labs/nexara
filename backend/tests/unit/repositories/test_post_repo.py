@@ -523,9 +523,7 @@ class TestPostRepositoryListResponses:
         session.execute = AsyncMock(return_value=mock_result)
         repo = PostRepository(session)
 
-        items, next_cursor = await repo.list_responses(
-            COMMUNITY_ID, POST_ID, viewer_id=VIEWER_ID
-        )
+        items, next_cursor = await repo.list_responses(COMMUNITY_ID, POST_ID, viewer_id=VIEWER_ID)
 
         assert items == [] and next_cursor is None
         sql = str(session.execute.await_args.args[0].compile()).lower()
