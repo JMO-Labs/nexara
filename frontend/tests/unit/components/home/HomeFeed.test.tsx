@@ -97,9 +97,34 @@ describe("HomeFeed", () => {
   it("empty state", () => {
     state.hook.items = [];
     render(<HomeFeed />);
-    expect(screen.getByText("Nothing here yet")).toBeTruthy();
+    expect(screen.getByText("No posts yet")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Write the first post" }),
+      screen.getByRole("button", { name: "Create your first post" }),
     ).toBeTruthy();
+  });
+
+  it("loading shows staggered skeletons, no empty state", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    expect(screen.getAllByTestId("feed-skeleton").length).toBe(3);
+    expect(screen.queryByText("No posts yet")).toBeNull();
+  });
+
+  it("error shows retry", () => {
+    const refetch = vi.fn();
+    state.hook.items = [];
+    state.hook.isError = true;
+    state.hook.refetch = refetch;
+    render(<HomeFeed />);
+    expect(screen.getByText("Failed to load feed")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
+    expect(screen.queryByText("No posts yet")).toBeNull();
+  });
+
+  it("uses 8px item gap", () => {
+    const { container } = render(<HomeFeed />);
+    expect(container.querySelector("ul")?.className).toContain("gap-2");
   });
 });

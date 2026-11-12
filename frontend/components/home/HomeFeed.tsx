@@ -5,7 +5,8 @@
  *        infinite scroll.
  */
 import * as React from "react";
-import { Button, EmptyState } from "@/components/ui";
+import { AlertCircle, MessageSquarePlus } from "lucide-react";
+import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
@@ -25,6 +26,8 @@ export function HomeFeed() {
     fetchNextPage,
     hasNextPage,
     isLoading,
+    isError,
+    refetch,
   } = useHomeFeed();
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
@@ -65,13 +68,38 @@ export function HomeFeed() {
       <div ref={composerRef}>
         <PostComposer />
       </div>
-      {!isLoading && isEmpty ? (
+      {isLoading ? (
+        <div className="flex flex-col gap-2" aria-label="Loading feed">
+          {[0, 1, 2].map((n) => (
+            <div
+              key={n}
+              data-testid="feed-skeleton"
+              style={{ animationDelay: `${n * 80}ms` }}
+              className="flex flex-col gap-2 rounded-[1.25rem] p-3 md:p-4"
+            >
+              <Skeleton width="40%" height={16} />
+              <Skeleton height={64} rounded="md" />
+            </div>
+          ))}
+        </div>
+      ) : isError && isEmpty ? (
         <EmptyState
-          title="Nothing here yet"
-          action={<Button onClick={focusComposer}>Write the first post</Button>}
+          icon={AlertCircle}
+          title="Failed to load feed"
+          description="Something went wrong. Check your connection and try again."
+          action={<Button onClick={() => refetch()}>Retry</Button>}
+        />
+      ) : isEmpty ? (
+        <EmptyState
+          icon={MessageSquarePlus}
+          title="No posts yet"
+          description="Share an update with your community to get things started."
+          action={
+            <Button onClick={focusComposer}>Create your first post</Button>
+          }
         />
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-2">
           {items.map((i) => (
             <li
               key={`${i.kind}:${i.id}`}
