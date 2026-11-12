@@ -1,0 +1,20 @@
+id = "example-trivia"
+name = "Daily Trivia"
+version = "1.0.0"
+author = "Nexara"
+description = "Reference plugin: daily multiple-choice trivia with streaks and a leaderboard."
+min_core_version = "0.1.0"
+permissions = [
+  "db_read",
+  "db_write",
+  "celery_tasks",
+  "hooks_on_user_joined",
+  "send_notifications",
+]
+
+[hooks]
+on_user_joined = "Welcome new members with today's trivia question"
+
+[backend]
+routes = "router.py"
+tasks = "tasks.py"
