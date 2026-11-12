@@ -15,6 +15,30 @@ import { StorageBreakdown } from "./StorageBreakdown";
 type SortKey = "name" | "bytes" | "pct";
 
 /** @brief Admin storage analytics view. */
+function Th({
+  k,
+  label,
+  sort,
+  onSort,
+}: {
+  k: SortKey;
+  label: string;
+  sort: "ascending" | "descending" | "none";
+  onSort: (k: SortKey) => void;
+}) {
+  return (
+    <th scope="col" aria-sort={sort} className="p-2 text-left">
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className="min-h-11 font-semibold"
+      >
+        {label}
+      </button>
+    </th>
+  );
+}
+
 export function StorageView() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
@@ -60,18 +84,6 @@ export function StorageView() {
   const pageSize = users.data?.page_size ?? 100;
   const pages = Math.max(1, Math.ceil((users.data?.total ?? 0) / pageSize));
 
-  const Th = ({ k, label }: { k: SortKey; label: string }) => (
-    <th scope="col" aria-sort={ariaSort(k)} className="p-2 text-left">
-      <button
-        type="button"
-        onClick={() => toggle(k)}
-        className="min-h-11 font-semibold"
-      >
-        {label}
-      </button>
-    </th>
-  );
-
   return (
     <div className="flex flex-col gap-6">
       <Card className="flex flex-col gap-1 p-4">
@@ -95,9 +107,24 @@ export function StorageView() {
         <table className="w-full text-sm">
           <thead>
             <tr>
-              <Th k="name" label="Name" />
-              <Th k="bytes" label="Used" />
-              <Th k="pct" label="% of total" />
+              <Th
+                k="name"
+                label="Name"
+                sort={ariaSort("name")}
+                onSort={toggle}
+              />
+              <Th
+                k="bytes"
+                label="Used"
+                sort={ariaSort("bytes")}
+                onSort={toggle}
+              />
+              <Th
+                k="pct"
+                label="% of total"
+                sort={ariaSort("pct")}
+                onSort={toggle}
+              />
             </tr>
           </thead>
           <tbody>

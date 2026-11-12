@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.retention import StorageSnapshot
@@ -31,7 +31,7 @@ class StorageRepository:
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
-    def _users(self, community_id: uuid.UUID):  # noqa: ANN202
+    def _users(self, community_id: uuid.UUID) -> Select[tuple[User]]:
         return select(User).where(User.community_id == community_id, User.deleted_at.is_(None))
 
     async def top_users(self, community_id: uuid.UUID, limit: int) -> list[User]:
