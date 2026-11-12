@@ -58,13 +58,13 @@ spec:
 {{- $ctx := dict "root" . "component" "postgresql" }}
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "nexara.fullname" . }}-postgresql
   labels: {{- include "nexara.labels" . | nindent 4 }}
 spec:
   replicas: 1
-  strategy: {type: Recreate}
+  serviceName: {{ include "nexara.fullname" . }}-postgresql-headless
   selector:
     matchLabels: {{- include "nexara.selector" $ctx | nindent 6 }}
   template:
@@ -93,6 +93,16 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexara.fullname" . }}-postgresql-headless
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {{- include "nexara.selector" $ctx | nindent 4 }}
+  ports: [{name: pg, port: 5432, targetPort: pg}]
 ---
 apiVersion: v1
 kind: Service
