@@ -61,6 +61,7 @@ class Post(Base):
     is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_prompt_post: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_prompt_summary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     reply_to_prompt_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("prompt_posts.id", ondelete="SET NULL", use_alter=True),
