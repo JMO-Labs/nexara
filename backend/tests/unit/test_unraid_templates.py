@@ -76,4 +76,6 @@ def test_valkey_template() -> None:
 def test_unraid_doc_exists_and_in_nav() -> None:
     root = DIR.parents[1]
     assert (root / "docs/docs/deployment/unraid.md").exists()
-    assert "deployment/unraid.md" in (root / "docs/mkdocs.yml").read_text()
+    docs = root / "docs/docs"
+    assert "  - deployment\n" in (docs / ".pages").read_text()
+    assert "- unraid.md" in (docs / "deployment/.pages").read_text()

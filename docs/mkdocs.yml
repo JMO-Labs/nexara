@@ -53,14 +53,6 @@ markdown_extensions:
   - toc:
       permalink: true
 
-nav:
-  - Home: index.md
-  - Getting Started: getting-started.md
-  - Development: development.md
-  - Deployment:
-      - Overview: deployment.md
-      - unRAID: deployment/unraid.md
-  - References:
-      - API Docs (Doxygen): "api/"
-      - Backend Coverage: "coverage/backend/"
-      - Frontend Coverage: "coverage/frontend/"
+plugins:
+  - search
+  - awesome-pages
