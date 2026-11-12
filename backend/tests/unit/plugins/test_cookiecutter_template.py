@@ -4,6 +4,7 @@
 generation hooks, and checks the output against the manifest schema.
 """
 
+import ast
 import json
 import re
 import subprocess
@@ -82,6 +83,16 @@ class TestCookiecutterJson:
         )
         assert all(p in {e.value for e in PluginPermission} for p in perms)
 
+    def test_pre_gen_allowed_matches_enum(self) -> None:
+        tree = ast.parse((TEMPLATE / "hooks" / "pre_gen_project.py").read_text())
+        node = next(
+            n.value
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "ALLOWED" for t in n.targets)
+        )
+        assert ast.literal_eval(node) == {p.value for p in PluginPermission}
+
     def test_sample_plugin_id_matches_slug(self) -> None:
         assert re.match(SLUG_RE, _defaults()["plugin_id"])
 
@@ -125,6 +136,11 @@ class TestGeneration:
     def test_multiple_permissions(self, tmp_path: Path) -> None:
         project = generate(tmp_path, backend_permissions='["db_read", "db_write"]')
         assert len(load_manifest(project).permissions) == 2
+
+    def test_every_permission_accepted(self, tmp_path: Path) -> None:
+        perms = [p.value for p in PluginPermission]
+        project = generate(tmp_path, backend_permissions=json.dumps(perms))
+        assert load_manifest(project).permissions == list(PluginPermission)
 
     def test_license_and_readme(self, tmp_path: Path) -> None:
         project = generate(tmp_path, author_name="Jane")

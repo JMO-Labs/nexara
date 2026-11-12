@@ -8,7 +8,8 @@ PLUGIN_ID = "{{ cookiecutter.plugin_id }}"
 PERMISSIONS = '{{ cookiecutter.backend_permissions }}'
 ALLOWED = {
     "db_read", "db_write", "hooks_before_post_created", "hooks_after_post_created",
-    "send_notifications", "storage_access", "external_http", "frontend_routes",
+    "hooks_before_chat_sent", "hooks_after_chat_sent", "hooks_on_user_joined",
+    "hooks_on_community_created", "send_notifications", "storage_access", "external_http", "frontend_routes",
     "celery_tasks",
 }  # fmt: skip
 
