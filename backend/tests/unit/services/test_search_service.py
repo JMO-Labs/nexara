@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -290,3 +290,32 @@ class TestGalleryPollSearch:
         assert p.items[0].title == "Pizza night?"
         assert p.items[0].parent_id == poll.post_id
         assert repo.search_galleries.call_args[0][3] == mock_user.id
+
+
+class TestIsAdult:
+    """@brief Age gate for NSFW search results."""
+
+    @staticmethod
+    def _user(birthday):
+        u = MagicMock()
+        u.birthday = birthday
+        return u
+
+    def test_no_birthday_is_not_adult(self):
+        from app.services.search_service import is_adult
+
+        assert is_adult(self._user(None)) is False
+
+    def test_old_enough_is_adult(self):
+        from datetime import date
+
+        from app.services.search_service import is_adult
+
+        assert is_adult(self._user(date(1980, 1, 1))) is True
+
+    def test_ten_year_old_is_not_adult(self):
+        from datetime import date
+
+        from app.services.search_service import is_adult
+
+        assert is_adult(self._user(date(date.today().year - 10, 1, 1))) is False
