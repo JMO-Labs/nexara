@@ -18,6 +18,7 @@ from app.repositories.calendar_token_repo import CalendarTokenRepository
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     EventCreate,
     EventUpdate,
@@ -402,6 +403,42 @@ class TestSubscriptions:
             ),
         )
         assert result.name == "Holidays"
+
+
+class TestUpdateSubscription:
+    @pytest.mark.asyncio
+    async def test_update_applies_fields(self, service: EventService, repo: AsyncMock) -> None:
+        sub = MagicMock(spec=CalendarSubscription)
+        sub.id = uuid.uuid4()
+        sub.name = "Old"
+        sub.color = "#4285f4"
+        sub.source_type = "ical"
+        sub.source_url = "https://example.com/a.ics"
+        sub.visibility = "private"
+        sub.sync_enabled = True
+        sub.sync_interval_minutes = 60
+        sub.last_synced_at = None
+        sub.sync_error = None
+        sub.shared_by_admin = False
+        sub.created_at = datetime.now(UTC)
+        repo.get_subscription.return_value = sub
+        repo.update_subscription.side_effect = lambda s: s
+        result = await service.update_subscription(
+            sub.id,
+            uuid.uuid4(),
+            CalendarSubscriptionUpdate(sync_enabled=False, sync_interval_minutes=1440),
+        )
+        assert sub.sync_enabled is False
+        assert sub.sync_interval_minutes == 1440
+        assert result.sync_interval_minutes == 1440
+
+    @pytest.mark.asyncio
+    async def test_update_missing_raises(self, service: EventService, repo: AsyncMock) -> None:
+        repo.get_subscription.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.update_subscription(
+                uuid.uuid4(), uuid.uuid4(), CalendarSubscriptionUpdate(name="x")
+            )
 
 
 class TestUpdateEvent:

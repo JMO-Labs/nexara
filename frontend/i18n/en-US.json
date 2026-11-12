@@ -625,46 +625,77 @@
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",
-      "reaction": { "added": "Reacted" }
+      "reaction": {
+        "added": "Reacted"
+      }
     },
-    "comments": { "added": "Comment posted" },
+    "comments": {
+      "added": "Comment posted"
+    },
     "events": {
       "created": "Event created",
       "updated": "Event updated",
-      "rsvp": { "saved": "RSVP saved" },
+      "rsvp": {
+        "saved": "RSVP saved"
+      },
       "cancelled": "Event cancelled"
     },
     "galleries": {
       "created": "Gallery created",
-      "item": { "added": "Added to gallery" },
+      "item": {
+        "added": "Added to gallery"
+      },
       "deleted": "Gallery deleted"
     },
-    "media": { "uploaded": "Upload complete", "deleted": "Media removed" },
+    "media": {
+      "uploaded": "Upload complete",
+      "deleted": "Media removed"
+    },
     "subgroups": {
       "created": "Subgroup created",
       "joined": "Joined subgroup",
       "left": "Left subgroup",
-      "member": { "added": "Member added", "removed": "Member removed" }
+      "member": {
+        "added": "Member added",
+        "removed": "Member removed"
+      }
     },
     "settings": {
       "saved": "Settings saved",
-      "password": { "changed": "Password updated" }
+      "password": {
+        "changed": "Password updated"
+      }
     },
-    "invites": { "sent": "Invite sent", "revoked": "Invite revoked" },
+    "invites": {
+      "sent": "Invite sent",
+      "revoked": "Invite revoked"
+    },
     "admin": {
       "user": { "updated": "User updated", "deactivated": "User deactivated" },
       "audit": { "exported": "Audit log exported" },
       "retention": { "updated": "Retention policy saved" }
     },
     "auth": {
-      "login": { "failed": "Login failed" },
-      "register": { "failed": "Registration failed" },
-      "reset": { "sent": "Reset email sent" }
+      "login": {
+        "failed": "Login failed"
+      },
+      "register": {
+        "failed": "Registration failed"
+      },
+      "reset": {
+        "sent": "Reset email sent"
+      }
     },
     "errors": {
       "generic": "Something went wrong",
       "network": "Network error",
       "unauthorized": "Not authorized"
+    },
+    "calendar": {
+      "subscription_added": "Calendar added",
+      "subscription_updated": "Calendar updated",
+      "subscription_deleted": "Calendar deleted",
+      "sync_complete": "Sync complete"
     }
   },
   "onboarding": {
@@ -691,6 +722,28 @@
       "shortcuts": "Keyboard shortcuts",
       "docs": "Documentation",
       "support": "Contact support"
+    }
+  },
+  "actions": {
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "components": {
+    "calendar": {
+      "subscriptions": {
+        "title": "Calendar subscriptions",
+        "description": "Subscribe to external iCal feeds and choose how often they sync.",
+        "empty": "No external calendars yet",
+        "add": "Add calendar",
+        "add_modal_title": "Add calendar subscription",
+        "edit_modal_title": "Edit calendar subscription",
+        "url": "Calendar URL",
+        "interval": "Sync frequency",
+        "delete_confirm": "Delete subscription?",
+        "delete_confirm_text": "Delete “{title}” and its imported events?"
+      }
     }
   }
 }
