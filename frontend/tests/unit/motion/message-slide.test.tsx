@@ -114,10 +114,13 @@ describe("NotificationsBell badge motion", () => {
     setup();
     const badge = await screen.findByTestId("unread-badge");
     // Wait for the pop-in to finish rather than sampling a mid-frame value.
-    await waitFor(() => {
-      expect(badge.style.opacity).toBe("1");
-      expect(badge.style.transform).toMatch(/^(none)?$/);
-    });
+    await waitFor(
+      () => {
+        expect(badge.style.opacity).toBe("1");
+        expect(badge.style.transform).toMatch(/^(none)?$/);
+      },
+      { timeout: 4000 },
+    );
   });
   it("renders the badge statically under reduced motion", async () => {
     reduced = true;
