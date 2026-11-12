@@ -27,7 +27,9 @@ def _render(*sets: str) -> list[dict]:
 
 
 def _all(docs: list[dict], kind: str) -> dict[str, dict]:
-    return {d["metadata"]["name"].removeprefix("nexara-nexara-"): d for d in docs if d["kind"] == kind}
+    return {
+        d["metadata"]["name"].removeprefix("nexara-nexara-"): d for d in docs if d["kind"] == kind
+    }
 
 
 def test_worker_hpa_targets_worker_deployment() -> None:
@@ -116,4 +118,6 @@ def test_all_containers_have_requests_and_limits() -> None:
     for d in _render():
         if d["kind"] in ("Deployment", "StatefulSet"):
             for c in d["spec"]["template"]["spec"]["containers"]:
-                assert c["resources"]["requests"] and c["resources"]["limits"], d["metadata"]["name"]
+                assert c["resources"]["requests"] and c["resources"]["limits"], d["metadata"][
+                    "name"
+                ]
