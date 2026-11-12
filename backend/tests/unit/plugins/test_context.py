@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from app.plugins.context import NOTIFY_LIMIT_PER_MINUTE, PluginContext
 from app.plugins.manifest import PluginManifest
@@ -27,16 +28,29 @@ def _manifest(perms: list[str]) -> PluginManifest:
     )
 
 
-def _ctx(perms: list[str], settings: dict | None = None, clock=None) -> PluginContext:
+def _ctx(
+    perms: list[str], settings: dict | None = None, clock=None, community=COMMUNITY, session=None
+) -> PluginContext:
+    if session is None:
+        session = AsyncMock()
+        found = MagicMock()
+        found.scalar_one_or_none.return_value = uuid.uuid4()
+        session.execute.return_value = found
     return PluginContext(
         plugin_id="hello",
         manifest=_manifest(perms),
-        session=AsyncMock(),
-        community_id=COMMUNITY,
+        session=session,
+        community_id=community,
         storage_client=AsyncMock(),
         notification_service=AsyncMock(),
         settings=settings,
         clock=clock,
+    )
+
+
+def _sql(stmt) -> str:
+    return str(
+        stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
     )
 
 
@@ -70,6 +84,20 @@ class TestDb:
         await ctx.db.set("k", {"x": 1})
         ctx._session.execute.assert_awaited_once()
         ctx._session.flush.assert_awaited()
+        compiled = ctx._session.execute.call_args[0][0].compile(dialect=postgresql.dialect())
+        assert str(compiled).startswith("INSERT INTO plugin_data")
+        assert compiled.params["plugin_id"] == "hello"
+        assert compiled.params["community_id"] == COMMUNITY
+        assert compiled.params["key"] == "k"
+        assert compiled.params["value_json"] == {"x": 1}
+
+    async def test_delete_scoped(self):
+        ctx = _ctx(["db_write"])
+        await ctx.db.delete("k")
+        ctx._session.flush.assert_awaited()
+        sql = _sql(ctx._session.execute.call_args[0][0])
+        assert "DELETE FROM plugin_data" in sql
+        assert "'hello'" in sql and str(COMMUNITY) in sql and "'k'" in sql
 
 
 class TestSettings:
@@ -94,7 +122,16 @@ class TestStorage:
     async def test_namespaced(self):
         ctx = _ctx(["storage_access"])
         await ctx.storage.put("a.txt", b"x", "text/plain")
-        ctx._storage.put.assert_awaited_with("plugins/hello/a.txt", b"x", "text/plain")
+        ctx._storage.put.assert_awaited_with(f"plugins/hello/{COMMUNITY}/a.txt", b"x", "text/plain")
+
+    async def test_communities_get_different_prefixes(self):
+        other = uuid.uuid4()
+        a, b = _ctx(["storage_access"]), _ctx(["storage_access"], community=other)
+        await a.storage.put("a.txt", b"x", "t")
+        await b.storage.put("a.txt", b"x", "t")
+        ka = a._storage.put.await_args[0][0]
+        kb = b._storage.put.await_args[0][0]
+        assert ka != kb and str(other) in kb
 
     @pytest.mark.parametrize("key", ["../other/a", "/abs", "a/../../b", ""])
     async def test_rejects_escape(self, key):
@@ -115,13 +152,38 @@ class TestNotify:
 
     async def test_rate_limited(self):
         now = [1000.0]
-        ctx = _ctx(["send_notifications"], clock=lambda: now[0])
+        ctx = _ctx(["send_notifications"], clock=lambda: now[0], community=uuid.uuid4())
         for _ in range(NOTIFY_LIMIT_PER_MINUTE):
             await ctx.notify(uuid.uuid4(), "t", {})
         with pytest.raises(RuntimeError, match="rate limit"):
             await ctx.notify(uuid.uuid4(), "t", {})
         now[0] += 61
         await ctx.notify(uuid.uuid4(), "t", {})
+
+
+    async def test_budget_shared_across_contexts(self):
+        now = [1000.0]
+        ctxs = [
+            _ctx(["send_notifications"], clock=lambda: now[0], community=uuid.uuid4())
+            for _ in range(2)
+        ]
+        # distinct communities keep distinct budgets; same community shares
+        c1 = _ctx(["send_notifications"], clock=lambda: now[0], community=ctxs[0].community_id)
+        for _ in range(NOTIFY_LIMIT_PER_MINUTE):
+            await ctxs[0].notify(uuid.uuid4(), "t", {})
+        with pytest.raises(RuntimeError, match="rate limit"):
+            await c1.notify(uuid.uuid4(), "t", {})
+        await ctxs[1].notify(uuid.uuid4(), "t", {})
+
+    async def test_rejects_user_outside_community(self):
+        session = AsyncMock()
+        missing = MagicMock()
+        missing.scalar_one_or_none.return_value = None
+        session.execute.return_value = missing
+        ctx = _ctx(["send_notifications"], session=session)
+        with pytest.raises(PermissionError, match="community"):
+            await ctx.notify(uuid.uuid4(), "t", {})
+        ctx._notifications.notify.assert_not_awaited()
 
 
 class TestHttp:

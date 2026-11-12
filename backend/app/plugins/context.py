@@ -14,9 +14,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plugin import PluginData
+from app.models.user import User
 from app.plugins.manifest import PluginManifest, PluginPermission
 
 NOTIFY_LIMIT_PER_MINUTE = 100
+# Sliding windows keyed by (plugin_id, community_id); shared by all contexts.
+_NOTIFY_WINDOWS: dict[tuple[str, uuid.UUID], deque[float]] = {}
 
 
 def _require(plugin_id: str, manifest: PluginManifest, perm: PluginPermission) -> None:
@@ -111,10 +114,13 @@ class PluginSettings(MutableMapping[str, Any]):
 
 
 class PluginStorage(_Scoped):
-    """@brief Storage proxy confined to ``plugins/{plugin_id}/``."""
+    """@brief Storage proxy confined to ``plugins/{plugin_id}/{community_id}/``."""
 
-    def __init__(self, plugin_id: str, manifest: PluginManifest, client: Any) -> None:
+    def __init__(
+        self, plugin_id: str, manifest: PluginManifest, client: Any, community_id: uuid.UUID
+    ) -> None:
         super().__init__(plugin_id, manifest)
+        self._community_id = community_id
         self._client = client
 
     def _key(self, key: str) -> str:
@@ -122,7 +128,7 @@ class PluginStorage(_Scoped):
         parts = key.split("/")
         if not key or key.startswith("/") or any(p in ("", "..", ".") for p in parts):
             raise ValueError(f"Invalid storage key '{key}'")
-        return f"plugins/{self._plugin_id}/{key}"
+        return f"plugins/{self._plugin_id}/{self._community_id}/{key}"
 
     async def put(self, key: str, data: bytes, content_type: str) -> None:
         """@brief Store bytes."""
@@ -145,7 +151,7 @@ class PluginContext:
     """@brief Scoped API object handed to plugins; immutable after creation."""
 
     __slots__ = (
-        "_clock", "_notifications", "_sent", "_session", "_storage",
+        "_clock", "_notifications", "_session", "_storage",
         "community_id", "db", "manifest", "plugin_id", "settings", "storage",
     )  # fmt: skip
 
@@ -169,10 +175,9 @@ class PluginContext:
         set_(self, "_storage", storage_client)
         set_(self, "_notifications", notification_service)
         set_(self, "_clock", clock or time.monotonic)
-        set_(self, "_sent", deque())
         set_(self, "db", PluginDB(plugin_id, manifest, session, community_id))
         set_(self, "settings", PluginSettings(manifest, settings))
-        set_(self, "storage", PluginStorage(plugin_id, manifest, storage_client))
+        set_(self, "storage", PluginStorage(plugin_id, manifest, storage_client, community_id))
 
     def __setattr__(self, name: str, value: Any) -> None:
         raise AttributeError("PluginContext is immutable")
@@ -184,16 +189,27 @@ class PluginContext:
         payload: dict[str, Any] | None = None,
         actor_id: uuid.UUID | None = None,
     ) -> Any:
-        """@brief Send a notification (max 100/min per context).
-        @throws PermissionError without send_notifications; RuntimeError when rate limited.
+        """@brief Send a notification (max 100/min per plugin and community).
+        @throws PermissionError without send_notifications or for a user outside the
+        community; RuntimeError when rate limited.
         """
         _require(self.plugin_id, self.manifest, PluginPermission.SEND_NOTIFICATIONS)
+        found = await self._session.execute(
+            select(User.id).where(
+                User.id == user_id,
+                User.community_id == self.community_id,
+                User.deleted_at.is_(None),
+            )
+        )
+        if found.scalar_one_or_none() is None:
+            raise PermissionError(f"User is not a member of community {self.community_id}")
         now = self._clock()
-        while self._sent and now - self._sent[0] >= 60:
-            self._sent.popleft()
-        if len(self._sent) >= NOTIFY_LIMIT_PER_MINUTE:
+        sent = _NOTIFY_WINDOWS.setdefault((self.plugin_id, self.community_id), deque())
+        while sent and now - sent[0] >= 60:
+            sent.popleft()
+        if len(sent) >= NOTIFY_LIMIT_PER_MINUTE:
             raise RuntimeError(f"Plugin '{self.plugin_id}' notification rate limit exceeded")
-        self._sent.append(now)
+        sent.append(now)
         return await self._notifications.notify(
             user_id, notification_type, payload or {}, actor_id=actor_id
         )
