@@ -1,6 +1,6 @@
 """
-@file tests/integration/test_migration_0022.py
-@brief Round-trip (upgrade, downgrade, upgrade) of migration 0022 on real Postgres.
+@file tests/integration/test_migration_0026.py
+@brief Round-trip (upgrade, downgrade, upgrade) of migration 0026 on real Postgres.
 
 Runs in a scratch database so the shared test DB is never downgraded.
 """
@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
-PREV = "0021_add_subgroup_accent_color"
-REV = "0022_list_templates"
+PREV = "0025_plugin_api_keys"
+REV = "0026_list_templates"
 TABLES = [
     "list_template",
     "list_template_field",
@@ -108,7 +108,7 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
 
     # Re-running the seed must not duplicate templates or fields.
     spec = importlib.util.spec_from_file_location(
-        "mig0022", ROOT / "alembic" / "versions" / "0022_list_templates.py"
+        "mig0026", ROOT / "alembic" / "versions" / "0026_list_templates.py"
     )
     mig = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mig)

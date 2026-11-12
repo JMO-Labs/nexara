@@ -1,8 +1,8 @@
 # ruff: noqa: E501
 """lists: template, list, member, item, signup, completion tables + seeds
 
-Revision ID: 0022_list_templates
-Revises: 0021_add_subgroup_accent_color
+Revision ID: 0026_list_templates
+Revises: 0025_plugin_api_keys
 """
 
 import json
@@ -13,8 +13,8 @@ from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 
 from alembic import op
 
-revision = "0022_list_templates"
-down_revision = "0021_add_subgroup_accent_color"
+revision = "0026_list_templates"
+down_revision = "0025_plugin_api_keys"
 branch_labels = None
 depends_on = None
 

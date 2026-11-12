@@ -1,6 +1,6 @@
 """
-@file tests/unit/migrations/test_0022_list_templates.py
-@brief Static checks for migration 0022 (list templates schema + seeds).
+@file tests/unit/migrations/test_0026_list_templates.py
+@brief Static checks for migration 0026 (list templates schema + seeds).
 """
 
 import importlib.util
@@ -9,21 +9,21 @@ from pathlib import Path
 import pytest
 
 VERSIONS = Path(__file__).resolve().parents[3] / "alembic" / "versions"
-FILE = VERSIONS / "0022_list_templates.py"
+FILE = VERSIONS / "0026_list_templates.py"
 
 
 @pytest.fixture(scope="module")
 def mig():
-    assert FILE.exists(), "0022_list_templates.py missing"
-    spec = importlib.util.spec_from_file_location("mig0022", FILE)
+    assert FILE.exists(), "0026_list_templates.py missing"
+    spec = importlib.util.spec_from_file_location("mig0026", FILE)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
 def test_revision_chain(mig) -> None:
-    assert mig.revision == "0022_list_templates"
-    assert mig.down_revision == "0021_add_subgroup_accent_color"
+    assert mig.revision == "0026_list_templates"
+    assert mig.down_revision == "0025_plugin_api_keys"
 
 
 def test_ten_notification_columns(mig) -> None:
