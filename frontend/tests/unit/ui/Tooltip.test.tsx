@@ -3,14 +3,14 @@
  * @brief Tooltip hover delay, focus behaviour and standalone fallback.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Tooltip, TooltipProvider } from "@/components/ui/Tooltip";
 
-function setupFake() {
-  vi.useFakeTimers({ shouldAdvanceTime: false });
-  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-}
+/*
+ * Fake-timer tests use sync fireEvent/focus: user-event's async wrapper
+ * awaits a setTimeout(0) that vitest fake timers never flush (hangs).
+ */
 
 const tree = (
   <TooltipProvider>
@@ -25,10 +25,10 @@ describe("Tooltip", () => {
     vi.useRealTimers();
   });
 
-  it("shows nothing on hover before 400ms, then shows content", async () => {
-    const user = setupFake();
+  it("shows nothing on hover before 400ms, then shows content", () => {
+    vi.useFakeTimers();
     render(tree);
-    await user.hover(screen.getByText("btn"));
+    fireEvent.pointerMove(screen.getByText("btn"));
     act(() => {
       vi.advanceTimersByTime(399);
     });
@@ -39,10 +39,12 @@ describe("Tooltip", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("Save");
   });
 
-  it("shows content immediately on keyboard focus", async () => {
-    const user = setupFake();
+  it("shows content immediately on keyboard focus", () => {
+    vi.useFakeTimers();
     render(tree);
-    await user.tab();
+    act(() => {
+      screen.getByText("btn").focus();
+    });
     expect(screen.getByRole("tooltip")).toHaveTextContent("Save");
   });
 
