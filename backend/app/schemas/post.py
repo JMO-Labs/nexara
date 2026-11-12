@@ -57,6 +57,7 @@ class PostResponse(BaseModel):
     poll: PollResponse | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)
     comment_count: int = 0
+    is_bookmarked: bool = False
     subgroup_id: UUID | None = None
     subgroup_name: str | None = None
     subgroup_slug: str | None = None

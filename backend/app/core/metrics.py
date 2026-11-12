@@ -94,6 +94,29 @@ celery_queue_depth: Gauge = Gauge(
 )
 """@brief Gauge with ``queue`` label refreshed by periodic task."""
 
+# ── Search cache ──────────────────────────────────────────────────────────
+
+search_cache_hits_total: Counter = Counter(
+    "search_cache_hits_total",
+    "Search results served from the Valkey cache",
+    ["community_id"],
+)
+"""@brief Counter of search cache hits."""
+
+search_cache_misses_total: Counter = Counter(
+    "search_cache_misses_total",
+    "Search first-page lookups not found in the Valkey cache",
+    ["community_id"],
+)
+"""@brief Counter of search cache misses."""
+
+search_cache_invalidations_total: Counter = Counter(
+    "search_cache_invalidations_total",
+    "Number of times the search cache was invalidated",
+    ["community_id"],
+)
+"""@brief Counter of search cache invalidations."""
+
 ocr_processed_total: Counter = Counter(
     "nexara_ocr_processed_total",
     "OCR task outcomes",
