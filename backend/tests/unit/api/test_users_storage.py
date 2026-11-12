@@ -63,8 +63,6 @@ async def test_storage_forbidden(test_app):
 
 
 async def test_storage_unauthenticated(test_app):
-    async with AsyncClient(
-        transport=ASGITransport(app=test_app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         resp = await client.get(f"/api/v1/users/{uuid.uuid4()}/storage")
     assert resp.status_code == 401

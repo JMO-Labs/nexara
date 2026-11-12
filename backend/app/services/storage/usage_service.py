@@ -43,9 +43,7 @@ class StorageUsageService:
             raise NotFoundError(_("User not found"))
         if viewer.id != target.id:
             raise AuthorizationError(_("Cannot view another user's storage"))
-        by_type = await self._media_repo.get_user_storage_by_type(
-            target.id, target.community_id
-        )
+        by_type = await self._media_repo.get_user_storage_by_type(target.id, target.community_id)
         return StorageUsageResponse(
             used_bytes=target.storage_used,
             quota_bytes=target.storage_quota,
