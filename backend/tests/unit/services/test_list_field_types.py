@@ -76,3 +76,16 @@ class TestLocationField:
         v = {"lat": 1.0, "lon": 2.0}
         assert self.ft.serialize(v) == v
         assert self.ft.deserialize(v) == v
+
+
+class TestCoverageGaps:
+    def test_date_project_rejects_non_string(self):
+        with pytest.raises(ValueError, match="YYYY-MM-DD string"):
+            DateField().project_columns(5, {"is_due_field": True})
+
+    def test_date_serialize_none(self):
+        assert DateField().serialize(None) is None
+
+    @pytest.mark.parametrize("empty", [None, {}])
+    def test_location_project_empty(self, empty):
+        assert LocationField().project_columns(empty, {}) == {}
