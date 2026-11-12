@@ -73,6 +73,7 @@ export function EventCreateModal({
     subgroup_id: null,
   });
   const [color, setColor] = React.useState<string | null>(null);
+  const [autoGallery, setAutoGallery] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const { data: calendars } = useCalendars();
@@ -128,6 +129,7 @@ export function EventCreateModal({
         subgroup_id: defaultSubgroupId ?? null,
       });
       setColor(null);
+      setAutoGallery(false);
     }
   }, [open, event, defaultSubgroupId]);
 
@@ -155,7 +157,7 @@ export function EventCreateModal({
       longitude: coords?.lon ?? null,
     };
     if (isEdit) await update.mutateAsync(body);
-    else await create.mutateAsync(body);
+    else await create.mutateAsync({ ...body, auto_create_gallery: autoGallery });
     onClose();
   };
 
@@ -192,6 +194,17 @@ export function EventCreateModal({
           <ScopeSelect value={scope} onChange={setScope} subgroups={myGroups} />
         )}
         <ColorField value={color} onChange={setColor} />
+        {!isEdit && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={autoGallery}
+              onChange={(e) => setAutoGallery(e.target.checked)}
+              className="size-4 accent-[var(--accent)]"
+            />
+            Create gallery for photos
+          </label>
+        )}
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

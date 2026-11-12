@@ -10,6 +10,7 @@ import { Markdown } from "@/components/ui";
 import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
+import { EventGalleryLink } from "./EventGalleryLink";
 import { formatRange } from "./formatRange";
 
 const EventMiniMap = dynamic(
@@ -71,6 +72,7 @@ export function EventDetailBody({ event }: { event: EventItem }) {
         current={event.user_rsvp?.status ?? null}
         counts={event.rsvp_counts}
       />
+      <EventGalleryLink galleryId={event.gallery_id} />
       {event.contribution_slots.length > 0 && (
         <div className="mt-4">
           <h3 className="mb-1.5 text-xs font-semibold tracking-wider text-muted">
