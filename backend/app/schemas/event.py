@@ -43,6 +43,7 @@ class EventCreate(BaseModel):
     rsvp_labels: dict[str, str] | None = None
     contribution_slots: list[ContributionSlot] = Field(default_factory=list)
     reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
+    auto_create_gallery: bool = False
 
     @field_validator("ends_at")
     @classmethod
@@ -139,6 +140,7 @@ class EventResponse(BaseModel):
     reminder_offsets_minutes: list[int] = Field(default_factory=lambda: [60])
     rsvp_counts: dict[str, int] = Field(default_factory=dict)
     user_rsvp: RSVPResponse | None = None
+    gallery_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
