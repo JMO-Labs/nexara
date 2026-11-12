@@ -21,6 +21,8 @@ class PluginPermission(StrEnum):
     - ``db_write``: write access to the plugin's scoped data.
     - ``hooks_before_post_created``: intercept posts before creation.
     - ``hooks_after_post_created``: react after a post is created.
+    - ``hooks_before_chat_sent`` / ``hooks_after_chat_sent``: chat message hooks.
+    - ``hooks_on_user_joined`` / ``hooks_on_community_created``: membership/community hooks.
     - ``send_notifications``: send notifications to users.
     - ``storage_access``: use the file/object storage.
     - ``external_http``: make outbound HTTP requests.
@@ -32,6 +34,10 @@ class PluginPermission(StrEnum):
     DB_WRITE = "db_write"
     HOOKS_BEFORE_POST_CREATED = "hooks_before_post_created"
     HOOKS_AFTER_POST_CREATED = "hooks_after_post_created"
+    HOOKS_BEFORE_CHAT_SENT = "hooks_before_chat_sent"
+    HOOKS_AFTER_CHAT_SENT = "hooks_after_chat_sent"
+    HOOKS_ON_USER_JOINED = "hooks_on_user_joined"
+    HOOKS_ON_COMMUNITY_CREATED = "hooks_on_community_created"
     SEND_NOTIFICATIONS = "send_notifications"
     STORAGE_ACCESS = "storage_access"
     EXTERNAL_HTTP = "external_http"
@@ -68,6 +74,7 @@ class SettingSpec(BaseModel):
     label: str
     required: bool = False
     secret: bool = False
+    default: Any = None
 
 
 class BackendSpec(BaseModel):

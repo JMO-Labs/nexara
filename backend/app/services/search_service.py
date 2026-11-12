@@ -150,7 +150,8 @@ class SearchService:
 
         @param query Raw search query (min 2 chars, validated by API).
         @param user Current authenticated user (for block filter).
-        @param content_types Requested types: posts, users, events, comments.
+        @param content_types Requested types: posts, users, events, subgroups, comments,
+            galleries, polls.
         @param cursor Pagination cursor.
         @param limit Max items per type.
         @return SearchResponse with results grouped by type.
@@ -275,12 +276,31 @@ class SearchService:
                 )
             )
 
+        if "galleries" in content_types:
+            tasks.append(
+                (
+                    "galleries",
+                    self._repo.search_galleries(
+                        q, prefix_q, self._community_id, user.id, cursor, limit
+                    ),
+                )
+            )
+        if "polls" in content_types:
+            tasks.append(
+                (
+                    "polls",
+                    self._repo.search_polls(
+                        q, prefix_q, self._community_id, user.id, cursor, limit
+                    ),
+                )
+            )
+
         coros = [t[1] for t in tasks]
         type_names = [t[0] for t in tasks]
         raw_results = await asyncio.gather(*coros)  # type: ignore[call-overload]
 
         results: dict[str, SearchTypeResults] = {}
-        for name, (rows, next_cursor, total) in zip(type_names, raw_results):
+        for name, (rows, next_cursor, total) in zip(type_names, raw_results, strict=True):
             items = self._format_results(name, rows)
             results[name] = SearchTypeResults(items=items, total=total, next_cursor=next_cursor)
 
@@ -296,7 +316,20 @@ class SearchService:
         @return List of SearchResultItem.
         """
         items: list[SearchResultItem] = []
-        for entity, _rank in rows:
+        for row in rows:
+            entity = row[0]
+            if result_type == "polls":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="polls",
+                        title=_snippet(entity.question, 80),
+                        snippet=_snippet(row[1].content),
+                        created_at=entity.created_at,
+                        parent_id=entity.post_id,
+                    )
+                )
+                continue
             if result_type == "posts":
                 items.append(
                     SearchResultItem(
@@ -337,6 +370,16 @@ class SearchService:
                         snippet=_snippet(entity.description),
                         created_at=entity.created_at,
                         slug=entity.slug,
+                    )
+                )
+            elif result_type == "galleries":
+                items.append(
+                    SearchResultItem(
+                        id=entity.id,
+                        type="galleries",
+                        title=entity.title,
+                        snippet=_snippet(entity.description),
+                        created_at=entity.created_at,
                     )
                 )
             elif result_type == "comments":

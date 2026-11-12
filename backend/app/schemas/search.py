@@ -35,7 +35,8 @@ class SearchResultItem(BaseModel):
     @brief Single search result item across posts, users, events, or comments.
 
     @param id UUID of the entity.
-    @param type Content type: "posts", "users", "events", or "comments".
+    @param type Content type: posts, users, events, comments, subgroups,
+        galleries, or polls.
     @param title Display title (post snippet, display_name, event title).
     @param snippet Excerpt or summary for preview.
     @param created_at When the entity was created.

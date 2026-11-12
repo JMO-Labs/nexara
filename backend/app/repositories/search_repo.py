@@ -22,6 +22,7 @@ from app.models.post import Comment, Post
 from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.base import BaseRepository
+from app.repositories.search_extra_repo import GalleryPollSearchMixin
 
 
 def _websearch_tsquery() -> ColumnElement[Any]:
@@ -73,7 +74,7 @@ def _fts_expressions(fts_col: Any, prefix_query: str | None) -> tuple[Any, Any, 
     return match, rank, {}
 
 
-class SearchRepository:
+class SearchRepository(GalleryPollSearchMixin):
     """
     @brief Async repository for full-text search.
 
