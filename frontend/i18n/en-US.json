@@ -616,7 +616,9 @@
     "enabled": "Enabled",
     "activePrompt": "Tradition prompt",
     "expiresAt": "Closes",
-    "responses": "responses"
+    "responses": "responses",
+    "noResponses": "No responses yet.",
+    "loadMore": "Load more"
   },
   "members": {
     "empty": "No members yet."
