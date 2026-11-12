@@ -80,11 +80,10 @@ describe("PostCard link previews", () => {
       body.compareDocumentPosition(wrap) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     const img = document.querySelector("img[src*='m.jpg']");
-    if (img) {
-      expect(
-        wrap.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    }
+    expect(img).not.toBeNull();
+    expect(
+      wrap.compareDocumentPosition(img!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("falls back to card when video id is unsafe", () => {
