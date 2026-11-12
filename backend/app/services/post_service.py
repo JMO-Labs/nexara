@@ -18,6 +18,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
+from app.plugins.hooks import HookRegistry
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
@@ -117,6 +118,14 @@ class PostService:
         subgroup_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
+        await HookRegistry.emit(
+            "before_post_created",
+            community_id=self._community_id,
+            session=self._post_repo._session,
+            user_id=user.id,
+            content=content,
+            subgroup_id=subgroup_id,
+        )
         post = await self._post_repo.create_post(
             author_id=user.id,
             content=content,
@@ -192,6 +201,16 @@ class PostService:
                     "object_title": post.content[:60],
                 },
             )
+
+        await HookRegistry.emit(
+            "after_post_created",
+            community_id=self._community_id,
+            session=self._post_repo._session,
+            user_id=user.id,
+            post_id=post.id,
+            content=content,
+            subgroup_id=subgroup_id,
+        )
 
         if enriched and self._event_bus:
             await self._emit_scoped(
