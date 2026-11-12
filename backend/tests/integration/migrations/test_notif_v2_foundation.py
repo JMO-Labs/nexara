@@ -1,6 +1,6 @@
 """
 @file test_notif_v2_foundation.py
-@brief Migration b2c3d4e5f6a7: schema add, JSONB prefs backfill, legacy drop.
+@brief Migration b2c3d4e5f6a7: schema add and JSONB prefs backfill (legacy columns kept).
 """
 
 import os
@@ -21,7 +21,7 @@ BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
 REV = "b2c3d4e5f6a7"
-PREV = "0027_add_sso_only_to_branding"
+PREV = "0028_plugin_pending_manifest"
 
 
 def _admin(url):
@@ -82,7 +82,7 @@ def _seed_user(conn, **legacy):
     return uid
 
 
-def test_upgrade_backfills_adds_and_drops(scratch):
+def test_upgrade_adds_and_backfills(scratch):
     cfg, engine = scratch
     command.upgrade(cfg, PREV)
     with engine.begin() as conn:
