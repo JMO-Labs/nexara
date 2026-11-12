@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
 from app.api.v1.calendars import router as calendars_router
 from app.api.v1.chat import router as chat_router
@@ -21,7 +22,6 @@ from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
 from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
-from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
