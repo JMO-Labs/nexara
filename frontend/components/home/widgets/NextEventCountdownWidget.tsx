@@ -14,7 +14,9 @@ import { EventCountdown } from "@/components/events/EventCountdown";
  */
 export function NextEventCountdownWidget() {
   const { data, isLoading } = useUpcomingEvents(30);
-  const next = data?.items?.[0];
+  const next = data?.items?.find(
+    (e) => new Date(e.starts_at).getTime() > Date.now(),
+  );
 
   if (isLoading) return <Skeleton height={96} rounded="md" />;
   if (!next) {
