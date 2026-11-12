@@ -20,6 +20,9 @@ export default function AdminPage() {
         <Link href="/app/admin/storage" className="text-sm underline">
           Storage analytics
         </Link>
+        <Link href="/app/admin/retention" className="text-sm underline">
+          Data retention policies
+        </Link>
       </div>
       <AdminTabs />
     </div>

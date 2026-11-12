@@ -14,6 +14,7 @@ from typing import Any
 
 import structlog
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.post import Post
@@ -25,6 +26,7 @@ from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.activity_publish import record_activity
+from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -170,12 +172,7 @@ class PostService:
             user.id,
         )
 
-        await self._notification.notify_mentions(
-            content,
-            user,
-            post.id,
-            self._post_repo._session,
-        )
+        await self._notify_mentions(content, user, post.id)
 
         if self._activity_repo is not None:
             await record_activity(
@@ -196,6 +193,8 @@ class PostService:
                     "object_title": post.content[:60],
                 },
             )
+
+        await invalidate_search_cache_for_community(self._community_id)
 
         if enriched and self._event_bus:
             await self._emit_scoped(
@@ -225,6 +224,7 @@ class PostService:
             raise AuthorizationError(_("You can only edit your own posts"))
 
         await self._post_repo.update_content(post, content)
+        await invalidate_search_cache_for_community(self._community_id)
         enriched = await self._post_repo.get_post_detail(
             post_id,
             self._community_id,
@@ -249,6 +249,7 @@ class PostService:
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("post", post_id)
 
@@ -319,12 +320,7 @@ class PostService:
             parent_id,
         )
 
-        await self._notification.notify_mentions(
-            content,
-            user,
-            post_id,
-            self._post_repo._session,
-        )
+        await self._notify_mentions(content, user, post_id)
 
         comment_dict: dict[str, Any] = {
             "id": str(comment.id),
@@ -552,6 +548,17 @@ class PostService:
                 self._target, post_id, target_type, target_id, emoji, count, action, user_id
             ),
             post,
+        )
+
+    async def _notify_mentions(self, content: str, actor: User, post_id: uuid.UUID) -> None:
+        """@brief Notify @mentioned users in this community (never the actor)."""
+        await notify_mentions(
+            self._post_repo._session,
+            self._notification,
+            self._community_id,
+            content,
+            actor,
+            post_id,
         )
 
     async def _notify_comment_participants(

@@ -10,6 +10,7 @@ import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useUpdateSubgroup } from "@/hooks/useSubgroups";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { useToasts } from "@/stores/toasts";
+import { accentPassesAA } from "@/lib/api/branding";
 import type { SubgroupDetail, UpdateSubgroupBody } from "@/lib/api/subgroups";
 
 export interface SettingsTabProps {
@@ -22,6 +23,7 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   const update = useUpdateSubgroup(subgroup.slug);
   const mediaUpload = useMediaUpload();
   const toasts = useToasts();
+  const [accent, setAccent] = React.useState(subgroup.accent_color ?? "");
   const [name, setName] = React.useState(subgroup.name);
   const [description, setDescription] = React.useState(
     subgroup.description ?? "",
@@ -44,9 +46,16 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
     );
   }
 
+  const accentError =
+    accent !== "" && !accentPassesAA(accent)
+      ? "Accent needs at least 4.5:1 contrast with the dark green text."
+      : undefined;
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (accentError) return;
     update.mutate({
+      accent_color: accent === "" ? null : accent,
       name,
       description,
       join_policy: joinPolicy,
@@ -118,6 +127,26 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
         <p className="text-sm text-muted">
           Private groups only appear to members in the directory.
         </p>
+      </div>
+
+      <div className="flex items-end gap-3">
+        <input
+          type="color"
+          aria-label="Accent color picker"
+          value={accentPassesAA(accent) ? accent : "#c6b4f5"}
+          onChange={(e) => setAccent(e.target.value)}
+          className="size-11 shrink-0 cursor-pointer rounded-xl"
+        />
+        <div className="flex-1">
+          <Input
+            label="Accent color"
+            value={accent}
+            maxLength={7}
+            error={accentError}
+            hint="Hex, e.g. #C6B4F5. Leave empty to use the community color."
+            onChange={(e) => setAccent(e.target.value)}
+          />
+        </div>
       </div>
 
       <Input

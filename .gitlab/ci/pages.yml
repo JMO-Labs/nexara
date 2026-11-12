@@ -12,6 +12,24 @@
 # The pages job name MUST be "pages" for GitLab Pages to deploy.
 ##
 
+docs:build:
+  stage: test
+  image: $PYTHON_IMAGE
+  script:
+    - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
+    - mkdocs build --strict -f docs/mkdocs.yml -d /tmp/site
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        paths:
+          - "docs/**"
+          - ".gitlab/ci/pages.yml"
+    - if: $CI_COMMIT_BRANCH == "dev"
+      changes:
+        paths:
+          - "docs/**"
+          - ".gitlab/ci/pages.yml"
+
 pages:
   stage: pages
   image: $PYTHON_IMAGE
@@ -30,13 +48,13 @@ pages:
       artifacts: true
   before_script:
     - apk add --no-cache doxygen graphviz
-    - pip install --quiet mkdocs-material
+    - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
   script:
     # -- Build MkDocs site --
     - |
       if [ -f docs/mkdocs.yml ]; then
         echo "Building MkDocs documentation..."
-        mkdocs build -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
+        mkdocs build --strict -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
       else
         echo "No mkdocs.yml found, creating minimal index..."
         mkdir -p public

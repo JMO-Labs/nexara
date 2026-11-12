@@ -49,6 +49,7 @@ export interface ProfileUpdate {
   location?: string;
   website_url?: string;
   title?: string;
+  pronouns?: string;
 }
 
 export interface MessageResponse {
