@@ -41,6 +41,12 @@ async function openPanel(name: string) {
   await userEvent.click(await screen.findByRole("button", { name }));
 }
 
+async function tabTo(el: HTMLElement) {
+  for (let i = 0; i < 10 && document.activeElement !== el; i++) {
+    await userEvent.tab();
+  }
+}
+
 describe("Notifications states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,11 +95,8 @@ describe("Notifications states", () => {
     await openPanel("Notifications, 1 unread");
     const row = (await screen.findByText("msg a")).closest("a")!;
     expect(row).toHaveAttribute("href", "/posts/1");
-    await userEvent.tab(); // panel -> first focusable
-    await userEvent.tab();
-    const focused = document.activeElement as HTMLElement;
-    expect(focused.closest("a") ?? focused).toBeTruthy();
-    row.focus();
+    await tabTo(row);
+    expect(document.activeElement).toBe(row);
     await userEvent.keyboard("{Enter}");
     expect(api.markRead).toHaveBeenCalledWith("a");
   });
@@ -106,7 +109,8 @@ describe("Notifications states", () => {
       "[data-row]",
     ) as HTMLElement;
     expect(row).toHaveAttribute("tabindex", "0");
-    row.focus();
+    await tabTo(row);
+    expect(document.activeElement).toBe(row);
     await userEvent.keyboard("{Enter}");
     expect(api.markRead).toHaveBeenCalledWith("a");
   });
