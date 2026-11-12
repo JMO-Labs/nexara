@@ -3,7 +3,7 @@
  * @brief PageTransition renders children, keys on pathname, honours reduced motion.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 let pathname = "/app";
 let reduced = false;
@@ -31,7 +31,7 @@ describe("PageTransition", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
 
-  it("keys the wrapper on pathname and fades via opacity", () => {
+  it("keys the wrapper on pathname and fades via opacity", async () => {
     const { container, rerender } = render(
       <PageTransition>
         <p>a</p>
@@ -46,8 +46,12 @@ describe("PageTransition", () => {
         <p>b</p>
       </PageTransition>,
     );
-    const next = container.querySelector('[data-pathname="/app/chat"]');
-    expect(next).not.toBeNull();
+    // mode="wait": new node mounts only after the exit animation completes.
+    await waitFor(() =>
+      expect(
+        container.querySelector('[data-pathname="/app/chat"]'),
+      ).not.toBeNull(),
+    );
   });
 
   it("skips animation when reduced motion is preferred", () => {
