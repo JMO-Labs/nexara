@@ -8,8 +8,8 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Bell } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Bell, BellOff, AlertCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
 import { NotificationRow } from "./NotificationRow";
@@ -30,6 +30,7 @@ const LIST_KEY = ["notifications", "list"] as const;
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion();
   const [pulse, setPulse] = useState(false);
   const [badgeKey, setBadgeKey] = useState(0);
   const prevCountRef = useRef(0);
@@ -53,6 +54,7 @@ export function NotificationsBell() {
     data: list,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: LIST_KEY,
     queryFn: () => listNotifications(),
@@ -132,7 +134,7 @@ export function NotificationsBell() {
   return (
     <div ref={wrapperRef} className="relative">
       <motion.div
-        animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
+        animate={pulse && !reduced ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
         transition={{ duration: 0.35, ease: "easeInOut" }}
       >
         <IconButton
@@ -149,13 +151,21 @@ export function NotificationsBell() {
         </IconButton>
       </motion.div>
       {unread > 0 && (
-        <span
+        <motion.span
           key={`badge-${badgeKey}`}
+          data-testid="unread-badge"
+          {...(reduced
+            ? {}
+            : {
+                initial: { scale: 0.6, opacity: 0 },
+                animate: { scale: 1, opacity: 1 },
+                transition: { duration: 0.2, ease: "easeOut" as const },
+              })}
           aria-hidden
           className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-destructive-foreground"
         >
           {unread > 99 ? "99+" : unread}
-        </span>
+        </motion.span>
       )}
 
       {open && (
@@ -164,7 +174,7 @@ export function NotificationsBell() {
           tabIndex={-1}
           role="dialog"
           aria-label="Notifications"
-          className="bg-surface text-ink border-ink/10 absolute top-[calc(100%+8px)] right-0 z-[1100] flex outline-none max-h-[min(70dvh,560px)] w-80 flex-col overflow-hidden rounded-2xl border shadow-lg sm:w-96"
+          className="bg-surface text-ink border-ink/10 z-[1100] fixed inset-x-0 top-14 mx-2 flex max-h-[min(70dvh,560px)] flex-col overflow-hidden rounded-2xl border shadow-lg outline-none sm:absolute sm:inset-x-auto sm:top-[calc(100%+8px)] sm:right-0 sm:mx-0 sm:w-96"
         >
           <div className="border-ink/10 flex items-center justify-between border-b p-4">
             <h2 className="font-display text-base font-semibold">
@@ -190,17 +200,38 @@ export function NotificationsBell() {
               </div>
             )}
             {!isLoading && error && (
-              <p className="text-destructive p-6 text-center text-sm">
-                Could not load notifications.
-                {unread > 0 && ` (${unread} unread reported)`}
-              </p>
+              <div
+                role="alert"
+                className="flex flex-col items-center gap-3 p-6 text-center"
+              >
+                <AlertCircle
+                  aria-hidden
+                  width={24}
+                  height={24}
+                  className="text-destructive"
+                />
+                <p className="text-ink text-sm">Failed to load notifications</p>
+                <Button size="sm" variant="ghost" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </div>
             )}
             {!isLoading && !error && (list?.items.length ?? 0) === 0 && (
-              <p className="text-muted p-6 text-center text-sm">
-                {unread > 0
-                  ? `${unread} unread reported but list is empty — try refresh.`
-                  : "You’re all caught up."}
-              </p>
+              <div className="flex flex-col items-center gap-2 p-6 text-center">
+                <BellOff
+                  aria-hidden
+                  data-testid="notifications-empty-icon"
+                  width={24}
+                  height={24}
+                  className="text-muted"
+                />
+                <p className="text-ink text-sm font-semibold">
+                  No notifications
+                </p>
+                <p className="text-muted text-sm">
+                  You&apos;re all caught up. New activity will show here.
+                </p>
+              </div>
             )}
             {!isLoading &&
               list?.items.map((n) => (

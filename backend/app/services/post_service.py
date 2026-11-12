@@ -27,6 +27,7 @@ from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.activity_publish import record_activity
+from app.services.ai.sassybot_service import wants_sassybot
 from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
@@ -213,6 +214,7 @@ class PostService:
             subgroup_id=subgroup_id,
         )
         await invalidate_search_cache_for_community(self._community_id)
+        self._enqueue_sassybot(post.id, content)
 
         if enriched and self._event_bus:
             await self._emit_scoped(
@@ -339,6 +341,8 @@ class PostService:
         )
 
         await self._notify_mentions(content, user, post_id)
+        if wants_sassybot(content):
+            self._enqueue_sassybot(post_id, content)
 
         comment_dict: dict[str, Any] = {
             "id": str(comment.id),
@@ -530,6 +534,18 @@ class PostService:
         )
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
+
+    def _enqueue_sassybot(self, post_id: uuid.UUID, content: str) -> None:
+        """@brief Enqueue the Sassybot task (forced on @sassybot); never fails the request."""
+        try:
+            from app.tasks.ai_tasks import sassybot_comment_task
+
+            sassybot_comment_task.apply_async(
+                args=(str(post_id), str(self._community_id), wants_sassybot(content)),
+                countdown=5,  # let the request transaction commit first
+            )
+        except Exception:
+            logger.warning("sassybot_enqueue_failed", post_id=str(post_id))
 
     @property
     def _target(self) -> CommunityTarget:

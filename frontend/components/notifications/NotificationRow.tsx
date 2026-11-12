@@ -94,8 +94,18 @@ export function NotificationRow({
 
   const body = (
     <div
+      data-row
+      tabIndex={link ? undefined : 0}
+      onKeyDown={
+        link
+          ? undefined
+          : (e) => {
+              if (e.target === e.currentTarget && e.key === "Enter" && unread)
+                onAck(item.id);
+            }
+      }
       className={cn(
-        "border-ink/10 hover:bg-surface flex items-start gap-3 border-b px-4 py-3",
+        "border-ink/10 hover:bg-surface focus-visible:ring-accent flex items-start gap-3 border-b px-4 py-3 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
         unread && "bg-surface",
       )}
     >
@@ -110,11 +120,16 @@ export function NotificationRow({
         <Icon aria-hidden width={18} height={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-muted mb-0.5 text-xs">
-          {formatTime(item.created_at)}
-        </p>
+        <p className="text-muted mb-2 text-xs">{formatTime(item.created_at)}</p>
         <p className="text-sm break-words">{message}</p>
       </div>
+      {unread && (
+        <span
+          role="img"
+          aria-label="Unread"
+          className="bg-accent mt-2 size-2 shrink-0 rounded-full"
+        />
+      )}
       {unread && (
         <IconButton
           aria-label="Acknowledge notification"
@@ -137,7 +152,7 @@ export function NotificationRow({
   return (
     <Link
       href={link}
-      className="text-inherit no-underline"
+      className="focus-visible:ring-accent block text-inherit no-underline focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
       onClick={() => {
         onDismiss(item.id);
         onNavigate();

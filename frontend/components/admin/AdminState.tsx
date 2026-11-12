@@ -3,6 +3,8 @@
  * @brief Shared loading / notice states and responsive table classes for admin tabs.
  */
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { cn } from "@/lib/utils";
 
 /** @brief Table classes that collapse rows into stacked cards on phone. */
@@ -17,14 +19,19 @@ export const stackTable = {
  * @return status element
  */
 export function AdminLoading() {
+  const fade = useMotionProps(fadeInOut);
   return (
-    <div className="flex items-center justify-center py-16">
+    <motion.div
+      data-testid="admin-loading"
+      className="flex items-center justify-center py-16"
+      {...fade}
+    >
       <Loader2
         role="status"
         aria-label="Loading"
         className="size-6 motion-safe:animate-spin"
       />
-    </div>
+    </motion.div>
   );
 }
 
