@@ -4,7 +4,11 @@
  * @brief Edit form for the selected prompt; saves each change immediately.
  */
 import { Button, Input, Option, Select, Textarea } from "@/components/ui";
-import type { PromptResponse, PromptUpdate } from "@/lib/api/prompts";
+import type {
+  FrequencyType,
+  PromptResponse,
+  PromptUpdate,
+} from "@/lib/api/prompts";
 import { FREQUENCIES } from "./constants";
 
 interface Props {
@@ -43,8 +47,10 @@ export function PromptEditor({ prompt, deleting, onChange, onDelete }: Props) {
         <span className="text-sm font-semibold">Frequency</span>
         <Select
           label="Frequency"
-          value={prompt.frequency}
-          onValueChange={(v) => onChange({ frequency: v })}
+          value={prompt.frequency_type}
+          onValueChange={(v) =>
+            onChange({ frequency_type: v as FrequencyType })
+          }
         >
           {FREQUENCIES.map((f) => (
             <Option key={f.value} value={f.value}>
@@ -53,7 +59,7 @@ export function PromptEditor({ prompt, deleting, onChange, onDelete }: Props) {
           ))}
         </Select>
       </div>
-      {prompt.frequency === "annual_date" && (
+      {prompt.frequency_type === "annual_date" && (
         <>
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-semibold">Month</span>
@@ -85,38 +91,6 @@ export function PromptEditor({ prompt, deleting, onChange, onDelete }: Props) {
               ))}
             </Select>
           </div>
-        </>
-      )}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-semibold">Prompt type</span>
-        <Select
-          label="Prompt type"
-          value={prompt.prompt_type}
-          onValueChange={(v) => onChange({ prompt_type: v })}
-        >
-          <Option value="standard">Standard</Option>
-          <Option value="interest_capture">Interest capture</Option>
-        </Select>
-      </div>
-      {prompt.prompt_type === "interest_capture" && (
-        <>
-          <Input
-            label="Interest category slug"
-            value={prompt.interest_category_slug || ""}
-            onChange={(e) =>
-              onChange({ interest_category_slug: e.target.value || null })
-            }
-            placeholder="e.g., cooking, music, books"
-          />
-          <Textarea
-            label="Interest capture hint"
-            rows={2}
-            value={prompt.interest_capture_hint || ""}
-            onChange={(e) =>
-              onChange({ interest_capture_hint: e.target.value || null })
-            }
-            placeholder="Hint for users to capture interests"
-          />
         </>
       )}
       <div>

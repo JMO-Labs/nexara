@@ -32,14 +32,29 @@ describe("PromptsTab", () => {
       id: "prompt-1",
       title: "Holiday memory",
       body: "What is your favorite holiday memory?",
-      frequency: "annual_date",
+      frequency_type: "annual_date",
       trigger_month: 12,
       trigger_day: 1,
-      enabled: true,
+      is_enabled: true,
       prompt_type: "standard",
-      created_at: new Date("2024-01-01"),
-      updated_at: new Date("2024-01-01"),
-      response_count: 5,
+      source: "custom",
+      trigger_weekday: null,
+      trigger_week_interval: null,
+      trigger_month_day: null,
+      trigger_custom_rule: null,
+      trigger_one_time_date: null,
+      active_days: 7,
+      scope: "community",
+      subgroup_id: null,
+      notify_members: true,
+      notification_body: null,
+      linked_event_id: null,
+      generate_summary: true,
+      interest_category_slug: null,
+      interest_capture_hint: null,
+      created_by: null,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
     },
   ];
 
@@ -60,11 +75,6 @@ describe("PromptsTab", () => {
     } as any);
 
     vi.mocked(usePromptsModule.useDeletePrompt).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
-    vi.mocked(usePromptsModule.useSeedBuiltinPrompts).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     } as any);
@@ -97,11 +107,6 @@ describe("PromptsTab", () => {
     } as any);
 
     vi.mocked(usePromptsModule.useDeletePrompt).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
-    vi.mocked(usePromptsModule.useSeedBuiltinPrompts).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     } as any);
@@ -144,62 +149,10 @@ describe("PromptsTab", () => {
       isPending: false,
     } as any);
 
-    vi.mocked(usePromptsModule.useSeedBuiltinPrompts).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
     render(<PromptsTab />, { wrapper });
 
     await waitFor(() => {
       expect(screen.getByText(/no prompts yet/i)).toBeInTheDocument();
-    });
-  });
-
-  it("should call seed when Seed builtin library clicked", async () => {
-    const seedMutation = {
-      mutate: vi.fn(),
-      isPending: false,
-    };
-
-    vi.mocked(usePromptsModule.usePrompts).mockReturnValue({
-      isLoading: false,
-      data: [],
-    } as any);
-
-    vi.mocked(usePromptsModule.useUpdatePrompt).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
-    vi.mocked(usePromptsModule.useCreatePrompt).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
-    vi.mocked(usePromptsModule.useDeletePrompt).mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-    } as any);
-
-    vi.mocked(usePromptsModule.useSeedBuiltinPrompts).mockReturnValue(
-      seedMutation as any,
-    );
-
-    const user = userEvent.setup();
-    render(<PromptsTab />, { wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText(/no prompts yet/i)).toBeInTheDocument();
-    });
-
-    const seedButton = screen.getByRole("button", {
-      name: /seed builtin library/i,
-    });
-    await user.click(seedButton);
-
-    await waitFor(() => {
-      expect(seedMutation.mutate).toHaveBeenCalled();
     });
   });
 });

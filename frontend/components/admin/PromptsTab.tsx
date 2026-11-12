@@ -5,15 +5,13 @@
  *        List on the left (stacked on phone), edit form on the right.
  */
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   usePrompts,
   useCreatePrompt,
   useUpdatePrompt,
   useDeletePrompt,
-  useSeedBuiltinPrompts,
 } from "@/hooks/usePrompts";
-import { Button, EmptyState } from "@/components/ui";
 import type { PromptCreate, PromptUpdate } from "@/lib/api/prompts";
 import { PromptList } from "./prompts-tab/PromptList";
 import { PromptEditor } from "./prompts-tab/PromptEditor";
@@ -31,7 +29,6 @@ export function PromptsTab() {
   const updateMutation = useUpdatePrompt();
   const createMutation = useCreatePrompt();
   const deleteMutation = useDeletePrompt();
-  const seedMutation = useSeedBuiltinPrompts();
 
   const selected = selectedId ? prompts.find((p) => p.id === selectedId) : null;
 
@@ -58,23 +55,6 @@ export function PromptsTab() {
     );
   }
 
-  if (prompts.length === 0) {
-    return (
-      <EmptyState
-        title="No prompts yet"
-        action={
-          <Button
-            onClick={() => seedMutation.mutate()}
-            loading={seedMutation.isPending}
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Seed builtin library
-          </Button>
-        }
-      />
-    );
-  }
-
   const handleUpdate = (update: PromptUpdate) => {
     if (selectedId)
       updateMutation.mutate({ promptId: selectedId, payload: update });
@@ -97,7 +77,10 @@ export function PromptsTab() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         onToggle={(promptId, enabled) =>
-          updateMutation.mutate({ promptId, payload: { enabled: !enabled } })
+          updateMutation.mutate({
+            promptId,
+            payload: { is_enabled: !enabled },
+          })
         }
         onNew={() => setIsCreating(true)}
       />

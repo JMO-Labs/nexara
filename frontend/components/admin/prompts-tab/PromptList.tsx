@@ -38,6 +38,7 @@ export function PromptList({
           New
         </Button>
       </div>
+      {prompts.length === 0 && <p className="text-muted">No prompts yet</p>}
       <ul className="flex flex-col gap-2">
         {prompts.map((p) => (
           <li
@@ -51,8 +52,8 @@ export function PromptList({
           >
             <Switch
               size="sm"
-              checked={p.enabled}
-              onCheckedChange={() => onToggle(p.id, p.enabled)}
+              checked={p.is_enabled}
+              onCheckedChange={() => onToggle(p.id, p.is_enabled)}
               aria-label={`Toggle ${p.title}`}
               className="mt-1"
             />
@@ -62,16 +63,15 @@ export function PromptList({
               aria-pressed={selectedId === p.id}
               className="flex min-h-11 min-w-0 flex-1 flex-col items-start gap-1 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              <span className={cn("font-semibold", !p.enabled && "opacity-60")}>
+              <span
+                className={cn("font-semibold", !p.is_enabled && "opacity-60")}
+              >
                 {p.title}
               </span>
               <span className="flex items-center gap-2">
-                <Badge tone={frequencyTone(p.frequency)}>
-                  {p.frequency.replace(/_/g, " ")}
+                <Badge tone={frequencyTone(p.frequency_type)}>
+                  {p.frequency_type.replace(/_/g, " ")}
                 </Badge>
-                {p.next_fire_at && (
-                  <span className="text-sm text-muted">Soon</span>
-                )}
               </span>
             </button>
           </li>
