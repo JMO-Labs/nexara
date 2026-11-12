@@ -80,10 +80,10 @@ class OfflineQueue extends ChangeNotifier {
   }
 
   /// @brief Send due items in order; stop at first failure (keeps ordering).
+  /// Notifies listeners only when the pending list changes.
   Future<void> sync() async {
     if (_syncing) return;
     _syncing = true;
-    notifyListeners();
     try {
       while (_items.isNotEmpty) {
         final a = _items.first;
@@ -104,7 +104,6 @@ class OfflineQueue extends ChangeNotifier {
       }
     } finally {
       _syncing = false;
-      notifyListeners();
     }
   }
 }
