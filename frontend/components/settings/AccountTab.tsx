@@ -3,13 +3,13 @@
  * @file components/settings/AccountTab.tsx
  * @brief Account settings tab: email change form.
  */
-import { DataExportSection } from "./DataExportSection";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, SettingsRow, Input, Button } from "@/components/ui";
 import { useUpdateEmail } from "@/hooks/useSettings";
+import { DataExportSection } from "./DataExportSection";
 
 const Schema = z.object({
   email: z.string().email("Invalid email address"),

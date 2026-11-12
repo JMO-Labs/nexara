@@ -89,12 +89,11 @@ export function DataExportSection() {
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         {status === "ready" && exp ? (
-          <a
-            href={`/api/v1/export/${encodeURIComponent(exp.id)}/download`}
-            className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-white"
-          >
-            Download
-          </a>
+          <Button asChild>
+            <a href={`/api/v1/export/${encodeURIComponent(exp.id)}/download`}>
+              Download
+            </a>
+          </Button>
         ) : (
           <Button onClick={start} disabled={busy}>
             {status === "failed" ? "Retry" : LABEL}
