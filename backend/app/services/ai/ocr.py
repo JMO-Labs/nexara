@@ -51,7 +51,7 @@ async def run_ocr(
         return _done("skipped")  # retry/re-enqueue: already processed
     try:
         image = await storage.get(media.storage_key)
-        text = await provider.vision(image, OCR_PROMPT, max_tokens=OCR_MAX_TOKENS)
+        text, _cost, _tokens = await provider.vision(image, OCR_PROMPT, max_tokens=OCR_MAX_TOKENS)
     except AIBudgetExhaustedError:
         logger.info("ocr_budget_exhausted", media_id=str(media_id))
         return _done("budget_exhausted")
