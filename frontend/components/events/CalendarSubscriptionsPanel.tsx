@@ -10,6 +10,7 @@ import { Button, EmptyState } from "@/components/ui";
 import {
   useCalendarSubscriptions,
   useAddSubscription,
+  useUpdateSubscription,
   useDeleteSubscription,
   useSyncNow,
 } from "@/hooks/useCalendarSubscriptions";
@@ -24,6 +25,7 @@ export function CalendarSubscriptionsPanel() {
   const [showAddModal, setShowAddModal] = React.useState(false);
   const { data: subscriptions, isLoading } = useCalendarSubscriptions();
   const addMutation = useAddSubscription();
+  const updateMutation = useUpdateSubscription();
   const deleteMutation = useDeleteSubscription();
   const syncMutation = useSyncNow();
 
@@ -70,6 +72,7 @@ export function CalendarSubscriptionsPanel() {
                 key={sub.id}
                 sub={sub}
                 onDelete={(id) => deleteMutation.mutate(id)}
+                onUpdate={(id, body) => updateMutation.mutate({ id, body })}
                 onSync={(id) => syncMutation.mutate(id)}
                 isSyncing={
                   syncMutation.isPending && syncMutation.variables === sub.id
