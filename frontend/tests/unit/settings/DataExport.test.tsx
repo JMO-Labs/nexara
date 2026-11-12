@@ -160,11 +160,17 @@ describe("useDataExport hooks", () => {
   });
 
   it("useExportStatus polls while processing then stops and toasts", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
     vi.mocked(api.getExportStatus)
       .mockResolvedValueOnce(row({ status: "processing" }) as never)
-      .mockResolvedValue(row({ status: "ready" }) as never);
+      .mockImplementation(async () => {
+        await gate;
+        return row({ status: "ready" }) as never;
+      });
     const { result } = renderHook(() => useExportStatus("e1", 20), { wrapper });
     await waitFor(() => expect(result.current.data?.status).toBe("processing"));
+    release();
     await waitFor(() => expect(result.current.data?.status).toBe("ready"));
     const calls = vi.mocked(api.getExportStatus).mock.calls.length;
     await new Promise((r) => setTimeout(r, 80));
