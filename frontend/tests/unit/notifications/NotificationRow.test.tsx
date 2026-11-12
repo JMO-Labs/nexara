@@ -82,3 +82,27 @@ describe("NotificationRow", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 });
+
+describe("NotificationRow list types", () => {
+  it("renders list renderer and navigates to /app/lists/[id]", async () => {
+    const onNavigate = vi.fn();
+    const onDismiss = vi.fn();
+    renderWithProviders(
+      <NotificationRow
+        item={{
+          ...item(),
+          id: "n9",
+          type: "list.item",
+          payload: { listId: "L9", listName: "Trip" },
+        }}
+        onAck={vi.fn()}
+        onDismiss={onDismiss}
+        onNavigate={onNavigate}
+        ackPending={false}
+      />,
+    );
+    expect(screen.getByText("New item in Trip")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDismiss).toHaveBeenCalledWith("n9");
+  });
+});

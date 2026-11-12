@@ -19,6 +19,10 @@ import {
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/utils";
+import {
+  ListNotification,
+  isListNotificationType,
+} from "./ListNotificationRenderer";
 import type { NotificationItem } from "@/lib/api/notifications";
 
 type IconCmp = ComponentType<SVGProps<SVGSVGElement>>;
@@ -68,6 +72,26 @@ export function NotificationRow({
   onNavigate,
   ackPending,
 }: NotificationRowProps) {
+  if (isListNotificationType(item.type)) {
+    const ctx = (item.payload ?? {}) as Record<string, unknown>;
+    return (
+      <ListNotification
+        notification={{
+          id: item.id,
+          type: item.type,
+          context: ctx,
+          createdAt: item.created_at,
+        }}
+        onDismiss={onDismiss}
+        onNavigate={(listId) => {
+          onDismiss(item.id);
+          onNavigate();
+          if (listId)
+            window.location.assign(`/app/lists/${encodeURIComponent(listId)}`);
+        }}
+      />
+    );
+  }
   const unread = !item.read_at;
   const { label, icon: Icon } = metaFor(item.type);
   const message =
