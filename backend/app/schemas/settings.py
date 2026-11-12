@@ -108,6 +108,14 @@ class UserSettingsResponse(BaseModel):
     mute_all_email: bool
     theme: str
     locale: str
+    profile_visible_to: str = "community"
+    show_online_status: bool = True
+    show_last_seen: bool = True
+    show_birthday_to: str = "community"
+    show_birthday_year: bool = False
+    allow_sassybot: bool = True
+    font_size: str = "medium"
+    compact_feed: bool = False
     home_layout: HomeLayoutSchema | None = None
 
     model_config = {"from_attributes": True}
@@ -120,6 +128,14 @@ class UserSettingsUpdate(BaseModel):
 
     theme: str | None = Field(default=None, pattern=r"^(system|light|dark)$")
     locale: str | None = Field(default=None, max_length=10)
+    profile_visible_to: str | None = Field(default=None, pattern=r"^(community|admin_only)$")
+    show_online_status: bool | None = None
+    show_last_seen: bool | None = None
+    show_birthday_to: str | None = Field(default=None, pattern=r"^(nobody|community|admin_only)$")
+    show_birthday_year: bool | None = None
+    allow_sassybot: bool | None = None
+    font_size: str | None = Field(default=None, pattern=r"^(small|medium|large)$")
+    compact_feed: bool | None = None
     home_layout: HomeLayoutSchema | None = None
 
 

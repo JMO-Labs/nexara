@@ -22,6 +22,7 @@ export interface CoverBandProps {
  */
 export function CoverBand({ subgroup, right }: CoverBandProps) {
   const { background } = gradientFor(subgroup.slug);
+  const accent = subgroup.accent_color || "var(--nx-accent, #C6B4F5)";
   const hasCover = !!subgroup.cover_media_id;
 
   return (
@@ -32,6 +33,12 @@ export function CoverBand({ subgroup, right }: CoverBandProps) {
       {hasCover && (
         <MediaThumb mediaId={subgroup.cover_media_id} alt={subgroup.name} />
       )}
+      <div
+        aria-hidden
+        data-accent-bar
+        className="absolute inset-x-0 top-0 z-10 h-1.5"
+        style={{ backgroundColor: accent }}
+      />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-b from-transparent via-black/15 to-black/65"

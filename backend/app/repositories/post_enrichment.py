@@ -16,6 +16,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.bookmark import Bookmark
 from app.models.media import Media
 from app.models.poll import Poll, PollOption, PollVote
 from app.models.post import Comment, Post, PostMedia, Reaction
@@ -116,6 +117,13 @@ async def enrich_posts(
     )
     comment_result = await session.execute(comment_stmt)
     comment_map = {pid: cnt for pid, cnt in comment_result.all()}
+
+    bookmarked: set[uuid.UUID] = set()
+    if viewer_id:
+        bm_stmt = select(Bookmark.post_id).where(
+            Bookmark.user_id == viewer_id, Bookmark.post_id.in_(post_ids)
+        )
+        bookmarked = set((await session.execute(bm_stmt)).scalars().all())
 
     poll_stmt = select(Poll).where(Poll.post_id.in_(post_ids))
     poll_result = await session.execute(poll_stmt)
@@ -233,12 +241,21 @@ async def enrich_posts(
             "poll": poll_map.get(post.id),
             "reactions": reaction_map.get(post.id, []),
             "comment_count": comment_map.get(post.id, 0),
+            "is_bookmarked": post.id in bookmarked,
             "subgroup_id": str(post.subgroup_id) if post.subgroup_id else None,
             "subgroup_name": (
                 subgroup_name_map.get(post.subgroup_id) if post.subgroup_id else None
             ),
             "subgroup_slug": (
                 subgroup_slug_map.get(post.subgroup_id) if post.subgroup_id else None
+            ),
+            "is_prompt_post": post.is_prompt_post,
+            "is_prompt_summary": post.is_prompt_summary,
+            "reply_to_prompt_id": (
+                str(post.reply_to_prompt_id) if post.reply_to_prompt_id else None
+            ),
+            "source_prompt_post_id": (
+                str(post.source_prompt_post_id) if post.source_prompt_post_id else None
             ),
             "created_at": post.created_at.isoformat(),
             "updated_at": post.updated_at.isoformat(),

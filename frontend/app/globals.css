@@ -17,6 +17,7 @@
   --nx-muted: #4f6b57;
   --nx-nav-muted: #9db8a2;
   --nx-danger: #b3261e;
+  --nx-danger-fg: #ffffff;
 
   --background: var(--nx-bg);
   --foreground: var(--nx-ink);
@@ -48,6 +49,7 @@
   --nx-muted: #86a38c;
   --nx-nav-muted: #86a38c;
   --nx-danger: #f2b8b5;
+  --nx-danger-fg: #0e1f15;
 }
 
 @theme inline {
@@ -62,6 +64,7 @@
   --color-nav-muted: var(--nx-nav-muted);
   --color-danger: var(--nx-danger);
   --color-destructive: var(--nx-danger);
+  --color-destructive-foreground: var(--nx-danger-fg);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
