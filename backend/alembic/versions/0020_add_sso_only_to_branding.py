@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0020_add_sso_only_to_branding"
-down_revision: str | None = "0019_add_oidc_provider_fields"
+down_revision: str | None = "0020_add_recipient_to_posts"
 branch_labels = None
 depends_on = None
 

@@ -95,13 +95,15 @@ class TestPluginDataModel:
 
 
 class TestMigration:
-    """@brief Verify the plugin migration sits on a single, linear head."""
+    """@brief Verify the plugin migration is part of a single, linear history."""
 
     def test_plugin_migration_is_sole_head(self):
         cfg = Config(str(BACKEND / "alembic.ini"))
         cfg.set_main_option("script_location", str(BACKEND / "alembic"))
-        heads = ScriptDirectory.from_config(cfg).get_heads()
-        assert heads == ["0022_plugin_models"]
+        script = ScriptDirectory.from_config(cfg)
+        assert len(script.get_heads()) == 1
+        history = [r.revision for r in script.walk_revisions()]
+        assert "0022_plugin_models" in history
 
     def test_downgrade_drops_plugin_tables(self):
         src = (VERSIONS / "0022_plugin_models.py").read_text()

@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0020_add_recipient_to_posts"
-down_revision: str | None = "0021_add_subgroup_accent_color"
+down_revision: str | None = "0022_plugin_models"
 branch_labels = None
 depends_on = None
 
