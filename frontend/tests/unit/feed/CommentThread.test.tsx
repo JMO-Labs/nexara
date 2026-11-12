@@ -9,10 +9,14 @@ import { CommentThread } from "@/components/feed/CommentThread";
 
 const mutateAsync = vi.fn().mockResolvedValue({});
 let items: unknown[] = [];
+let isError = false;
+const refetch = vi.fn();
 vi.mock("@/hooks/usePosts", () => ({
   useComments: () => ({
     data: { pages: [{ items }] },
     isLoading: false,
+    isError,
+    refetch,
     hasNextPage: false,
     fetchNextPage: vi.fn(),
     isFetchingNextPage: false,
@@ -46,5 +50,17 @@ describe("CommentThread", () => {
       content: "hi",
       parent_id: undefined,
     });
+  });
+
+  it("shows error with retry instead of empty state", async () => {
+    items = [];
+    isError = true;
+    const user = userEvent.setup();
+    render(<CommentThread postId="p1" />);
+    expect(screen.queryByText("Be first to comment")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/couldn.t load/i);
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+    expect(refetch).toHaveBeenCalled();
+    isError = false;
   });
 });
