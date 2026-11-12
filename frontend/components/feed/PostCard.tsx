@@ -6,6 +6,7 @@
  */
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { useSession } from "@/stores/session";
@@ -42,6 +43,7 @@ export function PostCard({
   defaultCommentsOpen = false,
   truncateBody = false,
 }: PostCardProps) {
+  const t = useTranslations("feed");
   const me = useSession((s) => s.user);
   const isAuthor = me?.id === post.author.id;
   const isAdmin = me?.role === "admin" || me?.role === "owner";
@@ -85,13 +87,16 @@ export function PostCard({
       </div>
       {post.is_prompt_summary || post.reply_to_prompt_id ? (
         <div className="flex flex-wrap items-center gap-2">
-          {post.is_prompt_summary ? <Badge>Prompt summary</Badge> : null}
+          {post.is_prompt_summary ? (
+            <Badge tone="accent">{t("promptSummary")}</Badge>
+          ) : null}
           {post.reply_to_prompt_id ? (
             <Link
-              href={`/app/prompts/${post.reply_to_prompt_id}`}
-              className="text-xs font-medium text-[var(--nx-ink)] underline underline-offset-2 focus-visible:outline-2"
+              href={`/app/prompts/${encodeURIComponent(post.reply_to_prompt_id)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              Reply to a prompt
+              <Badge>{t("replyToPrompt")}</Badge>
             </Link>
           ) : null}
         </div>
