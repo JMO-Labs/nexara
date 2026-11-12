@@ -8,7 +8,6 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.apprise_url import AppriseURL
 from app.repositories.base import BaseRepository
@@ -22,10 +21,7 @@ class AppriseRepository(BaseRepository[AppriseURL]):
 
     model = AppriseURL
 
-    def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session)
-
-    async def create(
+    async def create(  # type: ignore[override]
         self, community_id: uuid.UUID, user_id: uuid.UUID, url: str, label: str | None = None
     ) -> AppriseURL:
         """@brief Store a new URL encrypted.
