@@ -10,6 +10,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import structlog
+
 if TYPE_CHECKING:
     from app.core.config import Settings
 
@@ -20,7 +22,17 @@ EmbedResult = tuple[list[float], float, int]
 #: (token_count, cost_cents, token_count)
 CountResult = tuple[int, float, int]
 
+logger = structlog.get_logger(__name__)
+
 _PER_MILLION = 1_000_000
+
+
+class AIError(Exception):
+    """@brief Generic AI provider failure."""
+
+
+class AIBudgetExhaustedError(AIError):
+    """@brief Raised when the AI usage budget is exhausted."""
 
 
 class AIProviderConfigError(ValueError):
@@ -92,3 +104,16 @@ def create_provider(settings: Settings) -> AIProvider | None:
             raise AIProviderConfigError("OLLAMA_BASE_URL is required")
         return OllamaProvider(settings.OLLAMA_BASE_URL, settings.OLLAMA_MODEL, timeout=timeout)
     return None
+
+
+def get_ai_provider(settings: Settings) -> AIProvider | None:
+    """
+    @brief Return the configured provider or None when AI is disabled/misconfigured.
+    @param settings Application settings.
+    @return Provider instance or None.
+    """
+    try:
+        return create_provider(settings)
+    except AIProviderConfigError as exc:
+        logger.warning("ai_provider_misconfigured", error=str(exc))
+        return None
