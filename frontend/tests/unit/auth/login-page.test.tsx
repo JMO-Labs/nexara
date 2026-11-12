@@ -1,12 +1,15 @@
 /**
  * @file tests/unit/auth/login-page.test.tsx
- * @brief Login page: submit calls login, error shown on the form, OAuth
+ * @brief Login page: submit calls login, error toast, OAuth
  *        buttons render from config.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithProviders as render } from "../../utils/renderWithProviders";
+import { useToasts } from "@/stores/toasts";
 import userEvent from "@testing-library/user-event";
 
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 const push = vi.fn();
 let search = "";
 vi.mock("next/navigation", () => ({
@@ -64,7 +67,12 @@ describe("LoginPage", () => {
     await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
     await userEvent.type(screen.getByLabelText("Password"), "pw");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("alert")).toBeTruthy();
+    await waitFor(() =>
+      expect(useToasts.getState().items.at(-1)).toMatchObject({
+        variant: "danger",
+        message: "toasts.auth.login.failed",
+      }),
+    );
   });
 
   it("renders OAuth providers from config", async () => {

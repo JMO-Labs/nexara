@@ -3,9 +3,12 @@
  * @brief Register, magic-link, two-factor, landing and offline pages.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithProviders as render } from "../../utils/renderWithProviders";
+import { useToasts } from "@/stores/toasts";
 import userEvent from "@testing-library/user-event";
 
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 const push = vi.fn();
 const replace = vi.fn();
 let search = "";

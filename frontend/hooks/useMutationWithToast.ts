@@ -53,9 +53,15 @@ export function useMutationWithToast<
     },
     onError: (error, variables, context) => {
       if (!silentError) {
-        const apiError = error as { body?: { error?: { message?: string } } };
+        const apiError = error as {
+          body?: { error?: { message?: string } };
+          status?: number;
+        };
         const msg =
           apiError?.body?.error?.message ??
+          (typeof apiError?.status === "number" && error.message
+            ? error.message
+            : undefined) ??
           (errorKey ? t(errorKey) : t("toasts.errors.generic"));
         push({ variant: "danger", message: msg });
       }

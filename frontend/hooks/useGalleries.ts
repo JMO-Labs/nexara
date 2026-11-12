@@ -86,6 +86,7 @@ export function useRemoveItem(galleryId: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (itemId: string) => removeItem(galleryId, itemId),
+    successKey: "toasts.galleries.item.removed",
     onSuccess: () => invalidateAll(qc, galleryId),
   });
 }
