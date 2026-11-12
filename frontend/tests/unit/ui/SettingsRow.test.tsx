@@ -50,4 +50,27 @@ describe("SettingsRow", () => {
     const input = screen.getByDisplayValue("test@example.com");
     expect(input).toBeInTheDocument();
   });
+
+  it("uses a 12-col grid: label 4/12, control 8/12 from md", () => {
+    const { container } = wrap(
+      <SettingsRow label="Email" description="d">
+        <input />
+      </SettingsRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    expect(row).toHaveClass("grid-cols-1", "md:grid-cols-12");
+    expect(row.children[0]).toHaveClass("md:col-span-4");
+    expect(row.children[1]).toHaveClass("md:col-span-8");
+  });
+
+  it("description uses AA-safe muted color, not opacity", () => {
+    wrap(
+      <SettingsRow label="A" description="help">
+        <input />
+      </SettingsRow>,
+    );
+    const d = screen.getByText("help");
+    expect(d).toHaveClass("text-muted");
+    expect(d.className).not.toMatch(/opacity/);
+  });
 });

@@ -106,3 +106,36 @@ class TestListForUser:
         )
         assert len(items) == 2
         assert next_cursor is None
+
+
+class TestCrud:
+    """@brief get/create/delete helpers issue the expected session calls."""
+
+    async def test_get_for_user_post(self) -> None:
+        session = AsyncMock()
+        found = MagicMock(spec=Bookmark)
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = found
+        session.execute = AsyncMock(return_value=result)
+        got = await BookmarkRepository(session).get_for_user_post(
+            USER_ID, uuid.uuid4(), COMMUNITY_ID
+        )
+        assert got is found
+        sql = _sql(session)
+        assert "bookmarks.user_id = " in sql and "bookmarks.post_id = " in sql
+
+    async def test_create_bookmark_persists(self) -> None:
+        session = AsyncMock()
+        session.add = MagicMock()
+        post_id = uuid.uuid4()
+        created = await BookmarkRepository(session).create_bookmark(USER_ID, post_id, COMMUNITY_ID)
+        assert (created.user_id, created.post_id) == (USER_ID, post_id)
+        session.add.assert_called_once_with(created)
+
+    async def test_delete_bookmark_executes_and_flushes(self) -> None:
+        session = AsyncMock()
+        b = MagicMock(spec=Bookmark)
+        b.id = uuid.uuid4()
+        await BookmarkRepository(session).delete_bookmark(b)
+        assert "DELETE FROM bookmarks" in _sql(session)
+        session.flush.assert_awaited()

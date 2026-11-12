@@ -24,7 +24,7 @@ export default function SubgroupsPage() {
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterMode>("all");
 
-  const { data, isLoading, error } = useSubgroupList();
+  const { data, isLoading, error, refetch } = useSubgroupList();
   const join = useJoinSubgroup();
   const leave = useLeaveSubgroup();
 
@@ -115,6 +115,8 @@ export default function SubgroupsPage() {
           joinBusy={join.isPending ? join.variables : null}
           leaveBusy={leave.isPending ? leave.variables : null}
           onCreate={() => setCreateOpen(true)}
+          onRetry={() => refetch()}
+          isFiltered={total > 0}
         />
       </div>
 

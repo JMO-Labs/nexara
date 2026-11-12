@@ -21,13 +21,18 @@ logger = structlog.get_logger(__name__)
 class Dispatcher:
     """@brief Orchestrates notification delivery across channels."""
 
-    def __init__(self, event_bus: EventBus) -> None:
-        """@param event_bus Bus passed to the in-app channel."""
+    def __init__(self, event_bus: EventBus, fcm: Channel | None = None) -> None:
+        """@param event_bus Bus passed to the in-app channel.
+
+        @param fcm Optional pre-built FCM channel (needs a DB-bound repo).
+        """
         self._channels: dict[str, Channel] = {}
         self._bus = event_bus
         self.register_channel(InAppChannel(event_bus))
         self.register_channel(EmailChannel())
         self.register_channel(PushChannel())
+        if fcm is not None:
+            self.register_channel(fcm)
 
     def register_channel(self, ch: Channel) -> None:
         """@param ch Channel to register under its key."""
@@ -46,7 +51,8 @@ class Dispatcher:
         @param effective_channels Channel key -> enabled after preference gating.
         @return One ChannelResult per attempted channel; never raises.
         """
-        keys = [k for k, on in effective_channels.items() if on and k in self._channels]
+        enabled = {**effective_channels, "fcm": effective_channels.get("push", False)}
+        keys = [k for k, on in enabled.items() if on and k in self._channels]
         raw = await asyncio.gather(
             *(self._channels[k].send(notification) for k in keys),
             return_exceptions=True,

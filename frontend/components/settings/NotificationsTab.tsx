@@ -10,7 +10,9 @@ import {
   useUpdateNotificationPrefs,
 } from "@/hooks/useSettings";
 import type { NotificationPreferences } from "@/lib/api/settings";
+import { useTranslations } from "next-intl";
 import { PushSubscriptionRow } from "./PushSubscriptionRow";
+import { AppriseList, useAppriseUrls } from "./AppriseList";
 
 const NOTIF_TYPES = [
   { key: "mention", label: "Mention" },
@@ -33,6 +35,9 @@ const CHANNELS = [
 export function NotificationsTab() {
   const { data: prefs, isLoading } = useNotificationPrefs();
   const { mutate } = useUpdateNotificationPrefs();
+  const t = useTranslations("settings.apprise");
+  const { data: apprise = [] } = useAppriseUrls();
+  const hasApprise = apprise.some((u) => u.enabled);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null,
   );
@@ -47,6 +52,10 @@ export function NotificationsTab() {
     },
     [debounceTimer, mutate],
   );
+
+  const channels = hasApprise
+    ? [...CHANNELS, { suffix: "apprise", label: t("matrix") }]
+    : CHANNELS;
 
   if (isLoading) {
     return <Skeleton height={200} rounded="lg" />;
@@ -72,7 +81,7 @@ export function NotificationsTab() {
             description="Receive notifications via these channels."
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-              {CHANNELS.map(({ suffix, label: channel }) => {
+              {channels.map(({ suffix, label: channel }) => {
                 const k =
                   `notif_${key}_${suffix}` as keyof NotificationPreferences;
                 return (
@@ -82,7 +91,7 @@ export function NotificationsTab() {
                   >
                     <Switch
                       aria-label={`${label} ${channel}`}
-                      checked={prefs[k] as boolean}
+                      checked={Boolean(prefs[k])}
                       onCheckedChange={(v) => handleToggle(k, v)}
                     />
                     {channel}
@@ -103,6 +112,11 @@ export function NotificationsTab() {
             onCheckedChange={(v) => handleToggle("mute_all_email", v)}
           />
         </SettingsRow>
+      </Card>
+
+      <Card className="max-w-3xl p-4 md:p-6">
+        <h2 className="mb-2 text-lg font-semibold">{t("title")}</h2>
+        <AppriseList />
       </Card>
     </div>
   );
