@@ -15,12 +15,18 @@ vi.mock("next-intl", () => ({
     const translations: Record<string, string> = {
       "toasts.settings.saved": "Settings saved",
       "toasts.errors.generic": "Something went wrong",
+      matrix: "Apprise",
     };
     return translations[key] || key;
   },
 }));
 
 vi.mock("@/hooks/useSettings");
+const apprise = vi.hoisted(() => ({ data: [] as { enabled: boolean }[] }));
+vi.mock("@/components/settings/AppriseList", () => ({
+  AppriseList: () => null,
+  useAppriseUrls: () => ({ data: apprise.data }),
+}));
 
 const mockPrefs = {
   notif_mention_inapp: true,
@@ -60,6 +66,26 @@ describe("NotificationsTab", () => {
       isPending: false,
       isSuccess: false,
     } as any);
+  });
+
+  it("shows Apprise column only with an enabled URL", () => {
+    apprise.data = [{ enabled: true }];
+    const { unmount } = render(<NotificationsTab />, {
+      wrapper: createWrapper(),
+    });
+    expect(
+      screen.getByRole("switch", { name: "Mention Apprise" }),
+    ).toBeInTheDocument();
+    unmount();
+    for (const data of [[], [{ enabled: false }]]) {
+      apprise.data = data;
+      const r = render(<NotificationsTab />, { wrapper: createWrapper() });
+      expect(
+        screen.queryByRole("switch", { name: "Mention Apprise" }),
+      ).not.toBeInTheDocument();
+      r.unmount();
+    }
+    apprise.data = [];
   });
 
   it("renders notification preference toggles", () => {

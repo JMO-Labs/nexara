@@ -12,8 +12,6 @@ from typing import Any, Literal
 
 import structlog
 from dateutil.rrule import rrulestr
-from icalendar import Calendar as ICalCalendar
-from icalendar import Event as ICalEvent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +27,7 @@ from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     ContributionSlot,
     EventCreate,
@@ -41,6 +40,8 @@ from app.schemas.event import (
 )
 from app.services.activity_publish import record_activity
 from app.services.calendar_service import CalendarService
+from app.services.event_gallery import create_event_gallery, find_event_gallery_id
+from app.services.event_ical import EventIcalMixin
 
 logger = structlog.get_logger(__name__)
 
@@ -54,7 +55,7 @@ DEFAULT_RSVP_LABELS: dict[str, str] = {
 MAX_OCCURRENCES = 200
 
 
-class EventService:
+class EventService(EventIcalMixin):
     """@brief Service layer for events, RSVPs, and calendar subscriptions."""
 
     def __init__(
@@ -152,7 +153,11 @@ class EventService:
         return result.scalar_one_or_none()
 
     async def _build_response(
-        self, event: Event, *, user_id: uuid.UUID | None = None
+        self,
+        event: Event,
+        *,
+        user_id: uuid.UUID | None = None,
+        gallery_id: uuid.UUID | None = None,
     ) -> EventResponse:
         rsvp_counts = await self._repo.rsvp_counts(event.id)
         user_rsvp: RSVPResponse | None = None
@@ -165,6 +170,9 @@ class EventService:
         # TODO(home-redesign): batch subgroup_slug lookups across event list responses
         # (currently one query per event in _build_response).
         subgroup_slug = await self._subgroup_slug(event.subgroup_id)
+        gallery_id = gallery_id or await find_event_gallery_id(
+            self._session, self._community_id, event.id
+        )
 
         return EventResponse(
             id=event.id,
@@ -190,6 +198,7 @@ class EventService:
             reminder_offsets_minutes=event.reminder_offsets_minutes,
             rsvp_counts=rsvp_counts,
             user_rsvp=user_rsvp,
+            gallery_id=gallery_id,
             created_at=event.created_at,
             updated_at=event.updated_at,
         )
@@ -270,7 +279,12 @@ class EventService:
             )
 
         await invalidate_search_cache_for_community(self._community_id)
-        return await self._build_response(event, user_id=user_id)
+        gallery_id = None
+        if data.auto_create_gallery:
+            gallery_id = await create_event_gallery(
+                self._session, self._community_id, user_id, event
+            )
+        return await self._build_response(event, user_id=user_id, gallery_id=gallery_id)
 
     async def get_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> EventResponse:
         event = await self._repo.get_by_id(event_id, community_id=self._community_id)
@@ -541,52 +555,6 @@ class EventService:
         )
         return await self._build_response(event, user_id=user_id)
 
-    # ── iCal export ───────────────────────────────────────────────────
-
-    def to_ical(self, events: list[Event]) -> bytes:
-        cal = ICalCalendar()  # type: ignore[no-untyped-call]
-        cal.add("prodid", "-//Nexara//EN")
-        cal.add("version", "2.0")
-        for event in events:
-            ical_event = ICalEvent()  # type: ignore[no-untyped-call]
-            ical_event.add("uid", event.ical_uid)
-            ical_event.add("summary", event.title)
-            if event.description:
-                ical_event.add("description", event.description)
-            if event.location:
-                ical_event.add("location", event.location)
-            ical_event.add("dtstart", event.starts_at)
-            ical_event.add("dtend", event.ends_at)
-            ical_event.add("dtstamp", event.created_at or datetime.now(UTC))
-            if event.recurrence_rule:
-                # icalendar accepts a raw RRULE string via vRecur
-                from icalendar.prop import vRecur
-
-                ical_event["rrule"] = vRecur.from_ical(event.recurrence_rule)
-            cal.add_component(ical_event)
-        return cal.to_ical()  # type: ignore[no-any-return]
-
-    async def export_event_ical(self, event_id: uuid.UUID, user_id: uuid.UUID) -> bytes:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-        if not await self._can_view(event, user_id):
-            raise AuthorizationError(_("You cannot view this event"))
-        return self.to_ical([event])
-
-    async def export_feed_ical(self, user_id: uuid.UUID) -> bytes:
-        now = datetime.now(UTC)
-        end = now + timedelta(days=365)
-        subgroup_ids = await self._user_subgroup_ids(user_id)
-        events = await self._repo.list_in_range(
-            self._community_id,
-            now - timedelta(days=30),
-            end,
-            viewer_id=user_id,
-            subgroup_ids=subgroup_ids,
-        )
-        return self.to_ical(events)
-
     # ── RRULE exception occurrences ───────────────────────────────────
 
     def _append_until(self, rrule_str: str, until: str) -> str:
@@ -704,45 +672,6 @@ class EventService:
         new_event = Event(**new_data)
         return await self._repo.create(new_event)
 
-    # ── iCal token issuance & serving ──────────────────────────────────
-
-    async def issue_ical_token(self, user_id: uuid.UUID) -> tuple[str, str]:
-        """@brief Issue a read-only iCal token for external subscription.
-
-        @param user_id User to issue token for.
-        @return Tuple of (raw_token, feed_url).
-        """
-        from app.core.config import get_settings
-
-        raw, _ = await self._token_repo.issue(user_id=user_id, scope="ical")
-        settings = get_settings()
-        url = f"{settings.APP_BASE_URL}/api/v1/calendars/feed.ics?token={raw}"
-        return raw, url
-
-    async def serve_ical_for_token(self, raw_token: str) -> bytes:
-        """@brief Retrieve and serve iCal feed for a read-only token.
-
-        @param raw_token Raw token string (e.g. from query param).
-        @return iCal bytes.
-        @raises AuthorizationError if token invalid or revoked.
-        """
-        token = await self._token_repo.verify(raw_token)
-        if token is None:
-            raise AuthorizationError(_("Invalid or revoked iCal token"))
-
-        user_id = token.user_id
-        now = datetime.now(UTC)
-        end = now + timedelta(days=365)
-        subgroup_ids = await self._user_subgroup_ids(user_id)
-        events = await self._repo.list_in_range(
-            self._community_id,
-            now - timedelta(days=30),
-            end,
-            viewer_id=user_id,
-            subgroup_ids=subgroup_ids,
-        )
-        return self.to_ical(events)
-
     # ── Subscriptions ─────────────────────────────────────────────────
 
     async def create_subscription(
@@ -770,6 +699,7 @@ class EventService:
             source_url=data.source_url,
             visibility=data.visibility,
             shared_by_admin=data.shared_by_admin,
+            sync_interval_minutes=data.sync_interval_minutes,
         )
         sub = await self._repo.create_subscription(sub)
         return CalendarSubscriptionResponse.model_validate(sub)
@@ -784,57 +714,14 @@ class EventService:
             raise NotFoundError(_("Calendar subscription not found"))
         await self._repo.delete_subscription(sub_id)
 
-    # ── Sync (called from Celery task) ────────────────────────────────
-
-    async def sync_subscription(self, sub: CalendarSubscription, ical_bytes: bytes) -> int:
-        """
-        @brief Upsert events from an iCal feed bound to a subscription.
-
-        @param sub The subscription owning the imported events.
-        @param ical_bytes Raw iCal feed body.
-        @return Number of events upserted (created or updated).
-        """
-        try:
-            cal = ICalCalendar.from_ical(ical_bytes)
-        except Exception as exc:  # noqa: BLE001
-            sub.sync_error = f"parse_error: {exc}"
-            await self._session.flush()
-            return 0
-
-        upserted = 0
-        for component in cal.walk("VEVENT"):
-            uid = str(component.get("uid"))  # type: ignore[no-untyped-call]
-            if not uid:
-                continue
-            existing = await self._repo.get_by_ical_uid(uid)
-            # Skip upsert if event has been locally modified by user
-            if existing is not None and existing.locally_modified:
-                continue
-            rrule = component.get("rrule")  # type: ignore[no-untyped-call]
-            data: dict[str, Any] = {
-                "title": str(component.get("summary") or ""),  # type: ignore[no-untyped-call]
-                "description": str(component.get("description") or "") or None,  # type: ignore[no-untyped-call]
-                "location": str(component.get("location") or "") or None,  # type: ignore[no-untyped-call]
-                "starts_at": component.decoded("dtstart"),
-                "ends_at": component.decoded("dtend") or component.decoded("dtstart"),
-                "recurrence_rule": (rrule.to_ical().decode("utf-8") if rrule else None),
-                "source_subscription_id": sub.id,
-                "source_removed": False,
-            }
-            if existing is None:
-                event = Event(
-                    community_id=self._community_id,
-                    author_id=sub.user_id,
-                    ical_uid=uid,
-                    visibility=sub.visibility,
-                    **data,
-                )
-                await self._repo.create(event)
-            else:
-                await self._repo.update(existing, data)
-            upserted += 1
-
-        sub.last_synced_at = datetime.now(UTC)
-        sub.sync_error = None
-        await self._session.flush()
-        return upserted
+    async def update_subscription(
+        self, sub_id: uuid.UUID, user_id: uuid.UUID, data: CalendarSubscriptionUpdate
+    ) -> CalendarSubscriptionResponse:
+        """@brief Update name/url/enabled/interval of an owned subscription."""
+        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
+        if sub is None:
+            raise NotFoundError(_("Calendar subscription not found"))
+        for field, value in data.model_dump(exclude_unset=True, exclude_none=True).items():
+            setattr(sub, field, value)
+        sub = await self._repo.update_subscription(sub)
+        return CalendarSubscriptionResponse.model_validate(sub)

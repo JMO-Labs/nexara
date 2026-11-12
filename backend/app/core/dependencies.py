@@ -8,6 +8,7 @@ authenticated user, and role-based authorization guards.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncGenerator, Callable
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -27,6 +28,7 @@ from app.db.session import async_session_factory
 if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
+    from app.services.ai.suggestion_service import SuggestionService
 
 logger = structlog.get_logger(__name__)
 
@@ -226,3 +228,44 @@ async def get_activity_repo(
     from app.repositories.activity_repo import ActivityRepository
 
     return ActivityRepository(db)
+
+
+async def get_suggestion_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> SuggestionService:
+    """
+    @brief Provide a SuggestionService wired to its repository and the AI provider.
+
+    @param db Async database session.
+    @param settings Application settings (AI provider selection).
+    @return SuggestionService instance.
+    """
+    from app.repositories.suggestion_repo import SuggestionRepository
+    from app.services.ai.provider import get_ai_provider
+    from app.services.ai.suggestion_service import SuggestionService
+
+    return SuggestionService(SuggestionRepository(db), get_ai_provider(settings))
+
+
+async def get_plugin_from_api_key(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> str:
+    """
+    @brief Authenticate a plugin by API key (``X-Plugin-Api-Key`` or ``Bearer nxr_plugin_...``).
+
+    Optional alternative to JWT for plugin routes; never grants user access.
+    @return The authenticated plugin_id.
+    @throws AuthenticationError (401) if missing, invalid or revoked.
+    """
+    from app.plugins.api_keys import resolve_plugin_from_key
+
+    key = request.headers.get("x-plugin-api-key")
+    if not key:
+        auth = request.headers.get("authorization", "")
+        key = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not key:
+        raise AuthenticationError(message=_("Authentication required"))
+    return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
