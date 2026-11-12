@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import and_, delete, func, literal, or_, select
 
 from app.models.event import CalendarSubscription, Event, EventAttendance
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
@@ -75,11 +76,32 @@ class EventRepository(BaseRepository[Event]):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_by_ical_uid(self, ical_uid: str) -> Event | None:
-        """@brief Look up an event by its iCal UID (used for sync upserts)."""
-        stmt = select(Event).where(Event.ical_uid == ical_uid)
+    async def get_by_ical_uid(
+        self, *ical_uids: str, subscription_id: uuid.UUID, community_id: uuid.UUID
+    ) -> Event | None:
+        """
+        @brief Find an event imported by one subscription via any of its UIDs.
+
+        Scoped to the subscription and community so a feed can never match
+        (and overwrite) native events or events imported by other users.
+        Soft-deleted rows are included on purpose: ``ical_uid`` is unique.
+
+        @param ical_uids Candidate UIDs (namespaced first, legacy raw second).
+        @param subscription_id Owning subscription.
+        @param community_id Tenant scope.
+        @return First matching event, or None.
+        """
+        stmt = (
+            select(Event)
+            .where(
+                Event.ical_uid.in_(ical_uids),
+                Event.source_subscription_id == subscription_id,
+                Event.community_id == community_id,
+            )
+            .limit(1)
+        )
         result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     async def get_attendance(
         self, event_id: uuid.UUID, user_id: uuid.UUID
@@ -262,6 +284,47 @@ class EventRepository(BaseRepository[Event]):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_ical_people(
+        self, events: list[Event], *, viewer_id: uuid.UUID
+    ) -> dict[uuid.UUID, dict[str, Any]]:
+        """
+        @brief Organizer (author) and attending/maybe RSVPs per event, for iCal.
+
+        Emails are never selected (privacy); attendees blocked by/blocking the
+        viewer are excluded.
+        @return {event_id: {"organizer": (user_id, name) | None,
+                 "attendees": [(user_id, name, status)]}}
+        """
+        from app.models.moderation import UserBlock
+
+        if not events:
+            return {}
+        ids = [e.id for e in events]
+        out: dict[uuid.UUID, dict[str, Any]] = {e.id: {"attendees": []} for e in events}
+        authors = {e.author_id for e in events}
+        rows = await self._session.execute(
+            select(User.id, User.display_name).where(User.id.in_(authors))
+        )
+        users = {r[0]: r[1] for r in rows.all()}
+        for e in events:
+            name = users.get(e.author_id)
+            out[e.id]["organizer"] = (e.author_id, name) if name is not None else None
+        blocked = select(UserBlock.blocked_id).where(UserBlock.blocker_id == viewer_id)
+        blockers = select(UserBlock.blocker_id).where(UserBlock.blocked_id == viewer_id)
+        att = await self._session.execute(
+            select(EventAttendance.event_id, User.id, User.display_name, EventAttendance.status)
+            .join(User, User.id == EventAttendance.user_id)
+            .where(
+                EventAttendance.event_id.in_(ids),
+                EventAttendance.status.in_(["attending", "maybe"]),
+                EventAttendance.user_id.notin_(blocked),
+                EventAttendance.user_id.notin_(blockers),
+            )
+        )
+        for ev_id, uid, name, status in att.all():
+            out[ev_id]["attendees"].append((uid, name, status))
+        return out
 
     async def list_attendees(
         self, event_id: uuid.UUID, statuses: list[str] | None = None

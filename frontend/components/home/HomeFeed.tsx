@@ -117,21 +117,35 @@ export function HomeFeed() {
           />
         ) : (
           <ul key="list" className="flex flex-col gap-2">
-            {items.map((i) => (
-              <li
-                key={`${i.kind}:${i.id}`}
-                data-new={
-                  freshIds.has(`${i.kind}:${i.id}`) ? "true" : undefined
-                }
-                className="rounded-lg data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
-              >
-                {i.kind === "post" ? (
-                  <PostCard post={i.post} />
-                ) : (
-                  <ActivityLine item={i.activity} />
-                )}
-              </li>
-            ))}
+            <AnimatePresence>
+              {items.map((i) => {
+                const key = `${i.kind}:${i.id}`;
+                const fresh = freshIds.has(key);
+                return (
+                  <motion.li
+                    key={key}
+                    data-testid="feed-item"
+                    data-new={fresh ? "true" : undefined}
+                    className="rounded-lg data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
+                    {...(reduced
+                      ? {}
+                      : {
+                          layout: "position" as const,
+                          initial: fresh ? { opacity: 0, y: -8 } : false,
+                          animate: { opacity: 1, y: 0 },
+                          exit: { opacity: 0, transition: { duration: 0.12 } },
+                          transition: { duration: 0.2, ease: "easeOut" },
+                        })}
+                  >
+                    {i.kind === "post" ? (
+                      <PostCard post={i.post} />
+                    ) : (
+                      <ActivityLine item={i.activity} />
+                    )}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
           </ul>
         )}
       </AnimatePresence>

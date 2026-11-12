@@ -31,6 +31,7 @@ class OllamaProvider(AIProvider):
     ) -> None:
         self._base = base_url.rstrip("/")
         self._model = model
+        self.vision_model = model
         self._client = client or httpx.AsyncClient(timeout=timeout)
 
     async def _post(self, path: str, body: dict[str, object]) -> dict[str, Any]:

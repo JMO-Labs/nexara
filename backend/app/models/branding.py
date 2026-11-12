@@ -96,6 +96,11 @@ class CommunityBranding(Base):
         nullable=False,
         server_default="true",
     )
+    sso_only: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

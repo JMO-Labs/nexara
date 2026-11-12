@@ -79,6 +79,7 @@ def env(tmp_path: Path, test_app):
     d = tmp_path / "hello"
     d.mkdir()
     (d / "manifest.json").write_text(json.dumps(_manifest()))
+    (d / "__init__.py").write_text("")
     repo, keys = FakeRepo(), FakeKeyRepo()
     svc = PluginService(repo, keys, CID, tmp_path, "0.1.0")
     test_app.dependency_overrides[get_plugin_service] = lambda: svc
@@ -125,6 +126,7 @@ async def test_install_incompatible_core_version(env):
     d = env.dir / "future"
     d.mkdir()
     (d / "manifest.json").write_text(json.dumps(_manifest("future", min_core="9.0.0")))
+    (d / "__init__.py").write_text("")
     async with env.client() as c:
         r = await c.post("/api/v1/plugins/future/install")
     assert r.status_code == 422
@@ -134,6 +136,7 @@ async def test_install_invalid_manifest_422(env):
     d = env.dir / "bad"
     d.mkdir()
     (d / "manifest.json").write_text("{}")
+    (d / "__init__.py").write_text("")
     async with env.client() as c:
         r = await c.post("/api/v1/plugins/bad/install")
     assert r.status_code == 422
@@ -228,3 +231,36 @@ async def test_admin_only_endpoints_403_for_member(env, method, path):
     async with env.client("member") as c:
         r = await c.request(method, path, json={"settings": {}})
     assert r.status_code == 403
+
+
+async def test_enable_then_disable_toggles_state(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        on = await c.put("/api/v1/plugins/hello/enable")
+        off = await c.put("/api/v1/plugins/hello/disable")
+    assert on.status_code == 200 and on.json()["is_enabled"] is True
+    assert off.status_code == 200 and off.json()["is_enabled"] is False
+
+
+async def test_settings_wrong_type_rejected(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        r = await c.put("/api/v1/plugins/hello/settings", json={"settings": {"greeting": 5}})
+    assert r.status_code == 422
+
+
+async def test_list_description_blank_when_manifest_gone(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        (env.dir / "hello" / "manifest.json").unlink()
+        r = await c.get("/api/v1/plugins")
+    assert r.json()[0]["description"] == ""
+
+
+def test_get_plugin_service_wires_community_scope():
+    from app.api.v1.plugins import get_plugin_service as build
+    from app.core.config import get_settings
+
+    s = get_settings()
+    svc = build(db=None, settings=s)  # type: ignore[arg-type]
+    assert svc._cid == uuid.UUID(s.COMMUNITY_ID)
