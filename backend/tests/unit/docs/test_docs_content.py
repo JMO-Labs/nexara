@@ -43,8 +43,16 @@ def test_getting_started_commands(cmd):
 
 @pytest.mark.parametrize(
     "term",
-    ["Next.js 16", "Tailwind v4", "shadcn", "pytest-asyncio", "alembic", "mypy app/",
-     "npx playwright test", "Conventional Commits"],
+    [
+        "Next.js 16",
+        "Tailwind v4",
+        "shadcn",
+        "pytest-asyncio",
+        "alembic",
+        "mypy app/",
+        "npx playwright test",
+        "Conventional Commits",
+    ],
 )
 def test_development_current_tech(term):
     assert term in DEV
