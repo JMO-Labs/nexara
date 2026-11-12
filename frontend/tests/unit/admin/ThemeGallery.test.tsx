@@ -9,6 +9,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "@/lib/api/branding";
 import { ThemeGallery } from "@/components/admin/ThemeGallery";
 
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
+
 vi.mock("@/lib/api/branding", async (orig) => ({
   ...(await orig<typeof api>()),
   listPresets: vi.fn(),
