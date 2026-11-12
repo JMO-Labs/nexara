@@ -57,9 +57,7 @@ async def _user(
     session.add(u)
     await session.flush()
     session.add(
-        UserSettings(
-            user_id=u.id, community_id=community_id, receive_gentle_nudges=opted_in
-        )
+        UserSettings(user_id=u.id, community_id=community_id, receive_gentle_nudges=opted_in)
     )
     await session.flush()
     return u
