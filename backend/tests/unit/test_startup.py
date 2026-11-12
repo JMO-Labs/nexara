@@ -65,3 +65,22 @@ class TestSeedDefaultChatChannel:
                 mock_logger.warning.assert_called_once()
                 call_args = mock_logger.warning.call_args
                 assert "seed_default_chat_channel_failed" in str(call_args)
+
+
+class TestLoadPlugins:
+    """@brief Tests for _load_plugins() startup hook."""
+
+    @pytest.mark.asyncio
+    async def test_failure_logged_without_raising(self, settings: Settings) -> None:
+        """_load_plugins swallows loader errors and logs a warning."""
+        from app.main import _load_plugins
+
+        with (
+            patch("app.main.async_session_factory") as mock_factory,
+            patch("app.plugins.loader.load_plugins", side_effect=RuntimeError("boom")),
+            patch("app.main.logger") as mock_logger,
+        ):
+            mock_factory.return_value.__aenter__.return_value = AsyncMock()
+            await _load_plugins(MagicMock(), settings)
+            mock_logger.warning.assert_called_once()
+            assert "plugins_load_failed" in str(mock_logger.warning.call_args)
