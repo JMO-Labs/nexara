@@ -1,28 +1,42 @@
 /**
  * @file tests/unit/feed/PostCard.test.tsx
- * @brief PostCard prompt badges: summary badge and reply-to-prompt label.
+ * @brief PostCard prompt badges: summary badge and reply-to-prompt link.
  */
 import { describe, it, expect, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import type React from "react";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/en-US.json";
-import { renderWithProviders } from "../../utils/renderWithProviders";
 import { PostCard } from "@/components/feed/PostCard";
 import type { Post } from "@/lib/api/posts";
 
-vi.mock("next-intl", () => ({
-  useTranslations: (ns: string) => (key: string) =>
-    (messages as unknown as Record<string, Record<string, string>>)[ns]?.[
-      key
-    ] ?? key,
+vi.mock("next/link", () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
-
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/stores/session", () => ({
+  useSession: vi.fn((sel) => sel({ user: { id: "u1", role: "member" } })),
+}));
 vi.mock("@/hooks/usePosts", () => ({
   useDeletePost: () => ({ mutate: vi.fn() }),
   useTogglePostReaction: () => ({ mutate: vi.fn() }),
 }));
 
-function makePost(overrides: Partial<Post> = {}): Post {
-  const now = new Date().toISOString();
+/** @brief Build a minimal post with optional overrides. */
+function makePost(over: Partial<Post> = {}): Post {
   return {
     id: "p1",
     content: "Hello world",
@@ -36,38 +50,54 @@ function makePost(overrides: Partial<Post> = {}): Post {
     poll: null,
     reactions: [],
     comment_count: 0,
-    created_at: now,
-    updated_at: now,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     subgroup_id: null,
     subgroup_name: null,
     subgroup_slug: null,
-    ...overrides,
+    ...over,
   };
+}
+
+/** @brief Render inside QueryClient + next-intl providers. */
+function wrap(ui: React.ReactNode) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <NextIntlClientProvider locale="en-US" messages={messages}>
+        {ui}
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe("PostCard prompt badges", () => {
   it("shows a Prompt summary badge for summary posts", () => {
-    renderWithProviders(
-      <PostCard post={makePost({ is_prompt_summary: true })} />,
-    );
+    wrap(<PostCard post={makePost({ is_prompt_summary: true })} />);
     expect(screen.getByText("Prompt summary")).toBeInTheDocument();
+    expect(screen.queryByText("Reply to a prompt")).not.toBeInTheDocument();
   });
 
-  it("shows a Reply to a prompt link for prompt replies", () => {
-    renderWithProviders(
-      <PostCard post={makePost({ reply_to_prompt_id: "pr-42" })} />,
-    );
-    const link = screen.getByRole("link", { name: "Reply to a prompt" });
+  it("shows a Reply to a prompt link for response posts", () => {
+    wrap(<PostCard post={makePost({ reply_to_prompt_id: "pr-42" })} />);
+    const link = screen.getByRole("link", { name: /Reply to a prompt/ });
     expect(link).toHaveAttribute("href", "/app/prompts/pr-42");
+    expect(screen.queryByText("Prompt summary")).not.toBeInTheDocument();
   });
 
-  it("shows neither for normal posts", () => {
-    renderWithProviders(
-      <PostCard
-        post={makePost({ is_prompt_summary: false, reply_to_prompt_id: null })}
-      />,
+  it("shows neither badge nor label for normal posts", () => {
+    wrap(<PostCard post={makePost({ reply_to_prompt_id: null })} />);
+    expect(screen.queryByText("Prompt summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reply to a prompt")).not.toBeInTheDocument();
+  });
+
+  it("renders normal posts without an intl provider", () => {
+    const qc = new QueryClient();
+    render(
+      <QueryClientProvider client={qc}>
+        <PostCard post={makePost()} />
+      </QueryClientProvider>,
     );
-    expect(screen.queryByText("Prompt summary")).toBeNull();
-    expect(screen.queryByText("Reply to a prompt")).toBeNull();
+    expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
 });

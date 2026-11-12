@@ -5,10 +5,8 @@
  *        Comment thread rendered conditionally when expanded.
  */
 import * as React from "react";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Badge, Button, Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
@@ -20,6 +18,7 @@ import { CommentThread } from "./CommentThread";
 import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
 import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
+import { PromptBadges } from "./PromptBadges";
 import type { Post } from "@/lib/api/posts";
 
 export interface PostCardProps {
@@ -43,7 +42,6 @@ export function PostCard({
   defaultCommentsOpen = false,
   truncateBody = false,
 }: PostCardProps) {
-  const t = useTranslations("feed");
   const me = useSession((s) => s.user);
   const isAuthor = me?.id === post.author.id;
   const isAdmin = me?.role === "admin" || me?.role === "owner";
@@ -85,22 +83,10 @@ export function PostCard({
           subgroupSlug={post.subgroup_slug ?? null}
         />
       </div>
-      {post.is_prompt_summary || post.reply_to_prompt_id ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {post.is_prompt_summary ? (
-            <Badge tone="accent">{t("promptSummary")}</Badge>
-          ) : null}
-          {post.reply_to_prompt_id ? (
-            <Link
-              href={`/app/prompts/${encodeURIComponent(post.reply_to_prompt_id)}`}
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <Badge>{t("replyToPrompt")}</Badge>
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <PromptBadges
+        isPromptSummary={post.is_prompt_summary}
+        replyToPromptId={post.reply_to_prompt_id}
+      />
       <PostBody content={post.content} truncate={truncateBody} />
       {post.link_previews?.map((preview) =>
         preview.provider_type && embedUrl(preview) ? (

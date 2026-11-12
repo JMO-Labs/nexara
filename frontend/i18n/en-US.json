@@ -129,8 +129,10 @@
     "discard": "Discard",
     "removeMedia": "Remove media",
     "replyingTo": "Replying to {'@'}{username}",
-    "promptSummary": "Prompt summary",
-    "replyToPrompt": "Reply to a prompt",
+    "promptBadges": {
+      "summary": "Prompt summary",
+      "replyToPrompt": "Reply to a prompt"
+    },
     "poll": {
       "anonymous": "Anonymous poll",
       "vote": "Vote",
