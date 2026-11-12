@@ -20,8 +20,21 @@ TS = {"created_at", "updated_at", "deleted_at"}
 EXPECTED = {
     ListTemplate: (
         "list_template",
-        {"id", "community_id", "author_id", "is_system", "name", "description", "category",
-         "icon", "color", "cover_media_id", "is_shared", "search_fts"} | TS,
+        {
+            "id",
+            "community_id",
+            "author_id",
+            "is_system",
+            "name",
+            "description",
+            "category",
+            "icon",
+            "color",
+            "cover_media_id",
+            "is_shared",
+            "search_fts",
+        }
+        | TS,
         ["id"],
     ),
     ListTemplateField: (
@@ -36,9 +49,25 @@ EXPECTED = {
     ),
     List: (
         "list",
-        {"id", "community_id", "template_id", "owner_id", "title", "description", "visibility",
-         "subgroup_id", "cover_media_id", "expires_at", "status", "field_schema", "item_count",
-         "completed_count", "signup_count", "search_fts"} | TS,
+        {
+            "id",
+            "community_id",
+            "template_id",
+            "owner_id",
+            "title",
+            "description",
+            "visibility",
+            "subgroup_id",
+            "cover_media_id",
+            "expires_at",
+            "status",
+            "field_schema",
+            "item_count",
+            "completed_count",
+            "signup_count",
+            "search_fts",
+        }
+        | TS,
         ["id"],
     ),
     ListMember: (
@@ -48,8 +77,18 @@ EXPECTED = {
     ),
     ListItem: (
         "list_item",
-        {"id", "list_id", "position", "values", "due_at", "completed", "lat", "lon",
-         "signup_quantity_needed"} | TS,
+        {
+            "id",
+            "list_id",
+            "position",
+            "values",
+            "due_at",
+            "completed",
+            "lat",
+            "lon",
+            "signup_quantity_needed",
+        }
+        | TS,
         ["id"],
     ),
     ListItemSignup: (

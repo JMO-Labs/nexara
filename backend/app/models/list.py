@@ -28,7 +28,9 @@ from app.db.base import Base
 
 
 def _uuid_pk() -> Mapped[uuid.UUID]:
-    return mapped_column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    return mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
 
 
 def _now() -> Mapped[datetime]:
