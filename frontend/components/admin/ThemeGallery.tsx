@@ -36,11 +36,7 @@ function matches(t: PresetTheme, cur?: Partial<Branding>) {
  * @param current current branding colors (to mark the active theme)
  * @return gallery, or null while loading / on error
  */
-export function ThemeGallery({
-  current,
-}: {
-  current?: Partial<Branding>;
-}) {
+export function ThemeGallery({ current }: { current?: Partial<Branding> }) {
   const { data } = usePresetThemes();
   const apply = useApplyPreset();
   if (!data?.themes.length) return null;
