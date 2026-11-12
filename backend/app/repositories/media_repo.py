@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.media import Media
@@ -158,6 +158,42 @@ class MediaRepository(BaseRepository[Media]):
         )
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
+
+    async def get_user_storage_by_type(
+        self, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> dict[str, int]:
+        """
+        @brief Sum original size_bytes per media category for a user.
+
+        Categories derive from ``content_type``: image/* photos, video/*
+        videos, pdf/text/msword/vnd.* documents, everything else other.
+
+        @param user_id UUID of the uploader.
+        @param community_id Community scope.
+        @return Dict with keys photos, videos, documents, other (bytes).
+        """
+        ct = Media.content_type
+        category = case(
+            (ct.like("image/%"), "photos"),
+            (ct.like("video/%"), "videos"),
+            (
+                ct.in_(["application/pdf", "application/msword"])
+                | ct.like("text/%")
+                | ct.like("application/vnd.%"),
+                "documents",
+            ),
+            else_="other",
+        ).label("category")
+        stmt = (
+            select(category, func.coalesce(func.sum(Media.size_bytes), 0))
+            .where(Media.uploader_id == user_id, Media.community_id == community_id)
+            .group_by(category)
+        )
+        result = await self._session.execute(stmt)
+        totals = {"photos": 0, "videos": 0, "documents": 0, "other": 0}
+        for key, total in result.all():
+            totals[key] = int(total)
+        return totals
 
     async def attach_to_post(
         self,
