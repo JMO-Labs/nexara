@@ -92,7 +92,7 @@ describe("CSSEditor", () => {
     type("p { margin: 0 }");
     await userEvent.click(screen.getByRole("button", { name: /save css/i }));
     await waitFor(() =>
-      expect(api.updateBranding).toHaveBeenCalledWith({
+      expect(vi.mocked(api.updateBranding).mock.calls[0]?.[0]).toEqual({
         custom_css: "p { margin: 0 }",
       }),
     );
