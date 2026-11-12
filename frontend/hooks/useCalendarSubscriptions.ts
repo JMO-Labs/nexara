@@ -8,7 +8,9 @@ import { qk } from "@/lib/query-keys";
 import {
   listSubscriptions,
   createSubscription,
+  updateSubscription,
   deleteSubscription,
+  type UpdateSubscriptionBody,
   syncNowSubscription,
 } from "@/lib/api/events";
 import { useMutationWithToast } from "./useMutationWithToast";
@@ -32,6 +34,21 @@ export function useAddSubscription() {
   return useMutationWithToast({
     mutationFn: createSubscription,
     successKey: "toasts.calendar.subscription_added",
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.events.subscriptions.list() });
+    },
+  });
+}
+
+/**
+ * @brief Update a calendar subscription (url, name, frequency, enabled).
+ */
+export function useUpdateSubscription() {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: ({ id, body }: { id: string; body: UpdateSubscriptionBody }) =>
+      updateSubscription(id, body),
+    successKey: "toasts.calendar.subscription_updated",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.events.subscriptions.list() });
     },

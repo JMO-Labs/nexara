@@ -17,6 +17,7 @@ from icalendar import Event as ICalEvent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
@@ -28,6 +29,7 @@ from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     ContributionSlot,
     EventCreate,
@@ -40,6 +42,7 @@ from app.schemas.event import (
 )
 from app.services.activity_publish import record_activity
 from app.services.calendar_service import CalendarService
+from app.services.event_gallery import create_event_gallery, find_event_gallery_id
 
 logger = structlog.get_logger(__name__)
 
@@ -151,7 +154,11 @@ class EventService:
         return result.scalar_one_or_none()
 
     async def _build_response(
-        self, event: Event, *, user_id: uuid.UUID | None = None
+        self,
+        event: Event,
+        *,
+        user_id: uuid.UUID | None = None,
+        gallery_id: uuid.UUID | None = None,
     ) -> EventResponse:
         rsvp_counts = await self._repo.rsvp_counts(event.id)
         user_rsvp: RSVPResponse | None = None
@@ -164,6 +171,9 @@ class EventService:
         # TODO(home-redesign): batch subgroup_slug lookups across event list responses
         # (currently one query per event in _build_response).
         subgroup_slug = await self._subgroup_slug(event.subgroup_id)
+        gallery_id = gallery_id or await find_event_gallery_id(
+            self._session, self._community_id, event.id
+        )
 
         return EventResponse(
             id=event.id,
@@ -189,6 +199,7 @@ class EventService:
             reminder_offsets_minutes=event.reminder_offsets_minutes,
             rsvp_counts=rsvp_counts,
             user_rsvp=user_rsvp,
+            gallery_id=gallery_id,
             created_at=event.created_at,
             updated_at=event.updated_at,
         )
@@ -268,7 +279,13 @@ class EventService:
                 },
             )
 
-        return await self._build_response(event, user_id=user_id)
+        await invalidate_search_cache_for_community(self._community_id)
+        gallery_id = None
+        if data.auto_create_gallery:
+            gallery_id = await create_event_gallery(
+                self._session, self._community_id, user_id, event
+            )
+        return await self._build_response(event, user_id=user_id, gallery_id=gallery_id)
 
     async def get_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> EventResponse:
         event = await self._repo.get_by_id(event_id, community_id=self._community_id)
@@ -305,6 +322,7 @@ class EventService:
 
         update_data["updated_at"] = datetime.now(UTC)
         event = await self._repo.update(event, update_data)
+        await invalidate_search_cache_for_community(self._community_id)
         return await self._build_response(event, user_id=user_id)
 
     async def delete_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -315,6 +333,7 @@ class EventService:
             raise AuthorizationError(_("Only the event organizer can delete this event"))
         await self._session.delete(event)
         await self._session.flush()
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("event", event_id)
 
@@ -766,6 +785,7 @@ class EventService:
             source_url=data.source_url,
             visibility=data.visibility,
             shared_by_admin=data.shared_by_admin,
+            sync_interval_minutes=data.sync_interval_minutes,
         )
         sub = await self._repo.create_subscription(sub)
         return CalendarSubscriptionResponse.model_validate(sub)
@@ -779,6 +799,18 @@ class EventService:
         if sub is None:
             raise NotFoundError(_("Calendar subscription not found"))
         await self._repo.delete_subscription(sub_id)
+
+    async def update_subscription(
+        self, sub_id: uuid.UUID, user_id: uuid.UUID, data: CalendarSubscriptionUpdate
+    ) -> CalendarSubscriptionResponse:
+        """@brief Update name/url/enabled/interval of an owned subscription."""
+        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
+        if sub is None:
+            raise NotFoundError(_("Calendar subscription not found"))
+        for field, value in data.model_dump(exclude_unset=True, exclude_none=True).items():
+            setattr(sub, field, value)
+        sub = await self._repo.update_subscription(sub)
+        return CalendarSubscriptionResponse.model_validate(sub)
 
     # ── Sync (called from Celery task) ────────────────────────────────
 

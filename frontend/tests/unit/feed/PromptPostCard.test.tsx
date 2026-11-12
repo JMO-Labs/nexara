@@ -101,3 +101,12 @@ describe("PromptPostCard", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("PromptPostCard responses link", () => {
+  it("links the count badge to the responses page", () => {
+    render(<PromptPostCard post={createPromptPost()} />);
+    expect(
+      screen.getByRole("link", { name: /view 12 responses/i }),
+    ).toHaveAttribute("href", "/app/prompts/p1");
+  });
+});
