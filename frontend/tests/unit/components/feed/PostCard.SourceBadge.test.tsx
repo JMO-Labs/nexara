@@ -75,3 +75,15 @@ describe("PostCard SourceBadge integration", () => {
     expect(screen.getByText("Community")).toBeInTheDocument();
   });
 });
+
+describe("PostCard polish", () => {
+  it("uses 12px mobile / 16px desktop padding and a hover shade", () => {
+    const { container } = wrap(<PostCard post={fakePost} />);
+    const cls = (container.firstElementChild as HTMLElement).className;
+    expect(cls).toContain("p-3");
+    expect(cls).toContain("md:p-4");
+    expect(cls).not.toMatch(/(^|\s)p-4/);
+    expect(cls).toContain("transition-colors");
+    expect(cls).toContain("hover:bg-");
+  });
+});

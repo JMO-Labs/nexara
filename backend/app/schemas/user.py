@@ -25,6 +25,7 @@ class UserResponse(BaseModel):
     avatar_url: str | None = None
     bio: str | None = None
     title: str | None = None
+    pronouns: str | None = None
     location: str | None = None
     website_url: str | None = None
     role: str
@@ -49,6 +50,7 @@ class UserDetailResponse(BaseModel):
     avatar_url: str | None = None
     bio: str | None = None
     title: str | None = None
+    pronouns: str | None = None
     location: str | None = None
     website_url: str | None = None
     birthday: date | None = None
@@ -70,6 +72,7 @@ class UserUpdateRequest(BaseModel):
     display_name: str | None = Field(None, min_length=1, max_length=100)
     bio: str | None = Field(None, max_length=500)
     title: str | None = Field(None, max_length=50)
+    pronouns: str | None = Field(None, max_length=50, description="User pronouns")
     location: str | None = Field(None, max_length=100)
     website_url: HttpUrl | str | None = None
     birthday: date | None = None
