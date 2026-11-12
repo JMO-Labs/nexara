@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     # --- WAF ---
     WAF_ENABLED: bool = True
 
+    # --- AI (optional; empty disables) ---
+    AI_PROVIDER: str = ""
+
     # --- Metrics ---
     ENABLE_METRICS: bool = True
 
