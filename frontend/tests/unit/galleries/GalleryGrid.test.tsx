@@ -54,8 +54,22 @@ describe("GalleryGrid", () => {
     } as Awaited<ReturnType<typeof api.listGalleries>>);
     renderWithProviders(<GalleryGrid onSelect={() => {}} />);
     expect(await screen.findByText("No galleries yet")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Browse media" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create gallery" }));
     expect(push).toHaveBeenCalledWith("/app/media");
+  });
+
+  it("uses onCreate for the empty-state action when provided", async () => {
+    vi.mocked(api.listGalleries).mockResolvedValue({
+      items: [],
+    } as Awaited<ReturnType<typeof api.listGalleries>>);
+    const onCreate = vi.fn();
+    renderWithProviders(
+      <GalleryGrid onSelect={() => {}} onCreate={onCreate} />,
+    );
+    await screen.findByText("No galleries yet");
+    fireEvent.click(screen.getByRole("button", { name: "Create gallery" }));
+    expect(onCreate).toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
   });
 
   it("renders an error state when loading fails", async () => {
