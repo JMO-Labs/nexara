@@ -128,8 +128,7 @@ async def test_image_proxy_rate_limited(test_app):
     ):
         async with await _client(test_app) as c:
             codes = [
-                (await c.get(f"/api/v1/link-previews/{p.id}/image")).status_code
-                for _ in range(70)
+                (await c.get(f"/api/v1/link-previews/{p.id}/image")).status_code for _ in range(70)
             ]
     assert 429 in codes
 
@@ -146,9 +145,7 @@ async def test_scrape_rejects_unsafe_url(test_app):
     _admin(test_app)
     with patch("app.api.v1.link_previews.is_safe_url", return_value=False):
         async with await _client(test_app) as c:
-            r = await c.post(
-                "/api/v1/link-previews/scrape", json={"url": "http://127.0.0.1/x"}
-            )
+            r = await c.post("/api/v1/link-previews/scrape", json={"url": "http://127.0.0.1/x"})
     assert r.status_code == 422
 
 
@@ -160,8 +157,6 @@ async def test_scrape_enqueues_task(test_app):
         patch("app.api.v1.link_previews.scrape_link_preview") as task,
     ):
         async with await _client(test_app) as c:
-            r = await c.post(
-                "/api/v1/link-previews/scrape", json={"url": "https://example.com"}
-            )
+            r = await c.post("/api/v1/link-previews/scrape", json={"url": "https://example.com"})
     assert r.status_code == 202
     task.delay.assert_called_once_with("https://example.com")
