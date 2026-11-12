@@ -19,6 +19,9 @@ const Joyride = dynamic(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as any;
 
+/** @brief v3 options: explicit buttons, responsive width capped at 380px. */
+const TOUR_BUTTONS = ["back", "skip", "primary"];
+
 /** @brief Token-based tooltip theme (CSS vars follow light/dark). */
 const TOUR_OPTIONS = {
   // hex: joyride derives the beacon rgba from it
@@ -51,9 +54,6 @@ const TOUR_LOCALE = {
   nextWithProgress: "Next (Step {current} of {total})",
   skip: "Skip",
 };
-
-/** @brief v3 options: explicit buttons, responsive width capped at 380px. */
-const TOUR_BUTTONS = ["back", "skip", "primary"];
 
 const TERMINAL = new Set(["finished", "skipped", "error"]);
 
