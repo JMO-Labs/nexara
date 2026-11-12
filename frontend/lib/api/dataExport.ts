@@ -5,7 +5,11 @@
 import { apiGet, apiPost, seg } from "./client";
 
 export type ExportState =
-  "pending" | "processing" | "ready" | "expired" | "failed";
+  | "pending"
+  | "processing"
+  | "ready"
+  | "expired"
+  | "failed";
 
 export interface DataExport {
   id: string;
