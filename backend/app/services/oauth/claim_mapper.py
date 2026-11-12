@@ -9,6 +9,8 @@ from typing import Any
 
 from .user_provisioner import OAuthAuthResult
 
+_VERIFIED = (True, "true")
+
 DEFAULT_MAPPING: dict[str, str] = {
     "sub": "sub",
     "email": "email",
@@ -58,4 +60,5 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, str] | None) -> 
         display_name=str(name) if name else None,
         avatar_url=str(pic) if pic else None,
         groups=groups,
+        email_verified=_lookup(claims, "email_verified") in _VERIFIED,
     )
