@@ -12,7 +12,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
-import type { PromptCreate } from "@/lib/api/prompts";
+import type { FrequencyType, PromptCreate } from "@/lib/api/prompts";
 import { FREQUENCIES } from "./constants";
 
 interface Props {
@@ -22,7 +22,11 @@ interface Props {
   onCreate: (form: PromptCreate) => void;
 }
 
-const EMPTY: PromptCreate = { title: "", body: "", frequency: "annual_date" };
+const EMPTY: PromptCreate = {
+  title: "",
+  body: "",
+  frequency_type: "annual_date",
+};
 
 /**
  * @brief Create-prompt dialog.
@@ -72,8 +76,10 @@ export function NewPromptModal({ open, creating, onClose, onCreate }: Props) {
           <span className="text-sm font-semibold">Frequency</span>
           <Select
             label="Frequency"
-            value={form.frequency}
-            onValueChange={(v) => setForm({ ...form, frequency: v })}
+            value={form.frequency_type}
+            onValueChange={(v) =>
+              setForm({ ...form, frequency_type: v as FrequencyType })
+            }
           >
             {FREQUENCIES.map((f) => (
               <Option key={f.value} value={f.value}>
