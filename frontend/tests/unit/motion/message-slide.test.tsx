@@ -113,7 +113,13 @@ describe("NotificationsBell badge motion", () => {
   it("pops the badge in", async () => {
     setup();
     const badge = await screen.findByTestId("unread-badge");
-    expect(badge.style.transform).toContain("scale(0.6)");
+    // Pop starts at scale(0.6) and animates to 1; the tick at which the
+    // assertion runs is timing-dependent, so check the range, not equality.
+    const m = /scale\(([\d.]+)\)/.exec(badge.style.transform);
+    expect(m).not.toBeNull();
+    const scale = Number(m?.[1]);
+    expect(scale).toBeGreaterThanOrEqual(0.6);
+    expect(scale).toBeLessThan(1);
   });
   it("renders the badge statically under reduced motion", async () => {
     reduced = true;
