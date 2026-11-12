@@ -6,6 +6,7 @@ All tests use a mocked Redis client to verify correct behaviour
 without requiring a running Valkey instance.
 """
 
+import uuid
 from unittest.mock import AsyncMock
 
 from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
@@ -123,3 +124,30 @@ class TestCacheModuleExports:
 
     def test_default_ttl_is_300(self):
         assert DEFAULT_TTL == 300
+
+
+class TestInvalidateSearchCache:
+    """@brief SCAN-based search cache invalidation."""
+
+    async def test_default_client_pool_and_multi_page_scan(self):
+        from unittest.mock import MagicMock, patch
+
+        from app.core.cache import invalidate_search_cache_for_community
+
+        client = AsyncMock()
+        client.scan.side_effect = [(7, ["search:a:0"]), (0, ["search:b:0", "search:c:0"])]
+        with (
+            patch("app.core.config.get_settings", return_value=MagicMock()),
+            patch("app.core.valkey.get_pool", return_value=client) as pool,
+        ):
+            deleted = await invalidate_search_cache_for_community(uuid.uuid4())
+        pool.assert_called_once()
+        assert deleted == 3
+        assert client.delete.await_count == 2
+
+    async def test_errors_return_zero(self):
+        from app.core.cache import invalidate_search_cache_for_community
+
+        client = AsyncMock()
+        client.scan.side_effect = ConnectionError("down")
+        assert await invalidate_search_cache_for_community(uuid.uuid4(), client) == 0

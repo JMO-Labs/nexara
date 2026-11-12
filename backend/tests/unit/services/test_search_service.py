@@ -289,3 +289,47 @@ class TestGalleryPollSearch:
         assert p.items[0].title == "Pizza night?"
         assert p.items[0].parent_id == poll.post_id
         assert repo.search_galleries.call_args[0][3] == mock_user.id
+
+
+class TestSearchCachePaths:
+    """@brief Cache hit / corrupt / expire-failure / miss-store paths."""
+
+    @pytest.fixture
+    def user(self):
+        return type("User", (), {"id": uuid.uuid4()})()
+
+    @pytest.mark.asyncio
+    async def test_hit_returns_cached_and_survives_expire_failure(self, user):
+        from unittest.mock import patch
+
+        from app.schemas.search import SearchResponse
+
+        cached = SearchResponse(query="hello", results={})
+        cache = AsyncMock()
+        cache.expire.side_effect = ConnectionError("down")
+        repo = AsyncMock()
+        svc = SearchService(search_repo=repo, community_id=COMMUNITY_ID, cache_client=cache)
+        with patch(
+            "app.services.search_service.cache_get",
+            new=AsyncMock(return_value=cached.model_dump_json()),
+        ):
+            res = await svc.search("hello", user, ["posts"], None, 20)
+        assert res.query == "hello"
+        cache.expire.assert_awaited_once()
+        repo.search_posts.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_corrupt_cache_entry_falls_through_to_query_and_stores(self, user):
+        from unittest.mock import patch
+
+        repo = AsyncMock()
+        repo.search_posts.return_value = ([], None, 0)
+        svc = SearchService(search_repo=repo, community_id=COMMUNITY_ID, cache_client=AsyncMock())
+        with (
+            patch("app.services.search_service.cache_get", new=AsyncMock(return_value="{bad")),
+            patch("app.services.search_service.cache_set", new=AsyncMock()) as setter,
+        ):
+            res = await svc.search("hello", user, ["posts"], "0", 20)
+        assert "posts" in res.results
+        repo.search_posts.assert_awaited()
+        setter.assert_awaited_once()
