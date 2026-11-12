@@ -10,4 +10,4 @@ jobs:
       test-cmd: scripts/wq-ci-test.sh
       fix-cmd: "cd backend && pipx run ruff==0.15.3 format . && pipx run ruff==0.15.3 check --fix . ; cd ../frontend && npx --yes prettier@3.8.3 --write . >/dev/null"
       reruns: 2
-    secrets: inherit
+    secrets: {WQ_AUTOFIX_TOKEN: ${{ secrets.WQ_AUTOFIX_TOKEN }}}
