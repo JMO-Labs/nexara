@@ -1,5 +1,7 @@
 /// @file offline_queue_test.dart
 /// @brief Offline queue: queue while offline, persist, sync on reconnect, backoff.
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexara_mobile/core/offline/offline_queue.dart';
 import 'package:nexara_mobile/core/storage/local_storage.dart';
@@ -59,6 +61,7 @@ void main() {
     now = now.add(const Duration(seconds: 5));
     await q.sync();
     expect(q.pending, isEmpty);
+    q.dispose();
   });
 
   test('pending count notifies listeners', () async {
@@ -69,4 +72,93 @@ void main() {
     await q.sync();
     expect(counts, [1, 0]);
   });
+
+  test('failed sync schedules a retry without a reconnect', () async {
+    final timers = <Duration, void Function()>{};
+    final q = OfflineQueue(
+      storage: store,
+      sender: (a) async {
+        if (fail) throw Exception('boom');
+        sent.add(a);
+      },
+      clock: () => now,
+      timerFactory: (d, cb) {
+        timers[d] = cb;
+        return Timer(const Duration(days: 1), () {});
+      },
+    );
+    await q.enqueue('post', {'content': 'a'});
+    fail = true;
+    await q.sync();
+    expect(timers.keys, [const Duration(seconds: 2)]);
+    fail = false;
+    now = now.add(const Duration(seconds: 2));
+    timers.values.single();
+    await pumpEventQueue();
+    expect(sent, hasLength(1));
+    expect(q.pending, isEmpty);
+    q.dispose();
+  });
+
+  test('dispose cancels a pending retry timer', () async {
+    Timer? t;
+    final q = OfflineQueue(
+      storage: store,
+      sender: (_) async => throw Exception('boom'),
+      clock: () => now,
+      timerFactory: (d, cb) => t = Timer(const Duration(days: 1), cb),
+    );
+    await q.enqueue('post', {});
+    await q.sync();
+    expect(t!.isActive, isTrue);
+    q.dispose();
+    expect(t!.isActive, isFalse);
+  });
+
+  test('enqueue during load keeps its item', () async {
+    final slow = _SlowStorage(store);
+    await store.cache('offline_queue', [
+      QueuedAction(id: 'old', type: 'post', payload: {}).toJson(),
+    ]);
+    final q = OfflineQueue(storage: slow, sender: (a) async => sent.add(a), clock: () => now);
+    final loading = q.load();
+    final enq = q.enqueue('reaction', {});
+    slow.release();
+    await loading;
+    await enq;
+    expect(q.pending.map((a) => a.type), ['post', 'reaction']);
+  });
+
+  test('sync before load completes sends persisted items', () async {
+    final slow = _SlowStorage(store);
+    await store.cache('offline_queue', [
+      QueuedAction(id: 'old', type: 'post', payload: {}).toJson(),
+    ]);
+    final q = OfflineQueue(storage: slow, sender: (a) async => sent.add(a), clock: () => now);
+    final loading = q.load();
+    final syncing = q.sync();
+    slow.release();
+    await loading;
+    await syncing;
+    expect(sent.map((a) => a.id), ['old']);
+    expect(q.pending, isEmpty);
+  });
+}
+
+/// @brief Storage whose first get() blocks until release() (simulates slow load).
+class _SlowStorage implements LocalStorage {
+  _SlowStorage(this.inner);
+  final LocalStorage inner;
+  final _gate = Completer<void>();
+  void release() => _gate.complete();
+  @override
+  Future<void> cache(String key, Object data) => inner.cache(key, data);
+  @override
+  Future<Object?> get(String key) async {
+    await _gate.future;
+    return inner.get(key);
+  }
+
+  @override
+  Future<void> clear(String key) => inner.clear(key);
 }

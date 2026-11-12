@@ -1,5 +1,7 @@
 /// @file offline_queue.dart
 /// @brief Persistent queue of actions taken offline, synced with backoff on reconnect.
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../storage/local_storage.dart';
@@ -42,14 +44,19 @@ class OfflineQueue extends ChangeNotifier {
     required this.storage,
     required this.sender,
     DateTime Function()? clock,
+    Timer Function(Duration, void Function())? timerFactory,
     this.maxBackoff = const Duration(minutes: 5),
-  }) : _clock = clock ?? DateTime.now;
+  })  : _clock = clock ?? DateTime.now,
+        _timerFactory = timerFactory ?? Timer.new;
 
   static const _key = 'offline_queue';
   final LocalStorage storage;
   final Future<void> Function(QueuedAction) sender;
   final DateTime Function() _clock;
+  final Timer Function(Duration, void Function()) _timerFactory;
   final Duration maxBackoff;
+  Future<void>? _loading;
+  Timer? _retry;
   final List<QueuedAction> _items = [];
   bool _syncing = false;
   int _seq = 0;
@@ -58,7 +65,10 @@ class OfflineQueue extends ChangeNotifier {
   bool get syncing => _syncing;
 
   /// @brief Restore the persisted queue (call on app start).
-  Future<void> load() async {
+  /// Concurrent enqueue()/sync() calls wait for it to finish.
+  Future<void> load() => _loading = _load();
+
+  Future<void> _load() async {
     final raw = await storage.get(_key);
     _items
       ..clear()
@@ -71,6 +81,7 @@ class OfflineQueue extends ChangeNotifier {
 
   /// @brief Queue an action; returns it so the UI can show a pending marker.
   Future<QueuedAction> enqueue(String type, Map<String, dynamic> payload) async {
+    await _loading;
     final a = QueuedAction(
         id: '${_clock().microsecondsSinceEpoch}-${_seq++}', type: type, payload: payload);
     _items.add(a);
@@ -81,10 +92,12 @@ class OfflineQueue extends ChangeNotifier {
 
   /// @brief Send due items in order; stop at first failure (keeps ordering).
   /// Notifies listeners only when the pending list changes.
+  /// A failure schedules a retry after the backoff delay (no reconnect needed).
   Future<void> sync() async {
     if (_syncing) return;
     _syncing = true;
     try {
+      await _loading;
       while (_items.isNotEmpty) {
         final a = _items.first;
         if (a.nextAttempt != null && _clock().isBefore(a.nextAttempt!)) break;
@@ -96,6 +109,8 @@ class OfflineQueue extends ChangeNotifier {
           var d = Duration(seconds: 1 << a.attempts);
           if (d > maxBackoff) d = maxBackoff;
           a.nextAttempt = _clock().add(d);
+          _retry?.cancel();
+          _retry = _timerFactory(d, sync);
           await _save();
           break;
         }
@@ -105,5 +120,11 @@ class OfflineQueue extends ChangeNotifier {
     } finally {
       _syncing = false;
     }
+  }
+
+  @override
+  void dispose() {
+    _retry?.cancel();
+    super.dispose();
   }
 }
