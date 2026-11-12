@@ -16,8 +16,8 @@ from app.models.nudge import Nudge
 from app.models.user import User
 from app.repositories.nudge_repo import NudgeRepository
 from app.repositories.user_repo import UserRepository
-from app.services.nudge_service import NudgeService
 from app.services.notification_service import PREF_MAP
+from app.services.nudge_service import NudgeService
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 SENDER = uuid.uuid4()

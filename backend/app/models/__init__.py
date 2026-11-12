@@ -10,7 +10,6 @@ from app.models.activity_event import ActivityEvent  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.auth import MagicLinkToken, RefreshToken, UserBackupCode  # noqa: F401
 from app.models.bookmark import Bookmark  # noqa: F401
-from app.models.nudge import Nudge  # noqa: F401
 from app.models.branding import CommunityBranding  # noqa: F401
 from app.models.calendar import Calendar  # noqa: F401
 from app.models.calendar_token import CalendarToken  # noqa: F401
@@ -29,6 +28,7 @@ from app.models.media import Media  # noqa: F401
 from app.models.media_ai import MediaAIMetadata  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401
+from app.models.nudge import Nudge  # noqa: F401
 from app.models.oauth_provider import OAuthProvider  # noqa: F401
 from app.models.plugin import Plugin, PluginData  # noqa: F401
 from app.models.poll import Poll, PollOption, PollVote  # noqa: F401
