@@ -27,6 +27,8 @@ class OAuthProviderCreate(BaseModel):
     client_id: str = Field(..., min_length=1, max_length=256)
     client_secret: str = Field(..., min_length=1)
     issuer: str | None = None
+    discovery_url: str | None = None
+    claim_mapping: dict[str, str] = Field(default_factory=dict)
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -58,6 +60,8 @@ class OAuthProviderUpdate(BaseModel):
     client_id: str | None = None
     client_secret: str | None = None
     issuer: str | None = None
+    discovery_url: str | None = None
+    claim_mapping: dict[str, str] | None = None
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -90,6 +94,8 @@ class OAuthProviderResponse(BaseModel):
     icon_url: str | None
     provider_type: str
     issuer: str | None
+    discovery_url: str | None = None
+    claim_mapping: dict[str, str] = Field(default_factory=dict)
     client_id: str
     scopes: str
     authorization_endpoint: str | None
@@ -117,3 +123,24 @@ class OAuthExchangeRequest(BaseModel):
     """@brief Request body for exchanging OAuth callback code for tokens."""
 
     code: str = Field(..., min_length=1)
+
+
+class OIDCProviderCreate(BaseModel):
+    """@brief Payload for registering a generic OIDC provider via discovery."""
+
+    slug: str = Field(..., min_length=1, max_length=64)
+    display_name: str = Field(..., min_length=1, max_length=128)
+    discovery_url: str = Field(..., min_length=1)
+    client_id: str = Field(..., min_length=1, max_length=256)
+    client_secret: str = Field(..., min_length=1)
+    scopes: str = "openid profile email"
+    claim_mapping: dict[str, str] = Field(default_factory=dict)
+
+
+class OIDCTestResult(BaseModel):
+    """@brief Result of the admin discovery + sandbox token exchange test."""
+
+    discovery_ok: bool
+    issuer: str | None = None
+    token_endpoint_reachable: bool = False
+    error: str | None = None
