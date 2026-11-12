@@ -35,6 +35,13 @@ class FakeRedis:
             self.ttls[key] = ex
         return True
 
+    async def delete(self, *keys):
+        n = 0
+        for k in keys:
+            n += self.data.pop(k, None) is not None
+            self.ttls.pop(k, None)
+        return n
+
 
 def _export(user_id, **kw) -> MagicMock:
     row = MagicMock(spec=UserExport)
@@ -109,6 +116,19 @@ class TestRequest:
         assert repo.create.await_count == 1
         assert enqueue.call_count == 1
 
+    @pytest.mark.parametrize("step", ["create", "commit", "enqueue"])
+    async def test_failure_releases_rate_limit_key(self, client, repo, redis, enqueue, user, step):
+        target = enqueue if step == "enqueue" else getattr(repo, step)
+        target.side_effect = RuntimeError("down")
+        repo.create.return_value = _export(user.id)
+        async with client as c:
+            with pytest.raises(RuntimeError):
+                await c.post("/api/v1/export/request")
+            assert redis.data == {}
+            target.side_effect = None
+            retry = await c.post("/api/v1/export/request")
+        assert retry.status_code == 200
+
 
 class TestStatus:
     async def test_ready_has_download_url(self, client, repo, user):
@@ -127,6 +147,7 @@ class TestStatus:
         assert body["status"] == "ready"
         assert body["file_size_bytes"] == 123
         assert body["download_url"] == f"/api/v1/export/{row.id}/download"
+        repo.get_by_id.assert_awaited_once_with(row.id, user.community_id)
 
     async def test_expired_has_no_download_url(self, client, repo, user):
         row = _export(
