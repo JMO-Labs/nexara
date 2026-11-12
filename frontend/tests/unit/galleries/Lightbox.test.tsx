@@ -91,3 +91,40 @@ describe("Lightbox", () => {
     expect(close).toHaveFocus();
   });
 });
+
+describe("Lightbox close isolation", () => {
+  it("Esc does not propagate to outer listeners", () => {
+    const outer = vi.fn();
+    document.addEventListener("keydown", outer);
+    const onClose = vi.fn();
+    render(
+      <Lightbox
+        items={items}
+        index={0}
+        onClose={onClose}
+        onIndexChange={vi.fn()}
+      />,
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    document.removeEventListener("keydown", outer);
+  });
+
+  it("close button click does not bubble to parents", () => {
+    const parent = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <div onClick={parent}>
+        <Lightbox
+          items={items}
+          index={0}
+          onClose={onClose}
+          onIndexChange={vi.fn()}
+        />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(parent).not.toHaveBeenCalled();
+  });
+});

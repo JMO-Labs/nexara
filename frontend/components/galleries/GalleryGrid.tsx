@@ -15,19 +15,21 @@ const GRID = "grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4";
 export interface GalleryGridProps {
   onSelect: (id: string) => void;
   params?: ListGalleriesParams;
+  /** Opens the create-gallery flow from the empty state. */
+  onCreate?: () => void;
 }
 
-export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
+export function GalleryGrid({ onSelect, params, onCreate }: GalleryGridProps) {
   const router = useRouter();
-  const { data, isLoading, error } = useGalleryList(params);
+  const { data, isLoading, error, refetch } = useGalleryList(params);
 
   if (error)
     return (
       <EmptyState
         title="Couldn't load galleries"
-        description={String(error)}
+        description={error instanceof Error ? error.message : String(error)}
         action={
-          <Button variant="secondary" onClick={() => router.refresh()}>
+          <Button variant="secondary" onClick={() => refetch()}>
             Retry
           </Button>
         }
@@ -35,7 +37,7 @@ export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
     );
   if (isLoading || !data) {
     return (
-      <div className={GRID}>
+      <div className={GRID} aria-busy="true">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} height={220} />
         ))}
@@ -48,8 +50,11 @@ export function GalleryGrid({ onSelect, params }: GalleryGridProps) {
         title="No galleries yet"
         description="Create one to share photos."
         action={
-          <Button variant="primary" onClick={() => router.push("/app/media")}>
-            Browse media
+          <Button
+            variant="primary"
+            onClick={() => (onCreate ? onCreate() : router.push("/app/media"))}
+          >
+            Create gallery
           </Button>
         }
       />

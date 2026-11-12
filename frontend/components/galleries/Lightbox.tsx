@@ -32,6 +32,8 @@ export function Lightbox({
 }: LightboxProps) {
   const item = items[index];
   const ref = React.useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = React.useState(false);
+  React.useEffect(() => setLoaded(false), [index]);
 
   const next = React.useCallback(() => {
     if (index < items.length - 1) onIndexChange(index + 1);
@@ -49,8 +51,10 @@ export function Lightbox({
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowRight") next();
+      if (e.key === "Escape") {
+        e.stopImmediatePropagation();
+        onClose();
+      } else if (e.key === "ArrowRight") next();
       else if (e.key === "ArrowLeft") prev();
       else if (e.key === "Tab" && ref.current) {
         const f = Array.from(
@@ -97,7 +101,14 @@ export function Lightbox({
         <span className="text-sm text-white">
           {index + 1} / {items.length}
         </span>
-        <IconButton variant="ghost" aria-label="Close" onClick={onClose}>
+        <IconButton
+          variant="ghost"
+          aria-label="Close"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+        >
           <X className="size-6 text-white" aria-hidden="true" />
         </IconButton>
       </div>
@@ -118,7 +129,8 @@ export function Lightbox({
         <img
           src={src}
           alt={label}
-          className="max-h-[80vh] max-w-[90vw] object-contain"
+          onLoad={() => setLoaded(true)}
+          className={`max-h-[80vh] max-w-[90vw] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         />
         <IconButton
           variant="ghost"
