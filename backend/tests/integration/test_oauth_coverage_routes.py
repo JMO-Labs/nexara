@@ -34,9 +34,7 @@ async def _callback(test_app, provider, token_data, cookies, **patches):
     ):
         prov_cls.return_value.provision_user = AsyncMock(return_value=MagicMock(id=uuid.uuid4()))
         async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
-            return await c.get(
-                _CB, params={"code": "c", "state": "abc"}, cookies=cookies
-            )
+            return await c.get(_CB, params={"code": "c", "state": "abc"}, cookies=cookies)
 
 
 _COOKIES = {"oauth_state": "abc", "oauth_verifier": "v", "oauth_provider": "oidc"}
@@ -78,8 +76,12 @@ async def test_create_oidc_provider_invalid_discovery_returns_422():
     with patch.object(oauth_admin, "fetch_discovery", AsyncMock(side_effect=ValueError("bad"))):
         with pytest.raises(AppError) as ei:
             await oauth_admin.create_oidc_provider(
-                body, MagicMock(), user=MagicMock(), db=MagicMock(),
-                settings=_deps()["settings"], community_id=uuid.uuid4(),
+                body,
+                MagicMock(),
+                user=MagicMock(),
+                db=MagicMock(),
+                settings=_deps()["settings"],
+                community_id=uuid.uuid4(),
             )
     assert ei.value.status_code == 422
 
