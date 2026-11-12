@@ -184,7 +184,9 @@ class MediaService:
             )
 
         generate_thumbnail.delay(str(media.id))
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="media", action="create", user_id=user.id
+        )
         enqueue_ocr(media.id, self._community_id, media.content_type)
 
         return MediaResponse.model_validate(media)
@@ -275,7 +277,9 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="media", action="delete", user_id=user.id
+        )
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("media", media_id)
 

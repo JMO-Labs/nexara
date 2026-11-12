@@ -143,7 +143,9 @@ class GalleryService:
                 },
             )
 
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="create", user_id=user_id
+        )
         return GalleryResponse.model_validate(gallery)
 
     async def ensure_default_gallery(self, user_id: uuid.UUID) -> GalleryResponse:
@@ -254,7 +256,9 @@ class GalleryService:
         update_data = data.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(UTC)
         gallery = await self._repo.update(gallery, update_data)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="update", user_id=user_id
+        )
         return GalleryResponse.model_validate(gallery)
 
     async def delete_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -267,6 +271,9 @@ class GalleryService:
         await self._session.flush()
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("gallery", gallery_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="delete", user_id=user_id
+        )
 
     async def search(
         self,
@@ -365,6 +372,9 @@ class GalleryService:
             position=data.position if data.position is not None else gallery.item_count,
         )
         item = await self._repo.add_item(item)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="add_item", user_id=user_id
+        )
         return GalleryItemResponse.model_validate(item)
 
     async def bulk_add_items(
@@ -396,6 +406,9 @@ class GalleryService:
             item = await self._repo.add_item(item)
             position += 1
             out.append(GalleryItemResponse.model_validate(item))
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="add_item", user_id=user_id
+        )
         return out
 
     async def update_item(

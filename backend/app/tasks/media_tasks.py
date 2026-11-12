@@ -16,6 +16,7 @@ import structlog
 from celery import Task
 from PIL import Image, ImageOps
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.transcode import (
     build_ffmpeg_command,
     extract_thumbnail,
@@ -104,6 +105,9 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
             height=img.height,
         )
         await session.commit()
+        await invalidate_search_cache_for_community(
+            media.community_id, service="media", action="ready", user_id=media.uploader_id
+        )
 
     logger.info("generate_thumbnail_completed", media_id=str(media_id))
     return {"status": "processed"}
@@ -310,6 +314,9 @@ async def _transcode_video_async(media_id: str) -> dict[str, str]:
             size_bytes=new_size,
         )
         await session.commit()
+        await invalidate_search_cache_for_community(
+            media.community_id, service="media", action="ready", user_id=media.uploader_id
+        )
 
     logger.info("transcode_video_completed", media_id=media_id)
     return {"status": "processed"}
