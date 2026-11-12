@@ -3,7 +3,19 @@
 @brief Unit tests for OAuth group-to-role mapper.
 """
 
-from app.services.oauth.group_mapper import map_groups_to_role
+import uuid
+from unittest.mock import AsyncMock, MagicMock
+
+from structlog.testing import capture_logs
+
+from app.models.subgroup import Subgroup, SubgroupMember
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+from app.services.oauth.group_mapper import (
+    apply_subgroup_mappings,
+    global_role_mappings,
+    map_groups_to_role,
+    preview_group_mapping,
+)
 
 
 class TestMapGroupsToRole:
@@ -40,3 +52,146 @@ class TestMapGroupsToRole:
         mappings = {"viewers": "viewer", "members": "member"}
         result = map_groups_to_role(["viewers", "members"], mappings, "viewer")
         assert result == "member"
+
+
+ENG, DES = uuid.uuid4(), uuid.uuid4()
+CID, UID = uuid.uuid4(), uuid.uuid4()
+CM = {
+    "group_mapping": {
+        "eng": {"subgroup_id": str(ENG), "role": "member"},
+        "design": {"subgroup_id": str(DES), "role": "moderator"},
+        "admin": {"subgroup_id": None, "role": "admin"},
+    }
+}
+
+
+def _repos(existing=(ENG, DES), member_of=()):
+    subs = AsyncMock(spec=SubgroupRepository)
+    subs.get_by_id.side_effect = lambda i, c: MagicMock(spec=Subgroup) if i in existing else None
+    mem = AsyncMock(spec=SubgroupMemberRepository)
+    mem.get_membership.side_effect = lambda s, u: (
+        MagicMock(spec=SubgroupMember) if s in member_of else None
+    )
+    return subs, mem
+
+
+class TestGlobalRoleMappings:
+    """@brief Tests for global_role_mappings."""
+
+    def test_only_entries_without_subgroup(self):
+        assert global_role_mappings(CM) == {"admin": "admin"}
+
+    def test_no_group_mapping_is_empty(self):
+        assert global_role_mappings({"sub": "sub"}) == {}
+        assert global_role_mappings(None) == {}
+
+
+class TestApplySubgroupMappings:
+    """@brief Tests for apply_subgroup_mappings."""
+
+    async def test_multiple_groups_add_memberships_with_roles(self):
+        subs, mem = _repos()
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["eng", "design", "admin"], CM)
+        assert set(joined) == {ENG, DES}
+        roles = {c.kwargs["subgroup_id"]: c.kwargs["role"] for c in mem.add_member.call_args_list}
+        assert roles == {ENG: "member", DES: "moderator"}
+
+    async def test_missing_local_subgroup_skipped(self):
+        subs, mem = _repos(existing=(DES,))
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["eng", "design"], CM)
+        assert joined == [DES]
+
+    async def test_unmapped_group_skipped(self):
+        subs, mem = _repos()
+        assert await apply_subgroup_mappings(subs, mem, CID, UID, ["other"], CM) == []
+        mem.add_member.assert_not_called()
+
+    async def test_idempotent_when_already_member(self):
+        subs, mem = _repos(member_of=(ENG,))
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], CM)
+        assert joined == []
+        mem.add_member.assert_not_called()
+
+    async def test_no_mapping_configured_noop(self):
+        subs, mem = _repos()
+        assert await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], {}) == []
+        subs.get_by_id.assert_not_called()
+
+    async def test_invalid_subgroup_id_skipped(self):
+        subs, mem = _repos()
+        cm = {"group_mapping": {"eng": {"subgroup_id": "nope", "role": "member"}}}
+        assert await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], cm) == []
+
+
+class TestMappingWarningsAndGuards:
+    """@brief Log warnings, runtime role guard, and no-config behaviour."""
+
+    async def test_unmapped_group_logs_warning(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["other"], CM)
+        assert any(
+            e["event"] == "oauth_group_unmapped" and e["log_level"] == "warning" for e in logs
+        )
+
+    async def test_missing_subgroup_logs_warning(self):
+        subs, mem = _repos(existing=())
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], CM)
+        assert [e["event"] for e in logs] == ["oauth_group_subgroup_missing"]
+
+    async def test_global_role_group_not_reported_unmapped(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            await apply_subgroup_mappings(subs, mem, CID, UID, ["admin"], CM)
+        assert logs == []
+
+    async def test_no_mapping_configured_logs_nothing(self):
+        subs, mem = _repos()
+        with capture_logs() as logs:
+            assert await apply_subgroup_mappings(subs, mem, CID, UID, ["a", "b"], None) == []
+        assert logs == []
+        subs.get_by_id.assert_not_called()
+
+    async def test_invalid_subgroup_role_skipped_with_warning(self):
+        subs, mem = _repos()
+        cm = {"group_mapping": {"eng": {"subgroup_id": str(ENG), "role": "admin"}}}
+        with capture_logs() as logs:
+            assert await apply_subgroup_mappings(subs, mem, CID, UID, ["eng"], cm) == []
+        mem.add_member.assert_not_called()
+        assert [e["event"] for e in logs] == ["oauth_group_invalid_role"]
+
+    async def test_role_conflict_highest_wins_and_membership_created(self):
+        """Subgroup member + global admin: both applied, highest community role wins."""
+        role = map_groups_to_role(
+            ["eng", "admin"], {**{"eng": "member"}, **global_role_mappings(CM)}, "viewer"
+        )
+        assert role == "admin"
+        subs, mem = _repos()
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["eng", "admin"], CM)
+        assert joined == [ENG]
+
+
+class TestPreview:
+    """@brief Tests for preview_group_mapping (sandbox, no writes)."""
+
+    async def test_reports_existence_and_match(self):
+        subs, mem = _repos(existing=(ENG,))
+        out = await preview_group_mapping(subs, CID, CM, ["eng"])
+        by = {e["group"]: e for e in out}
+        assert by["eng"] == {
+            "group": "eng",
+            "subgroup_id": str(ENG),
+            "role": "member",
+            "subgroup_exists": True,
+            "matched": True,
+        }
+        assert by["design"]["subgroup_exists"] is False
+        assert by["design"]["matched"] is False
+        assert by["admin"]["subgroup_exists"] is None
+        mem.add_member.assert_not_called()
+
+    async def test_no_sample_groups_marks_none_matched(self):
+        subs, _ = _repos()
+        out = await preview_group_mapping(subs, CID, CM, None)
+        assert not any(e["matched"] for e in out)
