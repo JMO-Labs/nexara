@@ -33,7 +33,7 @@ def _deps(content_type: str = "image/png"):
     storage = AsyncMock(spec=StorageBackend)
     storage.get.return_value = b"img"
     provider = AsyncMock(spec=AIProvider)
-    provider.vision.return_value = "hello\nworld"
+    provider.vision.return_value = ("hello\nworld", 0.1, 10)
     return media, media_repo, ai_repo, storage, provider
 
 

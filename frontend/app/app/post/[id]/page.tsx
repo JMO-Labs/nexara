@@ -5,7 +5,7 @@
  */
 import { use } from "react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { AlertCircle, ChevronLeft } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostCard } from "@/components/feed/PostCard";
 import { CommentThread } from "@/components/feed/CommentThread";
@@ -17,7 +17,7 @@ export default function PostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: post, isLoading, isError } = usePost(id);
+  const { data: post, isLoading, isError, refetch } = usePost(id);
 
   return (
     <div className="mx-auto flex w-full max-w-180 flex-col gap-4">
@@ -30,8 +30,27 @@ export default function PostPage({
         </Button>
       </div>
       {isLoading ? (
-        <Skeleton height={240} rounded="lg" />
-      ) : isError || !post ? (
+        <div
+          role="status"
+          aria-label="Loading post"
+          className="flex flex-col gap-4"
+        >
+          <Skeleton height={240} rounded="lg" />
+          <Skeleton height={48} />
+          <Skeleton height={48} />
+        </div>
+      ) : isError ? (
+        <EmptyState
+          icon={AlertCircle}
+          title="Couldn't load post"
+          description="Check your connection and try again."
+          action={
+            <Button variant="secondary" onClick={() => refetch()}>
+              Retry
+            </Button>
+          }
+        />
+      ) : !post ? (
         <EmptyState
           title="Post not found"
           description="It may have been deleted."
