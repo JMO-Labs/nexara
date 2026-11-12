@@ -289,3 +289,70 @@ class TestGalleryPollSearch:
         assert p.items[0].title == "Pizza night?"
         assert p.items[0].parent_id == poll.post_id
         assert repo.search_galleries.call_args[0][3] == mock_user.id
+
+
+class TestSearchCache:
+    """@brief Tests for first-page caching and the cache key."""
+
+    @pytest.fixture
+    def user(self):
+        return type("User", (), {"id": uuid.uuid4()})()
+
+    def _resp(self):
+        from app.schemas.search import SearchResponse, SearchTypeResults
+
+        return SearchResponse(
+            query="hello",
+            results={"posts": SearchTypeResults(items=[], total=0, next_cursor=None)},
+        )
+
+    def test_key_normalizes_query_and_sorts_types(self):
+        from app.services.search_service import search_cache_key
+
+        uid = uuid.uuid4()
+        a = search_cache_key("  Hello   World ", COMMUNITY_ID, ["posts", "users"], uid, None)
+        b = search_cache_key("hello world", COMMUNITY_ID, ["users", "posts"], uid, None)
+        assert a == b
+        assert a.endswith(":0")
+        assert search_cache_key("x", COMMUNITY_ID, ["posts"], uid, "abc").endswith(":abc")
+
+    @pytest.mark.asyncio
+    async def test_hit_returns_cached_and_refreshes_ttl(self, user):
+        cache = AsyncMock()
+        cache.get.return_value = self._resp().model_dump_json()
+        repo = AsyncMock()
+        svc = SearchService(search_repo=repo, community_id=COMMUNITY_ID, cache_client=cache)
+        res = await svc.search("hello", user, ["posts"], None, 10)
+        assert res.query == "hello"
+        cache.expire.assert_awaited_once()
+        repo.search_posts.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_hit_survives_expire_failure(self, user):
+        cache = AsyncMock()
+        cache.get.return_value = self._resp().model_dump_json()
+        cache.expire.side_effect = ConnectionError("down")
+        svc = SearchService(search_repo=AsyncMock(), community_id=COMMUNITY_ID, cache_client=cache)
+        res = await svc.search("hello", user, ["posts"], "0", 10)
+        assert res.query == "hello"
+
+    @pytest.mark.asyncio
+    async def test_invalid_cached_payload_falls_through_and_stores(self, user):
+        cache = AsyncMock()
+        cache.get.return_value = "not-json"
+        repo = AsyncMock()
+        repo.search_posts.return_value = ([], None, 0)
+        svc = SearchService(search_repo=repo, community_id=COMMUNITY_ID, cache_client=cache)
+        res = await svc.search("hello", user, ["posts"], None, 10)
+        assert res.query == "hello"
+        cache.setex.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_later_pages_bypass_cache(self, user):
+        cache = AsyncMock()
+        repo = AsyncMock()
+        repo.search_posts.return_value = ([], None, 0)
+        svc = SearchService(search_repo=repo, community_id=COMMUNITY_ID, cache_client=cache)
+        await svc.search("hello", user, ["posts"], "5", 10)
+        cache.get.assert_not_called()
+        cache.setex.assert_not_called()

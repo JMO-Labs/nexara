@@ -584,3 +584,21 @@ class TestAdminModeration:
         repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError):
             await service.admin_feature(uuid.uuid4(), featured=True, admin_id=uuid.uuid4())
+
+
+class TestUpdateInvalidatesSearchCache:
+    @pytest.mark.asyncio
+    async def test_update_invalidates_search_cache(
+        self, service: GalleryService, repo: AsyncMock
+    ) -> None:
+        from unittest.mock import patch
+
+        gallery = _make_gallery()
+        repo.get_by_id.return_value = gallery
+        repo.update.return_value = gallery
+        with patch(
+            "app.services.gallery_service.invalidate_search_cache_for_community",
+            new=AsyncMock(),
+        ) as inv:
+            await service.update_gallery(gallery.id, gallery.owner_id, GalleryUpdate(title="New"))
+        inv.assert_awaited_once_with(COMMUNITY_ID)

@@ -1003,3 +1003,18 @@ class TestAdminSharedSubscriptions:
 
         repo.get_subscription.assert_awaited_once_with(sub.id, user_id=admin_id)
         repo.delete_subscription.assert_awaited_once_with(sub.id)
+
+
+class TestDeleteInvalidatesSearchCache:
+    @pytest.mark.asyncio
+    async def test_delete_invalidates_search_cache(
+        self, service: EventService, repo: AsyncMock
+    ) -> None:
+        event = _make_event()
+        repo.get_by_id.return_value = event
+        with patch(
+            "app.services.event_service.invalidate_search_cache_for_community",
+            new=AsyncMock(),
+        ) as inv:
+            await service.delete_event(event.id, event.author_id)
+        inv.assert_awaited_once_with(COMMUNITY_ID)

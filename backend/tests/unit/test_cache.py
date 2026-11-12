@@ -6,9 +6,18 @@ All tests use a mocked Redis client to verify correct behaviour
 without requiring a running Valkey instance.
 """
 
-from unittest.mock import AsyncMock
+import uuid
+from unittest.mock import AsyncMock, patch
 
-from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
+from app.core.cache import (
+    DEFAULT_TTL,
+    cache_delete,
+    cache_get,
+    cache_set,
+    invalidate_search_cache_for_community,
+)
+
+CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 class TestCacheGet:
@@ -123,3 +132,33 @@ class TestCacheModuleExports:
 
     def test_default_ttl_is_300(self):
         assert DEFAULT_TTL == 300
+
+
+class TestInvalidateSearchCache:
+    """@brief Verify SCAN-based search cache invalidation."""
+
+    async def test_scans_all_pages_and_deletes(self):
+        client = AsyncMock()
+        client.scan.side_effect = [(7, ["search:a:0", "search:b:0"]), (0, ["search:c:0"])]
+        assert await invalidate_search_cache_for_community(CID, client=client) == 3
+        assert client.delete.await_count == 2
+
+    async def test_empty_scan_deletes_nothing(self):
+        client = AsyncMock()
+        client.scan.return_value = (0, [])
+        assert await invalidate_search_cache_for_community(CID, client=client) == 0
+        client.delete.assert_not_awaited()
+
+    async def test_defaults_to_cache_pool(self):
+        client = AsyncMock()
+        client.scan.return_value = (0, ["search:a:0"])
+        with (
+            patch("app.core.config.get_settings"),
+            patch("app.core.valkey.get_pool", return_value=client),
+        ):
+            assert await invalidate_search_cache_for_community(CID) == 1
+
+    async def test_returns_zero_on_error(self):
+        client = AsyncMock()
+        client.scan.side_effect = ConnectionError("down")
+        assert await invalidate_search_cache_for_community(CID, client=client) == 0

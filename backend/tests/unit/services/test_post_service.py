@@ -540,3 +540,18 @@ class TestActivityRecording:
         await service_with_activity_repo.delete_post(POST_ID, user)
 
         activity_repo.invalidate.assert_awaited_once_with("post", POST_ID)
+
+
+class TestCreateInvalidatesSearchCache:
+    @pytest.mark.asyncio
+    async def test_create_post_invalidates_search_cache(self, service, post_repo):
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {}
+        with patch(
+            "app.services.post_service.invalidate_search_cache_for_community",
+            new=AsyncMock(),
+        ) as inv:
+            result = await service.create_post(_make_user(), "Hello")
+        assert result == {}
+        inv.assert_awaited_once_with(COMMUNITY_ID)
