@@ -21,6 +21,11 @@ describe("navItems", () => {
     );
     expect(visibleNav(MORE_NAV, true).map((i) => i.label)).toContain("Admin");
   });
+  it("has a Lists entry", () => {
+    expect(MORE_NAV).toContainEqual(
+      expect.objectContaining({ label: "Lists", href: "/app/lists" }),
+    );
+  });
   it("isNavActive", () => {
     expect(isNavActive("/app/chat/abc", "/app/chat")).toBe(true);
     expect(isNavActive("/app/chat", "/app")).toBe(false);

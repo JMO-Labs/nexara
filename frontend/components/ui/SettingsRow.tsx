@@ -22,15 +22,15 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
     return (
       <div
         ref={ref}
-        className="grid grid-cols-1 items-start gap-2 border-b border-ink/10 py-3 md:grid-cols-3 md:gap-4"
+        className="grid grid-cols-1 items-start gap-2 border-b border-ink/10 py-3 last:border-b-0 md:grid-cols-12 md:gap-4"
       >
-        <div>
+        <div className="md:col-span-4">
           <p className="text-sm font-semibold">{label}</p>
           {description && (
-            <p className="mt-0.5 text-xs opacity-70">{description}</p>
+            <p className="mt-0.5 text-xs text-muted">{description}</p>
           )}
         </div>
-        <div className="md:col-span-2">{children}</div>
+        <div className="md:col-span-8">{children}</div>
       </div>
     );
   },
