@@ -1,0 +1,11 @@
+{
+  "plugin_id": "my-awesome-plugin",
+  "plugin_name": "My Awesome Plugin",
+  "author_name": "Your Name",
+  "author_email": "you@example.com",
+  "description": "A one-line description of the plugin",
+  "has_backend": true,
+  "has_frontend": false,
+  "backend_permissions": "[\"db_read\"]",
+  "min_core_version": "1.0.0"
+}

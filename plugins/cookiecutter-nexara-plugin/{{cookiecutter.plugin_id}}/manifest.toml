@@ -1,0 +1,17 @@
+id = "{{cookiecutter.plugin_id}}"
+name = "{{cookiecutter.plugin_name}}"
+version = "0.1.0"
+author = "{{cookiecutter.author_name}} <{{cookiecutter.author_email}}>"
+description = "{{cookiecutter.description}}"
+min_core_version = "{{cookiecutter.min_core_version}}"
+permissions = {{cookiecutter.backend_permissions}}
+hooks = {}
+{% if cookiecutter.has_backend %}
+[backend]
+routes = "router.py"
+tasks = "tasks.py"
+{% endif %}
+{%- if cookiecutter.has_frontend %}
+[frontend]
+slots = {}
+{% endif %}
