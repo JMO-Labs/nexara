@@ -38,6 +38,7 @@ celery_app.conf.update(
     task_routes={
         "app.tasks.email_tasks.*": {"queue": "email"},
         "app.tasks.media_tasks.*": {"queue": "media"},
+        "app.tasks.ai_tasks.*": {"queue": "media"},
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},

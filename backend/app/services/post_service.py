@@ -25,6 +25,7 @@ from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
 from app.services.activity_publish import record_activity
+from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -170,12 +171,7 @@ class PostService:
             user.id,
         )
 
-        await self._notification.notify_mentions(
-            content,
-            user,
-            post.id,
-            self._post_repo._session,
-        )
+        await self._notify_mentions(content, user, post.id)
 
         if self._activity_repo is not None:
             await record_activity(
@@ -319,12 +315,7 @@ class PostService:
             parent_id,
         )
 
-        await self._notification.notify_mentions(
-            content,
-            user,
-            post_id,
-            self._post_repo._session,
-        )
+        await self._notify_mentions(content, user, post_id)
 
         comment_dict: dict[str, Any] = {
             "id": str(comment.id),
@@ -552,6 +543,17 @@ class PostService:
                 self._target, post_id, target_type, target_id, emoji, count, action, user_id
             ),
             post,
+        )
+
+    async def _notify_mentions(self, content: str, actor: User, post_id: uuid.UUID) -> None:
+        """@brief Notify @mentioned users in this community (never the actor)."""
+        await notify_mentions(
+            self._post_repo._session,
+            self._notification,
+            self._community_id,
+            content,
+            actor,
+            post_id,
         )
 
     async def _notify_comment_participants(

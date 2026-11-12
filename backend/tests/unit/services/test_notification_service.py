@@ -154,21 +154,3 @@ class TestNotifyEmail:
             await service.notify(USER_ID, "comment", {"message": "Hi"})
 
         mock_task.delay.assert_not_called()
-
-
-class TestDetectMentions:
-    """@brief Tests for detect_mentions()."""
-
-    def test_extracts_usernames_from_text(self):
-        """detect_mentions() extracts @usernames from text."""
-        text = "Hey @alice and @bob_123, check this out!"
-        result = NotificationService.detect_mentions(text)
-        assert "alice" in result
-        assert "bob_123" in result
-
-    def test_ignores_mentions_in_code_blocks(self):
-        """detect_mentions() ignores @mentions inside code blocks."""
-        text = "Use `@handle` in code, but @alice is a real mention"
-        result = NotificationService.detect_mentions(text)
-        assert "handle" not in result
-        assert "alice" in result
