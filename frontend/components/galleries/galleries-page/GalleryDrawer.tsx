@@ -13,6 +13,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { GalleryUpload } from "@/components/galleries/GalleryUpload";
+import { EventGalleryBadge } from "@/components/galleries/EventGalleryBadge";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import {
   useGalleryDetail,
@@ -186,6 +187,12 @@ export function GalleryDrawer({
               </IconButton>
             )}
           </div>
+
+          {gallery.event_id && (
+            <div>
+              <EventGalleryBadge />
+            </div>
+          )}
 
           {gallery.description && (
             <p className="text-muted text-sm">{gallery.description}</p>
