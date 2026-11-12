@@ -44,9 +44,11 @@ async def run_ocr(
 
     if provider is None:
         return _done("skipped")
-    media = await media_repo.get(media_id)
+    media = await media_repo.get_by_id(media_id, community_id)
     if media is None or not media.content_type.startswith("image/"):
         return _done("skipped")
+    if await ai_repo.get_by_media_id(media_id) is not None:
+        return _done("skipped")  # retry/re-enqueue: already processed
     try:
         image = await storage.get(media.storage_key)
         text = await provider.vision(image, OCR_PROMPT, max_tokens=OCR_MAX_TOKENS)

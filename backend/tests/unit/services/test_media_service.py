@@ -95,6 +95,38 @@ class TestUpload:
         assert result.status == "processing"
 
     @pytest.mark.asyncio
+    async def test_upload_enqueues_ocr(self):
+        """upload should enqueue OCR with media id, community and content type."""
+        from app.services.media_service import MediaService
+
+        mock_repo = AsyncMock()
+        mock_repo._session = AsyncMock()
+        mock_media = _make_media(status="processing")
+        mock_repo.create.return_value = mock_media
+
+        with (
+            patch("app.services.media_service.check_quota", new_callable=AsyncMock),
+            patch("app.services.media_service.increment_storage_used", new_callable=AsyncMock),
+            patch("app.services.media_service.generate_thumbnail"),
+            patch("app.services.media_service.enqueue_ocr") as enq,
+        ):
+            service = MediaService(
+                media_repo=mock_repo,
+                storage_backend=AsyncMock(),
+                user_repo=AsyncMock(),
+                community_id=COMMUNITY_ID,
+            )
+            data = b"fake image data"
+            await service.upload(
+                user=_make_user(),
+                file_data=data,
+                filename="photo.jpg",
+                content_type="image/jpeg",
+                size=len(data),
+            )
+        enq.assert_called_once_with(mock_media.id, COMMUNITY_ID, mock_media.content_type)
+
+    @pytest.mark.asyncio
     async def test_upload_rejects_file_exceeding_size_limit(self):
         """upload should reject files larger than 20 MB."""
         from app.services.media_service import MediaService

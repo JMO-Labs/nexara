@@ -27,8 +27,9 @@ def _deps(content_type: str = "image/png"):
     media.content_type = content_type
     media.storage_key = "k/a.png"
     media_repo = AsyncMock(spec=MediaRepository)
-    media_repo.get.return_value = media
+    media_repo.get_by_id.return_value = media
     ai_repo = AsyncMock(spec=MediaAIRepository)
+    ai_repo.get_by_media_id.return_value = None
     storage = AsyncMock(spec=StorageBackend)
     storage.get.return_value = b"img"
     provider = AsyncMock(spec=AIProvider)
@@ -76,6 +77,24 @@ async def test_ocr_budget_exhausted_skips() -> None:
     pr.vision.side_effect = AIBudgetExhaustedError("budget")
     res = await run_ocr(media.id, CID, media_repo=mr, ai_repo=ar, storage=st, provider=pr)
     assert res == "budget_exhausted"
+    ar.create.assert_not_awaited()
+
+
+async def test_ocr_uses_community_scoped_lookup_and_skips_mismatch() -> None:
+    media, mr, ar, st, pr = _deps()
+    mr.get_by_id.return_value = None  # other tenant: scoped lookup finds nothing
+    res = await run_ocr(media.id, CID, media_repo=mr, ai_repo=ar, storage=st, provider=pr)
+    mr.get_by_id.assert_awaited_once_with(media.id, CID)
+    assert res == "skipped"
+    ar.create.assert_not_awaited()
+
+
+async def test_ocr_skips_when_already_processed() -> None:
+    media, mr, ar, st, pr = _deps()
+    ar.get_by_media_id.return_value = MagicMock(spec=MediaAIMetadata)
+    res = await run_ocr(media.id, CID, media_repo=mr, ai_repo=ar, storage=st, provider=pr)
+    assert res == "skipped"
+    pr.vision.assert_not_awaited()
     ar.create.assert_not_awaited()
 
 
