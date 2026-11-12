@@ -69,9 +69,7 @@ class SassybotService:
             data = await self._storage.get(media.storage_key)
             text, _, _ = await self._provider.vision(data, _VISION_PROMPT, 100)
             descriptions.append(text.strip())
-        vision = (
-            "The post has images: " + "; ".join(descriptions) + "." if descriptions else ""
-        )
+        vision = "The post has images: " + "; ".join(descriptions) + "." if descriptions else ""
 
         prompt = (
             f"Generate a {sass} witty comment on this post: "

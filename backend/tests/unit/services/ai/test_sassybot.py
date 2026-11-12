@@ -123,5 +123,3 @@ def test_wants_sassybot_mention() -> None:
     assert wants_sassybot("@Sassybot!")
     assert not wants_sassybot("email a@sassybots.com")
     assert not wants_sassybot("nothing")
-
-

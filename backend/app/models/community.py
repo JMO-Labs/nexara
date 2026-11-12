@@ -42,15 +42,9 @@ class Community(Base):
         nullable=False,
     )
 
-    sassybot_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="true"
-    )
-    sassybot_sass_level: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default="2"
-    )
-    sassybot_probability: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default="15"
-    )
+    sassybot_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    sassybot_sass_level: Mapped[int] = mapped_column(Integer, nullable=False, server_default="2")
+    sassybot_probability: Mapped[int] = mapped_column(Integer, nullable=False, server_default="15")
     sassybot_invoke_only: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
