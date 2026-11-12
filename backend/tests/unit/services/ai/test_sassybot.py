@@ -23,7 +23,7 @@ CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 BOT = uuid.uuid4()
 
 
-def _make(*, opt_out=False, sass=2, prob=15, invoke_only=False, images=0, depth=0):
+def _make(*, opt_out=False, allow=True, sass=2, prob=15, invoke_only=False, images=0, depth=0):
     post = MagicMock(spec=Post)
     post.id = uuid.uuid4()
     post.content = "x" * 600
@@ -43,7 +43,7 @@ def _make(*, opt_out=False, sass=2, prob=15, invoke_only=False, images=0, depth=
         m.storage_key = "k"
         media.append(m)
     repo = AsyncMock(spec=SassybotRepository)
-    repo.get_post_and_author.return_value = (post, author)
+    repo.get_post_and_author.return_value = (post, author, allow)
     repo.get_community.return_value = community
     repo.get_community_id_for_post.return_value = CID
     repo.get_images.return_value = media
@@ -59,6 +59,12 @@ def _make(*, opt_out=False, sass=2, prob=15, invoke_only=False, images=0, depth=
 
 async def test_opt_out_returns_none() -> None:
     svc, _, provider, post = _make(opt_out=True)
+    assert await svc.generate_comment(post.id, CID) is None
+    provider.complete.assert_not_called()
+
+
+async def test_settings_disallow_returns_none() -> None:
+    svc, _, provider, post = _make(allow=False)
     assert await svc.generate_comment(post.id, CID) is None
     provider.complete.assert_not_called()
 
@@ -88,8 +94,8 @@ async def test_no_images_no_vision() -> None:
 
 async def test_thread_depth_counts_bot_comments() -> None:
     svc, repo, _, post = _make(depth=3)
-    assert await svc.count_thread_depth(post.id) == 3
-    repo.count_bot_comments.assert_awaited_once_with(post.id, BOT)
+    assert await svc.count_thread_depth(post.id, CID) == 3
+    repo.count_bot_comments.assert_awaited_once_with(post.id, BOT, CID)
     assert MAX_THREAD_COMMENTS == 3
 
 

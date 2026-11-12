@@ -21,7 +21,7 @@ fun, never mean.
 
 ## Opting out
 
-Open **Settings** and turn on the Sassybot opt-out. Sassybot will no longer comment on your
+Open **Settings → Privacy** and turn off **Allow Sassybot**. Sassybot will no longer comment on your
 posts, including when someone mentions it on them.
 
 ## Admin settings

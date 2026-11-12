@@ -57,8 +57,8 @@ class SassybotService:
         found = await self._repo.get_post_and_author(post_id, community_id)
         if found is None:
             return None
-        post, author = found
-        if author.sassybot_opt_out:
+        post, author, allowed = found
+        if author.sassybot_opt_out or not allowed:
             return None
         community = await self._repo.get_community(community_id)
         level = community.sassybot_sass_level if community else 2
@@ -94,6 +94,6 @@ class SassybotService:
             return False
         return random.uniform(0, 100) < community.sassybot_probability  # noqa: S311
 
-    async def count_thread_depth(self, post_id: uuid.UUID) -> int:
+    async def count_thread_depth(self, post_id: uuid.UUID, community_id: uuid.UUID) -> int:
         """@brief Number of Sassybot comments on the post (max ``MAX_THREAD_COMMENTS``)."""
-        return await self._repo.count_bot_comments(post_id, self._bot_id)
+        return await self._repo.count_bot_comments(post_id, self._bot_id, community_id)

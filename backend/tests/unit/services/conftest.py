@@ -156,5 +156,5 @@ def sassybot_delay():
     """@brief Stub the Sassybot Celery enqueue so unit tests never hit a broker."""
     from unittest.mock import patch
 
-    with patch("app.tasks.ai_tasks.sassybot_comment_task.delay") as m:
+    with patch("app.tasks.ai_tasks.sassybot_comment_task.apply_async") as m:
         yield m

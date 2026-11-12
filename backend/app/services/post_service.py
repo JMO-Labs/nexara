@@ -540,8 +540,9 @@ class PostService:
         try:
             from app.tasks.ai_tasks import sassybot_comment_task
 
-            sassybot_comment_task.delay(
-                str(post_id), str(self._community_id), wants_sassybot(content)
+            sassybot_comment_task.apply_async(
+                args=(str(post_id), str(self._community_id), wants_sassybot(content)),
+                countdown=5,  # let the request transaction commit first
             )
         except Exception:
             logger.warning("sassybot_enqueue_failed", post_id=str(post_id))

@@ -42,7 +42,7 @@ async def run_sassybot(
         return False
     if not force and not await service.should_trigger(post_id):
         return False
-    if await service.count_thread_depth(post_id) >= MAX_THREAD_COMMENTS:
+    if await service.count_thread_depth(post_id, community_id) >= MAX_THREAD_COMMENTS:
         return False
     try:
         text = await service.generate_comment(post_id, community_id)
@@ -78,7 +78,7 @@ async def run_sassybot(
             CommunityTarget(community_id=community_id), post_id, payload, bot_user_id
         )
         audience = await resolve_audience(
-            repo._session,
+            repo.session,
             community_id,
             visibility=post.visibility,
             subgroup_id=post.subgroup_id,
