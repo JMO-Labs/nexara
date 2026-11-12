@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production"
     ALLOWED_ORIGINS: str = ""
+    OIDC_HTTP_TIMEOUT: float = 10.0
     LOG_LEVEL: str = "INFO"
 
     # --- Database ---

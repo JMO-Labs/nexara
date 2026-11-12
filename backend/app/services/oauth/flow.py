@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from base64 import urlsafe_b64encode
+from urllib.parse import urlencode
 from typing import Any, cast
 
 import httpx
@@ -28,16 +29,18 @@ class OAuthFlow:
         self,
         provider: OAuthProvider,
         redirect_uri: str,
+        nonce: str | None = None,
     ) -> tuple[str, str, str]:
         """
         @brief Build the OAuth authorization URL with PKCE.
 
         @param provider OAuth provider configuration.
         @param redirect_uri Callback URL after authorization.
+        @param nonce Optional OIDC nonce bound to the ID token.
         @return Tuple of (authorize_url, state, code_verifier).
         """
         state = secrets.token_urlsafe(32)
-        code_verifier = secrets.token_urlsafe(64)
+        code_verifier = secrets.token_urlsafe(96)[:128]
         code_challenge = (
             urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().rstrip("=")
         )
@@ -52,7 +55,9 @@ class OAuthFlow:
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
         }
-        qs = "&".join(f"{k}={v}" for k, v in params.items())
+        if nonce:
+            params["nonce"] = nonce
+        qs = urlencode(params)
         sep = "&" if "?" in auth_endpoint else "?"
         authorize_url = f"{auth_endpoint}{sep}{qs}"
 
