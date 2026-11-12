@@ -1,7 +1,7 @@
 """add is_nsfw to posts and media
 
 Revision ID: 0025_add_nsfw_fields
-Revises: 0024_add_user_pronouns
+Revises: b2c3d4e5f6a7
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0025_add_nsfw_fields"
-down_revision = "0024_add_user_pronouns"
+down_revision = "b2c3d4e5f6a7"
 branch_labels = None
 depends_on = None
 
