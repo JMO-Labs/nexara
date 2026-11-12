@@ -42,7 +42,7 @@ const themes = [
   },
 ];
 
-function wrap(current?: Record<string, string>) {
+function wrap(current?: Partial<api.Branding>) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>

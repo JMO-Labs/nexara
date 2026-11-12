@@ -4,7 +4,7 @@
  * @brief Gallery of preset color themes; one click applies all colors.
  */
 import { useApplyPreset, usePresetThemes } from "@/hooks/useBranding";
-import type { PresetTheme } from "@/lib/api/branding";
+import type { Branding, PresetTheme } from "@/lib/api/branding";
 
 const MAP = {
   color_primary: "primary",
@@ -24,10 +24,10 @@ const SWATCHES = [
   "surface_dark",
 ] as const;
 
-function matches(t: PresetTheme, cur?: Record<string, string | undefined>) {
+function matches(t: PresetTheme, cur?: Partial<Branding>) {
   if (!cur) return false;
-  return Object.entries(MAP).every(
-    ([k, v]) => cur[k]?.toLowerCase() === t[v].toLowerCase(),
+  return (Object.keys(MAP) as (keyof typeof MAP)[]).every(
+    (k) => cur[k]?.toLowerCase() === t[MAP[k]].toLowerCase(),
   );
 }
 
@@ -39,7 +39,7 @@ function matches(t: PresetTheme, cur?: Record<string, string | undefined>) {
 export function ThemeGallery({
   current,
 }: {
-  current?: Record<string, string | undefined>;
+  current?: Partial<Branding>;
 }) {
   const { data } = usePresetThemes();
   const apply = useApplyPreset();
