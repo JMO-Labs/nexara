@@ -85,7 +85,10 @@ export function useGalleryUpload(galleryId: string) {
         const chunk = ok.slice(i, i + BULK_LIMIT);
         const ids = chunk.map((r) => r.job.id);
         try {
-          await bulkAddItems(galleryId, chunk.map((r) => r.mediaId));
+          await bulkAddItems(
+            galleryId,
+            chunk.map((r) => r.mediaId),
+          );
           patch(ids, { status: "done", progress: 100 });
           added = true;
         } catch (err) {
