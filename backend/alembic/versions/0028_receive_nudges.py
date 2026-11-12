@@ -1,7 +1,7 @@
 """add receive_nudges opt-out to user_settings (nexara#62)
 
 Revision ID: 0028_receive_nudges
-Revises: b2c3d4e5f6a7
+Revises: 0026_user_exports_table
 """
 
 from collections.abc import Sequence
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0028_receive_nudges"
-down_revision: str | Sequence[str] | None = "b2c3d4e5f6a7"
+down_revision: str | Sequence[str] | None = "0026_user_exports_table"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
