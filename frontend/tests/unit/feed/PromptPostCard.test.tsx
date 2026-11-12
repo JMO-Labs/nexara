@@ -54,14 +54,23 @@ describe("PromptPostCard", () => {
     expect(screen.getByText("12 responses")).toBeInTheDocument();
   });
 
-  it("clicking Reply triggers onReply callback with prompt id", async () => {
+  it("clicking Reply triggers onReply callback with prompt post id (not prompt.id)", async () => {
     const onReply = vi.fn();
     const post = createPromptPost();
     const user = userEvent.setup();
     wrap(<PromptPostCard post={post} onReply={onReply} />);
     const replyBtn = screen.getByRole("button", { name: /reply/i });
     await user.click(replyBtn);
-    expect(onReply).toHaveBeenCalledWith(post.prompt.id);
+    expect(onReply).toHaveBeenCalledWith(post.id);
+  });
+
+  it("Reply button has a descriptive aria-label", () => {
+    wrap(<PromptPostCard post={createPromptPost()} />);
+    expect(
+      screen.getByRole("button", {
+        name: "Reply to: What is your favorite holiday tradition?",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("renders aria-live region for response count updates", () => {

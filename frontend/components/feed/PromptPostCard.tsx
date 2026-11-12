@@ -11,13 +11,13 @@ import type { PromptPost } from "@/lib/api/prompts";
 
 export interface PromptPostCardProps {
   post: PromptPost;
-  onReply?: (promptId: string) => void;
+  onReply?: (promptPostId: string) => void;
 }
 
 /**
  * @brief Prompt post card.
  * @param post the prompt post
- * @param onReply called with the prompt id when Reply is pressed
+ * @param onReply called with the prompt post id when Reply is pressed
  * @return card element
  */
 export const PromptPostCard: React.FC<PromptPostCardProps> = ({
@@ -62,7 +62,11 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
             {`${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
           </Badge>
         </div>
-        <Button size="sm" onClick={() => onReply?.(post.prompt.id)}>
+        <Button
+          size="sm"
+          aria-label={`Reply to: ${post.prompt.title}`}
+          onClick={() => onReply?.(post.id)}
+        >
           Reply
         </Button>
       </div>

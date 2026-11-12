@@ -11,6 +11,9 @@ const state = vi.hoisted(() => ({
   io: null as null | ((entries: IntersectionObserverEntry[]) => void),
 }));
 vi.mock("@/hooks/useHomeFeed", () => ({ useHomeFeed: () => state.hook }));
+vi.mock("@/hooks/useActivePrompts", () => ({
+  useActivePrompts: () => ({ data: [] }),
+}));
 vi.mock("@/components/feed/PostComposer", () => ({
   PostComposer: () => <div contentEditable suppressContentEditableWarning />,
 }));
