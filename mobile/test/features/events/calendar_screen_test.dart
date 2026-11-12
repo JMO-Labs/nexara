@@ -45,13 +45,31 @@ void main() {
     expect(find.text('Picnic'), findsOneWidget);
   });
 
+  testWidgets('week view shows week strip and navigates weeks', (t) async {
+    await pump(t);
+    await t.tap(find.text('Week'));
+    await t.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(find.text('Picnic'), findsOneWidget);
+    await t.tap(find.byTooltip('Next week'));
+    await t.pumpAndSettle();
+    expect(find.text('No events this day'), findsOneWidget);
+    await t.tap(find.byTooltip('Previous week'));
+    await t.pumpAndSettle();
+    expect(find.text('Picnic'), findsOneWidget);
+    await t.tap(find.text('Month'));
+    await t.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsOneWidget);
+  });
+
   testWidgets('event detail shows RSVP controls and RSVP updates', (t) async {
     final repo = await pump(t);
     await t.tap(find.text('Picnic'));
     await t.pumpAndSettle();
-    expect(find.text('Going'), findsOneWidget);
-    expect(find.text('Maybe'), findsOneWidget);
-    await t.tap(find.text('Going'));
+    // 'Going' also appears as an attendee status, so target the chips.
+    expect(find.widgetWithText(ChoiceChip, 'Going'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Maybe'), findsOneWidget);
+    await t.tap(find.widgetWithText(ChoiceChip, 'Going'));
     await t.pumpAndSettle();
     expect(repo.rsvpStatus, 'attending');
     expect(tester(t, 'Going').selected, isTrue);

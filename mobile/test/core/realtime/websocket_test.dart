@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexara_mobile/core/realtime/websocket.dart';
 import 'package:stream_channel/stream_channel.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 void main() {
   test('sends auth, relays frames, reconnects after close', () async {
@@ -22,7 +21,7 @@ void main() {
         final sent = <Object?>[];
         clientSent.add(sent);
         ctrl.foreign.stream.listen(sent.add);
-        return _Chan(ctrl.local);
+        return ctrl.local;
       },
     );
     final got = <RealtimeMessage>[];
@@ -56,7 +55,7 @@ void main() {
       connector: (_) {
         final ctrl = StreamChannelController<Object?>(sync: true);
         ctrl.foreign.stream.listen(sent.add);
-        return _Chan(ctrl.local);
+        return ctrl.local;
       },
     );
     c.connect();
@@ -64,36 +63,4 @@ void main() {
     expect(jsonDecode(sent.first as String), {'type': 'auth', 'payload': {'token': 'tok'}});
     c.dispose();
   });
-}
-
-class _Chan extends StreamChannelMixin<dynamic> implements WebSocketChannel {
-  _Chan(this._c);
-  final StreamChannel<Object?> _c;
-  @override
-  Stream get stream => _c.stream;
-  @override
-  WebSocketSink get sink => _Sink(_c.sink);
-  @override
-  Future<void> get ready => Future.value();
-  @override
-  int? get closeCode => null;
-  @override
-  String? get closeReason => null;
-  @override
-  String? get protocol => null;
-}
-
-class _Sink implements WebSocketSink {
-  _Sink(this._s);
-  final StreamSink<Object?> _s;
-  @override
-  void add(Object? e) => _s.add(e);
-  @override
-  void addError(Object e, [StackTrace? st]) => _s.addError(e, st);
-  @override
-  Future addStream(Stream s) => _s.addStream(s);
-  @override
-  Future close([int? code, String? reason]) => _s.close();
-  @override
-  Future get done => _s.done;
 }
