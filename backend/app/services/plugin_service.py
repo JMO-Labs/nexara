@@ -17,6 +17,8 @@ from app.core.i18n import _
 from app.models.plugin import Plugin
 from app.plugins.api_keys import generate_api_key
 from app.plugins.manifest import PluginManifest, is_compatible, load_manifest
+from app.repositories.plugin_key_repo import PluginApiKeyRepository
+from app.repositories.plugin_repo import PluginRepository
 
 SECRET_MASK = "********"
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -33,8 +35,8 @@ class PluginService:
 
     def __init__(
         self,
-        repo: Any,
-        key_repo: Any,
+        repo: PluginRepository,
+        key_repo: PluginApiKeyRepository,
         community_id: uuid.UUID,
         plugins_dir: Path,
         core_version: str,

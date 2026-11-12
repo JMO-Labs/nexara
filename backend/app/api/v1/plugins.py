@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.exceptions import NotFoundError, ValidationError
 from app.models.user import User
 from app.plugins.loader import DEFAULT_PLUGINS_DIR
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
@@ -63,7 +64,7 @@ def get_plugin_service(
 def _desc(svc: PluginService, plugin_id: str) -> str:
     try:
         return svc.read_manifest(plugin_id).description
-    except Exception:
+    except (NotFoundError, ValidationError):
         return ""
 
 
