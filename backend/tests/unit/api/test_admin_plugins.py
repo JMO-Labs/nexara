@@ -125,3 +125,74 @@ async def test_audit_uses_first_forwarded_ip(test_app, admin_override, repos):
         resp = await c.get(BASE, headers={"x-forwarded-for": "203.0.113.7, 10.0.0.1"})
     assert resp.status_code == 200
     assert audit.append.call_args.kwargs["ip_address"] == "203.0.113.7"
+
+
+# --- Lifecycle routes --------------------------------------------------------
+
+LC = "/api/v1/admin/plugins"
+
+
+@pytest.fixture
+def lifecycle(test_app, admin_override):
+    from app.api.v1.admin_plugins import get_audit_repo
+    from app.api.v1.plugins import get_plugin_service
+
+    svc, audit = AsyncMock(), AsyncMock()
+    test_app.dependency_overrides[get_plugin_service] = lambda: svc
+    test_app.dependency_overrides[get_audit_repo] = lambda: audit
+    yield svc, audit
+    test_app.dependency_overrides.pop(get_plugin_service, None)
+    test_app.dependency_overrides.pop(get_audit_repo, None)
+
+
+async def _send(test_app, method, url, **kw):
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
+        return await c.request(method, url, **kw)
+
+
+@pytest.mark.asyncio
+async def test_install_request_audits(test_app, lifecycle):
+    svc, audit = lifecycle
+    svc.request_install.return_value = {"permissions_requested": ["db_read"]}
+    r = await _send(test_app, "POST", f"{LC}/install-request", json={"plugin_id": "hello"})
+    assert r.status_code == 200 and r.json()["permissions_requested"] == ["db_read"]
+    assert audit.append.call_args.kwargs["action"] == "plugin.install_requested"
+
+
+@pytest.mark.asyncio
+async def test_install_confirm_returns_key_and_audits(test_app, lifecycle):
+    svc, audit = lifecycle
+    row = MagicMock(id="hello", version="1.0.0", is_enabled=True)
+    row.name = "Hello"
+    svc.confirm_install.return_value = (row, "nxr_plugin_hello_secret", ["db_read"])
+    r = await _send(test_app, "POST", f"{LC}/install-confirm", json={"plugin_id": "hello"})
+    assert r.status_code == 200
+    assert r.json()["api_key"] == "nxr_plugin_hello_secret"
+    assert audit.append.call_args.kwargs["action"] == "plugin.installed"
+    assert "api_key" not in str(audit.append.call_args.kwargs["extra_data"])
+
+
+@pytest.mark.asyncio
+async def test_upgrade_preview_audits(test_app, lifecycle):
+    svc, audit = lifecycle
+    svc.request_upgrade.return_value = {
+        "new_version": "1.1.0",
+        "new_permissions": ["db_write"],
+        "removed_permissions": [],
+    }
+    r = await _send(test_app, "PUT", f"{LC}/hello/upgrade", json={"confirm": False})
+    assert r.status_code == 200 and r.json()["new_version"] == "1.1.0"
+    assert audit.append.call_args.kwargs["action"] == "plugin.upgrade_requested"
+    svc.confirm_upgrade.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_upgrade_confirm_applies_and_audits(test_app, lifecycle):
+    svc, audit = lifecycle
+    row = MagicMock(id="hello", version="1.1.0", permissions_granted=["db_write"])
+    diff = {"new_permissions": ["db_write"], "removed_permissions": []}
+    svc.confirm_upgrade.return_value = (row, diff)
+    r = await _send(test_app, "PUT", f"{LC}/hello/upgrade", json={"confirm": True})
+    assert r.status_code == 200
+    assert r.json()["version"] == "1.1.0" and r.json()["permissions_granted"] == ["db_write"]
+    assert audit.append.call_args.kwargs["action"] == "plugin.upgraded"
