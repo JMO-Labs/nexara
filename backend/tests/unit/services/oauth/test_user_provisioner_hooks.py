@@ -41,9 +41,7 @@ async def test_new_oauth_user_emits_on_user_joined():
     user = MagicMock(spec=User)
     user.id = uuid.uuid4()
     prov, session, cid = _provisioner(None, user)
-    auth = OAuthAuthResult(
-        sub="s1", email="n@x.com", display_name="N", email_verified=True
-    )
+    auth = OAuthAuthResult(sub="s1", email="n@x.com", display_name="N", email_verified=True)
     with patch(f"{_P}.HookRegistry.emit", new=AsyncMock()) as emit:
         await prov.provision_user(auth, _provider(), "member")
     emit.assert_awaited_once_with(
