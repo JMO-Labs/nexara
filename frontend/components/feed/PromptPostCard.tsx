@@ -4,6 +4,7 @@
  * @brief Card for prompt posts: live response count, interest hint, reply.
  */
 import * as React from "react";
+import Link from "next/link";
 import { Flag, Sparkles } from "lucide-react";
 import { Badge, Button, Card } from "@/components/ui";
 import { usePromptResponses } from "@/hooks/usePromptResponses";
@@ -58,9 +59,14 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
 
       <div className="flex items-center justify-between gap-2">
         <div role="status" aria-live="polite" aria-atomic="true">
-          <Badge>
-            {`${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
-          </Badge>
+          <Link
+            href={`/app/prompts/${post.id}`}
+            aria-label={`View ${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
+          >
+            <Badge>
+              {`${displayCount} ${displayCount === 1 ? "response" : "responses"}`}
+            </Badge>
+          </Link>
         </div>
         <Button
           size="sm"

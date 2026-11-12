@@ -129,3 +129,19 @@ async def test_routes_path_escape_rejected(tmp_path):
 async def test_missing_dir_is_noop(tmp_path):
     await load_plugins(FastAPI(), session_with([]), CID, plugins_dir=tmp_path / "nope")
     assert PluginRegistry.list() == []
+
+
+async def test_package_plugin_relative_import_and_register_hooks(tmp_path):
+    d = tmp_path / "pk"
+    d.mkdir()
+    (d / "manifest.json").write_text(json.dumps(manifest("pk")))
+    (d / "__init__.py").write_text("")
+    (d / "helper.py").write_text("VALUE = 7\n")
+    (d / "routes.py").write_text(
+        "from fastapi import APIRouter\nfrom .helper import VALUE\n"
+        "router = APIRouter()\nCALLS = []\n"
+        "def register_hooks(community_id, manifest):\n    CALLS.append((community_id, VALUE))\n"
+    )
+    cid = uuid.uuid4()
+    await load_plugins(FastAPI(), session_with(["pk"]), cid, tmp_path)
+    assert PluginRegistry.get("pk").module.CALLS == [(cid, 7)]
