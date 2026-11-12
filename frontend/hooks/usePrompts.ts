@@ -9,7 +9,6 @@ import {
   createPrompt,
   updatePrompt,
   deletePrompt,
-  seedBuiltinPrompts,
   getPromptPost,
   type PromptCreate,
   type PromptUpdate,
@@ -65,19 +64,6 @@ export function useDeletePrompt() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (promptId: string) => deletePrompt(promptId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.admin.prompts() });
-    },
-  });
-}
-
-/**
- * @brief Mutation hook to seed builtin prompts (admin).
- */
-export function useSeedBuiltinPrompts() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => seedBuiltinPrompts(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.prompts() });
     },
