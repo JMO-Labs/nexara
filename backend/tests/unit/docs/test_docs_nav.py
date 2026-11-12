@@ -55,3 +55,14 @@ def test_root_references_are_relative():
 def test_pages_job_builds_strict():
     text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
     assert "mkdocs build --strict" in text
+
+
+def test_docs_build_job_runs_on_mr_and_dev():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    assert "\ndocs:build:" in text
+    job = text.split("\ndocs:build:")[1].split("\npages:")[0]
+    assert "stage: test" in job
+    assert "mkdocs build --strict" in job
+    assert "mkdocs-awesome-pages-plugin" in job
+    assert "docs/**" in job
+    assert "$CI_MERGE_REQUEST_IID" in job
