@@ -1,6 +1,7 @@
 """
 @file moderation_service.py
-@brief Moderation business logic: reports, admin actions, user blocks.
+@brief Moderation business logic: reports, admin actions, user blocks,
+NSFW tagging.
 
 Every state change is appended to the audit log. Affected users are
 notified (``system`` notification type) when an admin acts on their content.
@@ -9,11 +10,13 @@ notified (``system`` notification type) when an admin acts on their content.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AppError, ConflictError, NotFoundError
 from app.core.i18n import _
 from app.models.moderation import ContentReport, UserBlock
@@ -37,24 +40,27 @@ class ModerationService:
 
     @param repo ModerationRepository.
     @param audit_repo AuditRepository for audit logging.
+    @param community_id Community scope.
     @param notification_service Service exposing ``notify(user_id, type, payload)``.
     @param session Async DB session.
-    @param community_id Community scope.
+    @param invalidate Search-cache invalidation coroutine (injectable for tests).
     """
 
     def __init__(
         self,
         repo: ModerationRepository,
         audit_repo: AuditRepository,
-        notification_service: Any,
-        session: AsyncSession,
         community_id: uuid.UUID,
+        notification_service: Any = None,
+        session: AsyncSession | None = None,
+        invalidate: Callable[[uuid.UUID], Awaitable[Any]] = invalidate_search_cache_for_community,
     ) -> None:
         self._repo = repo
         self._audit = audit_repo
         self._notifier = notification_service
         self._session = session
         self._community_id = community_id
+        self._invalidate = invalidate
 
     async def create_report(
         self,
@@ -229,3 +235,22 @@ class ModerationService:
         @return Block records.
         """
         return await self._repo.list_blocks(blocker_id, self._community_id)
+
+    async def mark_nsfw(self, kind: str, entity_id: uuid.UUID, admin_id: uuid.UUID) -> None:
+        """
+        @brief Set is_nsfw=true on a post or media item.
+
+        @param kind "posts" or "media".
+        @param entity_id Target UUID.
+        @param admin_id Acting admin.
+        @throws NotFoundError if missing, deleted, or in another community.
+        """
+        if not await self._repo.set_nsfw(kind, entity_id, self._community_id):
+            raise NotFoundError(_("Content not found"))
+        await self._audit.append(
+            actor_id=admin_id,
+            action=f"{kind}.marked_nsfw",
+            target_type=kind,
+            target_id=entity_id,
+        )
+        await self._invalidate(self._community_id)

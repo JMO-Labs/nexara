@@ -1,6 +1,7 @@
 """
 @file moderation.py
-@brief Moderation API: content reports, admin review, user blocking.
+@brief Moderation API: content reports, admin review, user blocking,
+NSFW tagging.
 """
 
 from __future__ import annotations
@@ -12,12 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.i18n import _
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.moderation import (
     BlockResponse,
     ReportAction,
@@ -134,3 +136,25 @@ async def unblock_user(
     """@brief Remove a block."""
     await service.unblock_user(user.id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/admin/moderation/posts/{post_id}/mark-nsfw", response_model=MessageResponse)
+async def mark_post_nsfw(
+    post_id: uuid.UUID,
+    user: User = Depends(require_role("admin")),
+    service: ModerationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Flag a post as NSFW (admin only)."""
+    await service.mark_nsfw("posts", post_id, user.id)
+    return MessageResponse(message=_("Post marked NSFW"))
+
+
+@router.post("/admin/moderation/media/{media_id}/mark-nsfw", response_model=MessageResponse)
+async def mark_media_nsfw(
+    media_id: uuid.UUID,
+    user: User = Depends(require_role("admin")),
+    service: ModerationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Flag a media item as NSFW (admin only)."""
+    await service.mark_nsfw("media", media_id, user.id)
+    return MessageResponse(message=_("Media marked NSFW"))
