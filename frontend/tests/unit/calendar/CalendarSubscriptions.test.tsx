@@ -3,13 +3,14 @@
  * @brief Export-as-iCal button and subscription row (last/next sync, actions).
  */
 import * as React from "react";
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import en from "@/i18n/en-US.json";
 import { ExportIcalButton } from "@/components/events/event-detail/ExportIcalButton";
 import { SubscriptionRow } from "@/components/events/subscriptions/SubscriptionRow";
 import type { CalendarSubscription } from "@/lib/api/events";
+import { API_BASE, setAccessToken } from "@/lib/auth/session";
 
 function wrap(ui: React.ReactElement) {
   return render(
@@ -20,11 +21,48 @@ function wrap(ui: React.ReactElement) {
 }
 
 describe("ExportIcalButton", () => {
-  it("links to the event .ics endpoint as a download", () => {
-    wrap(<ExportIcalButton eventId="ev 1" />);
-    const link = screen.getByRole("link", { name: /export as ical/i });
-    expect(link.getAttribute("href")).toBe("/api/v1/events/ev%201/ical");
-    expect(link.hasAttribute("download")).toBe(true);
+  const { createObjectURL, revokeObjectURL } = URL;
+  afterEach(() => {
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+    setAccessToken(null);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("fetches the .ics with the bearer token and downloads it", async () => {
+    setAccessToken("tok-123");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", {
+        status: 200,
+        headers: { "content-type": "text/calendar" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const createUrl = vi.fn().mockReturnValue("blob:ics");
+    const revokeUrl = vi.fn();
+    URL.createObjectURL = createUrl;
+    URL.revokeObjectURL = revokeUrl;
+    const clicked: { download: string; href: string | null }[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function (this: HTMLAnchorElement) {
+        const href = this.getAttribute("href");
+        clicked.push({ download: this.download, href });
+      },
+    );
+
+    wrap(<ExportIcalButton eventId="ev 1" title="Team BBQ" />);
+    fireEvent.click(screen.getByRole("button", { name: /export as ical/i }));
+
+    await waitFor(() => expect(clicked).toHaveLength(1));
+    expect(clicked[0]).toEqual({ download: "Team BBQ.ics", href: "blob:ics" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${API_BASE}/api/v1/events/ev%201/ical`);
+    expect(new Headers(init.headers).get("Authorization")).toBe(
+      "Bearer tok-123",
+    );
+    expect(createUrl.mock.calls[0][0]).toBeInstanceOf(Blob);
+    expect(revokeUrl).toHaveBeenCalledWith("blob:ics");
   });
 });
 

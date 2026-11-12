@@ -585,6 +585,7 @@
   "events": {
     "title": "Events",
     "exportIcal": "Export as iCal",
+    "exportIcalFailed": "Could not export the event. Please try again.",
     "lastSync": "Last sync: {when}",
     "nextSync": "Next sync: {when}",
     "create": "Create event",

@@ -86,6 +86,11 @@ export const updateEvent = (id: string, body: Partial<CreateEventBody>) =>
   apiPatch<EventItem>(`${BASE}/${seg(id)}`, body);
 export const deleteEvent = (id: string) =>
   apiDelete<{ message: string }>(`${BASE}/${seg(id)}`);
+/** Authed download of one event as iCal; returns a text/calendar Blob. */
+export const exportEventIcal = async (id: string): Promise<Blob> =>
+  new Blob([await apiGet<string>(`${BASE}/${seg(id)}/ical`)], {
+    type: "text/calendar",
+  });
 export const rsvpEvent = (id: string, status: string, note?: string) =>
   apiPost<{ id: string; event_id: string; user_id: string; status: string }>(
     `${BASE}/${seg(id)}/rsvp`,

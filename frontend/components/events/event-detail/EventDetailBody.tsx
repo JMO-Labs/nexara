@@ -69,7 +69,7 @@ export function EventDetailBody({ event }: { event: EventItem }) {
         </div>
       )}
       <div className="mb-4">
-        <ExportIcalButton eventId={event.id} />
+        <ExportIcalButton eventId={event.id} title={event.title} />
       </div>
       <RsvpInline
         eventId={event.id}
