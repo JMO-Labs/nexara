@@ -12,11 +12,12 @@ from app.repositories.branding_repo import BrandingRepository
 from app.tasks import notification_tasks as nt
 
 BASE = "https://nexara.example"
+COMMUNITY = uuid.uuid4()
 
 
 def _patches(branding):
     session = AsyncMock()
-    user = SimpleNamespace(email="a@b.c")
+    user = SimpleNamespace(email="a@b.c", community_id=COMMUNITY)
     session.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=user))
     factory = MagicMock()
     factory.return_value.__aenter__.return_value = session
@@ -39,6 +40,7 @@ async def _run(branding):
         patch.object(nt, "get_settings", return_value=MagicMock(APP_BASE_URL=f"{BASE}/")),
     ):
         await nt._send_email_notification_async(uuid.uuid4(), "comment", {})
+    repo.get.assert_awaited_once_with(COMMUNITY)
     return renderer.render.call_args.kwargs
 
 
