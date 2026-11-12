@@ -14,8 +14,8 @@ class ReactionPayload(NotificationPayload):
     """@brief Payload for reaction notifications."""
 
     actor_name: str
-    emoji: str
-    excerpt: str
+    emoji: str | None = None
+    excerpt: str | None = None
 
 
 REACTION_TYPE = NotificationType(

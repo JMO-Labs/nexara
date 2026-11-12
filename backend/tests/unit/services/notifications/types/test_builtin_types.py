@@ -59,6 +59,13 @@ def test_type_registered_and_payload_validates(key: str) -> None:
     assert p.message == "m"
 
 
+@pytest.mark.parametrize("key", ["mention", "comment", "reaction", "new_post"])
+def test_optional_fields_may_be_omitted(key: str) -> None:
+    t = get(key)
+    p = t.payload_schema.model_validate({"message": "m", "actor_name": "A"})
+    assert p.actor_name == "A"
+
+
 @pytest.mark.parametrize("key", sorted(VALID))
 def test_payload_rejects_missing_fields(key: str) -> None:
     t = get(key)

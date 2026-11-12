@@ -14,7 +14,7 @@ class CommentPayload(NotificationPayload):
     """@brief Payload for comment notifications."""
 
     actor_name: str
-    excerpt: str
+    excerpt: str | None = None
 
 
 COMMENT_TYPE = NotificationType(

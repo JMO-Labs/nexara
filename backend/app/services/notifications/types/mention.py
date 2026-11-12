@@ -14,7 +14,7 @@ class MentionPayload(NotificationPayload):
     """@brief Payload for mention notifications."""
 
     actor_name: str
-    excerpt: str
+    excerpt: str | None = None
 
 
 MENTION_TYPE = NotificationType(

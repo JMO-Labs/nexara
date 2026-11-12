@@ -14,7 +14,7 @@ class NewPostPayload(NotificationPayload):
     """@brief Payload for new_post notifications."""
 
     actor_name: str
-    title: str
+    title: str | None = None
 
 
 NEWPOST_TYPE = NotificationType(
