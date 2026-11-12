@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.plugin import PluginData
 from app.models.user import User
 from app.plugins.manifest import PluginManifest, PluginPermission
+from app.plugins.permissions import enforce_permission
 
 NOTIFY_LIMIT_PER_MINUTE = 100
 # Sliding windows keyed by (plugin_id, community_id); shared by all contexts.
@@ -23,9 +24,8 @@ _NOTIFY_WINDOWS: dict[tuple[str, uuid.UUID], deque[float]] = {}
 
 
 def _require(plugin_id: str, manifest: PluginManifest, perm: PluginPermission) -> None:
-    """@brief Raise PermissionError unless manifest grants perm."""
-    if perm not in manifest.permissions:
-        raise PermissionError(f"Plugin '{plugin_id}' does not have permission '{perm.value}'")
+    """@brief Raise PermissionError unless manifest grants perm (see permissions.py)."""
+    enforce_permission(manifest, perm)
 
 
 class _Scoped:

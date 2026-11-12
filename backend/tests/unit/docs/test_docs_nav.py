@@ -98,3 +98,85 @@ def test_pages_nav_has_rest_entry(d):
 def test_api_reference_link_is_relative():
     text = (DOCS / "developer" / "api-reference.md").read_text()
     assert "](/" not in text
+
+
+def test_api_reference_page_is_substantive_and_links_generated_html():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert len(text.split()) >= 300
+    assert "api-reference.html" in text
+    for call in ("GET /posts", "POST /posts", "PATCH /posts/{id}", "DELETE /posts/{id}"):
+        assert call in text
+
+
+def test_generate_api_ref_script_is_executable_and_uses_redoc():
+    script = ROOT / "scripts" / "generate-api-ref.sh"
+    assert script.is_file()
+    assert script.stat().st_mode & 0o111
+    body = script.read_text()
+    assert "redoc-cli" in body
+    assert "developer/api-reference.html" in body
+
+
+def test_developer_pages_list_api_reference():
+    pages = (DOCS / "developer" / ".pages").read_text()
+    assert "api-reference.md" in pages
+
+
+def test_api_reference_relative_links_resolve():
+    import re
+
+    page = DOCS / "developer" / "api-reference.md"
+    for target in re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", page.read_text()):
+        if re.match(r"^[a-z]+:", target):
+            continue
+        assert (page.parent / target).resolve().exists(), target
+
+
+def test_generate_api_ref_script_writes_output_with_stub_npx(tmp_path):
+    import os
+    import subprocess
+
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "npx").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo stub > "$out"\n'
+    )
+    (stub / "npx").chmod(0o755)
+    (stub / "curl").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo "{}" > "$out"\n'
+    )
+    (stub / "curl").chmod(0o755)
+    out = tmp_path / "ref.html"
+    env = {
+        **os.environ,
+        "PATH": f"{stub}:{os.environ['PATH']}",
+        "OPENAPI_URL": "http://x/openapi.json",
+        "OUT": str(out),
+    }
+    subprocess.run([str(ROOT / "scripts" / "generate-api-ref.sh")], env=env, check=True)
+    assert out.read_text().strip() == "stub"
+
+
+def test_pages_job_generates_api_ref_before_mkdocs():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    job = text.split("\npages:")[1]
+    assert "scripts/generate-api-ref.sh" in job
+    assert job.index("scripts/generate-api-ref.sh") < job.index("mkdocs build")
+
+
+def test_api_reference_md_describes_placeholder_and_refresh():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert "not committed" not in text
+    assert "placeholder" in text.lower()
+    assert "pages" in text.lower()
+
+
+def test_alembic_has_single_head():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    cfg = Config()
+    cfg.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
+    assert len(ScriptDirectory.from_config(cfg).get_heads()) == 1

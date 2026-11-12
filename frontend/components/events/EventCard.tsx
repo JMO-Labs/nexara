@@ -34,7 +34,11 @@ function formatRange(starts: string, ends: string, allDay: boolean): string {
  */
 export function EventCard({ event }: EventCardProps) {
   return (
-    <Card className="flex flex-col gap-2 p-4">
+    <Card
+      role="article"
+      aria-label={`Event: ${event.title}. ${formatRange(event.starts_at, event.ends_at, event.is_all_day)}.`}
+      className="flex flex-col gap-2 p-4"
+    >
       <h3 className="text-lg font-semibold">{event.title}</h3>
       <p className="text-sm text-muted">
         {formatRange(event.starts_at, event.ends_at, event.is_all_day)}

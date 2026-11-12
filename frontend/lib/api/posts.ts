@@ -56,6 +56,17 @@ export interface Poll {
   created_at: string;
 }
 
+export interface LinkPreview {
+  id: string;
+  url: string;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  og_site_name: string | null;
+  provider_type: string | null;
+  provider_id: string | null;
+}
+
 export interface Post {
   id: string;
   content: string;
@@ -70,6 +81,11 @@ export interface Post {
   subgroup_name: string | null;
   subgroup_slug: string | null;
   is_bookmarked?: boolean;
+  is_prompt_post?: boolean;
+  is_prompt_summary?: boolean;
+  reply_to_prompt_id?: string | null;
+  source_prompt_post_id?: string | null;
+  link_previews?: LinkPreview[];
 }
 
 export interface Comment {

@@ -16,6 +16,8 @@ import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
 import { BookmarkButton } from "./BookmarkButton";
+import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
+import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
 import type { Post } from "@/lib/api/posts";
 
@@ -50,8 +52,16 @@ export function PostCard({
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
 
+  const headline = post.content.split("\n")[0].trim().slice(0, 80);
+  const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);
+  const cardLabel = `Post by ${post.author.display_name}${headline ? `: ${headline}` : ""}. ${reactionTotal} ${reactionTotal === 1 ? "reaction" : "reactions"}, ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}.`;
+
   return (
-    <Card className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-surface))] md:p-4">
+    <Card
+      role="article"
+      aria-label={cardLabel}
+      className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-surface))] md:p-4"
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <PostHeader
           post={post}
@@ -74,6 +84,20 @@ export function PostCard({
         />
       </div>
       <PostBody content={post.content} truncate={truncateBody} />
+      {post.link_previews && post.link_previews.length > 0 ? (
+        <div
+          data-testid="post-previews"
+          className="mt-3 min-w-0 max-w-full space-y-2"
+        >
+          {post.link_previews.map((preview) =>
+            preview.provider_type && embedUrl(preview) ? (
+              <VideoEmbed key={preview.id} preview={preview} />
+            ) : (
+              <LinkPreviewCard key={preview.id} preview={preview} />
+            ),
+          )}
+        </div>
+      ) : null}
       {post.media.length > 0 ? (
         <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
       ) : null}

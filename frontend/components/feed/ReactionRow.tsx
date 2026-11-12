@@ -5,6 +5,8 @@
  */
 import * as React from "react";
 import { MessageCircle, Smile } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { scalePress } from "@/components/ui/motion";
 import { IconButton } from "@/components/ui";
 import type { ReactionSummary } from "@/lib/api/posts";
 
@@ -34,16 +36,25 @@ export function ReactionRow({
   extra,
 }: ReactionRowProps) {
   const [open, setOpen] = React.useState(false);
+  const [pressed, setPressed] = React.useState<string | null>(null);
+  const reduced = useReducedMotion();
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {reactions.map((r) => (
-        <button
+        <motion.button
           key={r.emoji}
+          variants={scalePress}
+          animate={!reduced && pressed === r.emoji ? "pressed" : "rest"}
+          onAnimationComplete={() => setPressed(null)}
+          data-pressed={!reduced && pressed === r.emoji ? "true" : undefined}
           type="button"
           aria-pressed={r.reacted_by_me}
           aria-label={`${r.emoji} reaction, ${r.count} ${r.count === 1 ? "person" : "people"}`}
-          onClick={() => onReact(r.emoji)}
+          onClick={() => {
+            setPressed(r.emoji);
+            onReact(r.emoji);
+          }}
           className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm text-ink outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
             r.reacted_by_me
               ? "border-accent bg-accent/15"
@@ -51,7 +62,7 @@ export function ReactionRow({
           }`}
         >
           {r.emoji} {r.count}
-        </button>
+        </motion.button>
       ))}
       <div
         className="relative"
