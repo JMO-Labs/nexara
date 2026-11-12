@@ -100,18 +100,28 @@ def test_networkpolicy_skips_disabled_internal_services() -> None:
     assert set(_all(docs, "NetworkPolicy")) == {"api", "worker"}
 
 
-def test_app_pods_have_hardened_security_context() -> None:
+def test_worker_beat_run_nonroot_as_image_uid() -> None:
     deps = _all(_render(), "Deployment")
-    for name in ("api", "worker", "beat"):
+    for name in ("worker", "beat"):
         pod = deps[name]["spec"]["template"]["spec"]
         assert pod["securityContext"]["runAsNonRoot"] is True
-        assert pod["securityContext"]["runAsUser"] == 1000
-        sc = pod["containers"][0]["securityContext"]
-        assert sc["allowPrivilegeEscalation"] is False
-    for name in ("worker", "beat"):
-        c = deps[name]["spec"]["template"]["spec"]["containers"][0]
+        assert pod["securityContext"]["runAsUser"] == 1001  # nexara.Dockerfile
+        c = pod["containers"][0]
+        assert c["securityContext"]["allowPrivilegeEscalation"] is False
         assert c["securityContext"]["readOnlyRootFilesystem"] is True
+        assert c["securityContext"]["capabilities"] == {"drop": ["ALL"]}
         assert any(m["mountPath"] == "/tmp" for m in c["volumeMounts"])
+
+
+def test_api_pod_not_forced_nonroot() -> None:
+    """API image runs supervisord/nginx as root; forcing non-root would crash-loop it."""
+    pod = _all(_render(), "Deployment")["api"]["spec"]["template"]["spec"]
+    psc = pod.get("securityContext", {})
+    assert "runAsNonRoot" not in psc and "runAsUser" not in psc
+    assert psc["seccompProfile"] == {"type": "RuntimeDefault"}
+    csc = pod["containers"][0]["securityContext"]
+    assert csc["allowPrivilegeEscalation"] is False
+    assert "capabilities" not in csc  # nginx/supervisord need setuid/chown
 
 
 def test_all_containers_have_requests_and_limits() -> None:

@@ -14,6 +14,12 @@ api:
   port: 8080
   # nginx + supervisord write outside /tmp, so the API root FS stays writable.
   readOnlyRootFilesystem: false
+  # API entrypoint is supervisord+nginx as root (pid/temp outside /tmp), so it cannot
+  # use the non-root context above; only restrict what root-run processes don't need.
+  podSecurityContext:
+    seccompProfile: {type: RuntimeDefault}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
   resources:
     requests: {cpu: 250m, memory: 512Mi}
     limits: {cpu: "1", memory: 1Gi}
@@ -123,13 +129,13 @@ networkPolicy:
   # Ports pods may reach outside the cluster (SMTP, HTTPS APIs, S3, push).
   externalEgressPorts: [443, 587, 465]
 
-# -- Pod/container security (API/worker/beat; data stores keep image defaults)
+# -- Pod/container security for worker/beat (data stores keep image defaults)
 securityContext:
   pod:
     runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
+    runAsUser: 1001   # matches `nexara` user in deploy/docker/nexara.Dockerfile
+    runAsGroup: 1001
+    fsGroup: 1001
   container:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
