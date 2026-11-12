@@ -5,6 +5,7 @@
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
+import { getAuthConfig } from "@/lib/api/auth";
 import { qk } from "@/lib/query-keys";
 import * as oauthApi from "@/lib/api/adminOauth";
 
@@ -91,3 +92,26 @@ export const useDiscoverIssuer = () =>
     mutationFn: (issuer: string) => oauthApi.discoverIssuer(issuer),
     silentSuccess: true,
   });
+
+/**
+ * @brief Current SSO-only state (from the public auth config).
+ */
+export const useSsoOnly = () =>
+  useQuery({
+    queryKey: [...qk.admin.oauth(), "sso-only"],
+    queryFn: async () => (await getAuthConfig()).sso_only ?? false,
+  });
+
+/**
+ * @brief Toggle SSO-only enforcement.
+ */
+export const useSetSsoOnly = () => {
+  const queryClient = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: (enabled: boolean) => oauthApi.setSsoOnly(enabled),
+    successKey: "toasts.admin.user.updated",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.admin.oauth() });
+    },
+  });
+};

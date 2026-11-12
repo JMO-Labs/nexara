@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class PushKeys(BaseModel):
@@ -46,3 +47,20 @@ class VAPIDPublicKeyResponse(BaseModel):
     """@brief Public VAPID key for client-side subscription."""
 
     public_key: str
+
+
+class DeviceRegisterRequest(BaseModel):
+    """@brief Request body for registering a native push device token."""
+
+    platform: Literal["android", "ios"]
+    token: str = Field(min_length=1, max_length=4096)
+
+
+class DeviceTokenResponse(BaseModel):
+    """@brief Response schema for a registered device token."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    platform: str
+    created_at: datetime

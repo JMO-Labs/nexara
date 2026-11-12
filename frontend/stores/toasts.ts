@@ -45,6 +45,17 @@ const getDefaultTtl = (variant: ToastVariant): number | null => {
   }
 };
 
+/** Max toasts rendered at once; the rest stay queued. */
+export const MAX_VISIBLE_TOASTS = 3;
+
+/**
+ * @brief First MAX_VISIBLE_TOASTS items.
+ * @param items full queue
+ * @return visible slice
+ */
+export const selectVisible = (items: Toast[]): Toast[] =>
+  items.slice(0, MAX_VISIBLE_TOASTS);
+
 export const useToasts = create<ToastsState>((set) => ({
   items: [],
   push: (t) => {
@@ -59,7 +70,14 @@ export const useToasts = create<ToastsState>((set) => ({
   dismiss: (id) => set((s) => ({ items: s.items.filter((x) => x.id !== id) })),
   update: (id, partial) =>
     set((s) => ({
-      items: s.items.map((x) => (x.id === id ? { ...x, ...partial } : x)),
+      items: s.items.map((x) => {
+        if (x.id !== id) return x;
+        const next = { ...x, ...partial };
+        if (partial.variant && partial.ttl === undefined) {
+          next.ttl = getDefaultTtl(partial.variant);
+        }
+        return next;
+      }),
     })),
   clear: () => set({ items: [] }),
 }));

@@ -13,6 +13,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import Event
@@ -142,6 +143,7 @@ class GalleryService:
                 },
             )
 
+        await invalidate_search_cache_for_community(self._community_id)
         return GalleryResponse.model_validate(gallery)
 
     async def ensure_default_gallery(self, user_id: uuid.UUID) -> GalleryResponse:
@@ -252,6 +254,7 @@ class GalleryService:
         update_data = data.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(UTC)
         gallery = await self._repo.update(gallery, update_data)
+        await invalidate_search_cache_for_community(self._community_id)
         return GalleryResponse.model_validate(gallery)
 
     async def delete_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> None:

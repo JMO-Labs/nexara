@@ -7,16 +7,12 @@ Respects user notification preferences and mutes.
 
 from __future__ import annotations
 
-import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
 import structlog
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.models.user import User
     from app.services.realtime.event_bus import EventBus
 
 from app.models.notification import Notification
@@ -39,6 +35,7 @@ NOTIFICATION_TYPES = (
     "gallery_reminder",
     "prompt",
     "prompt_summary",
+    "kudos_received",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -53,8 +50,12 @@ PREF_MAP = {
     "event_rsvp": ("notif_event_rsvp_inapp", "notif_event_rsvp_email"),
     "gallery_activity": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
     "gallery_reminder": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
+    "birthday_reminder": ("notif_birthday_inapp", "notif_birthday_email"),
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
+    "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
+    "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
+    "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
 }
 
 
@@ -139,28 +140,6 @@ class NotificationService:
 
         return notification
 
-    @staticmethod
-    def detect_mentions(content: str) -> list[str]:
-        """
-        @brief Extract @username mentions from text, excluding code blocks.
-
-        Skips mentions inside backtick-wrapped code blocks.
-
-        @param content Plain text or markdown content.
-        @return List of unique usernames (without @).
-        """
-        in_code = False
-        result: list[str] = []
-        for part in re.split(r"(`+)", content):
-            if part == "`":
-                in_code = not in_code
-                continue
-            if in_code or part.startswith("`"):
-                continue
-            for m in re.finditer(r"@([a-zA-Z0-9_-]+)", part):
-                result.append(m.group(1))
-        return list(dict.fromkeys(result))
-
     async def list_for_user(
         self,
         user_id: uuid.UUID,
@@ -193,47 +172,6 @@ class NotificationService:
     async def mark_all_read(self, user_id: uuid.UUID) -> int:
         """@brief Mark all notifications as read for a user."""
         return await self._notification_repo.mark_all_read(user_id)
-
-    async def notify_mentions(
-        self,
-        content: str,
-        actor: User,
-        post_id: uuid.UUID,
-        session: AsyncSession,
-    ) -> None:
-        """@brief Send mention notifications for @username references in content.
-        @param content Text containing potential @mentions.
-        @param actor User who authored the content.
-        @param post_id Post UUID for the notification link.
-        @param session Async DB session for user lookup.
-        """
-        usernames = self.detect_mentions(content)
-        if not usernames:
-            return
-
-        from sqlalchemy import select as sa_select
-
-        from app.core.i18n import _
-        from app.models.user import User as UserModel
-
-        stmt = sa_select(UserModel).where(
-            UserModel.username.in_(usernames),
-            UserModel.deleted_at.is_(None),
-        )
-        result = await session.execute(stmt)
-        for mentioned in result.scalars().all():
-            if mentioned.id == actor.id:
-                continue
-            await self.notify(
-                user_id=mentioned.id,
-                type="mention",
-                payload={
-                    "post_id": str(post_id),
-                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
-                    "link": f"/app/post/{post_id}",
-                },
-                actor_id=actor.id,
-            )
 
     async def clear_all(self, user_id: uuid.UUID) -> int:
         """@brief Delete all notifications for a user."""

@@ -1,14 +1,19 @@
 "use client";
 /**
  * @file components/events/events-page/EventsSidePanel.tsx
- * @brief Countdown + day-grouped rail shown beside (lg) or below the calendar.
+ * @brief Countdown, mini calendar (day click expands inline) and event rail
+ *        shown beside (lg) or below the main view.
  */
 import { EventCountdown } from "@/components/events/EventCountdown";
 import { EventRail } from "@/components/events/EventRail";
+import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import type { EventItem } from "@/lib/api/events";
 
 export interface EventsSidePanelProps {
   nextEvent: EventItem | null;
+  events: EventItem[];
+  month: Date;
+  onMonthChange: (m: Date) => void;
   railEvents: EventItem[];
   selectedDay: Date | null;
   selectedEventId: string | null;
@@ -31,6 +36,14 @@ export function EventsSidePanel(p: EventsSidePanelProps) {
       {p.nextEvent && (
         <EventCountdown event={p.nextEvent} key={p.nextEvent.id} />
       )}
+      <div className="border-ink/10 border-b p-3">
+        <CalendarWidget
+          events={p.events}
+          month={p.month}
+          onMonthChange={p.onMonthChange}
+          onSelectEvent={p.onSelectEvent}
+        />
+      </div>
       <div className="border-ink/10 flex items-center justify-between border-b px-4 py-2">
         <h2 className="text-muted text-sm font-semibold">
           {p.selectedDay ? "This day" : "This month"}

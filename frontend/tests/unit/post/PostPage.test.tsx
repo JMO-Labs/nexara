@@ -3,6 +3,7 @@
  * @brief Post detail page states.
  */
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { Suspense } from "react";
 import PostPage from "@/app/app/post/[id]/page";
@@ -37,9 +38,31 @@ describe("PostPage", () => {
     expect(screen.getByText("post-card")).toBeInTheDocument();
     expect(screen.getByText("comments")).toBeInTheDocument();
   });
-  it("shows not found on error", async () => {
-    state.v = { isError: true };
+  it("shows not found when no post and no error", async () => {
+    state.v = {};
     await setup();
     expect(screen.getByText("Post not found")).toBeInTheDocument();
+  });
+  it("shows loading skeleton status", async () => {
+    state.v = { isLoading: true };
+    await setup();
+    expect(
+      screen.getByRole("status", { name: /loading post/i }),
+    ).toBeInTheDocument();
+  });
+  it("shows error with retry", async () => {
+    const refetch = vi.fn();
+    state.v = { isError: true, refetch };
+    await setup();
+    await userEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+  it("uses a single-column centered container (390px and 1280px)", async () => {
+    state.v = { data: { id: "1" } };
+    await setup();
+    const root = screen.getByText("post-card").closest("div.mx-auto");
+    expect(root).not.toBeNull();
+    expect(root).toHaveClass("w-full", "max-w-180", "flex-col");
+    expect(root!.className).not.toMatch(/\bgrid|\bmd:flex-row|\bcols-/);
   });
 });
