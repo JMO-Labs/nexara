@@ -49,11 +49,13 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("downloaded_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_user_exports_user_status", "user_exports", ["user_id", "status"])
+    op.create_index("ix_user_exports_user_id", "user_exports", ["user_id"])
+    op.create_index("ix_user_exports_user_id_status", "user_exports", ["user_id", "status"])
     op.create_index("ix_user_exports_expires_at", "user_exports", ["expires_at"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_user_exports_expires_at", table_name="user_exports")
-    op.drop_index("ix_user_exports_user_status", table_name="user_exports")
+    op.drop_index("ix_user_exports_user_id_status", table_name="user_exports")
+    op.drop_index("ix_user_exports_user_id", table_name="user_exports")
     op.drop_table("user_exports")

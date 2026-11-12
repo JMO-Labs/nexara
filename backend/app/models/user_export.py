@@ -1,6 +1,6 @@
 """
 @file user_export.py
-@brief UserExport model: a user's data export request and its lifecycle.
+@brief UserExport model: a user's personal data export request and its lifecycle.
 """
 
 import uuid
@@ -15,11 +15,11 @@ from app.models.user import COMMUNITY_DEFAULT
 
 
 class UserExport(Base):
-    """@brief Export request; status is pending, processing, ready, or failed."""
+    """@brief Export job; status ∈ {pending, processing, ready, failed}."""
 
     __tablename__ = "user_exports"
     __table_args__ = (
-        Index("ix_user_exports_user_status", "user_id", "status"),
+        Index("ix_user_exports_user_id_status", "user_id", "status"),
         Index("ix_user_exports_expires_at", "expires_at"),
     )
 
@@ -27,7 +27,10 @@ class UserExport(Base):
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     community_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

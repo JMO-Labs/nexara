@@ -1,6 +1,6 @@
 """
 @file export.py
-@brief Pydantic schemas for the data export API.
+@brief Pydantic schemas for the personal data export API.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class ExportRequested(BaseModel):
+class ExportRequestResponse(BaseModel):
     """@brief Response to a new export request."""
 
     export_id: uuid.UUID
@@ -20,12 +20,12 @@ class ExportRequested(BaseModel):
 
 
 class ExportStatus(BaseModel):
-    """@brief Export state; ``download_url`` only when ready and unexpired."""
+    """@brief Export status; status ∈ {pending, processing, ready, failed, expired}."""
 
     export_id: uuid.UUID
     status: str
     created_at: datetime
-    ready_at: datetime | None = None
-    expires_at: datetime | None = None
-    file_size_bytes: int | None = None
-    download_url: str | None = None
+    ready_at: datetime | None
+    expires_at: datetime | None
+    file_size_bytes: int | None
+    download_url: str | None
