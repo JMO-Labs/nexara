@@ -101,7 +101,7 @@ class TestMigration:
         cfg = Config(str(BACKEND / "alembic.ini"))
         cfg.set_main_option("script_location", str(BACKEND / "alembic"))
         heads = ScriptDirectory.from_config(cfg).get_heads()
-        assert heads == ["0022_plugin_models"]
+        assert heads == ["b7c1d2e3f4a5"]
 
     def test_downgrade_drops_plugin_tables(self):
         src = (VERSIONS / "0022_plugin_models.py").read_text()
