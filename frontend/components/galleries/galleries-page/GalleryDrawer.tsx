@@ -24,6 +24,8 @@ import {
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { API_BASE } from "@/lib/auth/session";
+import { useEventDetail } from "@/hooks/useEvents";
+import { GalleryEventLink } from "./GalleryEventLink";
 import { cn } from "@/lib/utils";
 import type { Gallery } from "@/lib/api/galleries";
 
@@ -112,6 +114,7 @@ export function GalleryDrawer({
   onOpenItem,
 }: GalleryDrawerProps) {
   const { data: gallery } = useGalleryDetail(galleryId);
+  const { data: linkedEvent } = useEventDetail(gallery?.event_id);
   const { data: items, isLoading } = useGalleryItems(galleryId);
   const sessionUser = useSession((s) => s.user);
   const confirm = useConfirmDialog((s) => s.confirm);
@@ -186,6 +189,11 @@ export function GalleryDrawer({
               </IconButton>
             )}
           </div>
+
+          <GalleryEventLink
+            eventId={gallery.event_id}
+            title={linkedEvent?.title}
+          />
 
           {gallery.description && (
             <p className="text-muted text-sm">{gallery.description}</p>

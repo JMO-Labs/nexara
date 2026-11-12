@@ -1,6 +1,6 @@
 """
 @file test_receive_nudges_migration.py
-@brief 0026_receive_nudges is the single head and the column is mapped (nexara#62).
+@brief 0028_receive_nudges is the single head and the column is mapped (nexara#62).
 """
 
 from __future__ import annotations
@@ -16,12 +16,13 @@ BACKEND = Path(__file__).resolve().parents[3]
 
 
 def test_receive_nudges_migration_is_head() -> None:
-    """@brief New migration chains after 0025_plugin_api_keys."""
+    """@brief New migration chains after 0027_add_sso_only_to_branding."""
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0026_receive_nudges"]
-    assert script.get_revision("0026_receive_nudges").down_revision == "0025_plugin_api_keys"
+    assert script.get_heads() == ["0028_receive_nudges"]
+    rev = script.get_revision("0028_receive_nudges")
+    assert rev.down_revision == "0027_add_sso_only_to_branding"
 
 
 def test_user_settings_has_receive_nudges_column() -> None:

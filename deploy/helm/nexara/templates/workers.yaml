@@ -1,0 +1,41 @@
+{{- range $name, $cmd := dict "worker" (printf "celery -A app.tasks.celery_app worker -Q %s -c %v -l info" .Values.worker.queues .Values.worker.concurrency) "beat" "celery -A app.tasks.celery_app beat -l info --schedule /tmp/celerybeat-schedule" }}
+{{- $v := index $.Values $name }}
+{{- $ctx := dict "root" $ "component" $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexara.fullname" $ }}-{{ $name }}
+  labels: {{- include "nexara.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ if eq $name "beat" }}1{{ else }}{{ $v.replicas }}{{ end }}
+  {{- if eq $name "beat" }}
+  strategy: {type: Recreate}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "nexara.selector" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "nexara.selector" $ctx | nindent 8 }}
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "nexara.image" $ | quote }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command: ["sh", "-c", {{ $cmd | quote }}]
+          {{- include "nexara.env" $ | nindent 10 }}
+          resources: {{- toYaml $v.resources | nindent 12 }}
+          {{- if and (eq $name "worker") (eq $.Values.storage.backend "local") }}
+          volumeMounts:
+            - {name: media, mountPath: /data/media}
+          {{- end }}
+      {{- if and (eq $name "worker") (eq $.Values.storage.backend "local") }}
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: {{ include "nexara.fullname" $ }}-media
+      {{- end }}
+{{- end }}

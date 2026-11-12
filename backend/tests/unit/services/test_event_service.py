@@ -18,6 +18,7 @@ from app.repositories.calendar_token_repo import CalendarTokenRepository
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     EventCreate,
     EventUpdate,
@@ -127,6 +128,53 @@ class TestCreateEvent:
         result = await service.create_event(user_id, data)
         assert result.title == "Picnic"
         assert result.author_id == user_id
+
+    @pytest.mark.asyncio
+    async def test_auto_create_gallery_links_gallery(
+        self, service: EventService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        def _fill(e: Event) -> Event:
+            e.id = uuid.uuid4()
+            e.created_at = datetime.now(UTC)
+            e.updated_at = datetime.now(UTC)
+            return e
+
+        repo.create.side_effect = _fill
+        gid = uuid.uuid4()
+
+        def _add(g: object) -> None:
+            g.id = gid  # type: ignore[attr-defined]
+
+        session.add = MagicMock(side_effect=_add)
+        data = EventCreate(
+            title="Picnic",
+            starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+            auto_create_gallery=True,
+        )
+        result = await service.create_event(uuid.uuid4(), data)
+        gallery = session.add.call_args[0][0]
+        assert gallery.title == "Picnic"
+        assert gallery.event_id is not None
+        assert gallery.is_event_gallery is True
+        assert result.gallery_id == gid
+
+    @pytest.mark.asyncio
+    async def test_no_gallery_by_default(self, service: EventService, repo: AsyncMock) -> None:
+        def _fill(e: Event) -> Event:
+            e.id = uuid.uuid4()
+            e.created_at = datetime.now(UTC)
+            e.updated_at = datetime.now(UTC)
+            return e
+
+        repo.create.side_effect = _fill
+        data = EventCreate(
+            title="Picnic",
+            starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+        )
+        result = await service.create_event(uuid.uuid4(), data)
+        assert result.gallery_id is None
 
     @pytest.mark.asyncio
     async def test_invalid_rrule_rejected(self, service: EventService) -> None:
@@ -355,6 +403,42 @@ class TestSubscriptions:
             ),
         )
         assert result.name == "Holidays"
+
+
+class TestUpdateSubscription:
+    @pytest.mark.asyncio
+    async def test_update_applies_fields(self, service: EventService, repo: AsyncMock) -> None:
+        sub = MagicMock(spec=CalendarSubscription)
+        sub.id = uuid.uuid4()
+        sub.name = "Old"
+        sub.color = "#4285f4"
+        sub.source_type = "ical"
+        sub.source_url = "https://example.com/a.ics"
+        sub.visibility = "private"
+        sub.sync_enabled = True
+        sub.sync_interval_minutes = 60
+        sub.last_synced_at = None
+        sub.sync_error = None
+        sub.shared_by_admin = False
+        sub.created_at = datetime.now(UTC)
+        repo.get_subscription.return_value = sub
+        repo.update_subscription.side_effect = lambda s: s
+        result = await service.update_subscription(
+            sub.id,
+            uuid.uuid4(),
+            CalendarSubscriptionUpdate(sync_enabled=False, sync_interval_minutes=1440),
+        )
+        assert sub.sync_enabled is False
+        assert sub.sync_interval_minutes == 1440
+        assert result.sync_interval_minutes == 1440
+
+    @pytest.mark.asyncio
+    async def test_update_missing_raises(self, service: EventService, repo: AsyncMock) -> None:
+        repo.get_subscription.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.update_subscription(
+                uuid.uuid4(), uuid.uuid4(), CalendarSubscriptionUpdate(name="x")
+            )
 
 
 class TestUpdateEvent:
