@@ -167,7 +167,8 @@ describe("MessageList rendering", () => {
       />,
     );
     expect(isNew(container, "live")).toBe("true");
-    expect(isNew(container, "a")).toBe("false");
+    expect(isNew(container, "new")).toBe("false");
+    expect(isNew(container, "old")).toBe("false");
   });
   it("does not mark history arriving after the loading render", () => {
     const { container, rerender } = render(
