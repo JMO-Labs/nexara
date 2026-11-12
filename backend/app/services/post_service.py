@@ -121,7 +121,7 @@ class PostService:
         await HookRegistry.emit(
             "before_post_created",
             community_id=self._community_id,
-            session=self._post_repo._session,
+            session=self._post_repo.session,
             user_id=user.id,
             content=content,
             subgroup_id=subgroup_id,
@@ -205,7 +205,7 @@ class PostService:
         await HookRegistry.emit(
             "after_post_created",
             community_id=self._community_id,
-            session=self._post_repo._session,
+            session=self._post_repo.session,
             user_id=user.id,
             post_id=post.id,
             content=content,

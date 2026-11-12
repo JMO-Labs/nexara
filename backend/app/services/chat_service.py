@@ -254,7 +254,7 @@ class ChatService:
 
         hook_kw: dict[str, Any] = {
             "community_id": self._community_id,
-            "session": getattr(self._channel_repo, "_session", None),
+            "session": self._channel_repo.session,
             "user_id": user.id,
             "channel_id": channel.id,
             "content": content,

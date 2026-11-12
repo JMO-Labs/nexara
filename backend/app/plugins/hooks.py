@@ -52,21 +52,27 @@ class _Entry:
 class HookRegistry:
     """@brief Class-level singleton mapping events to plugin handlers."""
 
-    _hooks: ClassVar[dict[str, list[_Entry]]] = {}
+    _hooks: ClassVar[dict[tuple[uuid.UUID, str], list[_Entry]]] = {}
 
     @classmethod
     def register(
-        cls, event_name: str, plugin_id: str, handler: Handler, manifest: PluginManifest
+        cls,
+        community_id: uuid.UUID,
+        event_name: str,
+        plugin_id: str,
+        handler: Handler,
+        manifest: PluginManifest,
     ) -> None:
         """
-        @brief Register an async handler for an event.
+        @brief Register an async handler for an event in one community.
+        @param community_id Community the plugin is installed in (tenant isolation).
         @throws ValueError for an unknown event or one not declared in manifest.hooks.
         """
         if event_name not in HOOK_EVENTS:
             raise ValueError(f"Unknown hook event '{event_name}'")
         if event_name not in manifest.hooks:
             raise ValueError(f"Plugin '{plugin_id}' does not declare hook '{event_name}'")
-        cls._hooks.setdefault(event_name, []).append(_Entry(plugin_id, handler, manifest))
+        cls._hooks.setdefault((community_id, event_name), []).append(_Entry(plugin_id, handler, manifest))
 
     @classmethod
     async def emit(
@@ -80,14 +86,18 @@ class HookRegistry:
         **kwargs: Any,
     ) -> list[Any]:
         """
-        @brief Run all handlers concurrently; never raises.
+        @brief Run the emitting community's handlers one after another; never raises.
+
+        Handlers run sequentially because they share one AsyncSession (not
+        concurrency-safe). Each runs in a SAVEPOINT so a failing plugin cannot
+        abort the caller's transaction.
         @param community_id Community whose scoped PluginContext handlers receive.
         @param kwargs Event kwargs forwarded to handlers.
         @return Results of handlers that succeeded (skipped/failed/timed-out omitted).
         """
         entries = [
             e
-            for e in cls._hooks.get(event_name, [])
+            for e in cls._hooks.get((community_id, event_name), [])
             if PluginPermission(f"hooks_{event_name}") in e.manifest.permissions
         ]
         if not entries:
@@ -97,17 +107,17 @@ class HookRegistry:
             ctx = PluginContext(
                 e.plugin_id, e.manifest, session, community_id, storage_client, notification_service
             )
-            return await asyncio.wait_for(e.handler(ctx, **kwargs), HANDLER_TIMEOUT)
+            if session is None:
+                return await asyncio.wait_for(e.handler(ctx, **kwargs), HANDLER_TIMEOUT)
+            async with session.begin_nested():
+                return await asyncio.wait_for(e.handler(ctx, **kwargs), HANDLER_TIMEOUT)
 
-        outcomes = await asyncio.gather(*(run(e) for e in entries), return_exceptions=True)
         results: list[Any] = []
-        for e, out in zip(entries, outcomes, strict=True):
-            if isinstance(out, BaseException):
-                if isinstance(out, asyncio.CancelledError):
-                    raise out
-                logger.error("Hook '%s' failed in plugin '%s': %r", event_name, e.plugin_id, out)
-            else:
-                results.append(out)
+        for e in entries:
+            try:
+                results.append(await run(e))
+            except Exception as exc:  # CancelledError is BaseException: propagates
+                logger.error("Hook '%s' failed in plugin '%s': %r", event_name, e.plugin_id, exc)
         return results
 
     @classmethod
