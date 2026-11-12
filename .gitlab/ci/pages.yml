@@ -36,7 +36,7 @@ pages:
     - |
       if [ -f docs/mkdocs.yml ]; then
         echo "Building MkDocs documentation..."
-        mkdocs build -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
+        mkdocs build --strict -f docs/mkdocs.yml -d "$CI_PROJECT_DIR/public"
       else
         echo "No mkdocs.yml found, creating minimal index..."
         mkdir -p public

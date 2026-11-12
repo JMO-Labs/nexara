@@ -3,16 +3,18 @@
 ## Community setup
 
 **How do I create my community?**
-The first account created on a fresh instance becomes the administrator. Use
-the admin panel to name the community, set the logo, and invite members.
+New accounts get the member role. Administrators are assigned through your
+identity provider: users in the group named by `OIDC_ADMIN_GROUP` receive the
+admin role. Administrators can then manage community settings and invites.
 
 **Can I run more than one community?**
 Data is scoped by community internally, but the standard install is designed
 for a single community per instance. Run a second instance for a separate group.
 
 **How do members join?**
-Administrators send email invitations. Registration can be limited to invited
-users only.
+Administrators create invites that carry a token and a role. Set
+`REQUIRE_INVITE=true` to accept only invited sign-ups, or
+`ENABLE_REGISTRATION=false` to close registration entirely.
 
 ## Privacy
 

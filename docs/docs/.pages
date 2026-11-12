@@ -7,6 +7,6 @@ nav:
   - user
   - developer
   - References:
-      - API Docs (Doxygen): /api/
-      - Backend Coverage: /coverage/backend/
-      - Frontend Coverage: /coverage/frontend/
+      - API Docs (Doxygen): api/
+      - Backend Coverage: coverage/backend/
+      - Frontend Coverage: coverage/frontend/

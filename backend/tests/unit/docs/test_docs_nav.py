@@ -38,8 +38,20 @@ def test_content_pages_are_substantive(page):
     assert len(path.read_text().split()) >= 150
 
 
-@pytest.mark.parametrize("d", ["user", "developer"])
+@pytest.mark.parametrize("d", ["", "user", "developer"])
 def test_pages_lists_reference_existing_entries(d):
     for line in (DOCS / d / ".pages").read_text().splitlines():
-        if line.strip().startswith("- "):
+        if line.startswith("  - References"):
+            break  # external link block (api/, coverage/) is built by CI
+        if line.strip().startswith("- ") and ":" not in line:
             assert (DOCS / d / line.strip()[2:]).exists()
+
+
+def test_root_references_are_relative():
+    text = (DOCS / ".pages").read_text()
+    assert ": /" not in text
+
+
+def test_pages_job_builds_strict():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    assert "mkdocs build --strict" in text

@@ -17,7 +17,7 @@ Nexara is container-native. The supported ways to run it are Docker Compose
 ```bash
 cd deploy
 cp .env.example .env
-# edit .env: set secrets, database password, and public URL
+# edit .env: set SECRET_KEY, POSTGRES_PASSWORD, and ALLOWED_ORIGINS
 docker compose up -d
 ```
 
@@ -50,11 +50,16 @@ values file that is committed to version control.
 
 | Variable | Purpose |
 | -------- | ------- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `VALKEY_URL` | Valkey/Redis connection string used for cache, queues, realtime |
-| `SECRET_KEY` | Signing key for sessions and tokens; generate a long random value |
-| `PUBLIC_URL` | External URL used in links, emails, and push notifications |
-| `SMTP_*` | Outgoing email settings for invitations and notifications |
+| `SECRET_KEY` | Signing key for sessions and tokens; generate with `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | Database password; Compose builds `DATABASE_URL` from it |
+| `HTTP_PORT` | Host port for the reverse proxy (default `8080`) |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins, e.g. `https://nexara.example.com` |
+| `SMTP_*` | Outgoing email settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`) |
+| `OIDC_*` | Optional SSO: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ADMIN_GROUP`, `OIDC_MEMBER_GROUP`, `OIDC_SCOPES` |
+| `ENABLE_REGISTRATION` | Allow new sign-ups (`true`/`false`) |
+| `REQUIRE_INVITE` | Require an invite token to register |
+| `REDIS_URL` | Valkey/Redis connection string (set by Compose; override for external Valkey) |
+| `APP_BASE_URL` | External URL used in links, emails, and push notifications |
 
 Consult `deploy/.env.example` for the complete, current list.
 
@@ -66,7 +71,7 @@ enough for most communities. Test restores periodically.
 
 ## Troubleshooting
 
-- **Login loops**: `PUBLIC_URL` does not match the address in the browser.
+- **Login loops**: `APP_BASE_URL` or `ALLOWED_ORIGINS` does not match the address in the browser.
 - **No emails**: verify the SMTP settings and check the email worker logs.
 - **Slow uploads**: the media worker transcodes in the background; check that
   the worker container is running.
