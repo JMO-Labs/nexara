@@ -79,4 +79,29 @@ describe("ProfileTab", () => {
     const button = screen.getByRole("button", { name: /save profile/i });
     expect(button).toBeDisabled();
   });
+
+  it("saves pronouns and shows char count", async () => {
+    const user = userEvent.setup();
+    const mockMutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateProfile).mockReturnValue({
+      mutate: mockMutate,
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isSuccess: false,
+    } as any);
+
+    render(<ProfileTab />, { wrapper: createWrapper() });
+
+    const input = screen.getByLabelText(/pronouns \(optional\)/i);
+    expect(input).toHaveAttribute("maxlength", "50");
+    await user.type(input, "they/them");
+    expect(screen.getByText(/9\/50/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /save profile/i }));
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ pronouns: "they/them" }),
+      );
+    });
+  });
 });

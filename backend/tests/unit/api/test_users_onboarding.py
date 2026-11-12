@@ -42,6 +42,7 @@ def _mock_user(**overrides) -> MagicMock:
     user.location = ""
     user.website_url = ""
     user.birthday = None
+    user.pronouns = ""
     return user
 
 

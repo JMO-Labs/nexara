@@ -15,6 +15,7 @@ import {
 } from "@/hooks/useSettings";
 import * as settingsApi from "@/lib/api/settings";
 import { useToasts } from "@/stores/toasts";
+import { qk } from "@/lib/query-keys";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
@@ -142,6 +143,74 @@ describe("Settings hooks", () => {
       });
       const toasts = useToasts.getState().items;
       expect(toasts.some((t) => t.variant === "success")).toBe(true);
+    });
+  });
+
+  describe("useUpdateSettings optimistic behaviour", () => {
+    const base = {
+      theme: "system" as const,
+      locale: "en-US",
+      compact_feed: false,
+    } as unknown as settingsApi.UserSettings;
+    const key = qk.settings.profile();
+
+    const setup = () => {
+      const qc = new QueryClient();
+      qc.setQueryData(key, base);
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+      );
+      const hook = renderHook(() => useUpdateSettings(), { wrapper });
+      return { qc, hook };
+    };
+
+    it("updates cache before the request resolves", async () => {
+      let resolve!: (v: settingsApi.UserSettings) => void;
+      vi.mocked(settingsApi.updateSettings).mockReturnValue(
+        new Promise((r) => {
+          resolve = r;
+        }),
+      );
+      const { qc, hook } = setup();
+      act(() => {
+        hook.result.current.mutate({ compact_feed: true } as never);
+      });
+      await waitFor(() => {
+        expect(
+          (qc.getQueryData(key) as { compact_feed: boolean }).compact_feed,
+        ).toBe(true);
+      });
+      expect(hook.result.current.isPending).toBe(true);
+      resolve({ ...base, compact_feed: true } as never);
+      await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
+    });
+
+    it("rolls back and pushes danger toast on failure", async () => {
+      vi.mocked(settingsApi.updateSettings).mockRejectedValue(
+        new Error("boom"),
+      );
+      const { qc, hook } = setup();
+      act(() => {
+        hook.result.current.mutate({ compact_feed: true } as never);
+      });
+      await waitFor(() => expect(hook.result.current.isError).toBe(true));
+      expect(
+        (qc.getQueryData(key) as { compact_feed: boolean }).compact_feed,
+      ).toBe(false);
+      expect(
+        useToasts.getState().items.some((t) => t.variant === "danger"),
+      ).toBe(true);
+    });
+
+    it("invalidates the settings key on settled", async () => {
+      vi.mocked(settingsApi.updateSettings).mockResolvedValue(base);
+      const { qc, hook } = setup();
+      const spy = vi.spyOn(qc, "invalidateQueries");
+      act(() => {
+        hook.result.current.mutate({ compact_feed: true } as never);
+      });
+      await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
+      expect(spy).toHaveBeenCalledWith({ queryKey: key });
     });
   });
 
