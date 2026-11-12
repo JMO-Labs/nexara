@@ -17,6 +17,25 @@ from app.models.link_preview import LinkPreview
 from app.repositories.link_preview_repo import LinkPreviewRepository
 
 
+@pytest.fixture(autouse=True)
+def _memory_rate_limit():
+    """@brief Point the route-bound limiter at memory storage (no Valkey).
+
+    ``@limiter.limit`` binds the module-level limiter at import time, so the
+    conftest patch does not reach it; swap its storage for the test instead.
+    """
+    from limits.storage import MemoryStorage
+    from limits.strategies import FixedWindowRateLimiter
+
+    from app.core.rate_limit import limiter
+
+    saved = (limiter._storage, limiter._limiter)
+    limiter._storage = MemoryStorage()
+    limiter._limiter = FixedWindowRateLimiter(limiter._storage)
+    yield
+    limiter._storage, limiter._limiter = saved
+
+
 def _preview(image_url: str | None = "https://cdn.example.com/a.png") -> MagicMock:
     p = MagicMock(spec=LinkPreview)
     p.id = uuid.uuid4()
