@@ -53,8 +53,13 @@ const TEXT: [keyof ExtraValues, string, number][] = [
 export const extraValid = (v: ExtraValues) =>
   MEDIA.every(([k]) => !v[k] || UUID_RE.test(v[k] as string));
 
+const MEDIA_KEYS = new Set<keyof ExtraValues>(MEDIA.map(([k]) => k));
+
 /**
  * @brief Request body containing only the changed extra fields.
+ *
+ * Cleared media IDs are omitted: the API types them as UUID and ignores
+ * nulls, so clearing a stored media reference is not supported yet.
  * @param v current values
  * @param init initial values
  */
@@ -62,6 +67,7 @@ export function extraChanges(v: ExtraValues, init: ExtraValues) {
   return Object.fromEntries(
     (Object.keys(v) as (keyof ExtraValues)[])
       .filter((k) => v[k] !== init[k])
+      .filter((k) => !(MEDIA_KEYS.has(k) && v[k] === ""))
       .map((k) => [k, v[k]]),
   );
 }
