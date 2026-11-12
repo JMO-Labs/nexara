@@ -114,7 +114,7 @@ export function useGalleryUpload(galleryId: string) {
     } finally {
       drainingRef.current = false;
     }
-  }, [addToGallery, galleryId, qc, mediaUpload]);
+  }, [addToGallery, mediaUpload]);
 
   const enqueue = useCallback(
     async (files: File[]) => {
