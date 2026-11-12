@@ -1,7 +1,7 @@
 """add plugins and plugin_data tables
 
 Revision ID: 0022_plugin_models
-Revises: 0021_add_subgroup_accent_color
+Revises: 0020_add_recipient_to_posts
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from alembic import op
 
 revision: str = "0022_plugin_models"
-down_revision: str | None = "0021_add_subgroup_accent_color"
+down_revision: str | None = "0020_add_recipient_to_posts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
