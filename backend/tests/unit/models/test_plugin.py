@@ -54,7 +54,9 @@ class TestPluginModel:
 
     def test_default_values_on_instance(self):
         p = Plugin(id="example-recipe-box", name="Recipe Box", version="1.0.0")
-        assert p.id == "example-recipe-box"
+        assert p.deleted_at is None
+        assert p.is_enabled is None  # DB server_default applies on insert
+        assert Plugin.__table__.c.community_id.server_default is not None
 
 
 class TestPluginDataModel:
