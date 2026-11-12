@@ -1,0 +1,38 @@
+##
+# @file .gitlab/ci/test-mobile.yml
+# @brief Flutter analyze and unit tests for the mobile app.
+##
+
+test:mobile:
+  stage: test
+  image: ghcr.io/cirruslabs/flutter:stable
+  rules:
+    - changes:
+        - mobile/**/*
+        - .gitlab/ci/test-mobile.yml
+  script:
+    - cd mobile
+    - flutter pub get
+    - flutter analyze
+    - flutter test
+
+# Android release build (nexara#287). `flutter create` only fills in
+# generated files that are not committed (gradle wrapper, Xcode project);
+# it never overwrites existing ones. Stray template files in lib/ and test/ are removed.
+build:mobile-apk:
+  stage: test
+  image: ghcr.io/cirruslabs/flutter:stable
+  rules:
+    - changes:
+        - mobile/**/*
+        - .gitlab/ci/test-mobile.yml
+  script:
+    - cd mobile
+    - flutter create . --platforms android --org dev.jmolabs --project-name nexara_mobile
+    - git clean -fdq lib test
+    - flutter pub get
+    - flutter build apk --debug
+  artifacts:
+    paths:
+      - mobile/build/app/outputs/flutter-apk/app-debug.apk
+    expire_in: 1 week

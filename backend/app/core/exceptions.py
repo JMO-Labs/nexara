@@ -93,6 +93,18 @@ class NotFoundError(AppError):
         )
 
 
+class GoneError(AppError):
+    """@brief Raised when a resource existed but is no longer available (e.g. expired)."""
+
+    def __init__(self, message: str = "", details: dict[str, Any] | None = None) -> None:
+        super().__init__(
+            code="GONE",
+            message=message or _("Resource is no longer available"),
+            status_code=410,
+            details=details,
+        )
+
+
 class ConflictError(AppError):
     """@brief Raised on duplicate resource creation (email, username, etc.)."""
 

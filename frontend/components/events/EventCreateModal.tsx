@@ -77,6 +77,7 @@ export function EventCreateModal({
     subgroup_id: null,
   });
   const [color, setColor] = React.useState<string | null>(null);
+  const [autoGallery, setAutoGallery] = React.useState(false);
   const [slots, setSlots] = React.useState<ContributionSlot[]>([]);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -134,6 +135,7 @@ export function EventCreateModal({
         subgroup_id: defaultSubgroupId ?? null,
       });
       setColor(null);
+      setAutoGallery(false);
       setSlots([]);
     }
   }, [open, event, defaultSubgroupId]);
@@ -169,7 +171,8 @@ export function EventCreateModal({
       contribution_slots: slots,
     };
     if (isEdit) await update.mutateAsync(body);
-    else await create.mutateAsync(body);
+    else
+      await create.mutateAsync({ ...body, auto_create_gallery: autoGallery });
     onClose();
   };
 
@@ -206,6 +209,17 @@ export function EventCreateModal({
           <ScopeSelect value={scope} onChange={setScope} subgroups={myGroups} />
         )}
         <ColorField value={color} onChange={setColor} />
+        {!isEdit && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={autoGallery}
+              onChange={(e) => setAutoGallery(e.target.checked)}
+              className="size-4 accent-[var(--accent)]"
+            />
+            Create gallery for photos
+          </label>
+        )}
         <ContributionSlotsField value={slots} onChange={setSlots} />
         {error && (
           <p role="alert" className="text-sm text-destructive">

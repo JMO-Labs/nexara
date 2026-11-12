@@ -122,3 +122,19 @@ ocr_processed_total: Counter = Counter(
     "OCR task outcomes",
     ["status"],
 )
+
+ai_usage_cents_total: Counter = Counter(
+    "ai_usage_cents_total",
+    "Cumulative AI spend in cents",
+    ["model", "provider", "feature"],
+)
+ai_calls_total: Counter = Counter(
+    "ai_calls_total",
+    "AI call count",
+    ["model", "provider", "feature"],
+)
+ai_budget_exceeded_total: Counter = Counter(
+    "ai_budget_exceeded_total",
+    "Times the daily AI budget blocked a call",
+    ["community_id"],
+)

@@ -87,3 +87,19 @@ class PluginApiKeyRepository:
             key.revoked_at = datetime.now(UTC)
             await self._session.flush()
         return key
+
+    async def revoke_all(self, plugin_id: str, community_id: uuid.UUID) -> None:
+        """@brief Revoke every active key of a plugin."""
+        for key in await self.active_keys_for_plugin_any(plugin_id, community_id):
+            await self.revoke(key)
+
+    async def active_keys_for_plugin_any(
+        self, plugin_id: str, community_id: uuid.UUID
+    ) -> list[PluginApiKey]:
+        """@brief Non-revoked keys regardless of plugin enablement."""
+        stmt = select(PluginApiKey).where(
+            PluginApiKey.plugin_id == plugin_id,
+            PluginApiKey.community_id == community_id,
+            PluginApiKey.revoked_at.is_(None),
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
