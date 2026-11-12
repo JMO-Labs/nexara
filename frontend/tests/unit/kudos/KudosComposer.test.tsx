@@ -11,8 +11,12 @@ import messages from "@/i18n/en-US.json";
 
 const listUsers = vi.fn();
 const createKudos = vi.fn();
-vi.mock("@/lib/api/users", () => ({ listUsers: (...a: unknown[]) => listUsers(...a) }));
-vi.mock("@/lib/api/kudos", () => ({ createKudos: (...a: unknown[]) => createKudos(...a) }));
+vi.mock("@/lib/api/users", () => ({
+  listUsers: (...a: unknown[]) => listUsers(...a),
+}));
+vi.mock("@/lib/api/kudos", () => ({
+  createKudos: (...a: unknown[]) => createKudos(...a),
+}));
 vi.mock("@/hooks/useSubgroups", () => ({
   useSubgroupList: () => ({ data: [] }),
 }));
@@ -49,7 +53,9 @@ describe("KudosComposer", () => {
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toBeDisabled();
     await userEvent.type(screen.getByRole("combobox"), "an");
-    await userEvent.click(await screen.findByRole("option", { name: /Ana Lima/ }));
+    await userEvent.click(
+      await screen.findByRole("option", { name: /Ana Lima/ }),
+    );
     await userEvent.type(screen.getByLabelText("Message (optional)"), "Thanks");
     await userEvent.click(send);
     await waitFor(() =>
@@ -64,7 +70,9 @@ describe("KudosComposer", () => {
   it("filters out non-matching users", async () => {
     wrap(<KudosComposer open onClose={vi.fn()} />);
     await userEvent.type(screen.getByRole("combobox"), "bo");
-    expect(await screen.findByRole("option", { name: /Bo Chen/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: /Bo Chen/ }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Ana/ })).toBeNull();
   });
 

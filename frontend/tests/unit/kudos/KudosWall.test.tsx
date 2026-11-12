@@ -10,7 +10,9 @@ import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/en-US.json";
 
 const listKudos = vi.fn();
-vi.mock("@/lib/api/kudos", () => ({ listKudos: (...a: unknown[]) => listKudos(...a) }));
+vi.mock("@/lib/api/kudos", () => ({
+  listKudos: (...a: unknown[]) => listKudos(...a),
+}));
 vi.mock("@/hooks/useSubgroups", () => ({
   useSubgroupList: () => ({ data: [{ id: "g1", name: "Chess" }] }),
 }));

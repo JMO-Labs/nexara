@@ -83,9 +83,7 @@ export function KudosWall() {
           {items.map((k) => (
             <KudosCard
               key={k.id}
-              recipient={
-                k.recipient ?? { display_name: "?", avatar_url: null }
-              }
+              recipient={k.recipient ?? { display_name: "?", avatar_url: null }}
               message={k.message}
               authorName={k.author_name}
               createdAt={k.created_at}
