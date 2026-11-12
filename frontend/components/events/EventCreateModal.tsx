@@ -157,7 +157,8 @@ export function EventCreateModal({
       longitude: coords?.lon ?? null,
     };
     if (isEdit) await update.mutateAsync(body);
-    else await create.mutateAsync({ ...body, auto_create_gallery: autoGallery });
+    else
+      await create.mutateAsync({ ...body, auto_create_gallery: autoGallery });
     onClose();
   };
 
