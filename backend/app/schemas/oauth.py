@@ -8,9 +8,62 @@ Covers provider CRUD, exchange code flow, and public provider list items.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_validator
+
+from app.schemas.subgroup import SUBGROUP_ROLES
+
+#: Community roles a group rule without subgroup_id may grant.
+COMMUNITY_ROLES = ("viewer", "member", "admin")
+
+
+class GroupMappingRule(BaseModel):
+    """
+    @brief One IdP group -> subgroup membership and/or community role rule.
+
+    With subgroup_id the role must be a subgroup role; without it the role
+    is a community role.
+    """
+
+    subgroup_id: UUID | None = None
+    role: str = "member"
+
+    @model_validator(mode="after")
+    def _check_role(self) -> GroupMappingRule:
+        """@brief Restrict role to the set valid for this rule kind."""
+        allowed = SUBGROUP_ROLES if self.subgroup_id else COMMUNITY_ROLES
+        if self.role not in allowed:
+            raise ValueError(f"role must be one of {', '.join(allowed)}")
+        return self
+
+
+_RULES = TypeAdapter(dict[str, GroupMappingRule])
+
+
+def validate_claim_mapping(value: dict[str, Any]) -> dict[str, Any]:
+    """
+    @brief Validate claim_mapping: string overrides plus optional group_mapping.
+
+    @param value Raw claim_mapping.
+    @return JSON-serialisable claim_mapping (group_mapping normalised).
+    @throws ValueError On a non-string override or an invalid group rule.
+    """
+    out: dict[str, Any] = {}
+    for key, val in value.items():
+        if key == "group_mapping":
+            rules = _RULES.validate_python(val)
+            out[key] = {g: r.model_dump(mode="json") for g, r in rules.items()}
+        elif isinstance(val, str):
+            out[key] = val
+        else:
+            raise ValueError(f"claim_mapping.{key} must be a string")
+    return out
+
+
+#: Validated claim_mapping type for write schemas.
+ClaimMapping = Annotated[dict[str, Any], AfterValidator(validate_claim_mapping)]
 
 
 class OAuthProviderCreate(BaseModel):
@@ -28,7 +81,7 @@ class OAuthProviderCreate(BaseModel):
     client_secret: str = Field(..., min_length=1)
     issuer: str | None = None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: ClaimMapping = Field(default_factory=dict)
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -61,7 +114,7 @@ class OAuthProviderUpdate(BaseModel):
     client_secret: str | None = None
     issuer: str | None = None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] | None = None
+    claim_mapping: ClaimMapping | None = None
     icon_url: str | None = None
     scopes: str | None = None
     authorization_endpoint: str | None = None
@@ -95,7 +148,7 @@ class OAuthProviderResponse(BaseModel):
     provider_type: str
     issuer: str | None
     discovery_url: str | None = None
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: dict[str, Any] = Field(default_factory=dict)
     client_id: str
     scopes: str
     authorization_endpoint: str | None
@@ -134,7 +187,7 @@ class OIDCProviderCreate(BaseModel):
     client_id: str = Field(..., min_length=1, max_length=256)
     client_secret: str = Field(..., min_length=1)
     scopes: str = "openid profile email"
-    claim_mapping: dict[str, str] = Field(default_factory=dict)
+    claim_mapping: ClaimMapping = Field(default_factory=dict)
 
 
 class OIDCTestResult(BaseModel):
@@ -144,3 +197,19 @@ class OIDCTestResult(BaseModel):
     issuer: str | None = None
     token_endpoint_reachable: bool = False
     error: str | None = None
+
+
+class GroupMappingPreviewEntry(BaseModel):
+    """@brief One configured group rule resolved against local subgroups."""
+
+    group: str
+    subgroup_id: str | None
+    role: str | None
+    subgroup_exists: bool | None
+    matched: bool
+
+
+class GroupMappingPreview(BaseModel):
+    """@brief Sandbox preview of a provider group mapping (no writes)."""
+
+    entries: list[GroupMappingPreviewEntry]
