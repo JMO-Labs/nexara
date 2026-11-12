@@ -64,6 +64,9 @@ function ProviderSection() {
         <Button onClick={() => test.mutate()} disabled={test.isPending}>
           {test.isPending ? "Testing..." : "Test connection"}
         </Button>
+        {test.isError && (
+          <AdminNotice tone="error">Connection test failed.</AdminNotice>
+        )}
         {result && (
           <span
             role="status"
@@ -155,6 +158,9 @@ function SassybotSection() {
           {update.isPending ? "Saving..." : "Save"}
         </Button>
         {update.isSuccess && <span role="status">Settings saved</span>}
+        {update.isError && (
+          <AdminNotice tone="error">Failed to save settings.</AdminNotice>
+        )}
       </div>
     </Card>
   );

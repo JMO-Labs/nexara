@@ -91,7 +91,7 @@ def env(test_app):
         test_app.dependency_overrides[get_current_user] = lambda: user
         return AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test")
 
-    yield SimpleNamespace(client=client, budget=budget, box=box, redis=redis)
+    yield SimpleNamespace(session=session, client=client, budget=budget, box=box, redis=redis)
     test_app.dependency_overrides.clear()
 
 
@@ -107,6 +107,15 @@ async def test_get_config_defaults(env):
         "invoke_only": False,
         "opt_out_count": 3,
     }
+
+
+async def test_opt_out_count_scoped_to_community(env):
+    async with env.client() as c:
+        await c.get("/api/v1/admin/ai/config")
+    stmt = env.session.execute.call_args.args[0]
+    compiled = stmt.compile()
+    assert "community_id" in str(compiled)
+    assert CID in compiled.params.values()
 
 
 async def test_put_config_persists(env):

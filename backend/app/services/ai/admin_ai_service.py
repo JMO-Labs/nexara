@@ -76,7 +76,10 @@ class AdminAIService:
         stmt = (
             select(func.count())
             .select_from(UserSettings)
-            .where(UserSettings.allow_sassybot.is_(False))
+            .where(
+                UserSettings.community_id == self._cid,
+                UserSettings.allow_sassybot.is_(False),
+            )
         )
         return int((await self._session.execute(stmt)).scalar_one())
 
