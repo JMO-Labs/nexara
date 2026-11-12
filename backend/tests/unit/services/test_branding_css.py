@@ -85,7 +85,14 @@ async def test_service_sanitizes_before_save() -> None:
 
     repo = AsyncMock(spec=BrandingRepository)
     repo.upsert.return_value = SimpleNamespace(
-        community_name="C", tagline="t", color_primary="#000000", color_primary_dark="#111111"
+        community_name="C",
+        tagline="t",
+        color_primary="#000000",
+        color_primary_dark="#111111",
+        color_text_light="#000000",
+        color_surface_light="#ffffff",
+        color_text_dark="#ffffff",
+        color_surface_dark="#000000",
     )
     svc = BrandingService(repo=repo)
     await svc.update_branding(
@@ -133,7 +140,14 @@ async def test_service_sanitizes_when_toggle_not_true(enabled: bool | None) -> N
 
     repo = AsyncMock(spec=BrandingRepository)
     repo.upsert.return_value = SimpleNamespace(
-        community_name="C", tagline="t", color_primary="#000000", color_primary_dark="#111111"
+        community_name="C",
+        tagline="t",
+        color_primary="#000000",
+        color_primary_dark="#111111",
+        color_text_light="#000000",
+        color_surface_light="#ffffff",
+        color_text_dark="#ffffff",
+        color_surface_dark="#000000",
     )
     svc = BrandingService(repo=repo)
     await svc.update_branding(
