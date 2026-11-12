@@ -70,12 +70,25 @@ def test_ingress_and_external_services() -> None:
         "ingress.enabled=true",
         "postgresql.enabled=false",
         "postgresql.external.host=db.example.com",
+        "postgresql.external.password=extpass",
         "valkey.enabled=false",
         "valkey.external.url=redis://cache:6379",
     )
     kinds = [d["kind"] for d in docs]
     assert "Ingress" in kinds
     assert len([k for k in kinds if k == "Deployment"]) == 3
+
+
+def test_external_db_requires_password_or_secret() -> None:
+    args = ["template", "nexara", str(CHART), "--set", "postgresql.enabled=false"]
+    res = subprocess.run(["helm", *args], capture_output=True, text=True)
+    assert res.returncode != 0
+    assert "postgresql.external.password or postgresql.external.existingSecret" in res.stderr
+
+
+def test_external_db_existing_secret_renders_without_password() -> None:
+    docs = _render("postgresql.enabled=false", "postgresql.external.existingSecret=mydb")
+    assert not any(d["kind"] == "Secret" and d["metadata"]["name"].endswith("-db") for d in docs)
 
 
 def _secret_data(docs: list[dict], suffix: str) -> dict:
