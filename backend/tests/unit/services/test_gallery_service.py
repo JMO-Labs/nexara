@@ -591,7 +591,6 @@ class TestUpdateInvalidatesSearchCache:
     async def test_update_invalidates_search_cache(
         self, service: GalleryService, repo: AsyncMock
     ) -> None:
-        from unittest.mock import patch
 
         gallery = _make_gallery()
         repo.get_by_id.return_value = gallery
