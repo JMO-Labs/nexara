@@ -73,8 +73,11 @@ class ModerationService:
         @param reason ReportReason value.
         @param description Optional details.
         @return The pending report.
+        @throws NotFoundError If the target is not in this community.
         @throws ConflictError If the user already reported this target.
         """
+        if not await self._repo.content_exists(target_type, target_id, self._community_id):
+            raise NotFoundError(_("Reported content not found"))
         try:
             report = await self._repo.create_report(
                 reporter_id=reporter_id,
@@ -141,11 +144,15 @@ class ModerationService:
 
         author_id = None
         if action != "dismiss":
-            author_id = await self._repo.get_content_author_id(report.target_type, report.target_id)
+            author_id = await self._repo.get_content_author_id(
+                report.target_type, report.target_id, self._community_id
+            )
         if action in ("hide_content", "delete_content"):
-            await self._repo.soft_delete_content(report.target_type, report.target_id)
+            await self._repo.soft_delete_content(
+                report.target_type, report.target_id, self._community_id
+            )
         elif action == "ban_user" and author_id is not None:
-            await self._repo.deactivate_user(author_id)
+            await self._repo.deactivate_user(author_id, self._community_id)
 
         updated = await self._repo.mark_reviewed(
             report,
@@ -178,10 +185,13 @@ class ModerationService:
         @param blocked_id User to block.
         @return The block record.
         @throws AppError If blocking self.
+        @throws NotFoundError If the user is not in this community.
         @throws ConflictError If already blocked.
         """
         if blocker_id == blocked_id:
             raise AppError("VALIDATION_ERROR", _("You cannot block yourself"), 422)
+        if not await self._repo.user_exists(blocked_id, self._community_id):
+            raise NotFoundError(_("User not found"))
         if await self._repo.is_blocked(blocker_id, blocked_id):
             raise ConflictError(_("User is already blocked"))
         block = await self._repo.create_block(blocker_id, blocked_id, self._community_id)

@@ -9,10 +9,12 @@ used by all content queries in Phase 1.
 
 from __future__ import annotations
 
+import base64
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage
@@ -22,13 +24,40 @@ from app.models.post import Comment, Post
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
-_CONTENT_AUTHORS: dict[str, tuple[type, str]] = {
+_CONTENT_AUTHORS: dict[str, tuple[Any, str]] = {
     "post": (Post, "author_id"),
     "comment": (Comment, "author_id"),
     "message": (ChatMessage, "author_id"),
     "media": (Media, "uploader_id"),
 }
 """@brief Map of report target_type to (model, author column)."""
+
+
+def encode_report_cursor(created_at: datetime, report_id: uuid.UUID) -> str:
+    """
+    @brief Encode a ``(created_at, id)`` keyset position as an opaque cursor.
+
+    @param created_at Timestamp of the last returned report.
+    @param report_id UUID of the last returned report.
+    @return URL-safe base64 string.
+    """
+    raw = f"{created_at.isoformat()},{report_id}".encode()
+    return base64.urlsafe_b64encode(raw).decode("ascii")
+
+
+def decode_report_cursor(cursor: str) -> tuple[datetime, uuid.UUID] | None:
+    """
+    @brief Decode a cursor produced by :func:`encode_report_cursor`.
+
+    @param cursor Opaque cursor string.
+    @return ``(created_at, id)`` or None when unparseable.
+    """
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode("ascii")).decode()
+        ts_str, id_str = raw.split(",", 1)
+        return datetime.fromisoformat(ts_str), uuid.UUID(id_str)
+    except (ValueError, UnicodeDecodeError, TypeError):
+        return None
 
 
 class ModerationRepository(BaseRepository[UserBlock]):
@@ -218,40 +247,88 @@ class ModerationRepository(BaseRepository[UserBlock]):
         return list((await self._session.execute(stmt)).scalars().all())
 
     async def get_content_author_id(
-        self, target_type: str, target_id: uuid.UUID
+        self, target_type: str, target_id: uuid.UUID, community_id: uuid.UUID
     ) -> uuid.UUID | None:
         """
-        @brief Resolve the author/owner of reported content.
+        @brief Resolve the author/owner of reported content in a community.
 
         @param target_type post, comment, message or media.
         @param target_id Content UUID.
+        @param community_id Community scope.
         @return Author UUID or None if unknown.
         """
         model, column = _CONTENT_AUTHORS[target_type]
-        stmt = select(getattr(model, column)).where(model.id == target_id)
+        stmt = select(getattr(model, column)).where(
+            model.id == target_id, model.community_id == community_id
+        )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def soft_delete_content(self, target_type: str, target_id: uuid.UUID) -> None:
+    async def content_exists(
+        self, target_type: str, target_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
         """
-        @brief Soft-delete reported content (only models with ``deleted_at``).
+        @brief Check that reportable content exists in the community.
 
         @param target_type post, comment, message or media.
         @param target_id Content UUID.
+        @param community_id Community scope.
+        @return True if the row exists (and is not soft-deleted).
         """
         model, _col = _CONTENT_AUTHORS[target_type]
-        if not hasattr(model, "deleted_at"):
-            return
-        await self._session.execute(
-            update(model).where(model.id == target_id).values(deleted_at=datetime.now(UTC))
-        )
+        stmt = select(model.id).where(model.id == target_id, model.community_id == community_id)
+        if hasattr(model, "deleted_at"):
+            stmt = stmt.where(model.deleted_at.is_(None))
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
 
-    async def deactivate_user(self, user_id: uuid.UUID) -> None:
+    async def user_exists(self, user_id: uuid.UUID, community_id: uuid.UUID) -> bool:
         """
-        @brief Deactivate (ban) a user account.
+        @brief Check that a non-deleted user exists in the community.
 
         @param user_id User UUID.
+        @param community_id Community scope.
+        @return True if the user exists.
         """
-        await self._session.execute(update(User).where(User.id == user_id).values(is_active=False))
+        stmt = select(User.id).where(
+            User.id == user_id,
+            User.community_id == community_id,
+            User.deleted_at.is_(None),
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
+
+    async def soft_delete_content(
+        self, target_type: str, target_id: uuid.UUID, community_id: uuid.UUID
+    ) -> None:
+        """
+        @brief Remove reported content from view.
+
+        Models with ``deleted_at`` (posts) are soft-deleted; comments, chat
+        messages and media have no soft-delete column and are hard-deleted.
+
+        @param target_type post, comment, message or media.
+        @param target_id Content UUID.
+        @param community_id Community scope.
+        """
+        model, _col = _CONTENT_AUTHORS[target_type]
+        scope = (model.id == target_id, model.community_id == community_id)
+        if hasattr(model, "deleted_at"):
+            await self._session.execute(
+                update(model).where(*scope).values(deleted_at=datetime.now(UTC))
+            )
+        else:
+            await self._session.execute(delete(model).where(*scope))
+
+    async def deactivate_user(self, user_id: uuid.UUID, community_id: uuid.UUID) -> None:
+        """
+        @brief Deactivate (ban) a user account within a community.
+
+        @param user_id User UUID.
+        @param community_id Community scope.
+        """
+        await self._session.execute(
+            update(User)
+            .where(User.id == user_id, User.community_id == community_id)
+            .values(is_active=False)
+        )
 
     async def list_reports(
         self,
@@ -270,18 +347,23 @@ class ModerationRepository(BaseRepository[UserBlock]):
         @param cursor Opaque cursor for pagination.
         @return Tuple of (reports, next_cursor).
         """
-        stmt = select(ContentReport).order_by(ContentReport.created_at.desc())
+        stmt = select(ContentReport).order_by(
+            ContentReport.created_at.desc(), ContentReport.id.desc()
+        )
 
         if status_filter:
             stmt = stmt.where(ContentReport.status == status_filter)
         if community_id:
             stmt = stmt.where(ContentReport.community_id == community_id)
-        if cursor:
-            try:
-                cursor_id = uuid.UUID(cursor)
-                stmt = stmt.where(ContentReport.id < cursor_id)
-            except ValueError:
-                pass
+        position = decode_report_cursor(cursor) if cursor else None
+        if position is not None:
+            ts, last_id = position
+            stmt = stmt.where(
+                or_(
+                    ContentReport.created_at < ts,
+                    and_(ContentReport.created_at == ts, ContentReport.id < last_id),
+                )
+            )
 
         stmt = stmt.limit(limit + 1)
         result = await self._session.execute(stmt)
@@ -290,6 +372,6 @@ class ModerationRepository(BaseRepository[UserBlock]):
         next_cursor: str | None = None
         if len(rows) > limit:
             rows = rows[:limit]
-            next_cursor = str(rows[-1].id)
+            next_cursor = encode_report_cursor(rows[-1].created_at, rows[-1].id)
 
         return rows, next_cursor

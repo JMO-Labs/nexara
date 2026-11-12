@@ -67,6 +67,7 @@ def _report(status="pending"):
 
 class TestCreateReport:
     async def test_creates_pending_and_audits(self, service, repo, audit):
+        repo.content_exists.return_value = True
         repo.create_report.return_value = _report()
         result = await service.create_report(USER_ID, "post", TARGET_ID, "spam", None)
         assert result.status == "pending"
@@ -74,7 +75,15 @@ class TestCreateReport:
         audit.append.assert_awaited_once()
         assert audit.append.call_args.kwargs["action"] == "moderation.report.created"
 
+    async def test_target_not_in_community_is_404(self, service, repo):
+        repo.content_exists.return_value = False
+        with pytest.raises(NotFoundError):
+            await service.create_report(USER_ID, "post", TARGET_ID, "spam", None)
+        repo.content_exists.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID)
+        repo.create_report.assert_not_awaited()
+
     async def test_duplicate_rejected(self, service, repo):
+        repo.content_exists.return_value = True
         repo.create_report.side_effect = IntegrityError("x", {}, Exception())
         with pytest.raises(ConflictError):
             await service.create_report(USER_ID, "post", TARGET_ID, "spam", None)
@@ -111,7 +120,7 @@ class TestAction:
         repo.mark_reviewed.return_value = report
         repo.get_content_author_id.return_value = AUTHOR_ID
         await service.take_action(report.id, ADMIN_ID, "ban_user", None)
-        repo.deactivate_user.assert_awaited_once_with(AUTHOR_ID)
+        repo.deactivate_user.assert_awaited_once_with(AUTHOR_ID, COMMUNITY_ID)
 
     async def test_delete_content_removes_content(self, service, repo):
         report = _report()
@@ -119,7 +128,8 @@ class TestAction:
         repo.mark_reviewed.return_value = report
         repo.get_content_author_id.return_value = AUTHOR_ID
         await service.take_action(report.id, ADMIN_ID, "delete_content", None)
-        repo.soft_delete_content.assert_awaited_once_with("post", TARGET_ID)
+        repo.soft_delete_content.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID)
+        repo.get_content_author_id.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID)
 
     async def test_already_reviewed_conflict(self, service, repo):
         repo.get_report.return_value = _report(status="reviewed")
@@ -134,6 +144,7 @@ class TestAction:
 
 class TestBlocks:
     async def test_block_creates_and_audits(self, service, repo, audit):
+        repo.user_exists.return_value = True
         repo.is_blocked.return_value = False
         await service.block_user(USER_ID, AUTHOR_ID)
         repo.create_block.assert_awaited_once_with(USER_ID, AUTHOR_ID, COMMUNITY_ID)
@@ -143,7 +154,15 @@ class TestBlocks:
         with pytest.raises(AppError):
             await service.block_user(USER_ID, USER_ID)
 
+    async def test_block_unknown_user_not_found(self, service, repo):
+        repo.user_exists.return_value = False
+        with pytest.raises(NotFoundError):
+            await service.block_user(USER_ID, AUTHOR_ID)
+        repo.user_exists.assert_awaited_once_with(AUTHOR_ID, COMMUNITY_ID)
+        repo.create_block.assert_not_awaited()
+
     async def test_block_existing_is_conflict(self, service, repo):
+        repo.user_exists.return_value = True
         repo.is_blocked.return_value = True
         with pytest.raises(ConflictError):
             await service.block_user(USER_ID, AUTHOR_ID)
