@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,13 +24,16 @@ from app.models.oauth_provider import OAuthProvider
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.oauth_repo import OAuthProviderRepository
+from app.repositories.subgroup_repo import SubgroupRepository
 from app.schemas.common import MessageResponse
 from app.schemas.oauth import (
+    GroupMappingPreview,
     OAuthProviderCreate,
     OAuthProviderResponse,
     OAuthProviderUpdate,
 )
 from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints
+from app.services.oauth.group_mapper import preview_group_mapping
 from app.services.oauth.provider_manager import ProviderManager
 
 logger = structlog.get_logger(__name__)
@@ -161,6 +164,24 @@ async def update_provider(
         ip_address=_client_ip(request),
     )
     return OAuthProviderResponse.model_validate(provider)
+
+
+@router.get("/providers/{provider_id}/group-mapping-preview", response_model=GroupMappingPreview)
+async def group_mapping_preview(
+    provider_id: uuid.UUID,
+    groups: list[str] | None = Query(default=None),
+    _user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> GroupMappingPreview:
+    """@brief Sandbox: resolve the provider's group mapping (optionally for sample groups)."""
+    provider = await OAuthProviderRepository(db).get_by_id(provider_id, community_id)
+    if not provider:
+        raise NotFoundError(message=_("OAuth provider not found"))
+    entries = await preview_group_mapping(
+        SubgroupRepository(db), community_id, provider.claim_mapping, groups
+    )
+    return GroupMappingPreview.model_validate({"entries": entries})
 
 
 @router.delete("/providers/{provider_id}", response_model=MessageResponse)
