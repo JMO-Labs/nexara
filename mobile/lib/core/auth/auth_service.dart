@@ -125,4 +125,10 @@ class AuthService {
     if (!await _bio.isAvailable()) return false;
     return _bio.authenticate('Unlock Nexara');
   }
+
+  /// @brief Whether the device supports biometric unlock.
+  Future<bool> biometricAvailable() => _bio.isAvailable();
+
+  /// @brief Prompts the user to confirm biometrics (used when enabling unlock).
+  Future<bool> biometricConfirm() => _bio.authenticate('Enable biometric unlock');
 }
