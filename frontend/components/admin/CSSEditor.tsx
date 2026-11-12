@@ -13,6 +13,7 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter } from "@lezer/highlight";
 import { Button } from "@/components/ui";
 import { useUpdateBranding } from "@/hooks/useBranding";
+import { formatApiError } from "@/lib/api/errors";
 import { MAX_CSS_BYTES, cssByteLength } from "@/lib/customCss";
 import { useToasts } from "@/stores/toasts";
 import { CSSPreview } from "./CSSPreview";
@@ -101,8 +102,15 @@ export function CSSEditor({ initial }: { initial: string }) {
   const save = () => {
     if (!canSave) return;
     const body = css;
-    // Error toast is emitted by useUpdateBranding (useMutationWithToast).
-    update.mutate({ custom_css: body }, { onSuccess: () => setSaved(body) });
+    // useUpdateBranding is silent on error (BrandingTab shows it inline).
+    update.mutate(
+      { custom_css: body },
+      {
+        onSuccess: () => setSaved(body),
+        onError: (err) =>
+          push({ variant: "danger", message: formatApiError(err) }),
+      },
+    );
   };
 
   const copy = () => {
