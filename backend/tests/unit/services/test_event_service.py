@@ -129,6 +129,53 @@ class TestCreateEvent:
         assert result.author_id == user_id
 
     @pytest.mark.asyncio
+    async def test_auto_create_gallery_links_gallery(
+        self, service: EventService, repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        def _fill(e: Event) -> Event:
+            e.id = uuid.uuid4()
+            e.created_at = datetime.now(UTC)
+            e.updated_at = datetime.now(UTC)
+            return e
+
+        repo.create.side_effect = _fill
+        gid = uuid.uuid4()
+
+        def _add(g: object) -> None:
+            g.id = gid  # type: ignore[attr-defined]
+
+        session.add = MagicMock(side_effect=_add)
+        data = EventCreate(
+            title="Picnic",
+            starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+            auto_create_gallery=True,
+        )
+        result = await service.create_event(uuid.uuid4(), data)
+        gallery = session.add.call_args[0][0]
+        assert gallery.title == "Picnic"
+        assert gallery.event_id is not None
+        assert gallery.is_event_gallery is True
+        assert result.gallery_id == gid
+
+    @pytest.mark.asyncio
+    async def test_no_gallery_by_default(self, service: EventService, repo: AsyncMock) -> None:
+        def _fill(e: Event) -> Event:
+            e.id = uuid.uuid4()
+            e.created_at = datetime.now(UTC)
+            e.updated_at = datetime.now(UTC)
+            return e
+
+        repo.create.side_effect = _fill
+        data = EventCreate(
+            title="Picnic",
+            starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+        )
+        result = await service.create_event(uuid.uuid4(), data)
+        assert result.gallery_id is None
+
+    @pytest.mark.asyncio
     async def test_invalid_rrule_rejected(self, service: EventService) -> None:
         user_id = uuid.uuid4()
         data = EventCreate(
