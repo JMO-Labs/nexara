@@ -13,6 +13,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
+from app.api.v1.nudges import router as nudges_router
 from app.api.v1.branding import router as branding_router
 from app.api.v1.calendars import router as calendars_router
 from app.api.v1.chat import router as chat_router
@@ -58,6 +59,7 @@ api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)
+api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(polls_router)
