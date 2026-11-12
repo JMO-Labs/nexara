@@ -10,11 +10,7 @@
 import { apiGet } from "./client";
 
 export type SearchType =
-  | "posts"
-  | "users"
-  | "events"
-  | "subgroups"
-  | "comments";
+  "posts" | "users" | "events" | "subgroups" | "comments";
 
 export interface SearchResultItem {
   id: string;
