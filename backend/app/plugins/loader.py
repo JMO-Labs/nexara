@@ -8,6 +8,7 @@ from __future__ import annotations
 import importlib.util
 import logging
 import re
+import sys
 import uuid
 from pathlib import Path
 from types import ModuleType
@@ -41,10 +42,26 @@ def _import_module(plugin_dir: Path, manifest: PluginManifest) -> ModuleType | N
     if not path.is_relative_to(root) or not path.is_file():
         raise ValueError(f"invalid backend entry '{rel}'")
     name = "nexara_plugin_" + re.sub(r"\W", "_", manifest.id)
+    init = root / "__init__.py"
+    if path.parent == root and init.is_file():
+        # Package mode: lets entry files use relative imports (``from . import x``).
+        for mod in [m for m in sys.modules if m == name or m.startswith(name + ".")]:
+            del sys.modules[mod]
+        pkg_spec = importlib.util.spec_from_file_location(
+            name, init, submodule_search_locations=[str(root)]
+        )
+        if pkg_spec is None or pkg_spec.loader is None:
+            raise ValueError(f"cannot import package '{manifest.id}'")
+        pkg = importlib.util.module_from_spec(pkg_spec)
+        sys.modules[name] = pkg
+        pkg_spec.loader.exec_module(pkg)
+        name = f"{name}.{path.stem}"
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
         raise ValueError(f"cannot import '{rel}'")
     module = importlib.util.module_from_spec(spec)
+    if "." in name:
+        sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -86,6 +103,9 @@ async def load_plugins(
                 continue
             module = _import_module(plugin_dir, manifest)
             PluginRegistry.register(manifest, module, app)
+            register_hooks = getattr(module, "register_hooks", None)
+            if callable(register_hooks):
+                register_hooks(community_id, manifest)
             logger.info("plugin %s loaded (v%s)", pid, manifest.version)
         except Exception:
             logger.error("plugin %s failed to load; skipped", pid, exc_info=True)
