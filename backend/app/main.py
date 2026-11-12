@@ -45,6 +45,7 @@ from app.core.rate_limit import limiter
 from app.core.valkey import DB_CACHE, close_pools, get_pool
 from app.core.waf import WAFMiddleware
 from app.db.session import async_session_factory, engine
+from app.services.notifications import types as _notification_types  # noqa: F401
 
 logger = structlog.get_logger(__name__)
 
@@ -280,7 +281,7 @@ def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-un
     instrumentator = Instrumentator(
         should_group_status_codes=True,
         should_ignore_untemplated=True,
-        excluded_handlers=["/healthz", "/metrics"],
+        excluded_handlers=["/healthz", "/livez", "/metrics"],
     )
     instrumentator.instrument(app)
 

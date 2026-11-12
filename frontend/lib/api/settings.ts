@@ -47,6 +47,8 @@ export interface NotificationPreferences {
   notif_invite_accepted_inapp: boolean;
   notif_invite_accepted_email: boolean;
   mute_all_email: boolean;
+  /** Per-type Apprise channel flags, e.g. notif_mention_apprise. */
+  [apprise: `notif_${string}_apprise`]: boolean | undefined;
 }
 
 export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {

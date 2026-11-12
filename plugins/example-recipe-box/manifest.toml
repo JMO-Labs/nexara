@@ -1,0 +1,19 @@
+id = "example-recipe-box"
+name = "Recipe Box"
+version = "1.0.0"
+author = "Nexara"
+description = "Reference plugin: personal recipe collection with search, daily pick and tag hook."
+min_core_version = "0.1.0"
+permissions = ["db_read", "db_write", "hooks_after_post_created", "storage_access", "celery_tasks"]
+
+[hooks]
+after_post_created = "Suggest a recipe tag on posts mentioning a recipe"
+
+[settings.max_recipes_per_user]
+type = "integer"
+label = "Max recipes per user"
+default = 50
+
+[backend]
+routes = "router.py"
+tasks = "tasks.py"

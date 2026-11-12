@@ -6,6 +6,8 @@
  */
 import * as React from "react";
 import { Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { Avatar, Badge, IconButton, Skeleton } from "@/components/ui";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
@@ -89,13 +91,18 @@ export function ChannelList({
   onDeleteDm,
   loading,
 }: ChannelListProps) {
+  const fade = useMotionProps(fadeInOut);
   if (loading) {
     return (
-      <div className="flex flex-col gap-2 p-2">
+      <motion.div
+        data-testid="channel-skeleton"
+        className="flex flex-col gap-2 p-2"
+        {...fade}
+      >
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={48} />
         ))}
-      </div>
+      </motion.div>
     );
   }
 
