@@ -11,8 +11,8 @@ from typing import Any
 
 from sqlalchemy import and_, delete, func, literal, or_, select
 
-from app.models.user import User
 from app.models.event import CalendarSubscription, Event, EventAttendance
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 

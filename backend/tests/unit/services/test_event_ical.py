@@ -9,9 +9,8 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 import httpx
+import pytest
 
 from app.core.exceptions import AppError, NotFoundError
 from app.models.event import CalendarSubscription, Event
@@ -170,9 +169,7 @@ async def test_sync_now_fetch_failure_sets_error_and_commits(
 ) -> None:
     sub = _sub()
     repo.get_subscription.return_value = sub
-    with patch(
-        "app.services.event_service.safe_fetch", side_effect=httpx.ConnectError("boom")
-    ):
+    with patch("app.services.event_service.safe_fetch", side_effect=httpx.ConnectError("boom")):
         with pytest.raises(AppError) as ei:
             await service.sync_now(sub.id, sub.user_id)
     assert ei.value.code == "sync_failed"
