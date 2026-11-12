@@ -10,8 +10,10 @@ import { Markdown } from "@/components/ui";
 import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
+import { EventGalleryLink } from "./EventGalleryLink";
 import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
+import { ExportIcalButton } from "./ExportIcalButton";
 
 const EventMiniMap = dynamic(
   () => import("../EventMiniMap").then((m) => m.EventMiniMap),
@@ -66,12 +68,16 @@ export function EventDetailBody({ event }: { event: EventItem }) {
           <Markdown content={event.description} size="sm" />
         </div>
       )}
+      <div className="mb-4">
+        <ExportIcalButton eventId={event.id} title={event.title} />
+      </div>
       <RsvpInline
         eventId={event.id}
         labels={event.rsvp_labels}
         current={event.user_rsvp?.status ?? null}
         counts={event.rsvp_counts}
       />
+      <EventGalleryLink galleryId={event.gallery_id} />
       <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
     </div>
   );
