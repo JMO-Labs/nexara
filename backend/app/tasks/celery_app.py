@@ -48,6 +48,7 @@ celery_app.conf.update(
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
+        "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
     imports=("app.tasks.plugin_tasks",),
