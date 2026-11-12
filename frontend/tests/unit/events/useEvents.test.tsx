@@ -28,6 +28,8 @@ vi.mock("@/lib/api/events", () => ({
   deleteEvent: vi.fn(),
   rsvpEvent: vi.fn(),
   unrsvpEvent: vi.fn(),
+  claimContribution: vi.fn(),
+  unclaimContribution: vi.fn(),
 }));
 
 import * as api from "@/lib/api/events";
@@ -83,5 +85,42 @@ describe("useEvents mutations", () => {
       await result.current.mutateAsync(null);
     });
     expect(api.unrsvpEvent).toHaveBeenCalledWith("e1");
+  });
+});
+
+describe("contribution hooks", () => {
+  it("useClaimContribution calls API and invalidates event queries", async () => {
+    const { useClaimContribution } = await import("@/hooks/useEvents");
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    vi.mocked(api.claimContribution).mockResolvedValue({} as any);
+    const { result } = renderHook(() => useClaimContribution("e1"), {
+      wrapper: wrapper(qc),
+    });
+    await act(async () => {
+      await result.current.mutateAsync("s1");
+    });
+    expect(api.claimContribution).toHaveBeenCalledWith("e1", "s1");
+    expect(spy).toHaveBeenCalledWith({ queryKey: qk.events.detail("e1") });
+    expect(spy).toHaveBeenCalledWith({ queryKey: qk.events.all() });
+  });
+
+  it("useUnclaimContribution calls API and invalidates event queries", async () => {
+    const { useUnclaimContribution } = await import("@/hooks/useEvents");
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    vi.mocked(api.unclaimContribution).mockResolvedValue({} as any);
+    const { result } = renderHook(() => useUnclaimContribution("e1"), {
+      wrapper: wrapper(qc),
+    });
+    await act(async () => {
+      await result.current.mutateAsync("s1");
+    });
+    expect(api.unclaimContribution).toHaveBeenCalledWith("e1", "s1");
+    expect(spy).toHaveBeenCalledWith({ queryKey: qk.events.detail("e1") });
   });
 });

@@ -179,7 +179,7 @@ function PaletteBody() {
         value={query}
         onValueChange={setQuery}
       />
-      <CommandList>
+      <CommandList aria-live="polite">
         <CommandEmpty>No matches</CommandEmpty>
         {[...groups].map(([group, list]) => (
           <CommandGroup key={group} heading={group}>

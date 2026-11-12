@@ -28,7 +28,11 @@
     </div>
     <div class="footer">
       {% block footer %}
+      {% if footer_text %}
+      <p>{{ footer_text }}</p>
+      {% else %}
       <p>You received this email because you have an account on {{ community_name }}.</p>
+      {% endif %}
       {% endblock %}
     </div>
   </div>

@@ -61,13 +61,13 @@ export function EventsPage() {
       <CalendarViewSwitcher value={s.view} onChange={s.setView} />
 
       <div className="grid min-h-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div
-          className="min-w-0 motion-safe:transition-opacity"
-          style={{ opacity: s.isLoading ? 0.6 : 1 }}
-        >
+        <div className="min-w-0">
           <EventsViewPane
             view={s.view}
             events={s.filtered}
+            status={s.isLoading ? "loading" : s.isError ? "error" : "ready"}
+            onRetry={() => void s.refetch()}
+            onCreate={() => setCreateOpen(true)}
             month={s.month}
             weekStart={s.weekStart}
             onWeekStartChange={s.setWeekStart}
@@ -81,6 +81,9 @@ export function EventsPage() {
         </div>
         <EventsSidePanel
           nextEvent={s.nextEvent}
+          events={s.filtered}
+          month={s.month}
+          onMonthChange={s.setMonth}
           railEvents={s.railEvents}
           selectedDay={s.selectedDay}
           selectedEventId={s.selectedEventId}
