@@ -58,7 +58,9 @@ class TestDb:
         result.scalar_one_or_none.return_value = {"a": 1}
         ctx._session.execute.return_value = result
         assert await ctx.db.get("k") == {"a": 1}
-        sql = str(ctx._session.execute.call_args[0][0].compile(compile_kwargs={"literal_binds": True}))
+        sql = str(
+            ctx._session.execute.call_args[0][0].compile(compile_kwargs={"literal_binds": True})
+        )
         assert "plugin_data" in sql
         assert "'hello'" in sql and COMMUNITY.hex in sql
         assert "FROM plugin_data" in sql

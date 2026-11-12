@@ -40,14 +40,21 @@ class PluginDB(_Scoped):
     """@brief Key-value access limited to the plugin_data table rows of one plugin/community."""
 
     def __init__(
-        self, plugin_id: str, manifest: PluginManifest, session: AsyncSession, community_id: uuid.UUID
+        self,
+        plugin_id: str,
+        manifest: PluginManifest,
+        session: AsyncSession,
+        community_id: uuid.UUID,
     ) -> None:
         super().__init__(plugin_id, manifest)
         self._session = session
         self._community_id = community_id
 
     def _scope(self) -> tuple[Any, Any]:
-        return (PluginData.plugin_id == self._plugin_id, PluginData.community_id == self._community_id)
+        return (
+            PluginData.plugin_id == self._plugin_id,
+            PluginData.community_id == self._community_id,
+        )
 
     async def get(self, key: str) -> Any:
         """@brief Read a value. @return Stored JSON or None."""
