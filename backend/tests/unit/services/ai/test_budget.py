@@ -13,8 +13,8 @@ import pytest
 from prometheus_client import REGISTRY
 
 from app.core.exceptions import AppError
-from app.services.ai.budget_service import BudgetExceededError, BudgetService
 from app.services.ai.anthropic_provider import AnthropicProvider
+from app.services.ai.budget_service import BudgetExceededError, BudgetService
 from app.services.ai.ocr import OCR_ESTIMATED_CENTS, run_ocr
 from app.services.ai.ollama_provider import OllamaProvider
 from app.services.ai.openai_provider import OpenAIProvider

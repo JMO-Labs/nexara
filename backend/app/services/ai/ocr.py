@@ -62,7 +62,9 @@ async def run_ocr(
         text, cost, _tokens = await provider.vision(image, OCR_PROMPT, max_tokens=OCR_MAX_TOKENS)
         if budget is not None:
             await budget.record_usage(
-                cost, "ocr", provider=type(provider).__name__.removesuffix("Provider").lower(),
+                cost,
+                "ocr",
+                provider=type(provider).__name__.removesuffix("Provider").lower(),
                 model=getattr(provider, "vision_model", "unknown"),
             )
     except AIBudgetExhaustedError:
