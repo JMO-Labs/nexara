@@ -15,7 +15,12 @@ vi.mock("@/hooks/usePosts", () => ({
 describe("PromptResponseModal", () => {
   it("disables submit when empty", () => {
     render(
-      <PromptResponseModal open onClose={vi.fn()} promptPostId="p1" title="T" />,
+      <PromptResponseModal
+        open
+        onClose={vi.fn()}
+        promptPostId="p1"
+        title="T"
+      />,
     );
     expect(screen.getByRole("button", { name: /submit/i })).toBeDisabled();
   });
@@ -24,7 +29,12 @@ describe("PromptResponseModal", () => {
     const onClose = vi.fn();
     mutate.mockImplementation((_b, o) => o?.onSuccess?.());
     render(
-      <PromptResponseModal open onClose={onClose} promptPostId="p1" title="T" />,
+      <PromptResponseModal
+        open
+        onClose={onClose}
+        promptPostId="p1"
+        title="T"
+      />,
     );
     await userEvent.type(screen.getByRole("textbox"), "  Pancakes ");
     await userEvent.click(screen.getByRole("button", { name: /submit/i }));
