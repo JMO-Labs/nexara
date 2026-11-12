@@ -12,6 +12,10 @@ import * as mediaApi from "@/lib/api/media";
 
 vi.mock("@/lib/api/galleries");
 vi.mock("@/lib/api/media");
+// useCreateGallery -> useMutationWithToast needs next-intl context.
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
 // Radix Select is unreliable in jsdom: swap for a native <select>.
 vi.mock("@/components/ui", async (orig) => {
   const actual = await orig<typeof import("@/components/ui")>();
