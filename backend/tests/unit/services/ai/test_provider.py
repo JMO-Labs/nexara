@@ -19,6 +19,8 @@ from app.services.ai.provider import (
 
 
 def _settings(**kw) -> Settings:
+    kw.setdefault("ANTHROPIC_API_KEY", "")
+    kw.setdefault("OPENAI_API_KEY", "")
     return Settings(_env_file=None, **kw)
 
 

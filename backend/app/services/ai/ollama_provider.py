@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import base64
+from typing import Any, cast
 
 import httpx
 
@@ -32,10 +33,10 @@ class OllamaProvider(AIProvider):
         self._model = model
         self._client = client or httpx.AsyncClient(timeout=timeout)
 
-    async def _post(self, path: str, body: dict[str, object]) -> dict:
+    async def _post(self, path: str, body: dict[str, object]) -> dict[str, Any]:
         resp = await self._client.post(f"{self._base}/api/{path}", json=body)
         resp.raise_for_status()
-        return resp.json()
+        return cast(dict[str, Any], resp.json())
 
     async def _generate(self, body: dict[str, object]) -> TextResult:
         data = await self._post("generate", {"model": self._model, "stream": False, **body})

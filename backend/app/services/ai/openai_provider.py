@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import base64
+from typing import Any, cast
 
 import httpx
 
@@ -36,12 +37,12 @@ class OpenAIProvider(AIProvider):
         self._key = api_key
         self._client = client or httpx.AsyncClient(timeout=timeout)
 
-    async def _post(self, path: str, body: dict[str, object]) -> dict:
+    async def _post(self, path: str, body: dict[str, object]) -> dict[str, Any]:
         resp = await self._client.post(
             f"{_BASE}/{path}", headers={"Authorization": f"Bearer {self._key}"}, json=body
         )
         resp.raise_for_status()
-        return resp.json()
+        return cast(dict[str, Any], resp.json())
 
     async def _chat(
         self, model: str, content: object, max_tokens: int, temp: float | None
