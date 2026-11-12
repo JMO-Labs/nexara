@@ -75,6 +75,41 @@ describe("EventCreateModal", () => {
     });
   });
 
+  it("sends auto_create_gallery when checkbox is checked", async () => {
+    wrap(<EventCreateModal open onClose={vi.fn()} />);
+    await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
+    await userEvent.click(screen.getByLabelText(/create gallery for photos/i));
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({
+      auto_create_gallery: true,
+    });
+  });
+
+  it("defaults auto_create_gallery to false", async () => {
+    wrap(<EventCreateModal open onClose={vi.fn()} />);
+    await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({
+      auto_create_gallery: false,
+    });
+  });
+
+  it("hides the gallery checkbox in edit mode", async () => {
+    const event: any = {
+      id: "evt-1",
+      title: "Existing",
+      starts_at: "2025-05-01T10:00:00Z",
+      ends_at: "2025-05-01T11:00:00Z",
+      is_all_day: false,
+      visibility: "community",
+    };
+    wrap(<EventCreateModal open onClose={vi.fn()} event={event} />);
+    await screen.findByText(/edit event/i);
+    expect(screen.queryByLabelText(/create gallery for photos/i)).toBeNull();
+  });
+
   it("shows validation message and does not submit for subgroup without group", async () => {
     wrap(<EventCreateModal open onClose={vi.fn()} />);
     await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
