@@ -20,6 +20,9 @@ vi.mock("@/hooks/useGalleries", () => {
     useRemoveItem: mut,
   };
 });
+vi.mock("@/hooks/useEvents", () => ({
+  useEventDetail: () => ({ data: undefined }),
+}));
 vi.mock("@/components/galleries/GalleryUpload", () => ({
   GalleryUpload: () => null,
 }));

@@ -15,6 +15,7 @@ import {
   updateEmail,
   type NotificationPreferences,
   type ProfileUpdate,
+  type UserSettings,
   type UserSettingsUpdate,
 } from "@/lib/api/settings";
 import { useMutationWithToast } from "./useMutationWithToast";
@@ -49,12 +50,23 @@ export function useNotificationPrefs() {
  */
 export function useUpdateSettings() {
   const qc = useQueryClient();
+  const key = qk.settings.profile();
 
   return useMutationWithToast({
     mutationFn: (body: Partial<UserSettingsUpdate>) => updateSettings(body),
     successKey: "toasts.settings.saved",
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.settings.profile() });
+    // Optimistic update; rolled back with an error toast on failure.
+    onMutate: async (body) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<UserSettings>(key);
+      if (prev) qc.setQueryData<UserSettings>(key, { ...prev, ...body });
+      return { prev };
+    },
+    onError: (_err, _body, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: key });
     },
   });
 }
