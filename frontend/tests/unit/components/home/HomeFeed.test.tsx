@@ -97,9 +97,85 @@ describe("HomeFeed", () => {
   it("empty state", () => {
     state.hook.items = [];
     render(<HomeFeed />);
-    expect(screen.getByText("Nothing here yet")).toBeTruthy();
+    expect(screen.getByText("No posts yet")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Write the first post" }),
+      screen.getByRole("button", { name: "Create your first post" }),
     ).toBeTruthy();
+  });
+
+  it("loading shows staggered skeletons, no empty state", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    expect(screen.getAllByTestId("feed-skeleton").length).toBe(3);
+    const status = screen.getByRole("status", { name: "Loading feed" });
+    expect(status.querySelectorAll('[role="status"]')).toHaveLength(0);
+    expect(
+      screen
+        .getAllByTestId("feed-skeleton")
+        .every((e) => e.getAttribute("aria-hidden") === "true"),
+    ).toBe(true);
+    expect(screen.queryByText("No posts yet")).toBeNull();
+  });
+
+  it("error shows retry", () => {
+    const refetch = vi.fn();
+    state.hook.items = [];
+    state.hook.isError = true;
+    state.hook.refetch = refetch;
+    render(<HomeFeed />);
+    expect(screen.getByText("Failed to load feed")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
+    expect(screen.queryByText("No posts yet")).toBeNull();
+  });
+
+  it("uses 8px item gap", () => {
+    const { container } = render(<HomeFeed />);
+    expect(container.querySelector("ul")?.className).toContain("gap-2");
+  });
+
+  it("skeletons use the same Card surface and padding as PostCard", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    for (const e of screen.getAllByTestId("feed-skeleton")) {
+      expect(e.className).toContain("bg-surface");
+      expect(e.className).toContain("p-3");
+      expect(e.className).toContain("md:p-4");
+    }
+  });
+
+  it("skips stagger fade-in under reduced motion", () => {
+    const mm = window.matchMedia;
+    window.matchMedia = ((q: string) => ({
+      matches: true,
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    window.matchMedia = mm;
+    for (const e of screen.getAllByTestId("feed-skeleton"))
+      expect((e as HTMLElement).style.opacity).not.toBe("0");
+  });
+
+  it("staggers skeletons with per-item delay", () => {
+    state.hook.items = [];
+    state.hook.isLoading = true;
+    render(<HomeFeed />);
+    const delays = screen
+      .getAllByTestId("feed-skeleton")
+      .map((e) => e.getAttribute("data-delay"));
+    expect(delays).toEqual(["0", "0.08", "0.16"]);
+  });
+
+  it("uses shared radius token, not arbitrary values", () => {
+    const { container } = render(<HomeFeed />);
+    expect(container.innerHTML).not.toContain("rounded-[");
   });
 });
