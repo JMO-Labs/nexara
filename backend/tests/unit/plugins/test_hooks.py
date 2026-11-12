@@ -127,6 +127,13 @@ class TestEmit:
         HookRegistry.register(COMMUNITY, "after_post_created", "p1", slow, _manifest())
         assert await _emit() == []
 
+    async def test_no_session_runs_handler_without_savepoint(self):
+        h = AsyncMock(return_value=3)
+        HookRegistry.register(COMMUNITY, "after_post_created", "p1", h, _manifest())
+        out = await HookRegistry.emit("after_post_created", community_id=COMMUNITY, session=None)
+        assert out == [3]
+        assert h.call_args.args[0].community_id == COMMUNITY
+
     async def test_other_community_handler_not_fired(self):
         h = AsyncMock(return_value=1)
         HookRegistry.register(uuid.uuid4(), "after_post_created", "p1", h, _manifest())

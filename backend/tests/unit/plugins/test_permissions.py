@@ -160,3 +160,8 @@ class TestActiveKeysQuery:
         assert "plugins.is_enabled" in sql
         assert "plugin_api_keys.revoked_at IS NULL" in sql
         assert str(COMMUNITY) in sql or COMMUNITY.hex in sql
+
+
+class TestVerifyMalformedHash:
+    def test_invalid_hash_returns_false(self) -> None:
+        assert verify_api_key("nxr_plugin_hello_" + "a" * 32, "not-a-bcrypt-hash") is False
