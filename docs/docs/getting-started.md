@@ -7,7 +7,7 @@ Set up a local Nexara development environment in a few minutes.
 | Tool       | Version | Purpose                        |
 | ---------- | ------- | ------------------------------ |
 | Node.js    | 20+     | Frontend (Next.js 16)          |
-| Python     | 3.11+   | Backend (FastAPI)              |
+| Python     | 3.12+   | Backend (FastAPI)              |
 | uv         | latest  | Python venv/package management |
 | PostgreSQL | 16      | Database                       |
 | Valkey     | latest  | Cache, pub/sub, Celery broker  |

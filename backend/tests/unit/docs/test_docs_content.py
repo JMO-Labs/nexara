@@ -49,3 +49,9 @@ def test_getting_started_cd_steps_are_root_relative() -> None:
     assert "(cd backend && pytest --cov=app --cov-report=html -v)" in START
     assert "(cd frontend && npm test)" in START
     assert "from the repo root" in START
+
+
+def test_python_version_matches_pyproject() -> None:
+    """@brief Prerequisites must match requires-python (>=3.12)."""
+    assert "| Python     | 3.12+" in START
+    assert "3.11+" not in START
