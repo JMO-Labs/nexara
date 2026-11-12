@@ -16,10 +16,13 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.device_token_repo import DeviceTokenRepo
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.push import (
+    DeviceRegisterRequest,
+    DeviceTokenResponse,
     PushSubscribeRequest,
     PushSubscriptionResponse,
     PushUnsubscribeRequest,
@@ -44,6 +47,7 @@ def _build_service(
     return PushService(
         push_repo=PushSubscriptionRepository(db),
         settings_repo=SettingsRepository(db),
+        device_repo=DeviceTokenRepo(db),
         community_id=community_id,
         settings=settings,
     )
@@ -95,3 +99,25 @@ async def list_subscriptions(
 ) -> list[PushSubscriptionResponse]:
     """@brief List push subscriptions for the current user."""
     return await service.list_subscriptions(user.id)
+
+
+@router.post("/devices", response_model=DeviceTokenResponse, status_code=201)
+async def register_device(
+    body: DeviceRegisterRequest,
+    user: User = Depends(get_current_user),
+    service: PushService = Depends(_build_service),
+) -> DeviceTokenResponse:
+    """@brief Register (upsert) a native push device token for the current user."""
+    device = await service.register_device(user.id, body.platform, body.token)
+    return DeviceTokenResponse.model_validate(device)
+
+
+@router.delete("/devices/{token}", response_model=MessageResponse)
+async def unregister_device(
+    token: str,
+    user: User = Depends(get_current_user),
+    service: PushService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Soft-delete the caller's device token; 404 if not theirs."""
+    await service.unregister_device(user.id, token)
+    return MessageResponse(message=_("Device unregistered"))

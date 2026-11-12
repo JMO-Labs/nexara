@@ -107,3 +107,19 @@ test:backend:integration:
     expire_in: 30 days
   rules: !reference [.rules:backend-changes, rules]
   allow_failure: true
+
+test:helm:
+  stage: test
+  image:
+    name: alpine/helm:3.16.2
+    entrypoint: [""]
+  variables:
+    REQUIRE_HELM: "true"
+  before_script:
+    - apk add --no-cache py3-pytest py3-yaml
+  script:
+    - python3 -m pytest backend/tests/integration/deploy/test_helm.py -v -p no:cacheprovider --rootdir=backend/tests/integration/deploy --confcutdir=backend/tests/integration/deploy -c /dev/null
+  rules:
+    - changes:
+        - deploy/helm/**/*
+        - backend/tests/integration/deploy/**/*
