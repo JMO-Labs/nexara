@@ -46,6 +46,7 @@ celery_app.conf.update(
         "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
+        "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
     },
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
@@ -145,6 +146,10 @@ celery_app.conf.update(
         "gallery-batch-notifications": {
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
             "schedule": 60.0 * 60,
+        },
+        "send-gentle-nudges": {
+            "task": "app.tasks.nudge_tasks.send_gentle_nudges",
+            "schedule": crontab(hour="10", minute="0"),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",
