@@ -10,8 +10,6 @@ import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.core.cache import invalidate_search_cache_for_community
 from app.services.search_service import SearchService, search_cache_key
 
