@@ -158,7 +158,7 @@ class BrandingService:
         @return Updated BrandingResponse.
         """
         update_dict = data.model_dump(exclude_none=True)
-        if data.custom_css_enabled and data.custom_css:
+        if data.custom_css is not None:
             update_dict["custom_css"] = self._sanitize(data.custom_css)
         update_dict["updated_by"] = user_id
 

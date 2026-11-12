@@ -3,8 +3,8 @@
 @brief Server-side sanitizer for admin-supplied custom CSS.
 
 Regex based deny-list: removes @import, script-bearing url(), expression(),
-behavior and vbscript/jscript protocols. Applied to a fixpoint so nested
-payloads cannot reassemble after a removal.
+behavior and vbscript/jscript protocols. Backslash escapes are rejected
+outright. Applied to a fixpoint so nested payloads cannot reassemble.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ _MAX_PASSES = 10
 
 _COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"@import\s+[^;]+;?", re.I), ""),
+    (re.compile(r"@import\b[^;]*;?", re.I), ""),
     (
         re.compile(r"url\s*\(\s*[\"']?\s*(?:javascript|data|vbscript)\s*:[^)]*\)", re.I),
         'url("")',
@@ -43,6 +43,12 @@ def sanitize_css(raw_css: str, max_size_bytes: int = MAX_CSS_BYTES) -> str:
         raise AppError(
             code="css_too_large",
             message="Custom CSS must be under 10KB",
+            status_code=400,
+        )
+    if "\\" in raw_css:
+        raise AppError(
+            code="css_invalid",
+            message="Custom CSS must not contain backslash escapes",
             status_code=400,
         )
     css = raw_css

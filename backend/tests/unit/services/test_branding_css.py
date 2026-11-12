@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.core.exceptions import AppError
@@ -75,25 +77,24 @@ def test_rejects_too_large() -> None:
 
 async def test_service_sanitizes_before_save() -> None:
     import uuid
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import AsyncMock
 
     from app.repositories.branding_repo import BrandingRepository
     from app.schemas.branding import BrandingUpdate
     from app.services.branding_service import BrandingService
 
     repo = AsyncMock(spec=BrandingRepository)
-    repo.upsert.return_value = MagicMock()
+    repo.upsert.return_value = SimpleNamespace(
+        community_name="C", tagline="t", color_primary="#000000", color_primary_dark="#111111"
+    )
     svc = BrandingService(repo=repo)
-    try:
-        await svc.update_branding(
-            user_id=uuid.uuid4(),
-            data=BrandingUpdate(
-                custom_css="@import 'x';a{color:red;padding:1px;margin:1px;width:1px}",
-                custom_css_enabled=True,
-            ),
-        )
-    except Exception:
-        pass
+    await svc.update_branding(
+        user_id=uuid.uuid4(),
+        data=BrandingUpdate(
+            custom_css="@import 'x';a{color:red;padding:1px;margin:1px;width:1px}",
+            custom_css_enabled=True,
+        ),
+    )
     saved = repo.upsert.call_args.args[1]
     assert "@import" not in saved["custom_css"]
 
@@ -119,3 +120,44 @@ async def test_service_rejects_when_too_much_removed() -> None:
     assert exc.value.code == "css_invalid"
     assert exc.value.status_code == 400
     repo.upsert.assert_not_called()
+
+
+@pytest.mark.parametrize("enabled", [None, False])
+async def test_service_sanitizes_when_toggle_not_true(enabled: bool | None) -> None:
+    import uuid
+    from unittest.mock import AsyncMock
+
+    from app.repositories.branding_repo import BrandingRepository
+    from app.schemas.branding import BrandingUpdate
+    from app.services.branding_service import BrandingService
+
+    repo = AsyncMock(spec=BrandingRepository)
+    repo.upsert.return_value = SimpleNamespace(
+        community_name="C", tagline="t", color_primary="#000000", color_primary_dark="#111111"
+    )
+    svc = BrandingService(repo=repo)
+    await svc.update_branding(
+        user_id=uuid.uuid4(),
+        data=BrandingUpdate(
+            custom_css="@import 'x';a{color:red;padding:1px;margin:1px;width:1px}",
+            custom_css_enabled=enabled,
+        ),
+    )
+    saved = repo.upsert.call_args.args[1]
+    assert "@import" not in saved["custom_css"]
+
+
+@pytest.mark.parametrize("css", ['@import"https://evil/x.css";a{}', "@import'x.css';a{}"])
+def test_strips_import_without_whitespace(css: str) -> None:
+    assert "@import" not in sanitize_css(css).lower()
+
+
+@pytest.mark.parametrize(
+    "css",
+    ["@\\69mport url(x);a{}", 'a{b:url("java\\73 cript:x")}', "a{b:\\65xpression(1)}"],
+)
+def test_rejects_css_escapes(css: str) -> None:
+    with pytest.raises(AppError) as exc:
+        sanitize_css(css)
+    assert exc.value.code == "css_invalid"
+    assert exc.value.status_code == 400
