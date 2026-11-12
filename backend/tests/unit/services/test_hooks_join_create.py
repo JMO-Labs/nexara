@@ -24,8 +24,16 @@ def _clean_registry():
     HookRegistry.reset()
 
 
-def _register_failing(event: str, community_id: uuid.UUID) -> None:
-    """@brief Register a plugin handler that always raises."""
+def _session() -> AsyncMock:
+    """@brief Session whose begin_nested() is a sync async-context-manager."""
+    s = AsyncMock()
+    s.begin_nested = MagicMock()
+    return s
+
+
+def _register_failing(event: str, community_id: uuid.UUID) -> list[bool]:
+    """@brief Register a plugin handler that always raises; returns call log."""
+    calls: list[bool] = []
     manifest = PluginManifest(
         id="bad",
         name="Bad",
@@ -38,9 +46,11 @@ def _register_failing(event: str, community_id: uuid.UUID) -> None:
     )
 
     async def boom(ctx, **kw):
+        calls.append(True)
         raise RuntimeError("boom")
 
     HookRegistry.register(community_id, event, "bad", boom, manifest)
+    return calls
 
 
 async def test_register_emits_on_user_joined():
@@ -63,13 +73,15 @@ async def test_register_emits_on_user_joined():
 
 async def test_register_survives_hook_failure():
     svc = _make_service()
+    svc._session = _session()
     svc._user_repo.email_exists.return_value = False
     svc._user_repo.username_exists.return_value = False
     svc._user_repo.create.return_value = _make_user()
-    _register_failing("on_user_joined", svc._user_repo.create.return_value.community_id)
+    calls = _register_failing("on_user_joined", svc._user_repo.create.return_value.community_id)
     result = await svc.register(
         email="n@example.com", username="n", password="strong-password123", display_name="N"
     )
+    assert calls == [True]
     assert result["access_token"]
 
 
@@ -93,11 +105,11 @@ async def test_create_community_emits_on_community_created():
 
 
 async def test_create_community_survives_hook_failure():
-    session = MagicMock()
-    session.flush = AsyncMock()
-    session.refresh = AsyncMock()
+    session = _session()
+    session.add = MagicMock()
     cid = uuid.uuid4()
     session.add.side_effect = lambda o: setattr(o, "id", cid)
-    _register_failing("on_community_created", cid)
+    calls = _register_failing("on_community_created", cid)
     community = await CommunityService(session).create_community("Club", uuid.uuid4())
+    assert calls == [True]
     assert community.name == "Club"
