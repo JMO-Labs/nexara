@@ -23,11 +23,11 @@ from app.plugins.context import PluginContext
 from app.plugins.manifest import PluginManifest, PluginPermission, load_manifest
 
 from . import store
+from .hooks import register_hooks  # noqa: F401  (loader calls it on this module)
 from .models import RecipeIn
 
 PLUGIN_ID = "example-recipe-box"
 HARD_LIMIT = 100
-DEFAULT_LIMIT = 50
 
 router = APIRouter(tags=["example-recipe-box"])
 
@@ -72,7 +72,8 @@ def _denied() -> Iterator[None]:
 
 
 def _limit(ctx: PluginContext) -> int:
-    raw: Any = ctx.settings.get("max_recipes_per_user", DEFAULT_LIMIT)
+    default = _manifest().settings["max_recipes_per_user"].default
+    raw: Any = ctx.settings.get("max_recipes_per_user", default)
     return max(0, min(int(raw), HARD_LIMIT))
 
 

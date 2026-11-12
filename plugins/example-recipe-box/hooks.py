@@ -16,7 +16,12 @@ PLUGIN_ID = "example-recipe-box"
 
 
 async def on_post_created(
-    ctx: PluginContext, *, user_id: uuid.UUID, post_id: uuid.UUID, content: str, **_: Any
+    ctx: PluginContext,
+    *,
+    user_id: uuid.UUID,
+    post_id: uuid.UUID,
+    content: str,
+    **_: Any,
 ) -> None:
     """@brief Store a tag suggestion (``suggestion:{post_id}``) when content mentions "recipe"."""
     if "recipe" in (content or "").lower():
