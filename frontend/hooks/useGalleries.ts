@@ -3,7 +3,11 @@
  * @file hooks/useGalleries.ts
  * @brief Gallery CRUD + items hooks.
  */
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
 import { qk } from "@/lib/query-keys";
 import {
