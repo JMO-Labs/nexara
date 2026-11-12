@@ -3,7 +3,6 @@
 @brief Exercises scripts/build-docs-site.sh with stubbed mkdocs/doxygen.
 """
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -21,7 +20,9 @@ def _run(tmp_path: Path, mkdocs_rc: int = 0, doxygen: bool = True, cov: bool = T
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
     (repo / "docs").mkdir()
-    (repo / "scripts" / "generate-api-ref.sh").write_text("#!/usr/bin/env bash\ntouch \"$ROOT_MARK\"\n")
+    (repo / "scripts" / "generate-api-ref.sh").write_text(
+        '#!/usr/bin/env bash\ntouch "$ROOT_MARK"\n'
+    )
     (repo / "docs" / "mkdocs.yml").write_text("site_name: x\n")
     (repo / "docs" / "Doxyfile").write_text("")
     if cov:
@@ -30,8 +31,12 @@ def _run(tmp_path: Path, mkdocs_rc: int = 0, doxygen: bool = True, cov: bool = T
     (repo / "scripts" / "build-docs-site.sh").write_text(SCRIPT.read_text())
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    _stub(bin_dir, "mkdocs", f'[ {mkdocs_rc} -ne 0 ] && exit {mkdocs_rc}\n'
-          'while [ $# -gt 0 ]; do [ "$1" = -d ] && mkdir -p "$2" && touch "$2/index.html"; shift; done')
+    _stub(
+        bin_dir,
+        "mkdocs",
+        f"[ {mkdocs_rc} -ne 0 ] && exit {mkdocs_rc}\n"
+        'while [ $# -gt 0 ]; do [ "$1" = -d ] && mkdir -p "$2" && touch "$2/index.html"; shift; done',
+    )
     if doxygen:
         _stub(bin_dir, "doxygen", "mkdir -p build/api && touch build/api/index.html")
     env = {
@@ -41,7 +46,10 @@ def _run(tmp_path: Path, mkdocs_rc: int = 0, doxygen: bool = True, cov: bool = T
     }
     r = subprocess.run(
         ["bash", str(repo / "scripts" / "build-docs-site.sh")],
-        env=env, capture_output=True, text=True, cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=repo,
     )
     return r, repo
 
