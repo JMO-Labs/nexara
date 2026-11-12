@@ -57,7 +57,9 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Development: development.md
-  - Deployment: deployment.md
+  - Deployment:
+      - Overview: deployment.md
+      - unRAID: deployment/unraid.md
   - References:
       - API Docs (Doxygen): "api/"
       - Backend Coverage: "coverage/backend/"
