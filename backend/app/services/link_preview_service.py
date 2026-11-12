@@ -58,6 +58,9 @@ HTTP_TIMEOUT = 5.0
 HTTP_MAX_BYTES = 1_048_576
 """@brief Maximum response body size (1MB)."""
 
+IMAGE_MAX_BYTES = 5 * 1_048_576
+"""@brief Maximum proxied image size (5MB)."""
+
 
 def extract_urls(text: str) -> list[str]:
     """
@@ -190,6 +193,37 @@ async def scrape_og_metadata(url: str) -> dict[str, str | None]:
             return result
     except Exception:
         return result
+
+
+def _client_kwargs() -> dict[str, object]:
+    """@brief httpx client options for image fetches (no redirects: SSRF)."""
+    return {"timeout": HTTP_TIMEOUT, "follow_redirects": False}
+
+
+async def fetch_image(url: str) -> tuple[bytes, str] | None:
+    """
+    @brief Fetch a preview image for the proxy (SSRF-checked, 5s, size-capped).
+
+    Redirects are not followed so a public host cannot bounce to a private IP.
+
+    @param url Remote image URL.
+    @return (body, content_type) or None if unsafe, non-image, oversize, or failed.
+    """
+    if not is_safe_url(url):
+        return None
+    try:
+        async with httpx.AsyncClient(**_client_kwargs()) as client:  # type: ignore[arg-type]
+            response = await client.get(url, headers={"User-Agent": "NexaraLinkPreview/1.0"})
+            response.raise_for_status()
+            ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
+            if not ctype.startswith("image/") or ctype == "image/svg+xml":
+                return None
+            body = response.content
+            if len(body) > IMAGE_MAX_BYTES:
+                return None
+            return (body, ctype)
+    except Exception:
+        return None
 
 
 async def process_urls_for_post(
