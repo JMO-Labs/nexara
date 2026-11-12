@@ -38,9 +38,7 @@ class ExportDataRepository:
             raise LookupError(f"user {user_id} not found")
         return serialize(user)
 
-    async def list_posts(
-        self, user_id: uuid.UUID, community_id: uuid.UUID
-    ) -> list[dict[str, Any]]:
+    async def list_posts(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[dict[str, Any]]:
         """@brief Posts authored by the user."""
         return await self._rows(Post, Post.author_id, user_id, community_id)
 
@@ -62,14 +60,10 @@ class ExportDataRepository:
         """@brief Events created by the user."""
         return await self._rows(Event, Event.author_id, user_id, community_id)
 
-    async def list_rsvps(
-        self, user_id: uuid.UUID, community_id: uuid.UUID
-    ) -> list[dict[str, Any]]:
+    async def list_rsvps(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[dict[str, Any]]:
         """@brief Event RSVPs by the user."""
         return await self._rows(EventAttendance, EventAttendance.user_id, user_id, community_id)
 
-    async def list_media(
-        self, user_id: uuid.UUID, community_id: uuid.UUID
-    ) -> list[dict[str, Any]]:
+    async def list_media(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[dict[str, Any]]:
         """@brief Media uploaded by the user."""
         return await self._rows(Media, Media.uploader_id, user_id, community_id)
