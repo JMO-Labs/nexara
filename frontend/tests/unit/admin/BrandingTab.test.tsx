@@ -22,7 +22,13 @@ vi.mock("@/lib/api/branding", async (orig) => ({
 const base = {
   community_name: "Garden",
   tagline: null,
+  color_primary: "#14301e",
+  color_primary_dark: "#1b3524",
   color_accent: "#C6B4F5",
+  color_surface_light: "#ffffff",
+  color_surface_dark: "#16291d",
+  color_text_light: "#14301e",
+  color_text_dark: "#dce9d8",
   logo_light_url: null,
   logo_dark_url: null,
 };
