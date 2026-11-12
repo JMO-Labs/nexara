@@ -1,7 +1,7 @@
 """media_ai_metadata table for OCR text
 
 Revision ID: 0019_media_ai_metadata
-Revises: 0018_subgroup_cover_media
+Revises: a78f91338679
 """
 
 import sqlalchemy as sa
@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from alembic import op
 
 revision = "0019_media_ai_metadata"
-down_revision = "0018_subgroup_cover_media"
+down_revision = "a78f91338679"
 branch_labels = None
 depends_on = None
 
