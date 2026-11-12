@@ -33,9 +33,9 @@ describe("PluginRegistry", () => {
     r.registerSlotComponent("sidebar-widget", "a", Comp);
     r.registerSlotComponent("sidebar-widget", "b", Comp);
     r.registerSlotComponent("profile-tab", "a", Comp);
-    expect(r.getSlotComponents("sidebar-widget").map((e) => e.pluginId)).toEqual(
-      ["a", "b"],
-    );
+    expect(
+      r.getSlotComponents("sidebar-widget").map((e) => e.pluginId),
+    ).toEqual(["a", "b"]);
     expect(r.getSlotComponents("profile-tab")).toHaveLength(1);
     expect(r.getSlotComponents("admin-tab")).toEqual([]);
   });
@@ -65,7 +65,10 @@ describe("loadPlugins", () => {
   });
 
   it("imports enabled plugins and calls registerPlugin", async () => {
-    vi.mocked(apiGet).mockResolvedValue([manifest("a"), manifest("off", false)]);
+    vi.mocked(apiGet).mockResolvedValue([
+      manifest("a"),
+      manifest("off", false),
+    ]);
     const importer = vi.fn(async (_id: string) => ({
       registerPlugin: (r: PluginRegistry) =>
         r.registerSlotComponent("sidebar-widget", "a", Comp),
@@ -79,7 +82,11 @@ describe("loadPlugins", () => {
   });
 
   it("skips plugins whose import fails or lack registerPlugin", async () => {
-    vi.mocked(apiGet).mockResolvedValue([manifest("bad"), manifest("none"), manifest("ok")]);
+    vi.mocked(apiGet).mockResolvedValue([
+      manifest("bad"),
+      manifest("none"),
+      manifest("ok"),
+    ]);
     const importer = vi.fn(async (id: string) => {
       if (id === "bad") throw new Error("nope");
       if (id === "none") return {};
@@ -90,7 +97,9 @@ describe("loadPlugins", () => {
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
     await loadPlugins(importer);
-    expect(PluginRegistry.getInstance().getSlotComponents("post-action")).toHaveLength(1);
+    expect(
+      PluginRegistry.getInstance().getSlotComponents("post-action"),
+    ).toHaveLength(1);
   });
 
   it("does not throw when manifest fetch fails", async () => {

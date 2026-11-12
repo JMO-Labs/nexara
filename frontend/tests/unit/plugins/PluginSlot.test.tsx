@@ -16,9 +16,11 @@ describe("PluginSlot", () => {
   beforeEach(() => reg().reset());
 
   it("renders registered components with plugin props", () => {
-    reg().registerSlotComponent("sidebar-widget", "a", ({ pluginId }: { pluginId: string }) => (
-      <div>widget-{pluginId}</div>
-    ));
+    reg().registerSlotComponent(
+      "sidebar-widget",
+      "a",
+      ({ pluginId }: { pluginId: string }) => <div>widget-{pluginId}</div>,
+    );
     render(<PluginSlot slotName="sidebar-widget" />);
     expect(screen.getByText("widget-a")).toBeInTheDocument();
   });
@@ -33,7 +35,9 @@ describe("PluginSlot", () => {
     reg().registerSlotComponent("sidebar-widget", "bad", () => {
       throw new Error("boom");
     });
-    reg().registerSlotComponent("sidebar-widget", "good", () => <div>fine</div>);
+    reg().registerSlotComponent("sidebar-widget", "good", () => (
+      <div>fine</div>
+    ));
     render(<PluginSlot slotName="sidebar-widget" />);
     expect(screen.getByRole("alert")).toHaveTextContent(/bad/);
     expect(screen.getByText("fine")).toBeInTheDocument();
@@ -49,7 +53,9 @@ describe("PluginSlot", () => {
 
   it("re-renders when a component registers later", () => {
     render(<PluginSlot slotName="post-action" />);
-    act(() => reg().registerSlotComponent("post-action", "x", () => <div>late</div>));
+    act(() =>
+      reg().registerSlotComponent("post-action", "x", () => <div>late</div>),
+    );
     expect(screen.getByText("late")).toBeInTheDocument();
   });
 });
