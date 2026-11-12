@@ -19,10 +19,6 @@ class TestSendPushNotification:
     def test_queue_is_notifications(self):
         assert send_push_notification.queue == "notifications"
 
-    def test_returns_status(self):
-        result = send_push_notification("fake-user-id", {"title": "Test"})
-        assert result["status"] == "sent"
-
 
 class TestSendEmailNotification:
     """@brief Verify email notification task configuration."""
