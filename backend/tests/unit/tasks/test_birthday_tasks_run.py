@@ -32,3 +32,10 @@ async def test_one_service_per_community_sums_and_commits_once():
     assert svc_cls.call_count == 3
     assert [c.args[3] for c in svc_cls.call_args_list] == cids
     session.commit.assert_awaited_once()
+
+
+def test_beat_entry_runs_async_and_returns_result():
+    with patch.object(
+        birthday_tasks, "_send_birthday_reminders_async", AsyncMock(return_value={"sent": 5})
+    ):
+        assert birthday_tasks.send_birthday_reminders() == {"sent": 5}
