@@ -46,8 +46,6 @@ class ListFieldRegistry:
         """@brief Delegate config validation."""
         return self.get(key).validate_config(config)
 
-    def project_columns(
-        self, key: str, value: Any, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    def project_columns(self, key: str, value: Any, config: dict[str, Any]) -> dict[str, Any]:
         """@brief Delegate typed-column projection."""
         return self.get(key).project_columns(value, config)
