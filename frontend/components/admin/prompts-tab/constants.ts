@@ -12,6 +12,17 @@ export const FREQUENCIES = [
   { value: "one_time", label: "One time" },
 ] as const;
 
+/** @brief Weekday labels indexed 0 (Monday) to 6, matching backend. */
+export const WEEKDAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
 const FREQUENCY_TONES: Record<string, NonNullable<BadgeProps["tone"]>> = {
   annual_date: "sun",
   weekly: "accent",
