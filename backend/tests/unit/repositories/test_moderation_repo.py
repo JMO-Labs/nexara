@@ -188,3 +188,44 @@ class TestListReports:
         session.execute.assert_awaited_once()
         assert len(reports) == 1
         assert cursor is None
+
+
+class TestSetNsfw:
+    """@brief Tests for ModerationRepository.set_nsfw()."""
+
+    @staticmethod
+    def _session(found: bool) -> AsyncMock:
+        session = _make_session()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = uuid.uuid4() if found else None
+        session.execute.return_value = result
+        return session
+
+    @pytest.mark.asyncio
+    async def test_posts_update_excludes_soft_deleted(self):
+        session = self._session(True)
+        assert await ModerationRepository(session).set_nsfw("posts", uuid.uuid4(), COMMUNITY_ID)
+        sql = str(session.execute.await_args.args[0])
+        assert "UPDATE posts" in sql
+        assert "deleted_at IS NULL" in sql
+        session.flush.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_media_update_has_no_soft_delete_filter(self):
+        session = self._session(True)
+        assert await ModerationRepository(session).set_nsfw("media", uuid.uuid4(), COMMUNITY_ID)
+        sql = str(session.execute.await_args.args[0])
+        assert "UPDATE media" in sql
+        assert "deleted_at" not in sql
+
+    @pytest.mark.asyncio
+    async def test_returns_false_when_no_row(self):
+        session = self._session(False)
+        assert not await ModerationRepository(session).set_nsfw("posts", uuid.uuid4(), COMMUNITY_ID)
+
+    @pytest.mark.asyncio
+    async def test_unsupported_kind_raises(self):
+        session = self._session(True)
+        with pytest.raises(ValueError, match="unsupported kind"):
+            await ModerationRepository(session).set_nsfw("users", uuid.uuid4(), COMMUNITY_ID)
+        session.execute.assert_not_awaited()
