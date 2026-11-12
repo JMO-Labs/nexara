@@ -145,3 +145,18 @@ async def test_package_plugin_relative_import_and_register_hooks(tmp_path):
     cid = uuid.uuid4()
     await load_plugins(FastAPI(), session_with(["pk"]), cid, tmp_path)
     assert PluginRegistry.get("pk").module.CALLS == [(cid, 7)]
+
+
+async def test_unimportable_entry_extension_skipped(tmp_path):
+    make_plugin(tmp_path, "weird", routes="routes.txt", code="x = 1\n")
+    await load_plugins(FastAPI(), session_with(["weird"]), CID, plugins_dir=tmp_path)
+    assert PluginRegistry.get("weird") is None
+
+
+async def test_manifest_id_mismatch_skipped(tmp_path, caplog):
+    make_plugin(tmp_path, "real")
+    (tmp_path / "real").rename(tmp_path / "other")
+    with caplog.at_level(logging.ERROR):
+        await load_plugins(FastAPI(), session_with(["real", "other"]), CID, plugins_dir=tmp_path)
+    assert PluginRegistry.get("real") is None
+    assert "failed to load" in caplog.text
