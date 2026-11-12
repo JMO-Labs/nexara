@@ -66,6 +66,8 @@ vi.mock("next-intl", () => ({
 vi.mock("@/hooks/useEvents", () => ({
   useDeleteEvent: () => ({ mutate: vi.fn(), isPending: false }),
   useRsvp: () => ({ mutate: vi.fn(), isPending: false }),
+  useClaimContribution: () => ({ mutate: vi.fn(), isPending: false }),
+  useUnclaimContribution: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/stores/session", () => ({

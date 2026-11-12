@@ -5,12 +5,16 @@
  *        infinite scroll.
  */
 import * as React from "react";
-import { Button, EmptyState } from "@/components/ui";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AlertCircle, MessageSquarePlus } from "lucide-react";
+import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import { NewItemsPill } from "./NewItemsPill";
+
+const MotionCard = motion.create(Card);
 
 /**
  * @brief Home feed column.
@@ -25,7 +29,10 @@ export function HomeFeed() {
     fetchNextPage,
     hasNextPage,
     isLoading,
+    isError,
+    refetch,
   } = useHomeFeed();
+  const reduced = useReducedMotion();
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const nextRef = React.useRef({ fetchNextPage, hasNextPage });
@@ -65,28 +72,83 @@ export function HomeFeed() {
       <div ref={composerRef}>
         <PostComposer />
       </div>
-      {!isLoading && isEmpty ? (
-        <EmptyState
-          title="Nothing here yet"
-          action={<Button onClick={focusComposer}>Write the first post</Button>}
-        />
-      ) : (
-        <ul className="flex flex-col gap-4">
-          {items.map((i) => (
-            <li
-              key={`${i.kind}:${i.id}`}
-              data-new={freshIds.has(`${i.kind}:${i.id}`) ? "true" : undefined}
-              className="rounded-[1.25rem] data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
-            >
-              {i.kind === "post" ? (
-                <PostCard post={i.post} />
-              ) : (
-                <ActivityLine item={i.activity} />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            exit={{ opacity: 0 }}
+            role="status"
+            aria-label="Loading feed"
+            className="flex flex-col gap-2"
+          >
+            {[0, 1, 2].map((n) => (
+              <MotionCard
+                key={n}
+                data-testid="feed-skeleton"
+                data-delay={String(n * 0.08)}
+                aria-hidden="true"
+                initial={reduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: n * 0.08, duration: 0.2 }}
+                className="flex flex-col gap-2 p-3 md:p-4"
+              >
+                <Skeleton width="40%" height={16} role="presentation" />
+                <Skeleton height={64} rounded="md" role="presentation" />
+              </MotionCard>
+            ))}
+          </motion.div>
+        ) : isError && isEmpty ? (
+          <EmptyState
+            key="error"
+            icon={AlertCircle}
+            title="Failed to load feed"
+            description="Something went wrong. Check your connection and try again."
+            action={<Button onClick={() => refetch()}>Retry</Button>}
+          />
+        ) : isEmpty ? (
+          <EmptyState
+            key="empty"
+            icon={MessageSquarePlus}
+            title="No posts yet"
+            description="Share an update with your community to get things started."
+            action={
+              <Button onClick={focusComposer}>Create your first post</Button>
+            }
+          />
+        ) : (
+          <ul key="list" className="flex flex-col gap-2">
+            <AnimatePresence>
+              {items.map((i) => {
+                const key = `${i.kind}:${i.id}`;
+                const fresh = freshIds.has(key);
+                return (
+                  <motion.li
+                    key={key}
+                    data-testid="feed-item"
+                    data-new={fresh ? "true" : undefined}
+                    className="rounded-lg data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent"
+                    {...(reduced
+                      ? {}
+                      : {
+                          layout: "position" as const,
+                          initial: fresh ? { opacity: 0, y: -8 } : false,
+                          animate: { opacity: 1, y: 0 },
+                          exit: { opacity: 0, transition: { duration: 0.12 } },
+                          transition: { duration: 0.2, ease: "easeOut" },
+                        })}
+                  >
+                    {i.kind === "post" ? (
+                      <PostCard post={i.post} />
+                    ) : (
+                      <ActivityLine item={i.activity} />
+                    )}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
+          </ul>
+        )}
+      </AnimatePresence>
       <div ref={sentinelRef} aria-hidden="true" className="h-1" />
     </div>
   );

@@ -5,7 +5,7 @@
  *        lands on /app (or the `next` query param).
  */
 import { safeInternalLink } from "@/lib/safeLink";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -14,7 +14,11 @@ import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
-import { login as apiLogin } from "@/lib/api/auth";
+import {
+  getAuthConfig,
+  login as apiLogin,
+  type OAuthProvider,
+} from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -29,6 +33,22 @@ export default function LoginPage() {
   const params = useSearchParams();
   const next = safeInternalLink(params.get("next")) ?? "/app";
   const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<OAuthProvider[]>([]);
+  const [localAuth, setLocalAuth] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAuthConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        setProviders(cfg.oauth_providers);
+        setLocalAuth(cfg.local_auth_enabled && !cfg.sso_only);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
@@ -71,39 +91,41 @@ export default function LoginPage() {
           {error}
         </p>
       )}
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        className="flex flex-col gap-4"
-      >
-        <Input
-          label="Email"
-          type="email"
-          autoFocus
-          autoComplete="email"
-          error={formState.errors.email?.message}
-          {...register("email")}
-        />
-        <Input
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          error={formState.errors.password?.message}
-          {...register("password")}
-        />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
-          Sign in
-        </Button>
-        <div className="flex justify-between text-sm">
-          <Link href="/magic-link" className="underline">
-            Email a magic link
-          </Link>
-          <Link href="/reset-password" className="underline">
-            Forgot password?
-          </Link>
-        </div>
-      </form>
-      <OAuthButtons />
+      {localAuth && (
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
+          <Input
+            label="Email"
+            type="email"
+            autoFocus
+            autoComplete="email"
+            error={formState.errors.email?.message}
+            {...register("email")}
+          />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            error={formState.errors.password?.message}
+            {...register("password")}
+          />
+          <Button type="submit" size="lg" loading={formState.isSubmitting}>
+            Sign in
+          </Button>
+          <div className="flex justify-between text-sm">
+            <Link href="/magic-link" className="underline">
+              Email a magic link
+            </Link>
+            <Link href="/reset-password" className="underline">
+              Forgot password?
+            </Link>
+          </div>
+        </form>
+      )}
+      <OAuthButtons providers={providers} showDivider={localAuth} />
     </AuthCard>
   );
 }

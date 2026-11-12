@@ -101,3 +101,33 @@ def prune_activity_events(days: int = 30) -> dict[str, int]:
     # Note: actual deletion is async; this stub returns 0 for now.
     # Phase 2 will wire this to ActivityRepository.delete_older_than_days().
     return {"deleted_count": 0}
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="app.tasks.maintenance_tasks.reset_ai_daily_budget",
+    queue="maintenance",
+)
+def reset_ai_daily_budget() -> dict[str, str]:
+    """
+    @brief Clear today's AI budget counter at the reset hour.
+    @return Dict with ``status``.
+    """
+    import asyncio
+
+    from app.core.config import get_settings
+    from app.core.valkey import DB_CACHE, create_pool
+    from app.services.ai.budget_service import BudgetService
+
+    settings = get_settings()
+
+    async def _run() -> None:
+        redis = create_pool(settings, DB_CACHE)
+        try:
+            await BudgetService(
+                redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR
+            ).reset_daily_budget()
+        finally:
+            await redis.aclose()
+
+    asyncio.run(_run())
+    return {"status": "reset"}

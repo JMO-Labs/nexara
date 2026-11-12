@@ -114,6 +114,8 @@ export function useHomeFeed() {
     fetchNextPage: q.fetchNextPage,
     hasNextPage: q.hasNextPage,
     isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
     pending,
     reveal,
     freshIds,
