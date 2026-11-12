@@ -8,6 +8,10 @@ import userEvent from "@testing-library/user-event";
 import { GroupMosaic } from "@/components/subgroups/groups-page/GroupMosaic";
 import type { GroupMosaicProps } from "@/components/subgroups/groups-page/GroupMosaic";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const base: GroupMosaicProps = {
   data: [],
   isLoading: false,
