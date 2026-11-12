@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = "nexara"
 
+    # --- AI ('anthropic' | 'openai' | 'ollama'; empty disables AI) ---
+    AI_PROVIDER: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    OLLAMA_BASE_URL: str = ""
+    OLLAMA_MODEL: str = "llama2"
+    AI_HTTP_TIMEOUT: float = 60.0
+
     # --- VAPID (Web Push) ---
     VAPID_PRIVATE_KEY: str = ""
     VAPID_PUBLIC_KEY: str = ""
