@@ -5,13 +5,16 @@
 
 from pathlib import Path
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 
 import app.models  # noqa: F401
 from app.models.plugin import Plugin, PluginData
 
-VERSIONS = Path(__file__).resolve().parents[3] / "alembic" / "versions"
+BACKEND = Path(__file__).resolve().parents[3]
+VERSIONS = BACKEND / "alembic" / "versions"
 
 
 class TestPluginModel:
@@ -92,9 +95,14 @@ class TestPluginDataModel:
 
 
 class TestMigration:
-    """@brief Verify the 0021 migration and linear chain."""
+    """@brief Verify the plugin migration sits on a single, linear head."""
 
-    def test_down_revision_is_previous_head(self):
-        src = (VERSIONS / "0021_plugin_models.py").read_text()
-        assert 'down_revision: str | None = "0020_media_ai_metadata"' in src
+    def test_plugin_migration_is_sole_head(self):
+        cfg = Config(str(BACKEND / "alembic.ini"))
+        cfg.set_main_option("script_location", str(BACKEND / "alembic"))
+        heads = ScriptDirectory.from_config(cfg).get_heads()
+        assert heads == ["0022_plugin_models"]
+
+    def test_downgrade_drops_plugin_tables(self):
+        src = (VERSIONS / "0022_plugin_models.py").read_text()
         assert "plugin_data" in src and "drop_table" in src

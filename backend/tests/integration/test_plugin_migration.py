@@ -9,6 +9,7 @@ from pathlib import Path
 
 import psycopg2
 import pytest
+import sqlalchemy as sa
 from alembic.config import Config
 from sqlalchemy.engine import make_url
 
@@ -47,10 +48,31 @@ def scratch_db(monkeypatch):
     conn.close()
 
 
+PLUGIN_TABLES = {"plugins", "plugin_data"}
+
+
+def _tables(name: str) -> set[str]:
+    """@brief Return table names present in the scratch database."""
+    url = make_url(BASE_URL).set(drivername="postgresql+psycopg2", database=name)
+    engine = sa.create_engine(url)
+    try:
+        return set(sa.inspect(engine).get_table_names())
+    finally:
+        engine.dispose()
+
+
 def test_upgrade_head_then_downgrade_base(scratch_db):
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     command.upgrade(cfg, "head")
-    command.downgrade(cfg, "a78f91338679")  # drops plugin tables
+    assert PLUGIN_TABLES <= _tables(scratch_db)
+
+    command.downgrade(cfg, "-1")  # reverts only the plugin migration
+    remaining = _tables(scratch_db)
+    assert not PLUGIN_TABLES & remaining
+    assert "media_ai_metadata" in remaining
+
     command.upgrade(cfg, "head")
+    assert PLUGIN_TABLES <= _tables(scratch_db)
     command.downgrade(cfg, "base")
+    assert not PLUGIN_TABLES & _tables(scratch_db)
