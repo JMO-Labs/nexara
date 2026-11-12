@@ -44,7 +44,8 @@ describe("HomeFeed item motion", () => {
     render(<HomeFeed />);
     const items = screen.getAllByTestId("feed-item");
     expect(items[0]).toHaveStyle({ opacity: "0" });
-    expect(items[1].style.opacity).toBe("");
+    // initial={false}: rendered at the final state, no transparent start
+    expect(items[1]).toHaveStyle({ opacity: "1" });
   });
   it("skips animation under reduced motion", () => {
     reduced = true;
