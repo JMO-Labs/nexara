@@ -24,7 +24,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-
 from app.plugins.context import PluginContext
 from app.plugins.manifest import PluginManifest, PluginPermission
 
