@@ -18,7 +18,7 @@ response schemas.
 ## Source documentation
 
 The Doxygen-generated reference for the source code is published with this site
-under [API Docs](/api/). Coverage reports are published alongside it.
+under [API Docs](../../api/). Coverage reports are published alongside it.
 
 ## Conventions
 
