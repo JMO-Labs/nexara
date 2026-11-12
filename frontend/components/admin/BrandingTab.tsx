@@ -14,6 +14,12 @@ import {
   checkPairs,
   type ColorKey,
 } from "@/lib/branding-palette";
+import {
+  BrandingExtraFields,
+  extraChanges,
+  extraInitial,
+  extraValid,
+} from "./BrandingExtraFields";
 import { BrandingPreview } from "./BrandingPreview";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
@@ -34,6 +40,8 @@ function BrandingForm({ initial }: { initial: Branding }) {
   const [mono, setMono] = useState(
     initial.font_family_mono ?? "JetBrains Mono",
   );
+  const extraInit = extraInitial(initial);
+  const [extra, setExtra] = useState(extraInit);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const changed = COLOR_FIELDS.filter(
@@ -46,7 +54,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
       ? ACCENT_ERROR
       : undefined;
   const canSave =
-    !accentError && !invalid && name.trim().length > 0 && !update.isPending;
+    !accentError && !invalid && extraValid(extra) && name.trim().length > 0 && !update.isPending;
   const warnings = checkPairs(colors).filter((p) => !p.ok);
 
   const submit = (e: React.FormEvent) => {
@@ -57,6 +65,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
       {
         community_name: name.trim(),
         tagline,
+        ...extraChanges(extra, extraInit),
         ...Object.fromEntries(changed.map((k) => [k, colors[k]])),
         ...(font !== (initial.font_family ?? "Inter")
           ? { font_family: font }
@@ -105,6 +114,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
           value={mono}
           onChange={setMono}
         />
+        <BrandingExtraFields value={extra} onChange={setExtra} />
       </div>
       {warnings.map((w) => (
         <p key={w.id} role="status" className="text-sm text-amber-700">

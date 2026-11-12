@@ -22,6 +22,13 @@ export interface Branding {
   font_family_mono?: string;
   logo_light_url: string | null;
   logo_dark_url: string | null;
+  email_logo_media_id?: string | null;
+  email_footer_text?: string | null;
+  email_sender_name?: string | null;
+  landing_cta_text?: string | null;
+  landing_show_feature_list?: boolean;
+  pwa_icon_192_media_id?: string | null;
+  pwa_icon_512_media_id?: string | null;
 }
 
 export interface BrandingUpdate {
@@ -36,6 +43,13 @@ export interface BrandingUpdate {
   color_text_dark?: string;
   font_family?: string;
   font_family_mono?: string;
+  email_logo_media_id?: string;
+  email_footer_text?: string;
+  email_sender_name?: string;
+  landing_cta_text?: string;
+  landing_show_feature_list?: boolean;
+  pwa_icon_192_media_id?: string;
+  pwa_icon_512_media_id?: string;
 }
 
 /** @brief Fetch current branding (public). */

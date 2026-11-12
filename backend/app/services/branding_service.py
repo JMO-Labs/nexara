@@ -8,6 +8,7 @@ on every admin update.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from typing import TYPE_CHECKING, Any
@@ -252,7 +253,7 @@ class BrandingService:
         if not icons:
             icons.append({"src": "/favicon.ico", "sizes": "any", "type": "image/x-icon"})
 
-        return {
+        manifest: dict[str, Any] = {
             "name": name,
             "short_name": short_name,
             "theme_color": theme_color,
@@ -261,6 +262,11 @@ class BrandingService:
             "start_url": start_url,
             "icons": icons,
         }
+        # Content hash: changes whenever any manifest field changes, so the
+        # service worker can detect an updated manifest.
+        digest = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode())
+        manifest["version"] = digest.hexdigest()[:12]
+        return manifest
 
     def validate_font_family(self, font: str) -> bool:
         """@brief Validate font against allowed list."""
