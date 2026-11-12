@@ -3,6 +3,7 @@
  * @brief Prompts API endpoints for admin CRUD, seeding, and feed posts.
  */
 import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
+import type { Post } from "./posts";
 
 /**
  * @brief Prompt detail within a prompt post.
@@ -139,3 +140,31 @@ export const getPromptResponseCount = (promptPostId: string) =>
   apiGet<{ response_count: number }>(
     `/api/v1/prompts/posts/${seg(promptPostId)}/responses`,
   );
+
+/**
+ * @brief One page of response posts for a prompt post.
+ */
+export interface PromptResponsesPage {
+  response_count: number;
+  items: Post[];
+  next_cursor: string | null;
+}
+
+/**
+ * @brief List response posts for a prompt post (cursor paginated).
+ * @param promptPostId Prompt post ID
+ * @param cursor Cursor from previous page's next_cursor
+ * @param limit Page size
+ * @return PromptResponsesPage
+ */
+export const listPromptResponses = (
+  promptPostId: string,
+  cursor?: string | null,
+  limit = 20,
+) => {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (cursor) qs.set("cursor", cursor);
+  return apiGet<PromptResponsesPage>(
+    `/api/v1/prompts/posts/${seg(promptPostId)}/responses?${qs}`,
+  );
+};

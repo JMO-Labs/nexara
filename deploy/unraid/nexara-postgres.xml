@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>nexara-postgres</Name>
+  <Repository>postgres:16</Repository>
+  <Registry>https://hub.docker.com/_/postgres</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/JMO-Labs/nexara/issues</Support>
+  <Project>https://github.com/JMO-Labs/nexara</Project>
+  <Overview>PostgreSQL database for Nexara. No port is published to the host; Nexara reaches it by container name on the same Docker network. Install this first, on the same custom network as nexara.</Overview>
+  <Category>Other: Network:Web</Category>
+  <TemplateURL>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara-postgres.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara-icon.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <Requires>Docs: https://github.com/JMO-Labs/nexara/blob/main/docs/docs/deployment/unraid.md</Requires>
+  <Config Name="Database Storage" Target="/var/lib/postgresql/data" Default="/mnt/user/appdata/nexara/postgres" Mode="rw" Description="Persistent PostgreSQL data directory." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nexara/postgres</Config>
+  <Config Name="Database User" Target="POSTGRES_USER" Default="nexara" Mode="" Description="Database user. Must match DATABASE_URL in nexara." Type="Variable" Display="always" Required="true" Mask="false">nexara</Config>
+  <Config Name="Database Password" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="Database password. Must match DATABASE_URL in nexara." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Database Name" Target="POSTGRES_DB" Default="nexara" Mode="" Description="Database name. Must match DATABASE_URL in nexara." Type="Variable" Display="advanced" Required="true" Mask="false">nexara</Config>
+</Container>

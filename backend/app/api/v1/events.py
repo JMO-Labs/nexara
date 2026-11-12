@@ -27,6 +27,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     EventCreate,
     EventList,
@@ -231,11 +232,13 @@ async def export_event_ical(
 
 @router.get("/feed.ics")
 async def export_feed_ical(
+    start: datetime | None = Query(None, description="Range start (UTC)"),
+    end: datetime | None = Query(None, description="Range end (UTC)"),
     user: User = Depends(get_current_user),
     service: EventService = Depends(_build_service),
 ) -> Response:
     """@brief Export the user's full event feed as .ics."""
-    body = await service.export_feed_ical(user.id)
+    body = await service.export_feed_ical(user.id, start=start, end=end)
     return Response(
         content=body,
         media_type="text/calendar",
@@ -307,6 +310,27 @@ async def list_subscriptions(
 ) -> list[CalendarSubscriptionResponse]:
     """@brief List the current user's subscriptions."""
     return await service.list_subscriptions(user.id)
+
+
+@subs_router.post("/{sub_id}/sync")
+async def sync_subscription_now(
+    sub_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> dict[str, int]:
+    """@brief Fetch and import a subscription immediately."""
+    return {"synced_count": await service.sync_now(sub_id, user.id)}
+
+
+@subs_router.put("/{sub_id}", response_model=CalendarSubscriptionResponse)
+async def update_subscription(
+    sub_id: uuid.UUID,
+    body: CalendarSubscriptionUpdate,
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> CalendarSubscriptionResponse:
+    """@brief Update a calendar subscription."""
+    return await service.update_subscription(sub_id, user.id, body)
 
 
 @subs_router.delete("/{sub_id}", response_model=MessageResponse)
