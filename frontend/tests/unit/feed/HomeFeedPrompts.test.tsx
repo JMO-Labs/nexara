@@ -16,6 +16,9 @@ vi.mock("@/hooks/useActivePrompts", () => ({
 vi.mock("@/hooks/usePromptResponses", () => ({
   usePromptResponses: () => ({ data: undefined }),
 }));
+vi.mock("@/components/prompts/PromptResponseModal", () => ({
+  PromptResponseModal: () => null,
+}));
 vi.mock("@/hooks/useHomeFeed", () => ({
   useHomeFeed: () => ({
     items: [],
