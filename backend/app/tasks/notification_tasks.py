@@ -84,10 +84,15 @@ async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[
         subs = await push_repo.list_for_user(user_id)
         if not subs:
             return {"status": "skipped", "count": 0}
+        from sqlalchemy import select
+
+        community_id = await session.scalar(select(User.community_id).where(User.id == user_id))
+        if community_id is None:
+            return {"status": "skipped", "count": 0}
         service = PushService(
             push_repo,
             SettingsRepository(session),
-            user_id,
+            community_id,
             settings=get_settings(),
         )
         await service.send_push(
@@ -96,6 +101,7 @@ async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[
             payload.get("body", ""),
             payload.get("url") or "/",
         )
+        await session.commit()
         return {"status": "sent", "count": len(subs)}
 
 
