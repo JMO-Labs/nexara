@@ -37,7 +37,7 @@ export default function BookmarksPage() {
         <EmptyState
           icon={Bookmark}
           title="No bookmarks yet"
-          description="No bookmarks yet. Save posts for later reading!"
+          description="Save posts for later reading!"
         />
       ) : (
         <div className="flex flex-col gap-4">

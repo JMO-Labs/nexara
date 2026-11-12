@@ -44,7 +44,7 @@ describe("BookmarkButton", () => {
       "aria-pressed",
       "true",
     );
-    expect(api.toggleBookmark).toHaveBeenCalledWith("p1");
+    await waitFor(() => expect(api.toggleBookmark).toHaveBeenCalledWith("p1"));
   });
 
   it("reverts and shows error toast on failure", async () => {
