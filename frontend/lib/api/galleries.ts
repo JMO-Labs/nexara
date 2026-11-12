@@ -93,3 +93,9 @@ export const removeItem = (id: string, itemId: string) =>
   apiDelete<{ message: string }>(`${BASE}/${seg(id)}/items/${seg(itemId)}`);
 export const listCollaborators = (id: string) =>
   apiGet<Collaborator[]>(`${BASE}/${seg(id)}/collaborators`);
+export const addCollaborator = (id: string, user_id: string) =>
+  apiPost<Collaborator>(`${BASE}/${seg(id)}/collaborators`, { user_id });
+export const removeCollaborator = (id: string, userId: string) =>
+  apiDelete<{ message: string }>(
+    `${BASE}/${seg(id)}/collaborators/${seg(userId)}`,
+  );

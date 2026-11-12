@@ -13,6 +13,7 @@ import {
   Skeleton,
 } from "@/components/ui";
 import { GalleryUpload } from "@/components/galleries/GalleryUpload";
+import { GalleryCollaborators } from "./GalleryCollaborators";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import {
   useGalleryDetail,
@@ -214,6 +215,10 @@ export function GalleryDrawer({
               }
             />
           </div>
+
+          {gallery.contribution_policy === "collaborators" && (
+            <GalleryCollaborators galleryId={gallery.id} isOwner={isOwner} />
+          )}
 
           {canContribute && (
             <div>
