@@ -127,4 +127,5 @@ def extract_claims(
         display_name=str(display_name) if display_name else None,
         avatar_url=str(avatar_url) if avatar_url else None,
         groups=groups,
+        email_verified=claims.get("email_verified") in (True, "true"),
     )

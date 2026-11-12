@@ -15,6 +15,7 @@ import structlog
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.config import get_settings
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
@@ -183,6 +184,7 @@ class MediaService:
             )
 
         generate_thumbnail.delay(str(media.id))
+        await invalidate_search_cache_for_community(self._community_id)
         enqueue_ocr(media.id, self._community_id, media.content_type)
 
         return MediaResponse.model_validate(media)
@@ -273,6 +275,7 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("media", media_id)
 
