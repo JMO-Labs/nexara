@@ -41,6 +41,7 @@ from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth import sso_only as _sso_only
 from app.services.auth.invite import validate_invite as _validate_invite_impl
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
@@ -99,10 +100,11 @@ class AuthService:
         @raises ConflictError If email or username already exists.
         @raises AuthorizationError If registration is disabled or invite is required but missing.
         """
+        cid = community_id or uuid.UUID(self._settings.COMMUNITY_ID)
+        await _sso_only.assert_password_auth_allowed(self._session, cid)
         if not self._settings.ENABLE_REGISTRATION:
             raise AuthorizationError(message=_("Registration is currently disabled"))
 
-        cid = community_id or uuid.UUID(self._settings.COMMUNITY_ID)
         role = "member"
 
         if self._settings.REQUIRE_INVITE:
@@ -159,6 +161,12 @@ class AuthService:
         logger.info("user_registered", user_id=str(user.id), email=email)
         return await self._issue_tokens(user)
 
+    async def _assert_password_auth_allowed(self) -> None:
+        """@brief Raise AuthorizationError when SSO-only mode is enabled."""
+        await _sso_only.assert_password_auth_allowed(
+            self._session, uuid.UUID(self._settings.COMMUNITY_ID)
+        )
+
     async def login(
         self,
         *,
@@ -173,6 +181,7 @@ class AuthService:
         @return Dict with tokens, or ``requires_2fa=True`` with a pending token.
         @raises AuthenticationError On invalid credentials.
         """
+        await self._assert_password_auth_allowed()
         user = await self._user_repo.find_by_email(email)
         if not user or not user.password_hash:
             raise AuthenticationError(message=_("Invalid email or password"))
@@ -337,6 +346,7 @@ class AuthService:
 
         Delegates to :mod:`app.services.auth.magic_link`.
         """
+        await self._assert_password_auth_allowed()
         await _request_magic_link_impl(
             self._session,
             self._user_repo,
@@ -352,6 +362,7 @@ class AuthService:
         @return Dict with access_token, expires_in, raw_refresh_token.
         @raises AuthenticationError If token is invalid, expired, or consumed.
         """
+        await self._assert_password_auth_allowed()
         user = await _verify_magic_link_impl(
             self._session,
             self._user_repo,

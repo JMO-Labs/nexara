@@ -74,17 +74,17 @@ describe("HomeFeed prompts", () => {
     render(<HomeFeed />);
     const region = screen.getByRole("region", { name: /active prompts/i });
     expect(
-      within(region).getAllByRole("button", { name: /reply/i }),
+      within(region).getAllByRole("button", { name: /respond/i }),
     ).toHaveLength(2);
     expect(screen.getByText("Q two")).toBeInTheDocument();
   });
 
-  it("Reply opens composer with prompt post id and title", async () => {
+  it("Respond opens composer with prompt post id and title", async () => {
     state.prompts = [pp("a", "pa", "Q one")];
     render(<HomeFeed />);
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: /reply/i }));
+      .click(screen.getByRole("button", { name: /respond/i }));
     expect(state.composer).toHaveBeenLastCalledWith(
       expect.objectContaining({
         replyToPromptId: "a",
