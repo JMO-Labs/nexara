@@ -6,11 +6,7 @@
  *        Collapses to header bar when minimized.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import { MinusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useReducedMotion } from "framer-motion";
+import { Minus, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconButton } from "@/components/ui";
 import { MessageList, type MessageListHandle } from "./MessageList";
@@ -36,7 +32,6 @@ const CARD_H = 560;
 const HEADER_H = 44;
 
 export function ChatHead({ threadId, label }: ChatHeadProps) {
-  const prefersReduced = useReducedMotion();
   const closeThread = useChatDock((s) => s.closeThread);
   const toggleMinimize = useChatDock((s) => s.toggleMinimize);
   const isMinimized = useChatDock((s) => s.minimized[threadId] ?? false);
@@ -100,91 +95,53 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
   };
 
   return (
-    <Box
+    <div
       role="region"
       aria-label={`Conversation with ${label}`}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      sx={{
-        width: CARD_W,
-        height: isMinimized ? HEADER_H : CARD_H,
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: "background.surface",
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: "md",
-        boxShadow: "lg",
-        overflow: "hidden",
-        transition: "height 0.2s ease",
-        "@media (prefers-reduced-motion: reduce)": { transition: "none" },
-      }}
+      style={{ width: CARD_W, height: isMinimized ? HEADER_H : CARD_H }}
+      className="flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-bg text-ink shadow-lg motion-safe:transition-[height] motion-safe:duration-200"
     >
-      {/* Header */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        sx={{
-          px: 1.5,
-          height: HEADER_H,
-          flexShrink: 0,
-          bgcolor: "background.level1",
-          borderBottom: isMinimized ? "none" : "1px solid",
-          borderColor: "divider",
-          cursor: "pointer",
-        }}
+      <div
+        style={{ height: HEADER_H }}
+        className={`flex shrink-0 items-center gap-1 bg-surface px-3 ${
+          isMinimized ? "cursor-pointer" : "border-b border-border"
+        }`}
         onClick={() => isMinimized && toggleMinimize(threadId)}
       >
-        <Typography level="title-sm" noWrap sx={{ flex: 1, minWidth: 0 }}>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
           {label}
-        </Typography>
+        </h2>
         <IconButton
           size="sm"
-          variant="plain"
+          variant="ghost"
           aria-label="Minimize"
           onClick={(e) => {
             e.stopPropagation();
             toggleMinimize(threadId);
           }}
         >
-          <MinusIcon width={14} />
+          <Minus size={14} aria-hidden />
         </IconButton>
         <IconButton
           size="sm"
-          variant="plain"
+          variant="ghost"
           aria-label="Close"
           onClick={(e) => {
             e.stopPropagation();
             closeThread(threadId);
           }}
         >
-          <XMarkIcon width={14} />
+          <X size={14} aria-hidden />
         </IconButton>
-      </Stack>
+      </div>
 
-      {/* Body — hidden when minimized.
-          IMPORTANT: parent flex container with minHeight 0 is required so
-          MessageList can scroll without overlapping the Composer below. */}
+      {/* min-h-0 lets MessageList scroll without overlapping the Composer. */}
       {!isMinimized && (
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            opacity: 1,
-            transition: prefersReduced ? "none" : "opacity 0.15s ease",
-          }}
-        >
-          <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col">
             <MessageList
               ref={listRef}
               messages={messages}
@@ -194,18 +151,12 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
               onLoadMore={fetchNextPage}
               selfId={selfId}
             />
-          </Box>
-          <Box
-            sx={{
-              flexShrink: 0,
-              borderTop: "1px solid",
-              borderColor: "divider",
-            }}
-          >
+          </div>
+          <div className="shrink-0 border-t border-border">
             <Composer onSend={handleSend} onTyping={handleTyping} />
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

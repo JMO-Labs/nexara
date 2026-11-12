@@ -1,14 +1,12 @@
 "use client";
 /**
  * @file components/events/ListView.tsx
- * @brief List view grouped by date. Date headers in uppercase, event rows with color bar.
+ * @brief List view grouped by date. Event rows with color bar.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { format, parseISO, startOfDay, isSameDay } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
+import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
 
 export interface ListViewProps {
@@ -51,47 +49,29 @@ export function ListView({
 
   if (grouped.length === 0) {
     return (
-      <Box sx={{ p: 3, textAlign: "center" }}>
-        <Typography level="body-sm" sx={{ color: "text.tertiary" }}>
-          No events scheduled
-        </Typography>
-      </Box>
+      <div className="p-6 text-center">
+        <p className="text-sm text-muted">No events scheduled</p>
+      </div>
     );
   }
 
   return (
-    <Stack
-      spacing={0}
-      sx={{
-        width: "100%",
-        maxHeight: "100%",
-        overflowY: "auto",
-        px: 0,
-      }}
-    >
+    <div className="flex max-h-full w-full flex-col overflow-y-auto">
       {grouped.map(([dateKey, dayEvents]) => {
         const date = new Date(dateKey);
         const isToday = isSameDay(date, new Date());
 
         return (
-          <Box key={dateKey} sx={{ mb: 2 }}>
-            {/* Date header */}
-            <Typography
-              level="body-xs"
-              sx={{
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                fontWeight: 700,
-                color: isToday ? "primary.solidBg" : "text.secondary",
-                mb: 0.75,
-                px: 1.5,
-              }}
+          <section key={dateKey} className="mb-4">
+            <h3
+              className={cn(
+                "mb-1.5 px-3 text-sm font-semibold",
+                isToday ? "text-accent" : "text-muted",
+              )}
             >
               {format(date, "EEEE, MMMM d")}
-            </Typography>
-
-            {/* Event list for this day */}
-            <Stack spacing={0.5} sx={{ px: 0 }}>
+            </h3>
+            <ul className="flex flex-col gap-1">
               {dayEvents.map((ev) => {
                 const isSelected = selectedEventId === ev.id;
                 const tone = toneForEvent(ev, subgroupNames);
@@ -99,72 +79,33 @@ export function ListView({
                 const endTime = format(parseISO(ev.ends_at), "h:mm a");
 
                 return (
-                  <Box
-                    key={ev.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onSelectEvent(ev)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onSelectEvent(ev);
-                      }
-                    }}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      px: 1.5,
-                      py: 1,
-                      backgroundColor: isSelected
-                        ? "background.level1"
-                        : "transparent",
-                      borderLeft: `4px solid ${tone.solid}`,
-                      borderRadius: 0,
-                      cursor: "pointer",
-                      transition: "background-color 120ms ease",
-                      "&:hover": {
-                        backgroundColor: "background.level1",
-                      },
-                      "&:focus-visible": {
-                        outline: "2px solid",
-                        outlineColor: tone.solid,
-                        outlineOffset: "-2px",
-                      },
-                    }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        level="body-sm"
-                        sx={{
-                          fontWeight: 600,
-                          color: "text.primary",
-                          mb: 0.25,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                  <li key={ev.id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectEvent(ev)}
+                      style={{ borderLeftColor: tone.solid }}
+                      className={cn(
+                        "flex min-h-11 w-full flex-col justify-center border-l-4 px-3 py-2 text-left transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                        isSelected ? "bg-surface" : "bg-transparent",
+                      )}
+                    >
+                      <span className="w-full truncate text-sm font-semibold">
                         {ev.title}
-                      </Typography>
-                      <Typography
-                        level="body-xs"
-                        sx={{
-                          color: "text.secondary",
-                        }}
-                      >
+                      </span>
+                      <span className="text-sm text-muted">
                         {ev.is_all_day
                           ? "All day"
                           : `${startTime} – ${endTime}`}
-                      </Typography>
-                    </Box>
-                  </Box>
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
-            </Stack>
-          </Box>
+            </ul>
+          </section>
         );
       })}
-    </Stack>
+    </div>
   );
 }
 

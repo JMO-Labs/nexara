@@ -1,111 +1,73 @@
 "use client";
 /**
  * @file components/ui/Toast.tsx
- * @brief ToastRoot — subscribes to useToasts store, renders an ARIA live
- *        region of stacked toasts. Auto-dismisses after ttl.
+ * @brief ToastRoot renders the useToasts store in a polite live region.
  */
-import * as React from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import Box from "@mui/joy/Box";
-import Alert from "@mui/joy/Alert";
-import IconButton from "@mui/joy/IconButton";
-import Typography from "@mui/joy/Typography";
+import { useEffect } from "react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   useToasts,
   type Toast as ToastT,
   type ToastVariant,
 } from "@/stores/toasts";
-import { spring } from "./motion";
 
-const variantColor: Record<
-  ToastVariant,
-  "primary" | "success" | "warning" | "danger" | "neutral"
-> = {
-  info: "neutral",
-  success: "success",
-  warning: "warning",
-  danger: "danger",
-  loading: "primary",
+const TONE: Record<ToastVariant, string> = {
+  info: "border-muted/40",
+  success: "border-leaf",
+  warning: "border-sun",
+  danger: "border-red-600",
+  loading: "border-accent",
 };
 
 function ToastItem({ toast }: { toast: ToastT }) {
   const dismiss = useToasts((s) => s.dismiss);
-  React.useEffect(() => {
+  useEffect(() => {
     if (!toast.ttl) return;
     const t = setTimeout(() => dismiss(toast.id), toast.ttl);
     return () => clearTimeout(t);
   }, [toast.id, toast.ttl, dismiss]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: 24, scale: 0.96 }}
-      animate={{ opacity: 1, x: 0, scale: 1, transition: spring }}
-      exit={{ opacity: 0, x: 24, scale: 0.98, transition: { duration: 0.18 } }}
+    <div
+      className={cn(
+        "bg-surface text-ink flex w-full max-w-sm items-start gap-3 rounded-2xl border-l-4 p-3 shadow-lg",
+        TONE[toast.variant],
+      )}
     >
-      <Alert
-        color={variantColor[toast.variant]}
-        variant="soft"
-        sx={{
-          borderRadius: "md",
-          minWidth: 280,
-          maxWidth: 420,
-          boxShadow: "md",
-          alignItems: "flex-start",
-        }}
-        endDecorator={
-          <IconButton
-            size="sm"
-            variant="plain"
-            color={variantColor[toast.variant]}
-            onClick={() => dismiss(toast.id)}
-            aria-label="Dismiss notification"
-          >
-            ✕
-          </IconButton>
-        }
+      <div className="min-w-0 flex-1">
+        {toast.title ? <p className="font-semibold">{toast.title}</p> : null}
+        <p className="text-sm">{toast.message}</p>
+      </div>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={() => dismiss(toast.id)}
+        className="focus-visible:outline-accent rounded p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <Box>
-          {toast.title && (
-            <Typography
-              level="title-sm"
-              sx={{ fontFamily: "var(--font-display)" }}
-            >
-              {toast.title}
-            </Typography>
-          )}
-          <Typography level="body-sm">{toast.message}</Typography>
-        </Box>
-      </Alert>
-    </motion.div>
+        <X className="size-4" aria-hidden />
+      </button>
+    </div>
   );
 }
 
+/**
+ * @brief Toast region; bottom-center above tab bar on phones, bottom-right >= md.
+ * @return live region element
+ */
 export function ToastRoot() {
   const items = useToasts((s) => s.items).slice(0, 3);
   return (
-    <Box
-      role="region"
+    <div
+      role="status"
       aria-live="polite"
       aria-label="Notifications"
-      sx={{
-        position: "fixed",
-        bottom: 16,
-        right: 16,
-        zIndex: 1500,
-        display: "flex",
-        flexDirection: "column",
-        gap: 1,
-        pointerEvents: "none",
-        "& > *": { pointerEvents: "auto" },
-      }}
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-[100] flex flex-col items-center gap-2 px-3 md:inset-x-auto md:right-4 md:bottom-4 md:items-end [&>*]:pointer-events-auto"
     >
-      <AnimatePresence initial={false}>
-        {items.map((t) => (
-          <ToastItem key={t.id} toast={t} />
-        ))}
-      </AnimatePresence>
-    </Box>
+      {items.map((t) => (
+        <ToastItem key={t.id} toast={t} />
+      ))}
+    </div>
   );
 }
 

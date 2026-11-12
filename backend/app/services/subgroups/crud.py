@@ -15,6 +15,7 @@ from app.core.i18n import _
 from app.models.subgroup import ChatChannel, Subgroup
 from app.models.user import User
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+from app.services.activity_publish import record_activity
 from app.services.subgroups.helpers import is_admin, require_role
 
 if TYPE_CHECKING:
@@ -174,7 +175,10 @@ class SubgroupCrudMixin:
         )
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._subgroup_repo._session,
+                None,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="subgroup.created",

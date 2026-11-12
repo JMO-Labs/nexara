@@ -2,7 +2,7 @@
  * @file lib/api/events.ts
  * @brief Events REST endpoints (list window) + RSVP, contributions, CRUD.
  */
-import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 
 export interface EventItem {
   id: string;
@@ -77,30 +77,35 @@ export const listEvents = (params: ListEventsParams = {}) => {
   return apiGet<EventListResponse>(`${BASE}?${qs}`);
 };
 
-export const getEvent = (id: string) => apiGet<EventItem>(`${BASE}/${id}`);
+export const getEvent = (id: string) => apiGet<EventItem>(`${BASE}/${seg(id)}`);
 export const createEvent = (body: CreateEventBody) =>
   apiPost<EventItem>(BASE, body);
 export const updateEvent = (id: string, body: Partial<CreateEventBody>) =>
-  apiPatch<EventItem>(`${BASE}/${id}`, body);
+  apiPatch<EventItem>(`${BASE}/${seg(id)}`, body);
 export const deleteEvent = (id: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${id}`);
+  apiDelete<{ message: string }>(`${BASE}/${seg(id)}`);
 export const rsvpEvent = (id: string, status: string, note?: string) =>
   apiPost<{ id: string; event_id: string; user_id: string; status: string }>(
-    `${BASE}/${id}/rsvp`,
+    `${BASE}/${seg(id)}/rsvp`,
     { status, note },
   );
 export const unrsvpEvent = (id: string) =>
-  apiDelete<{ message: string }>(`${BASE}/${id}/rsvp`);
+  apiDelete<{ message: string }>(`${BASE}/${seg(id)}/rsvp`);
 export const claimContribution = (
   eventId: string,
   slotId: string,
   quantity = 1,
 ) =>
-  apiPost<EventItem>(`${BASE}/${eventId}/contributions/${slotId}/claim`, {
-    quantity,
-  });
+  apiPost<EventItem>(
+    `${BASE}/${seg(eventId)}/contributions/${seg(slotId)}/claim`,
+    {
+      quantity,
+    },
+  );
 export const unclaimContribution = (eventId: string, slotId: string) =>
-  apiDelete<EventItem>(`${BASE}/${eventId}/contributions/${slotId}/claim`);
+  apiDelete<EventItem>(
+    `${BASE}/${seg(eventId)}/contributions/${seg(slotId)}/claim`,
+  );
 
 export interface CalendarSubscription {
   id: string;
@@ -124,6 +129,6 @@ export const listSubscriptions = () =>
 export const createSubscription = (body: CreateSubscriptionBody) =>
   apiPost<CalendarSubscription>(SUBS_BASE, body);
 export const deleteSubscription = (id: string) =>
-  apiDelete<{ message: string }>(`${SUBS_BASE}/${id}`);
+  apiDelete<{ message: string }>(`${SUBS_BASE}/${seg(id)}`);
 export const syncNowSubscription = (id: string) =>
-  apiPost<{ synced_count: number }>(`${SUBS_BASE}/${id}/sync`, {});
+  apiPost<{ synced_count: number }>(`${SUBS_BASE}/${seg(id)}/sync`, {});

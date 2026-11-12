@@ -1,29 +1,30 @@
 "use client";
 /**
  * @file components/layout/Shell.tsx
- * @brief Authenticated app shell. Composes TopBar + Sidebar + main pane +
- *        MobileNav. Bootstraps the session and gates rendering on it.
+ * @brief Authenticated app shell. Composes SideNav + TopBar + main pane +
+ *        BottomTabBar. Bootstraps the session and gates rendering on it.
  *        Global ? listener opens keyboard shortcuts modal.
  */
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Box from "@mui/joy/Box";
-import CircularProgress from "@mui/joy/CircularProgress";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useSessionBootstrap } from "@/hooks/useSession";
 import { useModals } from "@/stores/modals";
+import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
-import { Sidebar } from "./Sidebar";
-import { MobileNav } from "./MobileNav";
+import { SideNav } from "./SideNav";
+import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
 import { HelpButton } from "@/components/help/HelpButton";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
-import { RightRail } from "@/components/home/RightRail";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 
 export function Shell({ children }: { children: ReactNode }) {
   useSessionBootstrap();
@@ -70,73 +71,49 @@ export function Shell({ children }: { children: ReactNode }) {
   const isBooting = status === "idle" || status === "loading";
 
   return (
-    <Box
-      sx={{
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: { xs: "column", md: "row" },
-      }}
-    >
-      <a href="#main" className="skip-link">
-        Skip to main content
-      </a>
-      <Sidebar />
-      <Box
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          height: "100dvh",
-        }}
-      >
-        <TopBar />
-        <Box
-          id="main"
-          component="main"
-          sx={{
-            position: "relative",
-            flex: 1,
-            minHeight: 0,
-            overflow: "auto",
-            p: { xs: 2, md: 3 },
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-          aria-busy={isBooting || undefined}
+    <TooltipProvider>
+      <div className="bg-bg text-ink min-h-dvh">
+        <a
+          href="#main"
+          className="bg-surface-strong text-accent focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
         >
-          {children}
-          {isBooting && (
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "var(--joy-palette-background-body)",
-                zIndex: 10,
-              }}
-            >
-              <CircularProgress />
-            </Box>
-          )}
-        </Box>
-        <MobileNav />
-      </Box>
-      {!isBooting && (
-        <>
-          <ModalRoot />
-          <KeyboardShortcutsModal />
-          <HelpButton />
-          <WelcomeModal />
-          <OnboardingTour />
-          <FloatingChatDock />
-          <RightRail />
-          <ConfirmDialog />
-        </>
-      )}
-    </Box>
+          Skip to content
+        </a>
+        <BrandingStyle />
+        <SideNav />
+        <div className="flex min-h-dvh min-w-0 flex-col md:pl-16">
+          <TopBar />
+          <main
+            id="main"
+            className={cn("relative flex-1 px-4 md:px-8", TAB_BAR_CLEARANCE)}
+            aria-busy={isBooting || undefined}
+          >
+            {children}
+            {isBooting && (
+              <div className="bg-bg absolute inset-0 z-10 flex items-center justify-center">
+                <Loader2
+                  aria-label="Loading"
+                  className="size-6 motion-safe:animate-spin"
+                />
+              </div>
+            )}
+          </main>
+          <BottomTabBar />
+        </div>
+        {!isBooting && (
+          <>
+            <ModalRoot />
+            <KeyboardShortcutsModal />
+            <HelpButton />
+            <WelcomeModal />
+            <OnboardingTour />
+            <div className="hidden md:block">
+              <FloatingChatDock />
+            </div>
+            <ConfirmDialog />
+          </>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

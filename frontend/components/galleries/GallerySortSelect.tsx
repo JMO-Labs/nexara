@@ -1,11 +1,10 @@
 "use client";
 /**
  * @file components/galleries/GallerySortSelect.tsx
- * @brief Toggleable sort chip row: Recent · Popular · Oldest.
+ * @brief Toggleable sort button row: Recent, Popular, Oldest.
  */
 import * as React from "react";
-import Button from "@mui/joy/Button";
-import Stack from "@mui/joy/Stack";
+import { Button } from "@/components/ui";
 
 export type SortOption = "recent" | "popular" | "oldest";
 
@@ -20,26 +19,31 @@ const SORTS: Array<{ value: SortOption; label: string }> = [
   { value: "oldest", label: "Oldest" },
 ];
 
+/**
+ * @brief Sort toggle row.
+ * @param sort active sort
+ * @param onSortChange called with the chosen sort
+ * @return button group
+ */
 export function GallerySortSelect({
   sort,
   onSortChange,
 }: GallerySortSelectProps) {
   return (
-    <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+    <div role="group" aria-label="Sort galleries" className="flex gap-2">
       {SORTS.map(({ value, label }) => (
         <Button
           key={value}
-          variant={sort === value ? "soft" : "plain"}
-          color={sort === value ? "primary" : "neutral"}
-          onClick={() => onSortChange(value)}
-          aria-pressed={sort === value}
+          variant={sort === value ? "primary" : "ghost"}
           size="sm"
-          sx={{ cursor: "pointer" }}
+          className="min-h-11 sm:min-h-8"
+          aria-pressed={sort === value}
+          onClick={() => onSortChange(value)}
         >
           {label}
         </Button>
       ))}
-    </Stack>
+    </div>
   );
 }
 

@@ -6,12 +6,10 @@ import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { GallerySortSelect } from "@/components/galleries/GallerySortSelect";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("GallerySortSelect", () => {
@@ -40,18 +38,18 @@ describe("GallerySortSelect", () => {
 
   it("changes active state when sort prop changes", () => {
     const { rerender } = render(
-      <CssVarsProvider theme={joyTheme}>
+      <>
         <GallerySortSelect sort="recent" onSortChange={() => {}} />
-      </CssVarsProvider>,
+      </>,
     );
 
     let recentBtn = screen.getByRole("button", { name: "Recent" });
     expect(recentBtn).toHaveAttribute("aria-pressed", "true");
 
     rerender(
-      <CssVarsProvider theme={joyTheme}>
+      <>
         <GallerySortSelect sort="popular" onSortChange={() => {}} />
-      </CssVarsProvider>,
+      </>,
     );
 
     const popularBtn = screen.getByRole("button", { name: "Popular" });

@@ -5,9 +5,7 @@
 "use client";
 
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Button from "@mui/joy/Button";
+import { Button } from "@/components/ui";
 import { CoverBand } from "./CoverBand";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 
@@ -15,6 +13,11 @@ export interface MemberOnlyGateProps {
   subgroup: SubgroupDetail;
 }
 
+/**
+ * @brief Gate shown to non-members of invite-only / approval groups.
+ * @param subgroup group detail
+ * @return gate view
+ */
 export function MemberOnlyGate({ subgroup }: MemberOnlyGateProps) {
   const ctaText =
     subgroup.join_policy === "admin_approval"
@@ -22,22 +25,18 @@ export function MemberOnlyGate({ subgroup }: MemberOnlyGateProps) {
       : "Invite required";
 
   return (
-    <Stack spacing={4} sx={{ width: "100%", maxWidth: 600, mx: "auto" }}>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
       <CoverBand subgroup={subgroup} />
-      <Stack spacing={2} sx={{ px: { xs: 2, md: 0 } }}>
-        <Typography level="h2" component="h1">
-          {subgroup.name}
-        </Typography>
+      <div className="flex flex-col gap-4 px-4 md:px-0">
+        <h2 className="text-2xl font-black tracking-tight">{subgroup.name}</h2>
         {subgroup.description && (
-          <Typography level="body-md" sx={{ color: "text.secondary" }}>
-            {subgroup.description}
-          </Typography>
+          <p className="text-muted">{subgroup.description}</p>
         )}
-        <Button disabled size="lg" sx={{ mt: 2 }}>
+        <Button disabled size="lg" className="mt-2">
           {ctaText}
         </Button>
-      </Stack>
-    </Stack>
+      </div>
+    </div>
   );
 }
 

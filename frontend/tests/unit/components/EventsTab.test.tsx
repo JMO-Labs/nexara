@@ -5,9 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { EventsTab } from "@/components/subgroups/hub/EventsTab";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 
@@ -32,11 +30,16 @@ function wrap(ui: React.ReactNode) {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 }
+
+// jsdom lacks ResizeObserver (used by EventDetailPanel).
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
 
 // Mock the hooks
 vi.mock("@/hooks/useEvents", () => {
@@ -65,25 +68,21 @@ vi.mock("@/hooks/useUserLocation", () => ({
 }));
 
 describe("EventsTab", () => {
-  // TODO(home-redesign): unrelated pre-existing failure — ResizeObserver is not defined
-  // in happy-dom; EventDetailPanel uses it in a useEffect. Needs global mock in setup.
-  it.skip('renders "New event" button for members', () => {
+  it('renders "New event" button for members', () => {
     wrap(<EventsTab subgroup={mockSubgroupMember} />);
     expect(
       screen.getByRole("button", { name: /new event/i }),
     ).toBeInTheDocument();
   });
 
-  // TODO(home-redesign): unrelated pre-existing failure — ResizeObserver not defined.
-  it.skip('does not render "New event" button for non-members', () => {
+  it('does not render "New event" button for non-members', () => {
     wrap(<EventsTab subgroup={mockSubgroupNonMember} />);
     expect(
       screen.queryByRole("button", { name: /new event/i }),
     ).not.toBeInTheDocument();
   });
 
-  // TODO(home-redesign): unrelated pre-existing failure — ResizeObserver not defined.
-  it.skip('"New event" button opens the event create modal', async () => {
+  it('"New event" button opens the event create modal', async () => {
     wrap(<EventsTab subgroup={mockSubgroupMember} />);
     const button = screen.getByRole("button", { name: /new event/i });
     await userEvent.click(button);

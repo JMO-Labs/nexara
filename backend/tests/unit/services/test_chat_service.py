@@ -392,31 +392,41 @@ class TestGetHistory:
             await service.get_history(_make_user(), CHANNEL_ID)
 
 
-class TestChatActivityPrivacy:
-    """@brief DM messages must never become community-visible activity."""
+class TestActivityRecording:
+    """@brief chat.posted activity must never expose non-public channels."""
 
-    @pytest.mark.parametrize(("channel_type", "recorded"), [("direct", False), ("community", True)])
-    async def test_activity_only_for_public_channels(
-        self, channel_repo, message_repo, broadcaster, link_preview_enqueue, channel_type, recorded
-    ) -> None:
-        activity_repo = AsyncMock()
+    def _svc(self, channel_repo, message_repo, broadcaster, link_preview_enqueue):
+        channel_repo._session = MagicMock()
         limiter = AsyncMock()
-        limiter.set.return_value = True
-        limiter.incr.return_value = 1
-        svc = ChatService(
+        limiter.incr = AsyncMock(return_value=1)
+        limiter.expire = AsyncMock()
+        limiter.set = AsyncMock(return_value=True)
+        return ChatService(
             channel_repo=channel_repo,
             message_repo=message_repo,
             community_id=COMMUNITY_ID,
+            rate_limiter=limiter,
             broadcaster=broadcaster,
             link_preview_enqueue=link_preview_enqueue,
-            rate_limiter=limiter,
-            activity_repo=activity_repo,
+            activity_repo=AsyncMock(),
         )
-        user = _make_user()
-        channel_repo.get_for_user.return_value = _make_channel(channel_type)
-        channel_repo.list_member_ids.return_value = [user.id]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("ctype,expected", [("direct", 0), ("community", 1)])
+    async def test_activity_by_channel_type(
+        self,
+        ctype,
+        expected,
+        channel_repo,
+        message_repo,
+        broadcaster,
+        link_preview_enqueue,
+        monkeypatch,
+    ) -> None:
+        rec = AsyncMock()
+        monkeypatch.setattr("app.services.chat_service.record_activity", rec)
+        channel_repo.get_for_user.return_value = _make_channel(ctype)
         message_repo.create_message.return_value = _make_message()
-
-        await svc.send_message(user, CHANNEL_ID, "hi")
-
-        assert activity_repo.record.await_count == (1 if recorded else 0)
+        svc = self._svc(channel_repo, message_repo, broadcaster, link_preview_enqueue)
+        await svc.send_message(_make_user(), CHANNEL_ID, "hi")
+        assert rec.await_count == expected

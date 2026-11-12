@@ -4,9 +4,7 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Lightbox } from "@/components/galleries/Lightbox";
 import type { GalleryItem } from "@/lib/api/galleries";
 
@@ -32,7 +30,7 @@ const items: GalleryItem[] = [
 ];
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(ui);
 }
 
 describe("Lightbox", () => {
@@ -74,5 +72,22 @@ describe("Lightbox", () => {
     );
     fireEvent.keyDown(window, { key: "ArrowLeft" });
     expect(onIdx).toHaveBeenCalledWith(0);
+  });
+  it("labels the image and traps Tab focus", () => {
+    wrap(
+      <Lightbox
+        items={items}
+        index={1}
+        onClose={() => {}}
+        onIndexChange={() => {}}
+      />,
+    );
+    expect(screen.getByAltText("two")).toBeInTheDocument();
+    const close = screen.getByLabelText("Close");
+    const prev = screen.getByLabelText("Previous");
+    // Next is disabled on the last item, so Previous is the last focusable.
+    prev.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(close).toHaveFocus();
   });
 });

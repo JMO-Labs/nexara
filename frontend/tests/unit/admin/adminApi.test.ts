@@ -16,7 +16,17 @@ import {
   getAuditLog,
 } from "@/lib/api/admin";
 
-vi.mock("@/lib/api/client");
+// Automock the transport but keep the real seg() path encoder.
+vi.mock("@/lib/api/client", async (orig) => {
+  const real = await orig<typeof import("@/lib/api/client")>();
+  const mocked = Object.fromEntries(
+    Object.entries(real).map(([k, v]) => [
+      k,
+      typeof v === "function" ? vi.fn() : v,
+    ]),
+  );
+  return { ...mocked, seg: real.seg };
+});
 
 describe("adminApi", () => {
   beforeEach(() => {

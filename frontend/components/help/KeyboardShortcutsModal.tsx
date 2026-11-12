@@ -3,13 +3,7 @@
  * @file components/help/KeyboardShortcutsModal.tsx
  * @brief Modal displaying available keyboard shortcuts in sections.
  */
-import * as React from "react";
-import Modal from "@mui/joy/Modal";
-import ModalDialog from "@mui/joy/ModalDialog";
-import ModalClose from "@mui/joy/ModalClose";
-import Typography from "@mui/joy/Typography";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
+import { Modal } from "@/components/ui";
 import { useModals } from "@/stores/modals";
 
 interface Shortcut {
@@ -48,60 +42,40 @@ const SHORTCUTS: ShortcutSection[] = [
   },
 ];
 
+/**
+ * @brief Keyboard shortcuts dialog driven by the modals store.
+ * @return modal element
+ */
 export function KeyboardShortcutsModal() {
   const open = useModals((s) => s.keyboardShortcutsOpen);
   const setOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   return (
-    <Modal open={open} onClose={() => setOpen(false)}>
-      <ModalDialog sx={{ maxWidth: 480, p: 0 }}>
-        <ModalClose variant="plain" sx={{ m: 1 }} />
-        <Stack spacing={3} sx={{ p: 3, pt: 2 }}>
-          <Typography component="h2" level="title-lg">
-            Keyboard Shortcuts
-          </Typography>
-          {SHORTCUTS.map((section) => (
-            <Stack key={section.name} spacing={1.5}>
-              <Typography
-                level="title-sm"
-                sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
-              >
-                {section.name}
-              </Typography>
-              <Stack spacing={1}>
-                {section.shortcuts.map((shortcut, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 2,
-                    }}
-                  >
-                    <Typography level="body-sm">{shortcut.action}</Typography>
-                    <Box
-                      component="kbd"
-                      sx={{
-                        px: 0.75,
-                        py: 0.375,
-                        borderRadius: 4,
-                        fontSize: 12,
-                        bgcolor: "neutral.softBg",
-                        color: "neutral.softColor",
-                        fontFamily: "monospace",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {shortcut.keys}
-                    </Box>
-                  </Box>
-                ))}
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      </ModalDialog>
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      title="Keyboard shortcuts"
+    >
+      <div className="flex flex-col gap-6">
+        {SHORTCUTS.map((section) => (
+          <section key={section.name} className="flex flex-col gap-3">
+            <h3 className="text-muted text-sm font-semibold">{section.name}</h3>
+            <ul className="flex flex-col gap-2">
+              {section.shortcuts.map((shortcut, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-center justify-between gap-4"
+                >
+                  <span className="text-sm">{shortcut.action}</span>
+                  <kbd className="bg-surface-strong text-accent rounded px-2 py-1 font-mono text-xs whitespace-nowrap">
+                    {shortcut.keys}
+                  </kbd>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
     </Modal>
   );
 }

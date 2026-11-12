@@ -5,12 +5,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { ScopeSelect } from "@/components/ui/ScopeSelect";
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.setPointerCapture ??= () => {};
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};
+
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("ScopeSelect", () => {
@@ -93,10 +96,9 @@ describe("ScopeSelect", () => {
     );
 
     const dropdown = screen.getByRole("combobox");
-    await userEvent.click(dropdown);
-
-    const workOption = screen.getByRole("option", { name: /work/i });
-    await userEvent.click(workOption);
+    dropdown.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(await screen.findByRole("option", { name: /work/i }));
 
     expect(onChange).toHaveBeenCalledWith({
       visibility: "subgroup",

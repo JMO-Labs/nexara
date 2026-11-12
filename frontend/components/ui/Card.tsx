@@ -1,44 +1,34 @@
-"use client";
 /**
  * @file components/ui/Card.tsx
- * @brief Editorial card. Joy Card with optional motion wrapper for
- *        interactive hover/press feedback.
+ * @brief Garden Club card. `featured` uses the sharp-corner leaf shape.
  */
 import * as React from "react";
-import JoyCard, { type CardProps as JoyCardProps } from "@mui/joy/Card";
-import { motion } from "framer-motion";
-import { spring } from "./motion";
+import { cn } from "@/lib/utils";
 
-export type CardProps = JoyCardProps & {
-  interactive?: boolean;
+export type CardProps = React.HTMLAttributes<HTMLDivElement> & {
+  tone?: "default" | "featured";
 };
 
+/**
+ * @brief Surface container.
+ * @param tone default (surface) or featured (strong surface, leaf corner)
+ * @return card element
+ */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
-  { interactive, sx, ...rest },
+  { tone = "default", className, ...rest },
   ref,
 ) {
-  const card = (
-    <JoyCard
+  return (
+    <div
       ref={ref}
-      sx={{
-        borderRadius: "lg",
-        boxShadow: "sm",
-        backgroundColor: "background.surface",
-        ...(interactive && { cursor: "pointer" }),
-        ...sx,
-      }}
+      className={cn(
+        tone === "featured"
+          ? "bg-surface-strong text-bg corner-leaf"
+          : "bg-surface text-ink rounded-[1.25rem]",
+        className,
+      )}
       {...rest}
     />
-  );
-  if (!interactive) return card;
-  return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.995 }}
-      transition={spring}
-    >
-      {card}
-    </motion.div>
   );
 });
 

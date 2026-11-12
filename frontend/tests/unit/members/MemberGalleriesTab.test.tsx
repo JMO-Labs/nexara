@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import type { Gallery } from "@/lib/api/galleries";
 
@@ -75,9 +73,7 @@ const queryClient = new QueryClient({
 
 function wrap(ui: React.ReactNode) {
   return render(
-    <QueryClientProvider client={queryClient}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   );
 }
 

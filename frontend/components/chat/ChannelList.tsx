@@ -5,10 +5,7 @@
  *        shows unread badge per channel.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Box from "@mui/joy/Box";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { Trash2 } from "lucide-react";
 import { Avatar, Badge, IconButton, Skeleton } from "@/components/ui";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
 
@@ -22,6 +19,10 @@ export interface ChannelListProps {
   loading?: boolean;
 }
 
+/**
+ * @brief One selectable conversation row; delete shows on hover/focus.
+ * @return row element
+ */
 function ChannelRow({
   active,
   unread,
@@ -39,56 +40,43 @@ function ChannelRow({
   onClick: () => void;
   onDelete?: () => void;
 }) {
-  const [hover, setHover] = React.useState(false);
   return (
-    <Box
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1.25,
-        px: 1.25,
-        py: 1,
-        borderRadius: "md",
-        cursor: "pointer",
-        bgcolor: active ? "background.level1" : "transparent",
-        "&:hover": { bgcolor: "background.level1" },
-        outline: "none",
-        "&:focus-visible": { boxShadow: "sm" },
-      }}
+    <div
+      className={`group relative flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface focus-within:bg-surface ${
+        active ? "bg-surface" : ""
+      }`}
     >
-      {avatar}
-      <Stack sx={{ flex: 1, minWidth: 0 }}>
-        <Typography level="title-sm" noWrap>
-          {primary}
-        </Typography>
-        {secondary && (
-          <Typography level="body-xs" textColor="text.tertiary" noWrap>
-            {secondary}
-          </Typography>
-        )}
-      </Stack>
-      {unread > 0 && <Badge>{unread}</Badge>}
-      {onDelete && hover && (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={active ? "true" : undefined}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        {avatar}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold">
+            {primary}
+          </span>
+          {secondary && (
+            <span className="text-muted block truncate text-xs">
+              {secondary}
+            </span>
+          )}
+        </span>
+        {unread > 0 && <Badge tone="accent">{unread}</Badge>}
+      </button>
+      {onDelete && (
         <IconButton
           aria-label="Delete conversation"
           size="sm"
-          variant="plain"
-          color="danger"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
+          variant="ghost"
+          className="relative z-10 size-11 opacity-100 md:size-8 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          onClick={onDelete}
         >
-          <TrashIcon width={14} />
+          <Trash2 className="size-4" aria-hidden="true" />
         </IconButton>
       )}
-    </Box>
+    </div>
   );
 }
 
@@ -103,34 +91,22 @@ export function ChannelList({
 }: ChannelListProps) {
   if (loading) {
     return (
-      <Stack spacing={1} p={1}>
+      <div className="flex flex-col gap-2 p-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} height={48} />
         ))}
-      </Stack>
+      </div>
     );
   }
 
   const grouped = channels.filter((c) => c.channel_type !== "direct");
 
   return (
-    <Stack spacing={2} p={1}>
-      <Stack spacing={0.5}>
-        <Typography
-          level="title-sm"
-          textColor="text.tertiary"
-          sx={{ px: 1.25, mb: 0.5 }}
-        >
-          Channels
-        </Typography>
+    <div className="flex flex-col gap-4 p-2">
+      <section aria-label="Channels" className="flex flex-col gap-1">
+        <h2 className="text-muted px-3 pb-1 text-sm font-semibold">Channels</h2>
         {grouped.length === 0 && (
-          <Typography
-            level="body-xs"
-            textColor="text.tertiary"
-            sx={{ px: 1.25 }}
-          >
-            No channels
-          </Typography>
+          <p className="text-muted px-3 text-xs">No channels</p>
         )}
         {grouped.map((c) => (
           <ChannelRow
@@ -139,28 +115,18 @@ export function ChannelList({
             unread={unread[c.id] ?? 0}
             primary={`# ${c.name}`}
             secondary={c.channel_type}
-            avatar={<Avatar size="sm">{c.name.charAt(0).toUpperCase()}</Avatar>}
+            avatar={<Avatar size="md" name={c.name} />}
             onClick={() => onSelect(c.id)}
           />
         ))}
-      </Stack>
+      </section>
 
-      <Stack spacing={0.5}>
-        <Typography
-          level="title-sm"
-          textColor="text.tertiary"
-          sx={{ px: 1.25, mb: 0.5 }}
-        >
+      <section aria-label="Direct messages" className="flex flex-col gap-1">
+        <h2 className="text-muted px-3 pb-1 text-sm font-semibold">
           Direct messages
-        </Typography>
+        </h2>
         {dms.length === 0 && (
-          <Typography
-            level="body-xs"
-            textColor="text.tertiary"
-            sx={{ px: 1.25 }}
-          >
-            No conversations
-          </Typography>
+          <p className="text-muted px-3 text-xs">No conversations</p>
         )}
         {dms.map((d) => (
           <ChannelRow
@@ -170,15 +136,17 @@ export function ChannelList({
             primary={d.peer.display_name}
             secondary={`@${d.peer.username}`}
             avatar={
-              <Avatar src={d.peer.avatar_url ?? undefined} size="sm">
-                {d.peer.display_name.charAt(0)}
-              </Avatar>
+              <Avatar
+                src={d.peer.avatar_url ?? undefined}
+                size="md"
+                name={d.peer.display_name}
+              />
             }
             onClick={() => onSelect(d.channel_id)}
             onDelete={onDeleteDm ? () => onDeleteDm(d.channel_id) : undefined}
           />
         ))}
-      </Stack>
-    </Stack>
+      </section>
+    </div>
   );
 }

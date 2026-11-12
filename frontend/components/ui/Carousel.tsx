@@ -118,7 +118,7 @@ export function Carousel({
     <div
       role="region"
       aria-label={ariaLabel}
-      className={`relative outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-palette-focusVisible,#4f46e5)] rounded-lg ${className ?? ""}`}
+      className={`relative outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg ${className ?? ""}`}
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
@@ -146,7 +146,7 @@ export function Carousel({
             aria-label="Previous slide"
             disabled={!loop && !canPrev}
             onClick={() => emblaApi?.scrollPrev()}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white/80 dark:bg-neutral-800/80 p-2 shadow-sm disabled:opacity-30 hover:bg-white dark:hover:bg-neutral-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] transition-opacity"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full bg-surface/80 p-2 shadow-sm disabled:opacity-30 hover:bg-surface  transition-opacity"
           >
             <svg
               aria-hidden="true"
@@ -163,7 +163,7 @@ export function Carousel({
             aria-label="Next slide"
             disabled={!loop && !canNext}
             onClick={() => emblaApi?.scrollNext()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full bg-white/80 dark:bg-neutral-800/80 p-2 shadow-sm disabled:opacity-30 hover:bg-white dark:hover:bg-neutral-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] transition-opacity"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full bg-surface/80 p-2 shadow-sm disabled:opacity-30 hover:bg-surface  transition-opacity"
           >
             <svg
               aria-hidden="true"
@@ -193,10 +193,10 @@ export function Carousel({
               aria-label={`Slide ${i + 1}`}
               aria-selected={i === selectedIndex}
               onClick={() => emblaApi?.scrollTo(i)}
-              className={`w-2 h-2 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--nx-palette-focusVisible,#4f46e5)] ${
+              className={`w-2 h-2 rounded-full transition-colors  ${
                 i === selectedIndex
                   ? "bg-primary-500 dark:bg-primary-400"
-                  : "bg-neutral-300 dark:bg-neutral-600 hover:bg-neutral-400"
+                  : "bg-muted hover:bg-ink/40"
               }`}
             />
           ))}

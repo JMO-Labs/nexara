@@ -1,17 +1,24 @@
 "use client";
 /**
  * @file components/settings/AppearanceTab.tsx
- * @brief Appearance settings tab with two-column layout: theme and locale.
+ * @brief Appearance settings tab: theme (radio group) and language.
  */
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import Stack from "@mui/joy/Stack";
-import FormControl from "@mui/joy/FormControl";
-import FormLabel from "@mui/joy/FormLabel";
-import Typography from "@mui/joy/Typography";
-import { Card, SettingsRow, Select } from "@/components/ui";
+import { Card, SettingsRow, Select, Option } from "@/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
+const THEMES = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const;
+
+/**
+ * @brief Theme and language preferences.
+ * @return appearance tab content
+ */
 export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
   const { data: settings } = useUserSettings();
@@ -25,67 +32,58 @@ export function AppearanceTab() {
   }, []);
 
   if (!mounted || !settings) {
-    return <Typography>Loading appearance settings...</Typography>;
+    return (
+      <p role="status" className="text-sm text-muted">
+        Loading appearance settings...
+      </p>
+    );
   }
 
-  const handleThemeChange = (value: string) => {
+  const onTheme = (value: string) => {
     setTheme(value);
     mutate({ theme: value as "system" | "light" | "dark" });
   };
 
-  const handleLocaleChange = (value: string) => {
-    mutate({ locale: value });
-  };
-
   return (
-    <Stack spacing={3} sx={{ maxWidth: 800 }}>
-      <Card variant="outlined">
-        <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
-          Appearance
-        </Typography>
+    <Card className="max-w-3xl p-4 md:p-6">
+      <h2 className="mb-2 text-lg font-semibold">Appearance</h2>
 
-        <SettingsRow
-          label="Theme"
-          description="Choose between light, dark, or system preference."
+      <SettingsRow
+        label="Theme"
+        description="Choose light, dark, or follow your device."
+      >
+        <RadioGroup
+          aria-label="Theme"
+          value={theme || "system"}
+          onValueChange={onTheme}
+          disabled={isPending}
         >
-          <Stack spacing={1} sx={{ width: "100%" }}>
-            <FormControl>
-              <FormLabel>Theme</FormLabel>
-              <Select
-                value={theme || "system"}
-                onChange={(_e, newValue) =>
-                  handleThemeChange(newValue || "system")
-                }
-                disabled={isPending}
-              >
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </Select>
-            </FormControl>
-          </Stack>
-        </SettingsRow>
+          {THEMES.map(({ value, label }) => (
+            <label
+              key={value}
+              htmlFor={`theme-${value}`}
+              className="flex min-h-11 items-center gap-3 text-sm"
+            >
+              <RadioGroupItem id={`theme-${value}`} value={value} />
+              {label}
+            </label>
+          ))}
+        </RadioGroup>
+      </SettingsRow>
 
-        <SettingsRow
+      <SettingsRow
+        label="Language"
+        description="Select your preferred language."
+      >
+        <Select
           label="Language"
-          description="Select your preferred language."
+          value={settings.locale || "en-US"}
+          onValueChange={(v) => mutate({ locale: v })}
+          disabled={isPending}
         >
-          <Stack spacing={1} sx={{ width: "100%" }}>
-            <FormControl>
-              <FormLabel>Language</FormLabel>
-              <Select
-                value={settings.locale || "en-US"}
-                onChange={(_e, newValue) =>
-                  handleLocaleChange(newValue || "en-US")
-                }
-                disabled={isPending}
-              >
-                <option value="en-US">English (US)</option>
-              </Select>
-            </FormControl>
-          </Stack>
-        </SettingsRow>
-      </Card>
-    </Stack>
+          <Option value="en-US">English (US)</Option>
+        </Select>
+      </SettingsRow>
+    </Card>
   );
 }

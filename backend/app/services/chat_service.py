@@ -34,6 +34,7 @@ from app.repositories.chat_repo import (
     ChatChannelRepository,
     ChatMessageRepository,
 )
+from app.services.activity_publish import record_activity
 from app.services.link_preview_service import extract_urls
 
 if TYPE_CHECKING:
@@ -259,13 +260,16 @@ class ChatService:
         payload = serialize_message(message, user)
 
         # Record activity with throttling via Redis SETNX (1 per 30 min per user per channel)
-        # Only public channel types become activity; DMs must never leak.
+        # Only public/subgroup channels surface in feeds; never DMs.
         is_public = getattr(channel, "channel_type", None) in ("community", "subgroup")
         if is_public and self._activity_repo is not None and self._rate_limiter is not None:
             throttle_key = f"activity:chat:throttle:{self._community_id}:{user.id}:{channel.id}"
             setnx_result = await self._rate_limiter.set(throttle_key, "1", nx=True, ex=1800)
             if setnx_result:
-                await self._activity_repo.record(
+                await record_activity(
+                    self._activity_repo,
+                    self._channel_repo._session,
+                    None,
                     community_id=self._community_id,
                     actor_id=user.id,
                     verb="chat.posted",

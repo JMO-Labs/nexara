@@ -2,7 +2,7 @@
  * @file lib/api/adminOauth.ts
  * @brief OAuth provider management API endpoints for admin panel.
  */
-import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
 
 /**
  * @brief OAuth provider response (excludes client_secret).
@@ -136,7 +136,7 @@ export const updateOauthProvider = (
   updates: OAuthProviderUpdate,
 ) =>
   apiPut<OAuthProviderResponse>(
-    `/api/v1/admin/oauth/providers/${providerId}`,
+    `/api/v1/admin/oauth/providers/${seg(providerId)}`,
     updates,
   );
 
@@ -146,7 +146,9 @@ export const updateOauthProvider = (
  * @return MessageResponse
  */
 export const deleteOauthProvider = (providerId: string) =>
-  apiDelete<MessageResponse>(`/api/v1/admin/oauth/providers/${providerId}`);
+  apiDelete<MessageResponse>(
+    `/api/v1/admin/oauth/providers/${seg(providerId)}`,
+  );
 
 /**
  * @brief Toggle OAuth provider enabled/disabled status.
@@ -155,7 +157,7 @@ export const deleteOauthProvider = (providerId: string) =>
  */
 export const toggleOauthProvider = (providerId: string) =>
   apiPost<MessageResponse>(
-    `/api/v1/admin/oauth/providers/${providerId}/toggle`,
+    `/api/v1/admin/oauth/providers/${seg(providerId)}/toggle`,
   );
 
 /**

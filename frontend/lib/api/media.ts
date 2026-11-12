@@ -5,7 +5,7 @@
  * Multipart raw-bytes PUT bypasses apiClient (which JSON-encodes bodies)
  * and uses fetch + bearer-from-session directly.
  */
-import { apiGet, apiPost, apiDelete } from "./client";
+import { apiGet, apiPost, apiDelete, seg } from "./client";
 import { API_BASE, getAccessToken } from "@/lib/auth/session";
 
 export interface MediaItem {
@@ -31,8 +31,9 @@ export interface MultipartInit {
 const BASE = "/api/v1/media";
 const SINGLE_SHOT_LIMIT = 5 * 1024 * 1024;
 
-export const getMedia = (id: string) => apiGet<MediaItem>(`${BASE}/${id}`);
-export const deleteMedia = (id: string) => apiDelete<void>(`${BASE}/${id}`);
+export const getMedia = (id: string) => apiGet<MediaItem>(`${BASE}/${seg(id)}`);
+export const deleteMedia = (id: string) =>
+  apiDelete<void>(`${BASE}/${seg(id)}`);
 
 export async function singleUpload(
   file: File,
@@ -70,7 +71,7 @@ export async function putPart(
 ): Promise<{ part_number: number; etag: string }> {
   const token = getAccessToken();
   const res = await fetch(
-    `${API_BASE}${BASE}/upload/${uploadId}/part/${partNumber}`,
+    `${API_BASE}${BASE}/upload/${seg(uploadId)}/part/${seg(partNumber)}`,
     {
       method: "PUT",
       body: bytes as BodyInit,
@@ -87,7 +88,7 @@ export async function putPart(
 }
 
 export const completeMultipart = (uploadId: string) =>
-  apiPost<{ media_id: string }>(`${BASE}/upload/${uploadId}/complete`);
+  apiPost<{ media_id: string }>(`${BASE}/upload/${seg(uploadId)}/complete`);
 
 export async function multipartUpload(
   file: File,

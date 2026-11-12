@@ -4,9 +4,6 @@
  * @brief Thumbnail tile with filename + size.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { Card } from "@/components/ui";
 import { API_BASE } from "@/lib/auth/session";
 import type { MediaItem } from "@/lib/api/media";
@@ -35,27 +32,18 @@ export function MediaCard({ media, onSelect }: MediaCardProps) {
           onSelect?.(media);
         }
       }}
-      sx={{
-        cursor: onSelect ? "pointer" : "default",
-        overflow: "hidden",
-        p: 0,
-      }}
+      className={`overflow-hidden outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${onSelect ? "cursor-pointer" : "cursor-default"}`}
     >
-      <Box
-        sx={{
-          aspectRatio: "1",
-          background: `url(${thumb}) center/cover, var(--joy-palette-neutral-100)`,
-        }}
+      <div
+        role="img"
+        className="aspect-square bg-bg bg-cover bg-center"
+        style={{ backgroundImage: `url(${thumb})` }}
         aria-label={media.alt_text ?? media.filename}
       />
-      <Stack spacing={0.25} sx={{ p: 1.5 }}>
-        <Typography level="body-sm" noWrap>
-          {media.filename}
-        </Typography>
-        <Typography level="body-xs" sx={{ color: "text.tertiary" }}>
-          {fmtSize(media.size_bytes)}
-        </Typography>
-      </Stack>
+      <div className="flex flex-col gap-0.5 p-3">
+        <p className="truncate text-sm">{media.filename}</p>
+        <p className="text-xs text-muted">{fmtSize(media.size_bytes)}</p>
+      </div>
     </Card>
   );
 }

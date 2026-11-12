@@ -16,6 +16,7 @@ import structlog
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.poll import Poll, PollOption
+from app.models.post import Post
 from app.repositories.poll_repo import PollRepository
 from app.schemas.poll import (
     PollCreate,
@@ -23,8 +24,9 @@ from app.schemas.poll import (
     PollResponse,
     PollResultsResponse,
 )
+from app.services.realtime.audience import emit_to_audience, resolve_audience
 from app.services.realtime.event_bus import EventBus
-from app.services.realtime.events import poll_voted
+from app.services.realtime.events import CommunityTarget, poll_voted
 
 logger = structlog.get_logger(__name__)
 
@@ -184,12 +186,21 @@ class PollService:
                 "total_votes": total_votes,
             }
             event = poll_voted(
-                community_id=self._community_id,
+                target=CommunityTarget(community_id=self._community_id),
                 post_id=poll.post_id,
                 poll_id=poll_id,
                 results=payload,
             )
-            await self._event_bus.emit(event)
+            session = self._poll_repo._session
+            post = await session.get(Post, poll.post_id) if poll.post_id else None
+            audience = await resolve_audience(
+                session,
+                self._community_id,
+                visibility=post.visibility if post else "community",
+                subgroup_id=post.subgroup_id if post else None,
+                author_id=post.author_id if post else (poll.created_by or user_id),
+            )
+            await emit_to_audience(self._event_bus, audience, event.type, event.payload)
 
         return results
 

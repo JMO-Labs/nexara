@@ -6,18 +6,15 @@
  *        Typing frames debounced by caller via onTyping.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import {
-  PaperAirplaneIcon,
-  PhotoIcon,
-  FaceSmileIcon,
-  ChartBarIcon,
-  XMarkIcon,
-  ArrowUturnLeftIcon,
-} from "@heroicons/react/24/outline";
-import { Textarea, IconButton } from "@/components/ui";
+  Send,
+  Image as ImageIcon,
+  Smile,
+  BarChart3,
+  X,
+  CornerUpLeft,
+} from "lucide-react";
+import { IconButton } from "@/components/ui";
 
 export interface ReplyContext {
   authorName: string;
@@ -89,134 +86,94 @@ export function Composer({
   };
 
   return (
-    <Box
-      sx={{
-        flexShrink: 0,
-        bgcolor: "background.surface",
-        borderTop: "1px solid",
-        borderColor: "divider",
-      }}
-    >
+    <div className="shrink-0 border-t border-border bg-bg">
       {replyTo && (
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={1}
-          sx={{
-            px: 1.5,
-            py: 0.75,
-            bgcolor: "background.level1",
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <ArrowUturnLeftIcon width={14} />
-          <Typography level="body-xs" sx={{ flex: 1, minWidth: 0 }} noWrap>
+        <div className="flex items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
+          <CornerUpLeft size={14} aria-hidden />
+          <p className="min-w-0 flex-1 truncate text-xs">
             <strong>Replying to {replyTo.authorName}:</strong> {replyTo.excerpt}
-          </Typography>
+          </p>
           <IconButton
             size="sm"
-            variant="plain"
+            variant="ghost"
             aria-label="Cancel reply"
             onClick={onCancelReply}
           >
-            <XMarkIcon width={14} />
+            <X size={14} aria-hidden />
           </IconButton>
-        </Stack>
+        </div>
       )}
       {emojiOpen && (
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{
-            px: 1.5,
-            py: 1,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
+        <div className="flex gap-1 border-b border-border px-3 py-2">
           {QUICK_EMOJI.map((e) => (
             <IconButton
               key={e}
-              variant="plain"
+              variant="ghost"
               size="sm"
               onClick={() => insertEmoji(e)}
               aria-label={`Insert ${e}`}
             >
-              <span style={{ fontSize: 18 }}>{e}</span>
+              <span className="text-lg">{e}</span>
             </IconButton>
           ))}
-        </Stack>
+        </div>
       )}
 
-      <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ p: 1.5 }}>
-        <Stack direction="row" spacing={0.25}>
+      <div className="flex items-end gap-2 p-3">
+        <div className="flex gap-0.5">
           <IconButton
-            tooltip="Emoji"
             aria-label="Add emoji"
-            variant="plain"
+            variant="ghost"
             size="sm"
             disabled={disabled}
             onClick={() => setEmojiOpen((v) => !v)}
           >
-            <FaceSmileIcon width={18} />
+            <Smile size={18} aria-hidden />
           </IconButton>
           <IconButton
-            tooltip="Attach media"
             aria-label="Attach media"
-            variant="plain"
+            variant="ghost"
             size="sm"
             disabled={disabled || !onAttachMedia}
             onClick={onAttachMedia}
           >
-            <PhotoIcon width={18} />
+            <ImageIcon size={18} aria-hidden />
           </IconButton>
           <IconButton
-            tooltip="Create poll"
             aria-label="Create poll"
-            variant="plain"
+            variant="ghost"
             size="sm"
             disabled={disabled || !onCreatePoll}
             onClick={onCreatePoll}
           >
-            <ChartBarIcon width={18} />
+            <BarChart3 size={18} aria-hidden />
           </IconButton>
-        </Stack>
+        </div>
 
-        <Textarea
-          slotProps={{ textarea: { ref: taRef } }}
-          minRows={1}
-          maxRows={6}
+        <textarea
+          ref={taRef}
+          rows={1}
           value={value}
           onChange={handleChange}
           onKeyDown={onKeyDown}
           disabled={disabled}
+          aria-label="Message"
           placeholder={placeholder ?? "Write a message…"}
-          sx={{ flex: 1 }}
+          className="max-h-36 min-h-9 flex-1 resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         />
 
         <IconButton
-          tooltip="Send"
-          shortcut="Enter"
           aria-label="Send message"
           onClick={submit}
           disabled={disabled || !value.trim()}
-          variant="solid"
-          color="primary"
         >
-          <PaperAirplaneIcon width={18} />
+          <Send size={18} aria-hidden />
         </IconButton>
-      </Stack>
+      </div>
 
       {connectionLabel && (
-        <Typography
-          level="body-xs"
-          textColor="text.tertiary"
-          sx={{ px: 2, pb: 1 }}
-        >
-          {connectionLabel}
-        </Typography>
+        <p className="px-4 pb-2 text-xs text-muted">{connectionLabel}</p>
       )}
-    </Box>
+    </div>
   );
 }

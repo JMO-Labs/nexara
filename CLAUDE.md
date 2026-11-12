@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Nexara — self-hosted community platform (families/clubs/groups). Monorepo: `backend/` (FastAPI) + `frontend/` (Nuxt 3). Postgres 16, Valkey (Redis), Celery. Container-native. GitLab CI/CD primary; mirrored on GitHub.
+Nexara — self-hosted community platform (families/clubs/groups). Monorepo: `backend/` (FastAPI) + `frontend/` (Next.js 16). Postgres 16, Valkey (Redis), Celery. Container-native. GitLab CI/CD primary; mirrored on GitHub.
 
 ## Commands
 
@@ -29,7 +29,7 @@ Tests need a real Postgres (no SQLite). `pytest-asyncio` mode = `auto`.
 ### Frontend (`cd frontend`)
 
 ```bash
-npm install && npm run dev          # dev (Nuxt)
+npm install && npm run dev          # dev (Next.js)
 npm run build                       # production build
 npm test                            # vitest run
 npx vitest run --coverage
@@ -74,7 +74,7 @@ Linear chain `0001 → 0007 → ...`. Two-tier filename style: ordinal `000N_*.p
 
 ### Frontend
 
-React/Next.js - need more details
+Next.js 16 App Router, React 19, Tailwind v4 + shadcn/ui (Radix) in components/ui, Lucide icons, TanStack Query (lib/api, hooks), zustand (stores), next-intl, next-themes (class). Tokens: app/globals.css + theme/palette.ts (AA test in tests/unit/theme). Shell: components/layout/{Shell,SideNav,BottomTabBar,MoreSheet,TopBar}.
 
 ## Conventions
 

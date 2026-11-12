@@ -5,8 +5,6 @@
 import * as React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { MessageItem } from "@/components/chat/MessageItem";
 import type { ChatMessage } from "@/lib/api/chat";
 
@@ -27,7 +25,7 @@ const base: ChatMessage = {
 };
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("MessageItem", () => {
@@ -45,5 +43,17 @@ describe("MessageItem", () => {
   it("hides author in compact mode", () => {
     wrap(<MessageItem message={base} compact />);
     expect(screen.queryByText("Alex")).not.toBeInTheDocument();
+  });
+});
+
+describe("MessageItem bubbles", () => {
+  it("own bubble uses strong surface, others plain surface", () => {
+    const { rerender, container } = render(
+      <MessageItem message={base} isSelf />,
+    );
+    expect(container.querySelector(".bg-surface-strong")).not.toBeNull();
+    rerender(<MessageItem message={base} />);
+    expect(container.querySelector(".bg-surface-strong")).toBeNull();
+    expect(container.querySelector(".bg-surface")).not.toBeNull();
   });
 });

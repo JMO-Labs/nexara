@@ -1,16 +1,18 @@
 "use client";
 /**
  * @file components/events/EventCountdown.tsx
- * @brief Live countdown widget: displays time until event with display font
- * (56px, weight 200) for numeric + uppercase units below (10px, tracking-wide).
- * Updates every 30s. Hairline dividers top + bottom.
+ * @brief Live countdown widget: time until event, large numerals with unit
+ * labels below. Updates every 30s via useEventCountdown.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
 import { useEventCountdown } from "@/hooks/useEventCountdown";
 import type { EventItem } from "@/lib/api/events";
 
+/**
+ * @brief Countdown to an event start.
+ * @param event event to count down to
+ * @return countdown block
+ */
 export function EventCountdown({ event }: { event: EventItem }) {
   const { days, hours, minutes } = useEventCountdown(event);
 
@@ -20,63 +22,18 @@ export function EventCountdown({ event }: { event: EventItem }) {
   parts.push({ value: minutes, unit: "min" });
 
   return (
-    <Box
-      sx={{
-        borderTop: "1px solid",
-        borderColor: "divider",
-        borderBottom: "1px solid",
-        py: 2,
-        px: 2,
-        textAlign: "center",
-      }}
-    >
-      <Typography
-        level="body-sm"
-        sx={{
-          mb: 1.5,
-          fontWeight: 600,
-          color: "text.primary",
-        }}
-      >
-        {event.title}
-      </Typography>
-
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          gap: 1.5,
-          alignItems: "flex-end",
-        }}
-      >
+    <div className="border-y border-current/15 px-4 py-4 text-center">
+      <p className="mb-3 text-sm font-semibold">{event.title}</p>
+      <div className="flex items-end justify-center gap-3">
         {parts.map((part, idx) => (
-          <Box key={`${part.unit}-${idx}`} sx={{ textAlign: "center" }}>
-            <Typography
-              sx={{
-                fontFamily: "var(--font-display)",
-                fontSize: "56px",
-                fontWeight: 200,
-                lineHeight: 1,
-                color: "text.primary",
-              }}
-            >
+          <div key={`${part.unit}-${idx}`} className="text-center">
+            <div className="text-5xl leading-none font-black tabular-nums">
               {part.value}
-            </Typography>
-            <Typography
-              level="body-xs"
-              sx={{
-                fontSize: "10px",
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: "text.tertiary",
-                mt: 0.5,
-              }}
-            >
-              {part.unit}
-            </Typography>
-          </Box>
+            </div>
+            <div className="mt-1 text-xs text-muted">{part.unit}</div>
+          </div>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

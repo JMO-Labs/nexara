@@ -4,12 +4,8 @@
  * @brief Admin metrics display with community, system, and WAF stats.
  */
 import { useAdminMetrics } from "@/hooks/useAdmin";
-import Stack from "@mui/joy/Stack";
-import Grid from "@mui/joy/Grid";
-import Card from "@mui/joy/Card";
-import Typography from "@mui/joy/Typography";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
+import { Card } from "@/components/ui";
+import { AdminLoading, AdminNotice } from "./AdminState";
 
 function formatBytes(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
@@ -39,167 +35,116 @@ function MetricCard({
   value: string | number;
 }) {
   return (
-    <Card variant="soft">
-      <Stack spacing={1}>
-        <Typography level="body-sm" color="neutral">
-          {label}
-        </Typography>
-        <Typography level="h2" component="div">
-          {value}
-        </Typography>
-      </Stack>
+    <Card className="flex flex-col gap-1 p-4">
+      <span className="text-sm text-muted">{label}</span>
+      <span className="text-2xl font-black">{value}</span>
     </Card>
   );
 }
 
+const GRID = "grid grid-cols-2 gap-3";
+
 export function MetricsTab() {
   const { data: metrics, isLoading, error } = useAdminMetrics();
 
-  if (isLoading) {
-    return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
+  if (isLoading) return <AdminLoading />;
 
   if (error) {
-    return (
-      <Alert color="danger" variant="soft">
-        Failed to load metrics
-      </Alert>
-    );
+    return <AdminNotice tone="error">Failed to load metrics</AdminNotice>;
   }
 
   if (!metrics) return null;
 
   return (
-    <Stack spacing={3}>
-      {/* Key Performance Indicators */}
-      <div>
-        <Typography level="title-md" component="h3" sx={{ mb: 1.5 }}>
-          Key Performance Indicators
-        </Typography>
-        <Grid container spacing={1.5}>
-          <Grid xs={6} sm={3} md={3}>
+    <div className="flex flex-col gap-6">
+      <section>
+        <h3 className="mb-3 text-lg font-semibold">
+          Key performance indicators
+        </h3>
+        <div className={`${GRID} md:grid-cols-4`}>
+          <MetricCard
+            label="Total users"
+            value={metrics.community.users_total}
+          />
+          <MetricCard
+            label="Active (30d)"
+            value={metrics.community.users_active_30d}
+          />
+          <MetricCard
+            label="Posts (7d)"
+            value={metrics.community.posts_last_7d}
+          />
+          <MetricCard
+            label="Storage"
+            value={formatBytes(metrics.community.media_storage_bytes)}
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <section>
+          <h4 className="mb-3 font-semibold">Community</h4>
+          <div className={GRID}>
             <MetricCard
-              label="Total Users"
-              value={metrics.community.users_total}
+              label="Online now"
+              value={metrics.community.users_online_now}
             />
-          </Grid>
-          <Grid xs={6} sm={3} md={3}>
             <MetricCard
-              label="Active (30d)"
-              value={metrics.community.users_active_30d}
+              label="Total posts"
+              value={metrics.community.posts_total}
             />
-          </Grid>
-          <Grid xs={6} sm={3} md={3}>
             <MetricCard
-              label="Posts (7d)"
-              value={metrics.community.posts_last_7d}
+              label="Media files"
+              value={metrics.community.media_files}
             />
-          </Grid>
-          <Grid xs={6} sm={3} md={3}>
+          </div>
+        </section>
+
+        <section>
+          <h4 className="mb-3 font-semibold">System</h4>
+          <div className={GRID}>
+            <MetricCard label="Version" value={metrics.system.version} />
             <MetricCard
-              label="Storage"
-              value={formatBytes(metrics.community.media_storage_bytes)}
+              label="Uptime"
+              value={formatSeconds(metrics.system.uptime_seconds)}
             />
-          </Grid>
-        </Grid>
+            {metrics.system.db_size_bytes && (
+              <MetricCard
+                label="DB size"
+                value={formatBytes(metrics.system.db_size_bytes)}
+              />
+            )}
+            {metrics.system.valkey_memory_bytes && (
+              <MetricCard
+                label="Valkey memory"
+                value={formatBytes(metrics.system.valkey_memory_bytes)}
+              />
+            )}
+            {metrics.system.celery_queue_depth !== undefined && (
+              <MetricCard
+                label="Celery queue"
+                value={metrics.system.celery_queue_depth ?? 0}
+              />
+            )}
+          </div>
+        </section>
       </div>
 
-      {/* Extended Metrics: 2-col on desktop */}
-      <Grid container spacing={2}>
-        <Grid xs={12} md={6}>
-          <div>
-            <Typography level="title-sm" component="h4" sx={{ mb: 1.5 }}>
-              Community
-            </Typography>
-            <Grid container spacing={1.5}>
-              <Grid xs={6} sm={6}>
-                <MetricCard
-                  label="Online Now"
-                  value={metrics.community.users_online_now}
-                />
-              </Grid>
-              <Grid xs={6} sm={6}>
-                <MetricCard
-                  label="Total Posts"
-                  value={metrics.community.posts_total}
-                />
-              </Grid>
-              <Grid xs={6} sm={6}>
-                <MetricCard
-                  label="Media Files"
-                  value={metrics.community.media_files}
-                />
-              </Grid>
-            </Grid>
-          </div>
-        </Grid>
-
-        <Grid xs={12} md={6}>
-          <div>
-            <Typography level="title-sm" component="h4" sx={{ mb: 1.5 }}>
-              System
-            </Typography>
-            <Grid container spacing={1.5}>
-              <Grid xs={6} sm={6}>
-                <MetricCard label="Version" value={metrics.system.version} />
-              </Grid>
-              <Grid xs={6} sm={6}>
-                <MetricCard
-                  label="Uptime"
-                  value={formatSeconds(metrics.system.uptime_seconds)}
-                />
-              </Grid>
-              {metrics.system.db_size_bytes && (
-                <Grid xs={6} sm={6}>
-                  <MetricCard
-                    label="DB Size"
-                    value={formatBytes(metrics.system.db_size_bytes)}
-                  />
-                </Grid>
-              )}
-              {metrics.system.valkey_memory_bytes && (
-                <Grid xs={6} sm={6}>
-                  <MetricCard
-                    label="Valkey Memory"
-                    value={formatBytes(metrics.system.valkey_memory_bytes)}
-                  />
-                </Grid>
-              )}
-              {metrics.system.celery_queue_depth !== undefined && (
-                <Grid xs={6} sm={6}>
-                  <MetricCard
-                    label="Celery Queue"
-                    value={metrics.system.celery_queue_depth ?? 0}
-                  />
-                </Grid>
-              )}
-            </Grid>
-          </div>
-        </Grid>
-      </Grid>
-
-      {/* Security */}
-      <div>
-        <Typography level="title-sm" component="h4" sx={{ mb: 1.5 }}>
-          Security (WAF)
-        </Typography>
-        <Grid container spacing={1.5}>
-          <Grid xs={6} sm={3} md={3}>
-            <MetricCard label="Blocks Today" value={metrics.waf.blocks_today} />
-          </Grid>
+      <section>
+        <h4 className="mb-3 font-semibold">Security (WAF)</h4>
+        <div className={`${GRID} md:grid-cols-4`}>
+          <MetricCard label="Blocks today" value={metrics.waf.blocks_today} />
           {Object.entries(metrics.waf.blocks_by_reason).map(
             ([reason, count]) => (
-              <Grid key={reason} xs={6} sm={3} md={3}>
-                <MetricCard label={`${reason} blocks`} value={count} />
-              </Grid>
+              <MetricCard
+                key={reason}
+                label={`${reason} blocks`}
+                value={count}
+              />
             ),
           )}
-        </Grid>
-      </div>
-    </Stack>
+        </div>
+      </section>
+    </div>
   );
 }

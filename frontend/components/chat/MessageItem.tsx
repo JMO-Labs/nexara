@@ -1,24 +1,15 @@
 "use client";
 /**
  * @file components/chat/MessageItem.tsx
- * @brief Single chat message row: avatar, author, time, body.
- *        Avatar/name click opens a menu (View, Send DM). Hover row
- *        reveals a Reply action that bubbles up via onReply.
+ * @brief Single chat message: avatar, author, time, bubble. Own bubbles use
+ *        the strong surface; the leaf corner sits on the sender side.
+ *        Hover/focus reveals Reply; other authors offer a Send DM action.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Box from "@mui/joy/Box";
-import Typography from "@mui/joy/Typography";
-import Menu from "@mui/joy/Menu";
-import MenuItem from "@mui/joy/MenuItem";
-import Dropdown from "@mui/joy/Dropdown";
-import MenuButton from "@mui/joy/MenuButton";
 import { format } from "date-fns";
-import {
-  ArrowUturnLeftIcon,
-  ChatBubbleLeftRightIcon,
-} from "@heroicons/react/24/outline";
+import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/api/chat";
 
 export interface MessageItemProps {
@@ -31,6 +22,11 @@ export interface MessageItemProps {
   onSendDm?: (userId: string) => void;
 }
 
+/**
+ * @brief Chat message row.
+ * @param props see MessageItemProps
+ * @return message element
+ */
 export function MessageItem({
   message,
   compact,
@@ -38,119 +34,89 @@ export function MessageItem({
   onReply,
   onSendDm,
 }: MessageItemProps) {
-  const [hover, setHover] = React.useState(false);
-
-  const time = (() => {
-    try {
-      return format(new Date(message.created_at), "p");
-    } catch {
-      return "";
-    }
-  })();
-
+  let time = "";
+  try {
+    time = format(new Date(message.created_at), "p");
+  } catch {
+    time = "";
+  }
   const name = message.author?.display_name ?? "Unknown";
-  const initial = name.charAt(0);
-  const deleted = message.deleted;
   const authorId = message.author?.id;
-
-  const avatar = (
-    <Avatar size="sm" src={message.author?.avatar_url ?? undefined}>
-      {initial}
-    </Avatar>
-  );
-
-  const authorBlock =
-    authorId && !isSelf ? (
-      <Dropdown>
-        <MenuButton
-          slots={{ root: "span" }}
-          slotProps={{
-            root: {
-              style: {
-                cursor: "pointer",
-                background: "none",
-                border: 0,
-                padding: 0,
-              },
-            },
-          }}
-        >
-          {avatar}
-        </MenuButton>
-        <Menu placement="bottom-start" size="sm">
-          <MenuItem onClick={() => onSendDm?.(authorId)} disabled={!onSendDm}>
-            <ChatBubbleLeftRightIcon width={16} style={{ marginRight: 8 }} />
-            Send DM
-          </MenuItem>
-        </Menu>
-      </Dropdown>
-    ) : (
-      avatar
-    );
+  const deleted = message.deleted;
 
   return (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      alignItems="flex-start"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      sx={{
-        px: 2,
-        py: compact ? 0.25 : 0.75,
-        position: "relative",
-        "&:hover": { bgcolor: "background.level1" },
-        opacity: message.id.startsWith("optimistic-") ? 0.6 : 1,
-      }}
+    <div
+      className={cn(
+        "group relative flex items-start gap-3 px-4",
+        compact ? "py-0.5" : "py-1.5",
+        isSelf && "flex-row-reverse",
+        message.id.startsWith("optimistic-") && "opacity-60",
+      )}
     >
-      <Stack sx={{ width: 36 }}>{!compact && authorBlock}</Stack>
-      <Stack sx={{ flex: 1, minWidth: 0 }}>
+      <div className="w-8 shrink-0">
         {!compact && (
-          <Stack direction="row" spacing={1} alignItems="baseline">
-            <Typography level="title-sm">{name}</Typography>
-            <Typography level="body-xs" textColor="text.tertiary">
+          <Avatar
+            size="md"
+            name={name}
+            src={message.author?.avatar_url ?? undefined}
+          />
+        )}
+      </div>
+      <div
+        className={cn(
+          "flex min-w-0 max-w-[85%] flex-col",
+          isSelf && "items-end",
+        )}
+      >
+        {!compact && (
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold">{name}</span>
+            <span className="text-xs text-muted">
               {time}
               {message.edited_at && " (edited)"}
-            </Typography>
-          </Stack>
+            </span>
+          </div>
         )}
-        {deleted ? (
-          <Typography
-            level="body-sm"
-            sx={{ color: "text.tertiary", fontStyle: "italic" }}
-          >
-            {message.content}
-          </Typography>
-        ) : (
-          <Box sx={{ fontSize: "0.875rem" }}>
-            <Markdown content={message.content} size="sm" />
-          </Box>
-        )}
-      </Stack>
-
-      {hover && !deleted && onReply && (
-        <Box
-          sx={{
-            position: "absolute",
-            right: 8,
-            top: 4,
-            bgcolor: "background.surface",
-            borderRadius: "sm",
-            boxShadow: "sm",
-            border: "1px solid",
-            borderColor: "divider",
-          }}
+        <div
+          className={cn(
+            "rounded-2xl px-3 py-2 text-sm",
+            isSelf
+              ? "rounded-tr-sm bg-surface-strong text-bg"
+              : "rounded-tl-sm bg-surface",
+            deleted && "italic opacity-80",
+          )}
         >
-          <IconButton
-            aria-label="Reply"
-            size="sm"
-            variant="plain"
-            onClick={() => onReply(message)}
-          >
-            <ArrowUturnLeftIcon width={14} />
-          </IconButton>
-        </Box>
+          {deleted ? (
+            message.content
+          ) : (
+            <Markdown content={message.content} size="sm" />
+          )}
+        </div>
+      </div>
+      {!deleted && (
+        <div className="flex items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+          {onReply && (
+            <IconButton
+              aria-label="Reply"
+              size="sm"
+              variant="ghost"
+              onClick={() => onReply(message)}
+            >
+              <CornerUpLeft size={14} aria-hidden />
+            </IconButton>
+          )}
+          {onSendDm && authorId && !isSelf && (
+            <IconButton
+              aria-label={`Send DM to ${name}`}
+              size="sm"
+              variant="ghost"
+              onClick={() => onSendDm(authorId)}
+            >
+              <MessageSquare size={14} aria-hidden />
+            </IconButton>
+          )}
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }

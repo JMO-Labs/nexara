@@ -5,9 +5,6 @@
  *        and opens (or creates) a DM channel on selection.
  */
 import * as React from "react";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Box from "@mui/joy/Box";
 import { Modal, Input, Avatar, Skeleton } from "@/components/ui";
 import { useQuery } from "@tanstack/react-query";
 import { listUsers, type UserSummary } from "@/lib/api/users";
@@ -56,73 +53,54 @@ export function NewDmModal({
 
   return (
     <Modal open={open} onClose={onClose} title="New direct message">
-      <Stack spacing={1.5} sx={{ width: { xs: "100%", sm: 420 } }}>
+      <div className="flex w-full flex-col gap-3">
         <Input
           autoFocus
+          aria-label="Search members"
           placeholder="Search by name or @username"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <Box sx={{ maxHeight: 360, overflowY: "auto", mx: -1 }}>
+        <div className="-mx-2 max-h-[360px] overflow-y-auto">
           {usersQ.isLoading ? (
-            <Stack spacing={1} px={1}>
+            <div className="flex flex-col gap-2 px-2">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} height={48} />
               ))}
-            </Stack>
+            </div>
           ) : filtered.length === 0 ? (
-            <Typography
-              level="body-sm"
-              textColor="text.tertiary"
-              sx={{ p: 2, textAlign: "center" }}
-            >
+            <p className="text-muted p-4 text-center text-sm">
               No matching users.
-            </Typography>
+            </p>
           ) : (
-            <Stack>
+            <ul className="flex flex-col">
               {filtered.map((u) => (
-                <Box
-                  key={u.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => select(u)}
-                  onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") && select(u)
-                  }
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 2,
-                    py: 1,
-                    cursor: "pointer",
-                    borderRadius: "sm",
-                    "&:hover": { bgcolor: "background.level1" },
-                    outline: "none",
-                    "&:focus-visible": { boxShadow: "sm" },
-                  }}
-                >
-                  <Avatar size="sm" src={u.avatar_url ?? undefined}>
-                    {u.display_name.charAt(0)}
-                  </Avatar>
-                  <Stack sx={{ minWidth: 0 }}>
-                    <Typography level="title-sm" noWrap>
-                      {u.display_name}
-                    </Typography>
-                    <Typography
-                      level="body-xs"
-                      textColor="text.tertiary"
-                      noWrap
-                    >
-                      @{u.username}
-                    </Typography>
-                  </Stack>
-                </Box>
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onClick={() => select(u)}
+                    className="hover:bg-bg flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <Avatar
+                      size="md"
+                      src={u.avatar_url ?? undefined}
+                      name={u.display_name}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">
+                        {u.display_name}
+                      </span>
+                      <span className="text-muted block truncate text-xs">
+                        @{u.username}
+                      </span>
+                    </span>
+                  </button>
+                </li>
               ))}
-            </Stack>
+            </ul>
           )}
-        </Box>
-      </Stack>
+        </div>
+      </div>
     </Modal>
   );
 }

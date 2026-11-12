@@ -8,28 +8,11 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import Sheet from "@mui/joy/Sheet";
-import Badge from "@mui/joy/Badge";
-import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  BellIcon,
-  CheckIcon,
-  AtSymbolIcon,
-  ChatBubbleLeftIcon,
-  HeartIcon,
-  CalendarIcon,
-  SparklesIcon,
-  DocumentTextIcon,
-  PhotoIcon,
-  InboxIcon,
-} from "@heroicons/react/24/outline";
-import type { ComponentType, SVGProps } from "react";
+import { Bell } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
+import { NotificationRow } from "./NotificationRow";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
   getUnreadCount,
@@ -37,7 +20,6 @@ import {
   markAllRead,
   markRead,
   STREAM_PATH,
-  type NotificationItem,
   type NotificationListResponse,
 } from "@/lib/api/notifications";
 import { useSSE } from "@/hooks/useSSE";
@@ -45,23 +27,6 @@ import { useSession } from "@/stores/session";
 
 const COUNT_KEY = ["notifications", "unread-count"] as const;
 const LIST_KEY = ["notifications", "list"] as const;
-
-type IconCmp = ComponentType<SVGProps<SVGSVGElement>>;
-
-const TYPE_META: Record<string, { label: string; icon: IconCmp }> = {
-  mention: { label: "Mention", icon: AtSymbolIcon },
-  comment: { label: "Comment", icon: ChatBubbleLeftIcon },
-  reaction: { label: "Reaction", icon: HeartIcon },
-  event_rsvp: { label: "Event RSVP", icon: CalendarIcon },
-  prompt: { label: "Prompt", icon: SparklesIcon },
-  prompt_summary: { label: "Prompt summary", icon: SparklesIcon },
-  gallery_activity: { label: "Gallery", icon: PhotoIcon },
-  post: { label: "Post", icon: DocumentTextIcon },
-};
-
-function metaFor(type: string): { label: string; icon: IconCmp } {
-  return TYPE_META[type] ?? { label: type.replace(/_/g, " "), icon: InboxIcon };
-}
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
@@ -72,6 +37,7 @@ export function NotificationsBell() {
     undefined,
   );
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   const isAuthed = useSession((s) => s.status === "authenticated");
   const qc = useQueryClient();
@@ -144,12 +110,16 @@ export function NotificationsBell() {
   // Outside-click + Esc to close (no Modal, no backdrop blur).
   useEffect(() => {
     if (!open) return;
+    panelRef.current?.focus();
     const onClick = (e: MouseEvent) => {
       if (!wrapperRef.current) return;
       if (!wrapperRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        wrapperRef.current?.querySelector("button")?.focus();
+      }
     };
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -160,109 +130,81 @@ export function NotificationsBell() {
   }, [open]);
 
   return (
-    <Box ref={wrapperRef} sx={{ position: "relative" }}>
-      <Badge
-        key={`badge-${badgeKey}`}
-        badgeContent={unread > 99 ? "99+" : unread}
-        color="danger"
-        invisible={unread === 0}
-        size="sm"
+    <div ref={wrapperRef} className="relative">
+      <motion.div
+        animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
+        transition={{ duration: 0.35, ease: "easeInOut" }}
       >
-        <motion.div
-          animate={pulse ? { rotate: [0, 8, -8, 0] } : { rotate: 0 }}
-          transition={{ duration: 0.35, ease: "easeInOut" }}
+        <IconButton
+          variant="ghost"
+          aria-label={
+            unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+          }
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          onClick={() => setOpen((v) => !v)}
+          data-tour="bell"
         >
-          <IconButton
-            tooltip="Notifications"
-            variant="plain"
-            color="neutral"
-            aria-label={
-              unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
-            }
-            aria-expanded={open}
-            aria-haspopup="dialog"
-            onClick={() => setOpen((v) => !v)}
-            data-tour="bell"
-          >
-            <BellIcon aria-hidden width={20} height={20} />
-          </IconButton>
-        </motion.div>
-      </Badge>
+          <Bell aria-hidden width={20} height={20} />
+        </IconButton>
+      </motion.div>
+      {unread > 0 && (
+        <span
+          key={`badge-${badgeKey}`}
+          aria-hidden
+          className="bg-destructive pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-white"
+        >
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
 
       {open && (
-        <Sheet
+        <div
+          ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-label="Notifications"
-          variant="outlined"
-          sx={{
-            position: "absolute",
-            top: "calc(100% + 8px)",
-            right: 0,
-            width: { xs: 320, sm: 380 },
-            maxHeight: "min(70dvh, 560px)",
-            borderRadius: "lg",
-            boxShadow: "lg",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 1100,
-          }}
+          className="bg-surface text-ink border-ink/10 absolute top-[calc(100%+8px)] right-0 z-[1100] flex outline-none max-h-[min(70dvh,560px)] w-80 flex-col overflow-hidden rounded-2xl border shadow-lg sm:w-96"
         >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}
-          >
-            <Typography
-              level="title-md"
-              sx={{ fontFamily: "var(--font-display)" }}
-            >
+          <div className="border-ink/10 flex items-center justify-between border-b p-4">
+            <h2 className="font-display text-base font-semibold">
               Notifications
-            </Typography>
+            </h2>
             {unread > 0 && (
               <Button
                 size="sm"
-                variant="plain"
+                variant="ghost"
                 onClick={() => markAll.mutate()}
                 loading={markAll.isPending}
               >
                 Mark all read
               </Button>
             )}
-          </Stack>
-          <Box sx={{ overflow: "auto", flex: 1 }}>
+          </div>
+          <div className="flex-1 overflow-auto">
             {isLoading && (
-              <Stack spacing={1} sx={{ p: 2 }}>
+              <div className="flex flex-col gap-2 p-4">
                 <Skeleton height={56} rounded="md" />
                 <Skeleton height={56} rounded="md" />
                 <Skeleton height={56} rounded="md" />
-              </Stack>
+              </div>
             )}
             {!isLoading && error && (
-              <Typography
-                level="body-sm"
-                color="danger"
-                sx={{ p: 4, textAlign: "center" }}
-              >
+              <p className="text-destructive p-6 text-center text-sm">
                 Could not load notifications.
                 {unread > 0 && ` (${unread} unread reported)`}
-              </Typography>
+              </p>
             )}
             {!isLoading && !error && (list?.items.length ?? 0) === 0 && (
-              <Typography
-                level="body-sm"
-                color="neutral"
-                sx={{ p: 4, textAlign: "center" }}
-              >
+              <p className="text-muted p-6 text-center text-sm">
                 {unread > 0
                   ? `${unread} unread reported but list is empty — try refresh.`
                   : "You’re all caught up."}
-              </Typography>
+              </p>
             )}
             {!isLoading &&
               list?.items.map((n) => (
-                <Row
+                <NotificationRow
                   key={n.id}
                   item={n}
                   onAck={(id) => ackOne.mutate(id)}
@@ -271,109 +213,9 @@ export function NotificationsBell() {
                   onNavigate={() => setOpen(false)}
                 />
               ))}
-          </Box>
-        </Sheet>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
-}
-
-interface RowProps {
-  item: NotificationItem;
-  onAck: (id: string) => void;
-  onDismiss: (id: string) => void;
-  onNavigate: () => void;
-  ackPending: boolean;
-}
-
-function Row({ item, onAck, onDismiss, onNavigate, ackPending }: RowProps) {
-  const unread = !item.read_at;
-  const { label, icon: Icon } = metaFor(item.type);
-  const message =
-    typeof item.payload?.message === "string" ? item.payload.message : label;
-  const link =
-    typeof item.payload?.link === "string" ? item.payload.link : null;
-
-  const Body = (
-    <Stack
-      direction="row"
-      spacing={1.5}
-      alignItems="flex-start"
-      sx={{
-        px: 2,
-        py: 1.5,
-        borderBottom: "1px solid",
-        borderColor: "divider",
-        background: unread ? "primary.softBg" : "transparent",
-        "&:hover": { background: "neutral.softBg" },
-      }}
-    >
-      <Box
-        aria-label={label}
-        title={label}
-        sx={{
-          flexShrink: 0,
-          width: 32,
-          height: 32,
-          borderRadius: "50%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: unread ? "primary.plainColor" : "neutral.plainColor",
-          background: unread ? "primary.softBg" : "neutral.softBg",
-        }}
-      >
-        <Icon aria-hidden width={18} height={18} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography level="body-xs" color="neutral" sx={{ mb: 0.25 }}>
-          {formatTime(item.created_at)}
-        </Typography>
-        <Typography level="body-sm" sx={{ wordBreak: "break-word" }}>
-          {message}
-        </Typography>
-      </Box>
-      {unread && (
-        <IconButton
-          tooltip="Acknowledge"
-          aria-label="Acknowledge notification"
-          size="sm"
-          variant="plain"
-          color="neutral"
-          loading={ackPending}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onAck(item.id);
-          }}
-        >
-          <CheckIcon aria-hidden width={16} height={16} />
-        </IconButton>
-      )}
-    </Stack>
-  );
-
-  if (!link) return Body;
-  return (
-    <Box
-      component={Link}
-      href={link}
-      sx={{ display: "block", color: "inherit", textDecoration: "none" }}
-      onClick={() => {
-        onDismiss(item.id);
-        onNavigate();
-      }}
-    >
-      {Body}
-    </Box>
-  );
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86_400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString();
 }

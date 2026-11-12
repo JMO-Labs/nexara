@@ -32,7 +32,7 @@ describe("UsersTab", () => {
 
     render(<UsersTab />, { wrapper });
 
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("should render error state", () => {
@@ -144,5 +144,34 @@ describe("UsersTab", () => {
     render(<UsersTab />, { wrapper });
 
     expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("confirms before deleting a user", () => {
+    const del = { mutate: vi.fn(), isPending: false };
+    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+      isLoading: false,
+      data: {
+        items: [
+          {
+            id: "user-1",
+            username: "john",
+            display_name: "John Doe",
+            email: "john@example.com",
+            role: "member",
+            status: "active",
+          },
+        ],
+      },
+    } as any);
+    vi.mocked(useAdminModule.useSuspendUser).mockReturnValue(del as any);
+    vi.mocked(useAdminModule.useRestoreUser).mockReturnValue(del as any);
+    const delUser = { mutate: vi.fn(), isPending: false };
+    vi.mocked(useAdminModule.useDeleteUser).mockReturnValue(delUser as any);
+
+    render(<UsersTab />, { wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Delete user" }));
+    expect(delUser.mutate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(delUser.mutate).toHaveBeenCalledWith("user-1");
   });
 });

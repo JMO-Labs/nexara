@@ -5,8 +5,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { Collapsible } from "@/components/ui/Collapsible";
 
 // framer-motion AnimatePresence: make it a passthrough in test env
@@ -30,7 +28,7 @@ vi.mock("framer-motion", async (importOriginal) => {
 });
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 describe("Collapsible", () => {
@@ -85,11 +83,11 @@ describe("Collapsible", () => {
 
   it("sets aria-expanded correctly on header button", () => {
     const { rerender } = wrap(
-      <CssVarsProvider theme={joyTheme}>
+      <>
         <Collapsible open={true} header="Header">
           <p>Content</p>
         </Collapsible>
-      </CssVarsProvider>,
+      </>,
     );
     expect(screen.getByRole("button", { name: /header/i })).toHaveAttribute(
       "aria-expanded",
@@ -97,11 +95,11 @@ describe("Collapsible", () => {
     );
 
     rerender(
-      <CssVarsProvider theme={joyTheme}>
+      <>
         <Collapsible open={false} header="Header">
           <p>Content</p>
         </Collapsible>
-      </CssVarsProvider>,
+      </>,
     );
     expect(screen.getByRole("button", { name: /header/i })).toHaveAttribute(
       "aria-expanded",

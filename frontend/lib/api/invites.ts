@@ -2,7 +2,7 @@
  * @file lib/api/invites.ts
  * @brief Invite management API endpoints.
  */
-import { apiGet, apiPost, apiDelete } from "./client";
+import { apiGet, apiPost, apiDelete, seg } from "./client";
 
 /**
  * @brief Invite response item.
@@ -55,4 +55,4 @@ export const createInvite = (email: string, role: string) =>
  * @return MessageResponse
  */
 export const revokeInvite = (inviteId: string) =>
-  apiDelete<MessageResponse>(`/api/v1/invites/${inviteId}`);
+  apiDelete<MessageResponse>(`/api/v1/invites/${seg(inviteId)}`);

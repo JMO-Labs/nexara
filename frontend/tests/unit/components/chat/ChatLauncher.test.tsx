@@ -6,8 +6,6 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useChatDock } from "@/stores/chatDock";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
@@ -53,11 +51,7 @@ const dms: DmThread[] = [
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient();
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("ChatLauncher (drawer)", () => {

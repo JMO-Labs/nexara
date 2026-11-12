@@ -2,7 +2,7 @@
  * @file lib/api/chat.ts
  * @brief Chat REST endpoints (channels, history, DMs).
  */
-import { apiGet, apiPost, apiDelete } from "./client";
+import { apiGet, apiPost, apiDelete, seg } from "./client";
 
 export interface ChatAuthor {
   id: string;
@@ -54,17 +54,17 @@ export const getMessageHistory = (
   const qs = new URLSearchParams({ limit: String(limit) });
   if (cursor) qs.set("cursor", cursor);
   return apiGet<MessageHistoryPage>(
-    `/api/v1/chat/channels/${channelId}/messages?${qs}`,
+    `/api/v1/chat/channels/${seg(channelId)}/messages?${qs}`,
   );
 };
 
 export const createOrGetDm = (peerId: string) =>
-  apiPost<ChatChannel>(`/api/v1/chat/dm/${peerId}`, {});
+  apiPost<ChatChannel>(`/api/v1/chat/dm/${seg(peerId)}`, {});
 
 export const ensureSubgroupChannel = (subgroupId: string) =>
-  apiPost<ChatChannel>(`/api/v1/chat/subgroup/${subgroupId}`, {});
+  apiPost<ChatChannel>(`/api/v1/chat/subgroup/${seg(subgroupId)}`, {});
 
 export const listDmThreads = () => apiGet<DmThread[]>("/api/v1/chat/dm");
 
 export const deleteDmThread = (channelId: string) =>
-  apiDelete<void>(`/api/v1/chat/dm/${channelId}`);
+  apiDelete<void>(`/api/v1/chat/dm/${seg(channelId)}`);

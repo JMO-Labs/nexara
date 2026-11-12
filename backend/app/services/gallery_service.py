@@ -31,6 +31,7 @@ from app.schemas.gallery import (
     GalleryResponse,
     GalleryUpdate,
 )
+from app.services.activity_publish import record_activity
 
 logger = structlog.get_logger(__name__)
 
@@ -122,7 +123,10 @@ class GalleryService:
             user = user_result.scalar_one_or_none()
             user_name = user.display_name if user else "Unknown"
 
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._session,
+                None,
                 community_id=self._community_id,
                 actor_id=user_id,
                 verb="gallery.created",

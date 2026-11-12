@@ -14,6 +14,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.services.branding.contrast import contrast_ratio
+
+_ACCENT_TEXT = "#14301E"
+"""@brief Forest text colour that sits on the accent colour (light palette)."""
+
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 """@brief Regex for validating 6-digit hex color strings."""
 
@@ -46,7 +51,7 @@ class BrandingResponse(BaseModel):
     logo_light_url: str | None = None
     logo_dark_url: str | None = None
     # Full palette
-    color_accent: str = "#8b5cf6"
+    color_accent: str = "#C6B4F5"
     color_surface_light: str = "#ffffff"
     color_surface_dark: str = "#1f2937"
     color_text_light: str = "#111827"
@@ -104,6 +109,15 @@ class BrandingUpdate(BaseModel):
     def validate_hex_color(cls, v: str | None) -> str | None:
         """@brief Ensure color values are valid 6-digit hex strings."""
         return _validate_hex(v)
+
+    @field_validator("color_accent", mode="after")
+    @classmethod
+    def validate_accent_contrast(cls, v: str | None) -> str | None:
+        """@brief Reject accents with under 4.5:1 contrast against forest text."""
+        if v is not None and contrast_ratio(_ACCENT_TEXT, v) < 4.5:
+            msg = "Accent color needs at least 4.5:1 contrast with dark green text."
+            raise ValueError(msg)
+        return v
 
 
 class ContrastWarning(BaseModel):

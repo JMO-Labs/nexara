@@ -5,8 +5,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 
 vi.mock("@/hooks/useSubgroups", () => ({
   useSubgroupList: vi.fn(() => ({ data: undefined, isLoading: true })),
@@ -34,11 +32,7 @@ import type { Subgroup } from "@/lib/api/subgroups";
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 const fakeGroups: Subgroup[] = [
@@ -62,12 +56,12 @@ const fakeGroups: Subgroup[] = [
 
 describe("MyGroupsWidget", () => {
   it("renders without crashing", () => {
-    wrap(<MyGroupsWidget instanceId="w1" />);
+    wrap(<MyGroupsWidget />);
     expect(document.body).toBeTruthy();
   });
 
   it("shows skeleton while loading", () => {
-    wrap(<MyGroupsWidget instanceId="w1" />);
+    wrap(<MyGroupsWidget />);
     expect(document.body.children.length).toBeGreaterThan(0);
   });
 
@@ -77,7 +71,7 @@ describe("MyGroupsWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useSubgroupList>);
 
-    wrap(<MyGroupsWidget instanceId="w1" />);
+    wrap(<MyGroupsWidget />);
     expect(screen.getByText("No groups yet")).toBeInTheDocument();
   });
 
@@ -87,7 +81,7 @@ describe("MyGroupsWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useSubgroupList>);
 
-    wrap(<MyGroupsWidget instanceId="w1" />);
+    wrap(<MyGroupsWidget />);
     expect(screen.getByLabelText("Go to Hiking Club")).toBeInTheDocument();
   });
 });

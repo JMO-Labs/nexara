@@ -1,28 +1,29 @@
 /**
  * @file tests/unit/ui/Button.test.tsx
- * @brief Smoke test the editorial Button wrapper.
+ * @brief Button variants, loading state and click handling.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { Button } from "@/components/ui/Button";
 
-function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
-}
-
 describe("Button", () => {
-  it("renders label and fires onClick", async () => {
+  it("renders text and fires onClick", async () => {
     const onClick = vi.fn();
-    wrap(<Button onClick={onClick}>Save</Button>);
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    render(<Button onClick={onClick}>Save</Button>);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it("respects disabled", () => {
-    wrap(<Button disabled>Save</Button>);
-    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  it("destructive variant has destructive class", () => {
+    render(<Button variant="destructive">Delete</Button>);
+    expect(screen.getByRole("button").className).toContain("destructive");
+  });
+
+  it("loading disables and sets aria-busy", () => {
+    render(<Button loading>Save</Button>);
+    const b = screen.getByRole("button");
+    expect(b).toBeDisabled();
+    expect(b).toHaveAttribute("aria-busy", "true");
   });
 });

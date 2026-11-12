@@ -1,13 +1,10 @@
-"use client";
 /**
  * @file components/layout/PageMasthead.tsx
- * @brief Editorial page header — atmospheric backdrop, oversized Fraunces
- *        wordmark, hairline rule + uppercase metric line, optional right slot.
+ * @brief Editorial page header: atmospheric backdrop, oversized display
+ *        title, hairline rule + uppercase metric line, optional right slot.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
+import { cn } from "@/lib/utils";
 
 export interface PageMastheadProps {
   title: string;
@@ -15,15 +12,20 @@ export interface PageMastheadProps {
   meta?: string;
   /** Optional slot rendered at right (button, action). */
   right?: React.ReactNode;
-  /** Title scale — default "lg" matches galleries page. */
+  /** Title scale; default "lg" matches galleries page. */
   size?: "md" | "lg";
 }
 
 const TITLE_SIZES = {
-  md: { xs: "12vw", sm: "64px", md: "92px", lg: "116px" },
-  lg: { xs: "14vw", sm: "88px", md: "120px", lg: "156px" },
+  md: "text-[12vw] sm:text-[64px] md:text-[92px] lg:text-[116px]",
+  lg: "text-[14vw] sm:text-[88px] md:text-[120px] lg:text-[156px]",
 } as const;
 
+/**
+ * @brief Page masthead.
+ * @param props title, optional meta line, right slot and size
+ * @return header element
+ */
 export function PageMasthead({
   title,
   meta,
@@ -31,85 +33,35 @@ export function PageMasthead({
   size = "lg",
 }: PageMastheadProps) {
   return (
-    <Box sx={{ position: "relative", mb: { xs: 2, md: 3 } }}>
-      {/* Atmospheric backdrop — warm radial wash */}
-      <Box
+    <div className="relative mb-4 md:mb-6">
+      <div
         aria-hidden
-        sx={{
-          position: "absolute",
-          inset: "-40px -40px 0 -40px",
-          pointerEvents: "none",
-          zIndex: 0,
-          background:
-            "radial-gradient(ellipse 1100px 480px at 18% -10%, var(--joy-palette-warning-softBg, rgba(217,164,87,0.18)) 0%, transparent 65%), radial-gradient(ellipse 800px 360px at 95% 8%, var(--joy-palette-primary-softBg, rgba(36,108,121,0.10)) 0%, transparent 70%)",
-        }}
+        className="pointer-events-none absolute -inset-x-10 top-[-40px] bottom-0 z-0 bg-[radial-gradient(ellipse_1100px_480px_at_18%_-10%,color-mix(in_srgb,var(--color-sun)_18%,transparent)_0%,transparent_65%),radial-gradient(ellipse_800px_360px_at_95%_8%,color-mix(in_srgb,var(--color-accent)_10%,transparent)_0%,transparent_70%)]"
       />
-      <Box
-        sx={{
-          position: "relative",
-          zIndex: 1,
-          pt: { xs: 3, md: 5 },
-          pb: { xs: 2, md: 3 },
-        }}
-      >
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          alignItems={{ md: "flex-end" }}
-          justifyContent="space-between"
-          spacing={2}
-        >
-          <Box>
-            <Typography
-              component="h1"
-              sx={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 400,
-                fontSize: TITLE_SIZES[size],
-                lineHeight: 0.88,
-                letterSpacing: "-0.04em",
-                color: "text.primary",
-              }}
+      <div className="relative z-10 pt-6 pb-4 md:pt-10 md:pb-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1
+              className={cn(
+                "text-ink leading-[0.88] font-normal tracking-[-0.04em]",
+                TITLE_SIZES[size],
+              )}
             >
               {title}
-            </Typography>
+            </h1>
             {meta && (
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                sx={{ mt: 2 }}
-              >
-                <Box
-                  sx={{
-                    height: "1px",
-                    width: 56,
-                    background: "currentColor",
-                    opacity: 0.35,
-                  }}
-                />
-                <Typography
-                  level="body-sm"
-                  sx={{
-                    fontFamily: "var(--font-mono, var(--font-body))",
-                    fontSize: "11px",
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "text.secondary",
-                  }}
-                >
+              <div className="mt-4 flex items-center gap-3">
+                <span className="h-px w-14 bg-current opacity-35" />
+                <span className="text-muted font-mono text-[11px] tracking-[0.18em] uppercase">
                   {meta}
-                </Typography>
-              </Stack>
+                </span>
+              </div>
             )}
-          </Box>
-          {right && (
-            <Box sx={{ alignSelf: { xs: "flex-start", md: "auto" } }}>
-              {right}
-            </Box>
-          )}
-        </Stack>
-      </Box>
-    </Box>
+          </div>
+          {right && <div className="self-start md:self-auto">{right}</div>}
+        </div>
+      </div>
+    </div>
   );
 }
 

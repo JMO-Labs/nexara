@@ -7,8 +7,8 @@
 import * as React from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import Box from "@mui/joy/Box";
 
 export interface MarkdownProps {
   content: string;
@@ -52,75 +52,21 @@ export function Markdown({
 }: MarkdownProps) {
   if (!content?.trim()) return null;
   return (
-    <Box
-      className="nx-md"
-      sx={{
-        fontSize: size === "sm" ? "0.875rem" : "inherit",
-        lineHeight: 1.55,
-        color: "text.primary",
-        wordBreak: "break-word",
-        "& p": { m: 0, "& + p": { mt: 0.75 } },
-        "& a": {
-          color: "var(--joy-palette-primary-plainColor)",
-          textDecoration: "underline",
-        },
-        "& code": {
-          fontFamily: "var(--font-mono, ui-monospace, monospace)",
-          fontSize: "0.9em",
-          px: 0.5,
-          py: 0.125,
-          borderRadius: "4px",
-          bgcolor: "background.level1",
-        },
-        "& pre": {
-          fontFamily: "var(--font-mono, ui-monospace, monospace)",
-          fontSize: "0.85em",
-          p: 1.25,
-          borderRadius: "sm",
-          bgcolor: "background.level1",
-          overflow: "auto",
-          m: 0,
-          mt: 0.75,
-          "& code": { p: 0, bgcolor: "transparent" },
-        },
-        "& blockquote": {
-          m: 0,
-          mt: 0.75,
-          pl: 1.25,
-          borderLeft: "3px solid",
-          borderColor: "divider",
-          color: "text.secondary",
-        },
-        "& ul, & ol": { m: 0, mt: 0.5, pl: 2.5 },
-        "& li + li": { mt: 0.25 },
-        "& table": {
-          borderCollapse: "collapse",
-          mt: 0.75,
-          fontSize: "0.9em",
-        },
-        "& th, & td": {
-          border: "1px solid",
-          borderColor: "divider",
-          px: 1,
-          py: 0.5,
-          textAlign: "left",
-        },
-        "& th": { bgcolor: "background.level1" },
-        "& hr": {
-          border: 0,
-          borderTop: "1px solid",
-          borderColor: "divider",
-          my: 1,
-        },
-        "& img": { maxWidth: "100%", borderRadius: "sm" },
-        '& input[type="checkbox"]': { mr: 0.5 },
-        ...(truncate && {
-          display: "-webkit-box",
-          WebkitLineClamp: clampLines,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }),
-      }}
+    <div
+      className={cn(
+        "nx-md leading-[1.55] text-ink break-words",
+        size === "sm" ? "text-sm" : "text-[length:inherit]",
+        "[&_p+p]:mt-3 [&_a]:underline [&_a]:text-ink",
+        "[&_code]:rounded [&_code]:bg-bg [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em]",
+        "[&_pre]:mt-3 [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-bg [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0",
+        "[&_blockquote]:mt-3 [&_blockquote]:border-l-4 [&_blockquote]:border-leaf [&_blockquote]:pl-3 [&_blockquote]:opacity-80",
+        "[&_ul]:mt-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:pl-6",
+        "[&_table]:mt-3 [&_table]:border-collapse [&_th]:border [&_td]:border [&_th]:border-ink/20 [&_td]:border-ink/20 [&_th]:px-2 [&_td]:px-2 [&_th]:bg-bg",
+        "[&_hr]:my-3 [&_hr]:border-ink/20 [&_img]:max-w-full [&_img]:rounded-lg",
+        truncate &&
+          "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical]",
+      )}
+      style={truncate ? { WebkitLineClamp: clampLines } : undefined}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
@@ -129,7 +75,7 @@ export function Markdown({
       >
         {content}
       </ReactMarkdown>
-    </Box>
+    </div>
   );
 }
 

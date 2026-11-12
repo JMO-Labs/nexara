@@ -1,18 +1,11 @@
 "use client";
 /**
  * @file components/galleries/Lightbox.tsx
- * @brief Full-screen modal viewer for gallery items with arrow nav + Esc.
+ * @brief Full-screen modal viewer for gallery items: focus trap, arrows, Esc.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui";
-import {
-  XMarkIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@heroicons/react/24/outline";
 import { API_BASE } from "@/lib/auth/session";
 import type { GalleryItem } from "@/lib/api/galleries";
 
@@ -23,6 +16,14 @@ export interface LightboxProps {
   onIndexChange: (i: number) => void;
 }
 
+/**
+ * @brief Modal image viewer.
+ * @param items gallery items
+ * @param index current item index
+ * @param onClose close handler (Esc, backdrop, close button)
+ * @param onIndexChange navigation handler
+ * @return dialog or null when no item
+ */
 export function Lightbox({
   items,
   index,
@@ -30,6 +31,7 @@ export function Lightbox({
   onIndexChange,
 }: LightboxProps) {
   const item = items[index];
+  const ref = React.useRef<HTMLDivElement>(null);
 
   const next = React.useCallback(() => {
     if (index < items.length - 1) onIndexChange(index + 1);
@@ -38,11 +40,37 @@ export function Lightbox({
     if (index > 0) onIndexChange(index - 1);
   }, [index, onIndexChange]);
 
+  // Focus the dialog on open and restore focus on close.
+  React.useEffect(() => {
+    const prevFocus = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    return () => prevFocus?.focus?.();
+  }, []);
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "ArrowRight") next();
       else if (e.key === "ArrowLeft") prev();
+      else if (e.key === "Tab" && ref.current) {
+        const f = Array.from(
+          ref.current.querySelectorAll<HTMLElement>("button:not([disabled])"),
+        );
+        if (f.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = f[0];
+        const last = f[f.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || active === ref.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -50,85 +78,67 @@ export function Lightbox({
 
   if (!item) return null;
   const src = `${API_BASE}/api/v1/media/${item.media_id}/file`;
+  const label = item.caption || `Image ${index + 1} of ${items.length}`;
 
   return (
-    <Box
+    <div
+      ref={ref}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Lightbox viewer"
       onClick={onClose}
-      sx={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.85)",
-        zIndex: 1500,
-        display: "flex",
-        flexDirection: "column",
-      }}
+      className="fixed inset-0 z-[1500] flex flex-col bg-black/85 outline-none"
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        sx={{ p: 2 }}
+      <div
+        className="flex items-center justify-between p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <Typography level="body-sm" sx={{ color: "common.white" }}>
+        <span className="text-sm text-white">
           {index + 1} / {items.length}
-        </Typography>
-        <IconButton
-          tooltip="Close"
-          shortcut="Esc"
-          variant="plain"
-          aria-label="Close"
-          onClick={onClose}
-        >
-          <XMarkIcon width={24} height={24} color="white" />
+        </span>
+        <IconButton variant="ghost" aria-label="Close" onClick={onClose}>
+          <X className="size-6 text-white" aria-hidden="true" />
         </IconButton>
-      </Stack>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-        sx={{ flex: 1, minHeight: 0, position: "relative" }}
+      </div>
+      <div
+        className="relative flex min-h-0 flex-1 items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         <IconButton
-          tooltip="Previous"
-          shortcut="←"
+          variant="ghost"
           aria-label="Previous"
           onClick={prev}
           disabled={index === 0}
-          sx={{ position: "absolute", left: 16 }}
+          className="absolute left-2 z-10 bg-black/40 md:left-4"
         >
-          <ChevronLeftIcon width={28} height={28} color="white" />
+          <ChevronLeft className="size-7 text-white" aria-hidden="true" />
         </IconButton>
-        <Box
-          component="img"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={src}
-          alt={item.caption ?? ""}
-          sx={{ maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain" }}
+          alt={label}
+          className="max-h-[80vh] max-w-[90vw] object-contain"
         />
         <IconButton
-          tooltip="Next"
-          shortcut="→"
+          variant="ghost"
           aria-label="Next"
           onClick={next}
           disabled={index >= items.length - 1}
-          sx={{ position: "absolute", right: 16 }}
+          className="absolute right-2 z-10 bg-black/40 md:right-4"
         >
-          <ChevronRightIcon width={28} height={28} color="white" />
+          <ChevronRight className="size-7 text-white" aria-hidden="true" />
         </IconButton>
-      </Stack>
+      </div>
       {item.caption && (
-        <Typography
-          level="body-sm"
-          sx={{ color: "common.white", textAlign: "center", p: 2 }}
+        <p
+          className="p-4 text-center text-sm text-white"
           onClick={(e) => e.stopPropagation()}
         >
           {item.caption}
-        </Typography>
+        </p>
       )}
-    </Box>
+    </div>
   );
 }
 

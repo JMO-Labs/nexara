@@ -17,8 +17,6 @@ import { describe, it, expect } from "vitest";
 import type React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import type { PromptPost } from "@/lib/api/prompts";
 import { PromptPostCard } from "@/components/feed/PromptPostCard";
 
@@ -46,7 +44,7 @@ function createPromptPost(overrides?: Partial<PromptPost>): PromptPost {
 
 describe("PromptPostCard", () => {
   function wrap(ui: React.ReactNode) {
-    return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+    return render(ui);
   }
 
   it("renders prompt question and response count", () => {

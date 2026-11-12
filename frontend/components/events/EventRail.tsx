@@ -1,16 +1,14 @@
 "use client";
 /**
  * @file components/events/EventRail.tsx
- * @brief Right-side rail for /app/events. Renders the visible month's events
- *        sorted ascending and grouped by day, with a colored dot per
- *        subgroup. Selecting a row syncs with the calendar + detail panel.
+ * @brief Right-side rail for /app/events. Renders the visible events sorted
+ *        ascending and grouped by day, with a colored bar per subgroup.
+ *        Selecting a row syncs with the calendar + detail panel.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { format, isSameDay, parseISO, startOfDay } from "date-fns";
 import { EmptyState } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent } from "./eventColors";
 
@@ -26,6 +24,11 @@ function dayKey(iso: string): string {
   return format(parseISO(iso), "yyyy-MM-dd");
 }
 
+/**
+ * @brief Day-grouped event list.
+ * @param props see EventRailProps
+ * @return rail element
+ */
 export function EventRail({
   events,
   selectedDay,
@@ -61,7 +64,6 @@ export function EventRail({
     ]);
   }, [sorted, selectedDay]);
 
-  // Auto-scroll selected day group into view
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     if (!selectedDay || !containerRef.current) return;
@@ -69,14 +71,12 @@ export function EventRail({
     const el = containerRef.current.querySelector<HTMLElement>(
       `[data-day="${k}"]`,
     );
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    el?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, [selectedDay]);
 
   if (groups.length === 0) {
     return (
-      <Box sx={{ p: 2 }}>
+      <div className="p-4">
         <EmptyState
           compact
           title={
@@ -90,155 +90,80 @@ export function EventRail({
               : "Switch months or clear filters to see more events."
           }
         />
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box
+    <div
       ref={containerRef}
-      sx={{
-        height: "100%",
-        overflowY: "auto",
-        px: 1.5,
-        py: 1,
-        scrollbarGutter: "stable",
-      }}
+      className="h-full overflow-y-auto px-3 py-2 [scrollbar-gutter:stable]"
     >
       {groups.map(([key, day, items]) => {
         const isSelectedDay =
           selectedDay && isSameDay(startOfDay(day), startOfDay(selectedDay));
         return (
-          <Box key={key} data-day={key} sx={{ mb: 2, scrollMarginTop: 8 }}>
-            <Stack
-              direction="row"
-              alignItems="baseline"
-              spacing={1}
-              sx={{
-                position: "sticky",
-                top: 0,
-                py: 0.5,
-                bgcolor: "background.body",
-                zIndex: 1,
-                borderBottom: "1px solid",
-                borderColor: "divider",
-                mb: 1,
-              }}
+          <section key={key} data-day={key} className="mb-4 scroll-mt-2">
+            <h3
+              className={cn(
+                "bg-surface sticky top-0 z-[1] mb-2 flex items-baseline gap-2 border-b border-ink/10 py-1 text-base font-semibold tabular-nums",
+                isSelectedDay ? "text-accent" : "text-ink",
+              )}
             >
-              <Typography
-                level="title-md"
-                sx={{
-                  fontFamily: "var(--font-display)",
-                  fontVariantNumeric: "tabular-nums",
-                  color: isSelectedDay ? "primary.plainColor" : "text.primary",
-                }}
-              >
-                {format(day, "d")}
-              </Typography>
-              <Typography
-                level="body-xs"
-                textColor="text.tertiary"
-                sx={{
-                  textTransform: "uppercase",
-                  letterSpacing: "0.14em",
-                  fontWeight: 600,
-                }}
-              >
-                {format(day, "EEE · MMM")}
-              </Typography>
-            </Stack>
-
-            <Stack spacing={0.5}>
+              {format(day, "d")}
+              <span className="text-muted text-sm font-normal">
+                {format(day, "EEE, MMM")}
+              </span>
+            </h3>
+            <ul className="flex flex-col gap-1">
               {items.map((ev) => {
                 const tone = toneForEvent(ev, subgroupNames);
                 const selected = selectedEventId === ev.id;
                 return (
-                  <Box
-                    key={ev.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onSelectEvent(ev)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onSelectEvent(ev);
+                  <li key={ev.id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectEvent(ev)}
+                      aria-pressed={selected}
+                      className="grid min-h-11 w-full grid-cols-[4px_1fr] gap-3 rounded-xl px-2 py-2 text-left transition-colors outline-none hover:bg-[var(--tone-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      style={
+                        {
+                          "--tone-soft": tone.soft,
+                          backgroundColor: selected ? tone.soft : undefined,
+                        } as React.CSSProperties
                       }
-                    }}
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "8px 1fr",
-                      gap: 1,
-                      alignItems: "stretch",
-                      px: 1,
-                      py: 1,
-                      borderRadius: "sm",
-                      cursor: "pointer",
-                      backgroundColor: selected ? tone.soft : "transparent",
-                      transition: "background-color 120ms ease",
-                      "&:hover": { backgroundColor: tone.soft },
-                      "&:focus-visible": {
-                        outline: "2px solid",
-                        outlineColor: tone.solid,
-                        outlineOffset: "2px",
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 4,
-                        borderRadius: "2px",
-                        backgroundColor: tone.solid,
-                      }}
-                    />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography
-                        level="body-xs"
-                        textColor="text.tertiary"
-                        sx={{
-                          fontVariantNumeric: "tabular-nums",
-                          letterSpacing: "0.04em",
-                        }}
-                      >
-                        {ev.is_all_day
-                          ? "All day"
-                          : `${format(parseISO(ev.starts_at), "h:mm a")} – ${format(parseISO(ev.ends_at), "h:mm a")}`}
-                        {ev.location ? ` · ${ev.location}` : ""}
-                      </Typography>
-                      <Typography
-                        level="body-sm"
-                        sx={{
-                          fontWeight: 600,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                        }}
-                      >
-                        {ev.title}
-                      </Typography>
-                      <Typography
-                        level="body-xs"
-                        sx={{
-                          mt: 0.25,
-                          color: tone.onSoft,
-                          fontWeight: 600,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.1em",
-                          fontSize: 10,
-                        }}
-                      >
-                        {tone.label}
-                      </Typography>
-                    </Box>
-                  </Box>
+                    >
+                      <span
+                        aria-hidden
+                        className="rounded-sm"
+                        style={{ backgroundColor: tone.solid }}
+                      />
+                      <span className="min-w-0">
+                        <span className="text-muted block text-xs tabular-nums">
+                          {ev.is_all_day
+                            ? "All day"
+                            : `${format(parseISO(ev.starts_at), "h:mm a")} to ${format(parseISO(ev.ends_at), "h:mm a")}`}
+                          {ev.location ? `, ${ev.location}` : ""}
+                        </span>
+                        <span className="text-ink line-clamp-2 text-sm font-semibold">
+                          {ev.title}
+                        </span>
+                        <span
+                          className="mt-0.5 block text-xs font-semibold"
+                          style={{ color: tone.onSoft }}
+                        >
+                          {tone.label}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
-            </Stack>
-          </Box>
+            </ul>
+          </section>
         );
       })}
-    </Box>
+    </div>
   );
 }
 

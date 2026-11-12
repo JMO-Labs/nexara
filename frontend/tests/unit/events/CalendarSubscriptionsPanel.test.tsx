@@ -5,9 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import joyTheme from "@/theme/joy-theme";
 import { CalendarSubscriptionsPanel } from "@/components/events/CalendarSubscriptionsPanel";
 import * as api from "@/lib/api/events";
 
@@ -30,9 +28,8 @@ vi.mock("next-intl", () => ({
 
 vi.mock("@/lib/api/events");
 vi.mock("@/stores/toasts", () => ({
-  useToasts: () => ({
-    push: vi.fn(),
-  }),
+  useToasts: (sel: (s: { push: () => void }) => unknown) =>
+    sel({ push: vi.fn() }),
 }));
 
 const mockSubscriptions = [
@@ -56,11 +53,7 @@ const mockSubscriptions = [
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("CalendarSubscriptionsPanel", () => {
@@ -164,5 +157,19 @@ describe("CalendarSubscriptionsPanel", () => {
 
     // Sync button would be tested via RotateCw icon click in real scenario
     expect(api.syncNowSubscription).toBeDefined();
+  });
+
+  it("sync button calls syncNowSubscription with id", async () => {
+    (api.listSubscriptions as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockSubscriptions,
+    );
+    (api.syncNowSubscription as ReturnType<typeof vi.fn>).mockResolvedValue({
+      synced_count: 1,
+    });
+    wrap(<CalendarSubscriptionsPanel />);
+    fireEvent.click(await screen.findByLabelText("Sync Work Calendar now"));
+    await waitFor(() =>
+      expect(api.syncNowSubscription).toHaveBeenCalledWith("sub1"),
+    );
   });
 });

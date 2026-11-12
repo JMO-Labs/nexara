@@ -1,26 +1,14 @@
 "use client";
 /**
  * @file components/chat/ChatLayout.tsx
- * @brief Two-pane chat shell: scrollable channel/DM list (left) + active
- *        thread (right, hidden when no selection on desktop). Composer
- *        is sticky at the bottom of the right pane and exposes media
- *        controls (emoji/media/poll). Toast on incoming messages for
- *        non-active channels.
+ * @brief Chat shell. Desktop: channel list (280px) + conversation (+ details).
+ *        Phone: list at /app/chat, conversation at /app/chat/[id]. Toasts on
+ *        incoming messages for non-active channels.
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import {
-  ArrowLeftIcon,
-  PencilSquareIcon,
-  ChevronRightIcon,
-  BellIcon,
-  BellSlashIcon,
-} from "@heroicons/react/24/outline";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconButton, EmptyState, Button } from "@/components/ui";
+import { EmptyState, Button } from "@/components/ui";
 import { useToasts } from "@/stores/toasts";
 import { useSession } from "@/stores/session";
 import { useUI } from "@/stores/ui";
@@ -36,74 +24,29 @@ import {
   sendChatTyping,
 } from "@/hooks/useChat";
 import { chatWs } from "@/lib/realtime/chat-ws";
-import { ChannelList } from "./ChannelList";
-import { MessageList } from "./MessageList";
-import { Composer } from "./Composer";
-import { TypingIndicator } from "./TypingIndicator";
 import { NewDmModal } from "./NewDmModal";
+import { SidebarPane } from "./chat-layout/SidebarPane";
+import { ThreadPane, DetailsPane } from "./chat-layout/ThreadPane";
+import {
+  isDesktop,
+  pickDefaultChannel,
+  readLastChannel,
+  resolveTitle,
+  statusLabel,
+  writeLastChannel,
+} from "./chat-layout/helpers";
 import { useConfirmDialog } from "@/stores/confirmDialog";
-import type { ChatChannel, ChatMessage, DmThread } from "@/lib/api/chat";
+import type { ChatMessage } from "@/lib/api/chat";
 
 export interface ChatLayoutProps {
   activeId: string | null;
 }
 
-const LAST_CHANNEL_KEY = "chat.lastChannelId";
-
-function readLastChannel(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(LAST_CHANNEL_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeLastChannel(id: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LAST_CHANNEL_KEY, id);
-  } catch {
-    /* storage unavailable (private mode, quota) — silently skip */
-  }
-}
-
-function pickDefaultChannel(
-  channels: ChatChannel[],
-  dms: DmThread[],
-  preferred: string | null,
-): string | null {
-  if (preferred) {
-    const inChannels = channels.some((c) => c.id === preferred);
-    const inDms = dms.some((d) => d.channel_id === preferred);
-    if (inChannels || inDms) return preferred;
-  }
-  const community = channels.find(
-    (c) => c.channel_type === "community" && c.subgroup_id === null,
-  );
-  return community?.id ?? null;
-}
-
-function resolveTitle(
-  channels: ChatChannel[],
-  dms: DmThread[],
-  id: string,
-): string {
-  const dm = dms.find((d) => d.channel_id === id);
-  if (dm) return dm.peer.display_name;
-  const ch = channels.find((c) => c.id === id);
-  if (ch) return ch.channel_type === "direct" ? ch.name : `# ${ch.name}`;
-  return "Conversation";
-}
-
-function statusLabel(status: string, fallback?: string): string | undefined {
-  if (status === "open") return undefined;
-  if (status === "connecting") return "Connecting…";
-  if (status === "error") return "Connection error — retrying.";
-  if (status === "closed") return fallback ?? "Disconnected — reconnecting.";
-  return undefined;
-}
-
+/**
+ * @brief Two-pane chat shell.
+ * @param activeId selected channel/DM id or null
+ * @return layout element
+ */
 export function ChatLayout({ activeId }: ChatLayoutProps) {
   const router = useRouter();
   const qc = useQueryClient();
@@ -191,7 +134,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
     if (activeId) return;
     if (!channelsLoaded || !dmsLoaded) return;
     const target = pickDefaultChannel(channels, dms, readLastChannel());
-    if (target) router.replace(`/app/chat/${target}`);
+    if (target && isDesktop()) router.replace(`/app/chat/${target}`);
   }, [activeId, channelsLoaded, dmsLoaded, channels, dms, router]);
 
   // Tell realtime hook which channel is active so unread doesn't bump.
@@ -251,256 +194,104 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   );
 
   const typingCount = activeId ? (typing[activeId]?.length ?? 0) : 0;
-  const showThread = Boolean(activeId);
-  const connLabel = statusLabel(status);
+
+  const onDeleteDm = async (channelId: string) => {
+    const ok = await confirm({
+      title: "Remove conversation?",
+      message: "This conversation will be removed from your inbox.",
+      confirmLabel: "Remove",
+      tone: "neutral",
+    });
+    if (!ok) return;
+    try {
+      await deleteDm.mutateAsync(channelId);
+      if (channelId === activeId) router.push("/app/chat");
+      pushToast({
+        variant: "success",
+        message: "Conversation removed.",
+        ttl: 3000,
+      });
+    } catch (err) {
+      pushToast({
+        variant: "danger",
+        title: "Could not delete",
+        message: err instanceof Error ? err.message : "Try again later.",
+        ttl: 5000,
+      });
+    }
+  };
+
+  const showDetails = threadPaneOpen && Boolean(activeId);
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "1fr",
-          md: threadPaneOpen ? "320px 1fr 320px" : "320px 1fr",
-        },
-        gridTemplateRows: "1fr",
-        bgcolor: "background.body",
-        overflow: "hidden",
-      }}
+    <div
+      className={`bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
+        showDetails
+          ? "md:grid-cols-[280px_1fr_320px]"
+          : "md:grid-cols-[280px_1fr]"
+      }`}
     >
-      <Box
-        sx={{
-          display: {
-            xs: showThread ? "none" : "flex",
-            md: "flex",
-          },
-          flexDirection: "column",
-          borderRight: { md: "1px solid" },
-          borderColor: { md: "divider" },
-          minHeight: 0,
-        }}
-      >
-        <Box
-          sx={{
-            p: 1,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            flexShrink: 0,
-            display: "flex",
-            gap: 0.5,
-            alignItems: "center",
+      <SidebarPane
+        className={activeId ? "hidden md:flex" : "flex"}
+        channels={channels}
+        dms={dms}
+        activeId={activeId}
+        unread={unread}
+        onSelect={select}
+        onDeleteDm={onDeleteDm}
+        loading={channelsQ.isLoading || dmsQ.isLoading}
+        muted={chatToastsMuted}
+        onToggleMute={toggleChatToastsMuted}
+        onNewDm={() => setDmModalOpen(true)}
+      />
+
+      {activeId ? (
+        <ThreadPane
+          title={resolveTitle(channels, dms, activeId)}
+          onBack={back}
+          detailsOpen={threadPaneOpen}
+          onToggleDetails={() => setThreadPaneOpen((o) => !o)}
+          list={{
+            messages,
+            isLoading: messagesQ.isLoading,
+            hasMore: messagesQ.hasNextPage ?? false,
+            isFetchingMore: messagesQ.isFetchingNextPage,
+            onLoadMore: () => messagesQ.fetchNextPage(),
+            selfId: sessionUser?.id ?? null,
+            onReply: setReplyTo,
+            onSendDm: startDm,
           }}
-        >
-          <Button
-            size="sm"
-            variant="soft"
-            onClick={() => setDmModalOpen(true)}
-            startDecorator={<PencilSquareIcon width={16} />}
-            sx={{ flex: 1 }}
-          >
-            New direct message
-          </Button>
-          <IconButton
-            aria-label={
-              chatToastsMuted
-                ? "Unmute chat notifications"
-                : "Mute chat notifications"
-            }
-            aria-pressed={chatToastsMuted}
-            onClick={toggleChatToastsMuted}
-            tooltip={
-              chatToastsMuted ? "Notifications muted" : "Mute notifications"
-            }
-            color={chatToastsMuted ? "warning" : "neutral"}
-          >
-            {chatToastsMuted ? (
-              <BellSlashIcon width={18} />
-            ) : (
-              <BellIcon width={18} />
-            )}
-          </IconButton>
-        </Box>
-        <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: "auto",
-            overscrollBehavior: "contain",
-            WebkitOverflowScrolling: "touch",
+          typingCount={typingCount}
+          composer={{
+            disabled: status !== "open",
+            connectionLabel: statusLabel(status),
+            onSend: handleSend,
+            onTyping: () => sendChatTyping(activeId),
+            placeholder: status === "open" ? "Write a message…" : "Connecting…",
+            replyTo: replyTo
+              ? {
+                  authorName: replyTo.author?.display_name ?? "someone",
+                  excerpt: replyTo.content.slice(0, 80),
+                }
+              : null,
+            onCancelReply: () => setReplyTo(null),
           }}
-        >
-          <ChannelList
-            channels={channels}
-            dms={dms}
-            activeId={activeId}
-            unread={unread}
-            onSelect={select}
-            onDeleteDm={async (channelId) => {
-              const ok = await confirm({
-                title: "Remove conversation?",
-                message: "This conversation will be removed from your inbox.",
-                confirmLabel: "Remove",
-                tone: "neutral",
-              });
-              if (!ok) return;
-              try {
-                await deleteDm.mutateAsync(channelId);
-                if (channelId === activeId) router.push("/app/chat");
-                pushToast({
-                  variant: "success",
-                  message: "Conversation removed.",
-                  ttl: 3000,
-                });
-              } catch (err) {
-                pushToast({
-                  variant: "danger",
-                  title: "Could not delete",
-                  message:
-                    err instanceof Error ? err.message : "Try again later.",
-                  ttl: 5000,
-                });
-              }
-            }}
-            loading={channelsQ.isLoading || dmsQ.isLoading}
-          />
-        </Box>
-      </Box>
-
-      {showThread && activeId ? (
-        <Stack
-          sx={{
-            minWidth: 0,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{
-              px: 2,
-              py: 1.25,
-              borderBottom: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.surface",
-            }}
-          >
-            <IconButton
-              aria-label="Back to channel list"
-              onClick={back}
-              sx={{ display: { md: "none" } }}
-            >
-              <ArrowLeftIcon width={18} />
-            </IconButton>
-            <Typography level="title-md" sx={{ flex: 1 }} noWrap>
-              {resolveTitle(channels, dms, activeId)}
-            </Typography>
-            <IconButton
-              aria-label={
-                threadPaneOpen ? "Close thread panel" : "Open thread panel"
-              }
-              onClick={() => setThreadPaneOpen(!threadPaneOpen)}
-              sx={{ display: { xs: "none", md: "flex" } }}
-              tooltip={threadPaneOpen ? "Close details" : "Open details"}
-            >
-              <ChevronRightIcon width={18} />
-            </IconButton>
-          </Stack>
-
-          <MessageList
-            messages={messages}
-            isLoading={messagesQ.isLoading}
-            hasMore={messagesQ.hasNextPage ?? false}
-            isFetchingMore={messagesQ.isFetchingNextPage}
-            onLoadMore={() => messagesQ.fetchNextPage()}
-            selfId={sessionUser?.id ?? null}
-            onReply={setReplyTo}
-            onSendDm={startDm}
-          />
-
-          <TypingIndicator count={typingCount} />
-
-          <Composer
-            disabled={status !== "open"}
-            connectionLabel={connLabel}
-            onSend={handleSend}
-            onTyping={() => sendChatTyping(activeId)}
-            placeholder={status === "open" ? "Write a message…" : "Connecting…"}
-            replyTo={
-              replyTo
-                ? {
-                    authorName: replyTo.author?.display_name ?? "someone",
-                    excerpt: replyTo.content.slice(0, 80),
-                  }
-                : null
-            }
-            onCancelReply={() => setReplyTo(null)}
-          />
-        </Stack>
+        />
       ) : (
-        <Box
-          sx={{
-            display: { xs: "none", md: "flex" },
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <div className="hidden items-center justify-center md:flex">
           <EmptyState
             title="Select a conversation"
             description="Choose a channel or direct message from the list to start chatting."
             action={
-              <Button variant="solid" onClick={() => setDmModalOpen(true)}>
+              <Button onClick={() => setDmModalOpen(true)}>
                 Start conversation
               </Button>
             }
           />
-        </Box>
+        </div>
       )}
 
-      {/* Thread/Details Pane: 320px on desktop when open */}
-      {threadPaneOpen && activeId && showThread && (
-        <Box
-          sx={{
-            display: { xs: "none", md: "flex" },
-            flexDirection: "column",
-            borderLeft: "1px solid",
-            borderColor: "divider",
-            bgcolor: "background.surface",
-            minHeight: 0,
-            minWidth: 0,
-          }}
-        >
-          <Stack
-            sx={{
-              px: 2,
-              py: 1.25,
-              borderBottom: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.body",
-              flexShrink: 0,
-            }}
-          >
-            <Typography level="title-sm">Details</Typography>
-          </Stack>
-          <Stack
-            sx={{
-              flex: 1,
-              overflow: "auto",
-              px: 2,
-              py: 2,
-              minHeight: 0,
-            }}
-          >
-            <Typography level="body-sm" color="neutral">
-              Thread details and conversation info will appear here.
-            </Typography>
-          </Stack>
-        </Box>
-      )}
+      {showDetails && <DetailsPane />}
 
       <NewDmModal
         open={dmModalOpen}
@@ -508,6 +299,6 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         onSelect={startDm}
         excludeUserId={sessionUser?.id ?? null}
       />
-    </Box>
+    </div>
   );
 }

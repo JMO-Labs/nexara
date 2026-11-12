@@ -7,7 +7,7 @@
  * Attribution: © OpenStreetMap contributors © CARTO.
  */
 import * as React from "react";
-import { useColorScheme } from "@mui/joy/styles";
+import { useTheme } from "next-themes";
 import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -63,8 +63,8 @@ export function EventMiniMap({
   zoom = 14,
   ariaLabel = "Event location map",
 }: EventMiniMapProps) {
-  const { mode, systemMode } = useColorScheme();
-  const effective = mode === "system" ? systemMode : mode;
+  const { resolvedTheme } = useTheme();
+  const effective = resolvedTheme === "dark" ? "dark" : "light";
   const tiles = effective === "dark" ? TILES.dark : TILES.light;
 
   return (
@@ -77,8 +77,8 @@ export function EventMiniMap({
         height,
         borderRadius: 8,
         overflow: "hidden",
-        border: "1px solid var(--joy-palette-divider)",
-        backgroundColor: "var(--joy-palette-background-level1)",
+        border: "1px solid color-mix(in srgb, var(--nx-ink) 15%, transparent)",
+        backgroundColor: "var(--nx-bg)",
       }}
     >
       <MapContainer
@@ -98,7 +98,7 @@ export function EventMiniMap({
           pathOptions={{
             color: "#fff",
             weight: 2,
-            fillColor: "var(--joy-palette-primary-solidBg, #1f6feb)",
+            fillColor: "var(--nx-accent, #1f6feb)",
             fillOpacity: 1,
           }}
         />

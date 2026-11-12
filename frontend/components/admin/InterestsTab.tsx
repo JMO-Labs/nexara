@@ -6,12 +6,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { qk } from "@/lib/query-keys";
 import { getInterestAnalytics } from "@/lib/api/interests";
-import Stack from "@mui/joy/Stack";
-import Card from "@mui/joy/Card";
-import Chip from "@mui/joy/Chip";
-import Typography from "@mui/joy/Typography";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
+import { Card, Chip } from "@/components/ui";
+import { AdminLoading, AdminNotice } from "./AdminState";
 
 export function InterestsTab() {
   const {
@@ -24,28 +20,16 @@ export function InterestsTab() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) {
-    return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
-  }
+  if (isLoading) return <AdminLoading />;
 
   if (error) {
     return (
-      <Alert color="danger" variant="soft">
-        Failed to load interest analytics
-      </Alert>
+      <AdminNotice tone="error">Failed to load interest analytics</AdminNotice>
     );
   }
 
   if (!analytics || analytics.length === 0) {
-    return (
-      <Alert color="primary" variant="soft">
-        No interest data available yet
-      </Alert>
-    );
+    return <AdminNotice>No interest data available yet</AdminNotice>;
   }
 
   // Group by category
@@ -59,41 +43,22 @@ export function InterestsTab() {
   );
 
   return (
-    <Stack spacing={2}>
+    <div className="flex flex-col gap-4">
       {Object.entries(grouped).map(([category, items]) => (
-        <Card key={category} variant="outlined">
-          <Stack spacing={1}>
-            <Typography level="title-sm" sx={{ textTransform: "capitalize" }}>
-              {category}
-            </Typography>
-            <Stack
-              direction="row"
-              spacing={1}
-              flexWrap="wrap"
-              sx={{
-                gap: 1,
-              }}
-            >
-              {items
-                .sort((a, b) => b.count - a.count)
-                .map((item, idx) => (
-                  <Chip
-                    key={`${item.value}-${idx}`}
-                    variant="soft"
-                    size="md"
-                    endDecorator={
-                      <Typography level="body-xs" sx={{ ml: 0.5 }}>
-                        {item.count}
-                      </Typography>
-                    }
-                  >
-                    {item.value}
-                  </Chip>
-                ))}
-            </Stack>
-          </Stack>
+        <Card key={category} className="p-4">
+          <h3 className="mb-2 text-sm font-semibold capitalize">{category}</h3>
+          <div className="flex flex-wrap gap-2">
+            {items
+              .sort((a, b) => b.count - a.count)
+              .map((item, idx) => (
+                <Chip key={`${item.value}-${idx}`}>
+                  {item.value}
+                  <span className="ml-1 opacity-70">{item.count}</span>
+                </Chip>
+              ))}
+          </div>
         </Card>
       ))}
-    </Stack>
+    </div>
   );
 }

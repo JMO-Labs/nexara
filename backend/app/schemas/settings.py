@@ -10,32 +10,28 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-
-class WidgetInstanceSchema(BaseModel):
-    """@brief Typed schema for a single persisted widget instance.
-
-    Layout coordinates are react-grid-layout-compatible: x, y, w, h on a
-    12-column grid. `collapsed` is independent of the grid coordinates.
-    """
-
-    id: str = Field(..., max_length=64)
-    def_id: str = Field(..., max_length=64, alias="defId")
-    x: int = Field(..., ge=0, le=12)
-    y: int = Field(..., ge=0)
-    w: int = Field(..., ge=1, le=12)
-    h: int = Field(..., ge=1)
-    collapsed: bool
-    props: dict[str, Any] | None = None
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
+DEFAULT_WIDGET_ORDER: list[str] = ["upcoming-events", "my-groups", "media", "quick-actions"]
 
 
 class HomeLayoutSchema(BaseModel):
-    """@brief Typed schema for the persisted home page widget layout."""
+    """@brief Persisted home widget column: display order plus hidden widget ids."""
 
-    widgets: list[WidgetInstanceSchema] = Field(..., max_length=64)
+    order: list[str] = Field(default_factory=lambda: list(DEFAULT_WIDGET_ORDER), max_length=16)
+    hidden: list[str] = Field(default_factory=list, max_length=16)
+
+    model_config = {"extra": "forbid"}
+
+
+def _tolerant_layout(value: Any) -> Any:
+    """@brief Map any stored shape other than the list layout to the default layout."""
+    if value is None or isinstance(value, HomeLayoutSchema):
+        return value
+    try:
+        return HomeLayoutSchema.model_validate(value)
+    except ValueError:
+        return HomeLayoutSchema()
 
 
 class NotificationPreferences(BaseModel):
@@ -82,6 +78,8 @@ class UserSettingsResponse(BaseModel):
     home_layout: HomeLayoutSchema | None = None
 
     model_config = {"from_attributes": True}
+
+    _legacy_layout = field_validator("home_layout", mode="before")(_tolerant_layout)
 
 
 class UserSettingsUpdate(BaseModel):

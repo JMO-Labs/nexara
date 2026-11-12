@@ -5,13 +5,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 
 function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
+  return render(<>{ui}</>);
 }
 
 function resetStore() {
@@ -71,7 +69,7 @@ describe("ConfirmDialog", () => {
     confirm({ title: "Delete?", message: "Sure?", tone: "danger" });
 
     const btn = await screen.findByTestId("confirm-dialog-confirm");
-    // MUI Joy renders color as data attribute or class — check the element exists
+    // renders color as data attribute or class — check the element exists
     // and the store tone is 'danger'
     expect(btn).toBeInTheDocument();
     expect(useConfirmDialog.getState().tone).toBe("danger");

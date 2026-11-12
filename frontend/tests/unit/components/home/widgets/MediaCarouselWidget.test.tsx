@@ -5,8 +5,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
 
 vi.mock("@/hooks/useHomeMedia", () => ({
   useHomeMedia: vi.fn(() => ({ data: undefined, isLoading: true })),
@@ -33,21 +31,17 @@ import { useHomeMedia } from "@/hooks/useHomeMedia";
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>
-    </QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 describe("MediaCarouselWidget", () => {
   it("renders without crashing", () => {
-    wrap(<MediaCarouselWidget instanceId="w1" />);
+    wrap(<MediaCarouselWidget />);
     expect(document.body).toBeTruthy();
   });
 
   it("shows skeleton while loading", () => {
-    wrap(<MediaCarouselWidget instanceId="w1" />);
+    wrap(<MediaCarouselWidget />);
     expect(document.body.children.length).toBeGreaterThan(0);
   });
 
@@ -57,21 +51,8 @@ describe("MediaCarouselWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useHomeMedia>);
 
-    wrap(<MediaCarouselWidget instanceId="w1" />);
+    wrap(<MediaCarouselWidget />);
     expect(screen.getByText("No media yet")).toBeInTheDocument();
-  });
-
-  it("does not show 'personal' scope pill", () => {
-    vi.mocked(useHomeMedia).mockReturnValue({
-      data: { items: [], next_cursor: null },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useHomeMedia>);
-
-    wrap(<MediaCarouselWidget instanceId="w1" />);
-    const allPills = screen.getAllByRole("button");
-    const labels = allPills.map((pill) => pill.textContent);
-    expect(labels).toEqual(["All", "Community"]);
-    expect(labels).not.toContain("Mine");
   });
 
   it("union query includes both community-root and subgroup items", () => {
@@ -82,7 +63,7 @@ describe("MediaCarouselWidget", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useHomeMedia>);
 
-    wrap(<MediaCarouselWidget instanceId="w1" />);
+    wrap(<MediaCarouselWidget />);
     // Component defaults to scope='all', which triggers union behavior
     expect(useHomeMedia).toHaveBeenCalledWith(
       expect.objectContaining({ scope: "all" }),

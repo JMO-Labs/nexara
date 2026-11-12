@@ -5,14 +5,8 @@
  */
 import { useState, useEffect } from "react";
 import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/useAdmin";
-import Stack from "@mui/joy/Stack";
-import Button from "@mui/joy/Button";
-import Switch from "@mui/joy/Switch";
-import Input from "@mui/joy/Input";
-import Typography from "@mui/joy/Typography";
-import CircularProgress from "@mui/joy/CircularProgress";
-import Alert from "@mui/joy/Alert";
-import { Card, SettingsRow } from "@/components/ui";
+import { Button, Card, Input, SettingsRow, Switch } from "@/components/ui";
+import { AdminLoading, AdminNotice } from "./AdminState";
 
 export function AdminSettingsTab() {
   const [enableReg, setEnableReg] = useState(true);
@@ -53,66 +47,58 @@ export function AdminSettingsTab() {
   };
 
   if (isLoading) {
-    return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: 8 }}>
-        <CircularProgress />
-      </Stack>
-    );
+    return <AdminLoading />;
   }
 
   if (error) {
     return (
-      <Alert color="danger" variant="soft">
-        Failed to load admin settings
-      </Alert>
+      <AdminNotice tone="error">Failed to load admin settings</AdminNotice>
     );
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <Stack spacing={3} sx={{ maxWidth: 800 }}>
-        {/* Registration & Access */}
-        <Card variant="outlined">
-          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
-            Registration & Access
-          </Typography>
-          <Stack spacing={1.5}>
+      <div className="flex max-w-3xl flex-col gap-6">
+        {/* Registration and access */}
+        <Card className="p-4">
+          <h2 className="mb-2 text-lg font-semibold">
+            Registration and access
+          </h2>
+          <div className="flex flex-col gap-3">
             <SettingsRow
-              label="Enable Registration"
+              label="Enable registration"
               description="Allow new users to create accounts"
             >
               <Switch
                 checked={enableReg}
-                onChange={(e) => {
-                  setEnableReg(e.target.checked);
+                aria-label="Enable registration"
+                onCheckedChange={(v) => {
+                  setEnableReg(v);
                   handleChange();
                 }}
-                size="sm"
               />
             </SettingsRow>
             <SettingsRow
-              label="Require Invite"
+              label="Require invite"
               description="Users must have an invite code to join"
             >
               <Switch
                 checked={requireInvite}
-                onChange={(e) => {
-                  setRequireInvite(e.target.checked);
+                aria-label="Require invite"
+                onCheckedChange={(v) => {
+                  setRequireInvite(v);
                   handleChange();
                 }}
-                size="sm"
               />
             </SettingsRow>
-          </Stack>
+          </div>
         </Card>
 
-        {/* Storage & System */}
-        <Card variant="outlined">
-          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
-            Storage & System
-          </Typography>
+        {/* Storage and system */}
+        <Card className="p-4">
+          <h2 className="mb-2 text-lg font-semibold">Storage and system</h2>
           <SettingsRow
-            label="Default Storage Quota"
+            label="Default storage quota"
             description="Maximum media storage limit per user (in bytes)"
           >
             <Input
@@ -122,37 +108,35 @@ export function AdminSettingsTab() {
                 setStorageQuota(Number(e.target.value));
                 handleChange();
               }}
-              slotProps={{ input: { min: 0 } }}
-              size="sm"
+              min={0}
+              aria-label="Default storage quota in bytes"
             />
           </SettingsRow>
         </Card>
 
         {/* Security */}
-        <Card variant="outlined">
-          <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
-            Security
-          </Typography>
+        <Card className="p-4">
+          <h2 className="mb-2 text-lg font-semibold">Security</h2>
           <SettingsRow
             label="Enable WAF"
             description="Web Application Firewall protection against common attacks"
           >
             <Switch
               checked={wafEnabled}
-              onChange={(e) => {
-                setWafEnabled(e.target.checked);
+              aria-label="Enable WAF"
+              onCheckedChange={(v) => {
+                setWafEnabled(v);
                 handleChange();
               }}
-              size="sm"
             />
           </SettingsRow>
         </Card>
 
         {/* Actions */}
-        <Stack direction="row" spacing={2}>
+        <div className="flex gap-3">
           <Button
-            variant="soft"
-            color="neutral"
+            variant="ghost"
+            type="button"
             onClick={() => {
               if (settings) {
                 setEnableReg(settings.enable_registration);
@@ -162,7 +146,6 @@ export function AdminSettingsTab() {
                 setIsDirty(false);
               }
             }}
-            size="sm"
           >
             Reset
           </Button>
@@ -170,12 +153,11 @@ export function AdminSettingsTab() {
             type="submit"
             disabled={!isDirty}
             loading={updateMutation.isPending}
-            size="sm"
           >
-            Save Changes
+            Save changes
           </Button>
-        </Stack>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }

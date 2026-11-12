@@ -1,25 +1,22 @@
 "use client";
 /**
  * @file components/settings/StorageTab.tsx
- * @brief Storage settings tab with two-column layout.
+ * @brief Storage settings tab (placeholder).
  */
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
 import { Card, EmptyState } from "@/components/ui";
 
+/**
+ * @brief Storage placeholder.
+ * @return storage tab content
+ */
 export function StorageTab() {
   return (
-    <Stack spacing={3} sx={{ maxWidth: 800 }}>
-      <Card variant="outlined">
-        <Typography level="title-md" component="h2" sx={{ mb: 2 }}>
-          Storage
-        </Typography>
-
-        <EmptyState
-          title="Storage Usage Coming Soon"
-          description="Storage usage analytics will be available in a future update."
-        />
-      </Card>
-    </Stack>
+    <Card className="max-w-3xl p-4 md:p-6">
+      <h2 className="mb-2 text-lg font-semibold">Storage</h2>
+      <EmptyState
+        title="Storage usage coming soon"
+        description="Storage usage analytics will be available in a future update."
+      />
+    </Card>
   );
 }

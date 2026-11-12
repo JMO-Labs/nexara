@@ -66,10 +66,10 @@ const PALETTE: Omit<EventTone, "label">[] = [
 ];
 
 const COMMUNITY: Omit<EventTone, "label"> = {
-  solid: "var(--joy-palette-primary-solidBg, #0b7285)",
+  solid: "var(--nx-accent, #0b7285)",
   soft: "rgba(11,114,133,0.12)",
   onSolid: "#fff",
-  onSoft: "var(--joy-palette-primary-plainColor, #0b7285)",
+  onSoft: "var(--nx-accent, #0b7285)",
 };
 
 function hashStr(s: string): number {

@@ -3,7 +3,7 @@
  * @brief Auth endpoint wrappers. All flows return LoginResponse-shaped data
  *        when a session is established; cookie is set by the backend.
  */
-import { apiPost, apiGet } from "./client";
+import { apiPost, apiGet, seg } from "./client";
 
 export interface LoginResponse {
   access_token: string | null;
@@ -106,4 +106,4 @@ export const oauthExchange = (code: string) =>
 
 /** URL the browser should hit to start an OAuth flow. */
 export const oauthLoginUrl = (slug: string, apiBase: string) =>
-  `${apiBase}/api/v1/oauth/${encodeURIComponent(slug)}/login`;
+  `${apiBase}/api/v1/oauth/${seg(slug)}/login`;

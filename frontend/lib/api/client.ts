@@ -22,6 +22,14 @@ export interface ApiOptions extends Omit<RequestInit, "body"> {
   timeoutMs?: number;
 }
 
+/** Encode one URL path segment; rejects empty and dot segments. */
+export function seg(value: string | number): string {
+  const v = String(value);
+  if (v === "" || v === "." || v === "..")
+    throw new Error(`Invalid path segment: "${v}"`);
+  return encodeURIComponent(v);
+}
+
 function buildUrl(path: string): string {
   if (path.startsWith("http")) return path;
   return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;

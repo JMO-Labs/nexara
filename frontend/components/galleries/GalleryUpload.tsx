@@ -1,34 +1,23 @@
 "use client";
 /**
  * @file components/galleries/GalleryUpload.tsx
- * @brief Drag-drop bulk uploader. 240px min-height, dashed border, progress queue.
+ * @brief Drag-drop bulk uploader with a "Choose files" button and progress queue.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Typography from "@mui/joy/Typography";
-import LinearProgress from "@mui/joy/LinearProgress";
-import Button from "@mui/joy/Button";
-import IconButton from "@mui/joy/IconButton";
-import { keyframes } from "@emotion/react";
-import {
-  PhotoIcon,
-  CheckIcon,
-  XMarkIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/solid";
+import { Image as ImageIcon, Check, X, RotateCw, Loader2 } from "lucide-react";
+import { Button, IconButton } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { useGalleryUpload } from "@/hooks/useGalleryUpload";
-
-const pulseAnimation = keyframes`
-  0% { opacity: 0.04; }
-  50% { opacity: 0.12; }
-  100% { opacity: 0.04; }
-`;
 
 export interface GalleryUploadProps {
   galleryId: string;
 }
 
+/**
+ * @brief Bulk uploader for a gallery.
+ * @param galleryId target gallery
+ * @return dropzone + upload queue
+ */
 export function GalleryUpload({ galleryId }: GalleryUploadProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = React.useState(false);
@@ -46,8 +35,8 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
   };
 
   return (
-    <Stack spacing={2}>
-      <Box
+    <div className="flex flex-col gap-4">
+      <div
         data-testid="upload-dropzone"
         onDragOver={(e) => {
           e.preventDefault();
@@ -55,49 +44,20 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        aria-label="Upload photos — drop files or click"
-        sx={{
-          minHeight: "240px",
-          p: 4,
-          borderRadius: "lg",
-          border: dragOver ? "2px solid" : "1.5px dashed",
-          borderColor: dragOver
-            ? "var(--joy-palette-primary-500)"
-            : "var(--joy-palette-neutral-outlinedBorder)",
-          background: dragOver
-            ? `linear-gradient(rgba(var(--joy-palette-primary-200)/0.04), rgba(var(--joy-palette-primary-200)/0.04))`
-            : "background.level1",
-          textAlign: "center",
-          cursor: "pointer",
-          transition: "all 200ms ease-out",
-          transform: dragOver ? "scale(1.01)" : "scale(1)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          animation: dragOver
-            ? `${pulseAnimation} 1.5s ease-in-out infinite`
-            : undefined,
-        }}
+        className={cn(
+          "bg-bg flex min-h-48 flex-col items-center justify-center gap-2 rounded-[1.25rem] border-2 border-dashed p-6 text-center transition-colors",
+          dragOver ? "border-accent" : "border-current/30",
+        )}
       >
-        <PhotoIcon
-          style={{
-            width: "40px",
-            height: "40px",
-            marginBottom: "1rem",
-            opacity: 0.7,
-          }}
-        />
-        <Typography level="title-md" sx={{ fontFamily: "var(--font-display)" }}>
-          Drop photos to upload
-        </Typography>
-        <Typography level="body-sm" sx={{ color: "text.tertiary", mt: 1 }}>
-          or click to browse
-        </Typography>
-        <Button sx={{ mt: 2 }} size="sm" variant="outlined" type="button">
+        <ImageIcon className="size-10 opacity-70" aria-hidden="true" />
+        <h3 className="text-base font-semibold">Drop photos to upload</h3>
+        <p className="text-sm text-ink/70">or choose files from your device</p>
+        <Button
+          size="md"
+          variant="outline"
+          type="button"
+          onClick={() => inputRef.current?.click()}
+        >
           Choose files
         </Button>
         <input
@@ -108,156 +68,85 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
           accept="image/*,video/*"
           onChange={handleInputChange}
         />
-      </Box>
+      </div>
 
       {jobs.length > 0 && (
-        <Stack spacing={1.5} sx={{ mt: 2 }}>
+        <ul className="flex flex-col gap-3" aria-label="Upload queue">
           {jobs.map((job) => (
-            <Stack key={job.id} data-testid="upload-row" spacing={0.75}>
-              <Stack direction="row" spacing={1} alignItems="flex-start">
-                {/* Thumbnail placeholder */}
-                <Box
-                  sx={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "sm",
-                    background: "background.level2",
-                    flexShrink: 0,
-                  }}
-                />
-
-                {/* Filename + status */}
-                <Stack spacing={0.5} sx={{ flex: 1 }}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    justifyContent="space-between"
+            <li
+              key={job.id}
+              data-testid="upload-row"
+              className="flex items-start gap-2"
+            >
+              <div className="bg-bg size-12 shrink-0 rounded-lg" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    data-testid="upload-filename"
+                    className="min-w-0 flex-1 truncate text-sm"
                   >
-                    <Typography
-                      data-testid="upload-filename"
-                      level="body-sm"
-                      noWrap
-                      sx={{ flex: 1 }}
-                    >
-                      {job.file.name}
-                    </Typography>
-
-                    {/* Status icon / text */}
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {job.status === "uploading" && (
-                        <ArrowPathIcon
-                          style={{
-                            width: "16px",
-                            height: "16px",
-                            animation: "spin 1s linear infinite",
-                          }}
-                        />
-                      )}
-                      {job.status === "done" && (
-                        <CheckIcon
-                          style={{
-                            width: "16px",
-                            height: "16px",
-                            color: "var(--joy-palette-success-500)",
-                          }}
-                        />
-                      )}
-                      {job.status === "error" && (
-                        <XMarkIcon
-                          style={{
-                            width: "16px",
-                            height: "16px",
-                            color: "var(--joy-palette-danger-500)",
-                          }}
-                        />
-                      )}
-                      <Typography
-                        level="body-xs"
-                        sx={{
-                          color:
-                            job.status === "error"
-                              ? "danger.500"
-                              : job.status === "done"
-                                ? "success.500"
-                                : "text.tertiary",
-                        }}
-                      >
-                        {job.status === "error"
-                          ? job.error || "Error"
-                          : job.status === "done"
-                            ? "Done"
-                            : `${Math.round(job.progress)}%`}
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  {/* Progress bar */}
-                  <LinearProgress
-                    determinate
-                    value={job.progress}
-                    color={
+                    {job.file.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "flex shrink-0 items-center gap-1 text-xs",
                       job.status === "error"
-                        ? "danger"
-                        : job.status === "done"
-                          ? "success"
-                          : "primary"
-                    }
-                    sx={{
-                      height: "1px",
-                      "& .MuiLinearProgress-bar": {
-                        backgroundImage:
-                          job.status === "uploading"
-                            ? "linear-gradient(90deg, var(--joy-palette-primary-500) 25%, transparent 25%, transparent 50%, var(--joy-palette-primary-500) 50%, var(--joy-palette-primary-500) 75%, transparent 75%, transparent)"
-                            : undefined,
-                        backgroundSize:
-                          job.status === "uploading" ? "20px 1px" : undefined,
-                        animation:
-                          job.status === "uploading"
-                            ? "slide 2s linear infinite"
-                            : undefined,
-                      },
-                    }}
-                  />
-                </Stack>
-
-                {/* Retry button */}
-                {job.status === "error" && (
-                  <IconButton
-                    data-testid="retry-button"
-                    size="sm"
-                    variant="plain"
-                    onClick={() => retry(job.id)}
-                    sx={{ flexShrink: 0 }}
+                        ? "text-destructive"
+                        : "text-ink/70",
+                    )}
                   >
-                    <ArrowPathIcon style={{ width: "16px", height: "16px" }} />
-                  </IconButton>
-                )}
-              </Stack>
-            </Stack>
+                    {job.status === "uploading" && (
+                      <Loader2
+                        className="size-4 motion-safe:animate-spin"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {job.status === "done" && (
+                      <Check className="text-leaf size-4" aria-hidden="true" />
+                    )}
+                    {job.status === "error" && (
+                      <X className="size-4" aria-hidden="true" />
+                    )}
+                    {job.status === "error"
+                      ? job.error || "Error"
+                      : job.status === "done"
+                        ? "Done"
+                        : `${Math.round(job.progress)}%`}
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label={`Upload progress for ${job.file.name}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(job.progress)}
+                  className="bg-bg h-1 overflow-hidden rounded-full"
+                >
+                  <div
+                    className={cn(
+                      "h-full",
+                      job.status === "error" ? "bg-destructive" : "bg-accent",
+                    )}
+                    style={{ width: `${job.progress}%` }}
+                  />
+                </div>
+              </div>
+              {job.status === "error" && (
+                <IconButton
+                  data-testid="retry-button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Retry ${job.file.name}`}
+                  onClick={() => retry(job.id)}
+                >
+                  <RotateCw className="size-4" aria-hidden="true" />
+                </IconButton>
+              )}
+            </li>
           ))}
-        </Stack>
+        </ul>
       )}
-
-      {/* CSS animation for stripe */}
-      <style>{`
-        @keyframes slide {
-          0% { background-position: 0 0; }
-          100% { background-position: 20px 0; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </Stack>
+    </div>
   );
 }
 

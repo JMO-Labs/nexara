@@ -22,6 +22,7 @@ from app.repositories.activity_repo import ActivityRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
+from app.services.activity_publish import record_activity
 from app.services.media.multipart import (
     complete_multipart_upload as _complete_multipart_upload_impl,
 )
@@ -145,7 +146,10 @@ class MediaService:
         await increment_storage_used(self._session(), user.id, size)
 
         if self._activity_repo is not None:
-            await self._activity_repo.record(
+            await record_activity(
+                self._activity_repo,
+                self._session(),
+                None,
                 community_id=self._community_id,
                 actor_id=user.id,
                 verb="media.uploaded",

@@ -4,11 +4,7 @@
  * @brief Media tab: grid of media from posts, galleries, and events with source filtering.
  */
 import * as React from "react";
-import Box from "@mui/joy/Box";
-import Stack from "@mui/joy/Stack";
-import Chip from "@mui/joy/Chip";
-import { AnimatePresence, motion } from "framer-motion";
-import { EmptyState, Skeleton } from "@/components/ui";
+import { Badge, EmptyState, Skeleton } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useSubgroupMedia } from "@/hooks/useSubgroupMedia";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
@@ -70,138 +66,76 @@ export function MediaTab({ subgroup }: MediaTabProps) {
     );
   }
 
-  return (
-    <Stack spacing={2}>
-      {/* Source filter chips */}
-      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-        {sourceOptions.map((opt) => (
-          <Chip
-            key={opt.value}
-            color={source === opt.value ? "primary" : "neutral"}
-            variant={source === opt.value ? "solid" : "outlined"}
-            onClick={() => setSource(opt.value)}
-            slotProps={{ action: { sx: { cursor: "pointer" } } }}
-          >
-            {opt.label}
-          </Chip>
-        ))}
-      </Box>
+  const grid = "grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4";
 
-      {/* Media grid */}
-      <AnimatePresence mode="wait">
-        {isLoading ? (
-          <motion.div
-            key="sk"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+  return (
+    <div className="flex flex-col gap-4">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Media source"
+      >
+        {sourceOptions.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={source === opt.value}
+            onClick={() => setSource(opt.value)}
+            className="min-h-11 rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <Box
-              sx={{
-                display: "grid",
-                gap: 2,
-                gridTemplateColumns: {
-                  xs: "repeat(2, 1fr)",
-                  md: "repeat(3, 1fr)",
-                  lg: "repeat(4, 1fr)",
-                },
-              }}
+            <Badge
+              tone={source === opt.value ? "accent" : "neutral"}
+              className="px-4 py-2 text-sm"
             >
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <Box
-                  key={i}
-                  sx={{
-                    position: "relative",
-                    paddingBottom: "100%",
-                    overflow: "hidden",
-                    borderRadius: "md",
-                  }}
-                >
-                  <Skeleton />
-                </Box>
-              ))}
-            </Box>
-          </motion.div>
-        ) : items.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <EmptyState
-              title="No media yet"
-              description={
-                source === "all"
-                  ? "Share photos and videos from posts, galleries, and events."
-                  : `No media from ${source}s yet.`
-              }
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="ct"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <Box
-              sx={{
-                display: "grid",
-                gap: 2,
-                gridTemplateColumns: {
-                  xs: "repeat(2, 1fr)",
-                  md: "repeat(3, 1fr)",
-                  lg: "repeat(4, 1fr)",
-                },
-              }}
-            >
-              {items.map((item) => (
-                <motion.div
-                  key={item.media_id}
-                  layout
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${item.source_title || "media"}`}
-                >
-                  <Box
-                    sx={{
-                      position: "relative",
-                      paddingBottom: "100%",
-                      overflow: "hidden",
-                      borderRadius: "md",
-                      cursor: "pointer",
-                      bgcolor: "neutral.200",
-                      "&:hover": {
-                        opacity: 0.8,
-                      },
-                      transition: "opacity 200ms",
-                    }}
-                  >
-                    <MediaThumb
-                      mediaId={item.media_id}
-                      alt={
-                        item.media.alt_text || `${item.source_title || "Media"}`
-                      }
-                      zoomOnHover
-                    />
-                  </Box>
-                </motion.div>
-              ))}
-            </Box>
-            {isFetchingNextPage && (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-                <Skeleton width={40} height={40} />
-              </Box>
-            )}
-            <div ref={sentinelRef} style={{ height: 1 }} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Stack>
+              {opt.label}
+            </Badge>
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className={grid}>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} height="auto" className="aspect-square" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="No media yet"
+          description={
+            source === "all"
+              ? "Share photos and videos from posts, galleries, and events."
+              : `No media from ${source}s yet.`
+          }
+        />
+      ) : (
+        <>
+          <div className={grid}>
+            {items.map((item) => (
+              <div
+                key={item.media_id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${item.source_title || "media"}`}
+                className="relative aspect-square overflow-hidden rounded-xl bg-surface transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                <MediaThumb
+                  mediaId={item.media_id}
+                  alt={item.media.alt_text || `${item.source_title || "Media"}`}
+                  zoomOnHover
+                />
+              </div>
+            ))}
+          </div>
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-4">
+              <Skeleton width={40} height={40} />
+            </div>
+          )}
+          <div ref={sentinelRef} className="h-px" />
+        </>
+      )}
+    </div>
   );
 }
 

@@ -3,9 +3,7 @@
  * @brief Smoke tests asserting QuickActions modal keys open the correct modals.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { CssVarsProvider } from "@mui/joy/styles";
-import joyTheme from "@/theme/joy-theme";
+import { render, screen, act } from "@testing-library/react";
 import { useModals } from "@/stores/modals";
 
 // Mock heavy sub-components to keep the test fast.
@@ -27,37 +25,33 @@ vi.mock("@/components/galleries/GalleryCreateModal", () => ({
 
 import { ModalRoot } from "@/components/layout/ModalRoot";
 
-function wrap(ui: React.ReactNode) {
-  return render(<CssVarsProvider theme={joyTheme}>{ui}</CssVarsProvider>);
-}
-
 describe("ModalRoot modal key wiring", () => {
   beforeEach(() => {
     useModals.getState().close();
   });
 
-  it("create-post key mounts PostComposer inside a Modal", () => {
-    wrap(<ModalRoot />);
-    useModals.getState().show("create-post");
-    // Re-render by re-wrapping (store is reactive)
-    wrap(<ModalRoot />);
-    expect(screen.getAllByTestId("post-composer").length).toBeGreaterThan(0);
+  it("create-post key mounts PostComposer inside a Modal", async () => {
+    render(<ModalRoot />);
+    act(() => useModals.getState().show("create-post"));
+    expect(await screen.findByTestId("post-composer")).toBeInTheDocument();
   });
 
-  it("create-event key mounts EventCreateModal", () => {
+  it("create-event key mounts EventCreateModal", async () => {
     useModals.getState().show("create-event");
-    wrap(<ModalRoot />);
-    expect(screen.getByTestId("event-create-modal")).toBeInTheDocument();
+    render(<ModalRoot />);
+    expect(await screen.findByTestId("event-create-modal")).toBeInTheDocument();
   });
 
-  it("create-gallery key mounts GalleryCreateModal", () => {
+  it("create-gallery key mounts GalleryCreateModal", async () => {
     useModals.getState().show("create-gallery");
-    wrap(<ModalRoot />);
-    expect(screen.getByTestId("gallery-create-modal")).toBeInTheDocument();
+    render(<ModalRoot />);
+    expect(
+      await screen.findByTestId("gallery-create-modal"),
+    ).toBeInTheDocument();
   });
 
   it("no key → no modal content rendered", () => {
-    wrap(<ModalRoot />);
+    render(<ModalRoot />);
     expect(screen.queryByTestId("event-create-modal")).toBeNull();
     expect(screen.queryByTestId("gallery-create-modal")).toBeNull();
   });

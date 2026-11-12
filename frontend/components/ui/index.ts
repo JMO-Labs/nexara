@@ -12,17 +12,20 @@ export { SettingsRow, type SettingsRowProps } from "./SettingsRow";
 export { Modal, type ModalProps } from "./Modal";
 export { Drawer, type DrawerProps } from "./Drawer";
 export { Tabs, TabList, Tab, TabPanel } from "./Tabs";
+export { Collapsible, type CollapsibleProps } from "./Collapsible";
+export { Carousel, type CarouselProps } from "./Carousel";
 export { Skeleton, type SkeletonProps } from "./Skeleton";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
-export { Avatar, AvatarGroup, type AvatarProps } from "./Avatar";
+export {
+  Avatar,
+  AvatarGroup,
+  type AvatarProps,
+  type AvatarGroupProps,
+} from "./Avatar";
 export { Badge, Chip, type BadgeProps, type ChipProps } from "./Badge";
 export { ToastRoot } from "./Toast";
-export { Tooltip, type AppTooltipProps } from "./Tooltip";
-export {
-  CommandPalette,
-  type CommandItem,
-  type CommandPaletteProps,
-} from "./CommandPalette";
+export { Tooltip, TooltipProvider, type TooltipProps } from "./Tooltip";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { Markdown, type MarkdownProps } from "./Markdown";
 export {
   ScopeSelect,
@@ -31,3 +34,6 @@ export {
   type Subgroup,
 } from "./ScopeSelect";
 export * as motionPrimitives from "./motion";
+export { Switch } from "./Switch";
+export { Checkbox } from "./Checkbox";
+export { Popover, PopoverTrigger, PopoverContent } from "./Popover";
