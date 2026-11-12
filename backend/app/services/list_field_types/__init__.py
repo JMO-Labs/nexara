@@ -2,7 +2,6 @@
 
 from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
 from app.services.list_field_types.base import FieldType, FieldTypeBase
-
 from app.services.list_field_types.builtin import DateField, LocationField  # noqa: E402
 
 registry = ListFieldRegistry()
