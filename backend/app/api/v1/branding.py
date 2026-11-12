@@ -24,9 +24,11 @@ from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
 from app.schemas.branding import (
     BrandingResponse,
-    BrandingUpdate, BrandingUpdateResponse,
+    BrandingUpdate,
+    BrandingUpdateResponse,
     PresetThemeList,
-)from app.services.branding_service import BrandingService
+)
+from app.services.branding_service import BrandingService
 
 logger = structlog.get_logger(__name__)
 
