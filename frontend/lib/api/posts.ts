@@ -69,6 +69,7 @@ export interface Post {
   subgroup_id: string | null;
   subgroup_name: string | null;
   subgroup_slug: string | null;
+  is_bookmarked?: boolean;
 }
 
 export interface Comment {

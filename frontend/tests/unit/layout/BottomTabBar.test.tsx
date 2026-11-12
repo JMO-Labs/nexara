@@ -54,6 +54,7 @@ describe("BottomTabBar", () => {
     for (const n of [
       "Galleries",
       "Media",
+      "Bookmarks",
       "Members",
       "Notifications",
       "Settings",

@@ -15,6 +15,7 @@ export interface ReactionRowProps {
   commentCount: number;
   onReact: (emoji: string) => void;
   onCommentClick?: () => void;
+  extra?: React.ReactNode;
 }
 
 /**
@@ -30,6 +31,7 @@ export function ReactionRow({
   commentCount,
   onReact,
   onCommentClick,
+  extra,
 }: ReactionRowProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -90,6 +92,7 @@ export function ReactionRow({
         ) : null}
       </div>
       <div className="grow" />
+      {extra}
       <IconButton
         aria-label="Comments"
         size="sm"

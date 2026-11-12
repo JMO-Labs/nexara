@@ -15,6 +15,7 @@ import { PostBody } from "./PostBody";
 import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
+import { BookmarkButton } from "./BookmarkButton";
 import { SourceBadge } from "./SourceBadge";
 import type { Post } from "@/lib/api/posts";
 
@@ -81,6 +82,12 @@ export function PostCard({
         commentCount={post.comment_count}
         onReact={(e) => reactMut.mutate(e)}
         onCommentClick={() => setCommentsOpen((v) => !v)}
+        extra={
+          <BookmarkButton
+            postId={post.id}
+            isBookmarked={post.is_bookmarked ?? false}
+          />
+        }
       />
       {commentsOpen ? (
         <CommentThread
