@@ -196,3 +196,10 @@ async def test_upgrade_confirm_applies_and_audits(test_app, lifecycle):
     assert r.status_code == 200
     assert r.json()["version"] == "1.1.0" and r.json()["permissions_granted"] == ["db_write"]
     assert audit.append.call_args.kwargs["action"] == "plugin.upgraded"
+
+
+def test_get_audit_repo_builds_audit_repository():
+    from app.api.v1.admin_plugins import get_audit_repo
+    from app.repositories.audit_repo import AuditRepository
+
+    assert isinstance(get_audit_repo(MagicMock()), AuditRepository)
