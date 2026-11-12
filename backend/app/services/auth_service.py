@@ -36,6 +36,7 @@ from app.core.security import (
 )
 from app.models.auth import UserBackupCode
 from app.models.user import User
+from app.plugins.hooks import HookRegistry
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -159,6 +160,12 @@ class AuthService:
                     actor_id=user.id,
                 )
 
+        await HookRegistry.emit(
+            "on_user_joined",
+            community_id=user.community_id,
+            session=self._session,
+            user_id=user.id,
+        )
         logger.info("user_registered", user_id=str(user.id), email=email)
         return await self._issue_tokens(user)
 
