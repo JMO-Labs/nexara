@@ -1,6 +1,6 @@
 """
 @file test_ai_coverage.py
-@brief Cover remaining OCR/AI lines: repo, provider registry, enqueue, task.
+@brief Cover remaining OCR/AI lines: repo, provider factory, enqueue, task.
 """
 
 from __future__ import annotations
@@ -51,13 +51,9 @@ def test_get_ai_provider_unknown_returns_none() -> None:
     assert prov.get_ai_provider(MagicMock(AI_PROVIDER="nope")) is None
 
 
-def test_get_ai_provider_registered_instantiates() -> None:
-    class Fake:
-        async def vision(self, image: bytes, prompt: str, *, max_tokens: int = 1000) -> str:
-            return ""
-
-    with patch.dict(prov._PROVIDERS, {"fake": Fake}):
-        assert isinstance(prov.get_ai_provider(MagicMock(AI_PROVIDER="fake")), Fake)
+def test_get_ai_provider_misconfigured_returns_none() -> None:
+    settings = MagicMock(AI_PROVIDER="anthropic", ANTHROPIC_API_KEY="")
+    assert prov.get_ai_provider(settings) is None
 
 
 def test_enqueue_ocr_swallows_broker_errors() -> None:
@@ -81,8 +77,11 @@ async def test_ocr_async_wires_dependencies_and_commits() -> None:
     cm.__aenter__ = AsyncMock(return_value=session)
     cm.__aexit__ = AsyncMock(return_value=False)
     mid = uuid.uuid4()
+    redis = MagicMock(aclose=AsyncMock())
     with (
         patch.object(ai_tasks, "get_settings"),
+        patch.object(ai_tasks, "create_pool", return_value=redis),
+        patch.object(ai_tasks, "BudgetService"),
         patch.object(ai_tasks, "async_session_factory", return_value=cm),
         patch.object(ai_tasks, "get_storage_backend"),
         patch.object(ai_tasks, "get_ai_provider"),
@@ -91,6 +90,7 @@ async def test_ocr_async_wires_dependencies_and_commits() -> None:
         assert await ai_tasks._ocr_async(mid, CID) == "processed"
     assert run.await_args.args == (mid, CID)
     session.commit.assert_awaited_once()
+    redis.aclose.assert_awaited_once()
 
 
 def test_ocr_task_returns_status_dict() -> None:
