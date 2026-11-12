@@ -13,6 +13,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_sso import router as admin_sso_router
+from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
@@ -40,6 +41,7 @@ from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
+from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.users import router as users_router
 from app.api.v1.ws import router as ws_router
 
@@ -49,6 +51,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(admin_router)
 api_v1_router.include_router(oauth_admin_router)
 api_v1_router.include_router(admin_oauth_router)
+api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(plugins_router)
@@ -68,6 +71,7 @@ api_v1_router.include_router(link_previews_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
+api_v1_router.include_router(suggestions_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
 api_v1_router.include_router(polls_router)

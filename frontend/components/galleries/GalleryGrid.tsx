@@ -5,7 +5,9 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton, EmptyState, Button } from "@/components/ui";
+import { fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { GalleryCard } from "./GalleryCard";
 import { useGalleryList } from "@/hooks/useGalleries";
 import type { ListGalleriesParams } from "@/lib/api/galleries";
@@ -22,6 +24,7 @@ export interface GalleryGridProps {
 export function GalleryGrid({ onSelect, params, onCreate }: GalleryGridProps) {
   const router = useRouter();
   const { data, isLoading, error, refetch } = useGalleryList(params);
+  const fade = useMotionProps(fadeInOut);
 
   if (error)
     return (
@@ -37,11 +40,16 @@ export function GalleryGrid({ onSelect, params, onCreate }: GalleryGridProps) {
     );
   if (isLoading || !data) {
     return (
-      <div className={GRID} aria-busy="true">
+      <motion.div
+        className={GRID}
+        data-testid="gallery-skeleton"
+        aria-busy="true"
+        {...fade}
+      >
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} height={220} />
         ))}
-      </div>
+      </motion.div>
     );
   }
   if (data.items.length === 0) {
@@ -63,9 +71,18 @@ export function GalleryGrid({ onSelect, params, onCreate }: GalleryGridProps) {
 
   return (
     <div className={GRID}>
-      {data.items.map((g) => (
-        <GalleryCard key={g.id} gallery={g} onSelect={onSelect} />
-      ))}
+      <AnimatePresence mode="popLayout">
+        {data.items.map((g) => (
+          <motion.div
+            key={g.id}
+            data-testid="gallery-item"
+            {...fade}
+            {...(Object.keys(fade).length ? { layout: true } : {})}
+          >
+            <GalleryCard gallery={g} onSelect={onSelect} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
