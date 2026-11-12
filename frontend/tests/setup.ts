@@ -20,6 +20,15 @@ if (typeof window !== "undefined" && !window.matchMedia) {
   }));
 }
 
+// jsdom lacks ResizeObserver (Radix popper, used by tooltips).
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 afterEach(() => cleanup());
 
 // jsdom lacks layout APIs that prosemirror-view calls on DOM mutations.
