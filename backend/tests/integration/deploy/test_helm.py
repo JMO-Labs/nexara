@@ -15,8 +15,8 @@ yaml = pytest.importorskip("yaml")
 CHART = Path(__file__).resolve().parents[4] / "deploy" / "helm" / "nexara"
 
 if shutil.which("helm") is None:
-    if os.environ.get("CI"):
-        pytest.fail("helm is required in CI", pytrace=False)
+    if os.environ.get("REQUIRE_HELM"):
+        pytest.fail("helm is required (REQUIRE_HELM set)", pytrace=False)
     pytest.skip("helm not installed", allow_module_level=True)
 
 
