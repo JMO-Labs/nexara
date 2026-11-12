@@ -1,0 +1,17 @@
+##
+# @file .gitlab/ci/test-mobile.yml
+# @brief Flutter analyze and unit tests for the mobile app.
+##
+
+test:mobile:
+  stage: test
+  image: ghcr.io/cirruslabs/flutter:stable
+  rules:
+    - changes:
+        - mobile/**/*
+        - .gitlab/ci/test-mobile.yml
+  script:
+    - cd mobile
+    - flutter pub get
+    - flutter analyze
+    - flutter test

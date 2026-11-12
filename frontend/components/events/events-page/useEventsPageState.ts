@@ -55,7 +55,7 @@ export function useEventsPageState() {
     startOfDay(new Date()),
   );
   const [selectedEventId, setSelectedEventId] = React.useState<string | null>(
-    null,
+    () => searchParams.get("event"),
   );
 
   const monthStart = React.useMemo(() => startOfMonth(month), [month]);

@@ -116,11 +116,19 @@ async def get_auth_config(
     except Exception:
         logger.warning("oauth_providers_unavailable", exc_info=True)
 
+    from app.services.auth.sso_only import is_sso_only
+
+    sso_only = False
+    try:
+        sso_only = await is_sso_only(db, uuid.UUID(settings.COMMUNITY_ID))
+    except Exception:
+        logger.warning("sso_only_lookup_failed", exc_info=True)
     oidc_enabled = len(oauth_providers) > 0
     return AuthConfigResponse(
         oidc_enabled=oidc_enabled,
-        registration_enabled=settings.ENABLE_REGISTRATION,
-        local_auth_enabled=True,
+        registration_enabled=settings.ENABLE_REGISTRATION and not sso_only,
+        local_auth_enabled=not sso_only,
+        sso_only=sso_only,
         oauth_providers=oauth_providers,
     )
 
