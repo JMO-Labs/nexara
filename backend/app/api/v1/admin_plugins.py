@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.api.v1.plugins import get_plugin_service
 from app.core.dependencies import get_db, require_role
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
@@ -23,6 +24,7 @@ from app.models.user import User
 from app.plugins.api_keys import KEY_PREFIX, generate_api_key
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
+from app.services.plugin_lifecycle import PluginLifecycleService
 
 router = APIRouter(prefix="/admin/plugins", tags=["admin-plugins"])
 
@@ -140,3 +142,120 @@ async def revoke_api_key(
         ip_address=_ip(request),
     )
     return _out(key)
+
+
+# --- Lifecycle: two-phase install and upgrade -------------------------------
+
+
+class PluginIdBody(BaseModel):
+    """@brief Identifies the plugin to stage or confirm."""
+
+    plugin_id: str
+
+
+class UpgradeBody(BaseModel):
+    """@brief ``confirm=false`` stages and previews; ``true`` applies the staged upgrade."""
+
+    confirm: bool = False
+
+
+def get_audit_repo(db: AsyncSession = Depends(get_db)) -> AuditRepository:
+    """@brief Audit repository dependency."""
+    return AuditRepository(db)
+
+
+@router.post("/install-request")
+async def install_request(
+    body: PluginIdBody,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    svc: PluginLifecycleService = Depends(get_plugin_service),
+    audit: AuditRepository = Depends(get_audit_repo),
+) -> dict[str, object]:
+    """@brief Stage an install and return manifest plus permissions diff (not enabled)."""
+    review = await svc.request_install(body.plugin_id)
+    await audit.append(
+        actor_id=user.id,
+        action="plugin.install_requested",
+        target_type="plugin",
+        extra_data={
+            "plugin_id": body.plugin_id,
+            "permissions_requested": review["permissions_requested"],
+        },
+        ip_address=_ip(request),
+    )
+    return review
+
+
+@router.post("/install-confirm")
+async def install_confirm(
+    body: PluginIdBody,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    svc: PluginLifecycleService = Depends(get_plugin_service),
+    audit: AuditRepository = Depends(get_audit_repo),
+) -> dict[str, object]:
+    """@brief Confirm a staged install: create, enable and issue the API key (shown once)."""
+    row, key, perms = await svc.confirm_install(body.plugin_id)
+    await audit.append(
+        actor_id=user.id,
+        action="plugin.installed",
+        target_type="plugin",
+        extra_data={"plugin_id": row.id, "version": row.version, "permissions_granted": perms},
+        ip_address=_ip(request),
+    )
+    return {
+        "id": row.id,
+        "name": row.name,
+        "version": row.version,
+        "is_enabled": row.is_enabled,
+        "permissions_granted": perms,
+        "api_key": key,
+    }
+
+
+@router.put("/{plugin_id}/upgrade")
+async def upgrade_plugin(
+    plugin_id: str,
+    body: UpgradeBody,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    svc: PluginLifecycleService = Depends(get_plugin_service),
+    audit: AuditRepository = Depends(get_audit_repo),
+) -> dict[str, object]:
+    """@brief Preview (stage) an upgrade, or apply it with ``confirm=true``."""
+    life = svc
+    if not body.confirm:
+        review = await life.request_upgrade(plugin_id)
+        await audit.append(
+            actor_id=user.id,
+            action="plugin.upgrade_requested",
+            target_type="plugin",
+            extra_data={
+                "plugin_id": plugin_id,
+                "new_version": review["new_version"],
+                "new_permissions": review["new_permissions"],
+                "removed_permissions": review["removed_permissions"],
+            },
+            ip_address=_ip(request),
+        )
+        return review
+    row, diff = await life.confirm_upgrade(plugin_id)
+    await audit.append(
+        actor_id=user.id,
+        action="plugin.upgraded",
+        target_type="plugin",
+        extra_data={
+            "plugin_id": plugin_id,
+            "version": row.version,
+            "new_permissions": diff["new_permissions"],
+            "removed_permissions": diff["removed_permissions"],
+        },
+        ip_address=_ip(request),
+    )
+    return {
+        "id": row.id,
+        "version": row.version,
+        "permissions_granted": list(row.permissions_granted),
+        **diff,
+    }
