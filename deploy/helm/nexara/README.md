@@ -25,9 +25,13 @@ port 8080), the Celery worker and Celery beat (command overrides).
 | `env` | `COMMUNITY_DEFAULT`, `LOG_LEVEL`, ... | Free-form map rendered into a ConfigMap. |
 | `storage` | `backend` (`local`/`s3`), `local.size`, `s3.*` | |
 
-Generated secrets are re-generated on every `helm upgrade` unless you set
+Generated secrets are created on first install and reused on upgrade (via `lookup`,
+kept on uninstall). Set
 `secrets.jwtSecret` / `postgresql.password` or reference an existing Secret.
-Set them explicitly for production.
+Set them explicitly for production. Passwords are placed in the database URL
+unescaped, so avoid `@`, `/` and `:` in them. With `storage.backend=local`, use a
+StorageClass supporting `ReadWriteMany` (see `storage.local.accessModes`) when
+running replicas on multiple nodes.
 
 ## External database
 

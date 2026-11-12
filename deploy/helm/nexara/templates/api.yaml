@@ -62,7 +62,7 @@ metadata:
   name: {{ include "nexara.fullname" . }}-media
   labels: {{- include "nexara.labels" . | nindent 4 }}
 spec:
-  accessModes: [ReadWriteOnce]
+  accessModes: {{- toYaml .Values.storage.local.accessModes | nindent 4 }}
   {{- with .Values.storage.local.storageClass }}
   storageClassName: {{ . }}
   {{- end }}

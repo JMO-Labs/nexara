@@ -41,7 +41,7 @@ worker:
 
 # -- Celery beat (singleton, replicas must stay 1)
 beat:
-  replicas: 1
+  # replicas is fixed at 1 by the template
   resources:
     requests: {cpu: 50m, memory: 128Mi}
     limits: {cpu: 250m, memory: 256Mi}
@@ -124,6 +124,8 @@ storage:
   local:
     size: 20Gi
     storageClass: ""
+    # -- Must be ReadWriteMany when API/worker pods run on several nodes
+    accessModes: [ReadWriteMany]
   s3:
     endpointUrl: ""
     bucket: nexara

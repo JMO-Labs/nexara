@@ -28,4 +28,14 @@ spec:
           command: ["sh", "-c", {{ $cmd | quote }}]
           {{- include "nexara.env" $ | nindent 10 }}
           resources: {{- toYaml $v.resources | nindent 12 }}
+          {{- if and (eq $name "worker") (eq $.Values.storage.backend "local") }}
+          volumeMounts:
+            - {name: media, mountPath: /data/media}
+          {{- end }}
+      {{- if and (eq $name "worker") (eq $.Values.storage.backend "local") }}
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: {{ include "nexara.fullname" $ }}-media
+      {{- end }}
 {{- end }}

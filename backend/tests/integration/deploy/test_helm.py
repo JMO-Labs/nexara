@@ -3,6 +3,7 @@
 @brief Validates the Helm chart: lint, template rendering and default values.
 """
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,7 +14,10 @@ yaml = pytest.importorskip("yaml")
 
 CHART = Path(__file__).resolve().parents[4] / "deploy" / "helm" / "nexara"
 
-pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm not installed")
+if shutil.which("helm") is None:
+    if os.environ.get("CI"):
+        pytest.fail("helm is required in CI", pytrace=False)
+    pytest.skip("helm not installed", allow_module_level=True)
 
 
 def _helm(*args: str) -> str:
@@ -72,3 +76,49 @@ def test_ingress_and_external_services() -> None:
     kinds = [d["kind"] for d in docs]
     assert "Ingress" in kinds
     assert len([k for k in kinds if k == "Deployment"]) == 3
+
+
+def _secret_data(docs: list[dict], suffix: str) -> dict:
+    return next(
+        d["data"] for d in docs if d["kind"] == "Secret" and d["metadata"]["name"].endswith(suffix)
+    )
+
+
+def test_supplied_secrets_are_rendered() -> None:
+    import base64
+
+    docs = _render("postgresql.password=pgpass", "secrets.jwtSecret=jwtval")
+    assert base64.b64decode(_secret_data(docs, "-db")["database-password"]) == b"pgpass"
+    assert base64.b64decode(_secret_data(docs, "-app")["secret-key"]) == b"jwtval"
+
+
+def test_secrets_use_lookup_and_keep_policy() -> None:
+    text = (CHART / "templates" / "secrets.yaml").read_text()
+    assert 'lookup "v1" "Secret"' in text
+    assert "helm.sh/resource-policy" in text
+
+
+def _worker(docs: list[dict]) -> dict:
+    return next(
+        d for d in docs if d["kind"] == "Deployment" and d["metadata"]["name"].endswith("-worker")
+    )
+
+
+def test_worker_mounts_media_when_local() -> None:
+    pod = _worker(_render())["spec"]["template"]["spec"]
+    assert any(m["mountPath"] == "/data/media" for m in pod["containers"][0]["volumeMounts"])
+    assert pod["volumes"][0]["persistentVolumeClaim"]["claimName"].endswith("-media")
+
+
+def test_worker_has_no_media_mount_for_s3() -> None:
+    pod = _worker(_render("storage.backend=s3"))["spec"]["template"]["spec"]
+    assert "volumes" not in pod
+
+
+def test_media_pvc_access_modes_configurable() -> None:
+    def modes(*sets: str) -> list[str]:
+        pvc = next(d for d in _render(*sets) if d["kind"] == "PersistentVolumeClaim")
+        return pvc["spec"]["accessModes"]
+
+    assert modes() == ["ReadWriteMany"]
+    assert modes("storage.local.accessModes={ReadWriteOnce}") == ["ReadWriteOnce"]
