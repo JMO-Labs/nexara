@@ -30,7 +30,7 @@ class FakeFeedRepo implements FeedRepository {
   @override
   Future<List<PostComment>> comments(String id) async => [];
   @override
-  Future<FeedPost> create(String content, {String? visibility, List<String> mediaIds = const []}) async =>
+  Future<FeedPost> create(String content, {List<String> mediaIds = const []}) async =>
       throw UnimplementedError();
   @override
   Future<void> addComment(String postId, String content) async {}

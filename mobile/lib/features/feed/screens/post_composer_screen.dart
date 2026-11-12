@@ -1,8 +1,7 @@
 /// @file post_composer_screen.dart
-/// @brief Compose a post: Markdown text, optional image, visibility.
+/// @brief Compose a post: Markdown text (community visibility; media/visibility pending backend support).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../providers/feed_provider.dart';
 
@@ -14,8 +13,6 @@ class PostComposerScreen extends ConsumerStatefulWidget {
 
 class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final _text = TextEditingController();
-  String _visibility = 'community';
-  XFile? _image;
   bool _busy = false;
 
   @override
@@ -28,7 +25,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     if (_text.text.trim().isEmpty) return;
     setState(() => _busy = true);
     try {
-      await ref.read(createPostProvider)(_text.text.trim(), visibility: _visibility);
+      await ref.read(createPostProvider)(_text.text.trim());
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
@@ -50,26 +47,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             maxLines: 12,
             decoration: const InputDecoration(
                 labelText: 'What is happening?', helperText: 'Markdown supported', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _visibility,
-            decoration: const InputDecoration(labelText: 'Visibility', border: OutlineInputBorder()),
-            items: const [
-              DropdownMenuItem(value: 'community', child: Text('Community')),
-              DropdownMenuItem(value: 'subgroup', child: Text('Subgroup')),
-              DropdownMenuItem(value: 'private', child: Text('Private')),
-            ],
-            onChanged: (v) => setState(() => _visibility = v ?? 'community'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.image),
-            label: Text(_image?.name ?? 'Add image'),
-            onPressed: () async {
-              final f = await ImagePicker().pickImage(source: ImageSource.gallery);
-              if (f != null) setState(() => _image = f);
-            },
           ),
         ]),
       );

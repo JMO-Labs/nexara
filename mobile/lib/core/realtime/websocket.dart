@@ -70,7 +70,8 @@ class WebSocketRealtimeClient implements RealtimeClient {
 
   void _scheduleReconnect() {
     if (_disposed || (_retry?.isActive ?? false)) return;
-    final secs = 1 << (_attempts++ < 5 ? _attempts : 5);
+    final secs = 1 << (_attempts < 5 ? _attempts : 5);
+    _attempts++;
     final d = Duration(seconds: secs);
     _retry = Timer(d > maxBackoff ? maxBackoff : d, _open);
   }

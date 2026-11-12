@@ -25,9 +25,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Future<void> _send() async {
     final text = _reply.text.trim();
     if (text.isEmpty) return;
-    await ref.read(feedRepositoryProvider).addComment(widget.postId, text);
-    _reply.clear();
-    ref.invalidate(commentsProvider(widget.postId));
+    try {
+      await ref.read(feedRepositoryProvider).addComment(widget.postId, text);
+      _reply.clear();
+      ref.invalidate(commentsProvider(widget.postId));
+    } catch (_) {
+      _fail('Could not send reply.');
+    }
+  }
+
+  void _fail(String msg) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -54,7 +62,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   IconButton(
                     tooltip: 'Like',
                     icon: const Icon(Icons.thumb_up_outlined),
-                    onPressed: () => ref.read(feedRepositoryProvider).react(p.id, '👍'),
+                    onPressed: () async {
+                      try {
+                        await ref.read(feedRepositoryProvider).react(p.id, '👍');
+                      } catch (_) {
+                        _fail('Could not like the post.');
+                      }
+                    },
                   ),
                 ]),
               ]),

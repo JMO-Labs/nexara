@@ -79,7 +79,7 @@ class _EventComposerScreenState extends ConsumerState<EventComposerScreen> {
             onTap: _pick,
           ),
           DropdownButtonFormField<String>(
-            value: _visibility,
+            initialValue: _visibility,
             decoration: const InputDecoration(labelText: 'Visibility', border: OutlineInputBorder()),
             items: const [
               DropdownMenuItem(value: 'community', child: Text('Community')),

@@ -27,11 +27,10 @@ class FeedRepository {
     return [for (final c in (r.data as Map)['items'] as List) PostComment.fromJson(c as Map<String, dynamic>)];
   }
 
-  Future<FeedPost> create(String content, {String? visibility, List<String> mediaIds = const []}) async {
+  Future<FeedPost> create(String content, {List<String> mediaIds = const []}) async {
     final r = await _dio.post('/posts', data: {
       'content': content,
       'media_ids': mediaIds,
-      if (visibility != null) 'visibility': visibility,
     });
     return FeedPost.fromJson(r.data as Map<String, dynamic>);
   }
@@ -67,7 +66,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
       final p = await _repo.feed();
       state = FeedState(items: p.items, cursor: p.cursor, hasMore: p.hasMore);
     } catch (e) {
-      state = FeedState(items: state.items, hasMore: state.hasMore, error: _msg(e));
+      state = FeedState(items: state.items, cursor: state.cursor, hasMore: state.hasMore, error: _msg(e));
     }
   }
 
@@ -96,7 +95,9 @@ final feedProvider = StateNotifierProvider<FeedNotifier, FeedState>((ref) {
   final n = FeedNotifier(ref.watch(feedRepositoryProvider));
   final sub = ref.watch(realtimeClientProvider).messages.listen((m) {
     if (m.type == 'feed_update' && m.payload['event'] == 'created' && m.payload['post'] is Map) {
-      n.prepend(FeedPost.fromJson((m.payload['post'] as Map).cast<String, dynamic>()));
+      try {
+        n.prepend(FeedPost.fromJson((m.payload['post'] as Map).cast<String, dynamic>()));
+      } catch (_) {/* ignore malformed payload */}
     }
   });
   ref.onDispose(sub.cancel);
@@ -119,9 +120,9 @@ final commentsProvider = FutureProvider.family<List<PostComment>, String>((ref, 
 });
 
 /// @brief Mutation: create a post, then refresh the feed.
-final createPostProvider = Provider<Future<void> Function(String, {String? visibility})>((ref) {
-  return (content, {visibility}) async {
-    await ref.read(feedRepositoryProvider).create(content, visibility: visibility);
+final createPostProvider = Provider<Future<void> Function(String)>((ref) {
+  return (content) async {
+    await ref.read(feedRepositoryProvider).create(content);
     await ref.read(feedProvider.notifier).refresh();
   };
 });

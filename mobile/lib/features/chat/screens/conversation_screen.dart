@@ -2,7 +2,6 @@
 /// @brief Single conversation: history, live messages, typing indicator, composer.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/providers.dart';
 import '../providers/chat_provider.dart';
@@ -73,9 +72,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             padding: const EdgeInsets.all(8),
             child: Row(children: [
               IconButton(
-                tooltip: 'Attach media',
+                tooltip: 'Attach media (coming soon)',
                 icon: const Icon(Icons.attach_file),
-                onPressed: () => ImagePicker().pickImage(source: ImageSource.gallery),
+                onPressed: null,
               ),
               Expanded(
                 child: TextField(

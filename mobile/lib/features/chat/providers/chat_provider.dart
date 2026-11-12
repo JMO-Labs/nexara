@@ -56,7 +56,11 @@ class ChatListNotifier extends StateNotifier<AsyncValue<List<Channel>>> {
 final chatListProvider = StateNotifierProvider<ChatListNotifier, AsyncValue<List<Channel>>>((ref) {
   final n = ChatListNotifier(ref.watch(chatRepositoryProvider));
   final sub = ref.watch(webSocketProvider).messages.listen((m) {
-    if (m.type == 'chat.message') n.onMessage(ChatMessage.fromJson(m.payload));
+    if (m.type == 'chat.message') {
+      try {
+        n.onMessage(ChatMessage.fromJson(m.payload));
+      } catch (_) {/* ignore malformed payload */}
+    }
   });
   ref.onDispose(sub.cancel);
   return n;
@@ -132,7 +136,11 @@ final conversationProvider =
     StateNotifierProvider.family<ConversationNotifier, ConversationState, String>((ref, chatId) {
   final n = ConversationNotifier(ref.watch(chatRepositoryProvider), chatId);
   final sub = ref.watch(webSocketProvider).messages.listen((m) {
-    if (m.type == 'chat.message') n.receive(ChatMessage.fromJson(m.payload));
+    if (m.type == 'chat.message') {
+      try {
+        n.receive(ChatMessage.fromJson(m.payload));
+      } catch (_) {/* ignore malformed payload */}
+    }
     if (m.type == 'chat.typing' && m.payload['channel_id']?.toString() == chatId) {
       final me = ref.read(currentUserIdProvider).valueOrNull;
       if (me == null || m.payload['user_id']?.toString() != me) n.setTyping(true);
