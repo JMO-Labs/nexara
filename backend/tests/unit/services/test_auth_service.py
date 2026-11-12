@@ -52,7 +52,6 @@ def _make_user(**overrides):
     return user
 
 
-
 @pytest.fixture(autouse=True)
 def _sso_only_off():
     """@brief SSO-only guard disabled by default (mocked sessions)."""

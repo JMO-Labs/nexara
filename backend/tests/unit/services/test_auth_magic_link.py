@@ -29,7 +29,6 @@ def _make_user(user_id=USER_ID, email=USER_EMAIL):
     return u
 
 
-
 @pytest.fixture(autouse=True)
 def _sso_only_off():
     """@brief SSO-only guard disabled by default (mocked sessions)."""
