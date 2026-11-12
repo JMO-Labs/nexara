@@ -24,6 +24,7 @@ from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.repositories.base import BaseRepository
+from app.repositories.search_extra_repo import GalleryPollSearchMixin
 
 
 def _websearch_tsquery() -> ColumnElement[Any]:
@@ -96,7 +97,7 @@ def is_adult(birthday: date | None, mark_as_adult: bool) -> bool:
     return age >= ADULT_AGE
 
 
-class SearchRepository:
+class SearchRepository(GalleryPollSearchMixin):
     """
     @brief Async repository for full-text search.
 

@@ -5,6 +5,13 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  listStagger,
+  listItem,
+  fadeInOut,
+  useMotionProps,
+} from "@/components/ui/motion";
 import { Skeleton, EmptyState, Button } from "@/components/ui";
 import { EventCard } from "./EventCard";
 import { useUpcomingEvents } from "@/hooks/useEvents";
@@ -22,14 +29,24 @@ function monthKey(iso: string): string {
 export function EventList() {
   const router = useRouter();
   const { data, isLoading, error } = useUpcomingEvents(60);
+  const reduced = useReducedMotion();
+  const stagger = reduced
+    ? {}
+    : { variants: listStagger, initial: "hidden", animate: "show" };
+  const item = reduced ? {} : { variants: listItem };
+  const fade = useMotionProps(fadeInOut);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
+      <motion.div
+        data-testid="event-skeleton"
+        className="flex flex-col gap-3"
+        {...fade}
+      >
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} height={140} rounded="lg" />
         ))}
-      </div>
+      </motion.div>
     );
   }
   if (error)
@@ -71,11 +88,13 @@ export function EventList() {
           <h3 className="sticky top-0 z-10 border-b border-current/15 bg-bg px-4 py-2 text-sm font-semibold text-muted">
             {month}
           </h3>
-          <div className="flex flex-col gap-3 p-4">
+          <motion.div className="flex flex-col gap-3 p-4" {...stagger}>
             {items.map((ev) => (
-              <EventCard key={ev.id} event={ev} />
+              <motion.div key={ev.id} {...item}>
+                <EventCard event={ev} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </React.Fragment>
       ))}
     </div>

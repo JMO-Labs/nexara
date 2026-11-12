@@ -244,3 +244,49 @@ class TestSearch:
         mock_repo.search_users.assert_awaited_once()
         mock_repo.search_events.assert_awaited_once()
         mock_repo.search_comments.assert_awaited_once()
+
+
+class TestGalleryPollSearch:
+    """@brief Tests for gallery and poll search types."""
+
+    @pytest.fixture
+    def mock_user(self):
+        """@brief Mock user."""
+        return type("User", (), {"id": uuid.uuid4()})()
+
+    @pytest.mark.asyncio
+    async def test_galleries_and_polls_with_counts_and_cursor(self, mock_user):
+        """Galleries and polls are searched, formatted, counted, paginated."""
+        repo = AsyncMock()
+        now = datetime.now(UTC)
+        gallery = type(
+            "Gallery",
+            (),
+            {"id": uuid.uuid4(), "title": "Summer", "description": "Beach", "created_at": now},
+        )()
+        poll = type(
+            "Poll",
+            (),
+            {
+                "id": uuid.uuid4(),
+                "question": "Pizza night?",
+                "post_id": uuid.uuid4(),
+                "created_at": now,
+            },
+        )()
+        post = type("Post", (), {"content": "Vote for pizza"})()
+        repo.search_galleries.return_value = ([(gallery, 0.5)], "20", 45)
+        repo.search_polls.return_value = ([(poll, post, 0.4)], None, 1)
+        service = SearchService(search_repo=repo, community_id=COMMUNITY_ID)
+
+        result = await service.search("summer", mock_user, ["galleries", "polls"], "0", 20)
+
+        g = result.results["galleries"]
+        assert (g.total, g.next_cursor, g.items[0].type) == (45, "20", "galleries")
+        assert g.items[0].title == "Summer"
+        p = result.results["polls"]
+        assert p.total == 1
+        assert p.items[0].type == "polls"
+        assert p.items[0].title == "Pizza night?"
+        assert p.items[0].parent_id == poll.post_id
+        assert repo.search_galleries.call_args[0][3] == mock_user.id

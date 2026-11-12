@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ##
 # @file scripts/wq-ci-test.sh
-# @brief wq-ci test entrypoint: backend unit + frontend vitest.
+# @brief wq-ci test entrypoint: backend unit + frontend vitest + mobile flutter test.
 #        Writes coverage.xml (backend Cobertura) and junit.xml (merged) to repo root.
 ##
 # ponytail: backend unit only (no Postgres); integration stays in GitLab CI (allow_failure there).
@@ -13,6 +13,15 @@ ROOT=$PWD; rc=0
   && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
 
 (cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml") || rc=1
+
+# Mobile (Flutter): install the stable SDK when absent, then analyze (infos non-fatal) and test.
+if [ -d mobile ]; then
+  ( if ! command -v flutter >/dev/null; then
+      [ -x "$HOME/flutter/bin/flutter" ] || git clone -q --depth 1 -b stable https://github.com/flutter/flutter.git "$HOME/flutter"
+      export PATH="$HOME/flutter/bin:$PATH"
+    fi
+    cd mobile && flutter --version && flutter pub get && flutter analyze --no-fatal-infos && flutter test ) || rc=1
+fi
 
 python3 - <<'PY'
 import glob, xml.etree.ElementTree as ET
