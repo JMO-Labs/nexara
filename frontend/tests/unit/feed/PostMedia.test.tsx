@@ -20,7 +20,8 @@ const mk = (id: string, mime = "image/png"): Media => ({
 describe("PostMedia", () => {
   it("renders nothing for empty media", () => {
     const { container } = renderWithProviders(<PostMedia media={[]} />);
-    expect(container).toBeEmptyDOMElement();
+    // ThemeProvider injects a <script>; assert no media markup instead.
+    expect(container.querySelector("div, img, video")).toBeNull();
   });
 
   it("renders image using thumbnail and video using url", () => {
