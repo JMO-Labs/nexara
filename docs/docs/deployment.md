@@ -25,6 +25,8 @@ cp .env.example .env
 docker compose up -d
 ```
 
+The app is then served through the bundled proxy on `http://localhost:8080`.
+
 ### Environment Variables
 
 | Variable             | Required | Default | Description                      |
@@ -79,4 +81,4 @@ GET /healthz
 
 - **Path:** `/healthz` (not `/api/v1/healthz`)
 - **Response:** HTTP 200 when all components (DB, Valkey, storage) are healthy, HTTP 503 otherwise
-- In development, the Nuxt dev proxy forwards `/healthz` to the backend at `http://localhost:8000/healthz`
+- In development, the Next.js dev server proxies `/healthz` to the backend at `http://localhost:8000/healthz`

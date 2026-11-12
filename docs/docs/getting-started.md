@@ -77,8 +77,18 @@ pytest --cov=app -v
 
 # Frontend tests
 cd frontend
-npx vitest run --coverage
+npm test
 ```
+
+## Running the Full Stack
+
+```bash
+cd deploy
+cp .env.example .env
+docker compose up -d
+```
+
+The app is available through the proxy on `http://localhost:8080`.
 
 ## Next Steps
 

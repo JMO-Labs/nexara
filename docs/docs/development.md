@@ -5,7 +5,7 @@ Architecture, conventions, and testing practices for Nexara contributors.
 ## Architecture Overview
 
 ```
-Clients (Nuxt 3 SPA / PWA)
+Clients (Next.js 16 / React 19 PWA)
     |
     | HTTP / WebSocket / SSE
     v
@@ -34,15 +34,18 @@ Routes (app/api/v1/)
 - Services contain business logic and call repositories
 - Repositories handle all database operations
 - Never import repositories directly in route files
+- Every query is scoped by `community_id`; errors use the standard envelope from `core/exceptions.py`
 
 ## Frontend Architecture
 
-The Nuxt 3 frontend uses:
+The Next.js 16 (App Router) frontend uses:
 
-- **Pinia** for state management
-- **Composables** for reusable logic (API client, WebSocket, SSE, dark mode)
-- **Flowbite** for UI components
-- **Tailwind CSS** for styling
+- **React 19** for UI
+- **TanStack Query** for server state (`lib/api`, hooks)
+- **zustand** for client state (stores)
+- **shadcn/ui** (Radix) components in `components/ui`
+- **Tailwind CSS v4** for styling
+- **next-intl** and **next-themes** for i18n and dark mode
 
 ## Code Style
 
@@ -71,7 +74,7 @@ npx prettier --check .
 
 ### Backend
 
-- **Framework:** pytest + pytest-asyncio
+- **Framework:** pytest + pytest-asyncio (`asyncio_mode = auto`)
 - **Database:** Real PostgreSQL (no SQLite in tests)
 - **Coverage:** pytest-cov with HTML and Cobertura reports
 
@@ -82,12 +85,14 @@ pytest --cov=app --cov-report=html -v
 
 ### Frontend
 
-- **Framework:** Vitest + Vue Test Utils
+- **Framework:** Vitest
 - **E2E:** Playwright (manual CI trigger)
 - **Coverage:** V8 coverage provider
 
 ```bash
 cd frontend
+npm run dev                # dev server
+npm test                   # Vitest
 npx vitest run --coverage
 ```
 
