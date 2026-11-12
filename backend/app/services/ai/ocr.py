@@ -21,8 +21,9 @@ logger = structlog.get_logger(__name__)
 
 OCR_PROMPT = "Extract all visible text. Return only text, one line per element."
 OCR_MAX_TOKENS = 2000
-#: Pre-call estimate (cents) used for the budget gate.
-OCR_ESTIMATED_CENTS = 1.0
+#: Pre-call worst-case estimate (cents) for the budget gate: 2000 output tokens
+#: at 15 USD/1M (3c, Sonnet vision) plus image input headroom.
+OCR_ESTIMATED_CENTS = 4.0
 
 
 async def run_ocr(
@@ -61,7 +62,8 @@ async def run_ocr(
         text, cost, _tokens = await provider.vision(image, OCR_PROMPT, max_tokens=OCR_MAX_TOKENS)
         if budget is not None:
             await budget.record_usage(
-                cost, "ocr", provider=type(provider).__name__.removesuffix("Provider").lower()
+                cost, "ocr", provider=type(provider).__name__.removesuffix("Provider").lower(),
+                model=getattr(provider, "vision_model", "unknown"),
             )
     except AIBudgetExhaustedError:
         logger.info("ocr_budget_exhausted", media_id=str(media_id))

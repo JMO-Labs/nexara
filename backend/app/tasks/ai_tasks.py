@@ -28,17 +28,20 @@ async def _ocr_async(media_id: uuid.UUID, community_id: uuid.UUID) -> str:
     settings = get_settings()
     redis = create_pool(settings, DB_CACHE)
     budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
-    async with async_session_factory() as session:
-        status = await run_ocr(
-            media_id,
-            community_id,
-            media_repo=MediaRepository(session),
-            ai_repo=MediaAIRepository(session),
-            storage=get_storage_backend(settings),
-            provider=get_ai_provider(settings),
-            budget=budget,
-        )
-        await session.commit()
+    try:
+        async with async_session_factory() as session:
+            status = await run_ocr(
+                media_id,
+                community_id,
+                media_repo=MediaRepository(session),
+                ai_repo=MediaAIRepository(session),
+                storage=get_storage_backend(settings),
+                provider=get_ai_provider(settings),
+                budget=budget,
+            )
+            await session.commit()
+    finally:
+        await redis.aclose()
     return status
 
 

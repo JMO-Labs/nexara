@@ -45,8 +45,9 @@ class BudgetService:
         self._reset_hour = reset_hour
         self._clock = clock or (lambda: datetime.now(UTC))
 
-    def _key(self) -> str:
+    def _key(self, days_back: int = 0) -> str:
         day = (self._clock() - timedelta(hours=self._reset_hour)).date()
+        day -= timedelta(days=days_back)
         return f"ai_budget:{day.isoformat()}:cents"
 
     async def _spent(self) -> float:
@@ -84,5 +85,8 @@ class BudgetService:
         ai_calls_total.labels(**labels).inc()
 
     async def reset_daily_budget(self) -> None:
-        """@brief Clear today's counter (called by the Beat job)."""
-        await self._redis.delete(self._key())
+        """
+        @brief Delete the previous budget day's counter (Beat job at the rollover).
+        @note Keys are date-scoped so rollover is automatic; the current day is kept.
+        """
+        await self._redis.delete(self._key(days_back=1))

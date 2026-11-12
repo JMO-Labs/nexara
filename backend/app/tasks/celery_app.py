@@ -66,7 +66,7 @@ celery_app.conf.update(
         },
         "ai-budget-reset": {
             "task": "app.tasks.maintenance_tasks.reset_ai_daily_budget",
-            "schedule": crontab(hour="0", minute="0"),
+            "schedule": crontab(hour=settings.AI_BUDGET_RESET_HOUR, minute=0),
         },
         "close-expired-polls": {
             "task": "app.tasks.poll_tasks.close_expired_polls",
