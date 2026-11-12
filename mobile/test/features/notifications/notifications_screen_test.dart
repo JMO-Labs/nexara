@@ -46,6 +46,15 @@ void main() {
     expect(api.read, ['2']);
   });
 
+  testWidgets('tap on read item does not mark read', (t) async {
+    final api = FakeApi([n('1', 'older', DateTime(2026, 1, 1), isRead: true)]);
+    await t.pumpWidget(host(api));
+    await t.pumpAndSettle();
+    await t.tap(find.text('older'));
+    await t.pumpAndSettle();
+    expect(api.read, isEmpty);
+  });
+
   testWidgets('shows empty state', (t) async {
     await t.pumpWidget(host(FakeApi([])));
     await t.pumpAndSettle();

@@ -63,12 +63,12 @@ void main() {
     await t.tap(find.byKey(const Key('biometric_switch')));
     await t.pumpAndSettle();
     expect(b.enabled, isTrue);
-    expect(t.widget<Switch>(find.byKey(const Key('biometric_switch'))).value, isTrue);
+    expect(t.widget<SwitchListTile>(find.byKey(const Key('biometric_switch'))).value, isTrue);
   });
 
   testWidgets('biometric toggle disabled when unavailable', (t) async {
     await t.pumpWidget(host(FakeSettings(), FakeBio(available: false)));
     await t.pumpAndSettle();
-    expect(t.widget<Switch>(find.byKey(const Key('biometric_switch'))).onChanged, isNull);
+    expect(t.widget<SwitchListTile>(find.byKey(const Key('biometric_switch'))).onChanged, isNull);
   });
 }
