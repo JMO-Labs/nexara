@@ -15,7 +15,8 @@ import structlog
 from celery import Task
 
 from app.db.session import async_session_factory
-from app.models.user import User
+from app.models.user import COMMUNITY_DEFAULT, User
+from app.repositories.branding_repo import BrandingRepository
 from app.services.email.sender import EmailSender
 from app.services.email.templates import EmailTemplateRenderer
 from app.tasks.celery_app import celery_app
@@ -45,6 +46,17 @@ async def _send_email_notification_async(
             logger.warning("send_email_notification_user_not_found", user_id=str(user_id))
             return {"status": "skipped"}
         to_email = user.email
+        branding = await BrandingRepository(session).get(uuid.UUID(COMMUNITY_DEFAULT))
+
+    branding_kwargs: dict[str, Any] = {}
+    if branding is not None:
+        logo_id = branding.email_logo_media_id or branding.logo_light_media_id
+        branding_kwargs = {
+            "community_name": branding.community_name,
+            "color_primary": branding.color_primary,
+            "logo_url": f"/api/v1/media/{logo_id}/file" if logo_id else None,
+            "footer_text": branding.email_footer_text,
+        }
 
     renderer = EmailTemplateRenderer()
     html, text = renderer.render(
@@ -55,6 +67,7 @@ async def _send_email_notification_async(
             "link": payload.get("link", ""),
             "actor_id": payload.get("actor_id"),
         },
+        **branding_kwargs,
     )
 
     sender = EmailSender()
