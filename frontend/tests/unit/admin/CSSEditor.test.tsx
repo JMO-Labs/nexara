@@ -3,13 +3,21 @@
  * @brief CSSEditor: render, highlight, live preview, byte counter, save.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import * as api from "@/lib/api/branding";
 import { useToasts } from "@/stores/toasts";
+import { EditorView } from "@codemirror/view";
 import { CSSEditor } from "@/components/admin/CSSEditor";
+import { buildPreviewDoc } from "@/components/admin/CSSPreview";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("@/lib/api/branding", async (orig) => ({
@@ -25,8 +33,18 @@ function wrap(ui: ReactNode) {
 }
 
 const editor = () => screen.getByLabelText("Custom CSS");
+const view = () => {
+  const v = EditorView.findFromDOM(editor());
+  if (!v) throw new Error("CodeMirror view not mounted");
+  return v;
+};
+const value = () => view().state.doc.toString();
 const type = (v: string) =>
-  fireEvent.change(editor(), { target: { value: v } });
+  act(() => {
+    view().dispatch({
+      changes: { from: 0, to: view().state.doc.length, insert: v },
+    });
+  });
 const preview = () => screen.getByTitle("Live Preview") as HTMLIFrameElement;
 
 beforeEach(() => {
@@ -37,13 +55,16 @@ beforeEach(() => {
 describe("CSSEditor", () => {
   it("renders editor with initial value, warning and highlighting", () => {
     wrap(<CSSEditor initial="h1 { color: red; }" />);
-    expect(editor()).toHaveValue("h1 { color: red; }");
+    expect(editor()).toHaveAttribute("contenteditable", "true");
+    expect(editor().closest(".cm-editor")).not.toBeNull();
+    expect(value()).toBe("h1 { color: red; }");
     expect(
       screen.getByText(/CSS can break site layout\. Dangerous patterns/),
     ).toBeInTheDocument();
-    const hl = screen.getByTestId("css-highlight");
-    expect(hl.querySelector(".tok-property")).toHaveTextContent("color");
-    expect(hl.querySelector(".tok-selector")).toHaveTextContent("h1");
+    expect(editor().querySelector(".tok-propertyName")).toHaveTextContent(
+      "color",
+    );
+    expect(editor().querySelector(".tok-typeName")).toHaveTextContent("h1");
   });
 
   it("updates the sandboxed preview as the user types", () => {
@@ -79,7 +100,7 @@ describe("CSSEditor", () => {
     type("b{}");
     expect(save).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: /reset/i }));
-    expect(editor()).toHaveValue("a{}");
+    expect(value()).toBe("a{}");
     type("a".repeat(10241));
     expect(save).toBeDisabled();
   });
@@ -97,11 +118,17 @@ describe("CSSEditor", () => {
       }),
     );
     await waitFor(() =>
-      expect(useToasts.getState().items.map((t) => t.variant)).toContain(
-        "success",
+      expect(useToasts.getState().items.map((t) => t.message)).toContain(
+        "Custom CSS saved",
       ),
     );
     expect(screen.getByRole("button", { name: /save css/i })).toBeDisabled();
+  });
+
+  it("blocks network fetches from the preview via CSP", () => {
+    const doc = buildPreviewDoc("@import url(https://x.test/a.css);");
+    expect(doc).toContain('http-equiv="Content-Security-Policy"');
+    expect(doc).toContain("default-src 'none'");
   });
 
   it("toasts an error when saving fails", async () => {

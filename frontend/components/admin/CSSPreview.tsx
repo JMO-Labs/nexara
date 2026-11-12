@@ -19,6 +19,10 @@ const BASE_CSS =
   ".btn{padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;margin-right:8px}" +
   ".btn-primary{background:#14301e;color:#fff;border-color:#14301e}";
 
+/** @brief CSP so admin CSS (`@import`, `url()`) cannot make network requests. */
+const PREVIEW_CSP =
+  "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:";
+
 /**
  * @brief Build the iframe document; escapes `</style` so CSS cannot inject HTML.
  * @param css admin CSS
@@ -26,7 +30,7 @@ const BASE_CSS =
  */
 export function buildPreviewDoc(css: string): string {
   const safe = css.replace(/<\/(style)/gi, "<\\/$1");
-  return `<!doctype html><html><head><style>${BASE_CSS}</style><style>${safe}</style></head><body>${SAMPLE}</body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}"><style>${BASE_CSS}</style><style>${safe}</style></head><body>${SAMPLE}</body></html>`;
 }
 
 /**

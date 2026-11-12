@@ -1,50 +1,42 @@
 /**
  * @file components/admin/CSSEditor.tsx
- * @brief Admin custom CSS editor: highlighted code, byte limit, live preview, save.
+ * @brief Admin custom CSS editor: CodeMirror 6, byte limit, live preview, save.
  */
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { css as cssLang } from "@codemirror/lang-css";
+import { syntaxHighlighting } from "@codemirror/language";
+import { EditorState } from "@codemirror/state";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { classHighlighter } from "@lezer/highlight";
 import { Button } from "@/components/ui";
 import { useUpdateBranding } from "@/hooks/useBranding";
 import { formatApiError } from "@/lib/api/errors";
-import { MAX_CSS_BYTES, cssByteLength, tokenizeCss } from "@/lib/cssHighlight";
+import { MAX_CSS_BYTES, cssByteLength } from "@/lib/customCss";
 import { useToasts } from "@/stores/toasts";
 import { CSSPreview } from "./CSSPreview";
 
-const TOKEN_CLASS: Record<string, string> = {
-  comment: "tok-comment italic text-muted-foreground",
-  string: "tok-string text-emerald-700 dark:text-emerald-300",
-  atrule: "tok-atrule text-fuchsia-700 dark:text-fuchsia-300",
-  selector: "tok-selector text-sky-700 dark:text-sky-300",
-  property: "tok-property text-violet-700 dark:text-violet-300",
-  value: "tok-value text-amber-800 dark:text-amber-300",
-};
+/** @brief Theme-aware colours for the stable `tok-*` classes from classHighlighter. */
+const TOKEN_STYLES =
+  "[&_.tok-comment]:italic [&_.tok-comment]:text-muted-foreground " +
+  "[&_.tok-string]:text-emerald-700 dark:[&_.tok-string]:text-emerald-300 " +
+  "[&_.tok-keyword]:text-fuchsia-700 dark:[&_.tok-keyword]:text-fuchsia-300 " +
+  "[&_.tok-typeName]:text-sky-700 dark:[&_.tok-typeName]:text-sky-300 " +
+  "[&_.tok-className]:text-sky-700 dark:[&_.tok-className]:text-sky-300 " +
+  "[&_.tok-propertyName]:text-violet-700 dark:[&_.tok-propertyName]:text-violet-300 " +
+  "[&_.tok-number]:text-amber-800 dark:[&_.tok-number]:text-amber-300 " +
+  "[&_.tok-atom]:text-amber-800 dark:[&_.tok-atom]:text-amber-300";
 
-const FIELD =
-  "m-0 whitespace-pre-wrap break-words p-3 font-mono text-sm leading-6";
-
-/**
- * @brief Highlighted read-only mirror of the textarea contents.
- * @param code CSS text
- */
-function Highlight({ code }: { code: string }) {
-  const tokens = useMemo(() => tokenizeCss(code), [code]);
-  return (
-    <>
-      {tokens.map((t, i) =>
-        TOKEN_CLASS[t.type] ? (
-          <span key={i} className={TOKEN_CLASS[t.type]}>
-            {t.text}
-          </span>
-        ) : (
-          t.text
-        ),
-      )}
-      {"\n"}
-    </>
-  );
-}
+const EDITOR_THEME = EditorView.theme({
+  "&": { height: "100%", fontSize: "0.875rem" },
+  ".cm-scroller": {
+    fontFamily: "var(--font-mono, monospace)",
+    lineHeight: "1.5rem",
+  },
+  "&.cm-focused": { outline: "none" },
+});
 
 /**
  * @brief Self-contained custom CSS editor with save/reset/copy.
@@ -53,9 +45,54 @@ function Highlight({ code }: { code: string }) {
 export function CSSEditor({ initial }: { initial: string }) {
   const [saved, setSaved] = useState(initial);
   const [css, setCss] = useState(initial);
-  const mirror = useRef<HTMLPreElement>(null);
-  const update = useUpdateBranding();
+  const host = useRef<HTMLDivElement>(null);
+  const view = useRef<EditorView | null>(null);
+  const update = useUpdateBranding("Custom CSS saved");
   const push = useToasts((s) => s.push);
+
+  // Create the EditorView once; later value changes are dispatched into it.
+  useEffect(() => {
+    if (!host.current) return;
+    const v = new EditorView({
+      parent: host.current,
+      state: EditorState.create({
+        doc: initial,
+        extensions: [
+          lineNumbers(),
+          history(),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          cssLang(),
+          syntaxHighlighting(classHighlighter),
+          EditorView.lineWrapping,
+          EDITOR_THEME,
+          EditorView.contentAttributes.of({
+            "aria-label": "Custom CSS",
+            "aria-multiline": "true",
+            "aria-describedby": "custom-css-warning custom-css-count",
+            spellcheck: "false",
+            autocapitalize: "off",
+            autocorrect: "off",
+          }),
+          EditorView.updateListener.of((u) => {
+            if (u.docChanged) setCss(u.state.doc.toString());
+          }),
+        ],
+      }),
+    });
+    view.current = v;
+    return () => {
+      v.destroy();
+      view.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
+  }, []);
+
+  /** @brief Replace the editor document (reset). */
+  const setDoc = (next: string) => {
+    const v = view.current;
+    if (!v) return setCss(next);
+    v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: next } });
+  };
 
   const bytes = cssByteLength(css);
   const tooBig = bytes > MAX_CSS_BYTES;
@@ -85,35 +122,14 @@ export function CSSEditor({ initial }: { initial: string }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="flex flex-col gap-2">
-        <label htmlFor="custom-css" className="text-sm font-medium">
+        <span aria-hidden="true" className="text-sm font-medium">
           Custom CSS
-        </label>
-        <div className="relative h-72 overflow-hidden rounded-md border bg-surface">
-          <pre
-            ref={mirror}
-            aria-hidden="true"
-            data-testid="css-highlight"
-            className={`${FIELD} pointer-events-none absolute inset-0 overflow-hidden`}
-          >
-            <Highlight code={css} />
-          </pre>
-          <textarea
-            id="custom-css"
-            aria-describedby="custom-css-warning custom-css-count"
-            className={`${FIELD} absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent text-transparent caret-black dark:caret-white outline-none focus-visible:ring-2 focus-visible:ring-accent`}
-            value={css}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoComplete="off"
-            onChange={(e) => setCss(e.target.value)}
-            onScroll={(e) => {
-              if (mirror.current) {
-                mirror.current.scrollTop = e.currentTarget.scrollTop;
-                mirror.current.scrollLeft = e.currentTarget.scrollLeft;
-              }
-            }}
-          />
-        </div>
+        </span>
+        <div
+          ref={host}
+          data-testid="css-editor"
+          className={`h-72 overflow-hidden rounded-md border bg-surface focus-within:ring-2 focus-within:ring-accent ${TOKEN_STYLES}`}
+        />
         <p
           id="custom-css-count"
           aria-live="polite"
@@ -141,7 +157,7 @@ export function CSSEditor({ initial }: { initial: string }) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setCss(saved)}
+            onClick={() => setDoc(saved)}
             disabled={!dirty || update.isPending}
           >
             Reset
