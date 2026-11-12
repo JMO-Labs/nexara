@@ -1,7 +1,7 @@
 """add nudges table and nudge notification preferences
 
 Revision ID: 0024_nudges
-Revises: 0023_bookmarks
+Revises: 0024_add_user_pronouns
 """
 
 from collections.abc import Sequence
