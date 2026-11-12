@@ -39,54 +39,6 @@ _TYPE_DEFAULTS: dict[str, dict[str, bool]] = {
 
 _LEGACY_RE = re.compile(r"^notif_(?P<type>\w+?)_(?P<channel>inapp|push|email)$")
 
-# Legacy columns recreated on downgrade: (name, server default).
-_LEGACY_COLS: tuple[tuple[str, bool], ...] = (
-    ("notif_mention_inapp", True),
-    ("notif_mention_push", True),
-    ("notif_mention_email", True),
-    ("notif_comment_inapp", True),
-    ("notif_comment_push", True),
-    ("notif_comment_email", True),
-    ("notif_reaction_inapp", True),
-    ("notif_reaction_push", True),
-    ("notif_reaction_email", False),
-    ("notif_new_post_inapp", True),
-    ("notif_new_post_push", False),
-    ("notif_new_post_email", False),
-    ("notif_event_reminder_inapp", True),
-    ("notif_event_reminder_push", True),
-    ("notif_event_reminder_email", True),
-    ("notif_event_rsvp_inapp", True),
-    ("notif_event_rsvp_push", False),
-    ("notif_event_rsvp_email", False),
-    ("notif_gallery_activity_inapp", True),
-    ("notif_gallery_activity_push", False),
-    ("notif_gallery_activity_email", False),
-    ("notif_dm_inapp", True),
-    ("notif_dm_push", True),
-    ("notif_dm_email", True),
-    ("notif_prompt_inapp", True),
-    ("notif_prompt_push", True),
-    ("notif_prompt_email", False),
-    ("notif_prompt_summary_inapp", True),
-    ("notif_prompt_summary_push", False),
-    ("notif_prompt_summary_email", False),
-    ("notif_birthday_inapp", True),
-    ("notif_birthday_push", False),
-    ("notif_birthday_email", False),
-    ("notif_system_inapp", True),
-    ("notif_system_push", True),
-    ("notif_system_email", True),
-    ("notif_poll_inapp", True),
-    ("notif_poll_push", False),
-    ("notif_poll_email", False),
-    ("notif_invite_accepted_inapp", True),
-    ("notif_invite_accepted_push", True),
-    ("notif_invite_accepted_email", False),
-    ("notif_nudge_inapp", True),
-    ("notif_nudge_push", False),
-    ("notif_nudge_email", False),
-)
 _MUTE_COLS = ("mute_all_push", "mute_all_email")
 
 
@@ -97,6 +49,12 @@ def _build_prefs(row: dict[str, object]) -> dict[str, dict[str, bool]]:
         m = _LEGACY_RE.match(col)
         if m and value is not None and m["type"] in prefs:
             prefs[m["type"]][m["channel"]] = bool(value)
+            if m["type"] == "gallery_activity":  # service maps gallery_reminder here too
+                prefs["gallery_reminder"][m["channel"]] = bool(value)
+    for channel in ("email", "push"):
+        if row.get(f"mute_all_{channel}"):
+            for p in prefs.values():
+                p[channel] = False
     return prefs
 
 
@@ -171,31 +129,20 @@ def upgrade() -> None:
         for c in sa.inspect(bind).get_columns("user_settings")
         if _LEGACY_RE.match(c["name"])
     ]
-    select = sa.text(f"SELECT user_id, {', '.join(legacy)} FROM user_settings")  # noqa: S608
+    cols = ", ".join([*legacy, *_MUTE_COLS])
+    select = sa.text(f"SELECT user_id, {cols} FROM user_settings")  # noqa: S608
     rows = bind.execute(select).mappings()
     update = sa.text(
         "UPDATE user_settings SET notification_prefs = CAST(:p AS jsonb) WHERE user_id = :uid"
     )
     for row in rows.all():
         bind.execute(update, {"p": json.dumps(_build_prefs(dict(row))), "uid": row["user_id"]})
-
-    for col in (*legacy, *_MUTE_COLS):
-        op.drop_column("user_settings", col)
+    # Legacy notif_* / mute_all_* columns are kept (readers still use them);
+    # dropped in the nexara#74 follow-up once services read notification_prefs.
 
 
 def downgrade() -> None:
-    for col, default in _LEGACY_COLS:
-        op.add_column(
-            "user_settings",
-            sa.Column(
-                col, sa.Boolean(), nullable=False, server_default=sa.text(str(default).lower())
-            ),
-        )
-    for col in _MUTE_COLS:
-        op.add_column(
-            "user_settings",
-            sa.Column(col, sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        )
+    """@brief Drop v2 columns. Lossy: notification_prefs is not copied back to legacy columns."""
     for col in (
         "digest_last_sent_at",
         "digest_cadence",

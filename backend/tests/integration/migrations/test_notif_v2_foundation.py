@@ -91,6 +91,8 @@ def test_upgrade_backfills_adds_and_drops(scratch):
             notif_mention_email=False,
             notif_reaction_email=True,
             notif_comment_push=False,
+            notif_gallery_activity_email=True,
+            notif_gallery_activity_push=True,
             mute_all_email=True,
         )
         default_uid = _seed_user(conn)
@@ -103,15 +105,16 @@ def test_upgrade_backfills_adds_and_drops(scratch):
             {"u": uid},
         ).scalar_one()
         assert len(prefs) == 12
+        # mute_all_email forces email off for every type, beating overrides
+        assert all(v["email"] is False for v in prefs.values())
         # legacy overrides win over type defaults
-        assert prefs["mention"]["email"] is False
-        assert prefs["reaction"]["email"] is True
+        assert prefs["mention"]["push"] is True
+        assert prefs["comment"]["push"] is False
+        # gallery_reminder follows the gallery_activity legacy values
+        assert prefs["gallery_reminder"]["push"] is True
         assert prefs["comment"]["push"] is False
         # missing combos fall back to section 5.1 defaults
         assert prefs["mention"]["toast"] is True
-        assert prefs["gallery_reminder"] == {
-            "inapp": True, "email": True, "push": False, "toast": False,
-        }  # fmt: skip
         assert all(set(v) == {"inapp", "email", "push", "toast"} for v in prefs.values())
 
         d = conn.execute(
@@ -119,13 +122,15 @@ def test_upgrade_backfills_adds_and_drops(scratch):
             {"u": default_uid},
         ).scalar_one()
         assert d["mention"] == {"inapp": True, "email": True, "push": True, "toast": True}
+        assert d["gallery_reminder"]["email"] is False  # follows gallery_activity default
 
         us = _cols(conn, "user_settings")
         assert {
             "notification_prefs", "dnd_schedule", "dnd_until", "dnd_timezone",
             "digest_cadence", "digest_last_sent_at",
         } <= us  # fmt: skip
-        assert not {c for c in us if c.startswith("notif_") or c.startswith("mute_all_")}
+        # legacy columns are retained until readers migrate
+        assert {"notif_mention_email", "mute_all_email"} <= us
         assert {"group_key", "count", "actor_ids", "updated_at", "dismissed_at"} <= _cols(
             conn, "notifications"
         )
@@ -144,12 +149,12 @@ def test_upgrade_backfills_adds_and_drops(scratch):
         )
 
 
-def test_downgrade_restores_legacy_columns(scratch):
+def test_downgrade_drops_v2_columns(scratch):
     cfg, engine = scratch
     command.upgrade(cfg, REV)
     command.downgrade(cfg, PREV)
     with engine.begin() as conn:
         us = _cols(conn, "user_settings")
-        assert "notif_mention_inapp" in us and "mute_all_email" in us
+        assert "notif_mention_inapp" in us and "mute_all_email" in us  # never dropped
         assert "notification_prefs" not in us
         assert "group_key" not in _cols(conn, "notifications")

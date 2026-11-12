@@ -42,8 +42,8 @@ class UserSettings(Base):
     )
 
     # --- Notification preferences v2: {type_key: {channel: bool}} ---
-    # TODO(nexara#74 follow-up): legacy notif_* / mute_all_* columns below are
-    # dropped by migration b2c3d4e5f6a7; remove them once services move to JSONB.
+    # Legacy notif_* / mute_all_* columns below are still the source of truth for
+    # readers; migration b2c3d4e5f6a7 only backfills prefs. Dropped in a follow-up.
     notification_prefs: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
