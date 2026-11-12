@@ -262,6 +262,43 @@ describe("GlobalCommandPalette", () => {
     expect(mockPush).toHaveBeenCalledWith("/app/events?event=e1");
   });
 
+  it.each([
+    ["polls", { id: "p1", parent_id: "post9" }, "/app/post/post9"],
+    ["galleries", { id: "g1" }, "/app/galleries?gallery=g1"],
+    ["subgroups", { id: "s1", slug: "choir" }, "/app/subgroups/choir"],
+  ])("navigates for %s result", async (type, extra, href) => {
+    (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        items: [
+          {
+            type,
+            title: "Target Row",
+            snippet: "s",
+            created_at: "2026-04-25T00:00:00Z",
+            ...extra,
+          },
+        ],
+        next_cursor: null,
+        has_more: false,
+      },
+      isLoading: false,
+    });
+    render(
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
+    );
+    act(() => useUI.getState().setCommandPaletteOpen(true));
+    const input = await screen.findByRole("combobox");
+    const user = userEvent.setup();
+    await user.type(input, "target");
+    const item = (await screen.findByText("Target Row")).closest(
+      '[role="option"]',
+    );
+    await user.click(item!);
+    expect(mockPush).toHaveBeenCalledWith(href);
+  });
+
   it("navigates to post with comment anchor when comment result selected", async () => {
     (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
       data: {
