@@ -26,7 +26,9 @@ def upgrade() -> None:
             "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
         ),
         sa.Column(
-            "user_id", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"),
+            "user_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
         ),
         sa.Column(
