@@ -4,6 +4,7 @@ nav:
   - getting-started.md
   - development.md
   - deployment.md
+  - deployment
   - user
   - developer
   - ...
