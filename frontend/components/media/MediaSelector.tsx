@@ -194,9 +194,7 @@ export function MediaSelector({ open, onClose, onSelect }: MediaSelectorProps) {
           <Gallery onPick={(m) => pick(fromItem(m))} />
         </TabPanel>
         <TabPanel value="url">
-          <UrlTab
-            onSubmit={(url) => pick({ mediaId: null, url, alt: url })}
-          />
+          <UrlTab onSubmit={(url) => pick({ mediaId: null, url, alt: url })} />
         </TabPanel>
       </Tabs>
     </Modal>
