@@ -13,7 +13,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import structlog
-from sqlalchemy import select
 
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
@@ -25,8 +24,8 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
-from app.services import mentions
 from app.services.activity_publish import record_activity
+from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -547,30 +546,15 @@ class PostService:
         )
 
     async def _notify_mentions(self, content: str, actor: User, post_id: uuid.UUID) -> None:
-        """
-        @brief Notify users @mentioned in content (never the actor).
-        @param content Text containing potential @mentions.
-        @param actor Author of the content.
-        @param post_id Post UUID for the notification link.
-        """
-        usernames = mentions.extract(content)
-        if not usernames:
-            return
-        stmt = select(User).where(User.username.in_(usernames), User.deleted_at.is_(None))
-        result = await self._post_repo._session.execute(stmt)
-        for mentioned in result.scalars().all():
-            if mentioned.id == actor.id:
-                continue
-            await self._notification.notify(
-                user_id=mentioned.id,
-                type="mention",
-                payload={
-                    "post_id": str(post_id),
-                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
-                    "link": f"/app/post/{post_id}",
-                },
-                actor_id=actor.id,
-            )
+        """@brief Notify @mentioned users in this community (never the actor)."""
+        await notify_mentions(
+            self._post_repo._session,
+            self._notification,
+            self._community_id,
+            content,
+            actor,
+            post_id,
+        )
 
     async def _notify_comment_participants(
         self,

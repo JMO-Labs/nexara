@@ -286,6 +286,44 @@ class TestAddComment:
         assert call_kwargs["type"] == "comment"
 
     @pytest.mark.asyncio
+    async def test_add_comment_notifies_mentioned_user(self, service, post_repo, comment_repo):
+        """add_comment() notifies users @mentioned in the comment."""
+        user = _make_user(user_id=VIEWER_ID)
+        bob = _make_user(user_id=uuid.uuid4(), username="bob")
+        post = _make_post(author_id=VIEWER_ID)
+        comment = MagicMock()
+        comment.id = uuid.uuid4()
+        comment.content = "hi @bob"
+        comment.parent_id = None
+        comment.created_at = MagicMock()
+        comment.created_at.isoformat.return_value = "2025-01-01T00:00:00"
+        post_repo.get_by_id.return_value = post
+        comment_repo.create_comment.return_value = comment
+        scalars = MagicMock()
+        scalars.all.return_value = [bob]
+        result = MagicMock()
+        result.scalars.return_value = scalars
+        post_repo._session.execute = AsyncMock(return_value=result)
+        await service.add_comment(POST_ID, user, "hi @bob")
+        service._notification.notify.assert_awaited_once()
+        kwargs = service._notification.notify.await_args.kwargs
+        assert kwargs["user_id"] == bob.id
+        assert kwargs["type"] == "mention"
+
+    @pytest.mark.asyncio
+    async def test_mention_lookup_scoped_to_community(self, service, post_repo):
+        """Mention user lookup filters on the service's community_id."""
+        user = _make_user()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        post_repo._session.execute = AsyncMock(return_value=result)
+        await service._notify_mentions("hey @bob", user, POST_ID)
+        stmt = post_repo._session.execute.await_args.args[0]
+        compiled = stmt.compile()
+        assert "community_id" in str(compiled)
+        assert COMMUNITY_ID in compiled.params.values()
+
+    @pytest.mark.asyncio
     async def test_add_comment_to_missing_post(self, service, post_repo):
         """add_comment() raises NotFoundError when post does not exist."""
         user = _make_user()
