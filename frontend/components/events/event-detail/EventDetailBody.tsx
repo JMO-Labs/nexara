@@ -11,6 +11,7 @@ import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
 import { formatRange } from "./formatRange";
+import { ExportIcalButton } from "./ExportIcalButton";
 
 const EventMiniMap = dynamic(
   () => import("../EventMiniMap").then((m) => m.EventMiniMap),
@@ -65,6 +66,9 @@ export function EventDetailBody({ event }: { event: EventItem }) {
           <Markdown content={event.description} size="sm" />
         </div>
       )}
+      <div className="mb-4">
+        <ExportIcalButton eventId={event.id} />
+      </div>
       <RsvpInline
         eventId={event.id}
         labels={event.rsvp_labels}

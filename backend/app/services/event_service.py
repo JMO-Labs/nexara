@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 import structlog
 from dateutil.rrule import rrulestr
+import httpx
 from icalendar import Calendar as ICalCalendar
 from icalendar import Event as ICalEvent
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
+from app.core.http_safe import UnsafeUrlError, safe_fetch
 from app.models.event import CalendarSubscription, Event
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
@@ -570,13 +572,21 @@ class EventService:
             raise AuthorizationError(_("You cannot view this event"))
         return self.to_ical([event])
 
-    async def export_feed_ical(self, user_id: uuid.UUID) -> bytes:
+    async def export_feed_ical(
+        self,
+        user_id: uuid.UUID,
+        *,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> bytes:
+        """@brief Export visible events in [start, end] (default -30d..+365d)."""
         now = datetime.now(UTC)
-        end = now + timedelta(days=365)
+        start = start or now - timedelta(days=30)
+        end = end or now + timedelta(days=365)
         subgroup_ids = await self._user_subgroup_ids(user_id)
         events = await self._repo.list_in_range(
             self._community_id,
-            now - timedelta(days=30),
+            start,
             end,
             viewer_id=user_id,
             subgroup_ids=subgroup_ids,
@@ -779,6 +789,23 @@ class EventService:
         if sub is None:
             raise NotFoundError(_("Calendar subscription not found"))
         await self._repo.delete_subscription(sub_id)
+
+    async def sync_now(self, sub_id: uuid.UUID, user_id: uuid.UUID) -> int:
+        """
+        @brief Fetch and upsert one of the user's subscriptions immediately.
+
+        @return Number of events upserted.
+        """
+        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
+        if sub is None or not sub.source_url:
+            raise NotFoundError(_("Calendar subscription not found"))
+        try:
+            body = await safe_fetch(sub.source_url)
+        except (UnsafeUrlError, httpx.HTTPError) as exc:
+            sub.sync_error = f"fetch_error: {exc}"
+            await self._session.flush()
+            raise AppError(message="Could not fetch calendar", code="sync_failed") from exc
+        return await self.sync_subscription(sub, body)
 
     # ── Sync (called from Celery task) ────────────────────────────────
 

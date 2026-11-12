@@ -114,6 +114,7 @@ export interface CalendarSubscription {
   last_synced_at: string | null;
   sync_error: string | null;
   sync_interval_minutes: number;
+  next_sync_at?: string | null;
 }
 
 export interface CreateSubscriptionBody {
