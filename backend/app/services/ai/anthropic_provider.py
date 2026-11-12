@@ -34,7 +34,9 @@ class AnthropicProvider(AIProvider):
         self._key = api_key
         self._client = client or httpx.AsyncClient(timeout=timeout)
 
-    async def _call(self, model: str, content: object, max_tokens: int, temp: float | None) -> TextResult:
+    async def _call(
+        self, model: str, content: object, max_tokens: int, temp: float | None
+    ) -> TextResult:
         body: dict[str, object] = {
             "model": model,
             "max_tokens": max_tokens,

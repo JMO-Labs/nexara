@@ -43,7 +43,9 @@ class OpenAIProvider(AIProvider):
         resp.raise_for_status()
         return resp.json()
 
-    async def _chat(self, model: str, content: object, max_tokens: int, temp: float | None) -> TextResult:
+    async def _chat(
+        self, model: str, content: object, max_tokens: int, temp: float | None
+    ) -> TextResult:
         body: dict[str, object] = {
             "model": model,
             "max_tokens": max_tokens,
@@ -55,7 +57,11 @@ class OpenAIProvider(AIProvider):
         usage = data["usage"]
         tin, tout = usage["prompt_tokens"], usage["completion_tokens"]
         rin, rout = PRICING[model]
-        return data["choices"][0]["message"]["content"] or "", cost_cents(tin, tout, rin, rout), tin + tout
+        return (
+            data["choices"][0]["message"]["content"] or "",
+            cost_cents(tin, tout, rin, rout),
+            tin + tout,
+        )
 
     async def complete(self, prompt: str, max_tokens: int, temperature: float) -> TextResult:
         return await self._chat(TEXT_MODEL, prompt, max_tokens, temperature)

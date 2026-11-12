@@ -51,9 +51,7 @@ class TestFactory:
         assert isinstance(p, cls)
         assert isinstance(p, AIProvider)
 
-    @pytest.mark.parametrize(
-        "name", ["anthropic", "openai", "ollama"]
-    )
+    @pytest.mark.parametrize("name", ["anthropic", "openai", "ollama"])
     def test_missing_required_env_raises(self, name):
         with pytest.raises(AIProviderConfigError):
             create_provider(_settings(AI_PROVIDER=name, OLLAMA_BASE_URL=""))
@@ -129,9 +127,7 @@ class TestOpenAI:
         assert client.post.call_args.kwargs["json"]["model"] == "gpt-4o"
 
     async def test_embed(self):
-        client = _client(
-            {"data": [{"embedding": [0.1, 0.2]}], "usage": {"prompt_tokens": 3}}
-        )
+        client = _client({"data": [{"embedding": [0.1, 0.2]}], "usage": {"prompt_tokens": 3}})
         p = OpenAIProvider(api_key="k", client=client)
         vec, _, tokens = await p.embed("x")
         assert vec == [0.1, 0.2]
@@ -145,9 +141,7 @@ class TestOpenAI:
 
 class TestOllama:
     async def test_complete_is_free(self):
-        client = _client(
-            {"response": "local", "prompt_eval_count": 4, "eval_count": 6}
-        )
+        client = _client({"response": "local", "prompt_eval_count": 4, "eval_count": 6})
         p = OllamaProvider(base_url="http://o:11434/", model="mistral", client=client)
         text, cost, tokens = await p.complete("p", 10, 0.1)
         assert (text, cost, tokens) == ("local", 0.0, 10)
