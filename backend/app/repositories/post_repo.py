@@ -120,6 +120,54 @@ class PostRepository(BaseRepository[Post]):
 
         return ordered, next_cursor
 
+    async def list_responses(
+        self,
+        community_id: uuid.UUID,
+        prompt_post_id: uuid.UUID,
+        *,
+        viewer_id: uuid.UUID | None = None,
+        cursor: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        """
+        @brief List posts replying to a prompt post, newest first.
+
+        @param community_id Community scope.
+        @param prompt_post_id PromptPost UUID (``reply_to_prompt_id`` value).
+        @param viewer_id Viewer UUID for block filter and reaction state.
+        @param cursor ISO timestamp of the last seen post.
+        @param limit Page size (capped at MAX_PAGE_SIZE).
+        @return Tuple of (enriched post dicts, next_cursor).
+        """
+        limit = min(limit, MAX_PAGE_SIZE)
+        stmt = (
+            self._base_query()
+            .where(
+                Post.community_id == community_id,
+                Post.reply_to_prompt_id == prompt_post_id,
+            )
+            .order_by(Post.created_at.desc())
+        )
+        if cursor:
+            try:
+                stmt = stmt.where(Post.created_at < datetime.fromisoformat(cursor))
+            except (ValueError, TypeError):
+                pass
+        if viewer_id:
+            stmt = self.apply_block_filter(stmt, viewer_id)
+
+        result = await self._session.execute(stmt.limit(limit + 1))
+        rows = list(result.scalars().all())
+        next_cursor: str | None = None
+        if len(rows) > limit:
+            rows = rows[:limit]
+            next_cursor = rows[-1].created_at.isoformat()
+        if not rows:
+            return [], None
+
+        data = await self._enrich_posts([p.id for p in rows], viewer_id)
+        return [data[p.id] for p in rows if p.id in data], next_cursor
+
     async def count_new_since(
         self,
         community_id: uuid.UUID,
