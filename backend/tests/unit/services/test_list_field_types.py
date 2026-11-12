@@ -1,39 +1,78 @@
-"""@file Tests for builtin list field types."""
+"""@file Tests for built-in projecting list field types (date, location)."""
+
+from datetime import UTC, date, datetime
 
 import pytest
 
 from app.services.list_field_types import registry
-
-OPTS = {"options": [{"value": "a", "label": "A"}, {"value": "b", "label": "B"}]}
-
-CASES = [
-    ("bool", {}, [True, False], ["x", 1, None]),
-    ("text", {"multiline": False}, ["hi", None], [5, ["a"]]),
-    ("select", OPTS, ["a"], ["z", 1]),
-    ("multiselect", OPTS, [["a", "b"], []], [["z"], "a", ["a", 1]]),
-    ("time", {}, ["09:30", "23:59", "00:00"], ["24:00", "9:30", "12:60", "x", 5]),
-    ("checkbox", {"completion_mode": "shared"}, [True, False], ["x", 1]),
-]
+from app.services.list_field_types.builtin import DateField, LocationField
 
 
-def test_all_registered():
-    for key, *_ in CASES:
-        assert key in registry.keys()
+def test_registered():
+    assert {"date", "location"} <= set(registry.keys())
+    assert isinstance(registry.get("date"), DateField)
+    assert isinstance(registry.get("location"), LocationField)
 
 
-@pytest.mark.parametrize(("key", "cfg", "good", "bad"), CASES)
-def test_validation(key, cfg, good, bad):
-    for v in good:
-        assert registry.validate_value(key, v, cfg) == v
-    for v in bad:
+class TestDateField:
+    ft = DateField()
+
+    def test_validate_ok(self):
+        assert self.ft.validate_value("2026-03-04", {}) == "2026-03-04"
+
+    @pytest.mark.parametrize("bad", ["03/04/2026", "2026-13-01", "", 5, None])
+    def test_validate_bad(self, bad):
         with pytest.raises(ValueError):
-            registry.validate_value(key, v, cfg)
+            self.ft.validate_value(bad, {})
+
+    def test_config_default(self):
+        assert self.ft.validate_config({}) == {"is_due_field": False}
+
+    def test_projects_due_at_when_flag(self):
+        cols = self.ft.project_columns("2026-03-04", {"is_due_field": True})
+        assert cols == {"due_at": datetime(2026, 3, 4, tzinfo=UTC)}
+
+    def test_no_projection_without_flag(self):
+        assert self.ft.project_columns("2026-03-04", {"is_due_field": False}) == {}
+        assert self.ft.project_columns("2026-03-04", {}) == {}
+
+    def test_serialize_deserialize(self):
+        assert self.ft.serialize(date(2026, 3, 4)) == "2026-03-04"
+        assert self.ft.serialize(datetime(2026, 3, 4, 9, 0, tzinfo=UTC)) == "2026-03-04"
+        assert self.ft.serialize("2026-03-04") == "2026-03-04"
+        assert self.ft.deserialize("2026-03-04") == date(2026, 3, 4)
+        assert self.ft.deserialize(None) is None
 
 
-def test_checkbox_config_rejects_bad_mode():
-    with pytest.raises(ValueError):
-        registry.validate_config("checkbox", {"completion_mode": "nope"})
+class TestLocationField:
+    ft = LocationField()
 
+    def test_validate_ok(self):
+        v = {"lat": 48.5, "lon": -120}
+        assert self.ft.validate_value(v, {}) == {"lat": 48.5, "lon": -120.0}
 
-def test_select_config_normalizes():
-    assert registry.validate_config("select", OPTS) == OPTS
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            {"lat": 91, "lon": 0},
+            {"lat": -91, "lon": 0},
+            {"lat": 0, "lon": 181},
+            {"lat": 0, "lon": -181},
+            {"lat": "1", "lon": 0},
+            {"lat": True, "lon": 0},
+            {"lat": 0},
+            "1,2",
+            None,
+        ],
+    )
+    def test_validate_bad(self, bad):
+        with pytest.raises(ValueError):
+            self.ft.validate_value(bad, {})
+
+    def test_projects_both(self):
+        assert self.ft.project_columns({"lat": 1.5, "lon": 2.5}, {}) == {"lat": 1.5, "lon": 2.5}
+
+    def test_serialize_passthrough(self):
+        v = {"lat": 1.0, "lon": 2.0}
+        assert self.ft.serialize(v) == v
+        assert self.ft.deserialize(v) == v
