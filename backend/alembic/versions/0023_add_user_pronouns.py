@@ -1,7 +1,9 @@
 """add user pronouns
 
 Revision ID: 0023_add_user_pronouns
-Revises: 0022_plugin_models
+Revises: 0020_add_recipient_to_posts, 0022_plugin_models
+
+Also merges the two heads present on dev into one.
 """
 
 from __future__ import annotations
@@ -11,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0023_add_user_pronouns"
-down_revision = "0022_plugin_models"
+down_revision = ("0020_add_recipient_to_posts", "0022_plugin_models")
 branch_labels = None
 depends_on = None
 
