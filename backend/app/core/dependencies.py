@@ -28,6 +28,7 @@ from app.db.session import async_session_factory
 if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
+    from app.services.notifications.dispatcher import Dispatcher
     from app.services.ai.suggestion_service import SuggestionService
 
 logger = structlog.get_logger(__name__)
@@ -226,6 +227,7 @@ async def get_activity_repo(
     @return ActivityRepository instance for recording activity events.
     """
     from app.repositories.activity_repo import ActivityRepository
+    from app.services.notifications.dispatcher import Dispatcher
 
     return ActivityRepository(db)
 
@@ -269,3 +271,21 @@ async def get_plugin_from_api_key(
     if not key:
         raise AuthenticationError(message=_("Authentication required"))
     return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
+
+
+_dispatcher: Dispatcher | None = None
+
+
+def get_dispatcher() -> Dispatcher:
+    """
+    @brief Return the process-wide notification Dispatcher (lazy singleton).
+
+    @return Dispatcher bound to the shared EventBus.
+    """
+    global _dispatcher
+    if _dispatcher is None:
+        from app.services.notifications.dispatcher import Dispatcher
+        from app.services.realtime.event_bus import event_bus
+
+        _dispatcher = Dispatcher(event_bus)
+    return _dispatcher
