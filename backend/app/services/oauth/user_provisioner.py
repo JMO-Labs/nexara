@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AuthenticationError
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
 from app.models.user_oauth_link import UserOAuthLink
+from app.plugins.hooks import HookRegistry
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
 from app.repositories.user_repo import UserRepository
