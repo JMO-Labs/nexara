@@ -43,12 +43,21 @@ describe("BrandingTab", () => {
     vi.mocked(api.updateBranding).mockResolvedValue({ branding: base });
     wrap(<BrandingTab />);
     const id = "11111111-1111-4111-8111-111111111111";
-    await userEvent.type(await screen.findByLabelText("Email logo media ID"), id);
+    await userEvent.type(
+      await screen.findByLabelText("Email logo media ID"),
+      id,
+    );
     await userEvent.type(screen.getByLabelText("Email footer text"), "Bye");
     await userEvent.type(screen.getByLabelText("Email sender name"), "Garden");
     await userEvent.type(screen.getByLabelText("Landing CTA text"), "Join");
-    await userEvent.type(screen.getByLabelText("PWA icon 192x192 media ID"), id);
-    await userEvent.type(screen.getByLabelText("PWA icon 512x512 media ID"), id);
+    await userEvent.type(
+      screen.getByLabelText("PWA icon 192x192 media ID"),
+      id,
+    );
+    await userEvent.type(
+      screen.getByLabelText("PWA icon 512x512 media ID"),
+      id,
+    );
     await userEvent.click(
       screen.getByRole("switch", { name: "Show feature list on landing page" }),
     );
@@ -67,7 +76,10 @@ describe("BrandingTab", () => {
 
   it("disables save on an invalid media ID", async () => {
     wrap(<BrandingTab />);
-    await userEvent.type(await screen.findByLabelText("Email logo media ID"), "nope");
+    await userEvent.type(
+      await screen.findByLabelText("Email logo media ID"),
+      "nope",
+    );
     expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 

@@ -54,7 +54,11 @@ function BrandingForm({ initial }: { initial: Branding }) {
       ? ACCENT_ERROR
       : undefined;
   const canSave =
-    !accentError && !invalid && extraValid(extra) && name.trim().length > 0 && !update.isPending;
+    !accentError &&
+    !invalid &&
+    extraValid(extra) &&
+    name.trim().length > 0 &&
+    !update.isPending;
   const warnings = checkPairs(colors).filter((p) => !p.ok);
 
   const submit = (e: React.FormEvent) => {
