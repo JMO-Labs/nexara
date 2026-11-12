@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 import uuid
-from io import BytesIO
 from collections.abc import Callable
 from datetime import UTC, datetime
+from io import BytesIO
 from typing import Any
 
 from fastapi import APIRouter, Depends
