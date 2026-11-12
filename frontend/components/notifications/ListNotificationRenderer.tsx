@@ -7,6 +7,7 @@
 import type { ComponentType, SVGProps } from "react";
 import { List, CircleCheck, Check, Clock, User, X } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatTime } from "./formatTime";
@@ -33,16 +34,25 @@ export interface ListNotificationProps {
 
 const s = (v: unknown, d = ""): string => (typeof v === "string" ? v : d);
 
-/** Title templates per type, interpolated from notification.context. */
-export const LIST_TITLES: Record<
+/** Message key and fallback param builder per list type. */
+const TITLES: Record<
   string,
-  (c: Record<string, unknown>) => string
+  { key: string; param?: [name: string, ctx: string, fallback: string] }
 > = {
-  "list.item": (c) => `New item in ${s(c.listName, "your list")}`,
-  "list.signup": (c) => `${s(c.userName, "Someone")} claimed`,
-  "list.completed": () => "Item marked done",
-  "list.expiring": () => "Expires in 1 day",
-  "list.member": (c) => `Added by ${s(c.inviterName, "a member")}`,
+  "list.item": {
+    key: "item",
+    param: ["listName", "listName", "fallback_list"],
+  },
+  "list.signup": {
+    key: "signup",
+    param: ["userName", "userName", "fallback_user"],
+  },
+  "list.completed": { key: "completed" },
+  "list.expiring": { key: "expiring" },
+  "list.member": {
+    key: "member",
+    param: ["inviterName", "inviterName", "fallback_inviter"],
+  },
 };
 
 const ICONS: Record<string, IconCmp> = {
@@ -59,7 +69,7 @@ const ICONS: Record<string, IconCmp> = {
  * @return true for the five list types
  */
 export function isListNotificationType(type: string): boolean {
-  return type in LIST_TITLES;
+  return type in TITLES;
 }
 
 /**
@@ -78,7 +88,18 @@ export function ListNotification({
 }: ListNotificationProps) {
   const { id, type, context, createdAt } = notification;
   const Icon = ICONS[type] ?? List;
-  const title = (LIST_TITLES[type] ?? (() => type))(context);
+  const t = useTranslations("lists");
+  const spec = TITLES[type];
+  const title = !spec
+    ? type
+    : spec.param
+      ? t(`notifications.${spec.key}`, {
+          [spec.param[0]]: s(
+            context[spec.param[1]],
+            t(`notifications.${spec.param[2]}`),
+          ),
+        })
+      : t(`notifications.${spec.key}`);
   const detail = s(context.itemTitle) || s(context.detail);
   const listId = s(context.listId);
 
@@ -123,7 +144,7 @@ export function ListNotification({
       )}
       {unread && onAck && (
         <IconButton
-          aria-label="Acknowledge notification"
+          aria-label={t("notifications.acknowledge")}
           size="sm"
           variant="ghost"
           disabled={ackPending}
@@ -134,7 +155,7 @@ export function ListNotification({
       )}
       <button
         type="button"
-        aria-label="Dismiss"
+        aria-label={t("notifications.dismiss")}
         onClick={() => onDismiss(id)}
         className="text-muted focus-visible:outline-accent mr-2 rounded p-1 hover:bg-gray-200 focus-visible:outline-2"
       >

@@ -5,9 +5,20 @@
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders } from "../../utils/renderWithProviders";
+import type { ReactElement } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
+import { renderWithProviders as baseRender } from "../../utils/renderWithProviders";
 import { NotificationRow } from "@/components/notifications/NotificationRow";
 import type { NotificationItem } from "@/lib/api/notifications";
+
+/** @brief Render inside app providers plus next-intl (list renderers). */
+const renderWithProviders = (ui: ReactElement) =>
+  baseRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 const item = (over: Partial<NotificationItem> = {}): NotificationItem => ({
   id: "n1",
