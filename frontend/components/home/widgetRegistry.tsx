@@ -4,6 +4,7 @@
  */
 import type { ComponentType } from "react";
 import { UpcomingEventsWidget } from "./widgets/UpcomingEventsWidget";
+import { NextEventCountdownWidget } from "./widgets/NextEventCountdownWidget";
 import { MyGroupsWidget } from "./widgets/MyGroupsWidget";
 import { MediaCarouselWidget } from "./widgets/MediaCarouselWidget";
 import { QuickActionsWidget } from "./widgets/QuickActionsWidget";
@@ -12,7 +13,8 @@ export type WidgetId =
   | "upcoming-events"
   | "my-groups"
   | "media"
-  | "quick-actions";
+  | "quick-actions"
+  | "next-event-countdown";
 
 export const WIDGETS: {
   id: WidgetId;
@@ -30,5 +32,10 @@ export const WIDGETS: {
     id: "quick-actions",
     title: "Quick actions",
     Component: QuickActionsWidget,
+  },
+  {
+    id: "next-event-countdown",
+    title: "Next event",
+    Component: NextEventCountdownWidget,
   },
 ];
