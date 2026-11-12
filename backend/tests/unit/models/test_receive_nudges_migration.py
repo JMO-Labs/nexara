@@ -16,13 +16,13 @@ BACKEND = Path(__file__).resolve().parents[3]
 
 
 def test_receive_nudges_migration_is_head() -> None:
-    """@brief New migration chains after 0027_add_sso_only_to_branding."""
+    """@brief New migration chains after b2c3d4e5f6a7 (current dev head)."""
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
     assert script.get_heads() == ["0028_receive_nudges"]
     rev = script.get_revision("0028_receive_nudges")
-    assert rev.down_revision == "0027_add_sso_only_to_branding"
+    assert rev.down_revision == "b2c3d4e5f6a7"
 
 
 def test_user_settings_has_receive_nudges_column() -> None:
