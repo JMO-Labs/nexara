@@ -558,6 +558,7 @@ class TestSassybotMentionOnComment:
         post_repo.get_by_id.return_value = _make_post(author_id=AUTHOR_ID)
         comment_repo.create_comment.return_value = comment
 
-        await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "hey @sassybot")
+        with patch("app.services.post_service.notify_mentions", new=AsyncMock()):
+            await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "hey @sassybot")
 
         assert sassybot_delay.call_args.kwargs["args"] == (str(POST_ID), str(COMMUNITY_ID), True)
