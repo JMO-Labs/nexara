@@ -18,6 +18,13 @@ vi.mock("@/lib/api/client", async (orig) => ({
   apiDelete: vi.fn(),
 }));
 
+// jsdom lacks ResizeObserver (used by Radix Switch via useSize).
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 const schema = {
   title: { type: "string", label: "Title", required: true },
   rounds: { type: "integer", label: "Rounds", required: false },
