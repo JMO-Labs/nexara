@@ -113,7 +113,12 @@ describe("NotificationsBell badge motion", () => {
   it("pops the badge in", async () => {
     setup();
     const badge = await screen.findByTestId("unread-badge");
-    expect(badge.style.transform).toContain("scale(0.6)");
+    // Animation may have advanced a frame by the time findBy resolves.
+    const m = /scale\(([\d.]+)\)/.exec(badge.style.transform);
+    expect(m).not.toBeNull();
+    const s = Number(m?.[1]);
+    expect(s).toBeGreaterThanOrEqual(0.6);
+    expect(s).toBeLessThan(1);
   });
   it("renders the badge statically under reduced motion", async () => {
     reduced = true;
