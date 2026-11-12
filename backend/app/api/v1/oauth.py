@@ -25,13 +25,13 @@ from app.core.dependencies import get_db
 from app.core.exceptions import AuthenticationError
 from app.core.i18n import _
 from app.core.valkey import DB_CACHE, get_pool
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import LoginResponse
 from app.schemas.oauth import OAuthExchangeRequest
 from app.services.auth_service import AuthService
 from app.services.oauth.claim_mapper import map_claims
 from app.services.oauth.flow import OAuthFlow
-from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.oauth.group_mapper import (
     apply_subgroup_mappings,
     global_role_mappings,

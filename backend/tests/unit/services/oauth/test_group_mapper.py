@@ -67,8 +67,8 @@ def _repos(existing=(ENG, DES), member_of=()):
     subs = AsyncMock(spec=SubgroupRepository)
     subs.get_by_id.side_effect = lambda i, c: MagicMock(spec=Subgroup) if i in existing else None
     mem = AsyncMock(spec=SubgroupMemberRepository)
-    mem.get_membership.side_effect = (
-        lambda s, u: MagicMock(spec=SubgroupMember) if s in member_of else None
+    mem.get_membership.side_effect = lambda s, u: (
+        MagicMock(spec=SubgroupMember) if s in member_of else None
     )
     return subs, mem
 
@@ -129,8 +129,11 @@ class TestPreview:
         out = await preview_group_mapping(subs, CID, CM, ["eng"])
         by = {e["group"]: e for e in out}
         assert by["eng"] == {
-            "group": "eng", "subgroup_id": str(ENG), "role": "member",
-            "subgroup_exists": True, "matched": True,
+            "group": "eng",
+            "subgroup_id": str(ENG),
+            "role": "member",
+            "subgroup_exists": True,
+            "matched": True,
         }
         assert by["design"]["subgroup_exists"] is False
         assert by["design"]["matched"] is False

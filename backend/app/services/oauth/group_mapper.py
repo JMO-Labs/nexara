@@ -149,7 +149,9 @@ async def preview_group_mapping(
         exists: bool | None = None
         if raw:
             try:
-                exists = await subgroup_repo.get_by_id(uuid.UUID(str(raw)), community_id) is not None
+                exists = (
+                    await subgroup_repo.get_by_id(uuid.UUID(str(raw)), community_id) is not None
+                )
             except ValueError:
                 exists = False
         out.append(
