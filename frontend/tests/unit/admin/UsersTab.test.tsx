@@ -26,7 +26,7 @@ describe("UsersTab", () => {
   const wrapper = Wrapper;
 
   it("should render loading state", () => {
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: true,
     } as any);
 
@@ -36,7 +36,7 @@ describe("UsersTab", () => {
   });
 
   it("should render error state", () => {
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       error: new Error("Failed to load"),
     } as any);
@@ -69,7 +69,7 @@ describe("UsersTab", () => {
       has_more: false,
     };
 
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       data: mockUsers,
     } as any);
@@ -123,7 +123,7 @@ describe("UsersTab", () => {
       has_more: false,
     };
 
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       data: mockUsers,
     } as any);
@@ -148,7 +148,7 @@ describe("UsersTab", () => {
 
   it("confirms before deleting a user", () => {
     const del = { mutate: vi.fn(), isPending: false };
-    vi.mocked(useAdminModule.useAdminUsers).mockReturnValue({
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
       isLoading: false,
       data: {
         items: [
