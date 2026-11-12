@@ -16,9 +16,9 @@ import pytest
 
 from app.models.media import Media
 from app.models.post import Comment, Post, Reaction
+from app.models.serialization import serialize
 from app.models.user import User
 from app.repositories.export_data_repo import ExportDataRepository
-from app.models.serialization import serialize
 from app.services.export_service import build_export_archive
 
 UID = uuid.uuid4()
@@ -96,8 +96,15 @@ class TestBuildArchive:
 
 class TestSerialize:
     def test_excludes_sensitive_and_formats_values(self):
-        u = User(id=UID, email="e", username="u", display_name="d", password_hash="h",
-                 totp_secret="t", created_at=NOW)
+        u = User(
+            id=UID,
+            email="e",
+            username="u",
+            display_name="d",
+            password_hash="h",
+            totp_secret="t",
+            created_at=NOW,
+        )
         out = serialize(u)
         assert "password_hash" not in out and "totp_secret" not in out
         assert out["id"] == str(UID)
