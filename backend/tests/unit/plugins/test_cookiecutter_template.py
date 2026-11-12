@@ -66,7 +66,9 @@ class TestCookiecutterJson:
         assert ctx["min_core_version"] == "1.0.0"
 
     def test_default_permissions_are_valid_enum_values(self) -> None:
-        perms = json.loads(json.loads((TEMPLATE / "cookiecutter.json").read_text())["backend_permissions"])
+        perms = json.loads(
+            json.loads((TEMPLATE / "cookiecutter.json").read_text())["backend_permissions"]
+        )
         assert all(p in {e.value for e in PluginPermission} for p in perms)
 
     def test_sample_plugin_id_matches_slug(self) -> None:
