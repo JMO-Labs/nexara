@@ -3,9 +3,8 @@
 import json
 
 import pytest
-from pydantic import ValidationError
-
 from packaging.version import InvalidVersion
+from pydantic import ValidationError
 
 import app.plugins.manifest as manifest_mod
 from app.plugins.manifest import (
