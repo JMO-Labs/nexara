@@ -53,6 +53,12 @@ class OAuthProvider(Base):
         nullable=False,
         server_default="openid profile email groups",
     )
+    discovery_url: Mapped[str | None] = mapped_column(Text)
+    claim_mapping: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="{}",
+    )
     authorization_endpoint: Mapped[str | None] = mapped_column(Text)
     token_endpoint: Mapped[str | None] = mapped_column(Text)
     userinfo_endpoint: Mapped[str | None] = mapped_column(Text)

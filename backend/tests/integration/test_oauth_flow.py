@@ -144,6 +144,7 @@ class TestOAuthCallbackFlow:
                                 "oauth_state": "abc",
                                 "oauth_verifier": "verifier123",
                                 "oauth_provider": "oidc",
+                                "oauth_nonce": "nonce-789",
                             },
                         )
 
