@@ -83,13 +83,20 @@ export function PostCard({
         />
       </div>
       <PostBody content={post.content} truncate={truncateBody} />
-      {post.link_previews?.map((preview) =>
-        preview.provider_type && embedUrl(preview) ? (
-          <VideoEmbed key={preview.id} preview={preview} />
-        ) : (
-          <LinkPreviewCard key={preview.id} preview={preview} />
-        ),
-      )}
+      {post.link_previews && post.link_previews.length > 0 ? (
+        <div
+          data-testid="post-previews"
+          className="mt-3 min-w-0 max-w-full space-y-2"
+        >
+          {post.link_previews.map((preview) =>
+            preview.provider_type && embedUrl(preview) ? (
+              <VideoEmbed key={preview.id} preview={preview} />
+            ) : (
+              <LinkPreviewCard key={preview.id} preview={preview} />
+            ),
+          )}
+        </div>
+      ) : null}
       {post.media.length > 0 ? (
         <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
       ) : null}
