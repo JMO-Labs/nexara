@@ -28,9 +28,7 @@ class DeviceTokenRepo(BaseRepository[DeviceToken]):
         @param token Device token string.
         @return The row or None.
         """
-        result = await self._session.execute(
-            select(DeviceToken).where(DeviceToken.token == token)
-        )
+        result = await self._session.execute(select(DeviceToken).where(DeviceToken.token == token))
         return result.scalar_one_or_none()
 
     async def find_active(

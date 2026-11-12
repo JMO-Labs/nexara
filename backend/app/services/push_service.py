@@ -102,9 +102,7 @@ class PushService:
         """
         await self._push_repo.delete_by_endpoint(endpoint)
 
-    async def register_device(
-        self, user_id: uuid.UUID, platform: str, token: str
-    ) -> DeviceToken:
+    async def register_device(self, user_id: uuid.UUID, platform: str, token: str) -> DeviceToken:
         """
         @brief Upsert a native push device token for a user.
 
