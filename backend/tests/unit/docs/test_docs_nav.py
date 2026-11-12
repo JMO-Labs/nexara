@@ -143,7 +143,10 @@ def test_generate_api_ref_script_writes_output_with_stub_npx(tmp_path):
         'echo stub > "$out"\n'
     )
     (stub / "npx").chmod(0o755)
-    (stub / "curl").write_text('#!/usr/bin/env bash\necho "{}" > "$4"\n')
+    (stub / "curl").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo "{}" > "$out"\n'
+    )
     (stub / "curl").chmod(0o755)
     out = tmp_path / "ref.html"
     env = {
@@ -154,6 +157,20 @@ def test_generate_api_ref_script_writes_output_with_stub_npx(tmp_path):
     }
     subprocess.run([str(ROOT / "scripts" / "generate-api-ref.sh")], env=env, check=True)
     assert out.read_text().strip() == "stub"
+
+
+def test_pages_job_generates_api_ref_before_mkdocs():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    job = text.split("\npages:")[1]
+    assert "scripts/generate-api-ref.sh" in job
+    assert job.index("scripts/generate-api-ref.sh") < job.index("mkdocs build")
+
+
+def test_api_reference_md_describes_placeholder_and_refresh():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert "not committed" not in text
+    assert "placeholder" in text.lower()
+    assert "pages" in text.lower()
 
 
 def test_alembic_has_single_head():

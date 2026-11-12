@@ -24,8 +24,13 @@ request and response schemas, authentication requirements, and error codes.
 
 To regenerate it locally, run `scripts/generate-api-ref.sh`. By default it
 dumps the schema from the FastAPI app; set `OPENAPI_URL` (for example
-`http://localhost:8000/openapi.json`) to read it from a running server. The
-HTML output is not committed.
+`http://localhost:8000/openapi.json`) to read it from a running server.
+
+The repository only contains a small placeholder `api-reference.html`. The
+GitLab Pages job runs `scripts/generate-api-ref.sh` before `mkdocs build`, so
+the published site gets a freshly generated reference on every deploy. If
+generation fails in CI, the job logs a warning and publishes the placeholder.
+Do not commit a locally generated file over the placeholder.
 
 ## Base URL and authentication
 
