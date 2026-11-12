@@ -1,7 +1,7 @@
 """suggestions: AI prompt/poll suggestions awaiting admin approval
 
 Revision ID: 0029_suggestions
-Revises: 0028_plugin_pending_manifest
+Revises: 0028_sassybot_settings
 """
 
 import sqlalchemy as sa
@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from alembic import op
 
 revision = "0029_suggestions"
-down_revision = "0028_plugin_pending_manifest"
+down_revision = "0028_sassybot_settings"
 branch_labels = None
 depends_on = None
 
