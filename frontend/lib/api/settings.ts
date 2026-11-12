@@ -4,7 +4,18 @@
  */
 import { apiGet, apiPut } from "./client";
 
-export interface UserSettings {
+export interface PrivacyAppearanceSettings {
+  profile_visible_to: "community" | "admin_only";
+  show_online_status: boolean;
+  show_last_seen: boolean;
+  show_birthday_to: "nobody" | "community" | "admin_only";
+  show_birthday_year: boolean;
+  allow_sassybot: boolean;
+  font_size: "small" | "medium" | "large";
+  compact_feed: boolean;
+}
+
+export interface UserSettings extends PrivacyAppearanceSettings {
   theme: "system" | "light" | "dark";
   locale: string;
   notif_mention_inapp: boolean;
@@ -40,7 +51,7 @@ export interface NotificationPreferences {
   mute_all_email: boolean;
 }
 
-export interface UserSettingsUpdate {
+export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   theme?: "system" | "light" | "dark";
   locale?: string;
   receive_nudges?: boolean;
