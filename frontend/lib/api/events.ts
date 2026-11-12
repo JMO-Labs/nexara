@@ -25,6 +25,7 @@ export interface EventItem {
   rsvp_counts: Record<string, number>;
   contribution_slots: ContributionSlot[];
   user_rsvp: { status: string } | null;
+  gallery_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +58,7 @@ export interface CreateEventBody {
   longitude?: number | null;
   rsvp_labels?: Record<string, string> | null;
   contribution_slots?: ContributionSlot[];
+  auto_create_gallery?: boolean;
 }
 
 const BASE = "/api/v1/events";
