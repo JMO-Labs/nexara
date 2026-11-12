@@ -82,4 +82,33 @@ describe("search API", () => {
     const url = (apiGet as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(url).toContain("limit=50");
   });
+
+  it("searchAll flattens galleries and polls buckets", async () => {
+    const item = (id: string) => ({
+      id,
+      title: id,
+      snippet: "",
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    (apiGet as ReturnType<typeof vi.fn>).mockResolvedValue({
+      query: "x",
+      results: {
+        galleries: { items: [item("g1")], total: 3, next_cursor: null },
+        polls: {
+          items: [item("p1"), item("p2")],
+          total: 2,
+          next_cursor: null,
+        },
+      },
+    });
+
+    const res = await searchAll("x");
+
+    expect(res.items.map((i) => [i.id, i.type])).toEqual([
+      ["g1", "galleries"],
+      ["p1", "polls"],
+      ["p2", "polls"],
+    ]);
+    expect(res.totals).toEqual({ galleries: 3, polls: 2 });
+  });
 });
