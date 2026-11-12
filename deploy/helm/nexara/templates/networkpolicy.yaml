@@ -1,0 +1,70 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+{{- $apps := list "api" "worker" "beat" }}
+{{- /* Egress shared by API, worker and beat: DNS, data stores, external APIs */ -}}
+{{- define "nexara.egress" }}
+- ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+{{- if .Values.postgresql.enabled }}
+- to:
+    - podSelector:
+        matchLabels: {{- include "nexara.selector" (dict "root" . "component" "postgresql") | nindent 10 }}
+  ports: [{port: 5432}]
+{{- else }}
+- ports: [{port: {{ .Values.postgresql.external.port }}}]
+{{- end }}
+{{- if .Values.valkey.enabled }}
+- to:
+    - podSelector:
+        matchLabels: {{- include "nexara.selector" (dict "root" . "component" "valkey") | nindent 10 }}
+  ports: [{port: 6379}]
+{{- else }}
+- ports: [{port: 6379}]
+{{- end }}
+- to: [{ipBlock: {cidr: 0.0.0.0/0}}]
+  ports:
+  {{- range .Values.networkPolicy.externalEgressPorts }}
+    - {port: {{ . }}}
+  {{- end }}
+{{- end }}
+{{- range $name := $apps }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nexara.fullname" $ }}-{{ $name }}
+  labels: {{- include "nexara.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "nexara.selector" (dict "root" $ "component" $name) | nindent 6 }}
+  policyTypes: [{{ if eq $name "api" }}Ingress, {{ end }}Egress]
+  {{- if eq $name "api" }}
+  ingress:
+    - ports: [{port: {{ $.Values.api.port }}}]
+      {{- with $np.apiIngressFrom }}
+      from: {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- end }}
+  egress: {{- include "nexara.egress" $ | indent 4 }}
+{{- end }}
+{{- range $name, $port := dict "postgresql" 5432 "valkey" 6379 }}
+{{- if index $.Values $name "enabled" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nexara.fullname" $ }}-{{ $name }}
+  labels: {{- include "nexara.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "nexara.selector" (dict "root" $ "component" $name) | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        {{- range $apps }}
+        - podSelector:
+            matchLabels: {{- include "nexara.selector" (dict "root" $ "component" .) | nindent 14 }}
+        {{- end }}
+      ports: [{port: {{ $port }}}]
+{{- end }}
+{{- end }}
+{{- end }}

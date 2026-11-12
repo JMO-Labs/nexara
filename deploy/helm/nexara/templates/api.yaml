@@ -15,6 +15,7 @@ spec:
       labels:
         {{- include "nexara.selector" $ctx | nindent 8 }}
     spec:
+      securityContext: {{- toYaml .Values.securityContext.pod | nindent 8 }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -35,6 +36,7 @@ spec:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 10
             initialDelaySeconds: 30
+          securityContext: {{- mustMergeOverwrite (deepCopy .Values.securityContext.container) (dict "readOnlyRootFilesystem" .Values.api.readOnlyRootFilesystem) | toYaml | nindent 12 }}
           resources: {{- toYaml .Values.api.resources | nindent 12 }}
           {{- if eq .Values.storage.backend "local" }}
           volumeMounts:

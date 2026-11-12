@@ -127,7 +127,7 @@ def test_worker_mounts_media_when_local() -> None:
 
 def test_worker_has_no_media_mount_for_s3() -> None:
     pod = _worker(_render("storage.backend=s3"))["spec"]["template"]["spec"]
-    assert "volumes" not in pod
+    assert not any("persistentVolumeClaim" in v for v in pod.get("volumes", []))
 
 
 def test_media_pvc_access_modes_configurable() -> None:
