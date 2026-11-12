@@ -163,6 +163,7 @@ class AuthConfigResponse(BaseModel):
     oidc_enabled: bool
     registration_enabled: bool
     local_auth_enabled: bool = True
+    sso_only: bool = False
     oauth_providers: list[OAuthProviderListItem] = []
 
 

@@ -21,6 +21,9 @@ vi.mock("@/hooks/useGalleries", () => {
     useRemoveItem: mut,
   };
 });
+vi.mock("@/hooks/useEvents", () => ({
+  useEventDetail: () => ({ data: undefined }),
+}));
 vi.mock("@/components/galleries/GalleryUpload", () => ({
   GalleryUpload: () => null,
 }));
@@ -56,4 +59,14 @@ test("contributors section shows only for the collaborators policy", () => {
   };
   render(<GalleryDrawer {...props} />);
   expect(screen.getByTestId("collabs")).toBeInTheDocument();
+});
+
+test("drawer shows Event gallery badge only when event_id is set", () => {
+  detail.current = { id: "g1", title: "Camping", event_id: "e1" };
+  const { unmount } = render(<GalleryDrawer {...props} />);
+  expect(screen.getByText("Event gallery")).toBeInTheDocument();
+  unmount();
+  detail.current = { id: "g1", title: "Camping", event_id: null };
+  render(<GalleryDrawer {...props} />);
+  expect(screen.queryByText("Event gallery")).toBeNull();
 });
