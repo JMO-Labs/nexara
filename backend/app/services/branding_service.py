@@ -16,6 +16,7 @@ import structlog
 from redis.asyncio import Redis
 
 from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
+from app.core.exceptions import AppError
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
 from app.schemas.branding import (
@@ -25,6 +26,7 @@ from app.schemas.branding import (
     ContrastWarning,
 )
 from app.services.branding.contrast import contrast_ratio
+from app.services.branding.css import sanitize_css
 
 if TYPE_CHECKING:
     from app.models.branding import CommunityBranding
@@ -156,6 +158,8 @@ class BrandingService:
         @return Updated BrandingResponse.
         """
         update_dict = data.model_dump(exclude_none=True)
+        if data.custom_css_enabled and data.custom_css:
+            update_dict["custom_css"] = self._sanitize(data.custom_css)
         update_dict["updated_by"] = user_id
 
         row = await self._repo.upsert(self._community_id, update_dict)
@@ -179,6 +183,18 @@ class BrandingService:
         response = _row_to_response(row)
         warnings = self.check_contrast(row)
         return BrandingUpdateResponse(branding=response, contrast_warnings=warnings)
+
+    @staticmethod
+    def _sanitize(raw: str) -> str:
+        """@brief Sanitize CSS; reject if over half of it was removed."""
+        clean = sanitize_css(raw)
+        if len(clean.encode("utf-8")) * 2 < len(raw.encode("utf-8")):
+            raise AppError(
+                code="css_invalid",
+                message="Custom CSS contains too many disallowed constructs",
+                status_code=400,
+            )
+        return clean
 
     def check_contrast(self, branding: CommunityBranding) -> list[ContrastWarning]:
         """
