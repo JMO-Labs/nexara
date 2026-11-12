@@ -28,8 +28,13 @@ This guide installs Nexara from the three templates in `deploy/unraid/`.
 ## Open Nexara
 
 Click the Nexara icon in the Docker tab and choose *WebUI*, or browse to
-`http://<unraid-ip>:8080/`. The first account you register becomes the
-administrator.
+`http://<unraid-ip>:8080/`.
+
+New accounts get the *member* role. To get an administrator, connect an
+OpenID Connect identity provider (`OIDC_*` variables): users in the group
+named by `OIDC_ADMIN_GROUP` (default `nexara-admin`) receive the admin role
+when they sign in. See the [FAQ](../user/faq.md) and
+[self-hosting variables](../user/self-hosting.md).
 
 ## Troubleshooting
 

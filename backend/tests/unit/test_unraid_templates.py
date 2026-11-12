@@ -79,3 +79,21 @@ def test_unraid_doc_exists_and_in_nav() -> None:
     docs = root / "docs/docs"
     assert "  - deployment\n" in (docs / ".pages").read_text()
     assert "- unraid.md" in (docs / "deployment/.pages").read_text()
+
+
+ICON_PREFIX = "https://raw.githubusercontent.com/JMO-Labs/nexara/main/"
+
+
+@pytest.mark.parametrize("name", FILES)
+def test_icon_url_points_to_png_in_repo(name: str) -> None:
+    url = _load(name).findtext("Icon") or ""
+    assert url.startswith(ICON_PREFIX)
+    icon = DIR.parents[1] / url.removeprefix(ICON_PREFIX)
+    assert icon.is_file()
+    assert icon.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_unraid_doc_admin_guidance_matches_backend() -> None:
+    text = (DIR.parents[1] / "docs/docs/deployment/unraid.md").read_text()
+    assert "first account" not in text.lower()
+    assert "OIDC_ADMIN_GROUP" in text
