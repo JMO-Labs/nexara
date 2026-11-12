@@ -62,6 +62,7 @@ def _service(redis):
 def _user():
     u = MagicMock()
     u.id = uuid.uuid4()
+    u.birthday = None
     return u
 
 
