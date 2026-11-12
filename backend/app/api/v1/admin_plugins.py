@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings, get_settings
 from app.api.v1.plugins import get_plugin_service
+from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
@@ -224,9 +224,8 @@ async def upgrade_plugin(
     audit: AuditRepository = Depends(get_audit_repo),
 ) -> dict[str, object]:
     """@brief Preview (stage) an upgrade, or apply it with ``confirm=true``."""
-    life = svc
     if not body.confirm:
-        review = await life.request_upgrade(plugin_id)
+        review = await svc.request_upgrade(plugin_id)
         await audit.append(
             actor_id=user.id,
             action="plugin.upgrade_requested",
@@ -240,7 +239,7 @@ async def upgrade_plugin(
             ip_address=_ip(request),
         )
         return review
-    row, diff = await life.confirm_upgrade(plugin_id)
+    row, diff = await svc.confirm_upgrade(plugin_id)
     await audit.append(
         actor_id=user.id,
         action="plugin.upgraded",

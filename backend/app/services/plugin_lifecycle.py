@@ -60,7 +60,6 @@ class PluginLifecycleService(PluginService):
         if row is None or not pm or pm.get("kind") != kind:
             raise NotFoundError(message=_("No pending request for this plugin"))
         if datetime.now(UTC) - datetime.fromisoformat(pm["staged_at"]) > STAGE_TTL:
-            row.pending_manifest = None
             raise GoneError(message=_("Staged request expired; request again"))
         return pm
 
@@ -126,7 +125,10 @@ class PluginLifecycleService(PluginService):
         }
 
     async def confirm_upgrade(self, plugin_id: str) -> tuple[Plugin, dict[str, Any]]:
-        
+        """@brief Apply a staged upgrade.
+
+        @return Updated plugin row and the permission diff.
+        """
         row = await self._installed(plugin_id)
         pm = self._staged(row, "upgrade")
         m = self.read_manifest(plugin_id)
