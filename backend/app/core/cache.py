@@ -14,6 +14,7 @@ The cache-aside pattern is used throughout the application:
 
 from __future__ import annotations
 
+import uuid
 from typing import cast
 
 import structlog
@@ -87,3 +88,47 @@ async def cache_delete(client: Redis, key: str) -> bool:
     except Exception:
         logger.warning("cache_delete_failed", key=key, exc_info=True)
         return False
+
+
+SEARCH_KEY_PATTERN: str = "search:*:*"
+"""@brief SCAN pattern matching every search cache entry."""
+
+
+async def invalidate_search_cache_for_community(
+    community_id: uuid.UUID,
+    client: Redis | None = None,
+) -> int:
+    """
+    @brief Delete all cached search results (SCAN-based, non-blocking).
+
+    Keys are hashed, so entries cannot be filtered per community; all
+    ``search:*:*`` keys are removed (safe: the cache is rebuildable).
+    Never raises: on Valkey errors returns 0 and entries expire via TTL.
+
+    @param community_id Community whose content changed.
+    @param client Optional Redis client (defaults to the cache pool).
+    @return Number of deleted keys.
+    """
+    from app.core.metrics import search_cache_invalidations_total
+
+    try:
+        if client is None:
+            from app.core.config import get_settings
+            from app.core.valkey import DB_CACHE, get_pool
+
+            client = get_pool(get_settings(), DB_CACHE)
+        deleted = 0
+        cursor: int | str = 0
+        while True:
+            cursor, keys = await client.scan(cursor=cursor, match=SEARCH_KEY_PATTERN, count=100)
+            if keys:
+                await client.delete(*keys)
+                deleted += len(keys)
+            if int(cursor) == 0:
+                break
+    except Exception:
+        logger.warning("search_cache_invalidate_failed", exc_info=True)
+        return 0
+    search_cache_invalidations_total.labels(community_id=str(community_id)).inc()
+    logger.info("Invalidated %d search cache entries for community %s", deleted, community_id)
+    return deleted

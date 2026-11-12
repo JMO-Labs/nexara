@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
@@ -268,6 +269,7 @@ class EventService:
                 },
             )
 
+        await invalidate_search_cache_for_community(self._community_id)
         return await self._build_response(event, user_id=user_id)
 
     async def get_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> EventResponse:
@@ -305,6 +307,7 @@ class EventService:
 
         update_data["updated_at"] = datetime.now(UTC)
         event = await self._repo.update(event, update_data)
+        await invalidate_search_cache_for_community(self._community_id)
         return await self._build_response(event, user_id=user_id)
 
     async def delete_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -315,6 +318,7 @@ class EventService:
             raise AuthorizationError(_("Only the event organizer can delete this event"))
         await self._session.delete(event)
         await self._session.flush()
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("event", event_id)
 
