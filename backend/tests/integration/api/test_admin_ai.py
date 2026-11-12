@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -23,13 +23,17 @@ NOW = datetime(2026, 11, 12, 10, tzinfo=UTC)
 
 
 class FakeRedis:
-    """@brief Minimal in-memory async Redis (strings + hashes)."""
+    """@brief Minimal in-memory async Redis (strings + hashes, honours expire)."""
 
-    def __init__(self) -> None:
+    def __init__(self, clock=lambda: NOW) -> None:
         self.s: dict[str, str] = {}
         self.h: dict[str, dict[str, str]] = {}
+        self.exp: dict[str, datetime] = {}
+        self.clock = clock
 
     async def get(self, k):
+        if k in self.exp and self.clock() >= self.exp[k]:
+            return None
         return self.s.get(k)
 
     async def set(self, k, v):
@@ -38,7 +42,8 @@ class FakeRedis:
     async def incrbyfloat(self, k, v):
         self.s[k] = str(float(self.s.get(k, 0)) + v)
 
-    async def expire(self, *_):
+    async def expire(self, k, seconds):
+        self.exp[k] = self.clock() + timedelta(seconds=seconds)
         return True
 
     async def hincrbyfloat(self, k, f, v):
@@ -66,14 +71,15 @@ class FakeProvider:
 
 @pytest.fixture
 def env(test_app):
-    redis = FakeRedis()
+    now = SimpleNamespace(value=NOW)
+    redis = FakeRedis(clock=lambda: now.value)
     session = MagicMock()
     session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one=lambda: 3))
     box = SimpleNamespace(provider=FakeProvider())
     settings = SimpleNamespace(
         AI_PROVIDER="ollama", AI_DAILY_BUDGET_CENTS=200, AI_BUDGET_RESET_HOUR=0
     )
-    budget = BudgetService(redis, 200, clock=lambda: NOW)
+    budget = BudgetService(redis, 200, clock=lambda: now.value)
     svc = AdminAIService(
         redis,
         session,
@@ -91,7 +97,9 @@ def env(test_app):
         test_app.dependency_overrides[get_current_user] = lambda: user
         return AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test")
 
-    yield SimpleNamespace(session=session, client=client, budget=budget, box=box, redis=redis)
+    yield SimpleNamespace(
+        now=now, session=session, client=client, budget=budget, box=box, redis=redis
+    )
     test_app.dependency_overrides.clear()
 
 
@@ -168,6 +176,16 @@ async def test_metrics_calculation(env):
     assert rows["sassybot"] == {"feature": "sassybot", "calls": 2, "cents": 30}
     assert rows["ocr"] == {"feature": "ocr", "calls": 1, "cents": 30}
     assert rows["suggestion"] == {"feature": "suggestion", "calls": 0, "cents": 0}
+
+
+async def test_metrics_include_earlier_days(env):
+    env.now.value = NOW - timedelta(days=5)
+    await env.budget.record_usage(42, "ocr")
+    env.now.value = NOW
+    async with env.client() as c:
+        days = (await c.get("/api/v1/admin/ai/metrics")).json()["last_7_days"]
+    assert days[1] == {"date": "2026-11-07", "cents": 42}
+    assert days[-1]["cents"] == 0
 
 
 async def test_test_connection_success_and_failure(env):

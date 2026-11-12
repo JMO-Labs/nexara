@@ -12,7 +12,12 @@ from typing import Any
 from app.core.exceptions import AppError
 from app.core.metrics import ai_calls_total, ai_usage_cents_total
 
-KEY_TTL_SECONDS = 48 * 3600
+HISTORY_DAYS = 7
+"""@brief Budget days kept for the admin 7-day usage chart."""
+KEY_TTL_SECONDS = (HISTORY_DAYS + 1) * 24 * 3600
+"""@brief TTL of the daily cents key; must outlive the chart window."""
+FEATURE_TTL_SECONDS = 48 * 3600
+"""@brief TTL of the per-feature hash (only today's breakdown is shown)."""
 
 
 class BudgetExceededError(AppError):
@@ -101,14 +106,15 @@ class BudgetService:
         fkey = f"{key}:features"
         await self._redis.hincrbyfloat(fkey, f"{feature}:cents", actual_cost_cents)
         await self._redis.hincrbyfloat(fkey, f"{feature}:calls", 1)
-        await self._redis.expire(fkey, KEY_TTL_SECONDS)
+        await self._redis.expire(fkey, FEATURE_TTL_SECONDS)
         labels = {"model": model, "provider": provider, "feature": feature}
         ai_usage_cents_total.labels(**labels).inc(actual_cost_cents)
         ai_calls_total.labels(**labels).inc()
 
     async def reset_daily_budget(self) -> None:
         """
-        @brief Delete the previous budget day's counter (Beat job at the rollover).
-        @note Keys are date-scoped so rollover is automatic; the current day is kept.
+        @brief Delete the counter that just left the history window (Beat job).
+        @note Keys are date-scoped so rollover is automatic; the last
+              ``HISTORY_DAYS`` days are kept for the admin usage chart.
         """
-        await self._redis.delete(self._key(days_back=1))
+        await self._redis.delete(self._key(days_back=HISTORY_DAYS + 1))

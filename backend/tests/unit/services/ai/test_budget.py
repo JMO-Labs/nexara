@@ -62,7 +62,8 @@ async def test_record_usage_reduces_remaining_and_sets_ttl() -> None:
     svc, r = _svc()
     await svc.record_usage(30, "ocr")
     assert await svc.get_daily_budget() == 70
-    assert r.ttl["ai_budget:2026-01-05:cents"] == 48 * 3600
+    assert r.ttl["ai_budget:2026-01-05:cents"] >= 7 * 24 * 3600
+    assert r.ttl["ai_budget:2026-01-05:cents:features"] == 48 * 3600
     assert r.hashes["ai_budget:2026-01-05:cents:features"] == {
         "ocr:cents": 30,
         "ocr:calls": 1,
@@ -84,12 +85,14 @@ async def test_check_budget_blocks_when_estimate_exceeds() -> None:
 
 @pytest.mark.parametrize("hour", [0, 6])
 async def test_reset_at_boundary_keeps_current_day_spend(hour: int) -> None:
-    now = datetime(2026, 1, 5, hour, 0, tzinfo=UTC)
+    now = datetime(2026, 1, 9, hour, 0, tzinfo=UTC)
     svc, r = _svc(budget=10, hour=hour, now=now)
     await svc.record_usage(4, "ocr")
-    r.data["ai_budget:2026-01-04:cents"] = 9.0  # previous budget day
+    r.data["ai_budget:2026-01-08:cents"] = 9.0  # previous budget day
+    r.data["ai_budget:2026-01-01:cents"] = 9.0  # outside the 7-day window
     await svc.reset_daily_budget()
-    assert "ai_budget:2026-01-04:cents" not in r.data
+    assert "ai_budget:2026-01-08:cents" in r.data  # kept for the chart
+    assert "ai_budget:2026-01-01:cents" not in r.data
     assert await svc.get_daily_budget() == 6
 
 
