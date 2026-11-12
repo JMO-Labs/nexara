@@ -153,8 +153,14 @@ async def test_list_reports_is_enabled(env):
 async def test_list_scoped_to_community(env):
     other = uuid.uuid4()
     env.repo.rows[("x", other)] = SimpleNamespace(
-        id="x", community_id=other, name="X", version="1.0.0", is_enabled=True,
-        deleted_at=None, settings={}, permissions_granted=[],
+        id="x",
+        community_id=other,
+        name="X",
+        version="1.0.0",
+        is_enabled=True,
+        deleted_at=None,
+        settings={},
+        permissions_granted=[],
     )
     async with env.client("member") as c:
         assert (await c.get("/api/v1/plugins")).json() == []

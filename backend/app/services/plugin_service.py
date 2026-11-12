@@ -59,7 +59,9 @@ class PluginService:
         except FileNotFoundError:
             raise NotFoundError(message=_("Plugin not found")) from None
         except (PydanticValidationError, ValueError) as exc:
-            raise ValidationError(message=_("Invalid plugin manifest"), details={"error": str(exc)}) from exc
+            raise ValidationError(
+                message=_("Invalid plugin manifest"), details={"error": str(exc)}
+            ) from exc
         if manifest.id != plugin_id:
             raise ValidationError(message=_("Manifest id does not match directory"))
         return manifest
@@ -83,7 +85,8 @@ class PluginService:
         manifest = self.read_manifest(plugin_id)
         if not is_compatible(manifest, self._core):
             raise ValidationError(
-                message=_("Plugin requires core version >= %(v)s") % {"v": manifest.min_core_version}
+                message=_("Plugin requires core version >= %(v)s")
+                % {"v": manifest.min_core_version}
             )
         if await self._repo.get(plugin_id, self._cid) is not None:
             raise ConflictError(message=_("Plugin already installed"))
