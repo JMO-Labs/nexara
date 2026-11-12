@@ -1,7 +1,7 @@
 """add recipient_id to posts (kudos)
 
 Revision ID: 0020_add_recipient_to_posts
-Revises: 0019_add_oidc_provider_fields
+Revises: 0021_add_subgroup_accent_color
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0020_add_recipient_to_posts"
-down_revision: str | None = "0019_add_oidc_provider_fields"
+down_revision: str | None = "0021_add_subgroup_accent_color"
 branch_labels = None
 depends_on = None
 
