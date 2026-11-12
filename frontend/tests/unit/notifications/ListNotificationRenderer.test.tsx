@@ -3,14 +3,23 @@
  * @brief List notification renderers: title, details, dismiss, navigate.
  */
 import { describe, it, expect, vi } from "vitest";
-import { screen } from "@testing-library/react";
-import { renderWithProviders as render } from "../../utils/renderWithProviders";
+import { screen, render as rtlRender } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 import { List, CircleCheck, Check, Clock, User } from "lucide-react";
 import userEvent from "@testing-library/user-event";
 import {
   ListNotification,
   isListNotificationType,
 } from "@/components/notifications/ListNotificationRenderer";
+
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 const ctx = {
   listId: "L1",
