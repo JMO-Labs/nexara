@@ -9,6 +9,7 @@ which Alembic needs for autogenerate to detect all tables.
 from app.models.activity_event import ActivityEvent  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.auth import MagicLinkToken, RefreshToken, UserBackupCode  # noqa: F401
+from app.models.bookmark import Bookmark  # noqa: F401
 from app.models.branding import CommunityBranding  # noqa: F401
 from app.models.calendar import Calendar  # noqa: F401
 from app.models.calendar_token import CalendarToken  # noqa: F401
