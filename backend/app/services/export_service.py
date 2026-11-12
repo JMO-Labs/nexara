@@ -31,26 +31,28 @@ async def build_export_archive(
     repo: ExportDataRepository,
     storage: StorageBackend,
     user_id: uuid.UUID,
+    community_id: uuid.UUID,
     fileobj: IO[bytes],
 ) -> None:
     """
     @brief Write the export ZIP into ``fileobj``.
 
-    Media are fetched and written one at a time so at most one file is held
-    in memory; the archive itself is written to the (temp) file object.
+    Media are streamed from storage chunk by chunk straight into the ZIP
+    entry, so memory use is bounded by the chunk size, not the file size.
     @param repo Data source for the user's rows.
     @param storage Storage backend providing media bytes.
     @param user_id Owner of the data.
+    @param community_id Tenant scope for every query.
     @param fileobj Writable binary file (e.g. NamedTemporaryFile).
     """
-    media = await repo.list_media(user_id)
+    media = await repo.list_media(user_id, community_id)
     sections = {
-        "profile.json": await repo.get_profile(user_id),
-        "posts.json": await repo.list_posts(user_id),
-        "comments.json": await repo.list_comments(user_id),
-        "reactions.json": await repo.list_reactions(user_id),
-        "events.json": await repo.list_events(user_id),
-        "rsvps.json": await repo.list_rsvps(user_id),
+        "profile.json": await repo.get_profile(user_id, community_id),
+        "posts.json": await repo.list_posts(user_id, community_id),
+        "comments.json": await repo.list_comments(user_id, community_id),
+        "reactions.json": await repo.list_reactions(user_id, community_id),
+        "events.json": await repo.list_events(user_id, community_id),
+        "rsvps.json": await repo.list_rsvps(user_id, community_id),
         "media_metadata.json": media,
     }
     with zipfile.ZipFile(fileobj, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -59,4 +61,6 @@ async def build_export_archive(
         used: set[str] = set()
         for m in media:
             path = _media_name(m["filename"], m["id"], used)
-            zf.writestr(path, await storage.get(m["storage_key"]))
+            with zf.open(path, "w", force_zip64=True) as dst:
+                async for chunk in storage.get_stream(m["storage_key"]):
+                    dst.write(chunk)

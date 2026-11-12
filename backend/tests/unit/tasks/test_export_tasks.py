@@ -53,7 +53,8 @@ async def test_success_updates_record_and_notifies(deps):
     assert ready["file_key"] == f"exports/{UID}/{EID}.zip"
     assert ready["file_size_bytes"] is not None
     assert ready["expires_at"] > ready["ready_at"]
-    storage.put.assert_awaited_once()
+    storage.put_file.assert_awaited_once()
+    storage.put.assert_not_called()
     assert notif.notify.await_args.kwargs["type"] == "data_export_ready"
 
 
@@ -65,3 +66,13 @@ async def test_failure_marks_failed_and_notifies(deps):
     assert last.args[1] == "failed"
     assert last.kwargs["error_message"] == "boom"
     assert notif.notify.await_args.kwargs["type"] == "data_export_failed"
+
+
+async def test_owner_mismatch_marks_failed_without_building(deps):
+    repo, notif, _, build = deps
+    await export_tasks._generate(str(uuid.uuid4()), str(EID))
+    build.assert_not_awaited()
+    last = repo.update_status.await_args_list[-1]
+    assert last.args[1] == "failed"
+    assert notif.notify.await_args.kwargs["type"] == "data_export_failed"
+    assert notif.notify.await_args.kwargs["user_id"] == UID

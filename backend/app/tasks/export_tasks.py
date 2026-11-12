@@ -58,16 +58,27 @@ async def _generate(user_id: str, export_id: str) -> None:
             logger.warning("export_missing", export_id=export_id)
             return
         notifier = _notifier(session, export.community_id)
+        if export.user_id != uid:
+            logger.error("export_owner_mismatch", export_id=export_id)
+            await exports.update_status(eid, "failed", error_message="owner mismatch")
+            await notifier.notify(
+                user_id=export.user_id, type="data_export_failed", payload={"export_id": export_id}
+            )
+            await session.commit()
+            return
         tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)  # noqa: SIM115
         try:
             await exports.update_status(eid, "processing")
             await session.commit()
             storage = get_storage_backend(get_settings())
             with tmp:
-                await build_export_archive(ExportDataRepository(session), storage, uid, tmp)
+                await build_export_archive(
+                    ExportDataRepository(session), storage, uid, export.community_id, tmp
+                )
             key = f"exports/{uid}/{eid}.zip"
             path = Path(tmp.name)
-            await storage.put(key, path.read_bytes(), "application/zip")
+            with path.open("rb") as src:
+                await storage.put_file(key, src, "application/zip")
             now = datetime.now(UTC)
             expires = now + EXPORT_TTL
             await exports.update_status(

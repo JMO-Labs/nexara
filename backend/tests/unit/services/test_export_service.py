@@ -22,6 +22,7 @@ from app.repositories.export_data_repo import ExportDataRepository
 from app.services.export_service import build_export_archive
 
 UID = uuid.uuid4()
+COMM = uuid.uuid4()
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
@@ -50,9 +51,24 @@ def _media(name: str, key: str) -> dict:
     return {"id": str(uuid.uuid4()), "filename": name, "storage_key": key}
 
 
+def _storage(blobs: dict[str, list[bytes]]) -> MagicMock:
+    storage = MagicMock()
+    storage.get = AsyncMock()
+
+    def stream(key):
+        async def gen():
+            for c in blobs[key]:
+                yield c
+
+        return gen()
+
+    storage.get_stream = stream
+    return storage
+
+
 async def _build(repo, storage):
     with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
-        await build_export_archive(repo, storage, UID, tmp)
+        await build_export_archive(repo, storage, UID, COMM, tmp)
         tmp.flush()
         with zipfile.ZipFile(tmp.name) as zf:
             return {n: zf.read(n) for n in zf.namelist()}
@@ -61,8 +77,7 @@ async def _build(repo, storage):
 class TestBuildArchive:
     async def test_structure_and_contents(self):
         m = _media("a.jpg", "k/a")
-        storage = AsyncMock()
-        storage.get.return_value = b"IMG"
+        storage = _storage({"k/a": [b"IM", b"G"]})
         files = await _build(_repo([m]), storage)
         assert {
             "profile.json",
@@ -76,22 +91,36 @@ class TestBuildArchive:
         } <= set(files)
         assert files["media/a.jpg"] == b"IMG"
         assert json.loads(files["posts.json"]) == [{"id": "p1", "content": "hi"}]
-        storage.get.assert_awaited_once_with("k/a")
+        storage.get.assert_not_called()
 
     async def test_duplicate_filenames_kept_and_path_stripped(self):
         a, b = _media("x.png", "k/1"), _media("../x.png", "k/2")
-        storage = AsyncMock()
-        storage.get.side_effect = [b"1", b"2"]
+        storage = _storage({"k/1": [b"1"], "k/2": [b"2"]})
         files = await _build(_repo([a, b]), storage)
         media_names = [n for n in files if n.startswith("media/")]
         assert len(media_names) == 2
         assert all(".." not in n for n in media_names)
 
-    async def test_media_fetched_one_at_a_time(self):
-        storage = AsyncMock()
-        storage.get.return_value = b"z"
-        await _build(_repo([_media("a", "k1"), _media("b", "k2")]), storage)
-        assert storage.get.await_count == 2
+    async def test_media_streamed_in_chunks_without_get(self):
+        """Chunks are consumed lazily, one file at a time, never via get()."""
+        events: list[str] = []
+
+        def stream(key):
+            async def gen():
+                events.append(f"open:{key}")
+                for c in (b"a", b"b"):
+                    yield c
+                events.append(f"close:{key}")
+
+            return gen()
+
+        storage = MagicMock()
+        storage.get = AsyncMock()
+        storage.get_stream = stream
+        files = await _build(_repo([_media("a", "k1"), _media("b", "k2")]), storage)
+        assert events == ["open:k1", "close:k1", "open:k2", "close:k2"]
+        storage.get.assert_not_called()
+        assert files["media/a"] == b"ab"
 
 
 class TestSerialize:
