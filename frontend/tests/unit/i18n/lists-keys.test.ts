@@ -67,6 +67,7 @@ describe("lists i18n namespace", () => {
     expect(flat["notifications.item"]).toContain("{listName}");
     expect(flat["notifications.signup"]).toContain("{userName}");
     expect(flat["notifications.member"]).toContain("{inviterName}");
-    expect(flat["placeholders.no_items"]).toBeTruthy();
+    expect(flat["placeholders.no_items"]).toContain("{listName}");
+    expect(flat["actions.confirm_delete"]).toContain("{listName}");
   });
 });

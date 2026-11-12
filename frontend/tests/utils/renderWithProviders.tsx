@@ -5,6 +5,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 import {
   render,
   renderHook,
@@ -26,7 +28,9 @@ function makeWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class">{children}</ThemeProvider>
+        <NextIntlClientProvider locale="en-US" messages={messages}>
+          <ThemeProvider attribute="class">{children}</ThemeProvider>
+        </NextIntlClientProvider>
       </QueryClientProvider>
     );
   };

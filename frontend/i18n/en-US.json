@@ -808,7 +808,9 @@
       "member": "Added by {inviterName}",
       "fallback_list": "your list",
       "fallback_user": "Someone",
-      "fallback_inviter": "a member"
+      "fallback_inviter": "a member",
+      "acknowledge": "Acknowledge notification",
+      "dismiss": "Dismiss"
     },
     "placeholders": {
       "no_lists": "No lists yet",
