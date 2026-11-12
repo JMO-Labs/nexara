@@ -133,7 +133,10 @@ final conversationProvider =
   final n = ConversationNotifier(ref.watch(chatRepositoryProvider), chatId);
   final sub = ref.watch(webSocketProvider).messages.listen((m) {
     if (m.type == 'chat.message') n.receive(ChatMessage.fromJson(m.payload));
-    if (m.type == 'chat.typing' && m.payload['channel_id']?.toString() == chatId) n.setTyping(true);
+    if (m.type == 'chat.typing' && m.payload['channel_id']?.toString() == chatId) {
+      final me = ref.read(currentUserIdProvider).valueOrNull;
+      if (me == null || m.payload['user_id']?.toString() != me) n.setTyping(true);
+    }
   });
   ref.onDispose(sub.cancel);
   return n;
@@ -145,7 +148,13 @@ final sendMessageProvider = Provider<void Function(String chatId, String content
       ref.read(webSocketProvider).send('chat.message', {'channel_id': chatId, 'content': content});
 });
 
-/// @brief Notify peers that the current user is typing.
+/// @brief Notify peers that the current user is typing (throttled to once per 2s).
 final sendTypingProvider = Provider<void Function(String chatId)>((ref) {
-  return (chatId) => ref.read(webSocketProvider).send('chat.typing', {'channel_id': chatId});
+  DateTime? last;
+  return (chatId) {
+    final now = DateTime.now();
+    if (last != null && now.difference(last!) < const Duration(seconds: 2)) return;
+    last = now;
+    ref.read(webSocketProvider).send('chat.typing', {'channel_id': chatId});
+  };
 });

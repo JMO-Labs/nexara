@@ -49,8 +49,14 @@ class WebSocketRealtimeClient implements RealtimeClient {
 
   Future<void> _open() async {
     if (_disposed) return;
-    final token = await tokenReader();
-    if (token == null || _disposed) return;
+    String? token;
+    try {
+      token = await tokenReader();
+    } catch (_) {
+      token = null;
+    }
+    if (_disposed) return;
+    if (token == null) return _scheduleReconnect(); // not logged in yet: keep polling
     final ch = _ch = _connector(Uri.parse(url));
     ch.sink.add(jsonEncode({'type': 'auth', 'payload': {'token': token}}));
     ch.stream.listen((raw) {

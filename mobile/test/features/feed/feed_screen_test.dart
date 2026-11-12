@@ -1,6 +1,5 @@
 /// @file feed_screen_test.dart
 /// @brief Feed: initial load, pull-to-refresh, infinite scroll, post detail, realtime prepend.
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

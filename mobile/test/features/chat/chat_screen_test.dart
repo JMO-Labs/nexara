@@ -37,7 +37,8 @@ Map<String, dynamic> msg(String id, String content) => {
 Future<FakeRealtime> pump(WidgetTester t, Widget home) async {
   final rt = FakeRealtime();
   await t.pumpWidget(ProviderScope(
-    overrides: [chatRepositoryProvider.overrideWithValue(FakeChatRepo()), realtimeClientProvider.overrideWithValue(rt)],
+    overrides: [chatRepositoryProvider.overrideWithValue(FakeChatRepo()), realtimeClientProvider.overrideWithValue(rt),
+      currentUserIdProvider.overrideWith((_) async => 'me')],
     child: MaterialApp(home: home),
   ));
   await t.pumpAndSettle();
@@ -77,5 +78,24 @@ void main() {
     expect(find.text('Someone is typing…'), findsOneWidget);
     await t.pump(const Duration(seconds: 4));
     expect(find.text('Someone is typing…'), findsNothing);
+  });
+
+  testWidgets('own typing frames are ignored, others shown', (t) async {
+    final rt = await pump(t, const ConversationScreen(chatId: 'c1', title: 'General'));
+    rt.emit('chat.typing', {'channel_id': 'c1', 'user_id': 'me'});
+    await t.pump();
+    expect(find.text('Someone is typing…'), findsNothing);
+    rt.emit('chat.typing', {'channel_id': 'c1', 'user_id': 'x'});
+    await t.pump();
+    expect(find.text('Someone is typing…'), findsOneWidget);
+    await t.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('typing frames are throttled to one per 2s', (t) async {
+    final rt = await pump(t, const ConversationScreen(chatId: 'c1', title: 'General'));
+    await t.enterText(find.byType(TextField), 'a');
+    await t.enterText(find.byType(TextField), 'ab');
+    await t.enterText(find.byType(TextField), 'abc');
+    expect(rt.sent.where((s) => s.$1 == 'chat.typing').length, 1);
   });
 }

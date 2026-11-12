@@ -1,5 +1,7 @@
 /// @file providers.dart
 /// @brief Riverpod providers wiring storage, API client and auth service.
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api/api_client.dart';
@@ -31,4 +33,17 @@ final realtimeClientProvider = Provider<RealtimeClient>((ref) {
     ..connect();
   ref.onDispose(c.dispose);
   return c;
+});
+
+/// @brief Current user id (JWT `sub` of the stored access token), or null when signed out.
+final currentUserIdProvider = FutureProvider<String?>((ref) async {
+  final t = await ref.read(tokenStoreProvider).readAccess();
+  final parts = t?.split('.');
+  if (parts == null || parts.length < 2) return null;
+  try {
+    final m = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1])))) as Map;
+    return m['sub']?.toString();
+  } catch (_) {
+    return null;
+  }
 });

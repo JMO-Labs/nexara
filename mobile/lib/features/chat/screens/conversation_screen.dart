@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/providers.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/message_bubble.dart';
 
@@ -48,6 +49,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(conversationProvider(widget.chatId));
+    final me = widget.currentUserId ?? ref.watch(currentUserIdProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: Column(children: [
@@ -59,7 +61,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   reverse: true,
                   itemCount: s.messages.length,
                   itemBuilder: (_, i) => MessageBubble(
-                      message: s.messages[i], mine: s.messages[i].authorId == widget.currentUserId),
+                      message: s.messages[i], mine: s.messages[i].authorId == me),
                 ),
         ),
         if (s.typing)

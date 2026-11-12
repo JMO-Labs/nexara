@@ -40,6 +40,30 @@ void main() {
     expect(servers.length, greaterThanOrEqualTo(2));
     c.dispose();
   });
+
+  test('retries when token is null or reader throws, then connects', () async {
+    final sent = <Object?>[];
+    var calls = 0;
+    final c = WebSocketRealtimeClient(
+      url: 'ws://x/ws/',
+      tokenReader: () async {
+        calls++;
+        if (calls == 1) return null;
+        if (calls == 2) throw StateError('storage');
+        return 'tok';
+      },
+      maxBackoff: const Duration(milliseconds: 10),
+      connector: (_) {
+        final ctrl = StreamChannelController<Object?>(sync: true);
+        ctrl.foreign.stream.listen(sent.add);
+        return _Chan(ctrl.local);
+      },
+    );
+    c.connect();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(jsonDecode(sent.first as String), {'type': 'auth', 'payload': {'token': 'tok'}});
+    c.dispose();
+  });
 }
 
 class _Chan extends StreamChannelMixin<dynamic> implements WebSocketChannel {
