@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import { EventList } from "@/components/events/EventList";
 import { listEvents } from "@/lib/api/events";
+import { useUpcomingEvents } from "@/hooks/useEvents";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 import { makeEvent } from "./fixtures";
 
@@ -22,10 +23,20 @@ vi.mock("@/lib/api/events", async (orig) => ({
   listEvents: vi.fn(),
 }));
 
+vi.mock("@/hooks/useEvents", async (orig) => {
+  const actual = await orig<typeof import("@/hooks/useEvents")>();
+  return { ...actual, useUpcomingEvents: vi.fn(actual.useUpcomingEvents) };
+});
+
 const mockList = vi.mocked(listEvents);
+const mockHook = vi.mocked(useUpcomingEvents);
 
 describe("EventList", () => {
-  beforeEach(() => mockList.mockReset());
+  beforeEach(() => {
+    mockList.mockReset();
+    // vitest >= 3: mockReset restores the real hook passed to vi.fn().
+    mockHook.mockReset();
+  });
 
   it("renders items grouped under month headers", async () => {
     mockList.mockResolvedValue({
@@ -54,12 +65,17 @@ describe("EventList", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows an error state with retry", async () => {
-    mockList.mockImplementation(() => Promise.reject(new Error("boom")));
+  it("shows an error state with retry", () => {
+    // Stub the hook's error state directly: a rejected promise flowing
+    // through react-query is reported by vitest as an unhandled error.
+    mockHook.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("boom"),
+    } as never);
     renderWithProviders(<EventList />);
-    expect(
-      await screen.findByText("Couldn't load events", {}, { timeout: 5000 }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load events")).toBeInTheDocument();
+    expect(screen.getByText("Error: boom")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });
