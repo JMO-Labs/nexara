@@ -31,6 +31,21 @@ export interface MultipartInit {
 const BASE = "/api/v1/media";
 const SINGLE_SHOT_LIMIT = 5 * 1024 * 1024;
 
+export interface MediaPage {
+  items: MediaItem[];
+  next_cursor: string | null;
+}
+
+export const listMedia = (cursor: string | null, limit = 20) => {
+  const q = new URLSearchParams({ limit: String(limit) });
+  if (cursor) q.set("cursor", cursor);
+  return apiGet<MediaPage>(`${BASE}?${q.toString()}`);
+};
+export const mediaFileUrl = (id: string) =>
+  `${API_BASE}${BASE}/${seg(id)}/file`;
+export const mediaThumbUrl = (id: string) =>
+  `${API_BASE}${BASE}/${seg(id)}/thumbnail`;
+
 export const getMedia = (id: string) => apiGet<MediaItem>(`${BASE}/${seg(id)}`);
 export const deleteMedia = (id: string) =>
   apiDelete<void>(`${BASE}/${seg(id)}`);
