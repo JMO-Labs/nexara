@@ -12,7 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.v1 import bookmarks
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user
 from app.services.bookmark_service import BookmarkService
 
 POST_ID = uuid.uuid4()
