@@ -420,6 +420,8 @@ class TestListFeedVisibilityPredicate:
 
         mock_my_reactions = MagicMock()
         mock_my_reactions.all.return_value = []
+        mock_bookmarks = MagicMock()
+        mock_bookmarks.scalars.return_value.all.return_value = [POST_ID]
 
         session.execute = AsyncMock(
             side_effect=[
@@ -430,6 +432,7 @@ class TestListFeedVisibilityPredicate:
                 mock_empty,  # reactions
                 mock_my_reactions,  # my_reactions (viewer_id set)
                 mock_comments,
+                mock_bookmarks,  # bookmarks (viewer_id set)
                 mock_polls,
             ]
         )
@@ -438,6 +441,7 @@ class TestListFeedVisibilityPredicate:
 
         assert len(items) == 1
         assert items[0]["id"] == str(POST_ID)
+        assert items[0]["is_bookmarked"] is True
 
     @pytest.mark.asyncio
     async def test_list_feed_without_subgroup_ids_excludes_subgroup_visibility(self):

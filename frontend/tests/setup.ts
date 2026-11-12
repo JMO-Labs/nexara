@@ -29,6 +29,11 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   };
 }
 
+// jsdom lacks scrollIntoView (Radix Select calls it on open).
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 afterEach(() => cleanup());
 
 // jsdom lacks layout APIs that prosemirror-view calls on DOM mutations.

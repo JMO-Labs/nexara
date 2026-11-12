@@ -4,10 +4,12 @@
  * @brief Admin user management table with search and suspend/restore/delete.
  *        Rows stack into cards on phone.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useUI } from "@/stores/ui";
 import { Check, Loader2, Trash2, X } from "lucide-react";
 import {
-  useAdminUsers,
+  useAdminUsersInfinite,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
@@ -21,6 +23,7 @@ import {
   Option,
   Select,
 } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -29,6 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/shadcn/table";
+
+/** @brief Row count above which the table is windowed. */
+const VIRTUAL_THRESHOLD = 100;
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
@@ -43,19 +49,55 @@ const ROLE_LABEL: Record<string, string> = {
 export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
-  const [density, setDensity] = useState<"comfortable" | "compact">(
-    "comfortable",
-  );
+  const density = useUI((s) => s.density);
+  const setDensity = useUI((s) => s.setDensity);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
     data: usersPage,
     isLoading,
     error,
-  } = useAdminUsers({ q: searchQuery || undefined, limit: 50 });
+    refetch,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useAdminUsersInfinite({ q: searchQuery || undefined, limit: 50 });
 
   const suspendMutation = useSuspendUser();
   const restoreMutation = useRestoreUser();
   const deleteMutation = useDeleteUser();
+
+  const items = usersPage?.items ?? [];
+  const virtual = items.length > VIRTUAL_THRESHOLD;
+  const rowHeight = density === "compact" ? 40 : 52;
+  const virtualizer = useVirtualizer({
+    count: virtual ? items.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 10,
+  });
+
+  // Fetch the next page when the window nears the end of loaded rows.
+  const lastVisible = virtual
+    ? (virtualizer.getVirtualItems().at(-1)?.index ?? -1)
+    : -1;
+  useEffect(() => {
+    if (
+      virtual &&
+      hasNextPage &&
+      !isFetchingNextPage &&
+      lastVisible >= items.length - 10
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    virtual,
+    hasNextPage,
+    isFetchingNextPage,
+    lastVisible,
+    items.length,
+    fetchNextPage,
+  ]);
 
   if (isLoading) {
     return (
@@ -73,9 +115,12 @@ export function UsersTab() {
     return (
       <div
         role="alert"
-        className="rounded-2xl border-l-4 border-danger bg-surface p-3"
+        className="flex items-center justify-between gap-3 rounded-2xl border-l-4 border-danger bg-surface p-3"
       >
-        Failed to load users
+        <p>Failed to load users</p>
+        <Button variant="ghost" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -89,6 +134,12 @@ export function UsersTab() {
     }
   };
 
+  const vItems = virtualizer.getVirtualItems();
+  const visible = virtual ? vItems.map((v) => items[v.index]) : items;
+  const padTop = vItems.length ? vItems[0].start : 0;
+  const padBottom = vItems.length
+    ? virtualizer.getTotalSize() - vItems[vItems.length - 1].end
+    : 0;
   const cell = density === "compact" ? "py-1 text-xs" : "py-2 text-sm";
 
   return (
@@ -120,7 +171,13 @@ export function UsersTab() {
           No users found
         </div>
       ) : (
-        <div className="rounded-2xl bg-surface p-2">
+        <div
+          ref={scrollRef}
+          className={cn(
+            "rounded-2xl bg-surface p-2",
+            virtual && "max-h-[70vh] overflow-y-auto",
+          )}
+        >
           <Table>
             <TableHeader className="max-md:sr-only">
               <TableRow>
@@ -132,9 +189,14 @@ export function UsersTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {usersPage.items.map((user) => (
+              {virtual && padTop > 0 && (
+                <tr aria-hidden="true" style={{ height: padTop }} />
+              )}
+              {visible.map((user) => (
                 <TableRow
                   key={user.id}
+                  data-index={virtual ? items.indexOf(user) : undefined}
+                  ref={virtual ? virtualizer.measureElement : undefined}
                   className="max-md:grid max-md:grid-cols-2 max-md:items-center max-md:gap-x-3"
                 >
                   <TableCell
@@ -189,9 +251,23 @@ export function UsersTab() {
                   </TableCell>
                 </TableRow>
               ))}
+              {virtual && padBottom > 0 && (
+                <tr aria-hidden="true" style={{ height: padBottom }} />
+              )}
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {hasNextPage && (
+        <Button
+          variant="ghost"
+          className="self-center"
+          loading={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        >
+          Load more
+        </Button>
       )}
 
       <Modal
