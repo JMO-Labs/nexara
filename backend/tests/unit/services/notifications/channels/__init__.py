@@ -1,0 +1,1 @@
+"""@file Channel tests package."""
