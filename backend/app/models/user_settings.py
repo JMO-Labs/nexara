@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
@@ -41,7 +41,23 @@ class UserSettings(Base):
         server_default=COMMUNITY_DEFAULT,
     )
 
-    # --- Notification preferences (type x channel) ---
+    # --- Notification preferences v2: {type_key: {channel: bool}} ---
+    # Legacy notif_* / mute_all_* columns below are still the source of truth for
+    # readers; migration b2c3d4e5f6a7 only backfills prefs. Dropped in a follow-up.
+    notification_prefs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    dnd_schedule: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    dnd_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dnd_timezone: Mapped[str] = mapped_column(Text, nullable=False, server_default="UTC")
+    digest_cadence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    digest_last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # --- Legacy notification preferences (type x channel) ---
     notif_mention_inapp: Mapped[bool] = _bool_col()
     notif_mention_push: Mapped[bool] = _bool_col()
     notif_mention_email: Mapped[bool] = _bool_col()

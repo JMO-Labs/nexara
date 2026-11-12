@@ -103,3 +103,17 @@ async def test_fetch_image_rejects_oversize_content_length_without_reading():
 
 def test_timeout_is_5s():
     assert svc.HTTP_TIMEOUT == 5.0
+
+
+def test_client_kwargs_disables_redirects():
+    assert svc._client_kwargs() == {"timeout": svc.HTTP_TIMEOUT, "follow_redirects": False}
+
+
+@pytest.mark.asyncio
+async def test_fetch_image_returns_none_on_http_error():
+    transport = httpx.MockTransport(lambda r: httpx.Response(500))
+    with (
+        patch.object(svc, "is_safe_url", return_value=True),
+        patch.object(svc, "_client_kwargs", return_value={"transport": transport}),
+    ):
+        assert await svc.fetch_image("https://x.example/a.png") is None
