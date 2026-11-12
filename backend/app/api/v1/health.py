@@ -82,3 +82,9 @@ async def healthz(
             "checks": checks,
         },
     )
+
+
+@router.get("/livez", include_in_schema=False)
+async def livez() -> JSONResponse:
+    """@brief Liveness probe; never touches DB, Valkey or storage."""
+    return JSONResponse(status_code=200, content={"status": "alive"})

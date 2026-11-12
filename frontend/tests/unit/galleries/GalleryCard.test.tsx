@@ -52,4 +52,14 @@ describe("GalleryCard", () => {
     fireEvent.click(screen.getByRole("button"));
     expect(fn).toHaveBeenCalledWith("g1");
   });
+  it("shows Event gallery badge when event_id is set", () => {
+    wrap(
+      <GalleryCard gallery={{ ...g, event_id: "e1" }} onSelect={() => {}} />,
+    );
+    expect(screen.getByText("Event gallery")).toBeInTheDocument();
+  });
+  it("shows no Event gallery badge when event_id is null", () => {
+    wrap(<GalleryCard gallery={g} onSelect={() => {}} />);
+    expect(screen.queryByText("Event gallery")).toBeNull();
+  });
 });
