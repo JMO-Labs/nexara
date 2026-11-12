@@ -19,11 +19,26 @@ vi.mock("@/hooks/useAdminOauth");
 
 const mut = { mutate: vi.fn(), isPending: false } as any;
 const cases: [string, any, any, RegExp][] = [
-  ["Metrics", MetricsTab, () => admin.useAdminMetrics, /failed to load metrics/i],
+  [
+    "Metrics",
+    MetricsTab,
+    () => admin.useAdminMetrics,
+    /failed to load metrics/i,
+  ],
   ["Invites", InvitesTab, () => invites.useInvites, /failed to load invites/i],
   ["Sso", SsoTab, () => oauth.useOauthProviders, /failed to load oauth/i],
-  ["Settings", AdminSettingsTab, () => admin.useAdminSettings, /failed to load admin settings/i],
-  ["AuditLog", AuditLogTab, () => admin.useAuditLog, /failed to load audit log/i],
+  [
+    "Settings",
+    AdminSettingsTab,
+    () => admin.useAdminSettings,
+    /failed to load admin settings/i,
+  ],
+  [
+    "AuditLog",
+    AuditLogTab,
+    () => admin.useAuditLog,
+    /failed to load audit log/i,
+  ],
 ];
 
 beforeEach(() => {
