@@ -36,6 +36,4 @@ class MediaAIMetadata(Base):
         DateTime, server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (
-        Index("idx_media_ai_metadata_ocr_fts", "ocr_fts", postgresql_using="gin"),
-    )
+    __table_args__ = (Index("idx_media_ai_metadata_ocr_fts", "ocr_fts", postgresql_using="gin"),)

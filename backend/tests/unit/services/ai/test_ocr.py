@@ -14,8 +14,8 @@ from app.models.media import Media
 from app.models.media_ai import MediaAIMetadata
 from app.repositories.media_ai_repo import MediaAIRepository
 from app.repositories.media_repo import MediaRepository
-from app.services.ai.provider import AIBudgetExhaustedError, AIError, AIProvider
 from app.services.ai.ocr import OCR_PROMPT, run_ocr
+from app.services.ai.provider import AIBudgetExhaustedError, AIError, AIProvider
 from app.services.storage.base import StorageBackend
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -56,7 +56,10 @@ async def test_ocr_skipped_when_ai_not_configured() -> None:
 
 async def test_ocr_skips_non_image() -> None:
     media, mr, ar, st, pr = _deps("video/mp4")
-    assert await run_ocr(media.id, CID, media_repo=mr, ai_repo=ar, storage=st, provider=pr) == "skipped"
+    assert (
+        await run_ocr(media.id, CID, media_repo=mr, ai_repo=ar, storage=st, provider=pr)
+        == "skipped"
+    )
     pr.vision.assert_not_awaited()
 
 
@@ -83,9 +86,7 @@ async def test_fts_query_targets_ocr_fts() -> None:
     session.execute.return_value = result
     out = await MediaAIRepository(session).search_by_fts("invoice", CID, limit=5, offset=0)
     assert len(out) == 1
-    sql = str(
-        session.execute.await_args.args[0].compile(dialect=postgresql.dialect())
-    )
+    sql = str(session.execute.await_args.args[0].compile(dialect=postgresql.dialect()))
     assert "ocr_fts @@" in sql and "community_id" in sql
 
 
@@ -93,9 +94,10 @@ def test_enqueue_helper_routes_to_media_queue_when_configured() -> None:
     from app.services.media_service import enqueue_ocr
 
     cid = uuid.uuid4()
-    with patch("app.services.media_service.ocr_process_image") as task, patch(
-        "app.services.media_service.get_settings"
-    ) as gs:
+    with (
+        patch("app.services.media_service.ocr_process_image") as task,
+        patch("app.services.media_service.get_settings") as gs,
+    ):
         gs.return_value.AI_PROVIDER = "x"
         enqueue_ocr(uuid.uuid4(), cid, "image/png")
         task.apply_async.assert_called_once()
