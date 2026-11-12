@@ -85,11 +85,13 @@ class GalleryPollSearchMixin:
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Poll, Post, float]], str | None, int]:
         """
         @brief Search polls via the FTS content of the post they are attached to.
 
-        Applies the post's soft-delete, visibility, and block rules.
+        Applies the post's soft-delete, visibility, and block rules. Polls on
+        NSFW posts are excluded unless *include_nsfw* (adult viewers only).
 
         @return Tuple of ((poll, post, rank) items, next_cursor, total).
         """
@@ -125,6 +127,8 @@ class GalleryPollSearchMixin:
             ~blocked,
             match_expr,
         ]
+        if not include_nsfw:
+            conds.append(Post.is_nsfw.is_(False))
         stmt = (
             select(Poll, Post, rank_expr.label("rank"))
             .join(Post, Post.id == Poll.post_id)
