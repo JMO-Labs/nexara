@@ -9,7 +9,10 @@ import { MediaCarouselWidget } from "./widgets/MediaCarouselWidget";
 import { QuickActionsWidget } from "./widgets/QuickActionsWidget";
 
 export type WidgetId =
-  "upcoming-events" | "my-groups" | "media" | "quick-actions";
+  | "upcoming-events"
+  | "my-groups"
+  | "media"
+  | "quick-actions";
 
 export const WIDGETS: {
   id: WidgetId;
