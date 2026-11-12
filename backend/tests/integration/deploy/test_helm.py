@@ -62,7 +62,9 @@ def test_default_template_renders_expected_kinds() -> None:
     kinds_only = {k for k, _ in kinds}
     assert {"Deployment", "Secret", "ConfigMap", "Service", "HorizontalPodAutoscaler"} <= kinds_only
     assert "Ingress" not in kinds_only
-    assert len([k for k, _ in kinds if k in ("Deployment", "StatefulSet")]) >= 5  # api, worker, beat, valkey, pg
+    assert (
+        len([k for k, _ in kinds if k in ("Deployment", "StatefulSet")]) >= 5
+    )  # api, worker, beat, valkey, pg
 
 
 def test_ingress_and_external_services() -> None:
