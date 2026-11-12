@@ -34,7 +34,13 @@ NOTIF_COLUMNS = [f"notif_list_{k}_{ch}" for k in _KINDS for ch in ("inapp", "ema
 
 
 def _f(key: str, label: str, type_key: str, required: bool = False, **config: object) -> dict:
-    return {"key": key, "label": label, "type_key": type_key, "required": required, "config": config}
+    return {
+        "key": key,
+        "label": label,
+        "type_key": type_key,
+        "required": required,
+        "config": config,
+    }
 
 
 SEED_TEMPLATES = [
@@ -61,8 +67,12 @@ SEED_TEMPLATES = [
         "fields": [
             _f("dish", "Dish", "text", True),
             _f("category", "Category", "select", options=["Main", "Side", "Dessert", "Drink"]),
-            _f("dietary", "Dietary", "multiselect",
-               options=["Vegetarian", "Vegan", "Gluten-free", "Nut-free"]),
+            _f(
+                "dietary",
+                "Dietary",
+                "multiselect",
+                options=["Vegetarian", "Vegan", "Gluten-free", "Nut-free"],
+            ),
             _f("quantity", "Quantity", "number"),
             _f("serves", "Serves", "number"),
         ],
@@ -151,7 +161,10 @@ def _created_tables() -> None:
         _fk("cover_media_id", "media.id", "SET NULL"),
         _bool("is_shared"),
         *_ts(),
-        _fts("list_template", "to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,''))"),
+        _fts(
+            "list_template",
+            "to_tsvector('english', coalesce(name,'') || ' ' || coalesce(description,''))",
+        ),
     )
     op.create_table(
         "list_template_field",
@@ -190,7 +203,9 @@ def _created_tables() -> None:
         _int("completed_count"),
         _int("signup_count"),
         *_ts(),
-        _fts("list", "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"),
+        _fts(
+            "list", "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"
+        ),
         sa.CheckConstraint(
             "visibility IN ('community','subgroup','private','members')", name="ck_list_visibility"
         ),
@@ -201,7 +216,9 @@ def _created_tables() -> None:
         _fk("user_id", "users.id", "CASCADE", False, primary_key=True),
         sa.Column("role", sa.Text, nullable=False, server_default="viewer"),
         _bool("share_personal"),
-        sa.Column("added_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "added_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+        ),
     )
     op.create_table(
         "list_item",
@@ -222,19 +239,31 @@ def _created_tables() -> None:
         _fk("user_id", "users.id", "CASCADE", False, primary_key=True),
         _int("quantity", "1"),
         sa.Column("note", sa.Text),
-        sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "claimed_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
     op.create_table(
         "list_item_completion",
         _fk("item_id", "list_item.id", "CASCADE", False, primary_key=True),
         _fk("user_id", "users.id", "CASCADE", False, primary_key=True),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "completed_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
 
 
 def _indexes() -> None:
     op.create_index("ix_list_template_community_id", "list_template", ["community_id"])
-    op.create_index("ix_list_template_search_fts", "list_template", ["search_fts"], postgresql_using="gin")
+    op.create_index(
+        "ix_list_template_search_fts", "list_template", ["search_fts"], postgresql_using="gin"
+    )
     op.create_index("ix_list_template_field_template_id", "list_template_field", ["template_id"])
     op.create_index("ix_list_template_item_template_id", "list_template_item", ["template_id"])
     op.create_index("ix_list_community_id", "list", ["community_id"])
@@ -259,7 +288,10 @@ def _seed() -> None:
                     " list_template WHERE community_id = :cid AND is_system AND category = :category"
                     " AND deleted_at IS NULL) RETURNING id"
                 ),
-                {"cid": cid, **{k: t[k] for k in ("name", "description", "category", "icon", "color")}},
+                {
+                    "cid": cid,
+                    **{k: t[k] for k in ("name", "description", "category", "icon", "color")},
+                },
             ).first()
             if row is None:
                 continue
@@ -270,8 +302,12 @@ def _seed() -> None:
                         " type_key, required, config) VALUES (:tid, :pos, :key, :label,"
                         " :type_key, :required, CAST(:config AS jsonb))"
                     ),
-                    {"tid": row[0], "pos": pos, **{k: f[k] for k in ("key", "label", "type_key", "required")},
-                     "config": json.dumps(f["config"])},
+                    {
+                        "tid": row[0],
+                        "pos": pos,
+                        **{k: f[k] for k in ("key", "label", "type_key", "required")},
+                        "config": json.dumps(f["config"]),
+                    },
                 )
 
 
