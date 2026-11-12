@@ -62,7 +62,7 @@ export function AppriseList() {
   });
 
   const remove = useMutation({
-    mutationFn: deleteAppriseUrl,
+    mutationFn: (id: string) => deleteAppriseUrl(id),
     onSuccess: () => {
       setDeleting(null);
       return refresh();
