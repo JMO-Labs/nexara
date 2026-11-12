@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AuthenticationError
 from app.models.user import User
+from app.plugins.hooks import HookRegistry
 from app.models.user_oauth_link import UserOAuthLink
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
@@ -176,4 +177,10 @@ class UserProvisioner:
         )
         await self._link_repo.create(new_link)
         await CalendarRepository(self._db).ensure_personal(self._community_id, user.id)
+        await HookRegistry.emit(
+            "on_user_joined",
+            community_id=self._community_id,
+            session=self._db,
+            user_id=user.id,
+        )
         return user
