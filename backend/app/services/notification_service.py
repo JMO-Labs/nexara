@@ -56,6 +56,11 @@ PREF_MAP = {
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
+    "list.item": ("notif_list_item_inapp", "notif_list_item_email"),
+    "list.signup": ("notif_list_signup_inapp", "notif_list_signup_email"),
+    "list.completed": ("notif_list_completed_inapp", "notif_list_completed_email"),
+    "list.expiring": ("notif_list_expiring_inapp", "notif_list_expiring_email"),
+    "list.member": ("notif_list_member_inapp", "notif_list_member_email"),
 }
 
 
