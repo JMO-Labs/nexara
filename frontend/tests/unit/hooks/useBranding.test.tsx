@@ -36,7 +36,7 @@ describe("useBranding", () => {
 describe("useUpdateBranding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useToasts.setState({ toasts: [] } as never);
+    useToasts.getState().clear();
   });
 
   it("calls API, invalidates cache and toasts on success", async () => {
@@ -52,7 +52,12 @@ describe("useUpdateBranding", () => {
       accent: "#000000",
     });
     expect(spy).toHaveBeenCalledWith({ queryKey: qk.admin.branding() });
-    expect(JSON.stringify(useToasts.getState())).toContain("Branding saved");
+    expect(useToasts.getState().items).toEqual([
+      expect.objectContaining({
+        variant: "success",
+        message: "Branding saved",
+      }),
+    ]);
   });
 
   it("does not invalidate on failure", async () => {
