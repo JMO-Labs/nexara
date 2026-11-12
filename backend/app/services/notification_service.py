@@ -35,6 +35,7 @@ NOTIFICATION_TYPES = (
     "gallery_reminder",
     "prompt",
     "prompt_summary",
+    "kudos_received",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -51,6 +52,7 @@ PREF_MAP = {
     "gallery_reminder": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
+    "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
 }
 
 
