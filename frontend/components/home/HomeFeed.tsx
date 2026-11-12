@@ -84,7 +84,9 @@ export function HomeFeed() {
           Send Kudos
         </Button>
       </div>
-      <KudosComposer open={kudosOpen} onClose={() => setKudosOpen(false)} />
+      {kudosOpen ? (
+        <KudosComposer open onClose={() => setKudosOpen(false)} />
+      ) : null}
       <AnimatePresence mode="wait" initial={false}>
         {isLoading ? (
           <motion.div
