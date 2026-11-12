@@ -62,6 +62,9 @@ describe("PrivacyTab", () => {
     await user.click(screen.getByRole("switch", { name: "Show last seen" }));
     expect(save).toBeEnabled();
     await user.click(save);
-    expect(mutate).toHaveBeenCalledWith({ show_last_seen: true });
+    expect(mutate).toHaveBeenCalledWith(
+      { show_last_seen: true },
+      expect.anything(),
+    );
   });
 });
