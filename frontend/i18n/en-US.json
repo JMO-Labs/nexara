@@ -104,6 +104,8 @@
   },
   "feed": {
     "title": "Activity Feed",
+    "promptSummary": "Prompt summary",
+    "replyToPrompt": "Reply to a prompt",
     "createPost": "What's on your mind?",
     "submit": "Post",
     "loadMore": "Load more",

@@ -5,8 +5,9 @@
  *        Comment thread rendered conditionally when expanded.
  */
 import * as React from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Badge, Button, Card } from "@/components/ui";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
@@ -82,6 +83,19 @@ export function PostCard({
           subgroupSlug={post.subgroup_slug ?? null}
         />
       </div>
+      {post.is_prompt_summary || post.reply_to_prompt_id ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {post.is_prompt_summary ? <Badge>Prompt summary</Badge> : null}
+          {post.reply_to_prompt_id ? (
+            <Link
+              href={`/app/prompts/${post.reply_to_prompt_id}`}
+              className="text-xs font-medium text-[var(--nx-ink)] underline underline-offset-2 focus-visible:outline-2"
+            >
+              Reply to a prompt
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       <PostBody content={post.content} truncate={truncateBody} />
       {post.link_previews?.map((preview) =>
         preview.provider_type && embedUrl(preview) ? (
