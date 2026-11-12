@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/events/subscriptions/AddModal.tsx
- * @brief Add calendar subscription modal with form.
+ * @brief Add/edit calendar subscription modal with form.
  */
 import * as React from "react";
 import { useTranslations } from "next-intl";
@@ -17,6 +17,12 @@ export interface AddModalProps {
     sync_interval_minutes: number;
   }) => void;
   isLoading: boolean;
+  /** When set the modal edits this subscription instead of adding. */
+  initial?: {
+    title: string;
+    source_url: string;
+    sync_interval_minutes: number;
+  };
 }
 
 const EMPTY = { title: "", sourceUrl: "", interval: 60 };
@@ -30,9 +36,21 @@ export function AddModal({
   onClose,
   onSubmit,
   isLoading,
+  initial,
 }: AddModalProps) {
   const t = useTranslations();
-  const [form, setForm] = React.useState(EMPTY);
+  const start = initial
+    ? {
+        title: initial.title,
+        sourceUrl: initial.source_url,
+        interval: initial.sync_interval_minutes,
+      }
+    : EMPTY;
+  const [form, setForm] = React.useState(start);
+  React.useEffect(() => {
+    if (open) setForm(start);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSubmit = () => {
     if (!form.title || !form.sourceUrl) return;
@@ -41,14 +59,18 @@ export function AddModal({
       source_url: form.sourceUrl,
       sync_interval_minutes: form.interval,
     });
-    setForm(EMPTY);
+    if (!initial) setForm(EMPTY);
   };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={t("components.calendar.subscriptions.add_modal_title")}
+      title={t(
+        initial
+          ? "components.calendar.subscriptions.edit_modal_title"
+          : "components.calendar.subscriptions.add_modal_title",
+      )}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={isLoading}>
@@ -59,7 +81,7 @@ export function AddModal({
             loading={isLoading}
             disabled={!form.title || !form.sourceUrl}
           >
-            {t("actions.add")}
+            {t(initial ? "actions.save" : "actions.add")}
           </Button>
         </>
       }

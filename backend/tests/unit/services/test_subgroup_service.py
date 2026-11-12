@@ -758,3 +758,49 @@ class TestCreateWithInitialOwner:
         # Verify subgroup was NOT created
         subgroup_repo.create_subgroup.assert_not_awaited()
         member_repo.add_member.assert_not_awaited()
+
+
+class TestAccentColor:
+    """accent_color validation on update_subgroup."""
+
+    async def _setup(self, subgroup_repo, member_repo):
+        owner = _make_user()
+        subgroup_repo.get_by_slug.return_value = _make_subgroup(slug="family")
+        membership = MagicMock(spec=SubgroupMember)
+        membership.role = "owner"
+        member_repo.get_membership.return_value = membership
+        subgroup_repo.update_fields.return_value = _make_subgroup(slug="family")
+        return owner
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("bad", ["red", "#12345", "#GGGGGG", "123456", "#1234567"])
+    async def test_invalid_hex_rejected(self, service, subgroup_repo, member_repo, bad):
+        from app.core.exceptions import ValidationError
+
+        owner = await self._setup(subgroup_repo, member_repo)
+        with pytest.raises(ValidationError):
+            await service.update_subgroup("family", owner, {"accent_color": bad})
+        subgroup_repo.update_fields.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_low_contrast_rejected(self, service, subgroup_repo, member_repo):
+        from app.core.exceptions import ValidationError
+
+        owner = await self._setup(subgroup_repo, member_repo)
+        with pytest.raises(ValidationError):
+            await service.update_subgroup("family", owner, {"accent_color": "#1B3524"})
+        subgroup_repo.update_fields.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_valid_accent_persisted(self, service, subgroup_repo, member_repo):
+        owner = await self._setup(subgroup_repo, member_repo)
+        await service.update_subgroup("family", owner, {"accent_color": "#C6B4F5"})
+        data = subgroup_repo.update_fields.await_args[0][1]
+        assert data["accent_color"] == "#C6B4F5"
+
+    @pytest.mark.asyncio
+    async def test_none_clears_accent_for_fallback(self, service, subgroup_repo, member_repo):
+        owner = await self._setup(subgroup_repo, member_repo)
+        await service.update_subgroup("family", owner, {"accent_color": None})
+        data = subgroup_repo.update_fields.await_args[0][1]
+        assert data["accent_color"] is None

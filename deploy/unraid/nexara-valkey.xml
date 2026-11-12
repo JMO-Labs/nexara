@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>nexara-valkey</Name>
+  <Repository>valkey/valkey:latest</Repository>
+  <Registry>https://hub.docker.com/r/valkey/valkey</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/JMO-Labs/nexara/issues</Support>
+  <Project>https://github.com/JMO-Labs/nexara</Project>
+  <Overview>Optional standalone Valkey (Redis-compatible) cache and queue for Nexara. Not needed by default because the Nexara image bundles Valkey. No port is published to the host.</Overview>
+  <Category>Other: Network:Web</Category>
+  <TemplateURL>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara-valkey.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara-icon.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <Requires>Docs: https://github.com/JMO-Labs/nexara/blob/main/docs/docs/deployment/unraid.md</Requires>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/nexara/valkey" Mode="rw" Description="Persistent Valkey data directory." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nexara/valkey</Config>
+</Container>

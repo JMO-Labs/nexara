@@ -3,6 +3,7 @@
  * @brief Motion primitives. Variants for page/modal/drawer/list-stagger.
  *        Spring/ease config inlined; reduced-motion respected via CSS.
  */
+import { useReducedMotion } from "framer-motion";
 import type { Variants, Transition } from "framer-motion";
 
 export const spring: Transition = {
@@ -72,3 +73,42 @@ export const tabPanelVariants: Variants = {
   },
   exit: { opacity: 0, y: -4, transition: { duration: 0.12 } },
 };
+
+/** Reaction click feedback: 1 -> 1.2 -> 1, 200ms spring. */
+export const scalePress: Variants = {
+  rest: { scale: 1 },
+  pressed: {
+    scale: [1, 1.2, 1],
+    transition: { type: "spring", stiffness: 300, damping: 15, duration: 0.2 },
+  },
+};
+
+/** New message slide-in. */
+export const slideUp: Variants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+};
+
+/** Opacity-only mount/exit (skeleton to content). */
+export const fadeInOut: Variants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.18, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.12 } },
+};
+
+/**
+ * @brief Motion props for a variants set, or `{}` under prefers-reduced-motion.
+ * @param variants variants using initial/animate/exit keys
+ * @return props to spread on a motion element
+ */
+export function useMotionProps(variants: Variants) {
+  const reduced = useReducedMotion();
+  if (reduced) return {};
+  return {
+    variants,
+    initial: "initial",
+    animate: "animate",
+    exit: "exit",
+  } as const;
+}
