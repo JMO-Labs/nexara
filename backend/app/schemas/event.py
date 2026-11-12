@@ -204,7 +204,6 @@ class CalendarSubscriptionResponse(BaseModel):
     last_synced_at: datetime | None
     sync_error: str | None
     shared_by_admin: bool = False
-    sync_interval_minutes: int = 60
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -13,6 +13,7 @@ import httpx
 import pytest
 
 from app.core.exceptions import AppError, NotFoundError
+from app.core.http_safe import UnsafeUrlError
 from app.models.event import CalendarSubscription, Event
 from app.repositories.event_repo import EventRepository
 from app.schemas.event import CalendarSubscriptionResponse
@@ -164,7 +165,7 @@ async def test_sync_now_fetches_and_upserts(service: EventService, repo: AsyncMo
     uid = uuid.uuid4()
     sub = _sub(user_id=uid)
     repo.get_subscription.return_value = sub
-    with patch("app.services.event_service.safe_fetch", AsyncMock(return_value=ICS)) as f:
+    with patch("app.services.event_ical.safe_fetch", AsyncMock(return_value=ICS)) as f:
         count = await service.sync_now(sub.id, uid)
     f.assert_awaited_once_with(sub.source_url)
     assert count == 1
@@ -205,9 +206,29 @@ async def test_sync_now_fetch_failure_sets_error_and_commits(
 ) -> None:
     sub = _sub()
     repo.get_subscription.return_value = sub
-    with patch("app.services.event_service.safe_fetch", side_effect=httpx.ConnectError("boom")):
+    with patch("app.services.event_ical.safe_fetch", side_effect=httpx.ConnectError("boom")):
         with pytest.raises(AppError) as ei:
             await service.sync_now(sub.id, sub.user_id)
     assert ei.value.code == "sync_failed"
+    assert ei.value.status_code == 502
     assert sub.sync_error.startswith("fetch_error")
     service._session.commit.assert_awaited()
+
+
+async def test_sync_now_unsafe_url_returns_422(service: EventService, repo: AsyncMock) -> None:
+    sub = _sub()
+    repo.get_subscription.return_value = sub
+    with patch("app.services.event_ical.safe_fetch", side_effect=UnsafeUrlError("private")):
+        with pytest.raises(AppError) as ei:
+            await service.sync_now(sub.id, sub.user_id)
+    assert ei.value.code == "sync_failed"
+    assert ei.value.status_code == 422
+    service._session.commit.assert_awaited()
+
+
+def test_ical_logic_lives_in_event_ical_module() -> None:
+    from app.services.event_ical import EventIcalMixin
+
+    assert issubclass(EventService, EventIcalMixin)
+    for name in ("to_ical", "export_event_ical", "export_feed_ical", "sync_now"):
+        assert name in vars(EventIcalMixin)
