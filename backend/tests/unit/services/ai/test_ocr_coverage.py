@@ -8,8 +8,6 @@ from __future__ import annotations
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.repositories.media_ai_repo import MediaAIRepository
 from app.services.ai import provider as provider_mod
 from app.tasks import ai_tasks
@@ -88,9 +86,10 @@ async def test_ocr_async_runs_and_commits() -> None:
 
 def test_ocr_process_image_returns_status() -> None:
     mid = uuid.uuid4()
-    with patch.object(ai_tasks, "_ocr_async", new=MagicMock(return_value=None)) as m, patch.object(
-        ai_tasks.asyncio, "run", return_value="skipped"
-    ) as run:
+    with (
+        patch.object(ai_tasks, "_ocr_async", new=MagicMock(return_value=None)) as m,
+        patch.object(ai_tasks.asyncio, "run", return_value="skipped") as run,
+    ):
         assert ai_tasks.ocr_process_image(str(mid), str(CID)) == {"status": "skipped"}
     m.assert_called_once_with(mid, CID)
     run.assert_called_once()
