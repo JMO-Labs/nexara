@@ -59,3 +59,49 @@ def ocr_process_image(media_id: str, community_id: str) -> dict[str, str]:
     """
     status = asyncio.run(_ocr_async(uuid.UUID(media_id), uuid.UUID(community_id)))
     return {"status": status}
+
+
+async def _sassybot_async(post_id: uuid.UUID, community_id: uuid.UUID, force: bool) -> bool:
+    from app.repositories.comment_repo import CommentRepository
+    from app.repositories.sassybot_repo import SassybotRepository
+    from app.services.ai.sassybot_runner import run_sassybot
+    from app.services.ai.sassybot_service import SassybotService
+    from app.services.realtime.event_bus import event_bus
+
+    settings = get_settings()
+    provider = get_ai_provider(settings)
+    if provider is None or not settings.SASSYBOT_USER_ID:
+        return False
+    bot_id = uuid.UUID(settings.SASSYBOT_USER_ID)
+    async with async_session_factory() as session:
+        repo = SassybotRepository(session)
+        service = SassybotService(repo, provider, get_storage_backend(settings), bot_id)
+        created = await run_sassybot(
+            post_id,
+            community_id,
+            force=force,
+            service=service,
+            repo=repo,
+            comment_repo=CommentRepository(session),
+            bot_user_id=bot_id,
+            event_bus=event_bus,
+        )
+        await session.commit()
+    return created
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="app.tasks.ai_tasks.sassybot_comment_task",
+    soft_time_limit=120,
+    time_limit=180,
+)
+def sassybot_comment_task(post_id: str, community_id: str, force: bool = False) -> dict[str, bool]:
+    """
+    @brief Maybe post a Sassybot comment on a post (best-effort; AI errors are skipped).
+    @param post_id Post UUID string.
+    @param community_id Community UUID string.
+    @param force True when @sassybot was mentioned (bypasses probability/invoke-only).
+    @return Dict with ``created``.
+    """
+    created = asyncio.run(_sassybot_async(uuid.UUID(post_id), uuid.UUID(community_id), force))
+    return {"created": created}
