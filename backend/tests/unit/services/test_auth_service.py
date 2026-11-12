@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -50,6 +50,14 @@ def _make_user(**overrides):
     user.totp_secret = overrides.get("totp_secret", None)
     user.deleted_at = None
     return user
+
+
+
+@pytest.fixture(autouse=True)
+def _sso_only_off():
+    """@brief SSO-only guard disabled by default (mocked sessions)."""
+    with patch("app.services.auth.sso_only.is_sso_only", AsyncMock(return_value=False)):
+        yield
 
 
 def _make_service(session=None, settings=None):

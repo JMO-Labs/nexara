@@ -29,6 +29,14 @@ def _make_user(user_id=USER_ID, email=USER_EMAIL):
     return u
 
 
+
+@pytest.fixture(autouse=True)
+def _sso_only_off():
+    """@brief SSO-only guard disabled by default (mocked sessions)."""
+    with patch("app.services.auth.sso_only.is_sso_only", AsyncMock(return_value=False)):
+        yield
+
+
 def _make_service(session=None, settings=None):
     session = session or AsyncMock()
     settings = settings or MagicMock()
