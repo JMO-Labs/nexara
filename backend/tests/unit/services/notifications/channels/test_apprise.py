@@ -128,8 +128,9 @@ async def test_deliver_transient_raises_for_retry() -> None:
 
     repo, apobj = _run_task(None, False)
     apobj.notify.side_effect = TimeoutError("slow")
-    with patch(f"{TASKS}.apprise.Apprise", return_value=apobj), pytest.raises(
-        TransientDeliveryError
+    with (
+        patch(f"{TASKS}.apprise.Apprise", return_value=apobj),
+        pytest.raises(TransientDeliveryError),
     ):
         await _apprise_deliver_async(repo, uuid4(), "T", "B")
     repo.record_failure.assert_not_awaited()

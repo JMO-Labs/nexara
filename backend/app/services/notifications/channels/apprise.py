@@ -2,9 +2,9 @@
 @brief Apprise channel: fans out to the user's enabled Apprise URLs.
 """
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import AsyncIterator, ClassVar
+from typing import ClassVar
 
 import structlog
 

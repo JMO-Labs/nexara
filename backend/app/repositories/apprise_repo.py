@@ -43,9 +43,7 @@ class AppriseRepository(BaseRepository[AppriseURL]):
         await self._session.refresh(row)
         return row
 
-    async def list_for_user(
-        self, user_id: uuid.UUID, community_id: uuid.UUID
-    ) -> list[AppriseURL]:
+    async def list_for_user(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[AppriseURL]:
         """@brief Enabled URLs for a user with ``apprise_url`` decrypted.
 
         Rows are detached from the session so the plaintext is never flushed.
