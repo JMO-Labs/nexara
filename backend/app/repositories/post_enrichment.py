@@ -240,6 +240,14 @@ async def enrich_posts(
             "subgroup_slug": (
                 subgroup_slug_map.get(post.subgroup_id) if post.subgroup_id else None
             ),
+            "is_prompt_post": post.is_prompt_post,
+            "is_prompt_summary": post.is_prompt_summary,
+            "reply_to_prompt_id": (
+                str(post.reply_to_prompt_id) if post.reply_to_prompt_id else None
+            ),
+            "source_prompt_post_id": (
+                str(post.source_prompt_post_id) if post.source_prompt_post_id else None
+            ),
             "created_at": post.created_at.isoformat(),
             "updated_at": post.updated_at.isoformat(),
         }

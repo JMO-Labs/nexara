@@ -60,6 +60,10 @@ class PostResponse(BaseModel):
     subgroup_id: UUID | None = None
     subgroup_name: str | None = None
     subgroup_slug: str | None = None
+    is_prompt_post: bool = False
+    is_prompt_summary: bool = False
+    reply_to_prompt_id: UUID | None = None
+    source_prompt_post_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
