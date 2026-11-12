@@ -72,6 +72,7 @@ def repo() -> AsyncMock:
     r = AsyncMock(spec=EventRepository)
     r.rsvp_counts.return_value = {}
     r.get_attendance.return_value = None
+    r.get_ical_people.return_value = {}
     return r
 
 
