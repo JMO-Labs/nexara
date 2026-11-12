@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>nexara</Name>
+  <Repository>ghcr.io/com-nexara/nexara:latest</Repository>
+  <Registry>https://github.com/com-nexara/nexara/pkgs/container/nexara</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/JMO-Labs/nexara/issues</Support>
+  <Project>https://github.com/JMO-Labs/nexara</Project>
+  <Overview>Nexara is a self-hosted community platform for families, clubs and groups: calendar, events, posts, photos and chat. Requires the nexara-postgres container. Valkey is bundled in the image (REDIS_URL defaults to 127.0.0.1).</Overview>
+  <Category>Other: Network:Web</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/JMO-Labs/nexara/main/deploy/unraid/nexara-icon.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Requires the nexara-postgres template. Docs: https://github.com/JMO-Labs/nexara/blob/main/docs/docs/deployment/unraid.md</Requires>
+  <Config Name="WebUI Port" Target="8080" Default="8080" Mode="tcp" Description="Host port for the Nexara web interface (1-65535, default 8080)." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Media Storage" Target="/data/media" Default="/mnt/user/appdata/nexara/media" Mode="rw" Description="Persistent storage for uploaded photos and files." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nexara/media</Config>
+  <Config Name="Cache (optional)" Target="/cache" Default="/mnt/user/appdata/nexara/cache" Mode="rw" Description="Optional cache directory (e.g. transcoding scratch space)." Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/appdata/nexara/cache</Config>
+  <Config Name="Database URL" Target="DATABASE_URL" Default="postgresql+asyncpg://nexara:CHANGE_ME@nexara-postgres:5432/nexara" Mode="" Description="PostgreSQL connection string. Host is the nexara-postgres container name; user, password and database must match that template. Special characters in the password must be URL-encoded." Type="Variable" Display="always" Required="true" Mask="true">postgresql+asyncpg://nexara:CHANGE_ME@nexara-postgres:5432/nexara</Config>
+  <Config Name="Redis/Valkey URL" Target="REDIS_URL" Default="redis://127.0.0.1:6379" Mode="" Description="Advanced: leave the default to use the bundled Valkey, or point to the nexara-valkey container (redis://nexara-valkey:6379)." Type="Variable" Display="advanced" Required="true" Mask="false">redis://127.0.0.1:6379</Config>
+  <Config Name="Secret Key" Target="SECRET_KEY" Default="" Mode="" Description="Secret used to sign login tokens. Use a long random string (e.g. output of: openssl rand -hex 32). Keep it private." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO|DEBUG|WARNING|ERROR" Mode="" Description="Log verbosity." Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
+</Container>
