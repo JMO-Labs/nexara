@@ -92,9 +92,9 @@ class TestPluginDataModel:
 
 
 class TestMigration:
-    """@brief Verify the 0019 migration and linear chain."""
+    """@brief Verify the 0021 migration and linear chain."""
 
     def test_down_revision_is_previous_head(self):
         src = (VERSIONS / "0021_plugin_models.py").read_text()
-        assert 'down_revision: str | None = "a78f91338679"' in src
+        assert 'down_revision: str | None = "0020_media_ai_metadata"' in src
         assert "plugin_data" in src and "drop_table" in src
