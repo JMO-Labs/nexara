@@ -5,6 +5,9 @@
  */
 
 export const qk = {
+  storage: {
+    user: (userId: string) => ["storage", userId] as const,
+  },
   auth: {
     me: () => ["auth", "me"] as const,
     session: () => ["auth", "session"] as const,
