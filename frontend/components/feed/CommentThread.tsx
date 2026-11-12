@@ -84,8 +84,15 @@ export function CommentThread({
   expanded = false,
   onOverflowChange,
 }: CommentThreadProps) {
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useComments(postId);
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useComments(postId);
   const createMut = useCreateComment(postId);
   const [text, setText] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<string | null>(null);
@@ -157,8 +164,18 @@ export function CommentThread({
           <Skeleton height={48} />
           <Skeleton height={48} />
         </div>
+      ) : isError && flat.length === 0 ? (
+        <div role="alert" className="flex items-center gap-3 py-2 text-sm">
+          <span>Couldn&apos;t load comments.</span>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       ) : flat.length === 0 ? (
-        <p className="py-2 text-sm text-ink/75">No comments yet.</p>
+        <p className="py-2 text-sm text-ink/75">
+          <span className="font-semibold">Be first to comment</span>
+          {" — share your thoughts above."}
+        </p>
       ) : (
         <div
           ref={scrollRef}

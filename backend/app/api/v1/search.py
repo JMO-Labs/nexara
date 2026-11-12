@@ -11,12 +11,14 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Query
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.exceptions import AppError
 from app.core.i18n import _
+from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import SearchResponse
@@ -34,11 +36,17 @@ def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
 def _build_service(
     db: AsyncSession = Depends(get_db),
     community_id: uuid.UUID = Depends(_community_id),
+    settings: Settings = Depends(get_settings),
 ) -> SearchService:
     """@brief Build the SearchService with injected dependencies."""
+    try:
+        cache: Redis | None = get_pool(settings, DB_CACHE)
+    except Exception:  # noqa: BLE001
+        cache = None
     return SearchService(
         search_repo=SearchRepository(db),
         community_id=community_id,
+        cache_client=cache,
     )
 
 

@@ -14,6 +14,7 @@ from typing import Any
 
 import structlog
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.post import Post
@@ -193,6 +194,8 @@ class PostService:
                 },
             )
 
+        await invalidate_search_cache_for_community(self._community_id)
+
         if enriched and self._event_bus:
             await self._emit_scoped(
                 events.post_created(self._target, enriched),
@@ -221,6 +224,7 @@ class PostService:
             raise AuthorizationError(_("You can only edit your own posts"))
 
         await self._post_repo.update_content(post, content)
+        await invalidate_search_cache_for_community(self._community_id)
         enriched = await self._post_repo.get_post_detail(
             post_id,
             self._community_id,
@@ -245,6 +249,7 @@ class PostService:
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
+        await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("post", post_id)
 

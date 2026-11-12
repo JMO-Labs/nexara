@@ -17,6 +17,7 @@ from celery import Task
 from app.core.config import get_settings
 from app.db.session import async_session_factory
 from app.models.user import User
+from app.repositories.branding_repo import BrandingRepository
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.services.email.sender import EmailSender
@@ -49,6 +50,8 @@ async def _send_email_notification_async(
             logger.warning("send_email_notification_user_not_found", user_id=str(user_id))
             return {"status": "skipped"}
         to_email = user.email
+        branding = await BrandingRepository(session).get(user.community_id)
+        sender_name = getattr(branding, "email_sender_name", None) or None
 
     renderer = EmailTemplateRenderer()
     html, text = renderer.render(
@@ -67,6 +70,7 @@ async def _send_email_notification_async(
         subject=payload.get("subject", "New notification"),
         html_body=html,
         text_body=text,
+        sender_name=sender_name,
     )
     return {"status": "sent" if sent else "skipped"}
 
