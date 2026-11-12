@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock
 
 from pydantic import ValidationError as PydanticValidationError
 
+import app.services.notifications.types  # noqa: F401  (registers types)
 from app.core.exceptions import AppError
 from app.services.notification_service import NotificationService
 from app.services.notifications import registry
-import app.services.notifications.types  # noqa: F401  (registers types)
 
 
 async def _validate(user_id: Any, type: str, payload: dict[str, Any], actor_id: Any = None) -> None:  # noqa: A002

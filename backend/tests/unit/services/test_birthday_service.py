@@ -7,11 +7,11 @@ import uuid
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
-from tests.unit.services.strict_notify import strict_notify
 from app.repositories.birthday_repo import BirthdayRepository
 from app.repositories.post_repo import PostRepository
 from app.services.birthday_service import BirthdayService
 from app.services.notification_service import PREF_MAP
+from tests.unit.services.strict_notify import strict_notify
 
 TODAY = date(2026, 5, 4)
 

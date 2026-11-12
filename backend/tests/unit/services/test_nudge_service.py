@@ -11,8 +11,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.unit.services.strict_notify import strict_notify
-
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError, RateLimitError
 from app.models.nudge import Nudge
 from app.models.user import User
@@ -20,6 +18,7 @@ from app.repositories.nudge_repo import NudgeRepository
 from app.repositories.user_repo import UserRepository
 from app.services.notification_service import PREF_MAP
 from app.services.nudge_service import NudgeService
+from tests.unit.services.strict_notify import strict_notify
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 SENDER = uuid.uuid4()

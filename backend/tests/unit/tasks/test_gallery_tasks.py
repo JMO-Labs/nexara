@@ -8,9 +8,8 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
-from tests.unit.services.strict_notify import strict_notify
-
 from app.tasks.gallery_tasks import gallery_batch_notifications, gallery_post_event_reminders
+from tests.unit.services.strict_notify import strict_notify
 
 
 class TestGalleryPostEventReminders:
