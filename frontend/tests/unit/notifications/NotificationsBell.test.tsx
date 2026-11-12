@@ -102,6 +102,6 @@ describe("NotificationsBell", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Notifications" }),
     );
-    expect(await screen.findByText(/all caught up/i)).toBeInTheDocument();
+    expect(await screen.findByText("No notifications")).toBeInTheDocument();
   });
 });
