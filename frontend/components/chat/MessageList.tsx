@@ -201,9 +201,7 @@ export const MessageList = React.forwardRef<
                 data-testid="message-row"
                 data-new={isNew}
                 {...(isNew ? slide : {})}
-                onAnimationComplete={
-                  isNew ? () => fresh.done(m.id) : undefined
-                }
+                onAnimationComplete={isNew ? () => fresh.done(m.id) : undefined}
               >
                 <MessageItem
                   message={m}
