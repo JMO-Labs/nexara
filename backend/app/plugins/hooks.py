@@ -72,7 +72,9 @@ class HookRegistry:
             raise ValueError(f"Unknown hook event '{event_name}'")
         if event_name not in manifest.hooks:
             raise ValueError(f"Plugin '{plugin_id}' does not declare hook '{event_name}'")
-        cls._hooks.setdefault((community_id, event_name), []).append(_Entry(plugin_id, handler, manifest))
+        cls._hooks.setdefault((community_id, event_name), []).append(
+            _Entry(plugin_id, handler, manifest)
+        )
 
     @classmethod
     async def emit(
