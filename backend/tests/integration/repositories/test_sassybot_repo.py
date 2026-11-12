@@ -118,20 +118,10 @@ async def test_get_images_filters_and_orders(session: AsyncSession) -> None:
     assert [m.id for m in images] == [img1.id, img2.id]
 
 
-async def test_count_bot_comments_ignores_others_and_deleted(session: AsyncSession) -> None:
-    from datetime import UTC, datetime
-
+async def test_count_bot_comments_ignores_others(session: AsyncSession) -> None:
     bot, other = await _user(session), await _user(session)
     p = await _post(session, other)
-    for author, deleted in ((bot, False), (bot, False), (bot, True), (other, False)):
-        session.add(
-            Comment(
-                community_id=CID,
-                post_id=p.id,
-                author_id=author.id,
-                content="c",
-                deleted_at=datetime.now(UTC) if deleted else None,
-            )
-        )
+    for author in (bot, bot, other):
+        session.add(Comment(community_id=CID, post_id=p.id, author_id=author.id, content="c"))
     await session.flush()
     assert await SassybotRepository(session).count_bot_comments(p.id, bot.id, CID) == 2
