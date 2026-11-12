@@ -31,6 +31,8 @@ PRICING = {TEXT_MODEL: (0.15, 0.60), VISION_MODEL: (2.50, 10.0), EMBED_MODEL: (0
 class OpenAIProvider(AIProvider):
     """@brief gpt-4o-mini for text, gpt-4o for vision, text-embedding-3-small."""
 
+    vision_model = VISION_MODEL
+
     def __init__(
         self, api_key: str, client: httpx.AsyncClient | None = None, timeout: float = 60.0
     ) -> None:

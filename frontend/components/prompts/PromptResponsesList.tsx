@@ -4,7 +4,8 @@
  * @brief Paginated list of response posts for a prompt post.
  */
 import { AlertCircle } from "lucide-react";
-import { Button, EmptyState, Skeleton } from "@/components/ui";
+import { useState } from "react";
+import { Button, EmptyState, Input, Skeleton } from "@/components/ui";
 import { PostCard } from "@/components/feed/PostCard";
 import { useInfinitePromptResponses } from "@/hooks/usePromptResponses";
 
@@ -18,6 +19,7 @@ export function PromptResponsesList({
 }: {
   promptPostId: string;
 }) {
+  const [search, setSearch] = useState("");
   const q = useInfinitePromptResponses(promptPostId);
 
   if (q.isLoading) {
@@ -50,12 +52,23 @@ export function PromptResponsesList({
       />
     );
   }
-  const posts = q.data?.pages.flatMap((p) => p.items) ?? [];
-  if (posts.length === 0) {
+  const all = q.data?.pages.flatMap((p) => p.items) ?? [];
+  if (all.length === 0) {
     return <EmptyState title="No responses yet." />;
   }
+  const term = search.trim().toLowerCase();
+  const posts = term
+    ? all.filter((p) => (p.content ?? "").toLowerCase().includes(term))
+    : all;
   return (
     <div className="flex flex-col gap-4">
+      <Input
+        type="search"
+        label="Search responses"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {posts.length === 0 && <EmptyState title="No matching responses." />}
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
