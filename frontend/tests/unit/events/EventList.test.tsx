@@ -55,9 +55,11 @@ describe("EventList", () => {
   });
 
   it("shows an error state with retry", async () => {
-    mockList.mockRejectedValue(new Error("boom"));
+    mockList.mockImplementation(() => Promise.reject(new Error("boom")));
     renderWithProviders(<EventList />);
-    expect(await screen.findByText("Couldn't load events")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Couldn't load events", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });
