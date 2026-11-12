@@ -74,6 +74,11 @@ def _fts_expressions(fts_col: Any, prefix_query: str | None) -> tuple[Any, Any, 
     return match, rank, {}
 
 
+def _exclude_nsfw_comments(stmt: Any) -> Any:
+    """@brief Join the parent post and drop comments on NSFW posts."""
+    return stmt.join(Post, Post.id == Comment.post_id).where(Post.is_nsfw.is_(False))
+
+
 class SearchRepository(GalleryPollSearchMixin):
     """
     @brief Async repository for full-text search.
@@ -96,6 +101,7 @@ class SearchRepository(GalleryPollSearchMixin):
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Post, float]], str | None, int]:
         """
         @brief Search posts by content using FTS with prefix support.
@@ -106,6 +112,7 @@ class SearchRepository(GalleryPollSearchMixin):
         @param viewer_id    Current user (for block filter).
         @param cursor       Opaque pagination cursor (offset).
         @param limit        Max items to return.
+        @param include_nsfw Include NSFW-flagged posts (adult viewers only).
         @return Tuple of (items with rank, next_cursor, total).
         """
         if not query or not query.strip():
@@ -128,6 +135,8 @@ class SearchRepository(GalleryPollSearchMixin):
             .where(Post.deleted_at.is_(None))
             .where(match_expr)
         )
+        if not include_nsfw:
+            stmt = stmt.where(Post.is_nsfw.is_(False))
         stmt = BaseRepository.apply_block_filter(stmt, viewer_id)
         stmt = stmt.order_by(rank_expr.desc(), Post.created_at.desc())
 
@@ -138,6 +147,8 @@ class SearchRepository(GalleryPollSearchMixin):
             .where(Post.deleted_at.is_(None))
             .where(match_expr)
         )
+        if not include_nsfw:
+            count_stmt = count_stmt.where(Post.is_nsfw.is_(False))
         count_stmt = BaseRepository.apply_block_filter(
             count_stmt,
             viewer_id,
@@ -354,6 +365,7 @@ class SearchRepository(GalleryPollSearchMixin):
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Comment, float]], str | None, int]:
         """
         @brief Search comments by content using FTS with prefix support.
@@ -364,6 +376,7 @@ class SearchRepository(GalleryPollSearchMixin):
         @param viewer_id    Current user (for block filter).
         @param cursor       Opaque pagination cursor (offset).
         @param limit        Max items to return.
+        @param include_nsfw Include comments on NSFW posts (adult viewers only).
         @return Tuple of (items with rank, next_cursor, total).
         """
         if not query or not query.strip():
@@ -385,6 +398,8 @@ class SearchRepository(GalleryPollSearchMixin):
             .where(Comment.community_id == community_id)
             .where(match_expr)
         )
+        if not include_nsfw:
+            stmt = _exclude_nsfw_comments(stmt)
         stmt = BaseRepository.apply_block_filter(stmt, viewer_id)
         stmt = stmt.order_by(
             rank_expr.desc(),
@@ -397,6 +412,8 @@ class SearchRepository(GalleryPollSearchMixin):
             .where(Comment.community_id == community_id)
             .where(match_expr)
         )
+        if not include_nsfw:
+            count_stmt = _exclude_nsfw_comments(count_stmt)
         count_stmt = BaseRepository.apply_block_filter(
             count_stmt,
             viewer_id,
