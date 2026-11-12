@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import uuid
+from datetime import date
 from typing import TYPE_CHECKING, Any
 
 from app.core.cache import cache_get, cache_set
@@ -55,6 +56,27 @@ def search_cache_key(
     normalized = " ".join(query.lower().split())
     raw = "|".join([normalized, str(community_id), ",".join(sorted(content_types)), str(user_id)])
     return f"search:{hashlib.sha256(raw.encode()).hexdigest()}:{cursor or '0'}"
+
+
+ADULT_AGE: int = 18
+"""@brief Minimum age (years) to view NSFW content."""
+
+
+def is_adult(user: User) -> bool:
+    """
+    @brief Whether the user may view NSFW content (age >= 18 from birthday).
+
+    Users without a birthday are treated as non-adult (safe default).
+
+    @param user Viewer.
+    @return True if the user is an adult.
+    """
+    b = user.birthday
+    if b is None:
+        return False
+    today = date.today()
+    age = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+    return age >= ADULT_AGE
 
 
 def build_prefix_tsquery(raw: str) -> str:
@@ -182,6 +204,7 @@ class SearchService:
     ) -> SearchResponse:
         """@brief Run the repository searches and build the response."""
         prefix_q = build_prefix_tsquery(q)
+        adult = is_adult(user)
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
@@ -195,6 +218,7 @@ class SearchService:
                         user.id,
                         cursor,
                         limit,
+                        include_nsfw=adult,
                     ),
                 )
             )
@@ -249,6 +273,7 @@ class SearchService:
                         user.id,
                         cursor,
                         limit,
+                        include_nsfw=adult,
                     ),
                 )
             )
@@ -267,7 +292,7 @@ class SearchService:
                 (
                     "polls",
                     self._repo.search_polls(
-                        q, prefix_q, self._community_id, user.id, cursor, limit
+                        q, prefix_q, self._community_id, user.id, cursor, limit, include_nsfw=adult
                     ),
                 )
             )
@@ -315,6 +340,7 @@ class SearchService:
                         title=_snippet(entity.content, 80),
                         snippet=_snippet(entity.content),
                         created_at=entity.created_at,
+                        is_nsfw=bool(entity.is_nsfw),
                     )
                 )
             elif result_type == "users":
