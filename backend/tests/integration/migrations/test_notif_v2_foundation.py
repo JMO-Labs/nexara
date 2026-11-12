@@ -21,7 +21,7 @@ BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
 REV = "b2c3d4e5f6a7"
-PREV = "0026_list_templates"
+PREV = "0027_add_sso_only_to_branding"
 
 
 def _admin(url):
@@ -112,7 +112,7 @@ def test_upgrade_backfills_adds_and_drops(scratch):
         assert prefs["comment"]["push"] is False
         # gallery_reminder follows the gallery_activity legacy values
         assert prefs["gallery_reminder"]["push"] is True
-        assert prefs["comment"]["push"] is False
+        assert prefs["reaction"]["inapp"] is True
         # missing combos fall back to section 5.1 defaults
         assert prefs["mention"]["toast"] is True
         assert all(set(v) == {"inapp", "email", "push", "toast"} for v in prefs.values())
