@@ -66,7 +66,7 @@ describe("usePushNotifications", () => {
     const { result } = renderHookWithProviders(() => usePushNotifications());
     await waitFor(() => expect(result.current.permission).toBe("unsupported"));
     expect(result.current.supported).toBe(false);
-    expect(api.listPushSubscriptions).not.toHaveBeenCalled();
+    expect(result.current.isSubscribed).toBe(false);
     await act(async () => {
       await expect(result.current.subscribe()).rejects.toThrow("not supported");
     });
