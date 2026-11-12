@@ -16,7 +16,9 @@ import structlog
 from celery import Task
 from PIL import Image, ImageOps
 
+from app.core.config import get_settings
 from app.core.cache import invalidate_search_cache_for_community
+from app.core.valkey import DB_CACHE, create_pool
 from app.core.transcode import (
     build_ffmpeg_command,
     extract_thumbnail,
@@ -36,6 +38,21 @@ THUMBNAIL_MAX_SIZE = (600, 600)
 
 THUMBNAIL_QUALITY = 85
 """@brief WebP quality for thumbnails."""
+
+
+async def _invalidate_ready(community_id: uuid.UUID, uploader_id: uuid.UUID) -> None:
+    """
+    @brief Invalidate the search cache with a client bound to the current loop.
+
+    Celery runs each task in its own event loop, so the shared pool cannot be used.
+    """
+    redis = create_pool(get_settings(), DB_CACHE)
+    try:
+        await invalidate_search_cache_for_community(
+            community_id, client=redis, service="media", action="ready", user_id=uploader_id
+        )
+    finally:
+        await redis.aclose()
 
 
 async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
@@ -105,9 +122,7 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
             height=img.height,
         )
         await session.commit()
-        await invalidate_search_cache_for_community(
-            media.community_id, service="media", action="ready", user_id=media.uploader_id
-        )
+        await _invalidate_ready(media.community_id, media.uploader_id)
 
     logger.info("generate_thumbnail_completed", media_id=str(media_id))
     return {"status": "processed"}
@@ -314,9 +329,7 @@ async def _transcode_video_async(media_id: str) -> dict[str, str]:
             size_bytes=new_size,
         )
         await session.commit()
-        await invalidate_search_cache_for_community(
-            media.community_id, service="media", action="ready", user_id=media.uploader_id
-        )
+        await _invalidate_ready(media.community_id, media.uploader_id)
 
     logger.info("transcode_video_completed", media_id=media_id)
     return {"status": "processed"}
