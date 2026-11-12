@@ -76,6 +76,7 @@ class NudgeRepository(BaseRepository[Nudge]):
         """
         now = datetime.now(UTC)
         recent = exists().where(
+            Nudge.community_id == community_id,
             Nudge.target_id == User.id,
             Nudge.nudge_type == "gentle",
             Nudge.created_at > now - GENTLE_COOLDOWN,
