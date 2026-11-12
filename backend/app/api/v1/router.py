@@ -28,7 +28,6 @@ from app.api.v1.link_previews import router as link_previews_router
 from app.api.v1.media import router as media_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.nudges import router as nudges_router
-from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.oauth import router as oauth_router
 from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.plugins import router as plugins_router
@@ -40,6 +39,7 @@ from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
+from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.users import router as users_router
 from app.api.v1.ws import router as ws_router
 

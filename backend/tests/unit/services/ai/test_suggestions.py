@@ -6,8 +6,6 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from app.repositories.suggestion_repo import SuggestionRepository
 from app.services.ai.provider import AIError, AIProvider
 from app.services.ai.suggestion_service import SuggestionService

@@ -18,7 +18,9 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "suggestions",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column(
             "community_id",
             UUID(as_uuid=True),
@@ -30,9 +32,13 @@ def upgrade() -> None:
         sa.Column("content", JSONB, nullable=False),
         sa.Column("suggested_by", sa.Text, nullable=False, server_default="ai"),
         sa.Column("approved_at", sa.DateTime(timezone=True)),
-        sa.Column("approved_by", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL")),
+        sa.Column(
+            "approved_by", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL")
+        ),
         sa.Column("rejected_at", sa.DateTime(timezone=True)),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.CheckConstraint("type IN ('prompt', 'poll')", name="ck_suggestions_type"),
     )
     op.create_index(

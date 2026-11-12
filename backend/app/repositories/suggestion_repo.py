@@ -32,7 +32,9 @@ class SuggestionRepository(BaseRepository[Suggestion]):
         self, community_id: uuid.UUID, type: str, content: dict[str, Any]
     ) -> Suggestion:
         """@brief Insert a pending suggestion. @return The created Suggestion."""
-        return await super().create(Suggestion(community_id=community_id, type=type, content=content))
+        return await super().create(
+            Suggestion(community_id=community_id, type=type, content=content)
+        )
 
     async def list_pending(
         self, community_id: uuid.UUID, type: str | None = None, limit: int = 10, offset: int = 0

@@ -42,7 +42,6 @@ from app.models.media_ai import MediaAIMetadata  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401
 from app.models.nudge import Nudge  # noqa: F401
-from app.models.suggestion import Suggestion  # noqa: F401
 from app.models.oauth_provider import OAuthProvider  # noqa: F401
 from app.models.plugin import Plugin, PluginData  # noqa: F401
 from app.models.poll import Poll, PollOption, PollVote  # noqa: F401
@@ -50,6 +49,7 @@ from app.models.post import Comment, Post, PostMedia, Reaction  # noqa: F401
 from app.models.prompt import Prompt, PromptPost  # noqa: F401
 from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot  # noqa: F401
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401
+from app.models.suggestion import Suggestion  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.user_oauth_link import UserOAuthLink  # noqa: F401
 from app.models.user_settings import UserSettings  # noqa: F401
