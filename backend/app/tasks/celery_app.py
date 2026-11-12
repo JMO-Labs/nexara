@@ -49,7 +49,9 @@ celery_app.conf.update(
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
+        "plugins.example_trivia.*": {"queue": "maintenance"},
     },
+    imports=("app.tasks.plugin_tasks",),
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
     worker_prefetch_multiplier=1,
@@ -160,6 +162,14 @@ celery_app.conf.update(
         "send-gentle-nudges": {
             "task": "app.tasks.nudge_tasks.send_gentle_nudges",
             "schedule": crontab(hour="10", minute="0"),
+        },
+        "trivia-select-daily-question": {
+            "task": "plugins.example_trivia.select_daily_question",
+            "schedule": crontab(hour="0", minute="0"),
+        },
+        "trivia-reset-streaks": {
+            "task": "plugins.example_trivia.reset_streaks",
+            "schedule": crontab(day_of_week="sun", hour="0", minute="5"),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",
