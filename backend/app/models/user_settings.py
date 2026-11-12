@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
@@ -41,7 +41,23 @@ class UserSettings(Base):
         server_default=COMMUNITY_DEFAULT,
     )
 
-    # --- Notification preferences (type x channel) ---
+    # --- Notification preferences v2: {type_key: {channel: bool}} ---
+    # TODO(nexara#74 follow-up): legacy notif_* / mute_all_* columns below are
+    # dropped by migration b2c3d4e5f6a7; remove them once services move to JSONB.
+    notification_prefs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    dnd_schedule: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    dnd_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dnd_timezone: Mapped[str] = mapped_column(Text, nullable=False, server_default="UTC")
+    digest_cadence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    digest_last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # --- Legacy notification preferences (type x channel) ---
     notif_mention_inapp: Mapped[bool] = _bool_col()
     notif_mention_push: Mapped[bool] = _bool_col()
     notif_mention_email: Mapped[bool] = _bool_col()

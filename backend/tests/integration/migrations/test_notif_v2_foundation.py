@@ -1,0 +1,152 @@
+"""
+@file test_notif_v2_foundation.py
+@brief Migration b2c3d4e5f6a7: schema add, JSONB prefs backfill, legacy drop.
+"""
+
+import os
+import uuid
+from pathlib import Path
+
+import psycopg2
+import pytest
+import sqlalchemy as sa
+from alembic.config import Config
+from sqlalchemy.engine import make_url
+
+from alembic import command
+from app.core.config import get_settings
+
+BACKEND = Path(__file__).resolve().parents[3]
+BASE_URL = os.environ.get(
+    "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
+)
+REV = "b2c3d4e5f6a7"
+PREV = "0025_plugin_api_keys"
+
+
+def _admin(url):
+    c = psycopg2.connect(
+        host=url.host, port=url.port, user=url.username,
+        password=url.password, dbname="postgres",
+    )  # fmt: skip
+    c.autocommit = True
+    return c
+
+
+@pytest.fixture
+def scratch(monkeypatch):
+    """@brief Throwaway DB; yields (alembic config, sync engine)."""
+    url = make_url(BASE_URL)
+    name = f"mig_{uuid.uuid4().hex[:10]}"
+    conn = _admin(url)
+    conn.cursor().execute(f'CREATE DATABASE "{name}"')
+    conn.close()
+    monkeypatch.setenv("DATABASE_URL", url.set(database=name).render_as_string(hide_password=False))
+    get_settings.cache_clear()
+    cfg = Config(str(BACKEND / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND / "alembic"))
+    engine = sa.create_engine(url.set(drivername="postgresql+psycopg2", database=name))
+    yield cfg, engine
+    engine.dispose()
+    get_settings.cache_clear()
+    conn = _admin(url)
+    conn.cursor().execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+    conn.close()
+
+
+def _cols(conn, table):
+    rows = conn.execute(
+        sa.text("SELECT column_name FROM information_schema.columns WHERE table_name = :t"),
+        {"t": table},
+    )
+    return {r[0] for r in rows}
+
+
+def _seed_user(conn, **legacy):
+    uid = uuid.uuid4()
+    conn.execute(
+        sa.text(
+            "INSERT INTO users (id, email, username, display_name, password_hash) "
+            "VALUES (:id, :e, :u, 'T', '!')"
+        ),
+        {"id": uid, "e": f"{uid}@e.test", "u": f"u{uid.hex[:8]}"},
+    )
+    names = ["user_id", *legacy]
+    conn.execute(
+        sa.text(
+            f"INSERT INTO user_settings ({', '.join(names)}) "
+            f"VALUES ({', '.join(':' + n for n in names)})"
+        ),
+        {"user_id": uid, **legacy},
+    )
+    return uid
+
+
+def test_upgrade_backfills_adds_and_drops(scratch):
+    cfg, engine = scratch
+    command.upgrade(cfg, PREV)
+    with engine.begin() as conn:
+        uid = _seed_user(
+            conn,
+            notif_mention_email=False,
+            notif_reaction_email=True,
+            notif_comment_push=False,
+            mute_all_email=True,
+        )
+        default_uid = _seed_user(conn)
+
+    command.upgrade(cfg, REV)
+
+    with engine.begin() as conn:
+        prefs = conn.execute(
+            sa.text("SELECT notification_prefs FROM user_settings WHERE user_id = :u"),
+            {"u": uid},
+        ).scalar_one()
+        assert len(prefs) == 12
+        # legacy overrides win over type defaults
+        assert prefs["mention"]["email"] is False
+        assert prefs["reaction"]["email"] is True
+        assert prefs["comment"]["push"] is False
+        # missing combos fall back to section 5.1 defaults
+        assert prefs["mention"]["toast"] is True
+        assert prefs["gallery_reminder"] == {
+            "inapp": True, "email": True, "push": False, "toast": False,
+        }  # fmt: skip
+        assert all(set(v) == {"inapp", "email", "push", "toast"} for v in prefs.values())
+
+        d = conn.execute(
+            sa.text("SELECT notification_prefs FROM user_settings WHERE user_id = :u"),
+            {"u": default_uid},
+        ).scalar_one()
+        assert d["mention"] == {"inapp": True, "email": True, "push": True, "toast": True}
+
+        us = _cols(conn, "user_settings")
+        assert {
+            "notification_prefs", "dnd_schedule", "dnd_until", "dnd_timezone",
+            "digest_cadence", "digest_last_sent_at",
+        } <= us  # fmt: skip
+        assert not {c for c in us if c.startswith("notif_") or c.startswith("mute_all_")}
+        assert {"group_key", "count", "actor_ids", "updated_at", "dismissed_at"} <= _cols(
+            conn, "notifications"
+        )
+        idx = {
+            r[0]
+            for r in conn.execute(
+                sa.text("SELECT indexname FROM pg_indexes WHERE tablename = 'notifications'")
+            )
+        }
+        assert {"notifications_group_active_idx", "notifications_user_active_idx"} <= idx
+        assert conn.execute(
+            sa.text("SELECT dnd_timezone FROM user_settings WHERE user_id = :u"), {"u": uid}
+        ).scalar_one() == "UTC"
+
+
+def test_downgrade_restores_legacy_columns(scratch):
+    cfg, engine = scratch
+    command.upgrade(cfg, REV)
+    command.downgrade(cfg, PREV)
+    with engine.begin() as conn:
+        us = _cols(conn, "user_settings")
+        assert "notif_mention_inapp" in us and "mute_all_email" in us
+        assert "notification_prefs" not in us
+        assert "group_key" not in _cols(conn, "notifications")
