@@ -1,0 +1,182 @@
+"""
+@file test_docs_nav.py
+@brief Guards the directory-based MkDocs nav (awesome-pages) structure.
+"""
+
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[4]
+DOCS = ROOT / "docs" / "docs"
+PAGES = [
+    "user/index.md",
+    "user/self-hosting.md",
+    "user/features.md",
+    "user/faq.md",
+    "developer/index.md",
+    "developer/architecture.md",
+    "developer/contributing.md",
+]
+
+
+def test_mkdocs_has_no_explicit_nav_and_uses_awesome_pages():
+    text = (ROOT / "docs" / "mkdocs.yml").read_text()
+    assert not any(line.startswith("nav:") for line in text.splitlines())
+    assert "awesome-pages" in text
+
+
+@pytest.mark.parametrize("d", ["", "user", "developer"])
+def test_pages_files_exist(d):
+    assert (DOCS / d / ".pages").is_file()
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_content_pages_are_substantive(page):
+    path = DOCS / page
+    assert path.is_file()
+    assert len(path.read_text().split()) >= 150
+
+
+@pytest.mark.parametrize("d", ["", "user", "developer"])
+def test_pages_lists_reference_existing_entries(d):
+    for line in (DOCS / d / ".pages").read_text().splitlines():
+        if line.startswith("  - References"):
+            break  # external link block (api/, coverage/) is built by CI
+        if line.strip() == "- ...":
+            continue  # awesome-pages rest entry
+        if line.strip().startswith("- ") and ":" not in line:
+            assert (DOCS / d / line.strip()[2:]).exists()
+
+
+def test_root_references_are_relative():
+    text = (DOCS / ".pages").read_text()
+    assert ": /" not in text
+
+
+def test_pages_job_builds_strict():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    assert "mkdocs build --strict" in text
+
+
+def test_docs_build_job_runs_on_mr_and_dev():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    assert "\ndocs:build:" in text
+    job = text.split("\ndocs:build:")[1].split("\npages:")[0]
+    assert "stage: test" in job
+    assert "mkdocs build --strict" in job
+    assert "mkdocs-awesome-pages-plugin" in job
+    assert "docs/**" in job
+    assert "$CI_MERGE_REQUEST_IID" in job
+
+
+def _nav_entries(d):
+    """@brief Top-level nav entries of a dir's .pages (before References)."""
+    entries = []
+    for line in (DOCS / d / ".pages").read_text().splitlines():
+        if line.startswith("  - References"):
+            break
+        if line.startswith("  - "):
+            entries.append(line[4:].strip())
+    return entries
+
+
+@pytest.mark.parametrize("d", ["", "user", "developer"])
+def test_all_pages_reachable_in_nav(d):
+    entries = _nav_entries(d)
+    if "..." in entries:
+        return
+    missing = [p.name for p in (DOCS / d).glob("*.md") if p.name not in entries]
+    assert not missing, f"{d or 'root'}: not in nav: {missing}"
+
+
+@pytest.mark.parametrize("d", ["", "user", "developer"])
+def test_pages_nav_has_rest_entry(d):
+    assert "..." in _nav_entries(d)
+
+
+def test_api_reference_link_is_relative():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert "](/" not in text
+
+
+def test_api_reference_page_is_substantive_and_links_generated_html():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert len(text.split()) >= 300
+    assert "api-reference.html" in text
+    for call in ("GET /posts", "POST /posts", "PATCH /posts/{id}", "DELETE /posts/{id}"):
+        assert call in text
+
+
+def test_generate_api_ref_script_is_executable_and_uses_redoc():
+    script = ROOT / "scripts" / "generate-api-ref.sh"
+    assert script.is_file()
+    assert script.stat().st_mode & 0o111
+    body = script.read_text()
+    assert "redoc-cli" in body
+    assert "developer/api-reference.html" in body
+
+
+def test_developer_pages_list_api_reference():
+    pages = (DOCS / "developer" / ".pages").read_text()
+    assert "api-reference.md" in pages
+
+
+def test_api_reference_relative_links_resolve():
+    import re
+
+    page = DOCS / "developer" / "api-reference.md"
+    for target in re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", page.read_text()):
+        if re.match(r"^[a-z]+:", target):
+            continue
+        assert (page.parent / target).resolve().exists(), target
+
+
+def test_generate_api_ref_script_writes_output_with_stub_npx(tmp_path):
+    import os
+    import subprocess
+
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "npx").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo stub > "$out"\n'
+    )
+    (stub / "npx").chmod(0o755)
+    (stub / "curl").write_text(
+        '#!/usr/bin/env bash\nwhile [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done\n'
+        'echo "{}" > "$out"\n'
+    )
+    (stub / "curl").chmod(0o755)
+    out = tmp_path / "ref.html"
+    env = {
+        **os.environ,
+        "PATH": f"{stub}:{os.environ['PATH']}",
+        "OPENAPI_URL": "http://x/openapi.json",
+        "OUT": str(out),
+    }
+    subprocess.run([str(ROOT / "scripts" / "generate-api-ref.sh")], env=env, check=True)
+    assert out.read_text().strip() == "stub"
+
+
+def test_pages_job_generates_api_ref_before_mkdocs():
+    text = (ROOT / ".gitlab" / "ci" / "pages.yml").read_text()
+    job = text.split("\npages:")[1]
+    assert "scripts/generate-api-ref.sh" in job
+    assert job.index("scripts/generate-api-ref.sh") < job.index("mkdocs build")
+
+
+def test_api_reference_md_describes_placeholder_and_refresh():
+    text = (DOCS / "developer" / "api-reference.md").read_text()
+    assert "not committed" not in text
+    assert "placeholder" in text.lower()
+    assert "pages" in text.lower()
+
+
+def test_alembic_has_single_head():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    cfg = Config()
+    cfg.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
+    assert len(ScriptDirectory.from_config(cfg).get_heads()) == 1

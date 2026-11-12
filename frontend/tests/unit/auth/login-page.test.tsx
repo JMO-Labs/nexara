@@ -87,4 +87,26 @@ describe("LoginPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(expected));
   });
+
+  it("hides email/password form when SSO-only", async () => {
+    vi.mocked(api.getAuthConfig).mockResolvedValue({
+      oidc_enabled: true,
+      registration_enabled: false,
+      local_auth_enabled: false,
+      sso_only: true,
+      oauth_providers: [{ slug: "g", display_name: "Google", icon_url: null }],
+    });
+    render(<LoginPage />);
+    expect(await screen.findByRole("link", { name: /Google/ })).toBeTruthy();
+    expect(screen.queryByLabelText("Email")).toBeNull();
+    expect(screen.queryByLabelText("Password")).toBeNull();
+    expect(screen.getByText("Sign in with SSO")).toBeTruthy();
+  });
+
+  it("shows divider between form and SSO buttons", async () => {
+    render(<LoginPage />);
+    await screen.findByRole("link", { name: /Google/ });
+    expect(screen.getByRole("separator")).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+  });
 });

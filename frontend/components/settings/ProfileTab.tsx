@@ -16,6 +16,7 @@ const Schema = z.object({
   location: z.string().optional(),
   website_url: z.string().url("Invalid URL").optional().or(z.literal("")),
   title: z.string().optional(),
+  pronouns: z.string().max(50, "Max 50 characters").optional(),
 });
 type FormData = z.infer<typeof Schema>;
 
@@ -26,11 +27,12 @@ type FormData = z.infer<typeof Schema>;
 export function ProfileTab() {
   const [initialValues] = useState<FormData>({});
   const { mutate, isPending } = useUpdateProfile();
-  const { register, handleSubmit, formState } = useForm<FormData>({
+  const { register, handleSubmit, formState, watch } = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: initialValues,
   });
   const err = formState.errors;
+  const pronounsLen = (watch("pronouns") ?? "").length;
 
   const onSubmit = (data: FormData) => {
     const filtered: Record<string, unknown> = {};
@@ -95,6 +97,20 @@ export function ProfileTab() {
             placeholder="e.g., Designer"
             error={err.title?.message}
             {...register("title")}
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          label="Pronouns (optional)"
+          description={`Shown next to your name. ${pronounsLen}/50`}
+        >
+          <Input
+            type="text"
+            label="Pronouns (optional)"
+            placeholder="e.g., she/her, they/them"
+            maxLength={50}
+            error={err.pronouns?.message}
+            {...register("pronouns")}
           />
         </SettingsRow>
 
