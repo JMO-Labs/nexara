@@ -127,7 +127,7 @@ def test_worker_mounts_media_when_local() -> None:
 
 def test_worker_has_no_media_mount_for_s3() -> None:
     pod = _worker(_render("storage.backend=s3"))["spec"]["template"]["spec"]
-    assert "volumes" not in pod
+    assert not any("persistentVolumeClaim" in v for v in pod.get("volumes", []))
 
 
 def test_media_pvc_access_modes_configurable() -> None:
@@ -143,12 +143,35 @@ def _by(docs: list[dict], kind: str, suffix: str) -> dict:
     return next(d for d in docs if d["kind"] == kind and d["metadata"]["name"].endswith(suffix))
 
 
-def test_api_probes_use_healthz_with_periods() -> None:
-    c = _by(_render(), "Deployment", "-api")["spec"]["template"]["spec"]["containers"][0]
-    assert c["livenessProbe"]["httpGet"]["path"] == "/healthz"
-    assert c["livenessProbe"]["periodSeconds"] == 10
-    assert c["readinessProbe"]["httpGet"]["path"] == "/healthz"
-    assert c["readinessProbe"]["periodSeconds"] == 5
+def _api_container(*sets: str) -> dict:
+    return _by(_render(*sets), "Deployment", "-api")["spec"]["template"]["spec"]["containers"][0]
+
+
+def test_api_probes_paths_port_and_default_periods() -> None:
+    c = _api_container()
+    live, ready, start = c["livenessProbe"], c["readinessProbe"], c["startupProbe"]
+    assert live["httpGet"]["path"] == "/livez"
+    assert ready["httpGet"]["path"] == "/healthz"
+    assert start["httpGet"]["path"] == "/livez"
+    for p in (live, ready, start):
+        assert p["httpGet"]["port"] == "http"
+    assert live["periodSeconds"] == 10
+    assert ready["periodSeconds"] == 5
+    assert start["periodSeconds"] == 5
+    assert start["failureThreshold"] == 30
+
+
+def test_api_probe_settings_come_from_values() -> None:
+    c = _api_container(
+        "api.probes.liveness.timeoutSeconds=7",
+        "api.probes.readiness.failureThreshold=9",
+        "api.probes.startup.initialDelaySeconds=4",
+        "api.probes.startup.periodSeconds=2",
+    )
+    assert c["livenessProbe"]["timeoutSeconds"] == 7
+    assert c["readinessProbe"]["failureThreshold"] == 9
+    assert c["startupProbe"]["initialDelaySeconds"] == 4
+    assert c["startupProbe"]["periodSeconds"] == 2
 
 
 def test_postgres_is_statefulset_with_headless_service() -> None:
@@ -158,3 +181,8 @@ def test_postgres_is_statefulset_with_headless_service() -> None:
     assert headless["spec"]["clusterIP"] == "None"
     assert sts["spec"]["serviceName"] == headless["metadata"]["name"]
     assert sts["spec"]["replicas"] == 1
+
+
+def test_nginx_proxies_livez_to_api() -> None:
+    conf = (Path(__file__).resolve().parents[4] / "deploy/nginx/nginx.conf").read_text()
+    assert "location = /livez" in conf
