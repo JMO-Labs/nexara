@@ -38,6 +38,7 @@ describe("ListNotification", () => {
         notification={mk(type)}
         onDismiss={vi.fn()}
         onNavigate={vi.fn()}
+        href="/app/lists/L1"
       />,
     );
     expect(screen.getByText(title)).toBeInTheDocument();
@@ -52,6 +53,7 @@ describe("ListNotification", () => {
         notification={mk("list.item")}
         onDismiss={vi.fn()}
         onNavigate={onNavigate}
+        href="/app/lists/L1"
       />,
     );
     await userEvent.click(screen.getByText("New item in My Gift List"));
@@ -66,6 +68,7 @@ describe("ListNotification", () => {
         notification={mk("list.item")}
         onDismiss={onDismiss}
         onNavigate={onNavigate}
+        href="/app/lists/L1"
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));

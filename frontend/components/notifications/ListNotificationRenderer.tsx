@@ -6,7 +6,10 @@
  */
 import type { ComponentType, SVGProps } from "react";
 import { List, CircleCheck, Check, Clock, User, X } from "lucide-react";
-import { formatTime } from "./NotificationRow";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { IconButton } from "@/components/ui/IconButton";
+import { formatTime } from "./formatTime";
 
 type IconCmp = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -21,6 +24,11 @@ export interface ListNotificationProps {
   notification: ListNotificationData;
   onDismiss: (id: string) => void;
   onNavigate: (listId: string) => void;
+  /** Target URL; when absent the row is not a link. */
+  href?: string;
+  unread?: boolean;
+  ackPending?: boolean;
+  onAck?: (id: string) => void;
 }
 
 const s = (v: unknown, d = ""): string => (typeof v === "string" ? v : d);
@@ -63,6 +71,10 @@ export function ListNotification({
   notification,
   onDismiss,
   onNavigate,
+  href,
+  unread = false,
+  ackPending = false,
+  onAck,
 }: ListNotificationProps) {
   const { id, type, context, createdAt } = notification;
   const Icon = ICONS[type] ?? List;
@@ -70,31 +82,56 @@ export function ListNotification({
   const detail = s(context.itemTitle) || s(context.detail);
   const listId = s(context.listId);
 
+  const content = (
+    <>
+      <Icon
+        aria-hidden
+        width={20}
+        height={20}
+        className="text-accent mt-0.5 shrink-0"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium break-words">{title}</span>
+        {detail && (
+          <span className="text-muted block text-xs break-words">{detail}</span>
+        )}
+      </span>
+      <span className="text-muted shrink-0 text-xs">
+        {formatTime(createdAt)}
+      </span>
+    </>
+  );
+  const cls = "flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left";
+
   return (
-    <div className="border-ink/10 flex items-center border-b hover:bg-gray-100">
-      <button
-        type="button"
-        onClick={() => onNavigate(listId)}
-        className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3 text-left"
-      >
-        <Icon
-          aria-hidden
-          width={20}
-          height={20}
-          className="text-accent mt-0.5 shrink-0"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium break-words">{title}</span>
-          {detail && (
-            <span className="text-muted block text-xs break-words">
-              {detail}
-            </span>
-          )}
-        </span>
-        <span className="text-muted shrink-0 text-xs">
-          {formatTime(createdAt)}
-        </span>
-      </button>
+    <div
+      className={cn(
+        "border-ink/10 hover:bg-surface flex items-center border-b",
+        unread && "bg-surface",
+      )}
+    >
+      {href ? (
+        <Link
+          href={href}
+          className={cn(cls, "text-inherit no-underline")}
+          onClick={() => onNavigate(listId)}
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className={cls}>{content}</div>
+      )}
+      {unread && onAck && (
+        <IconButton
+          aria-label="Acknowledge notification"
+          size="sm"
+          variant="ghost"
+          disabled={ackPending}
+          onClick={() => onAck(id)}
+        >
+          <Check aria-hidden width={16} height={16} />
+        </IconButton>
+      )}
       <button
         type="button"
         aria-label="Dismiss"

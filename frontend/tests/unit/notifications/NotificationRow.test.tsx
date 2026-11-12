@@ -104,5 +104,47 @@ describe("NotificationRow list types", () => {
     expect(screen.getByText("New item in Trip")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalledWith("n9");
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  const listItem = (over: Partial<NotificationItem> = {}) =>
+    item({
+      id: "n9",
+      type: "list.item",
+      payload: { listId: "L9", listName: "Trip" },
+      ...over,
+    });
+
+  it("is a real link to /app/lists/[id]; click dismisses and navigates", async () => {
+    const h = setup(listItem());
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/app/lists/L9");
+    await userEvent.click(link);
+    expect(h.onDismiss).toHaveBeenCalledWith("n9");
+    expect(h.onNavigate).toHaveBeenCalled();
+  });
+
+  it("encodes the list id in the href", () => {
+    setup(listItem({ payload: { listId: "a/b" } }));
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/app/lists/a%2Fb",
+    );
+  });
+
+  it("unread list notification can be acknowledged without navigating", async () => {
+    const h = setup(listItem());
+    await userEvent.click(
+      screen.getByRole("button", { name: "Acknowledge notification" }),
+    );
+    expect(h.onAck).toHaveBeenCalledWith("n9");
+    expect(h.onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("read list notification has no ack button", () => {
+    setup(listItem({ read_at: new Date().toISOString() }));
+    expect(
+      screen.queryByRole("button", { name: "Acknowledge notification" }),
+    ).toBeNull();
   });
 });
