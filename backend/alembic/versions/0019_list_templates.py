@@ -2,7 +2,7 @@
 """lists: template, list, member, item, signup, completion tables + seeds
 
 Revision ID: 0019_list_templates
-Revises: a78f91338679
+Revises: 0020_media_ai_metadata
 """
 
 import json
@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from alembic import op
 
 revision = "0019_list_templates"
-down_revision = "a78f91338679"
+down_revision = "0020_media_ai_metadata"
 branch_labels = None
 depends_on = None
 
