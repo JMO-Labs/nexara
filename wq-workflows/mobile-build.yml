@@ -1,0 +1,44 @@
+# @file .github/workflows/mobile-build.yml
+# @brief Flutter platform builds: APK (ubuntu) and iOS no-codesign (macOS). nexara#287
+name: mobile-build
+on:
+  pull_request: {branches: [dev], paths: ["mobile/**", ".github/workflows/mobile-build.yml"]}
+  push: {branches: [dev], paths: ["mobile/**", ".github/workflows/mobile-build.yml"]}
+  workflow_dispatch:
+permissions: {contents: read}
+defaults:
+  run: {working-directory: mobile}
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+      - uses: subosito/flutter-action@v2
+        with: {channel: stable, cache: true}
+      # Fills only uncommitted generated files; never overwrites existing ones.
+      - run: flutter create . --platforms android --org dev.jmolabs --project-name nexara_mobile && git clean -fdq lib test
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build apk --debug
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: {channel: stable, cache: true}
+      - run: flutter create . --platforms ios --org dev.jmolabs --project-name nexara_mobile && git clean -fdq lib test
+      - run: flutter pub get
+      - run: flutter build ios --no-codesign
+      # Upload the generated Xcode project so it can be committed (no SDK in agent env).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-generated
+          path: |
+            mobile/ios/Runner.xcodeproj
+            mobile/ios/Runner.xcworkspace
+            mobile/ios/Runner/Assets.xcassets
+            mobile/ios/Runner/Base.lproj
+            mobile/ios/RunnerTests
+            mobile/ios/Flutter/AppFrameworkInfo.plist

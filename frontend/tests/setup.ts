@@ -20,6 +20,11 @@ if (typeof window !== "undefined" && !window.matchMedia) {
   }));
 }
 
+// jsdom lacks scrollIntoView (Radix Select calls it on open).
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 afterEach(() => cleanup());
 
 // jsdom lacks layout APIs that prosemirror-view calls on DOM mutations.
@@ -48,4 +53,13 @@ if (typeof document !== "undefined") {
     (Text.prototype as unknown as { getClientRects: unknown }).getClientRects =
       emptyRects;
   if (!document.elementFromPoint) document.elementFromPoint = () => null;
+}
+
+// jsdom lacks ResizeObserver (Radix Switch/Checkbox use it via useSize).
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
 }

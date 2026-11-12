@@ -27,6 +27,7 @@ export interface AuthConfig {
   oidc_enabled: boolean;
   registration_enabled: boolean;
   local_auth_enabled: boolean;
+  sso_only?: boolean;
   oauth_providers: OAuthProvider[];
 }
 
