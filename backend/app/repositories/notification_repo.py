@@ -11,9 +11,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.models.notification import Notification
 from app.repositories.base import BaseRepository
 
@@ -91,6 +92,91 @@ class NotificationRepository(BaseRepository[Notification]):
             next_cursor = str(rows[-1].id)
 
         return rows, next_cursor
+
+    async def list_active(self, user_id: uuid.UUID, limit: int = 20) -> list[Notification]:
+        """
+        @brief List a user's non-dismissed notifications, newest first.
+
+        @param user_id Recipient user UUID.
+        @param limit Max rows.
+        @return Active notifications.
+        """
+        stmt = (
+            select(Notification)
+            .where(Notification.user_id == user_id, Notification.dismissed_at.is_(None))
+            .order_by(Notification.created_at.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def dismiss(self, user_id: uuid.UUID, notification_id: uuid.UUID) -> None:
+        """
+        @brief Dismiss one notification owned by the user.
+
+        @param user_id Owner UUID.
+        @param notification_id Notification UUID.
+        @throws NotFoundError If missing or not owned by user_id.
+        """
+        stmt = select(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == user_id,
+        )
+        result = await self._session.execute(stmt)
+        notification = result.scalar_one_or_none()
+        if notification is None:
+            raise NotFoundError("Notification not found")
+        notification.dismissed_at = datetime.now(UTC)
+        await self._session.flush()
+
+    async def dismiss_all(self, user_id: uuid.UUID) -> int:
+        """
+        @brief Dismiss all of a user's active notifications.
+
+        @param user_id Owner UUID.
+        @return Number of rows dismissed.
+        """
+        stmt = (
+            update(Notification)
+            .where(Notification.user_id == user_id, Notification.dismissed_at.is_(None))
+            .values(dismissed_at=datetime.now(UTC))
+        )
+        result = await self._session.execute(stmt)
+        return cast(int, getattr(result, "rowcount", 0)) or 0
+
+    async def upsert_grouped(
+        self,
+        user_id: uuid.UUID,
+        type: str,
+        payload: dict[str, Any],
+        community_id: uuid.UUID,
+        group_key: str | None = None,
+        actor_id: uuid.UUID | None = None,
+    ) -> Notification:
+        """
+        @brief Insert a notification (stub; windowed merge lands in #81).
+
+        @param user_id Recipient user UUID.
+        @param type Notification type.
+        @param payload JSON payload.
+        @param community_id Community scope.
+        @param group_key Grouping key; currently stored, no merge performed.
+        @param actor_id Optional actor, recorded in actor_ids.
+        @return The persisted Notification.
+        """
+        notification = Notification(
+            user_id=user_id,
+            community_id=community_id,
+            type=type,
+            payload=payload,
+            group_key=group_key,
+            count=1,
+            actor_ids=[actor_id] if actor_id else [],
+        )
+        self._session.add(notification)
+        await self._session.flush()
+        await self._session.refresh(notification)
+        return notification
 
     async def get_unread_count(self, user_id: uuid.UUID) -> int:
         """
