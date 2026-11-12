@@ -1,7 +1,7 @@
 """add sso_only to community_branding
 
-Revision ID: 0024_add_sso_only_to_branding
-Revises: 0023_bookmarks
+Revision ID: 0026_add_sso_only_to_branding
+Revises: 0025_plugin_api_keys
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0024_add_sso_only_to_branding"
-down_revision: str | None = "0023_bookmarks"
+revision: str = "0026_add_sso_only_to_branding"
+down_revision: str | None = "0025_plugin_api_keys"
 branch_labels = None
 depends_on = None
 

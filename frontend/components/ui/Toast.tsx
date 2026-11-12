@@ -4,10 +4,12 @@
  * @brief ToastRoot renders the useToasts store in a polite live region.
  */
 import { useEffect } from "react";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   useToasts,
+  selectVisible,
   type Toast as ToastT,
   type ToastVariant,
 } from "@/stores/toasts";
@@ -22,6 +24,7 @@ const TONE: Record<ToastVariant, string> = {
 
 function ToastItem({ toast }: { toast: ToastT }) {
   const dismiss = useToasts((s) => s.dismiss);
+  const reduce = useReducedMotion();
   useEffect(() => {
     if (!toast.ttl) return;
     const t = setTimeout(() => dismiss(toast.id), toast.ttl);
@@ -29,12 +32,23 @@ function ToastItem({ toast }: { toast: ToastT }) {
   }, [toast.id, toast.ttl, dismiss]);
 
   return (
-    <div
+    <motion.div
+      layout={!reduce}
+      initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: reduce ? 0 : 8 }}
+      transition={{ duration: reduce ? 0 : 0.18 }}
       className={cn(
         "bg-surface text-ink flex w-full max-w-sm items-start gap-3 rounded-2xl border-l-4 p-3 shadow-lg",
         TONE[toast.variant],
       )}
     >
+      {toast.variant === "loading" ? (
+        <Loader2
+          className="text-accent mt-0.5 size-4 shrink-0 animate-spin motion-reduce:animate-none"
+          aria-hidden
+        />
+      ) : null}
       <div className="min-w-0 flex-1">
         {toast.title ? <p className="font-semibold">{toast.title}</p> : null}
         <p className="text-sm">{toast.message}</p>
@@ -47,7 +61,7 @@ function ToastItem({ toast }: { toast: ToastT }) {
       >
         <X className="size-4" aria-hidden />
       </button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -56,7 +70,7 @@ function ToastItem({ toast }: { toast: ToastT }) {
  * @return live region element
  */
 export function ToastRoot() {
-  const items = useToasts((s) => s.items).slice(0, 3);
+  const items = selectVisible(useToasts((s) => s.items));
   return (
     <div
       role="status"
@@ -64,9 +78,11 @@ export function ToastRoot() {
       aria-label="Notifications"
       className="pointer-events-none fixed inset-x-0 bottom-[calc(84px+env(safe-area-inset-bottom))] z-[100] flex flex-col items-center gap-2 px-3 md:inset-x-auto md:right-4 md:bottom-4 md:items-end [&>*]:pointer-events-auto"
     >
-      {items.map((t) => (
-        <ToastItem key={t.id} toast={t} />
-      ))}
+      <AnimatePresence initial={false}>
+        {items.map((t) => (
+          <ToastItem key={t.id} toast={t} />
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
