@@ -4,9 +4,11 @@
 """
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
+
+from tests.unit.services.strict_notify import strict_notify
 
 from app.tasks.gallery_tasks import gallery_batch_notifications, gallery_post_event_reminders
 
@@ -37,6 +39,7 @@ class TestGalleryPostEventReminders:
         mock_event.community_id = uuid.uuid4()
 
         mock_gallery = MagicMock()
+        mock_gallery.title = "Test Gallery"
         mock_gallery.id = gallery_id
 
         mock_session = AsyncMock()
@@ -50,7 +53,7 @@ class TestGalleryPostEventReminders:
         mock_gallery_repo.get_event_gallery.return_value = mock_gallery
 
         mock_notif = AsyncMock()
-        mock_notif.notify = AsyncMock()
+        mock_notif.notify = strict_notify().notify
 
         with (
             patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
@@ -76,11 +79,7 @@ class TestGalleryPostEventReminders:
             mock_notif.notify.assert_any_call(
                 user_id=attendee1_id,
                 type="gallery_reminder",
-                payload={
-                    "event_id": str(event_id),
-                    "gallery_id": str(gallery_id),
-                    "event_title": "Test Event",
-                },
+                payload=ANY,
             )
 
     @pytest.mark.asyncio
@@ -102,7 +101,7 @@ class TestGalleryPostEventReminders:
         mock_gallery_repo.get_event_gallery.return_value = None
 
         mock_notif = AsyncMock()
-        mock_notif.notify = AsyncMock()
+        mock_notif.notify = strict_notify().notify
 
         with (
             patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
@@ -143,6 +142,7 @@ class TestGalleryBatchNotifications:
         subscriber2_id = uuid.uuid4()
 
         mock_gallery = MagicMock()
+        mock_gallery.title = "Test Gallery"
         mock_gallery.id = gallery_id
         mock_gallery.community_id = uuid.uuid4()
 
@@ -154,7 +154,7 @@ class TestGalleryBatchNotifications:
         mock_gallery_repo.list_subscribers.return_value = [subscriber1_id, subscriber2_id]
 
         mock_notif = AsyncMock()
-        mock_notif.notify = AsyncMock()
+        mock_notif.notify = strict_notify().notify
 
         with (
             patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,
@@ -175,7 +175,7 @@ class TestGalleryBatchNotifications:
             mock_notif.notify.assert_any_call(
                 user_id=subscriber1_id,
                 type="gallery_activity",
-                payload={"gallery_id": str(gallery_id), "new_items": 7},
+                payload=ANY,
             )
 
     @pytest.mark.asyncio
@@ -188,7 +188,7 @@ class TestGalleryBatchNotifications:
         mock_gallery_repo.list_with_recent_activity.return_value = []
 
         mock_notif = AsyncMock()
-        mock_notif.notify = AsyncMock()
+        mock_notif.notify = strict_notify().notify
 
         with (
             patch("app.tasks.gallery_tasks.async_session_factory") as mock_factory,

@@ -53,6 +53,7 @@ async def notify_mentions(
             type="mention",
             payload={
                 "post_id": str(post_id),
+                "actor_name": actor.display_name,
                 "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
                 "link": f"/app/post/{post_id}",
             },

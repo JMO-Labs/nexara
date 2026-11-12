@@ -7,6 +7,7 @@ import uuid
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
+from tests.unit.services.strict_notify import strict_notify
 from app.repositories.birthday_repo import BirthdayRepository
 from app.repositories.post_repo import PostRepository
 from app.services.birthday_service import BirthdayService
@@ -27,7 +28,7 @@ def _svc(birthdays, members, admins, auto_post=False):
     repo.list_birthday_users.return_value = birthdays
     repo.list_member_ids.return_value = members
     repo.list_admin_ids.return_value = admins
-    notif = AsyncMock()
+    notif = strict_notify()
     posts = AsyncMock(spec=PostRepository)
     svc = BirthdayService(repo, notif, posts, uuid.uuid4(), auto_post=auto_post)
     return svc, notif, posts

@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.unit.services.strict_notify import strict_notify
+
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError, RateLimitError
 from app.models.nudge import Nudge
 from app.models.user import User
@@ -38,7 +40,7 @@ def _nudge() -> MagicMock:
 def deps():
     repo = AsyncMock(spec=NudgeRepository)
     users = AsyncMock(spec=UserRepository)
-    notify = AsyncMock()
+    notify = strict_notify()
     target = MagicMock(spec=User)
     target.id = TARGET
     users.get_by_id.return_value = target

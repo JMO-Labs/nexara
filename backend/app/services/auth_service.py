@@ -152,6 +152,7 @@ class AuthService:
                     user_id=invite.created_by,
                     type="invite_accepted",
                     payload={
+                        "actor_name": user.display_name,
                         "message": _("%(user)s registered using your invite")
                         % {"user": user.display_name},
                     },
