@@ -12,16 +12,33 @@ from app.plugins import loader, task_loader
 from app.plugins.manifest import load_manifest
 
 
-def _write(root: Path, pid: str, *, tasks: str | None = "tasks.py", perms=("celery_tasks",),
-           mid: str | None = None, code: str = "LOADED = True\n", package: bool = False) -> Path:
+def _write(
+    root: Path,
+    pid: str,
+    *,
+    tasks: str | None = "tasks.py",
+    perms=("celery_tasks",),
+    mid: str | None = None,
+    code: str = "LOADED = True\n",
+    package: bool = False,
+) -> Path:
     d = root / pid
     d.mkdir()
     backend = {"tasks": tasks} if tasks else {}
-    (d / "manifest.json").write_text(json.dumps({
-        "id": mid or pid, "name": pid, "version": "1.0.0", "author": "a",
-        "description": "d", "min_core_version": "0.1.0",
-        "permissions": list(perms), "backend": backend,
-    }))
+    (d / "manifest.json").write_text(
+        json.dumps(
+            {
+                "id": mid or pid,
+                "name": pid,
+                "version": "1.0.0",
+                "author": "a",
+                "description": "d",
+                "min_core_version": "0.1.0",
+                "permissions": list(perms),
+                "backend": backend,
+            }
+        )
+    )
     if tasks:
         (d / tasks).write_text(code)
     if package:
