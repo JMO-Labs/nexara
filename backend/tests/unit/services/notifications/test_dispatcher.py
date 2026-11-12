@@ -88,3 +88,9 @@ async def test_fcm_gated_by_push_preference() -> None:
     fcm.send.assert_not_called()
     await d.dispatch(MagicMock(), MagicMock(key="t"), {"push": True})
     fcm.send.assert_awaited_once()
+
+
+def test_registers_optional_fcm_channel() -> None:
+    fcm = _Fake("fcm")
+    d = Dispatcher(AsyncMock(spec=EventBus), fcm=fcm)  # type: ignore[arg-type]
+    assert d._channels["fcm"] is fcm

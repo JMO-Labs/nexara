@@ -29,6 +29,7 @@ from app.repositories.event_repo import EventRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
+    CalendarSubscriptionUpdate,
     ContributionClaim,
     ContributionSlot,
     EventCreate,
@@ -784,6 +785,7 @@ class EventService:
             source_url=data.source_url,
             visibility=data.visibility,
             shared_by_admin=data.shared_by_admin,
+            sync_interval_minutes=data.sync_interval_minutes,
         )
         sub = await self._repo.create_subscription(sub)
         return CalendarSubscriptionResponse.model_validate(sub)
@@ -797,6 +799,18 @@ class EventService:
         if sub is None:
             raise NotFoundError(_("Calendar subscription not found"))
         await self._repo.delete_subscription(sub_id)
+
+    async def update_subscription(
+        self, sub_id: uuid.UUID, user_id: uuid.UUID, data: CalendarSubscriptionUpdate
+    ) -> CalendarSubscriptionResponse:
+        """@brief Update name/url/enabled/interval of an owned subscription."""
+        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
+        if sub is None:
+            raise NotFoundError(_("Calendar subscription not found"))
+        for field, value in data.model_dump(exclude_unset=True, exclude_none=True).items():
+            setattr(sub, field, value)
+        sub = await self._repo.update_subscription(sub)
+        return CalendarSubscriptionResponse.model_validate(sub)
 
     # ── Sync (called from Celery task) ────────────────────────────────
 

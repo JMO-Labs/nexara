@@ -228,6 +228,12 @@ class EventRepository(BaseRepository[Event]):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def update_subscription(self, sub: CalendarSubscription) -> CalendarSubscription:
+        """@brief Flush pending changes on a subscription."""
+        await self._session.flush()
+        await self._session.refresh(sub)
+        return sub
+
     async def delete_subscription(self, sub_id: uuid.UUID) -> None:
         """@brief Hard-delete a calendar subscription."""
         stmt = delete(CalendarSubscription).where(CalendarSubscription.id == sub_id)
