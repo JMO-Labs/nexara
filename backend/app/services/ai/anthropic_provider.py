@@ -28,6 +28,8 @@ PRICING = {TEXT_MODEL: (0.25, 1.25), VISION_MODEL: (3.0, 15.0)}
 class AnthropicProvider(AIProvider):
     """@brief Claude haiku for text, sonnet for vision. Embeddings unsupported."""
 
+    vision_model = VISION_MODEL
+
     def __init__(
         self, api_key: str, client: httpx.AsyncClient | None = None, timeout: float = 60.0
     ) -> None:

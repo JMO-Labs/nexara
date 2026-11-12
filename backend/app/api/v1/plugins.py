@@ -21,6 +21,7 @@ from app.models.user import User
 from app.plugins.loader import DEFAULT_PLUGINS_DIR
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
 from app.repositories.plugin_repo import PluginRepository
+from app.services.plugin_lifecycle import PluginLifecycleService
 from app.services.plugin_service import PluginService
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
@@ -50,9 +51,9 @@ class SettingsBody(BaseModel):
 
 def get_plugin_service(
     db: AsyncSession = Depends(get_db), settings: Settings = Depends(get_settings)
-) -> PluginService:
-    """@brief Build the community-scoped plugin service."""
-    return PluginService(
+) -> PluginLifecycleService:
+    """@brief Build the community-scoped plugin service (with lifecycle flows)."""
+    return PluginLifecycleService(
         PluginRepository(db),
         PluginApiKeyRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

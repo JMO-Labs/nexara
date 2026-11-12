@@ -61,6 +61,7 @@ class Plugin(Base):
     settings: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
+    pending_manifest: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     installed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
