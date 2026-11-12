@@ -96,4 +96,11 @@ describe("WidgetColumn", () => {
     await userEvent.keyboard(" ");
     expect(move).toHaveBeenCalledWith(0, 1);
   });
+
+  it("sidebar is hidden below md", () => {
+    render(<WidgetColumn />);
+    const cls = screen.getByLabelText("Widgets").className;
+    expect(cls).toContain("hidden");
+    expect(cls).toContain("md:flex");
+  });
 });

@@ -35,4 +35,14 @@ describe("AppHome page", () => {
     expect(screen.getByTestId("feed")).toBeInTheDocument();
     expect(screen.getByLabelText("Widgets")).toBeInTheDocument();
   });
+
+  it("stacks on mobile, row with sidebar from md", () => {
+    render(<AppHome />);
+    const row = screen.getByTestId("feed").parentElement!.parentElement!;
+    expect(row.className).toContain("md:flex");
+    expect(row.className).not.toMatch(/(^|\s)flex(\s|$)/);
+    expect(screen.getByTestId("feed").parentElement!.className).toContain(
+      "w-full",
+    );
+  });
 });

@@ -69,6 +69,11 @@ class Post(Base):
         UUID(as_uuid=True),
         ForeignKey("posts.id", ondelete="SET NULL"),
     )
+    recipient_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
@@ -87,6 +92,11 @@ class Post(Base):
         Index("posts_created_idx", created_at.desc()),
         Index("posts_fts_idx", "content_fts", postgresql_using="gin"),
         Index("posts_subgroup_idx", "subgroup_id", postgresql_where=(subgroup_id.isnot(None))),
+        Index(
+            "posts_recipient_idx",
+            "recipient_id",
+            postgresql_where=(recipient_id.isnot(None)),
+        ),
         Index("posts_deleted_idx", "deleted_at", postgresql_where=(deleted_at.isnot(None))),
     )
 
