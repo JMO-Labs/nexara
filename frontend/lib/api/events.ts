@@ -2,7 +2,7 @@
  * @file lib/api/events.ts
  * @brief Events REST endpoints (list window) + RSVP, contributions, CRUD.
  */
-import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, seg } from "./client";
 
 export interface EventItem {
   id: string;
@@ -25,6 +25,7 @@ export interface EventItem {
   rsvp_counts: Record<string, number>;
   contribution_slots: ContributionSlot[];
   user_rsvp: { status: string } | null;
+  gallery_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +58,7 @@ export interface CreateEventBody {
   longitude?: number | null;
   rsvp_labels?: Record<string, string> | null;
   contribution_slots?: ContributionSlot[];
+  auto_create_gallery?: boolean;
 }
 
 const BASE = "/api/v1/events";
@@ -114,6 +116,7 @@ export interface CalendarSubscription {
   last_synced_at: string | null;
   sync_error: string | null;
   sync_interval_minutes: number;
+  sync_enabled?: boolean;
 }
 
 export interface CreateSubscriptionBody {
@@ -122,12 +125,34 @@ export interface CreateSubscriptionBody {
   sync_interval_minutes?: number;
 }
 
-const SUBS_BASE = "/api/v1/events/calendar-subscriptions";
+export type UpdateSubscriptionBody = Partial<
+  Pick<
+    CalendarSubscription,
+    "title" | "source_url" | "sync_interval_minutes" | "sync_enabled"
+  >
+>;
 
-export const listSubscriptions = () =>
-  apiGet<CalendarSubscription[]>(SUBS_BASE);
-export const createSubscription = (body: CreateSubscriptionBody) =>
-  apiPost<CalendarSubscription>(SUBS_BASE, body);
+const SUBS_BASE = "/api/v1/calendar-subscriptions";
+
+/** Backend names the display field `name`; the UI calls it `title`. */
+type Wire = Omit<CalendarSubscription, "title"> & { name: string };
+const fromWire = ({ name, ...rest }: Wire): CalendarSubscription => ({
+  ...rest,
+  title: name,
+});
+const toWire = ({ title, ...rest }: Partial<CalendarSubscription>) => ({
+  ...(title !== undefined ? { name: title } : {}),
+  ...rest,
+});
+
+export const listSubscriptions = async () =>
+  (await apiGet<Wire[]>(SUBS_BASE)).map(fromWire);
+export const createSubscription = async (body: CreateSubscriptionBody) =>
+  fromWire(await apiPost<Wire>(SUBS_BASE, toWire(body)));
+export const updateSubscription = async (
+  id: string,
+  body: UpdateSubscriptionBody,
+) => fromWire(await apiPut<Wire>(`${SUBS_BASE}/${seg(id)}`, toWire(body)));
 export const deleteSubscription = (id: string) =>
   apiDelete<{ message: string }>(`${SUBS_BASE}/${seg(id)}`);
 export const syncNowSubscription = (id: string) =>

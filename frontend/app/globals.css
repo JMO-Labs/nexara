@@ -17,6 +17,7 @@
   --nx-muted: #4f6b57;
   --nx-nav-muted: #9db8a2;
   --nx-danger: #b3261e;
+  --nx-danger-fg: #ffffff;
 
   --background: var(--nx-bg);
   --foreground: var(--nx-ink);
@@ -48,6 +49,7 @@
   --nx-muted: #86a38c;
   --nx-nav-muted: #86a38c;
   --nx-danger: #f2b8b5;
+  --nx-danger-fg: #0e1f15;
 }
 
 @theme inline {
@@ -62,6 +64,7 @@
   --color-nav-muted: var(--nx-nav-muted);
   --color-danger: var(--nx-danger);
   --color-destructive: var(--nx-danger);
+  --color-destructive-foreground: var(--nx-danger-fg);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -105,21 +108,4 @@
 /* Signature featured-card shape: one sharp bottom-left corner. */
 .corner-leaf {
   border-radius: 1.75rem 1.75rem 1.75rem 0.375rem;
-}
-
-/* Chat: new-message entrance (disabled for reduced motion). */
-@keyframes nx-slide-up {
-  from {
-    opacity: 0;
-    translate: 0 8px;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .nx-slide-up {
-    animation: nx-slide-up 0.18s ease-out;
-  }
 }

@@ -5,7 +5,6 @@
  *        the strong surface; the leaf corner sits on the sender side.
  *        Hover/focus reveals Reply; other authors offer a Send DM action.
  */
-import * as React from "react";
 import { format } from "date-fns";
 import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
@@ -22,10 +21,6 @@ export interface MessageItemProps {
   onSendDm?: (userId: string) => void;
   /** Spacing/font density. */
   density?: "comfortable" | "compact";
-  /** Play the slide-up entrance (live messages only). */
-  animate?: boolean;
-  /** Called once the entrance finished or the row unmounted mid-way. */
-  onAnimationDone?: (id: string) => void;
 }
 
 /**
@@ -40,26 +35,7 @@ export function MessageItem({
   onReply,
   onSendDm,
   density = "comfortable",
-  animate,
-  onAnimationDone,
 }: MessageItemProps) {
-  // Clear the "fresh" flag on unmount so a virtualized remount never replays.
-  const id = message.id;
-  // Native listener: React may bind a vendor-prefixed name instead.
-  const rowRef = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    const el = rowRef.current;
-    if (!animate || !el) return undefined;
-    const end = (e: Event) => {
-      if (e.target === el) onAnimationDone?.(id);
-    };
-    el.addEventListener("animationend", end);
-    return () => {
-      el.removeEventListener("animationend", end);
-      onAnimationDone?.(id);
-    };
-  }, [animate, id, onAnimationDone]);
-
   let time = "";
   try {
     time = format(new Date(message.created_at), "p");
@@ -74,7 +50,6 @@ export function MessageItem({
     <div
       data-density={density}
       data-message-id={message.id}
-      ref={rowRef}
       className={cn(
         "group relative flex items-start gap-3 px-4",
         density === "compact"
@@ -84,7 +59,6 @@ export function MessageItem({
           : compact
             ? "py-0.5"
             : "py-1.5",
-        animate && "nx-slide-up",
         isSelf && "flex-row-reverse",
         message.id.startsWith("optimistic-") && "opacity-60",
       )}

@@ -9,9 +9,6 @@ import { MessageList } from "@/components/chat/MessageList";
 import { dayLabel, isGrouped, startsNewDay } from "@/components/chat/grouping";
 import type { ChatMessage } from "@/lib/api/chat";
 
-// Indexes hidden from the fake virtualizer (simulates scrolled-out rows).
-const hidden = vi.hoisted(() => new Set<number>());
-
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: (o: {
     count: number;
@@ -23,7 +20,7 @@ vi.mock("@tanstack/react-virtual", () => ({
         index,
         key: o.getItemKey(index),
         start: index * 64,
-      })).filter((v) => !hidden.has(v.index)),
+      })),
     measureElement: () => {},
   }),
 }));
@@ -155,27 +152,31 @@ describe("MessageList rendering", () => {
     expect(screen.getAllByText("u1")).toHaveLength(1);
     expect(screen.getAllByRole("img", { name: "u1" })).toHaveLength(1);
   });
-  it("animates only messages that arrive after first render", () => {
+  const isNew = (c: HTMLElement, id: string) =>
+    row(c, id)
+      ?.closest("[data-testid='message-row']")
+      ?.getAttribute("data-new");
+  it("marks only messages that arrive after first render as new", () => {
     const { container, rerender } = render(
       <MessageList {...base} messages={two} />,
     );
-    expect(container.querySelector(".nx-slide-up")).toBeNull();
     rerender(
       <MessageList
         {...base}
         messages={[msg("live", "u2", "2026-11-12T09:10:00"), ...two]}
       />,
     );
-    expect(container.querySelectorAll(".nx-slide-up")).toHaveLength(1);
+    expect(isNew(container, "live")).toBe("true");
+    expect(isNew(container, "a")).toBe("false");
   });
-  it("does not animate history arriving after the loading render", () => {
+  it("does not mark history arriving after the loading render", () => {
     const { container, rerender } = render(
       <MessageList {...base} messages={[]} isLoading />,
     );
     rerender(<MessageList {...base} messages={two} />);
-    expect(container.querySelectorAll(".nx-slide-up")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-new='true']")).toHaveLength(0);
   });
-  it("does not animate an older page", () => {
+  it("does not mark an older page", () => {
     const { container, rerender } = render(
       <MessageList {...base} messages={two} />,
     );
@@ -185,30 +186,6 @@ describe("MessageList rendering", () => {
         messages={[...two, msg("older", "u3", "2026-11-10T09:00:00")]}
       />,
     );
-    expect(container.querySelectorAll(".nx-slide-up")).toHaveLength(0);
-  });
-  it("stops animating once the animation ends", () => {
-    const live = [msg("live", "u2", "2026-11-12T09:10:00"), ...two];
-    const { container, rerender } = render(
-      <MessageList {...base} messages={two} />,
-    );
-    rerender(<MessageList {...base} messages={live} />);
-    fireEvent.animationEnd(row(container, "live")!);
-    rerender(<MessageList {...base} messages={[...live]} />);
-    expect(container.querySelectorAll(".nx-slide-up")).toHaveLength(0);
-  });
-  it("does not replay the animation on a remounted row", () => {
-    const live = [msg("live", "u2", "2026-11-12T09:10:00"), ...two];
-    const { container, rerender } = render(
-      <MessageList {...base} messages={two} />,
-    );
-    rerender(<MessageList {...base} messages={live} />);
-    expect(row(container, "live")).not.toBeNull();
-    hidden.add(2); // scroll the live row out (unmount)
-    rerender(<MessageList {...base} messages={[...live]} />);
-    expect(row(container, "live")).toBeNull();
-    hidden.clear(); // scroll back (remount)
-    rerender(<MessageList {...base} messages={[...live]} />);
-    expect(row(container, "live")?.className).not.toContain("nx-slide-up");
+    expect(container.querySelectorAll("[data-new='true']")).toHaveLength(0);
   });
 });
