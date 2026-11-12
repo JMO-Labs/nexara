@@ -231,3 +231,36 @@ async def test_admin_only_endpoints_403_for_member(env, method, path):
     async with env.client("member") as c:
         r = await c.request(method, path, json={"settings": {}})
     assert r.status_code == 403
+
+
+async def test_enable_then_disable_toggles_state(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        on = await c.put("/api/v1/plugins/hello/enable")
+        off = await c.put("/api/v1/plugins/hello/disable")
+    assert on.status_code == 200 and on.json()["is_enabled"] is True
+    assert off.status_code == 200 and off.json()["is_enabled"] is False
+
+
+async def test_settings_wrong_type_rejected(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        r = await c.put("/api/v1/plugins/hello/settings", json={"settings": {"greeting": 5}})
+    assert r.status_code == 422
+
+
+async def test_list_description_blank_when_manifest_gone(env):
+    async with env.client() as c:
+        await c.post("/api/v1/plugins/hello/install")
+        (env.dir / "hello" / "manifest.json").unlink()
+        r = await c.get("/api/v1/plugins")
+    assert r.json()[0]["description"] == ""
+
+
+def test_get_plugin_service_wires_community_scope():
+    from app.api.v1.plugins import get_plugin_service as build
+    from app.core.config import get_settings
+
+    s = get_settings()
+    svc = build(db=None, settings=s)  # type: ignore[arg-type]
+    assert svc._cid == uuid.UUID(s.COMMUNITY_ID)
