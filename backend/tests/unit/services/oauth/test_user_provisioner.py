@@ -135,7 +135,8 @@ class TestProvisionUser:
         mock_link_repo.create = AsyncMock()
 
         auth_result = OAuthAuthResult(
-            sub="oidc-456", email="existing@example.com",
+            sub="oidc-456",
+            email="existing@example.com",
             avatar_url="https://x.com/a.png",
             email_verified=True,
         )
@@ -216,7 +217,10 @@ def _run(auth_result, *, link=None, user=None):
 
     async def go():
         with (
-            patch("app.services.oauth.user_provisioner.UserOAuthLinkRepository", return_value=link_repo),
+            patch(
+                "app.services.oauth.user_provisioner.UserOAuthLinkRepository",
+                return_value=link_repo,
+            ),
             patch("app.services.oauth.user_provisioner.UserRepository", return_value=user_repo),
         ):
             return await UserProvisioner(AsyncMock(), uuid.uuid4()).provision_user(
@@ -283,7 +287,14 @@ class TestEmailVerifiedExtraction:
 
     @pytest.mark.parametrize(
         ("raw", "expected"),
-        [(True, True), ("true", True), (False, False), ("false", False), (None, False), ("1", False)],
+        [
+            (True, True),
+            ("true", True),
+            (False, False),
+            ("false", False),
+            (None, False),
+            ("1", False),
+        ],
     )
     def test_extract_and_map(self, raw, expected):
         from app.services.oauth.claim_mapper import map_claims
