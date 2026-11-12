@@ -204,6 +204,7 @@ class SearchService:
     ) -> SearchResponse:
         """@brief Run the repository searches and build the response."""
         prefix_q = build_prefix_tsquery(q)
+        adult = is_adult(user)
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
@@ -217,7 +218,7 @@ class SearchService:
                         user.id,
                         cursor,
                         limit,
-                        include_nsfw=is_adult(user),
+                        include_nsfw=adult,
                     ),
                 )
             )
@@ -272,6 +273,7 @@ class SearchService:
                         user.id,
                         cursor,
                         limit,
+                        include_nsfw=adult,
                     ),
                 )
             )
@@ -290,7 +292,7 @@ class SearchService:
                 (
                     "polls",
                     self._repo.search_polls(
-                        q, prefix_q, self._community_id, user.id, cursor, limit
+                        q, prefix_q, self._community_id, user.id, cursor, limit, include_nsfw=adult
                     ),
                 )
             )

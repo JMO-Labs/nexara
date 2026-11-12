@@ -12,17 +12,14 @@ from typing import Any
 from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
-from app.models.media import Media
-from app.models.post import Post
-
-_MODELS: dict[str, type] = {"posts": Post, "media": Media}
+from app.repositories.moderation_repo import ModerationRepository
 
 
 class ModerationService:
     """
     @brief Marks posts/media NSFW, writes an audit entry, busts the search cache.
 
-    @param session Async DB session.
+    @param repo ModerationRepository.
     @param audit_repo AuditRepository.
     @param community_id Community scope.
     @param invalidate Cache invalidation coroutine (injectable for tests).
@@ -30,12 +27,12 @@ class ModerationService:
 
     def __init__(
         self,
-        session: Any,
+        repo: ModerationRepository,
         audit_repo: Any,
         community_id: uuid.UUID,
         invalidate: Callable[[uuid.UUID], Awaitable[Any]] = invalidate_search_cache_for_community,
     ) -> None:
-        self._session = session
+        self._repo = repo
         self._audit = audit_repo
         self._community_id = community_id
         self._invalidate = invalidate
@@ -49,15 +46,8 @@ class ModerationService:
         @param admin_id Acting admin.
         @throws NotFoundError if missing, deleted, or in another community.
         """
-        entity = await self._session.get(_MODELS[kind], entity_id)
-        if (
-            entity is None
-            or entity.community_id != self._community_id
-            or getattr(entity, "deleted_at", None) is not None
-        ):
+        if not await self._repo.set_nsfw(kind, entity_id, self._community_id):
             raise NotFoundError(_("Content not found"))
-        entity.is_nsfw = True
-        await self._session.flush()
         await self._audit.append(
             actor_id=admin_id,
             action=f"{kind}.marked_nsfw",

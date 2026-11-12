@@ -14,6 +14,7 @@ import pytest
 from app.models.media import Media
 from app.models.post import Post
 from app.models.user import User
+from app.repositories.moderation_repo import ModerationRepository
 from app.services.moderation_service import ModerationService
 from app.services.search_service import SearchService, is_adult
 
@@ -71,22 +72,29 @@ class TestSearchNsfw:
         assert repo.search_posts.await_args.kwargs["include_nsfw"] is True
         assert [i.is_nsfw for i in resp.results["posts"].items] == [True, False]
 
+    @pytest.mark.parametrize("birthday,expected", [(MINOR, False), (ADULT, True)])
+    async def test_comments_and_polls_get_include_nsfw(self, birthday, expected):
+        repo = AsyncMock()
+        repo.search_comments.return_value = ([], None, 0)
+        repo.search_polls.return_value = ([], None, 0)
+        await SearchService(repo, CID).search(
+            "hello", _user(birthday), ["comments", "polls"], None, 20
+        )
+        assert repo.search_comments.await_args.kwargs["include_nsfw"] is expected
+        assert repo.search_polls.await_args.kwargs["include_nsfw"] is expected
+
 
 class TestModerationService:
-    @pytest.mark.parametrize("kind,model", [("posts", Post), ("media", Media)])
-    async def test_mark_nsfw_audits_and_invalidates(self, kind, model):
-        entity = MagicMock(spec=model)
-        entity.is_nsfw = False
-        session = AsyncMock()
-        session.get.return_value = entity
-        entity.community_id = CID
-        entity.deleted_at = None
+    @pytest.mark.parametrize("kind", ["posts", "media"])
+    async def test_mark_nsfw_uses_repo_audits_and_invalidates(self, kind):
+        repo = AsyncMock(spec=ModerationRepository)
+        repo.set_nsfw.return_value = True
         audit = AsyncMock()
         invalidate = AsyncMock()
-        svc = ModerationService(session, audit, CID, invalidate=invalidate)
-        admin = uuid.uuid4()
-        await svc.mark_nsfw(kind, uuid.uuid4(), admin)
-        assert entity.is_nsfw is True
+        svc = ModerationService(repo, audit, CID, invalidate=invalidate)
+        target, admin = uuid.uuid4(), uuid.uuid4()
+        await svc.mark_nsfw(kind, target, admin)
+        repo.set_nsfw.assert_awaited_once_with(kind, target, CID)
         audit.append.assert_awaited_once()
         assert audit.append.await_args.kwargs["action"] == f"{kind}.marked_nsfw"
         invalidate.assert_awaited_once()
@@ -94,8 +102,10 @@ class TestModerationService:
     async def test_missing_entity_raises(self):
         from app.core.exceptions import NotFoundError
 
-        session = AsyncMock()
-        session.get.return_value = None
-        svc = ModerationService(session, AsyncMock(), CID, invalidate=AsyncMock())
+        repo = AsyncMock(spec=ModerationRepository)
+        repo.set_nsfw.return_value = False
+        audit = AsyncMock()
+        svc = ModerationService(repo, audit, CID, invalidate=AsyncMock())
         with pytest.raises(NotFoundError):
             await svc.mark_nsfw("posts", uuid.uuid4(), uuid.uuid4())
+        audit.append.assert_not_awaited()

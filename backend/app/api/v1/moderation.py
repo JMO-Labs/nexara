@@ -17,6 +17,7 @@ from app.core.dependencies import get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
+from app.repositories.moderation_repo import ModerationRepository
 from app.schemas.common import MessageResponse
 from app.services.moderation_service import ModerationService
 
@@ -28,7 +29,9 @@ def _build_service(
     settings: Settings = Depends(get_settings),
 ) -> ModerationService:
     """@brief Build ModerationService with injected dependencies."""
-    return ModerationService(db, AuditRepository(db), uuid.UUID(settings.COMMUNITY_ID))
+    return ModerationService(
+        ModerationRepository(db), AuditRepository(db), uuid.UUID(settings.COMMUNITY_ID)
+    )
 
 
 @router.post("/posts/{post_id}/mark-nsfw", response_model=MessageResponse)
