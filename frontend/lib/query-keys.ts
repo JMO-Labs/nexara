@@ -5,6 +5,10 @@
  */
 
 export const qk = {
+  dataExport: {
+    status: (id: string) => ["data-export", "status", id] as const,
+    history: () => ["data-export", "history"] as const,
+  },
   storage: {
     user: (userId: string) => ["storage", userId] as const,
   },

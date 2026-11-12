@@ -81,3 +81,27 @@ class TestHealthEndpoint:
             data = resp.json()
             assert data["status"] == "healthy"
             assert data["checks"]["storage"] is False
+
+
+class TestLivezEndpoint:
+    """@brief Liveness endpoint behavior tests."""
+
+    @pytest.mark.asyncio
+    async def test_livez_returns_alive_without_dependency_checks(self, test_app):
+        with (
+            patch("app.api.v1.health._check_db") as db,
+            patch("app.api.v1.health._check_redis") as redis,
+            patch("app.api.v1.health._check_storage") as storage,
+        ):
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get("/livez")
+
+            assert resp.status_code == 200
+            assert resp.json() == {"status": "alive"}
+            db.assert_not_called()
+            redis.assert_not_called()
+            storage.assert_not_called()
+            db.assert_not_awaited()
+            redis.assert_not_awaited()
+            storage.assert_not_awaited()
