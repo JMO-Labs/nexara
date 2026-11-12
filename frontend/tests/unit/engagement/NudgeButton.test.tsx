@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import {
   NudgeButton,
   formatCooldown,
+  formatRemaining,
 } from "@/components/engagement/NudgeButton";
 import { ApiError } from "@/lib/api/errors";
 import { useToasts } from "@/stores/toasts";
@@ -20,6 +21,15 @@ describe("formatCooldown", () => {
     expect(formatCooldown(30_000)).toBe("Nudged just now");
     expect(formatCooldown(4 * 3600_000 + 60_000)).toBe("Nudged 4h ago");
     expect(formatCooldown(25 * 60_000)).toBe("Nudged 25m ago");
+  });
+});
+
+describe("formatRemaining", () => {
+  it("formats remaining cooldown", () => {
+    expect(formatRemaining(20 * 3600_000)).toBe("Nudge again in 20h");
+    expect(formatRemaining(19 * 3600_000 + 60_000)).toBe("Nudge again in 20h");
+    expect(formatRemaining(35 * 60_000)).toBe("Nudge again in 35m");
+    expect(formatRemaining(10_000)).toBe("Nudge again in 1m");
   });
 });
 
@@ -53,7 +63,18 @@ describe("NudgeButton", () => {
         "You've already nudged this person in the last 24 hours",
       ),
     );
-    expect(screen.getByRole("button", { name: /Nudged/ })).toBeDisabled();
+    const btn = screen.getByRole("button", { name: /Try again in ~24h/ });
+    expect(btn).toBeDisabled();
+    expect(btn).not.toHaveTextContent(/Nudged/);
+    expect(localStorage.getItem("nudge:u1")).toMatch(/^rl:\d+$/);
+  });
+
+  it("restores rate-limited state from storage", () => {
+    localStorage.setItem("nudge:u1", `rl:${Date.now() - 3600_000}`);
+    render(<NudgeButton userId="u1" />);
+    expect(
+      screen.getByRole("button", { name: /Try again in ~24h/ }),
+    ).toBeDisabled();
   });
 
   it("on other error shows error toast", async () => {
@@ -71,9 +92,9 @@ describe("NudgeButton", () => {
   it("starts disabled from stored recent nudge, enabled after 24h", () => {
     localStorage.setItem("nudge:u1", String(Date.now() - 4 * 3600_000));
     const { unmount } = render(<NudgeButton userId="u1" />);
-    expect(
-      screen.getByRole("button", { name: "Nudged 4h ago" }),
-    ).toBeDisabled();
+    const btn = screen.getByRole("button", { name: /Nudged 4h ago/ });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveTextContent("Nudge again in 20h");
     unmount();
     localStorage.setItem("nudge:u1", String(Date.now() - 25 * 3600_000));
     render(<NudgeButton userId="u1" />);
