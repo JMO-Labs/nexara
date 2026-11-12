@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -31,7 +31,7 @@ def _post(nsfw: bool) -> MagicMock:
     p = MagicMock(spec=Post)
     p.id = uuid.uuid4()
     p.content = "hello world"
-    p.created_at = datetime.now(timezone.utc)
+    p.created_at = datetime.now(UTC)
     p.is_nsfw = nsfw
     return p
 
