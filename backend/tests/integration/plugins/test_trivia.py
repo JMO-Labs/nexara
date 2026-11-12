@@ -182,14 +182,22 @@ async def test_my_stats_rank(ctx):
 async def test_daily_task_selects_new_question(ctx):
     models = _load("models")
     first = await _today(ctx, D0, seed=1)
-    seen = {first["id"]}
+    seen = {first["text"]}
+    prev = first
     for i in range(1, 6):
-        q = await models.select_daily_question(ctx, D0 + timedelta(days=i), random.Random(i))
-        assert q["date"] == (D0 + timedelta(days=i)).isoformat()
-        seen.add(q["id"])
+        day = D0 + timedelta(days=i)
+        q = await models.select_daily_question(ctx, day, random.Random(i))
+        assert q["date"] == day.isoformat()
+        assert q["text"] != prev["text"]  # never repeats yesterday's question
+        stored = await ctx.db.get("question:today")
+        assert stored["text"] == q["text"] and stored["date"] == q["date"]
+        seen.add(q["text"])
+        prev = q
     assert len(seen) > 1
-    again = await models.select_daily_question(ctx, D0 + timedelta(days=5), random.Random(0))
-    assert again["id"] != q["id"]  # never repeats the previous question
+    again = await models.select_daily_question(ctx, D0 + timedelta(days=6), random.Random(0))
+    assert again["text"] != q["text"]
+    stored = await ctx.db.get("question:today")
+    assert stored["text"] == again["text"] and stored["date"] == again["date"]
 
 
 async def test_reset_streaks_zeroes_all(ctx):
