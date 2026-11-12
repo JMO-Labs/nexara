@@ -39,7 +39,11 @@ export function PromptResponsesList({
         title="Couldn't load responses"
         description="Check your connection and try again."
         action={
-          <Button variant="secondary" onClick={() => q.refetch()}>
+          <Button
+            variant="secondary"
+            className="min-h-11"
+            onClick={() => q.refetch()}
+          >
             Retry
           </Button>
         }
