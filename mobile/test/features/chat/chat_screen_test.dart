@@ -74,7 +74,7 @@ void main() {
   testWidgets('typing indicator shows then clears', (t) async {
     final rt = await pump(t, const ConversationScreen(chatId: 'c1', title: 'General'));
     rt.emit('chat.typing', {'channel_id': 'c1'});
-    await t.pump();
+    await t.pumpAndSettle(); // deliver stream event, then draw the frame it schedules
     expect(find.text('Someone is typing…'), findsOneWidget);
     await t.pump(const Duration(seconds: 4));
     expect(find.text('Someone is typing…'), findsNothing);
@@ -83,10 +83,10 @@ void main() {
   testWidgets('own typing frames are ignored, others shown', (t) async {
     final rt = await pump(t, const ConversationScreen(chatId: 'c1', title: 'General'));
     rt.emit('chat.typing', {'channel_id': 'c1', 'user_id': 'me'});
-    await t.pump();
+    await t.pumpAndSettle(); // deliver stream event, then draw the frame it schedules
     expect(find.text('Someone is typing…'), findsNothing);
     rt.emit('chat.typing', {'channel_id': 'c1', 'user_id': 'x'});
-    await t.pump();
+    await t.pumpAndSettle(); // deliver stream event, then draw the frame it schedules
     expect(find.text('Someone is typing…'), findsOneWidget);
     await t.pump(const Duration(seconds: 4));
   });
