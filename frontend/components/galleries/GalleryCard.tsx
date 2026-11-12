@@ -6,6 +6,7 @@
 import * as React from "react";
 import { Card, Badge, Avatar } from "@/components/ui";
 import { API_BASE } from "@/lib/auth/session";
+import { EventGalleryBadge } from "./EventGalleryBadge";
 import { MediaThumb } from "./MediaThumb";
 import type { Gallery } from "@/lib/api/galleries";
 
@@ -55,11 +56,12 @@ export function GalleryCard({ gallery, onSelect }: GalleryCardProps) {
       </div>
       <div className="flex flex-col gap-1 p-4">
         <h3 className="truncate text-base font-semibold">{gallery.title}</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-ink/70">
             {gallery.item_count} {gallery.item_count === 1 ? "item" : "items"}
           </span>
           {gallery.is_featured && <Badge tone="sun">Featured</Badge>}
+          {gallery.event_id && <EventGalleryBadge />}
         </div>
       </div>
     </Card>
