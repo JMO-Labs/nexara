@@ -83,10 +83,21 @@ def test_signup_quantity_ge_one() -> None:
 def test_item_and_member_out_from_attributes() -> None:
     now = datetime.now(UTC)
     item = SimpleNamespace(
-        id=uuid.uuid4(), position=1, values={}, due_at=None, completed=False,
-        lat=None, lon=None, signup_quantity_needed=3,
+        id=uuid.uuid4(),
+        position=1,
+        values={},
+        due_at=None,
+        completed=False,
+        lat=None,
+        lon=None,
+        signup_quantity_needed=3,
     )
     assert ListItemOut.model_validate(item).signup_quantity_needed == 3
-    m = SimpleNamespace(list_id=uuid.uuid4(), user_id=uuid.uuid4(), role="viewer",
-                        share_personal=False, added_at=now)
+    m = SimpleNamespace(
+        list_id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        role="viewer",
+        share_personal=False,
+        added_at=now,
+    )
     assert ListMemberOut.model_validate(m).role == "viewer"
