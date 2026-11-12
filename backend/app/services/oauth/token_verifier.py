@@ -81,15 +81,11 @@ async def verify_id_token(
         issuer = getattr(provider, "issuer", None)
         if isinstance(issuer, str) and issuer:
             options["iss"] = {"essential": True, "value": issuer}
-        claims = JsonWebToken(["RS256", "ES256"]).decode(
-            id_token, key_set, claims_options=options
-        )
+        claims = JsonWebToken(["RS256", "ES256"]).decode(id_token, key_set, claims_options=options)
         if hasattr(claims, "validate"):
             claims.validate()
         result = dict(claims)
-        if nonce is not None and not secrets.compare_digest(
-            str(result.get("nonce", "")), nonce
-        ):
+        if nonce is not None and not secrets.compare_digest(str(result.get("nonce", "")), nonce):
             raise AuthenticationError(message="Invalid OIDC id_token nonce")
         return result
     except AuthenticationError:

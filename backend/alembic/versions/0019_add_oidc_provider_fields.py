@@ -7,8 +7,9 @@ Revises: a78f91338679
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0019_add_oidc_provider_fields"
 down_revision: str | None = "a78f91338679"

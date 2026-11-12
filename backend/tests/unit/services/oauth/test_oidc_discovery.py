@@ -60,9 +60,7 @@ async def test_cache_expires_after_24h():
     with patch("app.services.oauth.discovery.httpx.AsyncClient", return_value=c):
         with patch("app.services.oauth.discovery.time.monotonic", return_value=1000.0):
             await discovery.fetch_discovery(URL)
-        with patch(
-            "app.services.oauth.discovery.time.monotonic", return_value=1000.0 + 86401
-        ):
+        with patch("app.services.oauth.discovery.time.monotonic", return_value=1000.0 + 86401):
             await discovery.fetch_discovery(URL)
     assert c.get.call_count == 2
 

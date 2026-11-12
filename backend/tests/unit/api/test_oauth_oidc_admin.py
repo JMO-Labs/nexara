@@ -40,15 +40,35 @@ def _provider():
     p = MagicMock()
     now = datetime.now(UTC)
     vals = dict(
-        id=uuid.uuid4(), community_id=uuid.uuid4(), slug="kc", display_name="KC",
-        icon_url=None, provider_type="oidc", issuer=DOC["issuer"], client_id="c",
-        scopes="openid profile email", authorization_endpoint=DOC["authorization_endpoint"],
-        token_endpoint=DOC["token_endpoint"], userinfo_endpoint=None, jwks_uri=DOC["jwks_uri"],
-        end_session_endpoint=None, group_mappings={}, default_role="member",
-        group_claim="groups", avatar_claim="picture", sub_claim="sub", email_claim="email",
-        name_claim="name", enabled=True, auto_create_users=True, seeded_from_env=False,
-        created_at=now, updated_at=now, discovery_url="https://kc.example.com/d",
-        claim_mapping={}, client_secret_encrypted="x",
+        id=uuid.uuid4(),
+        community_id=uuid.uuid4(),
+        slug="kc",
+        display_name="KC",
+        icon_url=None,
+        provider_type="oidc",
+        issuer=DOC["issuer"],
+        client_id="c",
+        scopes="openid profile email",
+        authorization_endpoint=DOC["authorization_endpoint"],
+        token_endpoint=DOC["token_endpoint"],
+        userinfo_endpoint=None,
+        jwks_uri=DOC["jwks_uri"],
+        end_session_endpoint=None,
+        group_mappings={},
+        default_role="member",
+        group_claim="groups",
+        avatar_claim="picture",
+        sub_claim="sub",
+        email_claim="email",
+        name_claim="name",
+        enabled=True,
+        auto_create_users=True,
+        seeded_from_env=False,
+        created_at=now,
+        updated_at=now,
+        discovery_url="https://kc.example.com/d",
+        claim_mapping={},
+        client_secret_encrypted="x",
     )
     for k, v in vals.items():
         setattr(p, k, v)
@@ -71,8 +91,11 @@ async def test_register_oidc_uses_discovery_and_masks_secret(test_app, admin_ove
             resp = await c.post(
                 "/api/v1/admin/oauth/providers/oidc",
                 json={
-                    "slug": "kc", "display_name": "KC", "client_id": "c",
-                    "client_secret": "s3cret", "discovery_url": "https://kc.example.com/d",
+                    "slug": "kc",
+                    "display_name": "KC",
+                    "client_id": "c",
+                    "client_secret": "s3cret",
+                    "discovery_url": "https://kc.example.com/d",
                 },
             )
     assert resp.status_code == 201

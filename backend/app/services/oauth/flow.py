@@ -8,8 +8,8 @@ from __future__ import annotations
 import hashlib
 import secrets
 from base64 import urlsafe_b64encode
-from urllib.parse import urlencode
 from typing import Any, cast
+from urllib.parse import urlencode
 
 import httpx
 
