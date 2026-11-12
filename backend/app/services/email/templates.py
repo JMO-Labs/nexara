@@ -44,6 +44,7 @@ class EmailTemplateRenderer:
         community_name: str = "Nexara",
         color_primary: str = "#3b82f6",
         logo_url: str | None = None,
+        footer_text: str | None = None,
     ) -> tuple[str, str]:
         """
         @brief Render a template to HTML and plain text.
@@ -56,12 +57,14 @@ class EmailTemplateRenderer:
         @param community_name Community display name.
         @param color_primary Primary brand color.
         @param logo_url Optional logo URL.
+        @param footer_text Optional footer text replacing the default sentence.
         @return Tuple of (html_body, text_body).
         """
         merged = {
             "community_name": community_name,
             "color_primary": color_primary,
             "logo_url": logo_url,
+            "footer_text": footer_text,
             **context,
         }
         template = self._env.get_template(template_name)
