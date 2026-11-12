@@ -98,9 +98,7 @@ class UserSettingsUpdate(BaseModel):
     profile_visible_to: str | None = Field(default=None, pattern=r"^(community|admin_only)$")
     show_online_status: bool | None = None
     show_last_seen: bool | None = None
-    show_birthday_to: str | None = Field(
-        default=None, pattern=r"^(nobody|community|admin_only)$"
-    )
+    show_birthday_to: str | None = Field(default=None, pattern=r"^(nobody|community|admin_only)$")
     show_birthday_year: bool | None = None
     allow_sassybot: bool | None = None
     font_size: str | None = Field(default=None, pattern=r"^(small|medium|large)$")
