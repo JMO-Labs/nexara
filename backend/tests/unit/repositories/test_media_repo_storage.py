@@ -9,6 +9,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from app.repositories.media_repo import MediaRepository
 
@@ -40,12 +41,25 @@ class TestStorageByType:
         assert out == {"photos": 10, "videos": 0, "documents": 5, "other": 0}
 
     @pytest.mark.asyncio
-    async def test_single_grouped_query_with_filters(self):
+    async def test_category_patterns_and_filters(self):
         repo, session = _repo([])
         await repo.get_user_storage_by_type(USER_ID, COMMUNITY_ID)
-        session.execute.assert_awaited_once()
-        sql = str(session.execute.await_args.args[0]).upper()
-        assert "GROUP BY" in sql
-        assert "CASE" in sql
-        assert "UPLOADER_ID" in sql
-        assert "COMMUNITY_ID" in sql
+        stmt = session.execute.await_args.args[0]
+        sql = str(
+            stmt.compile(
+                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+            )
+        )
+        flat = " ".join(sql.split()).replace("%%", "%")
+        assert "media.content_type LIKE 'image/%') THEN 'photos'" in flat
+        assert "media.content_type LIKE 'video/%') THEN 'videos'" in flat
+        assert "'application/pdf'" in flat
+        assert "'application/msword'" in flat
+        assert "media.content_type LIKE 'text/%'" in flat
+        assert "media.content_type LIKE 'application/vnd.%')" in flat
+        assert "THEN 'documents'" in flat
+        assert "ELSE 'other'" in flat
+        assert "GROUP BY" in flat
+        where = flat.split("WHERE")[1].split("GROUP BY")[0]
+        assert f"media.uploader_id = '{USER_ID}'" in where
+        assert f"media.community_id = '{COMMUNITY_ID}'" in where
