@@ -11,6 +11,7 @@ export interface Subgroup {
   description: string | null;
   avatar_url: string | null;
   cover_media_id: string | null;
+  accent_color?: string | null;
   is_private: boolean;
   join_policy: "open" | "invite_only" | "admin_approval";
   created_by: string | null;
@@ -53,6 +54,7 @@ export interface UpdateSubgroupBody {
   name?: string;
   description?: string | null;
   cover_media_id?: string | null;
+  accent_color?: string | null;
   is_private?: boolean;
   join_policy?: "open" | "invite_only" | "admin_approval";
 }

@@ -5,9 +5,13 @@
  */
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Card, SettingsRow, Select, Option } from "@/components/ui";
+import { Card, SettingsRow, Select, Option, Switch } from "@/components/ui";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { cn } from "@/lib/utils";
+import type { UserSettings } from "@/lib/api/settings";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
+
+type FontSize = UserSettings["font_size"];
 
 const THEMES = [
   { value: "system", label: "System" },
@@ -15,8 +19,14 @@ const THEMES = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+const FONT_SIZES = [
+  { value: "small", label: "Small", cls: "text-xs" },
+  { value: "medium", label: "Medium", cls: "text-sm" },
+  { value: "large", label: "Large", cls: "text-base" },
+] as const;
+
 /**
- * @brief Theme and language preferences.
+ * @brief Theme, font size, compact feed and language preferences.
  * @return appearance tab content
  */
 export function AppearanceTab() {
@@ -38,6 +48,9 @@ export function AppearanceTab() {
       </p>
     );
   }
+
+  const sizeClass =
+    FONT_SIZES.find((f) => f.value === settings.font_size)?.cls ?? "text-sm";
 
   const onTheme = (value: string) => {
     setTheme(value);
@@ -69,6 +82,55 @@ export function AppearanceTab() {
             </label>
           ))}
         </RadioGroup>
+      </SettingsRow>
+
+      <SettingsRow label="Font size" description="Text size in the app.">
+        <RadioGroup
+          aria-label="Font size"
+          value={settings.font_size}
+          onValueChange={(v) => mutate({ font_size: v as FontSize })}
+          disabled={isPending}
+        >
+          {FONT_SIZES.map(({ value, label }) => (
+            <label
+              key={value}
+              htmlFor={`font-${value}`}
+              className="flex min-h-11 items-center gap-3 text-sm"
+            >
+              <RadioGroupItem id={`font-${value}`} value={value} />
+              {label}
+            </label>
+          ))}
+        </RadioGroup>
+      </SettingsRow>
+
+      <SettingsRow
+        label="Compact feed"
+        description="Tighter spacing between feed items."
+      >
+        <Switch
+          aria-label="Compact feed"
+          checked={settings.compact_feed}
+          onCheckedChange={(v) => mutate({ compact_feed: v })}
+          disabled={isPending}
+        />
+      </SettingsRow>
+
+      <SettingsRow label="Preview" description="How your choices look.">
+        <div
+          data-testid="appearance-preview"
+          data-font-size={settings.font_size}
+          aria-live="polite"
+          className={cn(
+            "rounded-xl border border-ink/10 bg-surface p-3",
+            sizeClass,
+            settings.compact_feed ? "space-y-1" : "space-y-3",
+          )}
+        >
+          <p className="font-semibold">Sample post title</p>
+          <p>Text sizing and spacing update as you change settings.</p>
+          <p className="text-muted">Posted just now</p>
+        </div>
       </SettingsRow>
 
       <SettingsRow
