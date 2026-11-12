@@ -95,3 +95,48 @@ POST /api/v1/admin/oauth/providers/oidc
   "claim_mapping": {"groups": "realm_access.roles"}
 }
 ```
+
+## Group to subgroup and role mapping (optional)
+
+Add a `group_mapping` section to `claim_mapping` to place users in subgroups and
+assign community roles on every SSO login. Without it, nothing extra happens.
+
+```json
+PUT /api/v1/admin/oauth/providers/{id}
+{
+  "claim_mapping": {
+    "groups": "groups",
+    "group_mapping": {
+      "eng":    {"subgroup_id": "<subgroup-uuid>", "role": "member"},
+      "design": {"subgroup_id": "<subgroup-uuid>", "role": "moderator"},
+      "admin":  {"subgroup_id": null, "role": "admin"}
+    }
+  }
+}
+```
+
+- `subgroup_id` set: the user is added to that subgroup with `role`
+  (subgroup role). Existing memberships are never duplicated or changed.
+- `subgroup_id` null: `role` is a community role. If several groups match, the
+  highest wins (`admin` > `member` > `viewer`).
+- Groups with no mapping, or whose subgroup no longer exists, are skipped and a
+  warning is logged; login never fails because of them.
+- Memberships are only added, never removed, when a group disappears from the token.
+- Rules are validated on create/update (422 on error): with `subgroup_id`, `role`
+  must be `owner`, `moderator` or `member`; without it, `viewer`, `member` or
+  `admin`. Other `claim_mapping` keys must be strings.
+
+Preview the mapping (no writes). Optional `groups` simulates a token:
+
+```
+GET /api/v1/admin/oauth/providers/{id}/group-mapping-preview?groups=eng&groups=admin
+```
+
+### Keycloak
+Add the "Group Membership" mapper (claim `groups`, full path off). Group names
+in `group_mapping` must match exactly, e.g. `eng`. For realm roles use
+`"groups": "realm_access.roles"`.
+
+### Authentik
+The `groups` scope mapping returns group names in `groups`; use those names as
+`group_mapping` keys.
