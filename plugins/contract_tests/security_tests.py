@@ -43,8 +43,8 @@ def _modules(tree: ast.Module) -> list[tuple[str, int]]:
         if isinstance(n, ast.Import):
             mods += [(a.name, n.lineno) for a in n.names]
         elif isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
-            if n.module == "app.models":  # ``from app.models import x`` -> app.models.x
-                mods += [(f"app.models.{a.name}", n.lineno) for a in n.names]
+            if n.module in ("app", "app.models"):  # ``from app import x`` -> app.x
+                mods += [(f"{n.module}.{a.name}", n.lineno) for a in n.names]
             else:
                 mods.append((n.module, n.lineno))
     return mods
@@ -76,6 +76,9 @@ def run(plugin_dir: Path) -> list[Check]:
         tree = parse(path)
         if tree is not None:
             for mod, line in _modules(tree):
+                if mod == "app":
+                    out.append(warn("security.unlisted_import", f"{rel}:{line} imports 'app'."))
+                    continue
                 if not mod.startswith("app."):
                     continue
                 forbidden = any(_under(mod, p) for p in FORBIDDEN) or (

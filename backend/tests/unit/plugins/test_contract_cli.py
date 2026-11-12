@@ -62,7 +62,7 @@ def test_integration_missing_router_fails(tmp_path):
     assert c.by_name(it.run(d), "integration.router")[0].status == "fail"
 
 
-def test_integration_valid_router_and_import_error(tmp_path):
+def test_integration_valid_router_passes(tmp_path):
     ok_dir = c.make(
         tmp_path,
         code="from fastapi import APIRouter\nrouter = APIRouter()\n",
@@ -87,3 +87,36 @@ def test_integration_hooks_signature(tmp_path):
         "from fastapi import APIRouter\nfrom .hooks import register_hooks\nrouter = APIRouter()\n"
     )
     assert c.by_name(it.run(d), "integration.register_hooks")[0].status == "fail"
+
+
+_ROUTER = "from fastapi import APIRouter\nrouter = APIRouter()\n"
+
+
+def _tasks_plugin(tmp_path, tasks_code, pid="demo"):
+    d = c.make(tmp_path, code=_ROUTER, id=pid, backend={"routes": "router.py", "tasks": "tasks.py"})
+    (d / "tasks.py").write_text(tasks_code)
+    return d
+
+
+def test_integration_celery_task_registered_passes(tmp_path):
+    d = _tasks_plugin(
+        tmp_path,
+        "from app.tasks.celery_app import celery_app\n"
+        "@celery_app.task(name='demo.contract_probe')\n"
+        "def probe():\n    return 1\n",
+    )
+    assert c.by_name(it.run(d), "integration.celery_tasks")[0].status == "pass"
+
+
+def test_integration_celery_no_tasks_fails(tmp_path):
+    d = _tasks_plugin(tmp_path, "x = 1\n", pid="notasks")
+    assert c.by_name(it.run(d), "integration.celery_tasks")[0].status == "fail"
+
+
+def test_integration_hooks_valid_signature_passes(tmp_path):
+    d = c.make(tmp_path, code=_ROUTER, backend={"routes": "router.py"})
+    (d / "hooks.py").write_text("def register_hooks(community_id, manifest): ...\n")
+    (d / "router.py").write_text(
+        "from fastapi import APIRouter\nfrom .hooks import register_hooks\nrouter = APIRouter()\n"
+    )
+    assert c.by_name(it.run(d), "integration.register_hooks")[0].status == "pass"

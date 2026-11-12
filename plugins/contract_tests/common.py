@@ -15,7 +15,7 @@ SKIP_DIRS = {"tests", "__pycache__", "node_modules", ".git", "venv", ".venv"}
 
 @dataclass(frozen=True)
 class Check:
-    """@brief One check outcome. ``doc`` is a docs anchor used by the reporter."""
+    """@brief One check outcome."""
 
     name: str
     status: Status

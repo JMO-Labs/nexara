@@ -21,6 +21,10 @@ def _status(checks, name):
         "from app.repositories.event_repo import EventRepo",
         "from app.models.post import Post",
         "from app.models import post",
+        "from app import api",
+        "from app import services",
+        "from app import repositories",
+        "from app import api as a, services",
     ],
 )
 def test_forbidden_imports_fail(tmp_path, line):
@@ -45,6 +49,12 @@ def test_allowlisted_imports_pass(tmp_path, line):
     assert not [x for x in checks if x.status != "pass"]
 
 
+def test_bare_import_app_is_unlisted(tmp_path):
+    checks = sec.run(c.make(tmp_path, code="import app\nfrom app import plugins\n"))
+    assert len(_status(checks, "security.unlisted_import")) == 1
+    assert "fail" not in {x.status for x in checks}
+
+
 def test_nested_import_detected(tmp_path):
     d = c.make(tmp_path, code="def f():\n    from app.services import x\n")
     assert "fail" in _status(sec.run(d), "security.forbidden_import")
@@ -52,7 +62,11 @@ def test_nested_import_detected(tmp_path):
 
 @pytest.mark.parametrize(
     "line",
-    ['API_KEY = "abcd1234efgh5678"', 'x = "AKIAABCDEFGHIJKLMNOP"', 'password = "hunter2hunter2"'],
+    [
+        'API_KEY = "' + "x" * 12 + '"',
+        'x = "' + "AKIA" + "A" * 16 + '"',
+        'password = "' + "y" * 10 + '"',
+    ],
 )
 def test_hardcoded_secret_fails(tmp_path, line):
     assert "fail" in _status(

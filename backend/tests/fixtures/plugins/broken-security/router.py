@@ -7,7 +7,7 @@ from app.models.post import Post
 from app.services import event_service
 
 router = APIRouter()
-API_KEY = "abcd1234efgh5678"
+API_KEY = "xxxxxxxxxxxx"  # low entropy placeholder
 
 
 async def leak(ctx):
