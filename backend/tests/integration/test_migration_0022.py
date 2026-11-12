@@ -1,6 +1,6 @@
 """
-@file tests/integration/test_migration_0019.py
-@brief Round-trip (upgrade, downgrade, upgrade) of migration 0019 on real Postgres.
+@file tests/integration/test_migration_0022.py
+@brief Round-trip (upgrade, downgrade, upgrade) of migration 0022 on real Postgres.
 
 Runs in a scratch database so the shared test DB is never downgraded.
 """
@@ -21,7 +21,8 @@ ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
-PREV = "0020_media_ai_metadata"
+PREV = "0021_add_subgroup_accent_color"
+REV = "0022_list_templates"
 TABLES = [
     "list_template",
     "list_template_field",
@@ -76,6 +77,12 @@ def _state(engine) -> tuple[set[str], set[str]]:
     return tables, cols
 
 
+def _current(engine) -> set[str]:
+    """@brief Return the set of revisions stamped in alembic_version."""
+    with engine.connect() as c:
+        return set(c.execute(text("SELECT version_num FROM alembic_version")).scalars())
+
+
 def _counts(engine) -> tuple[int, int, int]:
     with engine.connect() as c:
         communities = c.execute(text("SELECT count(*) FROM communities")).scalar_one()
@@ -96,6 +103,7 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
         )
     command.upgrade(cfg, "head")
 
+    assert _current(engine) == {REV}
     assert _state(engine) == (set(TABLES), set(NOTIF))
     communities, tpl, fields = _counts(engine)
     assert communities >= 2
@@ -104,7 +112,7 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
 
     # Re-running the seed must not duplicate templates or fields.
     spec = importlib.util.spec_from_file_location(
-        "mig0019", ROOT / "alembic" / "versions" / "0019_list_templates.py"
+        "mig0022", ROOT / "alembic" / "versions" / "0022_list_templates.py"
     )
     mig = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mig)
