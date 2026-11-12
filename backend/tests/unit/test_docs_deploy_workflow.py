@@ -1,4 +1,5 @@
 """@file Validates the docs-deploy GitHub Actions workflow (nexara#123)."""
+
 from pathlib import Path
 
 import yaml
