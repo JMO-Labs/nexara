@@ -81,7 +81,7 @@ class AuthService {
           queryParameters: {'token': token}, options: _noRefresh));
 
   /// @brief Returns the provider login URL to open in an external browser/custom tab.
-  String loginOIDC(String provider) => '${api.dio.options.baseUrl}/oauth/$provider/login';
+  String loginOIDC(String provider) => '${api.dio.options.baseUrl}/oauth/${Uri.encodeComponent(provider)}/login';
 
   /// @brief Exchanges the code received via deep link after OIDC login.
   Future<void> completeOIDC(String code) async => _store(await api.dio
@@ -102,7 +102,7 @@ class AuthService {
     }
   }
 
-  /// @brief Rotates tokens via the refresh cookie. Returns false (and signs out) on failure.
+  /// @brief Rotates tokens via the refresh cookie. Returns false on failure; signs out only on 401/403.
   Future<bool> refreshToken() async {
     final rt = await tokens.readRefresh();
     if (rt == null) return false;
@@ -111,8 +111,10 @@ class AuthService {
           options: Options(headers: {'Cookie': 'refresh_token=$rt'}, extra: {'noRefresh': true}));
       await _store(r);
       return true;
-    } on DioException {
-      await tokens.clear();
+    } on DioException catch (e) {
+      // Only an explicit rejection ends the session; offline/timeouts keep it.
+      final code = e.response?.statusCode;
+      if (code == 401 || code == 403) await tokens.clear();
       return false;
     }
   }

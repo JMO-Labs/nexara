@@ -24,6 +24,13 @@ class Mem implements TokenStore {
   Future<void> clear() async => access = refresh = null;
 }
 
+class ThrowingAdapter extends Adapter {
+  ThrowingAdapter() : super((_) => (200, {}, {}));
+  @override
+  Future<ResponseBody> fetch(RequestOptions o, Stream<Uint8List>? s, Future<void>? c) async =>
+      throw DioException.connectionError(requestOptions: o, reason: 'offline');
+}
+
 class Adapter implements HttpClientAdapter {
   Adapter(this.h);
   final (int, Object, Map<String, List<String>>) Function(RequestOptions) h;
@@ -136,6 +143,27 @@ void main() {
     t.refresh = 'bad';
     expect(await s.refreshToken(), isFalse);
     expect(t.refresh, isNull);
+  });
+
+  test('refreshToken keeps tokens on connection error', () async {
+    final (s, t, _) = make(ThrowingAdapter());
+    t.access = 'a';
+    t.refresh = 'r';
+    expect(await s.refreshToken(), isFalse);
+    expect(t.access, 'a');
+    expect(t.refresh, 'r');
+  });
+
+  test('refreshToken keeps tokens on 500', () async {
+    final (s, t, _) = make(Adapter((_) => (500, {}, {})));
+    t.refresh = 'r';
+    expect(await s.refreshToken(), isFalse);
+    expect(t.refresh, 'r');
+  });
+
+  test('loginOIDC url-encodes provider', () {
+    final (s, _, _) = make(Adapter((_) => (200, {}, {})));
+    expect(s.loginOIDC('a/b c'), 'http://x/api/v1/oauth/a%2Fb%20c/login');
   });
 
   test('biometricUnlock true only with session and successful auth', () async {
