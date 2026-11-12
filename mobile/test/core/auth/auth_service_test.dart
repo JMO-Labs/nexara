@@ -54,12 +54,22 @@ const cookie = {
   'set-cookie': ['refresh_token=r1; Path=/api/v1/auth; HttpOnly']
 };
 
-(AuthService, Mem, Adapter) make(Adapter a, {bool bio = true, bool bioOk = true}) {
+class MemPref implements BiometricPrefStore {
+  MemPref([this.value = false]);
+  bool value;
+  @override
+  Future<bool> read() async => value;
+  @override
+  Future<void> write(bool v) async => value = v;
+}
+
+(AuthService, Mem, Adapter) make(Adapter a,
+    {bool bio = true, bool bioOk = true, bool bioEnabled = true}) {
   final t = Mem();
   final c = ApiClient(baseUrl: 'http://x/api/v1', tokens: t, refresher: () async => false);
   c.dio.httpClientAdapter = a;
   return (
-    AuthService(api: c, tokens: t, biometric: FakeBio(bio, bioOk)),
+    AuthService(api: c, tokens: t, biometric: FakeBio(bio, bioOk), biometricPref: MemPref(bioEnabled)),
     t,
     a
   );
@@ -68,10 +78,14 @@ const cookie = {
 class FakeBio implements BiometricAuthenticator {
   FakeBio(this.available, this.ok);
   final bool available, ok;
+  int prompts = 0;
   @override
   Future<bool> isAvailable() async => available;
   @override
-  Future<bool> authenticate(String reason) async => ok;
+  Future<bool> authenticate(String reason) async {
+    prompts++;
+    return ok;
+  }
 }
 
 void main() {
@@ -180,5 +194,46 @@ void main() {
     final (s2, t2, _) = make(Adapter((_) => (200, {}, {})), bioOk: false);
     t2.refresh = 'r';
     expect(await s2.biometricUnlock(), isFalse);
+  });
+
+  test('biometricUnlock false when disabled, without prompting', () async {
+    final t = Mem()..refresh = 'r';
+    final bio = FakeBio(true, true);
+    final s = AuthService(
+        api: ApiClient(baseUrl: 'http://x', tokens: t, refresher: () async => false),
+        tokens: t,
+        biometric: bio,
+        biometricPref: MemPref(false));
+    expect(await s.biometricUnlock(), isFalse);
+    expect(bio.prompts, 0);
+  });
+
+  test('setBiometricEnabled(true) persists only after successful prompt', () async {
+    final pref = MemPref(false);
+    final t = Mem();
+    AuthService svc(bool ok) => AuthService(
+        api: ApiClient(baseUrl: 'http://x', tokens: t, refresher: () async => false),
+        tokens: t,
+        biometric: FakeBio(true, ok),
+        biometricPref: pref);
+    expect(await svc(false).setBiometricEnabled(true), isFalse);
+    expect(await svc(false).biometricEnabled(), isFalse);
+    expect(await svc(true).setBiometricEnabled(true), isTrue);
+    expect(pref.value, isTrue);
+  });
+
+  test('setBiometricEnabled(false) skips prompt and persists', () async {
+    final pref = MemPref(true);
+    final t = Mem();
+    final bio = FakeBio(true, true);
+    final s = AuthService(
+        api: ApiClient(baseUrl: 'http://x', tokens: t, refresher: () async => false),
+        tokens: t,
+        biometric: bio,
+        biometricPref: pref);
+    expect(await s.setBiometricEnabled(false), isFalse);
+    expect(bio.prompts, 0);
+    expect(pref.value, isFalse);
+    expect(await s.biometricEnabled(), isFalse);
   });
 }
