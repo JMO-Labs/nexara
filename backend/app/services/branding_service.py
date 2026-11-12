@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -24,12 +25,24 @@ from app.schemas.branding import (
     BrandingUpdate,
     BrandingUpdateResponse,
     ContrastWarning,
+    PresetTheme,
 )
 from app.services.branding.contrast import contrast_ratio
 from app.services.branding.css import sanitize_css
 
 if TYPE_CHECKING:
     from app.models.branding import CommunityBranding
+
+_PRESETS_PATH = Path(__file__).resolve().parents[2] / "data" / "preset_themes.json"
+_COLOR_KEYS = (
+    "primary",
+    "primary_dark",
+    "accent",
+    "surface_light",
+    "surface_dark",
+    "text_light",
+    "text_dark",
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -183,6 +196,40 @@ class BrandingService:
         response = _row_to_response(row)
         warnings = self.check_contrast(row)
         return BrandingUpdateResponse(branding=response, contrast_warnings=warnings)
+
+    async def get_preset_themes(self) -> list[PresetTheme]:
+        """@brief Load preset themes from backend/data/preset_themes.json."""
+        raw = json.loads(_PRESETS_PATH.read_text(encoding="utf-8"))
+        return [PresetTheme(**t) for t in raw["themes"]]
+
+    async def apply_preset_theme(
+        self,
+        theme_name: str,
+        community_id: uuid.UUID,
+        *,
+        user_id: uuid.UUID,
+        ip_address: str | None = None,
+    ) -> BrandingUpdateResponse:
+        """
+        @brief Apply a preset's colours to the community branding.
+
+        @param theme_name Case-insensitive theme name.
+        @param community_id Community to update; must match the service scope.
+        @param user_id Admin applying the theme.
+        @param ip_address Request IP for audit log.
+        @return Updated branding with contrast warnings.
+        @throws AppError 404 if the theme does not exist.
+        """
+        if community_id != self._community_id:
+            raise AppError(code="forbidden", message="Community mismatch", status_code=403)
+        wanted = theme_name.strip().lower()
+        theme = next((t for t in await self.get_preset_themes() if t.name.lower() == wanted), None)
+        if theme is None:
+            raise AppError(
+                code="theme_not_found", message="Preset theme not found", status_code=404
+            )
+        data = BrandingUpdate(**{f"color_{k}": getattr(theme, k) for k in _COLOR_KEYS})
+        return await self.update_branding(user_id=user_id, data=data, ip_address=ip_address)
 
     @staticmethod
     def _sanitize(raw: str) -> str:

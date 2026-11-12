@@ -31,3 +31,27 @@ export const useUpdateBranding = () => {
     },
   });
 };
+
+/** @brief Fetch preset themes. */
+export const usePresetThemes = () =>
+  useQuery({
+    queryKey: [...qk.admin.branding(), "presets"] as const,
+    queryFn: brandingApi.getPresetThemes,
+    staleTime: Infinity,
+  });
+
+/** @brief Apply a preset theme; refreshes branding on success. */
+export const useApplyPreset = () => {
+  const qc = useQueryClient();
+  const push = useToasts((s) => s.push);
+  return useMutationWithToast({
+    mutationFn: brandingApi.applyPresetTheme,
+    silentError: true,
+    silentSuccess: true,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.admin.branding() });
+      push({ variant: "success", message: "Theme applied" });
+    },
+    onError: () => push({ variant: "error", message: "Could not apply theme" }),
+  });
+};

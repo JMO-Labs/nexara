@@ -17,6 +17,7 @@ import {
 import { BrandingPreview } from "./BrandingPreview";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
+import { ThemeGallery } from "./ThemeGallery";
 import { AdminLoading, AdminNotice } from "./AdminState";
 
 const ACCENT_ERROR =
@@ -131,5 +132,11 @@ export function BrandingTab() {
   if (isLoading) return <AdminLoading />;
   if (error || !data)
     return <AdminNotice tone="error">Failed to load branding.</AdminNotice>;
-  return <BrandingForm initial={data} />;
+  const colorKey = COLOR_FIELDS.map((f) => data[f.key] ?? "").join("|");
+  return (
+    <div className="flex flex-col gap-8">
+      <BrandingForm key={colorKey} initial={data} />
+      <ThemeGallery current={data} />
+    </div>
+  );
 }

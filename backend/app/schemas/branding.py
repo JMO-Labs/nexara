@@ -137,6 +137,26 @@ class BrandingUpdateResponse(BaseModel):
     contrast_warnings: list[ContrastWarning]
 
 
+class PresetTheme(BaseModel):
+    """@brief A named preset colour palette (unprefixed colour keys)."""
+
+    name: str
+    description: str
+    primary: str
+    primary_dark: str
+    accent: str
+    surface_light: str
+    surface_dark: str
+    text_light: str
+    text_dark: str
+
+
+class PresetThemeList(BaseModel):
+    """@brief Response for GET /branding/presets."""
+
+    themes: list[PresetTheme]
+
+
 class PwaManifest(BaseModel):
     """@brief PWA web app manifest structure."""
 

@@ -2,7 +2,7 @@
  * @file lib/api/branding.ts
  * @brief Branding API (GET public, PUT admin) plus accent-contrast check.
  */
-import { apiGet, apiPut } from "./client";
+import { apiGet, apiPost, apiPut, seg } from "./client";
 import { contrastRatio } from "@/lib/contrast";
 import { palette } from "@/theme/palette";
 
@@ -66,3 +66,29 @@ export const isHex = (v: unknown): v is string =>
 /** @brief True if value is a safe font family name (letters, digits, space, dash). */
 export const isFontName = (v: unknown): v is string =>
   typeof v === "string" && /^[A-Za-z0-9][A-Za-z0-9 \-]{0,63}$/.test(v);
+
+/** @brief Preset colour theme (unprefixed keys). */
+export interface PresetTheme {
+  name: string;
+  description: string;
+  primary: string;
+  primary_dark: string;
+  accent: string;
+  surface_light: string;
+  surface_dark: string;
+  text_light: string;
+  text_dark: string;
+}
+
+/** @brief Fetch preset themes (public). */
+export const getPresetThemes = () =>
+  apiGet<{ themes: PresetTheme[] }>(`${BASE}presets`);
+
+/**
+ * @brief Apply a preset theme (admin only).
+ * @param name theme name
+ */
+export const applyPresetTheme = (name: string) =>
+  apiPost<{ branding: Branding }>(
+    `/api/v1/branding/presets/${seg(name)}/apply`,
+  );
