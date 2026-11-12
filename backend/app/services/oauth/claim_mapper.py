@@ -33,7 +33,7 @@ def _lookup(claims: dict[str, Any], path: str) -> Any:
     return cur
 
 
-def map_claims(claims: dict[str, Any], claim_mapping: dict[str, str] | None) -> OAuthAuthResult:
+def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> OAuthAuthResult:
     """
     @brief Transform provider claims into an OAuthAuthResult.
 
@@ -41,7 +41,8 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, str] | None) -> 
     @param claim_mapping Nexara field -> provider claim overrides (merged over defaults).
     @return OAuthAuthResult (sub, email, display_name, avatar_url, groups).
     """
-    m = {**DEFAULT_MAPPING, **(claim_mapping or {})}
+    overrides = {k: v for k, v in (claim_mapping or {}).items() if isinstance(v, str)}
+    m = {**DEFAULT_MAPPING, **overrides}
 
     def get(field: str) -> Any:
         return _lookup(claims, m[field])
