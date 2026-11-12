@@ -390,3 +390,45 @@ describe("GlobalCommandPalette hotkey", () => {
     await waitFor(() => expect(useUI.getState().commandPaletteOpen).toBe(true));
   });
 });
+
+describe("GlobalCommandPalette new result types", () => {
+  const cases = [
+    {
+      name: "poll",
+      item: { id: "pl1", type: "polls", title: "Lunch?", parent_id: "p9" },
+      path: "/app/post/p9",
+    },
+    {
+      name: "gallery",
+      item: { id: "g1", type: "galleries", title: "Summer Pics" },
+      path: "/app/galleries?gallery=g1",
+    },
+    {
+      name: "subgroup",
+      item: { id: "s1", type: "subgroups", title: "Chess Club", slug: "chess" },
+      path: "/app/subgroups/chess",
+    },
+  ];
+
+  it.each(cases)("navigates for $name result", async ({ item, path }) => {
+    mockPush.mockClear();
+    (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        items: [{ snippet: "", created_at: "2026-04-25T00:00:00Z", ...item }],
+        next_cursor: null,
+        has_more: false,
+      },
+      isLoading: false,
+    });
+    useUI.getState().setCommandPaletteOpen(false);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
+    );
+    act(() => useUI.getState().setCommandPaletteOpen(true));
+    const el = (await screen.findByText(item.title)).closest('[role="option"]');
+    await userEvent.setup().click(el!);
+    expect(mockPush).toHaveBeenCalledWith(path);
+  });
+});

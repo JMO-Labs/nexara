@@ -107,6 +107,12 @@ function PaletteBody() {
         href = `/app/events?event=${item.id}`;
       } else if (item.type === "comments") {
         href = `/app/post/${item.parent_id}#comment-${item.id}`;
+      } else if (item.type === "polls") {
+        href = `/app/post/${item.parent_id}`;
+      } else if (item.type === "galleries") {
+        href = `/app/galleries?gallery=${item.id}`;
+      } else if (item.type === "subgroups") {
+        href = `/app/subgroups/${item.slug ?? item.id}`;
       }
       return {
         id: `${item.type}:${item.id}`,

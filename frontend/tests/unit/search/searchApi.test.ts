@@ -83,3 +83,37 @@ describe("search API", () => {
     expect(url).toContain("limit=50");
   });
 });
+
+describe("searchAll galleries and polls", () => {
+  it("flattens galleries and polls buckets", async () => {
+    (apiGet as ReturnType<typeof vi.fn>).mockResolvedValue({
+      query: "x",
+      results: {
+        galleries: {
+          items: [{ id: "g1", title: "G", snippet: "", created_at: "t" }],
+          total: 3,
+          next_cursor: null,
+        },
+        polls: {
+          items: [
+            {
+              id: "pl1",
+              title: "P",
+              snippet: "",
+              created_at: "t",
+              parent_id: "p1",
+            },
+          ],
+          total: 2,
+          next_cursor: null,
+        },
+      },
+    });
+
+    const res = await searchAll("x");
+
+    expect(res.items.map((i) => i.type)).toEqual(["galleries", "polls"]);
+    expect(res.items[1].parent_id).toBe("p1");
+    expect(res.totals).toEqual({ galleries: 3, polls: 2 });
+  });
+});
