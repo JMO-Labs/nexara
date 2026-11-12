@@ -90,4 +90,10 @@ describe("LinkPreviewCard", () => {
       screen.getByRole("img", { name: "Link preview" }),
     ).toBeInTheDocument();
   });
+  it("does not render a link for non-http(s) urls", () => {
+    render(
+      <LinkPreviewCard preview={{ ...base, url: "javascript:alert(1)" }} />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
 });
