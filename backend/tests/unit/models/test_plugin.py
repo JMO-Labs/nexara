@@ -23,8 +23,16 @@ class TestPluginModel:
     def test_columns(self):
         cols = {c.name for c in Plugin.__table__.columns}
         assert {
-            "id", "name", "version", "is_enabled", "permissions_granted",
-            "settings", "installed_at", "updated_at", "deleted_at", "community_id",
+            "id",
+            "name",
+            "version",
+            "is_enabled",
+            "permissions_granted",
+            "settings",
+            "installed_at",
+            "updated_at",
+            "deleted_at",
+            "community_id",
         } <= cols
 
     def test_id_is_text_and_scoped_per_community(self):
@@ -58,8 +66,13 @@ class TestPluginDataModel:
     def test_columns(self):
         cols = {c.name for c in PluginData.__table__.columns}
         assert {
-            "id", "plugin_id", "community_id", "key", "value_json",
-            "created_at", "updated_at",
+            "id",
+            "plugin_id",
+            "community_id",
+            "key",
+            "value_json",
+            "created_at",
+            "updated_at",
         } <= cols
 
     def test_unique_constraint(self):
@@ -71,10 +84,7 @@ class TestPluginDataModel:
         assert ["plugin_id", "community_id", "key"] in uniques
 
     def test_fk_to_plugins(self):
-        targets = {
-            fk.target_fullname
-            for fk in PluginData.__table__.foreign_keys
-        }
+        targets = {fk.target_fullname for fk in PluginData.__table__.foreign_keys}
         assert "plugins.id" in targets
         assert "plugins.community_id" in targets
 

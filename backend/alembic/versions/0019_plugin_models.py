@@ -33,10 +33,16 @@ def upgrade() -> None:
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("version", sa.String(64), nullable=False),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("permissions_granted", JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column(
+            "permissions_granted", JSONB(), nullable=False, server_default=sa.text("'[]'::jsonb")
+        ),
         sa.Column("settings", JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("installed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "installed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id", "community_id"),
     )
@@ -45,13 +51,21 @@ def upgrade() -> None:
 
     op.create_table(
         "plugin_data",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.func.gen_random_uuid()),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.func.gen_random_uuid()
+        ),
         sa.Column("plugin_id", sa.Text(), nullable=False),
-        sa.Column("community_id", UUID(as_uuid=True), nullable=False, server_default=DEFAULT_COMMUNITY),
+        sa.Column(
+            "community_id", UUID(as_uuid=True), nullable=False, server_default=DEFAULT_COMMUNITY
+        ),
         sa.Column("key", sa.String(255), nullable=False),
         sa.Column("value_json", JSONB(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(
             ["plugin_id", "community_id"],
             ["plugins.id", "plugins.community_id"],

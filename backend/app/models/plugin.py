@@ -54,9 +54,7 @@ class Plugin(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     version: Mapped[str] = mapped_column(String(64), nullable=False)
-    is_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("false")
-    )
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     permissions_granted: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
@@ -85,9 +83,7 @@ class PluginData(Base):
             ["plugins.id", "plugins.community_id"],
             ondelete="CASCADE",
         ),
-        UniqueConstraint(
-            "plugin_id", "community_id", "key", name="uq_plugin_data_key"
-        ),
+        UniqueConstraint("plugin_id", "community_id", "key", name="uq_plugin_data_key"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
