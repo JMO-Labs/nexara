@@ -2,7 +2,7 @@
  * @file lib/api/adminOauth.ts
  * @brief OAuth provider management API endpoints for admin panel.
  */
-import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, seg } from "./client";
 
 /**
  * @brief OAuth provider response (excludes client_secret).
@@ -167,3 +167,14 @@ export const toggleOauthProvider = (providerId: string) =>
  */
 export const discoverIssuer = (issuer: string) =>
   apiPost<IssuerDiscoveryResponse>("/api/v1/admin/oauth/discover", { issuer });
+
+/**
+ * @brief Enable/disable SSO-only login enforcement.
+ * @param enabled New state
+ * @return new state plus optional lockout warning
+ */
+export const setSsoOnly = (enabled: boolean) =>
+  apiPatch<{ sso_only: boolean; warning: string | null }>(
+    "/api/v1/admin/settings/sso-only",
+    { enabled },
+  );
