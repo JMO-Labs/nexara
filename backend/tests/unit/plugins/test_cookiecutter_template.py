@@ -107,13 +107,42 @@ class TestGeneration:
         assert m.version == "0.1.0"
         assert m.hooks == {}
         assert m.backend.routes == "router.py"
-        assert m.backend.tasks == "tasks.py"
+        assert m.backend.tasks is None
         assert m.permissions == [PluginPermission.DB_READ]
+
+    def test_tasks_declared_only_with_celery_permission(self, tmp_path: Path) -> None:
+        project = generate(tmp_path, backend_permissions='["db_read", "celery_tasks"]')
+        assert load_manifest(project).backend.tasks == "tasks.py"
+        assert (project / "tasks.py").is_file()
+
+    def test_quotes_in_text_fields_are_escaped(self, tmp_path: Path) -> None:
+        project = generate(
+            tmp_path,
+            plugin_name='My "Best" Plugin',
+            author_name='Jo "J"',
+            description='a "b" \\ c',
+        )
+        m = load_manifest(project)
+        assert (m.name, m.author) == ('My "Best" Plugin', 'Jo "J" <you@example.com>')
+        assert m.description == 'a "b" \\ c'
+
+    def test_no_celery_permission_drops_tasks_file(self, tmp_path: Path) -> None:
+        assert not (generate(tmp_path) / "tasks.py").exists()
+
+    def test_register_hooks_matches_loader_signature(self, tmp_path: Path) -> None:
+        src = (generate(tmp_path) / "hooks.py").read_text()
+        fn = next(
+            n
+            for n in ast.parse(src).body
+            if isinstance(n, ast.FunctionDef) and n.name == "register_hooks"
+        )
+        assert [a.arg for a in fn.args.args] == ["community_id", "manifest"]
+        assert "HookRegistry.register(" in src
 
     def test_structure_backend_only(self, tmp_path: Path) -> None:
         project = generate(tmp_path)
         for name in (
-            "__init__.py", "router.py", "models.py", "tasks.py", "hooks.py", "README.md",
+            "__init__.py", "router.py", "models.py", "hooks.py", "README.md",
             "requirements.txt", ".gitignore", "LICENSE", "manifest.toml",
             "tests/test_my_awesome_plugin.py", "pyproject.toml",
         ):  # fmt: skip

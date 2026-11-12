@@ -23,6 +23,7 @@ one here. Delete this section if the plugin has no settings.
 
 1. Edit `manifest.toml` and keep `permissions` to the minimum needed.
 2. Replace the example code in `router.py`, `tasks.py` and `hooks.py`.
+   `tasks.py` is only generated (and loaded) with the `celery_tasks` permission.
 3. Add optional dependencies to `requirements.txt`.
 4. Run `ruff check .` and `mypy .` from this directory before publishing
    (inside the Nexara backend environment; settings are in `pyproject.toml`).

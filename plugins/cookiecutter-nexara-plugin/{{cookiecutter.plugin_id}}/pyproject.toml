@@ -23,3 +23,8 @@ exclude = ["^frontend/"]
 # Celery ships without type hints (same as Nexara core).
 module = ["celery", "celery.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Nexara core (`app`) is importable at runtime inside the backend.
+module = ["app", "app.*"]
+ignore_missing_imports = true
