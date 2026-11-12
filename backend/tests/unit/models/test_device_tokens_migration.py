@@ -18,8 +18,11 @@ def _script() -> ScriptDirectory:
 
 
 def test_device_tokens_migration_is_single_head_after_pronouns() -> None:
-    """@brief 0025_device_tokens chains after 0024_add_user_pronouns as sole head."""
+    """@brief 0025_device_tokens chains after 0024_nudges on a single head."""
     script = _script()
-    assert script.get_heads() == ["0025_device_tokens"]
+    heads = script.get_heads()
+    assert len(heads) == 1
+    ancestors = {r.revision for r in script.iterate_revisions(heads[0], "base")}
+    assert "0025_device_tokens" in ancestors
     rev = script.get_revision("0025_device_tokens")
-    assert rev.down_revision == "0024_add_user_pronouns"
+    assert rev.down_revision == "0024_nudges"

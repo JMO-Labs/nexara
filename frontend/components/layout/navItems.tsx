@@ -9,6 +9,7 @@ import {
   Users,
   Images,
   Film,
+  List,
   Contact,
   Bell,
   Settings,
@@ -63,6 +64,7 @@ export const PRIMARY_NAV: NavItem[] = [
 
 export const MORE_NAV: NavItem[] = [
   { label: "Galleries", href: "/app/galleries", Icon: Images },
+  { label: "Lists", href: "/app/lists", Icon: List },
   { label: "Media", href: "/app/media", Icon: Film },
   { label: "Members", href: "/app/members", Icon: Contact },
   { label: "Notifications", href: "/app/notifications", Icon: Bell },
