@@ -196,7 +196,9 @@ class SearchService:
             tasks.append(
                 (
                     "polls",
-                    self._repo.search_polls(q, prefix_q, self._community_id, user.id, cursor, limit),
+                    self._repo.search_polls(
+                        q, prefix_q, self._community_id, user.id, cursor, limit
+                    ),
                 )
             )
 
