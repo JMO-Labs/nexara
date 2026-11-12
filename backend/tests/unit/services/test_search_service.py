@@ -84,6 +84,7 @@ class TestSearch:
                 "id": uuid.uuid4(),
                 "content": "Test post content",
                 "created_at": datetime.now(UTC),
+                "is_nsfw": False,
             },
         )()
         user_result = type(

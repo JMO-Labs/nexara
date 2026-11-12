@@ -184,3 +184,28 @@ class TestListReports:
         session.execute.assert_awaited_once()
         assert len(reports) == 1
         assert cursor is None
+
+
+class TestSetNsfw:
+    """@brief Tests for ModerationRepository.set_nsfw()."""
+
+    @pytest.mark.parametrize("kind", ["post", "media"])
+    async def test_set_nsfw_returns_true_when_row_updated(self, kind: str) -> None:
+        session = _make_session()
+        session.execute.return_value = MagicMock(rowcount=1)
+
+        repo = ModerationRepository(session)
+        assert await repo.set_nsfw(kind, uuid.uuid4(), COMMUNITY_ID, True) is True
+        session.execute.assert_awaited_once()
+        session.flush.assert_awaited_once()
+
+    async def test_set_nsfw_returns_false_when_no_row(self) -> None:
+        session = _make_session()
+        session.execute.return_value = MagicMock(rowcount=0)
+
+        repo = ModerationRepository(session)
+        assert await repo.set_nsfw("post", uuid.uuid4(), COMMUNITY_ID, True) is False
+
+    def test_moderation_repo_keeps_block_and_report_api(self) -> None:
+        for name in ("create_block", "remove_block", "is_blocked", "create_report", "list_reports"):
+            assert hasattr(ModerationRepository, name)
