@@ -121,6 +121,13 @@ class TestGallerySearchVisibility:
         g = await _gallery(session, owner, "zorblat summer")
         assert g.id in await _galleries(session, viewer, "zorblat")
 
+    async def test_matches_on_description_only(self, session: AsyncSession):
+        owner, viewer = await _user(session), await _user(session)
+        g = await _gallery(session, owner, "plain title")
+        g.description = "contains blorptastic word"
+        await session.flush()
+        assert g.id in await _galleries(session, viewer, "blorptastic")
+
     async def test_private_only_for_owner(self, session: AsyncSession):
         owner, other = await _user(session), await _user(session)
         g = await _gallery(session, owner, "zorblat secret", "private")
@@ -176,6 +183,15 @@ class TestPollSearch:
         author, viewer = await _user(session), await _user(session)
         poll, post = await _poll(session, author, "quixotic deleted vote")
         post.deleted_at = datetime.now(UTC)
+        await session.flush()
+        assert poll.id not in await _polls(session, viewer, "quixotic")
+
+    async def test_soft_deleted_poll_excluded(self, session: AsyncSession):
+        from datetime import UTC, datetime
+
+        author, viewer = await _user(session), await _user(session)
+        poll, _ = await _poll(session, author, "quixotic polldel vote")
+        poll.deleted_at = datetime.now(UTC)
         await session.flush()
         assert poll.id not in await _polls(session, viewer, "quixotic")
 

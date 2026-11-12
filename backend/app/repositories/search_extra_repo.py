@@ -120,6 +120,7 @@ class GalleryPollSearchMixin:
         conds: list[Any] = [
             Poll.community_id == community_id,
             Post.deleted_at.is_(None),
+            Poll.deleted_at.is_(None),
             visibility,
             ~blocked,
             match_expr,
