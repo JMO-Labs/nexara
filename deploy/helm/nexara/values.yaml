@@ -1,0 +1,137 @@
+# Nexara Helm values. See README.md for details and examples.
+
+# -- Container image (single image runs API, worker and beat)
+image:
+  registry: ghcr.io
+  repository: com-nexara/nexara
+  tag: ""            # defaults to Chart appVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# -- API deployment (nginx + uvicorn on port 8080)
+api:
+  replicas: 3
+  port: 8080
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  # Probes hit nginx (named port `http`), which proxies /livez and /healthz to uvicorn.
+  probes:
+    liveness: {initialDelaySeconds: 0, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3}
+    readiness: {initialDelaySeconds: 0, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 3}
+    # Allows up to 30 x 5s = 150s of boot/migrations before liveness applies.
+    startup: {initialDelaySeconds: 0, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 30}
+  # Soft pod anti-affinity spreads replicas across nodes.
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: nexara
+                app.kubernetes.io/component: api
+
+# -- Celery worker
+worker:
+  replicas: 2
+  queues: default,maintenance,email,notifications,media
+  concurrency: 4
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+
+# -- Celery beat (singleton, replicas must stay 1)
+beat:
+  # replicas is fixed at 1 by the template
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 250m, memory: 256Mi}
+
+# -- Valkey (Redis-compatible cache/broker)
+valkey:
+  enabled: true
+  image: valkey/valkey:8-alpine
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 250m, memory: 256Mi}
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  # Used when enabled=false, e.g. redis://my-redis:6379
+  external:
+    url: ""
+
+# -- PostgreSQL
+postgresql:
+  enabled: true
+  image: postgres:18-alpine
+  database: nexara
+  username: nexara
+  password: ""       # generated if empty
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  # Used when enabled=false
+  external:
+    host: ""
+    port: 5432
+    database: nexara
+    username: nexara
+    password: ""     # or set existingSecret
+    existingSecret: ""   # secret containing key "database-password"
+
+# -- Ingress
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: nexara.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: nexara-tls
+  #    hosts: [nexara.example.com]
+
+# -- Horizontal Pod Autoscaler for the API
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilization: 70
+
+# -- Secrets (generated on first install when empty; reused on upgrade and kept on uninstall)
+secrets:
+  existingSecret: ""   # secret with keys "secret-key" (JWT/signing); overrides below
+  jwtSecret: ""
+
+# -- Application environment variables
+env:
+  COMMUNITY_DEFAULT: "default"
+  LOG_LEVEL: "INFO"
+  ENABLE_REGISTRATION: "true"
+  REQUIRE_INVITE: "false"
+  ALLOWED_ORIGINS: ""
+
+# -- Media storage: "local" (PVC) or "s3"
+storage:
+  backend: local
+  local:
+    size: 20Gi
+    storageClass: ""
+    # -- Must be ReadWriteMany when API/worker pods run on several nodes
+    accessModes: [ReadWriteMany]
+  s3:
+    endpointUrl: ""
+    bucket: nexara
+    accessKey: ""
+    secretKey: ""
+    existingSecret: ""   # keys "s3-access-key" and "s3-secret-key"

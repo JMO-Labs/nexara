@@ -244,6 +244,31 @@
   },
   "settings": {
     "title": "Settings",
+    "apprise": {
+      "title": "Apprise notifications",
+      "add": "Add URL",
+      "test": "Send test",
+      "invalid_url": "Invalid Apprise URL",
+      "empty": "No Apprise URLs yet.",
+      "edit": "Edit",
+      "delete": "Delete",
+      "enable": "Enable",
+      "label": "Label",
+      "url": "URL",
+      "url_hint": "e.g. slack://tokenA/tokenB/tokenC. Stored encrypted and never shown again.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "save_and_test": "Save and test?",
+      "save_and_test_msg": "Send a test notification to this URL now?",
+      "yes": "Save and test",
+      "no": "Just save",
+      "delete_title": "Delete this URL?",
+      "delete_msg": "This removes the Apprise URL permanently.",
+      "test_failed": "Test failed",
+      "save_failed": "Could not save the URL. Check it and try again.",
+      "action_failed": "Action failed. Please try again.",
+      "matrix": "Apprise"
+    },
     "profile": "Profile",
     "account": "Account",
     "security": "Security",
@@ -616,7 +641,9 @@
     "enabled": "Enabled",
     "activePrompt": "Tradition prompt",
     "expiresAt": "Closes",
-    "responses": "responses"
+    "responses": "responses",
+    "noResponses": "No responses yet.",
+    "loadMore": "Load more"
   },
   "members": {
     "empty": "No members yet."
@@ -625,45 +652,77 @@
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",
-      "reaction": { "added": "Reacted" }
+      "reaction": {
+        "added": "Reacted"
+      }
     },
-    "comments": { "added": "Comment posted" },
+    "comments": {
+      "added": "Comment posted"
+    },
     "events": {
       "created": "Event created",
       "updated": "Event updated",
-      "rsvp": { "saved": "RSVP saved" },
+      "rsvp": {
+        "saved": "RSVP saved"
+      },
       "cancelled": "Event cancelled"
     },
     "galleries": {
       "created": "Gallery created",
-      "item": { "added": "Added to gallery" },
+      "item": {
+        "added": "Added to gallery"
+      },
       "deleted": "Gallery deleted"
     },
-    "media": { "uploaded": "Upload complete", "deleted": "Media removed" },
+    "media": {
+      "uploaded": "Upload complete",
+      "deleted": "Media removed"
+    },
     "subgroups": {
       "created": "Subgroup created",
       "joined": "Joined subgroup",
       "left": "Left subgroup",
-      "member": { "added": "Member added", "removed": "Member removed" }
+      "member": {
+        "added": "Member added",
+        "removed": "Member removed"
+      }
     },
     "settings": {
       "saved": "Settings saved",
-      "password": { "changed": "Password updated" }
+      "password": {
+        "changed": "Password updated"
+      }
     },
-    "invites": { "sent": "Invite sent", "revoked": "Invite revoked" },
+    "invites": {
+      "sent": "Invite sent",
+      "revoked": "Invite revoked"
+    },
     "admin": {
       "user": { "updated": "User updated", "deactivated": "User deactivated" },
-      "audit": { "exported": "Audit log exported" }
+      "audit": { "exported": "Audit log exported" },
+      "retention": { "updated": "Retention policy saved" }
     },
     "auth": {
-      "login": { "failed": "Login failed" },
-      "register": { "failed": "Registration failed" },
-      "reset": { "sent": "Reset email sent" }
+      "login": {
+        "failed": "Login failed"
+      },
+      "register": {
+        "failed": "Registration failed"
+      },
+      "reset": {
+        "sent": "Reset email sent"
+      }
     },
     "errors": {
       "generic": "Something went wrong",
       "network": "Network error",
       "unauthorized": "Not authorized"
+    },
+    "calendar": {
+      "subscription_added": "Calendar added",
+      "subscription_updated": "Calendar updated",
+      "subscription_deleted": "Calendar deleted",
+      "sync_complete": "Sync complete"
     }
   },
   "onboarding": {
@@ -690,6 +749,111 @@
       "shortcuts": "Keyboard shortcuts",
       "docs": "Documentation",
       "support": "Contact support"
+    }
+  },
+  "actions": {
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "components": {
+    "calendar": {
+      "subscriptions": {
+        "title": "Calendar subscriptions",
+        "description": "Subscribe to external iCal feeds and choose how often they sync.",
+        "empty": "No external calendars yet",
+        "add": "Add calendar",
+        "add_modal_title": "Add calendar subscription",
+        "edit_modal_title": "Edit calendar subscription",
+        "url": "Calendar URL",
+        "interval": "Sync frequency",
+        "delete_confirm": "Delete subscription?",
+        "delete_confirm_text": "Delete “{title}” and its imported events?"
+      }
+    }
+  },
+  "lists": {
+    "title": "Lists",
+    "create": "Create list",
+    "edit": "Edit list",
+    "delete": "Delete list",
+    "archive": "Archive list",
+    "unarchive": "Restore list",
+    "description": "Description",
+    "name": "List name",
+    "visibility": "Visibility",
+    "loading": "Loading lists...",
+    "items": {
+      "title": "Items",
+      "add": "Add item",
+      "edit": "Edit item",
+      "delete": "Delete item",
+      "complete": "Mark done",
+      "uncomplete": "Mark not done",
+      "count": "{count, plural, one {# item} other {# items}}",
+      "name": "Item name"
+    },
+    "signups": {
+      "claim": "Claim",
+      "release": "Release",
+      "claimed_by": "Claimed by {userName}",
+      "slots_left": "{count, plural, one {# spot left} other {# spots left}}",
+      "full": "Full"
+    },
+    "members": {
+      "title": "Members",
+      "add": "Add member",
+      "remove": "Remove member",
+      "share": "Share list",
+      "count": "{count, plural, one {# member} other {# members}}",
+      "role": "Role"
+    },
+    "templates": {
+      "title": "Templates",
+      "create": "Create template",
+      "clone": "Clone template",
+      "gallery": "Template gallery",
+      "use": "Use template",
+      "from_list": "Save as template"
+    },
+    "fields": {
+      "title": "Fields",
+      "add": "Add field",
+      "delete": "Delete field",
+      "name": "Field name",
+      "type": "Field type",
+      "required": "Required"
+    },
+    "notifications": {
+      "item": "New item in {listName}",
+      "signup": "{userName} claimed an item",
+      "completed": "Item marked done",
+      "expiring": "Expires in 1 day",
+      "member": "Added by {inviterName}",
+      "fallback_list": "your list",
+      "fallback_user": "Someone",
+      "fallback_inviter": "a member",
+      "acknowledge": "Acknowledge notification",
+      "dismiss": "Dismiss"
+    },
+    "placeholders": {
+      "no_lists": "No lists yet",
+      "no_items": "No items in {listName} yet",
+      "no_members": "No members yet",
+      "search": "Search lists"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm_delete": "Delete {listName}? This cannot be undone."
+    },
+    "messages": {
+      "created": "List created successfully",
+      "updated": "List updated",
+      "deleted": "List deleted",
+      "archived": "List archived",
+      "error": "Something went wrong. Please try again."
     }
   }
 }

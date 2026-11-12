@@ -4,10 +4,11 @@
  * @brief Client-side provider tree. Wraps children with next-themes (class-based,
  *        system default), next-intl, and TanStack Query. Server state lives here; UI state lives in Zustand.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
+import { loadPlugins } from "@/lib/plugins/plugin-loader";
 import messages from "@/i18n/en-US.json";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   );
+
+  useEffect(() => {
+    void loadPlugins();
+  }, []);
 
   return (
     <NextThemesProvider

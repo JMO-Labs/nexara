@@ -7,6 +7,8 @@ No-op when SMTP is not configured (SMTP_HOST empty).
 
 from __future__ import annotations
 
+from email.utils import formataddr
+
 import structlog
 from aiosmtplib import SMTP
 
@@ -38,6 +40,7 @@ class EmailSender:
         text_body: str | None = None,
         *,
         list_unsubscribe: str | None = None,
+        sender_name: str | None = None,
     ) -> bool:
         """
         @brief Send an email via SMTP.
@@ -50,6 +53,7 @@ class EmailSender:
         @param html_body HTML body.
         @param text_body Optional plain-text body.
         @param list_unsubscribe Optional List-Unsubscribe header value.
+        @param sender_name Optional display name for the From header.
         @return True if sent, False if skipped (SMTP not configured).
         """
         if not self._settings.SMTP_HOST:
@@ -61,7 +65,8 @@ class EmailSender:
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = self._settings.SMTP_FROM or "noreply@nexara.local"
+        from_addr = self._settings.SMTP_FROM or "noreply@nexara.local"
+        msg["From"] = formataddr((sender_name, from_addr)) if sender_name else from_addr
         msg["To"] = to
 
         if list_unsubscribe:
