@@ -22,7 +22,9 @@ from app.models.user_oauth_link import UserOAuthLink
 from app.plugins.hooks import HookRegistry
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.repositories.user_repo import UserRepository
+from app.services.oauth.group_mapper import apply_subgroup_mappings, global_role_mappings
 
 if TYPE_CHECKING:
     from app.models.oauth_provider import OAuthProvider
@@ -96,6 +98,31 @@ class UserProvisioner:
         role: str,
     ) -> User:
         """
+        @brief Provision the user, then apply claim_mapping.group_mapping subgroups.
+
+        @param auth_result Extracted claims from token.
+        @param provider OAuth provider configuration.
+        @param role Resolved community role.
+        @return The user (created or updated).
+        """
+        user = await self._provision_identity(auth_result, provider, role)
+        await apply_subgroup_mappings(
+            SubgroupRepository(self._db),
+            SubgroupMemberRepository(self._db),
+            self._community_id,
+            user.id,
+            auth_result.groups or [],
+            provider.claim_mapping,
+        )
+        return user
+
+    async def _provision_identity(
+        self,
+        auth_result: OAuthAuthResult,
+        provider: OAuthProvider,
+        role: str,
+    ) -> User:
+        """
         @brief Create or update a user from OAuth claims.
 
         Looks up by provider+sub via UserOAuthLink first, then by email
@@ -113,7 +140,9 @@ class UserProvisioner:
         @param role Resolved role (from group mapping or default).
         @return The user (created or updated).
         """
-        has_group_mappings = bool(provider.group_mappings)
+        has_group_mappings = bool(provider.group_mappings) or bool(
+            global_role_mappings(provider.claim_mapping)
+        )
 
         link = await self._link_repo.find_by_provider_and_sub(provider.id, auth_result.sub)
         if link:
