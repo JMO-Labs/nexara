@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.device_token import DeviceToken
 from app.models.notification import PushSubscription
@@ -111,10 +111,10 @@ class PushService:
         @param token FCM device token.
         @return The stored DeviceToken.
         """
-        assert self._device_repo is not None
-        existing = await self._device_repo.find_by_token(token)
+        repo = self._require_device_repo()
+        existing = await repo.find_by_token(token)
         if existing:
-            return await self._device_repo.reassign(
+            return await repo.reassign(
                 existing,
                 user_id=user_id,
                 community_id=self._community_id,
@@ -126,7 +126,7 @@ class PushService:
             platform=platform,
             token=token,
         )
-        return await self._device_repo.create(device)
+        return await repo.create(device)
 
     async def unregister_device(self, user_id: uuid.UUID, token: str) -> None:
         """
@@ -136,11 +136,25 @@ class PushService:
         @param token Device token string.
         @raise NotFoundError If the token is not an active token of the caller.
         """
-        assert self._device_repo is not None
-        device = await self._device_repo.find_active(self._community_id, user_id, token)
+        repo = self._require_device_repo()
+        device = await repo.find_active(self._community_id, user_id, token)
         if device is None:
             raise NotFoundError(_("Device token not found"))
-        await self._device_repo.soft_delete(device)
+        await repo.soft_delete(device)
+
+    def _require_device_repo(self) -> DeviceTokenRepo:
+        """
+        @brief Return the device repo or fail with a standard AppError.
+
+        @return The configured DeviceTokenRepo.
+        @raise AppError If the service was built without a device repo.
+        """
+        if self._device_repo is None:
+            raise AppError(
+                code="DEVICE_REPO_UNAVAILABLE",
+                message=_("Device token storage is not configured"),
+            )
+        return self._device_repo
 
     async def list_subscriptions(self, user_id: uuid.UUID) -> list[PushSubscriptionResponse]:
         """

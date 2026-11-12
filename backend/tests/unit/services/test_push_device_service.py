@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.models.device_token import DeviceToken
 from app.repositories.device_token_repo import DeviceTokenRepo
 from app.services.push_service import PushService
@@ -80,3 +80,25 @@ class TestUnregisterDevice:
         with pytest.raises(NotFoundError):
             await service.unregister_device(USER_ID, "tok")
         device_repo.soft_delete.assert_not_awaited()
+
+
+class TestMissingDeviceRepo:
+    async def test_register_raises_app_error_without_repo(self):
+        svc = PushService(
+            push_repo=AsyncMock(),
+            settings_repo=AsyncMock(),
+            community_id=COMMUNITY_ID,
+            settings=MagicMock(),
+        )
+        with pytest.raises(AppError):
+            await svc.register_device(USER_ID, "ios", "tok")
+
+    async def test_unregister_raises_app_error_without_repo(self):
+        svc = PushService(
+            push_repo=AsyncMock(),
+            settings_repo=AsyncMock(),
+            community_id=COMMUNITY_ID,
+            settings=MagicMock(),
+        )
+        with pytest.raises(AppError):
+            await svc.unregister_device(USER_ID, "tok")

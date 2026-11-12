@@ -1,7 +1,7 @@
 """add device_tokens for native push
 
-Revision ID: 0020_device_tokens
-Revises: 0019_add_oidc_provider_fields
+Revision ID: 0024_device_tokens
+Revises: 0023_bookmarks
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "0020_device_tokens"
-down_revision: str | None = "0019_add_oidc_provider_fields"
+revision: str = "0024_device_tokens"
+down_revision: str | None = "0023_bookmarks"
 branch_labels = None
 depends_on = None
 
