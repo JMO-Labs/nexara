@@ -11,7 +11,6 @@ import {
   useCreatePrompt,
   useUpdatePrompt,
   useDeletePrompt,
-  useSeedBuiltinPrompts,
 } from "@/hooks/usePrompts";
 import { Button, EmptyState } from "@/components/ui";
 import type { PromptCreate, PromptUpdate } from "@/lib/api/prompts";
@@ -31,7 +30,6 @@ export function PromptsTab() {
   const updateMutation = useUpdatePrompt();
   const createMutation = useCreatePrompt();
   const deleteMutation = useDeletePrompt();
-  const seedMutation = useSeedBuiltinPrompts();
 
   const selected = selectedId ? prompts.find((p) => p.id === selectedId) : null;
 
@@ -58,31 +56,40 @@ export function PromptsTab() {
     );
   }
 
+  const handleCreate = (form: PromptCreate) => {
+    createMutation.mutate(form);
+    setIsCreating(false);
+  };
+
+  const modal = (
+    <NewPromptModal
+      open={isCreating}
+      creating={createMutation.isPending}
+      onClose={() => setIsCreating(false)}
+      onCreate={handleCreate}
+    />
+  );
+
   if (prompts.length === 0) {
     return (
-      <EmptyState
-        title="No prompts yet"
-        action={
-          <Button
-            onClick={() => seedMutation.mutate()}
-            loading={seedMutation.isPending}
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Seed builtin library
-          </Button>
-        }
-      />
+      <>
+        <EmptyState
+          title="No prompts yet"
+          action={
+            <Button onClick={() => setIsCreating(true)}>
+              <Plus className="size-4" aria-hidden="true" />
+              New prompt
+            </Button>
+          }
+        />
+        {modal}
+      </>
     );
   }
 
   const handleUpdate = (update: PromptUpdate) => {
     if (selectedId)
       updateMutation.mutate({ promptId: selectedId, payload: update });
-  };
-
-  const handleCreate = (form: PromptCreate) => {
-    createMutation.mutate(form);
-    setIsCreating(false);
   };
 
   const handleDelete = (id: string) => {
@@ -97,7 +104,10 @@ export function PromptsTab() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         onToggle={(promptId, enabled) =>
-          updateMutation.mutate({ promptId, payload: { enabled: !enabled } })
+          updateMutation.mutate({
+            promptId,
+            payload: { is_enabled: !enabled },
+          })
         }
         onNew={() => setIsCreating(true)}
       />
@@ -109,12 +119,7 @@ export function PromptsTab() {
           onDelete={() => handleDelete(selected.id)}
         />
       )}
-      <NewPromptModal
-        open={isCreating}
-        creating={createMutation.isPending}
-        onClose={() => setIsCreating(false)}
-        onCreate={handleCreate}
-      />
+      {modal}
     </div>
   );
 }
