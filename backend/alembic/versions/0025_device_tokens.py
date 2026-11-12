@@ -1,7 +1,7 @@
 """add device_tokens for native push
 
 Revision ID: 0025_device_tokens
-Revises: 0024_add_user_pronouns
+Revises: 0024_nudges
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0025_device_tokens"
-down_revision: str | None = "0024_add_user_pronouns"
+down_revision: str | None = "0024_nudges"
 branch_labels = None
 depends_on = None
 
