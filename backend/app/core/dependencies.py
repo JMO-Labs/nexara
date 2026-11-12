@@ -28,6 +28,7 @@ from app.db.session import async_session_factory
 if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
+    from app.services.ai.suggestion_service import SuggestionService
 
 logger = structlog.get_logger(__name__)
 
@@ -227,6 +228,24 @@ async def get_activity_repo(
     from app.repositories.activity_repo import ActivityRepository
 
     return ActivityRepository(db)
+
+
+async def get_suggestion_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> SuggestionService:
+    """
+    @brief Provide a SuggestionService wired to its repository and the AI provider.
+
+    @param db Async database session.
+    @param settings Application settings (AI provider selection).
+    @return SuggestionService instance.
+    """
+    from app.repositories.suggestion_repo import SuggestionRepository
+    from app.services.ai.provider import get_ai_provider
+    from app.services.ai.suggestion_service import SuggestionService
+
+    return SuggestionService(SuggestionRepository(db), get_ai_provider(settings))
 
 
 async def get_plugin_from_api_key(

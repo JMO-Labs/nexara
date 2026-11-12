@@ -9,6 +9,7 @@ import uuid
 
 import structlog
 
+from app.models.suggestion import Suggestion
 from app.repositories.suggestion_repo import SuggestionRepository
 from app.services.ai.provider import AIProvider
 
@@ -92,3 +93,19 @@ class SuggestionService:
             community_id, "poll", {"question": question, "options": options, "topic": topic}
         )
         return question, options
+
+    async def list_pending(
+        self, community_id: uuid.UUID, type: str | None = None, limit: int = 10, offset: int = 0
+    ) -> list[Suggestion]:
+        """@brief Pending suggestions for admin review, newest first."""
+        return await self._repo.list_pending(community_id, type, limit, offset)
+
+    async def approve(
+        self, suggestion_id: uuid.UUID, approver_id: uuid.UUID, community_id: uuid.UUID
+    ) -> Suggestion:
+        """@brief Approve a pending suggestion. @throws NotFoundError, ConflictError."""
+        return await self._repo.approve(suggestion_id, approver_id, community_id)
+
+    async def reject(self, suggestion_id: uuid.UUID, community_id: uuid.UUID) -> Suggestion:
+        """@brief Reject a pending suggestion. @throws NotFoundError, ConflictError."""
+        return await self._repo.reject(suggestion_id, community_id)

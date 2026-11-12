@@ -11,15 +11,12 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_db, require_role
+from app.core.dependencies import get_suggestion_service, require_role
 from app.core.exceptions import ValidationError
 from app.models.suggestion import Suggestion
 from app.models.user import User
-from app.repositories.suggestion_repo import SuggestionRepository
-from app.services.ai.provider import get_ai_provider
 from app.services.ai.suggestion_service import SuggestionService
 
 router = APIRouter(prefix="/admin/suggestions", tags=["admin-suggestions"])
@@ -56,11 +53,11 @@ async def list_suggestions(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     _user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
+    svc: SuggestionService = Depends(get_suggestion_service),
     cid: uuid.UUID = Depends(_cid),
 ) -> list[Suggestion]:
     """@brief List pending suggestions (admin)."""
-    return await SuggestionRepository(db).list_pending(cid, type, limit, offset)
+    return await svc.list_pending(cid, type, limit, offset)
 
 
 @router.post("/generate", response_model=GenerateOut)
@@ -68,12 +65,10 @@ async def generate(
     type: Literal["prompt", "poll"] = "prompt",
     topic: str | None = Query(None, min_length=1, max_length=200),
     _user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
+    svc: SuggestionService = Depends(get_suggestion_service),
     cid: uuid.UUID = Depends(_cid),
-    settings: Settings = Depends(get_settings),
 ) -> GenerateOut:
     """@brief Manually trigger generation (admin); ``topic`` is required for polls."""
-    svc = SuggestionService(SuggestionRepository(db), get_ai_provider(settings))
     if type == "prompt":
         return GenerateOut(created=len(await svc.generate_prompt_suggestions(cid)))
     if not topic:
@@ -85,19 +80,19 @@ async def generate(
 async def approve(
     suggestion_id: uuid.UUID,
     user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
+    svc: SuggestionService = Depends(get_suggestion_service),
     cid: uuid.UUID = Depends(_cid),
 ) -> Suggestion:
     """@brief Approve a pending suggestion (admin)."""
-    return await SuggestionRepository(db).approve(suggestion_id, user.id, cid)
+    return await svc.approve(suggestion_id, user.id, cid)
 
 
 @router.post("/{suggestion_id}/reject", response_model=SuggestionOut)
 async def reject(
     suggestion_id: uuid.UUID,
     _user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
+    svc: SuggestionService = Depends(get_suggestion_service),
     cid: uuid.UUID = Depends(_cid),
 ) -> Suggestion:
     """@brief Reject a pending suggestion (admin)."""
-    return await SuggestionRepository(db).reject(suggestion_id, cid)
+    return await svc.reject(suggestion_id, cid)
