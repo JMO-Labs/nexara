@@ -16,6 +16,7 @@ import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
 import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
+import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
 import type { Post } from "@/lib/api/posts";
 
@@ -82,9 +83,13 @@ export function PostCard({
         />
       </div>
       <PostBody content={post.content} truncate={truncateBody} />
-      {post.link_previews?.map((preview) => (
-        <LinkPreviewCard key={preview.id} preview={preview} />
-      ))}
+      {post.link_previews?.map((preview) =>
+        preview.provider_type && embedUrl(preview) ? (
+          <VideoEmbed key={preview.id} preview={preview} />
+        ) : (
+          <LinkPreviewCard key={preview.id} preview={preview} />
+        ),
+      )}
       {post.media.length > 0 ? (
         <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
       ) : null}
