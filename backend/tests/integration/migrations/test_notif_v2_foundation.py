@@ -136,9 +136,12 @@ def test_upgrade_backfills_adds_and_drops(scratch):
             )
         }
         assert {"notifications_group_active_idx", "notifications_user_active_idx"} <= idx
-        assert conn.execute(
-            sa.text("SELECT dnd_timezone FROM user_settings WHERE user_id = :u"), {"u": uid}
-        ).scalar_one() == "UTC"
+        assert (
+            conn.execute(
+                sa.text("SELECT dnd_timezone FROM user_settings WHERE user_id = :u"), {"u": uid}
+            ).scalar_one()
+            == "UTC"
+        )
 
 
 def test_downgrade_restores_legacy_columns(scratch):
