@@ -14,6 +14,11 @@ vi.mock("@/hooks/usePosts", () => ({
     isLoading: false,
     error: null,
   })),
+  useFeed: vi.fn(() => ({
+    data: { pages: [] },
+    isLoading: false,
+    error: null,
+  })),
 }));
 
 vi.mock("@/hooks/useEvents", () => ({
@@ -33,18 +38,6 @@ vi.mock("@/hooks/useGalleries", () => ({
     error: null,
   })),
 }));
-
-vi.mock("@/hooks/usePosts", async () => {
-  const actual = await vi.importActual("@/hooks/usePosts");
-  return {
-    ...actual,
-    useFeed: vi.fn(() => ({
-      data: { pages: [] },
-      isLoading: false,
-      error: null,
-    })),
-  };
-});
 
 const mockSubgroup: SubgroupDetail = {
   id: "sg-1",
