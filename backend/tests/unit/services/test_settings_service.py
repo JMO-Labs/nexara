@@ -148,3 +148,62 @@ class TestUpdateNotificationPreferences:
         )
 
         assert result.notif_mention_email is False
+
+
+NOTIF_TYPES = [
+    "mention", "comment", "reaction", "new_post", "system", "invite_accepted",
+    "event_reminder", "event_rsvp", "gallery_activity", "prompt", "prompt_summary",
+    "poll", "dm", "birthday",
+]  # fmt: skip
+NOTIF_CHANNELS = ["inapp", "email", "push"]
+
+
+class TestFullNotificationPreferences:
+    """@brief Tests for the full notification preference surface."""
+
+    def test_schema_has_all_42_toggle_fields(self):
+        """Schema exposes every type x channel toggle, optional."""
+        fields = NotificationPreferences.model_fields
+        for t in NOTIF_TYPES:
+            for c in NOTIF_CHANNELS:
+                assert f"notif_{t}_{c}" in fields
+        for name in ("mute_all_email", "mute_all_push", "email_digest_enabled", "email_digest_hour"):
+            assert name in fields
+        assert NotificationPreferences().model_dump(exclude_none=True) == {}
+
+    @pytest.mark.parametrize("hour", [-1, 24])
+    def test_digest_hour_out_of_range_rejected(self, hour):
+        """email_digest_hour must be within 0-23."""
+        with pytest.raises(ValueError):
+            NotificationPreferences(email_digest_hour=hour)
+
+    @pytest.mark.asyncio
+    async def test_get_returns_all_stored_values(self):
+        """get_notification_preferences returns every field from the row."""
+        row = MagicMock()
+        for i, name in enumerate(NotificationPreferences.model_fields):
+            setattr(row, name, 8 if name == "email_digest_hour" else i % 2 == 0)
+        repo = AsyncMock()
+        repo.get_or_create.return_value = row
+
+        service = SettingsService(repo, AsyncMock(), COMMUNITY_ID)
+        result = await service.get_notification_preferences(USER_ID)
+
+        for name in NotificationPreferences.model_fields:
+            assert getattr(result, name) == getattr(row, name), name
+
+    @pytest.mark.asyncio
+    async def test_update_persists_new_fields(self):
+        """update passes push toggle and digest hour to the repo."""
+        repo = AsyncMock()
+        repo.get_or_create.return_value = _make_settings_row()
+        repo.update.return_value = _make_settings_row()
+
+        service = SettingsService(repo, AsyncMock(), COMMUNITY_ID)
+        await service.update_notification_preferences(
+            USER_ID, NotificationPreferences(notif_dm_push=False, email_digest_hour=20)
+        )
+
+        repo.update.assert_awaited_once_with(
+            USER_ID, {"notif_dm_push": False, "email_digest_hour": 20}
+        )

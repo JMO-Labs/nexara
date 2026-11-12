@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, create_model, field_validator
 
 DEFAULT_WIDGET_ORDER: list[str] = ["upcoming-events", "my-groups", "media", "quick-actions"]
 
@@ -34,27 +34,44 @@ def _tolerant_layout(value: Any) -> Any:
         return HomeLayoutSchema()
 
 
-class NotificationPreferences(BaseModel):
-    """
-    @brief Per-type notification channel toggles.
+NOTIF_TYPES: tuple[str, ...] = (
+    "mention",
+    "comment",
+    "reaction",
+    "new_post",
+    "system",
+    "invite_accepted",
+    "event_reminder",
+    "event_rsvp",
+    "gallery_activity",
+    "prompt",
+    "prompt_summary",
+    "poll",
+    "dm",
+    "birthday",
+)
+NOTIF_CHANNELS: tuple[str, ...] = ("inapp", "email", "push")
 
-    Phase 1 types: mention, comment, reaction, new_post, system, invite_accepted.
-    Each type has inapp and email booleans (push deferred to Phase 2).
+# Declared once and expanded into 14 types x 3 channels optional bool fields.
+_TOGGLE_FIELDS: dict[str, Any] = {
+    f"notif_{t}_{c}": (bool | None, None) for t in NOTIF_TYPES for c in NOTIF_CHANNELS
+}
+
+_NotificationToggles = create_model("_NotificationToggles", **_TOGGLE_FIELDS)
+
+
+class NotificationPreferences(_NotificationToggles):  # type: ignore[valid-type,misc]
+    """
+    @brief Notification preferences: per-type x per-channel toggles plus globals.
+
+    Toggle fields are named ``notif_<type>_<channel>`` (see NOTIF_TYPES and
+    NOTIF_CHANNELS). Also carries global mutes and email digest settings.
     """
 
-    notif_mention_inapp: bool | None = None
-    notif_mention_email: bool | None = None
-    notif_comment_inapp: bool | None = None
-    notif_comment_email: bool | None = None
-    notif_reaction_inapp: bool | None = None
-    notif_reaction_email: bool | None = None
-    notif_new_post_inapp: bool | None = None
-    notif_new_post_email: bool | None = None
-    notif_system_inapp: bool | None = None
-    notif_system_email: bool | None = None
-    notif_invite_accepted_inapp: bool | None = None
-    notif_invite_accepted_email: bool | None = None
     mute_all_email: bool | None = None
+    mute_all_push: bool | None = None
+    email_digest_enabled: bool | None = None
+    email_digest_hour: int | None = Field(default=None, ge=0, le=23)
 
 
 class UserSettingsResponse(BaseModel):
