@@ -11,11 +11,11 @@ import uuid
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
 from alembic import command
-from alembic.config import Config
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE_URL = os.environ.get(

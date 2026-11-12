@@ -115,7 +115,9 @@ def _id() -> sa.Column:
     )
 
 
-def _fk(name: str, target: str, ondelete: str | None, nullable: bool = True, **kw: Any) -> sa.Column:
+def _fk(
+    name: str, target: str, ondelete: str | None, nullable: bool = True, **kw: Any
+) -> sa.Column:
     return sa.Column(
         name, UUID(as_uuid=True), sa.ForeignKey(target, ondelete=ondelete), nullable=nullable, **kw
     )
@@ -203,9 +205,7 @@ def _created_tables() -> None:
         _int("completed_count"),
         _int("signup_count"),
         *_ts(),
-        _fts(
-            "to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"
-        ),
+        _fts("to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,''))"),
         sa.CheckConstraint(
             "visibility IN ('community','subgroup','private','members')", name="ck_list_visibility"
         ),
