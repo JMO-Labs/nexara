@@ -30,7 +30,7 @@ pages:
       artifacts: true
   before_script:
     - apk add --no-cache doxygen graphviz
-    - pip install --quiet mkdocs-material
+    - pip install --quiet mkdocs-material mkdocs-awesome-pages-plugin
   script:
     # -- Build MkDocs site --
     - |

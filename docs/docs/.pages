@@ -1,0 +1,10 @@
+nav:
+  - index.md
+  - getting-started.md
+  - development.md
+  - deployment.md
+  - ...
+  - References:
+      - API Docs (Doxygen): api/
+      - Backend Coverage: coverage/backend/
+      - Frontend Coverage: coverage/frontend/
