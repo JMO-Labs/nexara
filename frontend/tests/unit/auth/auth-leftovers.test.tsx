@@ -36,11 +36,14 @@ vi.mock("@/lib/api/auth", () => ({
   register: vi.fn(),
   requestMagicLink: vi.fn(),
   verifyTwoFactorLogin: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  confirmPasswordReset: vi.fn(),
 }));
 vi.mock("@/lib/auth/flow", () => ({ completeLogin: vi.fn() }));
 
 import RegisterPage from "@/app/(auth)/register/page";
 import MagicLinkPage from "@/app/(auth)/magic-link/page";
+import ResetPasswordPage from "@/app/(auth)/reset-password/page";
 import TwoFactorPage from "@/app/(auth)/two-factor/page";
 import Home from "@/app/page";
 import OfflinePage from "@/app/offline/page";
@@ -50,7 +53,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   search = "";
   hasCookie = false;
+  useToasts.getState().clear();
 });
+
+/** @brief Wait for a danger toast with the given i18n key. */
+const expectDangerToast = (key: string) =>
+  waitFor(() =>
+    expect(useToasts.getState().items).toContainEqual(
+      expect.objectContaining({ variant: "danger", message: key }),
+    ),
+  );
 
 describe("auth leftovers", () => {
   it("register submits with invite token", async () => {
@@ -68,6 +80,46 @@ describe("auth leftovers", () => {
         expect.objectContaining({ invite_token: "abc", username: "al_1" }),
       ),
     );
+  });
+
+  it("register failure shows a danger toast", async () => {
+    vi.mocked(api.register).mockRejectedValue(new Error("x"));
+    render(<RegisterPage />);
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText("Display name"), "Al");
+    await u.type(screen.getByLabelText("Username"), "al_1");
+    await u.type(screen.getByLabelText("Email"), "a@b.co");
+    await u.type(screen.getByLabelText("Password"), "twelvecharsss");
+    await u.click(screen.getByRole("button", { name: "Create account" }));
+    await expectDangerToast("toasts.auth.register.failed");
+  });
+
+  it("magic link failure shows a danger toast", async () => {
+    vi.mocked(api.requestMagicLink).mockRejectedValue(new Error("x"));
+    render(<MagicLinkPage />);
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText("Email"), "a@b.co");
+    await u.click(screen.getByRole("button", { name: "Email me a link" }));
+    await expectDangerToast("toasts.auth.magicLink.failed");
+  });
+
+  it("reset request failure shows a danger toast", async () => {
+    vi.mocked(api.requestPasswordReset).mockRejectedValue(new Error("x"));
+    render(<ResetPasswordPage />);
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText("Email"), "a@b.co");
+    await u.click(screen.getByRole("button", { name: "Email reset link" }));
+    await expectDangerToast("toasts.auth.reset.failed");
+  });
+
+  it("reset confirm failure shows a danger toast", async () => {
+    search = "token=t";
+    vi.mocked(api.confirmPasswordReset).mockRejectedValue(new Error("x"));
+    render(<ResetPasswordPage />);
+    const u = userEvent.setup();
+    await u.type(screen.getByLabelText("New password"), "twelvecharsss");
+    await u.click(screen.getByRole("button", { name: "Update password" }));
+    await expectDangerToast("toasts.auth.reset.confirmFailed");
   });
 
   it("magic link shows confirmation after send", async () => {

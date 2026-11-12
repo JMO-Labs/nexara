@@ -6,6 +6,7 @@
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useToasts } from "@/stores/toasts";
+import { ApiError } from "@/lib/api/errors";
 
 interface ToastOpts {
   successKey?: string;
@@ -53,16 +54,14 @@ export function useMutationWithToast<
     },
     onError: (error, variables, context) => {
       if (!silentError) {
-        const apiError = error as {
-          body?: { error?: { message?: string } };
-          status?: number;
-        };
-        const msg =
-          apiError?.body?.error?.message ??
-          (typeof apiError?.status === "number" && error.message
-            ? error.message
-            : undefined) ??
-          (errorKey ? t(errorKey) : t("toasts.errors.generic"));
+        // Only trust server text when it came from a real error envelope.
+        const fromEnvelope =
+          error instanceof ApiError && error.code !== "unknown";
+        const msg = fromEnvelope
+          ? error.message
+          : errorKey
+            ? t(errorKey)
+            : t("toasts.errors.generic");
         push({ variant: "danger", message: msg });
       }
       if (onError) {

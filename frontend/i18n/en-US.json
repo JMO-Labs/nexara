@@ -745,6 +745,7 @@
     },
     "chat": {
       "sent": "Message sent",
+      "dmOpened": "Conversation opened",
       "dmDeleted": "Conversation deleted"
     },
     "calendar": {
