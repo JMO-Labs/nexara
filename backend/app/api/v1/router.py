@@ -11,8 +11,8 @@ from fastapi import APIRouter
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
-from app.api.v1.admin_sso import router as admin_sso_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
+from app.api.v1.admin_sso import router as admin_sso_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
