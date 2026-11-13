@@ -1,0 +1,10 @@
+id = "broken-security"
+name = "Broken Security"
+version = "1.0.0"
+author = "x"
+description = "Imports forbidden modules and calls out without declaring it."
+min_core_version = "0.1.0"
+permissions = []
+
+[backend]
+routes = "router.py"
