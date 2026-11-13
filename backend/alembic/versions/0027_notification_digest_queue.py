@@ -1,7 +1,7 @@
 """add notification_digest_queue table
 
 Revision ID: 0027_notification_digest_queue
-Revises: b7c1d2e3f4a5, e5f6a7b8c9d0 (merge point)
+Revises: 0030_merge_heads
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision: str = "0027_notification_digest_queue"
-down_revision: tuple[str, ...] | None = ("b7c1d2e3f4a5", "e5f6a7b8c9d0")
+down_revision: str | None = "0030_merge_heads"
 branch_labels = None
 depends_on = None
 
