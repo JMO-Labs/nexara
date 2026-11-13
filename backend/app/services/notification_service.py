@@ -18,7 +18,7 @@ from app.models.notification import Notification
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.notification import NotificationList, NotificationResponse, UnreadCountResponse
-from app.services.notifications import registry
+from app.services.notifications import coalescer, registry
 from app.services.notifications.dispatcher import Dispatcher
 from app.services.notifications.prefs import effective_channels
 from app.services.realtime.event_bus import EventBus
@@ -135,9 +135,10 @@ class NotificationService:
             user_id,
             type,
             payload,
-            self._community_id,
-            group_key=None,
+            community_id=self._community_id,
+            group_key=coalescer.compose_group_key(type_, payload),
             actor_id=actor_id,
+            group_window_seconds=type_.group_window_seconds,
         )
         await self._dispatcher.dispatch(notification, type_, dict(eff))
         return notification
