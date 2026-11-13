@@ -19,7 +19,7 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.services.list_field_registry import ListFieldRegistry
 from app.services.realtime.event_bus import EventBus
-from app.services.realtime.events import CommunityTarget, EventType, UserTarget, RealtimeEvent
+from app.services.realtime.events import CommunityTarget, EventType, RealtimeEvent, UserTarget
 
 COMPLETED_BY_KEY = "_completed_by"
 
