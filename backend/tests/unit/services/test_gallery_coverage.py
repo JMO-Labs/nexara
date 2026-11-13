@@ -100,9 +100,14 @@ class TestBaseVisibility:
         g = _gallery(visibility="subgroup", subgroup_id=None)
         assert await service._can_view(g, uuid.uuid4()) is False
 
-    async def test_subgroup_member_can_view(self, service: GalleryService) -> None:
+    async def test_subgroup_member_can_view(
+        self, service: GalleryService, session: AsyncMock
+    ) -> None:
         sg = uuid.uuid4()
         g = _gallery(visibility="subgroup", subgroup_id=sg)
+        session.execute.return_value = MagicMock(
+            scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[sg])))
+        )
         with patch(
             "app.repositories.subgroup_repo.expand_with_descendants",
             new=AsyncMock(return_value=[sg]),
