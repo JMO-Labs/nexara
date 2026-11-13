@@ -1,7 +1,7 @@
 """add_apprise_urls: encrypted per-user Apprise targets
 
 Revision ID: b7c1d2e3f4a5
-Revises: 0026_user_exports_table
+Revises: e5f6a7b8c9d0
 Create Date: 2026-11-12 00:00:00.000000
 
 """
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b7c1d2e3f4a5"
-down_revision: str | Sequence[str] | None = "0026_user_exports_table"
+down_revision: str | Sequence[str] | None = "e5f6a7b8c9d0"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
