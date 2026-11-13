@@ -129,6 +129,10 @@
     "discard": "Discard",
     "removeMedia": "Remove media",
     "replyingTo": "Replying to {'@'}{username}",
+    "promptBadges": {
+      "summary": "Prompt summary",
+      "replyToPrompt": "Reply to a prompt"
+    },
     "poll": {
       "anonymous": "Anonymous poll",
       "vote": "Vote",
@@ -695,10 +699,16 @@
     },
     "galleries": {
       "created": "Gallery created",
-      "item": {
-        "added": "Added to gallery"
+      "collaborator": {
+        "added": "Collaborator added",
+        "removed": "Collaborator removed"
       },
-      "deleted": "Gallery deleted"
+      "item": {
+        "added": "Added to gallery",
+        "removed": "Removed from gallery"
+      },
+      "deleted": "Gallery deleted",
+      "updated": "Gallery updated"
     },
     "media": {
       "uploaded": "Upload complete",
@@ -710,8 +720,11 @@
       "left": "Left subgroup",
       "member": {
         "added": "Member added",
-        "removed": "Member removed"
-      }
+        "removed": "Member removed",
+        "roleChanged": "Member role updated"
+      },
+      "updated": "Subgroup updated",
+      "deleted": "Subgroup deleted"
     },
     "settings": {
       "saved": "Settings saved",
@@ -724,8 +737,18 @@
       "revoked": "Invite revoked"
     },
     "admin": {
-      "user": { "updated": "User updated", "deactivated": "User deactivated" },
-      "audit": { "exported": "Audit log exported" },
+      "user": {
+        "updated": "User updated",
+        "deactivated": "User deactivated",
+        "restored": "User restored",
+        "deleted": "User deleted"
+      },
+      "audit": {
+        "exported": "Audit log exported"
+      },
+      "settings": {
+        "saved": "Admin settings saved"
+      },
       "retention": { "updated": "Retention policy saved" }
     },
     "auth": {
@@ -736,13 +759,24 @@
         "failed": "Registration failed"
       },
       "reset": {
-        "sent": "Reset email sent"
+        "sent": "Reset email sent",
+        "failed": "Could not send reset email",
+        "confirmFailed": "Could not reset password",
+        "done": "Password updated"
+      },
+      "magicLink": {
+        "failed": "Could not send link"
       }
     },
     "errors": {
       "generic": "Something went wrong",
       "network": "Network error",
       "unauthorized": "Not authorized"
+    },
+    "chat": {
+      "sent": "Message sent",
+      "dmOpened": "Conversation opened",
+      "dmDeleted": "Conversation deleted"
     },
     "calendar": {
       "subscription_added": "Calendar added",

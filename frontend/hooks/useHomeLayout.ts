@@ -18,6 +18,7 @@ const IDS: string[] = [
   "my-groups",
   "media",
   "quick-actions",
+  "next-event-countdown",
 ];
 const DEBOUNCE_MS = 500;
 
