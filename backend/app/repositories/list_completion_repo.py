@@ -44,7 +44,9 @@ class ListCompletionRepository(BaseRepository[ListItemCompletion]):
 
     async def count_for_item(self, item_id: uuid.UUID) -> int:
         """@brief Count users who completed an item."""
-        stmt = select(func.count()).select_from(ListItemCompletion).where(
-            ListItemCompletion.item_id == item_id
+        stmt = (
+            select(func.count())
+            .select_from(ListItemCompletion)
+            .where(ListItemCompletion.item_id == item_id)
         )
         return int((await self._session.execute(stmt)).scalar_one())
