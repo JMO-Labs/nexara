@@ -86,3 +86,44 @@ async def test_no_user_pull_fields_skips_queries():
     out = await r.resolve([uuid.uuid4()], LIST_ID, [], VIEWER, AsyncMock(), session)
     assert out == {}
     session.execute.assert_not_called()
+
+
+def _sql(session, n):
+    return str(session.execute.await_args_list[n].args[0])
+
+
+async def test_queries_scoped_to_list_community_and_not_deleted():
+    items, session, members = _setup({U1: True}, {})
+    await UserPullResolver().resolve(
+        [i.id for i in items], LIST_ID, SCHEMA, VIEWER, members, session, community_id=uuid.uuid4()
+    )
+    items_sql, users_sql = _sql(session, 0), _sql(session, 1)
+    assert "list_id" in items_sql and "deleted_at IS NULL" in items_sql
+    assert "community_id" in users_sql and "deleted_at IS NULL" in users_sql
+
+
+async def test_admin_only_birthday_denied():
+    prefs = {U1: {"can_share_email": True, "show_birthday_to": "admin_only"}}
+    items, session, members = _setup({U1: True}, prefs)
+    out = await UserPullResolver().resolve(
+        [items[0].id], LIST_ID, SCHEMA, VIEWER, members, session, community_id=uuid.uuid4()
+    )
+    assert out[items[0].id]["bday"] is None
+
+
+async def test_community_birthday_allowed():
+    prefs = {U1: {"can_share_email": True, "show_birthday_to": "community"}}
+    items, session, members = _setup({U1: True}, prefs)
+    out = await UserPullResolver().resolve(
+        [items[0].id], LIST_ID, SCHEMA, VIEWER, members, session, community_id=uuid.uuid4()
+    )
+    assert out[items[0].id]["bday"] == date(2000, 1, 2)
+
+
+async def test_missing_user_resolves_none():
+    items, session, members = _setup({U1: True}, {})
+    session.execute.side_effect = [_rows(items[:1]), _rows([]), _rows([])]
+    out = await UserPullResolver().resolve(
+        [items[0].id], LIST_ID, SCHEMA, VIEWER, members, session, community_id=uuid.uuid4()
+    )
+    assert out[items[0].id]["mail"] is None

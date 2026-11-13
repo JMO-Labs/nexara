@@ -28,16 +28,16 @@ class UserPullResolver:
     def __init__(self, cache_ttl: int = 300) -> None:
         """@param cache_ttl Upper bound (seconds) a cached snapshot is considered valid."""
         self.cache_ttl = cache_ttl
-        self._cache: dict[Any, dict[str, Any]] = {}
+        self._cache: dict[tuple[Any, ...], dict[uuid.UUID, dict[str, Any]]] = {}
 
     @staticmethod
-    def _allowed(field: str, owner: User, prefs: UserSettings | None) -> bool:
+    def _allowed(field: str, prefs: UserSettings | None) -> bool:
         """@brief Per-field sharing pref of the data owner; restrictive by default."""
         if prefs is None:
             return False
         flag = getattr(prefs, f"can_share_{field}", None)
         if flag is None and field == "birthday":
-            return getattr(prefs, "show_birthday_to", "nobody") not in ("nobody", "private")
+            return getattr(prefs, "show_birthday_to", "nobody") == "community"
         return bool(flag)
 
     async def resolve(
@@ -48,6 +48,7 @@ class UserPullResolver:
         viewer_id: uuid.UUID,
         member_repo: Any,
         session: AsyncSession,
+        community_id: uuid.UUID | None = None,
     ) -> dict[uuid.UUID, dict[str, Any]]:
         """@brief Resolve user_pull values.
 
@@ -56,27 +57,24 @@ class UserPullResolver:
         pulls = [f for f in field_schema if f.get("type") == "user_pull"]
         if not pulls or not item_ids:
             return {}
-        ck = (list_id, viewer_id, tuple(item_ids))
+        ck = (list_id, viewer_id, community_id, tuple(item_ids))
         if ck in self._cache:
-            return self._cache[ck]  # type: ignore[return-value]
+            return self._cache[ck]
 
-        items = (
-            (await session.execute(select(ListItem).where(ListItem.id.in_(item_ids))))
-            .scalars()
-            .all()
+        stmt = select(ListItem).where(
+            ListItem.id.in_(item_ids),
+            ListItem.list_id == list_id,
+            ListItem.deleted_at.is_(None),
         )
-        targets: dict[uuid.UUID, uuid.UUID] = {}
-        user_ids: set[uuid.UUID] = set()
-        for it in items:
-            for f in pulls:
-                key = (f.get("config") or {}).get("target_user_field") or _DEFAULT_TARGET
-                uid = self._to_uuid(it.values.get(key))
-                if uid:
-                    user_ids.add(uid)
+        items = (await session.execute(stmt)).scalars().all()
+        user_ids = {uid for it in items for f in pulls if (uid := self._target(it, f))}
         users: dict[uuid.UUID, User] = {}
         prefs: dict[uuid.UUID, UserSettings] = {}
         if user_ids:
-            rows = await session.execute(select(User).where(User.id.in_(user_ids)))
+            ustmt = select(User).where(User.id.in_(user_ids), User.deleted_at.is_(None))
+            if community_id is not None:
+                ustmt = ustmt.where(User.community_id == community_id)
+            rows = await session.execute(ustmt)
             users = {u.id: u for u in rows.scalars().all()}
             rows = await session.execute(
                 select(UserSettings).where(UserSettings.user_id.in_(user_ids))
@@ -88,22 +86,26 @@ class UserPullResolver:
         for it in items:
             res: dict[str, Any] = {}
             for f in pulls:
-                cfg = f.get("config") or {}
-                src = cfg.get("pull_from", "")
-                uid = self._to_uuid(it.values.get(cfg.get("target_user_field") or _DEFAULT_TARGET))
+                src = (f.get("config") or {}).get("pull_from", "")
+                uid = self._target(it, f)
                 user = users.get(uid) if uid else None
                 ok = (
                     user is not None
                     and src in ("email", "phone", "address", "birthday")
                     and (
                         uid == viewer_id
-                        or (shared.get(uid, False) and self._allowed(src, user, prefs.get(uid)))
+                        or (shared.get(uid, False) and self._allowed(src, prefs.get(uid)))
                     )
                 )
                 res[f["key"]] = getattr(user, src, None) if ok else None
             out[it.id] = res
         self._cache[ck] = out
         return out
+
+    def _target(self, item: Any, field: dict[str, Any]) -> uuid.UUID | None:
+        """@brief Target user id referenced by an item for a user_pull field."""
+        key = (field.get("config") or {}).get("target_user_field") or _DEFAULT_TARGET
+        return self._to_uuid(item.values.get(key))
 
     @staticmethod
     def _to_uuid(raw: Any) -> uuid.UUID | None:
