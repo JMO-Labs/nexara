@@ -28,8 +28,11 @@ from app.db.session import async_session_factory
 if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
+    from app.repositories.webhook_repo import WebhookRepository
     from app.services.ai.admin_ai_service import AdminAIService
     from app.services.ai.suggestion_service import SuggestionService
+    from app.services.notifications.dispatcher import Dispatcher
+    from app.services.webhook_service import WebhookService
 
 logger = structlog.get_logger(__name__)
 
@@ -231,6 +234,36 @@ async def get_activity_repo(
     return ActivityRepository(db)
 
 
+async def get_webhook_repo(
+    db: AsyncSession = Depends(get_db),
+) -> WebhookRepository:
+    """
+    @brief Provide a WebhookRepository instance.
+
+    @param db Async database session.
+    @return WebhookRepository (WebhookChannel registration lives in #79).
+    """
+    from app.repositories.webhook_repo import WebhookRepository
+
+    return WebhookRepository(db)
+
+
+async def get_webhook_service(
+    repo: WebhookRepository = Depends(get_webhook_repo),
+    settings: Settings = Depends(get_settings),
+) -> WebhookService:
+    """
+    @brief Provide a WebhookService scoped to the configured community.
+
+    @param repo Webhook repository.
+    @param settings Application settings.
+    @return WebhookService instance.
+    """
+    from app.services.webhook_service import WebhookService
+
+    return WebhookService(repo, uuid.UUID(settings.COMMUNITY_ID))
+
+
 async def get_suggestion_service(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -312,3 +345,21 @@ async def get_plugin_from_api_key(
     if not key:
         raise AuthenticationError(message=_("Authentication required"))
     return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
+
+
+_dispatcher: Dispatcher | None = None
+
+
+def get_dispatcher() -> Dispatcher:
+    """
+    @brief Return the process-wide notification Dispatcher (lazy singleton).
+
+    @return Dispatcher bound to the shared EventBus.
+    """
+    global _dispatcher
+    if _dispatcher is None:
+        from app.services.notifications.dispatcher import Dispatcher
+        from app.services.realtime.event_bus import event_bus
+
+        _dispatcher = Dispatcher(event_bus)
+    return _dispatcher
