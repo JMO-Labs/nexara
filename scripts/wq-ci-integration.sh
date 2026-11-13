@@ -34,5 +34,7 @@ done
 
 export DATABASE_URL=postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test
 export REDIS_URL=redis://127.0.0.1:6379
+# Tests expect a migrated schema (communities etc.); migration tests use scratch DBs.
+(cd backend && "${ALEMBIC_BIN:-.venv/bin/alembic}" upgrade head) || { echo "ERROR: alembic upgrade failed" >&2; exit 1; }
 cd backend && "${PYTEST_BIN:-.venv/bin/pytest}" tests/integration -q --cov=app --cov-append \
   --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-int.xml"

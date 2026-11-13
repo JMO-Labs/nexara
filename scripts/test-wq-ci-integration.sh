@@ -10,21 +10,27 @@ mk() { T=$(mktemp -d); mkdir "$T/bin"; LOG="$T/log"; : >"$LOG"
   printf '#!/bin/sh\necho "docker $*" >>%s\n' "$LOG" >"$T/bin/docker"
   printf '#!/bin/sh\nexit 0\n' >"$T/bin/pg_isready"
   printf '#!/bin/sh\necho "pytest $*" >>%s\nexit ${PYTEST_RC:-0}\n' "$LOG" >"$T/bin/pytest"
+  printf '#!/bin/sh\necho "alembic $*" >>%s\nexit ${ALEMBIC_RC:-0}\n' "$LOG" >"$T/bin/alembic"
   chmod +x "$T"/bin/*; }
 ok() { [ "$1" = 0 ] && echo "PASS $2" || { echo "FAIL $2"; fail=1; }; }
 # stubs live in an isolated dir; keep /usr/bin:/bin for coreutils only
 BASE=/usr/bin:/bin
-mk; PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" bash "$S" >/dev/null 2>&1; rc=$?
+mk; PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1; rc=$?
 ok $rc "success path"
 grep -q "docker run -d --name nexara-ci-pg" "$LOG"; ok $? "starts postgres"
 grep -q "docker run -d --name nexara-ci-valkey" "$LOG"; ok $? "starts valkey"
 grep -q "pytest tests/integration .*--cov-append" "$LOG"; ok $? "runs integration w/ cov-append"
+grep -q "alembic upgrade head" "$LOG"; ok $? "migrates schema"
+[ "$(grep -n 'alembic upgrade' "$LOG" | cut -d: -f1)" -lt "$(grep -n '^pytest' "$LOG" | cut -d: -f1)" ]; ok $? "migrates before pytest"
+mk; ALEMBIC_RC=1 PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1; rc=$?
+[ $rc -ne 0 ] && ! grep -q '^pytest' "$LOG"; ok $? "migration failure aborts"
+mk; PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1
 grep -q "docker rm -f nexara-ci-pg" "$LOG"; ok $? "cleans up on success"
-mk; PYTEST_RC=1 PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" bash "$S" >/dev/null 2>&1; rc=$?
+mk; PYTEST_RC=1 PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1; rc=$?
 [ $rc -ne 0 ]; ok $? "propagates pytest failure"
 grep -q "docker rm -f nexara-ci-pg" "$LOG"; ok $? "cleans up on failure"
-mk; rm "$T/bin/docker"; CI=true PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" bash "$S" >/dev/null 2>&1; rc=$?
+mk; rm "$T/bin/docker"; CI=true PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1; rc=$?
 [ $rc -ne 0 ]; ok $? "no docker + CI fails"
-mk; rm "$T/bin/docker"; env -u CI PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" bash "$S" >/dev/null 2>&1; rc=$?
+mk; rm "$T/bin/docker"; env -u CI PATH="$T/bin:$BASE" PYTEST_BIN="$T/bin/pytest" ALEMBIC_BIN="$T/bin/alembic" bash "$S" >/dev/null 2>&1; rc=$?
 ok $rc "no docker locally skips"
 exit $fail
