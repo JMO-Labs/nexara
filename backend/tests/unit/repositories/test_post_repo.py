@@ -513,3 +513,26 @@ class TestReactionRepository:
         assert count == 0
         session.delete.assert_awaited_once_with(existing)
         session.add.assert_not_called()
+
+
+class TestPostRepositoryListResponses:
+    """@brief Tests for PostRepository.list_responses()."""
+
+    @pytest.mark.asyncio
+    async def test_filters_scope_and_applies_block_filter(self):
+        """list_responses scopes by community, prompt id, soft-delete, and blocks."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        repo = PostRepository(session)
+
+        items, next_cursor = await repo.list_responses(COMMUNITY_ID, POST_ID, viewer_id=VIEWER_ID)
+
+        assert items == [] and next_cursor is None
+        sql = str(session.execute.await_args.args[0].compile()).lower()
+        assert "reply_to_prompt_id" in sql
+        assert "community_id" in sql
+        assert "deleted_at is null" in sql
+        assert "order by posts.created_at desc" in sql
+        assert "user_blocks" in sql or "block" in sql

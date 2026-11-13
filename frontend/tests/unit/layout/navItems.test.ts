@@ -15,6 +15,11 @@ describe("navItems", () => {
       "Groups",
     ]);
   });
+  it("has Bookmarks in more nav", () => {
+    expect(MORE_NAV.find((i) => i.label === "Bookmarks")?.href).toBe(
+      "/app/bookmarks",
+    );
+  });
   it("hides Admin for non-admins", () => {
     expect(visibleNav(MORE_NAV, false).map((i) => i.label)).not.toContain(
       "Admin",

@@ -8,10 +8,10 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import tuple_
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.list import ListItem
+from app.models.list import ListItem, ListItemCompletion
 from app.repositories.base import BaseRepository
 from app.repositories.list_keyset import decode_cursor, encode_cursor, parse_dt
 
@@ -71,3 +71,22 @@ class ListItemRepository(BaseRepository[ListItem]):
         stmt = self._base_query().where(ListItem.id == item_id).with_for_update()
         result = await (session or self._session).execute(stmt)
         return result.scalar_one_or_none()
+
+    async def count_live_and_completed(self, list_id: uuid.UUID) -> tuple[int, int]:
+        """
+        @brief Count live items and completed items (global or per-user completions).
+
+        @param list_id Parent list.
+        @return (item_count, completed_count).
+        """
+        live = (ListItem.list_id == list_id, ListItem.deleted_at.is_(None))
+        done = func.count(ListItem.id).filter(ListItem.completed.is_(True))
+        per_user = (
+            select(func.count(func.distinct(ListItemCompletion.item_id)))
+            .join(ListItem, ListItem.id == ListItemCompletion.item_id)
+            .where(*live, ListItem.completed.is_(False))
+            .scalar_subquery()
+        )
+        stmt = select(func.count(ListItem.id), done + per_user).where(*live)
+        total, completed = (await self._session.execute(stmt)).one()
+        return int(total), int(completed)

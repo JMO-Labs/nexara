@@ -158,3 +158,10 @@ class ListRepository(BaseRepository[List]):
         else:
             return set()
         return set((await self._session.execute(stmt)).scalars().all())
+
+    async def is_member(self, list_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """@brief True when ``user_id`` has an explicit membership on the list."""
+        stmt = select(ListMember.user_id).where(
+            ListMember.list_id == list_id, ListMember.user_id == user_id
+        )
+        return (await self._session.execute(stmt)).first() is not None
