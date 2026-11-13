@@ -21,12 +21,6 @@ def upgrade() -> None:
     op.create_table(
         "notification_digest_queue",
         sa.Column(
-            "id",
-            postgresql.UUID(as_uuid=True),
-            primary_key=True,
-            server_default=sa.func.gen_random_uuid(),
-        ),
-        sa.Column(
             "user_id",
             postgresql.UUID(as_uuid=True),
             sa.ForeignKey("users.id", ondelete="CASCADE"),
@@ -40,14 +34,17 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+            "enqueued_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
         ),
+        sa.PrimaryKeyConstraint("user_id", "notification_id"),
     )
     op.create_index(
-        "ix_digest_queue_user_type", "notification_digest_queue", ["user_id", "type_key"]
+        "digest_queue_drain_idx",
+        "notification_digest_queue",
+        ["user_id", "type_key", "enqueued_at"],
     )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_digest_queue_user_type", table_name="notification_digest_queue")
+    op.drop_index("digest_queue_drain_idx", table_name="notification_digest_queue")
     op.drop_table("notification_digest_queue")

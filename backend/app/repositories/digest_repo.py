@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification_digest import NotificationDigestQueue as Q
@@ -20,12 +21,14 @@ class DigestRepository:
         """@param session Request/task-scoped async session."""
         self._session = session
 
-    async def enqueue(self, user_id: uuid.UUID, type_key: str, notification_id: uuid.UUID) -> Q:
-        """@brief Queue a notification for digest. @return The inserted row."""
-        row = Q(user_id=user_id, type_key=type_key, notification_id=notification_id)
-        self._session.add(row)
-        await self._session.flush()
-        return row
+    async def enqueue(self, user_id: uuid.UUID, type_key: str, notification_id: uuid.UUID) -> None:
+        """@brief Queue a notification for digest; duplicates are ignored."""
+        stmt = (
+            pg_insert(Q)
+            .values(user_id=user_id, type_key=type_key, notification_id=notification_id)
+            .on_conflict_do_nothing(index_elements=["user_id", "notification_id"])
+        )
+        await self._session.execute(stmt)
 
     async def drain(self, user_id: uuid.UUID, type_key: str) -> list[uuid.UUID]:
         """@brief Atomically delete and return queued notification ids (idempotent)."""

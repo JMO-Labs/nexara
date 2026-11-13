@@ -36,9 +36,9 @@ async def test_dispatch_drains_due_types_and_spawns():
         patch.object(nt.send_digest_email, "delay") as delay,
     ):
         n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
-    assert n == 1
-    repo.drain.assert_awaited_once_with(uid, "comment")
-    delay.assert_called_once_with(str(uid), "comment", [str(nid)])
+    assert n == 2  # instant rows are due too
+    delay.assert_any_call(str(uid), "comment", [str(nid)])
+    delay.assert_any_call(str(uid), "mention", [str(nid)])
     assert st.digest_last_sent_at is not None
 
 
@@ -94,3 +94,71 @@ async def test_send_digest_no_notifications_skipped():
     session.execute = AsyncMock(return_value=res)
     with patch.object(nt, "async_session_factory", return_value=_session_cm(session)):
         assert await nt._send_digest_email_async(uuid4(), "c", [uuid4()]) == {"status": "skipped"}
+
+
+def _dispatch_patches(session, repo, st):
+    srepo = MagicMock()
+    srepo.get_by_user_id = AsyncMock(return_value=st)
+    return (
+        patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
+        patch.object(nt, "DigestRepository", return_value=repo),
+        patch.object(nt, "SettingsRepository", return_value=srepo),
+    )
+
+
+async def test_dispatch_commits_before_delay():
+    uid, nid = uuid4(), uuid4()
+    order = MagicMock()
+    session = MagicMock()
+    session.commit = order.commit
+    order.commit.side_effect = AsyncMock()
+    repo = MagicMock()
+    repo.list_users_with_pending = AsyncMock(return_value=[uid])
+    repo.list_pending_types = AsyncMock(return_value=["comment"])
+    repo.drain = AsyncMock(return_value=[nid])
+    st = MagicMock(
+        digest_cadence={"comment": "hourly"}, digest_last_sent_at=None, dnd_timezone="UTC"
+    )
+    p1, p2, p3 = _dispatch_patches(session, repo, st)
+    with p1, p2, p3, patch.object(nt.send_digest_email, "delay", order.delay):
+        await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
+    names = [c[0] for c in order.mock_calls if c[0] in ("commit", "delay")]
+    assert names == ["commit", "delay"]
+
+
+async def test_dispatch_off_cadence_drains_and_drops():
+    uid, nid = uuid4(), uuid4()
+    session = MagicMock()
+    session.commit = AsyncMock()
+    repo = MagicMock()
+    repo.list_users_with_pending = AsyncMock(return_value=[uid])
+    repo.list_pending_types = AsyncMock(return_value=["comment"])
+    repo.drain = AsyncMock(return_value=[nid])
+    st = MagicMock(
+        digest_cadence={"comment": "off"}, digest_last_sent_at=None, dnd_timezone="UTC"
+    )
+    p1, p2, p3 = _dispatch_patches(session, repo, st)
+    with p1, p2, p3, patch.object(nt.send_digest_email, "delay") as delay:
+        n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
+    assert n == 0
+    repo.drain.assert_awaited_once_with(uid, "comment")
+    delay.assert_not_called()
+    session.commit.assert_awaited_once()
+
+
+async def test_dispatch_instant_cadence_sends():
+    uid, nid = uuid4(), uuid4()
+    session = MagicMock()
+    session.commit = AsyncMock()
+    repo = MagicMock()
+    repo.list_users_with_pending = AsyncMock(return_value=[uid])
+    repo.list_pending_types = AsyncMock(return_value=["comment"])
+    repo.drain = AsyncMock(return_value=[nid])
+    st = MagicMock(
+        digest_cadence={"comment": "instant"}, digest_last_sent_at=None, dnd_timezone="UTC"
+    )
+    p1, p2, p3 = _dispatch_patches(session, repo, st)
+    with p1, p2, p3, patch.object(nt.send_digest_email, "delay") as delay:
+        n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
+    assert n == 1
+    delay.assert_called_once_with(str(uid), "comment", [str(nid)])

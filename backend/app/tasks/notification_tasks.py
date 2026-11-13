@@ -208,7 +208,7 @@ async def _digest_dispatch_async(now: datetime) -> int:
     @param now Current aware time.
     @return Number of send_digest_email tasks spawned.
     """
-    spawned = 0
+    to_send: list[tuple[str, str, list[str]]] = []
     async with async_session_factory() as session:
         repo = DigestRepository(session)
         settings_repo = SettingsRepository(session)
@@ -220,19 +220,24 @@ async def _digest_dispatch_async(now: datetime) -> int:
             last = st.digest_last_sent_at
             sent = False
             for type_key in await repo.list_pending_types(user_id):
-                if not should_send_now(
-                    cadence.get(type_key, "instant"), last, now, st.dnd_timezone or "UTC"
-                ):
+                mode = cadence.get(type_key, "instant")
+                # instant rows are always due; off rows are drained and dropped
+                due = mode in ("instant", "off") or should_send_now(
+                    mode, last, now, st.dnd_timezone or "UTC"
+                )
+                if not due:
                     continue
                 ids = await repo.drain(user_id, type_key)
-                if ids:
-                    send_digest_email.delay(str(user_id), type_key, [str(i) for i in ids])
-                    spawned += 1
+                if ids and mode != "off":
+                    to_send.append((str(user_id), type_key, [str(i) for i in ids]))
                     sent = True
             if sent:
                 st.digest_last_sent_at = now
         await session.commit()
-    return spawned
+    # Only enqueue emails once the drain is durably committed.
+    for uid, type_key, ids in to_send:
+        send_digest_email.delay(uid, type_key, ids)
+    return len(to_send)
 
 
 async def _send_digest_email_async(
