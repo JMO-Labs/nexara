@@ -3,11 +3,14 @@
 @brief Tests for list expiry/reminder Celery tasks and Beat schedule.
 """
 
+import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from celery.schedules import crontab
+from sqlalchemy.dialects import postgresql
 
 from app.tasks import list_tasks
 from app.tasks.celery_app import celery_app
@@ -105,3 +108,56 @@ def test_entries_run_async(monkeypatch):
 
     monkeypatch.setattr(list_tasks, "_remind_async", fake2)
     assert list_tasks.dispatch_list_expiry_reminders() == {"reminded": 1}
+
+
+NOW = datetime(2026, 11, 13, 15, 30, tzinfo=UTC)
+
+
+class _FrozenDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):  # type: ignore[override]
+        return NOW
+
+
+def _sql(stmt) -> str:
+    """Compile for Postgres and inline params as ``<repr>`` tokens."""
+    compiled = stmt.compile(dialect=postgresql.dialect())
+    params = {
+        k: datetime.fromisoformat(v.isoformat()) if isinstance(v, datetime) else v
+        for k, v in compiled.params.items()
+    }
+    text = re.sub(r"%\((\w+)\)s", lambda m: f"<{params[m.group(1)]!r}>", str(compiled))
+    return " ".join(text.replace('"', "").split())
+
+
+async def _captured_sql(monkeypatch, fn) -> str:
+    monkeypatch.setattr(list_tasks, "datetime", _FrozenDatetime)
+    session = _session([[]], [])
+    await fn(session, lambda cid: AsyncMock(), AsyncMock(), batch_size=7)
+    return _sql(session.execute.await_args.args[0])
+
+
+@pytest.mark.parametrize("fn", [list_tasks.sweep_expired_lists, list_tasks.send_expiry_reminders])
+async def test_common_filters_locking_and_limit(monkeypatch, fn):
+    sql = await _captured_sql(monkeypatch, fn)
+    assert "list.status = <'active'>" in sql
+    assert "list.deleted_at IS NULL" in sql
+    assert "list.expires_at IS NOT NULL" in sql
+    assert "LIMIT <7>" in sql
+    assert sql.endswith("FOR UPDATE SKIP LOCKED")
+
+
+async def test_sweep_selects_only_past_expiry(monkeypatch):
+    sql = await _captured_sql(monkeypatch, list_tasks.sweep_expired_lists)
+    where = sql.split(" WHERE ", 1)[1]
+    assert f"list.expires_at < <{NOW!r}>" in where
+    assert "list.expires_at >" not in where
+    assert "notified_at" not in where
+
+
+async def test_reminders_select_next_day_window_not_reminded_today(monkeypatch):
+    sql = await _captured_sql(monkeypatch, list_tasks.send_expiry_reminders)
+    today = datetime(2026, 11, 13, tzinfo=UTC)
+    assert f"list.expires_at >= <{NOW!r}>" in sql
+    assert f"list.expires_at <= <{NOW + timedelta(days=1)!r}>" in sql
+    assert f"(list.notified_at IS NULL OR list.notified_at < <{today!r}>)" in sql
