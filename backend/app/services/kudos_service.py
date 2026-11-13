@@ -23,7 +23,7 @@ def _to_response(post: Post, recipient: User | None = None) -> KudosResponse:
     """@brief Map a kudos Post (and optional recipient) to the response schema."""
     return KudosResponse(
         id=post.id,
-        recipient_id=post.recipient_id,  # type: ignore[arg-type]
+        recipient_id=post.recipient_id,
         message=post.content or None,
         author_id=post.author_id,
         subgroup_id=post.subgroup_id,

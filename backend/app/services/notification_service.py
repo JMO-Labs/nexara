@@ -72,6 +72,8 @@ PREF_MAP = {
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
+    "data_export_ready": ("notif_system_inapp", "notif_system_email"),
+    "data_export_failed": ("notif_system_inapp", "notif_system_email"),
 }
 
 

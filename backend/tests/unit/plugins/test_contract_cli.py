@@ -120,3 +120,44 @@ def test_integration_hooks_valid_signature_passes(tmp_path):
         "from fastapi import APIRouter\nfrom .hooks import register_hooks\nrouter = APIRouter()\n"
     )
     assert c.by_name(it.run(d), "integration.register_hooks")[0].status == "pass"
+
+
+def test_integration_celery_task_preloaded_under_other_name_passes(tmp_path):
+    """Tasks preloaded like app.tasks.plugin_tasks._load (other module name) still count."""
+    import importlib.util
+    import sys
+
+    d = _tasks_plugin(
+        tmp_path,
+        "from app.tasks.celery_app import celery_app\n"
+        "@celery_app.task(name='preloaded.contract_probe')\n"
+        "def probe():\n    return 1\n",
+        pid="preloaded",
+    )
+    name = "nexara_plugin_preloaded_contract_tasks"
+    spec = importlib.util.spec_from_file_location(name, d / "tasks.py")
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    try:
+        spec.loader.exec_module(mod)
+        assert c.by_name(it.run(d), "integration.celery_tasks")[0].status == "pass"
+    finally:
+        sys.modules.pop(name, None)
+
+
+class _Task:
+    run = len  # builtin: inspect.getsourcefile raises TypeError
+
+
+def test_defined_in_false_without_source_file(tmp_path):
+    assert it._defined_in(_Task(), tmp_path) is False
+
+
+def test_defined_in_false_on_oserror(tmp_path, monkeypatch):
+    def boom(_obj):
+        raise OSError("no source")
+
+    monkeypatch.setattr(it.inspect, "getsourcefile", boom)
+    task = type("T", (), {"run": staticmethod(lambda: 1)})()
+    assert it._defined_in(task, tmp_path) is False
