@@ -17,11 +17,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import (
-    AuthenticationError,
-    AuthorizationError,
-    ConflictError,
-)
+from app.core.exceptions import AuthenticationError
 from app.core.i18n import _
 from app.core.security import (
     create_2fa_pending_token,
@@ -29,23 +25,20 @@ from app.core.security import (
     generate_backup_codes,
     generate_totp_secret,
     get_totp_uri,
-    hash_password,
     hash_token,
     verify_password,
     verify_totp,
 )
 from app.models.auth import UserBackupCode
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
-from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 from app.services.auth import sso_only as _sso_only
-from app.services.auth.invite import validate_invite as _validate_invite_impl
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
+from app.services.auth.registration import register_user
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
@@ -101,73 +94,15 @@ class AuthService:
         @raises ConflictError If email or username already exists.
         @raises AuthorizationError If registration is disabled or invite is required but missing.
         """
-        cid = community_id or uuid.UUID(self._settings.COMMUNITY_ID)
-        await _sso_only.assert_password_auth_allowed(self._session, cid)
-        if not self._settings.ENABLE_REGISTRATION:
-            raise AuthorizationError(message=_("Registration is currently disabled"))
-
-        role = "member"
-
-        if self._settings.REQUIRE_INVITE:
-            if not invite_token:
-                raise AuthorizationError(message=_("An invite token is required to register"))
-            invite = await _validate_invite_impl(self._invite_repo, invite_token)
-            role = invite.role
-        elif invite_token:
-            invite = await _validate_invite_impl(self._invite_repo, invite_token)
-            role = invite.role
-        else:
-            invite = None
-
-        if await self._password_svc.check_hibp(password):
-            raise ConflictError(
-                message=_("This password has appeared in a data breach"),
-            )
-
-        if await self._user_repo.email_exists(email):
-            raise ConflictError(message=_("Email is already registered"))
-        if await self._user_repo.username_exists(username):
-            raise ConflictError(message=_("Username is already taken"))
-
-        user = User(
-            community_id=cid,
+        return await register_user(
+            self,
             email=email,
             username=username,
+            password=password,
             display_name=display_name,
-            password_hash=hash_password(password),
-            role=role,
+            invite_token=invite_token,
+            community_id=community_id,
         )
-        user = await self._user_repo.create(user)
-
-        await self._settings_repo.get_or_create(user.id, user.community_id)
-
-        # Seed personal calendar (idempotent — safe if a prior run partially completed).
-        calendar_repo = CalendarRepository(self._session)
-        await calendar_repo.ensure_personal(user.community_id, user.id)
-
-        if invite:
-            await self._invite_repo.mark_used(invite.id, user.id)
-            if self._notification_service:
-                # Notify invite creator that someone registered with their invite.
-                await self._notification_service.notify(
-                    user_id=invite.created_by,
-                    type="invite_accepted",
-                    payload={
-                        "actor_name": user.display_name,
-                        "message": _("%(user)s registered using your invite")
-                        % {"user": user.display_name},
-                    },
-                    actor_id=user.id,
-                )
-
-        await HookRegistry.emit(
-            "on_user_joined",
-            community_id=user.community_id,
-            session=self._session,
-            user_id=user.id,
-        )
-        logger.info("user_registered", user_id=str(user.id), email=email)
-        return await self._issue_tokens(user)
 
     async def _assert_password_auth_allowed(self) -> None:
         """@brief Raise AuthorizationError when SSO-only mode is enabled."""
