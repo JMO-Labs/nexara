@@ -75,3 +75,9 @@ async def test_depth_limit_skips_even_when_forced() -> None:
 async def test_ai_errors_skipped() -> None:
     assert not (await _run(exc=AIError("x")))[0]
     assert not (await _run(exc=AIBudgetExhaustedError("x")))[0]
+
+
+async def test_empty_generation_skipped() -> None:
+    ok, _, comments = await _run(gen="")
+    assert not ok
+    comments.create_comment.assert_not_called()
