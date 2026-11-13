@@ -1,6 +1,6 @@
 """
 @file notification_tasks.py
-@brief Celery tasks for push and email notifications.
+@brief Celery tasks for push, email and webhook notifications.
 
 Routed to the ``notifications`` queue for high-priority delivery.
 """
@@ -11,17 +11,23 @@ import asyncio
 import uuid
 from typing import Any
 
+import httpx
 import structlog
 from celery import Task
 
 from app.core.config import get_settings
 from app.db.session import async_session_factory
+from app.models.notification import Notification
 from app.models.user import User
 from app.repositories.branding_repo import BrandingRepository
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.webhook_repo import WebhookRepository
 from app.services.email.sender import EmailSender
 from app.services.email.templates import EmailTemplateRenderer
+from app.services.notifications import registry
+from app.services.notifications import types as _notification_types  # noqa: F401
+from app.services.notifications.webhook_delivery import deliver_webhook
 from app.services.push_service import PushService
 from app.tasks.celery_app import celery_app
 
@@ -190,3 +196,72 @@ def send_email_notification(
             error=str(exc),
         )
         raise self.retry(exc=exc)
+
+
+WEBHOOK_TIMEOUT_SECONDS = 10.0
+"""@brief Per-request timeout for webhook POSTs."""
+
+
+async def _webhook_deliver_async(
+    webhook_id: str, notification_id: str, final_attempt: bool
+) -> dict[str, str]:
+    """
+    @brief Load the subscription + notification and attempt one delivery.
+
+    Commits failure/success bookkeeping even when the attempt raises.
+
+    @param webhook_id Subscription UUID string.
+    @param notification_id Notification UUID string.
+    @param final_attempt True on the last Celery attempt.
+    @return Dict with ``status``.
+    """
+    async with async_session_factory() as session:
+        repo = WebhookRepository(session)
+        sub = await repo.get(uuid.UUID(webhook_id))
+        notif = await session.get(Notification, uuid.UUID(notification_id))
+        if sub is None or notif is None or not sub.enabled:
+            logger.info("webhook.skipped", webhook_id=webhook_id, notification_id=notification_id)
+            return {"status": "skipped"}
+        try:
+            category: str | None = registry.get(notif.type).category
+        except KeyError:
+            category = None
+        try:
+            async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SECONDS) as client:
+                outcome = await deliver_webhook(
+                    repo, sub, notif, category, client, final_attempt=final_attempt
+                )
+        finally:
+            await session.commit()
+        return {"status": outcome}
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    bind=True,
+    name="app.tasks.notification_tasks.webhook_deliver",
+    autoretry_for=(httpx.HTTPError, httpx.TimeoutException),
+    max_retries=5,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    queue="notifications",
+)
+def webhook_deliver(self: Task, webhook_id: str, notification_id: str) -> dict[str, str]:
+    """
+    @brief Deliver one notification to one webhook subscription.
+
+    5xx, timeouts and transport errors raise and are auto-retried with
+    jittered exponential backoff; 4xx counts a failure without retry.
+
+    @param webhook_id Subscription UUID string.
+    @param notification_id Notification UUID string.
+    @return Dict with ``status`` (delivered, failed, disabled or skipped).
+    """
+    try:
+        uuid.UUID(webhook_id)
+        uuid.UUID(notification_id)
+    except ValueError:
+        logger.error("webhook_deliver_invalid_uuid", webhook_id=webhook_id)
+        return {"status": "skipped"}
+    final = self.request.retries >= self.max_retries
+    return asyncio.run(_webhook_deliver_async(webhook_id, notification_id, final))

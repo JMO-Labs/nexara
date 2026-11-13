@@ -62,9 +62,7 @@ async def test_fanout_enqueues_one_task_per_matching_sub() -> None:
         res = await WebhookChannel(repo).send(n)
     assert res == ChannelResult(ok=True)
     repo.list_matching.assert_awaited_once_with(n.community_id, n.user_id, "new_post")
-    assert [c.args for c in task.delay.call_args_list] == [
-        (str(s.id), str(n.id)) for s in subs
-    ]
+    assert [c.args for c in task.delay.call_args_list] == [(str(s.id), str(n.id)) for s in subs]
 
 
 async def test_no_subscriptions_is_skipped() -> None:
@@ -176,7 +174,7 @@ async def test_4xx_at_threshold_logs_disabled() -> None:
     with patch("app.services.notifications.webhook_delivery.logger") as log:
         out = await deliver_webhook(repo, sub, _notif(), "social", client, final_attempt=False)
     assert out == "disabled"
-    events = [c.args[0] for c in log.warning.call_args_list]
+    events = [c.args[0] for c in log.bind.return_value.warning.call_args_list]
     assert "webhook.disabled" in events
     assert "notif.channel.failed" in events
 
