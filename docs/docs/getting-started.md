@@ -83,4 +83,4 @@ npx vitest run --coverage
 ## Next Steps
 
 - Read the [Development Guide](development.md) for architecture and conventions
-- Read the [Deployment Guide](deployment.md) for production setup
+- Read the [Deployment Guide](deployment/deployment-guide.md) for production setup
