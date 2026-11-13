@@ -67,4 +67,3 @@ def _fts_expressions(fts_col: Any, prefix_query: str | None) -> tuple[Any, Any, 
 def _exclude_nsfw_comments(stmt: Any) -> Any:
     """@brief Join the parent post and drop comments on NSFW posts."""
     return stmt.join(Post, Post.id == Comment.post_id).where(Post.is_nsfw.is_(False))
-

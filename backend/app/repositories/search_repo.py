@@ -21,7 +21,11 @@ from app.models.user import User
 from app.repositories.base import BaseRepository
 from app.repositories.search_content_repo import SubgroupCommentSearchMixin
 from app.repositories.search_extra_repo import GalleryPollSearchMixin
-from app.repositories.search_fts import _fts_expressions, _prefix_tsquery, _websearch_tsquery  # noqa: F401
+from app.repositories.search_fts import (  # noqa: F401
+    _fts_expressions,
+    _prefix_tsquery,
+    _websearch_tsquery,
+)
 
 
 class SearchRepository(GalleryPollSearchMixin, SubgroupCommentSearchMixin):
