@@ -89,9 +89,7 @@ async def test_mark_downloaded_stamps_and_flushes() -> None:
 async def test_list_expired_filters_on_ready_at_and_file_key() -> None:
     rows = [UserExport(user_id=UID, community_id=CID, status="ready")]
     repo, session = _repo()
-    session.execute.return_value = MagicMock(
-        scalars=lambda: MagicMock(all=lambda: rows)
-    )
+    session.execute.return_value = MagicMock(scalars=lambda: MagicMock(all=lambda: rows))
     assert await repo.list_expired(datetime.now(UTC)) == rows
     sql = str(session.execute.await_args.args[0])
     assert "ready_at <" in sql and "file_key IS NOT NULL" in sql
