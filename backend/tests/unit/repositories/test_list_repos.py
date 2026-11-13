@@ -142,3 +142,14 @@ async def test_sum_claimed() -> None:
     res.scalar_one.return_value = 4
     s.execute = AsyncMock(return_value=res)
     assert await ListSignupRepository(s).sum_claimed(LID) == 4
+
+
+async def test_template_get_by_id_eager_loads_children() -> None:
+    """@brief Async sessions cannot lazy-load; clone needs fields+items loaded."""
+    s = _session([MagicMock()])
+    await ListTemplateRepository(s).get_by_id(LID, CID)
+    stmt = s.execute.call_args_list[-1].args[0]
+    loaded = {str(opt.path[-1]) for opt in stmt._with_options}  # noqa: SLF001
+    assert any("fields" in p for p in loaded) and any("items" in p for p in loaded)
+    sql = _sql(s)
+    assert "list_template.community_id" in sql and "deleted_at IS NULL" in sql
