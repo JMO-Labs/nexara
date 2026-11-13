@@ -12,10 +12,11 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Query, Request, Response
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -35,6 +36,7 @@ from app.schemas.notification import (
 )
 from app.services.notification_service import NotificationService
 from app.services.notifications import Category, to_json_schema
+from app.services.notifications.dnd import resolve_snooze
 from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
@@ -138,6 +140,35 @@ async def update_preferences(
 ) -> NotificationPreferences:
     """@brief Partial update; 400 NOTIF_TYPE_UNKNOWN / NOTIF_PREF_INVALID."""
     return await service.update_preferences(user.id, patch)
+
+
+class SnoozeRequest(BaseModel):
+    """@brief Body for POST /snooze: ``1h``, ``until_morning`` or ISO-8601."""
+
+    duration: str
+
+
+@router.post("/snooze", response_model=MessageResponse)
+async def snooze(
+    body: SnoozeRequest,
+    user: User = Depends(get_current_user),
+    service: NotificationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Snooze email/push/toast; 400 NOTIF_PREF_INVALID on bad duration."""
+    prefs = await service.get_preferences(user.id)
+    until = resolve_snooze(body.duration, prefs.dnd_timezone, datetime.now(UTC))
+    await service.snooze(user.id, until)
+    return MessageResponse(message=_("Notifications snoozed"))
+
+
+@router.delete("/snooze", response_model=MessageResponse)
+async def clear_snooze(
+    user: User = Depends(get_current_user),
+    service: NotificationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief End the active snooze."""
+    await service.clear_snooze(user.id)
+    return MessageResponse(message=_("Snooze cleared"))
 
 
 @router.post("/read-all", response_model=MessageResponse)
