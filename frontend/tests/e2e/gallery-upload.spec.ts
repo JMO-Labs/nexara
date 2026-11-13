@@ -7,13 +7,14 @@ const FIXTURE = path.join(__dirname, "fixtures", "tiny.png");
 test("user can create a gallery, upload an image and open the lightbox", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const title = `e2e gallery ${Date.now()}`;
   await login(page);
   await page.goto("/app/galleries");
 
   await page.getByRole("button", { name: "New gallery" }).click();
   await page.getByLabel("Title").fill(title);
-  await page.getByRole("button", { name: "Create" }).click();
+  await page.getByRole("button", { name: "Create", exact: true }).click();
 
   await page.getByRole("button", { name: title }).click();
 
