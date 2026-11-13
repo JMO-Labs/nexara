@@ -38,10 +38,11 @@ void main() {
 
   testWidgets('shows pending count when items are queued', (tester) async {
     await pump(tester, online: false);
-    await tester.runAsync(() async {
-      await container.read(offlineQueueProvider).enqueue('post', {'content': 'a'});
-      await container.read(offlineQueueProvider).enqueue('post', {'content': 'b'});
-    });
+    // No runAsync: the queue's load future lives in the fake-async zone, so
+    // awaiting it from the real zone would never complete (hang).
+    final q = container.read(offlineQueueProvider);
+    await q.enqueue('post', {'content': 'a'});
+    await q.enqueue('post', {'content': 'b'});
     await tester.pumpAndSettle();
     expect(find.text('Offline - 2 changes will sync when you reconnect'), findsOneWidget);
   });
