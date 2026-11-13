@@ -48,6 +48,7 @@ class ReactionsMixin(PostServiceBase):
                 type="reaction",
                 payload={
                     "post_id": str(post_id),
+                    "actor_name": user.display_name,
                     "emoji": emoji,
                     "message": _("%(user)s reacted to your post") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
@@ -125,6 +126,7 @@ class ReactionsMixin(PostServiceBase):
                 payload={
                     "post_id": str(post_id),
                     "comment_id": str(comment_id),
+                    "actor_name": user.display_name,
                     "emoji": emoji,
                     "message": _("%(user)s reacted to your comment") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
