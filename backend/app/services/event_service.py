@@ -1,62 +1,53 @@
 """
 @file event_service.py
-@brief Event business logic — CRUD, RSVP, contributions, RRULE expansion, iCal.
+@brief Event business logic — CRUD and shared helpers; RSVP, recurrence,
+       subscriptions and iCal live in sibling mixin modules.
 """
 
 from __future__ import annotations
 
-import re
 import uuid
-from datetime import UTC, datetime, timedelta
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import Any
 
-import structlog
 from dateutil.rrule import rrulestr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import invalidate_search_cache_for_community
-from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
-from app.models.event import CalendarSubscription, Event
+from app.models.event import Event
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.subgroup_repo import SubgroupRepository
 from app.schemas.event import (
-    CalendarSubscriptionCreate,
-    CalendarSubscriptionResponse,
-    CalendarSubscriptionUpdate,
-    ContributionClaim,
     ContributionSlot,
     EventCreate,
     EventList,
-    EventOccurrence,
     EventResponse,
     EventUpdate,
-    RSVPRequest,
     RSVPResponse,
 )
 from app.services.activity_publish import record_activity
 from app.services.calendar_service import CalendarService
 from app.services.event_gallery import create_event_gallery, find_event_gallery_id
 from app.services.event_ical import EventIcalMixin
+from app.services.event_recurrence import MAX_OCCURRENCES, EventRecurrenceMixin
+from app.services.event_rsvp import DEFAULT_RSVP_LABELS, EventRsvpMixin
+from app.services.event_subscriptions import EventSubscriptionsMixin
 
-logger = structlog.get_logger(__name__)
-
-DEFAULT_RSVP_LABELS: dict[str, str] = {
-    "attending": "Attending",
-    "maybe": "Maybe",
-    "declined": "Declined",
-}
-
-# Maximum number of recurrence occurrences expanded per query window.
-MAX_OCCURRENCES = 200
+__all__ = ["DEFAULT_RSVP_LABELS", "MAX_OCCURRENCES", "EventService"]
 
 
-class EventService(EventIcalMixin):
+class EventService(
+    EventIcalMixin,
+    EventRsvpMixin,
+    EventRecurrenceMixin,
+    EventSubscriptionsMixin,
+):
     """@brief Service layer for events, RSVPs, and calendar subscriptions."""
 
     def __init__(
@@ -367,364 +358,3 @@ class EventService(EventIcalMixin):
             responses = responses[:limit]
             next_cursor = str(responses[-1].id)
         return EventList(items=responses, next_cursor=next_cursor, has_more=next_cursor is not None)
-
-    # ── RRULE expansion ───────────────────────────────────────────────
-
-    def expand_occurrences(
-        self, event: Event, start: datetime, end: datetime
-    ) -> list[EventOccurrence]:
-        if event.recurrence_rule is None:
-            return [
-                EventOccurrence(
-                    event_id=event.id,
-                    starts_at=event.starts_at,
-                    ends_at=event.ends_at,
-                )
-            ]
-
-        try:
-            rule = rrulestr(event.recurrence_rule, dtstart=event.starts_at)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "expand_occurrences_invalid_rrule",
-                event_id=str(event.id),
-                error=str(exc),
-            )
-            return []
-
-        duration = event.ends_at - event.starts_at
-        occurrences: list[EventOccurrence] = []
-        for dt in rule.between(start, end, inc=True):
-            occurrences.append(
-                EventOccurrence(
-                    event_id=event.id,
-                    starts_at=dt,
-                    ends_at=dt + duration,
-                )
-            )
-            if len(occurrences) >= MAX_OCCURRENCES:
-                break
-        return occurrences
-
-    # ── RSVP ──────────────────────────────────────────────────────────
-
-    async def rsvp(
-        self, event_id: uuid.UUID, user_id: uuid.UUID, data: RSVPRequest
-    ) -> RSVPResponse:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-        if not await self._can_view(event, user_id):
-            raise AuthorizationError(_("You cannot RSVP to this event"))
-
-        labels = dict(event.rsvp_labels) if event.rsvp_labels else dict(DEFAULT_RSVP_LABELS)
-        if data.status not in labels:
-            raise AppError(
-                code="INVALID_RSVP_STATUS",
-                message=_("RSVP status is not allowed for this event"),
-                status_code=400,
-            )
-
-        att = await self._repo.upsert_attendance(
-            event_id=event_id,
-            user_id=user_id,
-            community_id=self._community_id,
-            status=data.status,
-            note=data.note,
-        )
-
-        if self._notifications and event.author_id != user_id:
-            try:
-                await self._notifications.notify(
-                    user_id=event.author_id,
-                    type="event_rsvp",
-                    payload={
-                        "event_id": str(event.id),
-                        "status": data.status,
-                        "message": _("Someone RSVP'd to your event"),
-                        "link": f"/app/events/{event.id}",
-                    },
-                    actor_id=user_id,
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("rsvp_notify_failed", error=str(exc))
-
-        if self._activity_repo is not None:
-            from app.models.user import User
-
-            user_result = await self._session.execute(select(User).where(User.id == user_id))
-            user = user_result.scalar_one_or_none()
-            user_name = user.display_name if user else "Unknown"
-
-            rsvp_id = att.id if hasattr(att, "id") else uuid.uuid4()
-            await record_activity(
-                self._activity_repo,
-                self._session,
-                None,
-                community_id=self._community_id,
-                actor_id=user_id,
-                verb="event.rsvp",
-                object_type="rsvp",
-                object_id=rsvp_id,
-                subgroup_id=event.subgroup_id,
-                visibility=event.visibility,
-                target_type="event",
-                target_id=event_id,
-                metadata={
-                    "actor_name": user_name,
-                    "object_title": event.title,
-                },
-            )
-
-        return RSVPResponse.model_validate(att)
-
-    async def list_rsvps(self, event_id: uuid.UUID, user_id: uuid.UUID) -> list[RSVPResponse]:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-        if not await self._can_view(event, user_id):
-            raise AuthorizationError(_("You cannot view this event"))
-        records = await self._repo.list_attendance(event_id)
-        return [RSVPResponse.model_validate(r) for r in records]
-
-    async def cancel_rsvp(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-        await self._repo.remove_attendance(event_id, user_id)
-
-    # ── Contributions ─────────────────────────────────────────────────
-
-    async def claim_contribution(
-        self,
-        event_id: uuid.UUID,
-        slot_id: uuid.UUID,
-        user_id: uuid.UUID,
-        data: ContributionClaim,
-    ) -> EventResponse:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-        if not await self._can_view(event, user_id):
-            raise AuthorizationError(_("You cannot claim contributions on this event"))
-
-        slots = self._slots_from_db(event.contribution_slots)
-        target = next((s for s in slots if s.id == slot_id), None)
-        if target is None:
-            raise NotFoundError(_("Contribution slot not found"))
-
-        remaining = target.quantity_needed - target.quantity_claimed
-        if data.quantity > remaining:
-            raise AppError(
-                code="SLOT_FULL",
-                message=_("Not enough remaining capacity on this slot"),
-                status_code=400,
-            )
-        target.quantity_claimed += data.quantity
-        if user_id not in target.claimed_by:
-            target.claimed_by.append(user_id)
-
-        event = await self._repo.update(
-            event,
-            {
-                "contribution_slots": self._slots_to_dicts(slots),
-                "updated_at": datetime.now(UTC),
-            },
-        )
-        return await self._build_response(event, user_id=user_id)
-
-    async def unclaim_contribution(
-        self, event_id: uuid.UUID, slot_id: uuid.UUID, user_id: uuid.UUID
-    ) -> EventResponse:
-        event = await self._repo.get_by_id(event_id, community_id=self._community_id)
-        if event is None:
-            raise NotFoundError(_("Event not found"))
-
-        slots = self._slots_from_db(event.contribution_slots)
-        target = next((s for s in slots if s.id == slot_id), None)
-        if target is None:
-            raise NotFoundError(_("Contribution slot not found"))
-
-        if user_id in target.claimed_by:
-            target.claimed_by.remove(user_id)
-            target.quantity_claimed = max(0, target.quantity_claimed - 1)
-
-        event = await self._repo.update(
-            event,
-            {
-                "contribution_slots": self._slots_to_dicts(slots),
-                "updated_at": datetime.now(UTC),
-            },
-        )
-        return await self._build_response(event, user_id=user_id)
-
-    # ── RRULE exception occurrences ───────────────────────────────────
-
-    def _append_until(self, rrule_str: str, until: str) -> str:
-        """@brief Strip existing UNTIL and append a new one to RRULE.
-
-        @param rrule_str RRULE string (e.g. 'FREQ=WEEKLY;COUNT=4').
-        @param until ISO 8601 datetime string (e.g. '20260508T175959Z').
-        @return Modified RRULE with UNTIL appended.
-        """
-        # Remove any existing UNTIL= clause
-        modified = re.sub(r";UNTIL=[^;]*", "", rrule_str)
-        # Remove any existing COUNT= clause (UNTIL and COUNT are mutually exclusive)
-        modified = re.sub(r";COUNT=\d+", "", modified)
-        # Append UNTIL
-        if modified.endswith(";"):
-            return f"{modified}UNTIL={until}"
-        return f"{modified};UNTIL={until}"
-
-    async def update_occurrence(
-        self,
-        parent_id: uuid.UUID,
-        occurrence_start: datetime,
-        scope: Literal["this", "this_and_following", "all"],
-        payload: dict[str, Any],
-    ) -> Event:
-        """@brief Update a single occurrence of a recurring event.
-
-        @param parent_id UUID of the recurring parent event.
-        @param occurrence_start Datetime of the occurrence to modify.
-        @param scope Update scope:
-            - 'this': create child override for this occurrence only.
-            - 'this_and_following': truncate parent rule, create new series from this date.
-            - 'all': update the parent event directly.
-        @param payload Fields to update (title, description, etc.).
-        @return The modified or new Event.
-        @raises NotFoundError if parent not found or not recurring.
-        @raises AuthorizationError if user is not the organizer.
-        """
-        parent = await self._repo.get_by_id(parent_id, community_id=self._community_id)
-        if parent is None or not parent.recurrence_rule:
-            raise NotFoundError(_("Recurring event not found"))
-
-        # Authorize: only organizer can edit
-        if parent.author_id != self._actor_id:
-            raise AuthorizationError(_("Only the event organizer can edit this event"))
-
-        if scope == "all":
-            # Update the parent event directly
-            update_data = {**payload, "updated_at": datetime.now(UTC)}
-            return await self._repo.update(parent, update_data)
-
-        if scope == "this":
-            # Create a child override event
-            child_data = {
-                "community_id": parent.community_id,
-                "author_id": self._actor_id,
-                "title": payload.get("title", parent.title),
-                "description": payload.get("description", parent.description),
-                "location": payload.get("location", parent.location),
-                "starts_at": occurrence_start,
-                "ends_at": occurrence_start + (parent.ends_at - parent.starts_at),
-                "is_all_day": payload.get("is_all_day", parent.is_all_day),
-                "recurrence_rule": None,
-                "recurrence_id": parent.id,
-                "original_start": occurrence_start,
-                "ical_uid": str(uuid.uuid4()) + "@nexara",
-                "visibility": payload.get("visibility", parent.visibility),
-                "subgroup_id": payload.get("subgroup_id", parent.subgroup_id),
-                "calendar_id": parent.calendar_id,
-                "color": payload.get("color", parent.color),
-                "latitude": payload.get("latitude", parent.latitude),
-                "longitude": payload.get("longitude", parent.longitude),
-                "rsvp_labels": payload.get("rsvp_labels", parent.rsvp_labels),
-                "contribution_slots": payload.get("contribution_slots", parent.contribution_slots),
-                "reminder_offsets_minutes": payload.get(
-                    "reminder_offsets_minutes", parent.reminder_offsets_minutes
-                ),
-            }
-            child = Event(**child_data)
-            return await self._repo.create(child)
-
-        # scope == "this_and_following"
-        # Truncate parent RRULE with UNTIL = (occurrence_start - 1 second)
-        until_dt = occurrence_start - timedelta(seconds=1)
-        until_str = until_dt.strftime("%Y%m%dT%H%M%SZ")
-        new_rule = self._append_until(parent.recurrence_rule, until_str)
-        await self._repo.update(parent, {"recurrence_rule": new_rule})
-
-        # Create new recurring event starting from this occurrence
-        new_data = {
-            "community_id": parent.community_id,
-            "author_id": self._actor_id,
-            "title": payload.get("title", parent.title),
-            "description": payload.get("description", parent.description),
-            "location": payload.get("location", parent.location),
-            "starts_at": occurrence_start,
-            "ends_at": occurrence_start + (parent.ends_at - parent.starts_at),
-            "is_all_day": payload.get("is_all_day", parent.is_all_day),
-            "recurrence_rule": parent.recurrence_rule,
-            "recurrence_id": None,
-            "original_start": None,
-            "ical_uid": str(uuid.uuid4()) + "@nexara",
-            "visibility": payload.get("visibility", parent.visibility),
-            "subgroup_id": payload.get("subgroup_id", parent.subgroup_id),
-            "calendar_id": parent.calendar_id,
-            "color": payload.get("color", parent.color),
-            "latitude": payload.get("latitude", parent.latitude),
-            "longitude": payload.get("longitude", parent.longitude),
-            "rsvp_labels": payload.get("rsvp_labels", parent.rsvp_labels),
-            "contribution_slots": payload.get("contribution_slots", parent.contribution_slots),
-            "reminder_offsets_minutes": payload.get(
-                "reminder_offsets_minutes", parent.reminder_offsets_minutes
-            ),
-        }
-        new_event = Event(**new_data)
-        return await self._repo.create(new_event)
-
-    # ── Subscriptions ─────────────────────────────────────────────────
-
-    async def create_subscription(
-        self, user_id: uuid.UUID, data: CalendarSubscriptionCreate, *, is_admin: bool = False
-    ) -> CalendarSubscriptionResponse:
-        # Reject shared_by_admin=True if not admin
-        if data.shared_by_admin and not is_admin:
-            raise AuthorizationError(_("Only admins can create shared subscriptions"))
-
-        # Enforce per-user subscription cap
-        count = await self._repo.count_subscriptions_for(user_id)
-        settings = get_settings()
-        if count >= settings.CALENDAR_SUBS_PER_USER_MAX:
-            raise AppError(
-                message="Subscription limit reached",
-                code="subscription_limit",
-            )
-
-        sub = CalendarSubscription(
-            community_id=self._community_id,
-            user_id=user_id,
-            name=data.name,
-            color=data.color,
-            source_type=data.source_type,
-            source_url=data.source_url,
-            visibility=data.visibility,
-            shared_by_admin=data.shared_by_admin,
-            sync_interval_minutes=data.sync_interval_minutes,
-        )
-        sub = await self._repo.create_subscription(sub)
-        return CalendarSubscriptionResponse.model_validate(sub)
-
-    async def list_subscriptions(self, user_id: uuid.UUID) -> list[CalendarSubscriptionResponse]:
-        rows = await self._repo.list_subscriptions(self._community_id, user_id)
-        return [CalendarSubscriptionResponse.model_validate(r) for r in rows]
-
-    async def delete_subscription(self, sub_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
-        if sub is None:
-            raise NotFoundError(_("Calendar subscription not found"))
-        await self._repo.delete_subscription(sub_id)
-
-    async def update_subscription(
-        self, sub_id: uuid.UUID, user_id: uuid.UUID, data: CalendarSubscriptionUpdate
-    ) -> CalendarSubscriptionResponse:
-        """@brief Update name/url/enabled/interval of an owned subscription."""
-        sub = await self._repo.get_subscription(sub_id, user_id=user_id)
-        if sub is None:
-            raise NotFoundError(_("Calendar subscription not found"))
-        for field, value in data.model_dump(exclude_unset=True, exclude_none=True).items():
-            setattr(sub, field, value)
-        sub = await self._repo.update_subscription(sub)
-        return CalendarSubscriptionResponse.model_validate(sub)
