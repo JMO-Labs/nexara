@@ -20,6 +20,7 @@ from app.core.dependencies import get_current_user, get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
 from app.schemas.common import MessageResponse, PaginatedResponse
+from app.schemas.media import StorageUsageResponse
 from app.schemas.user import (
     EmailChangeRequest,
     PasswordChangeRequest,
@@ -27,6 +28,7 @@ from app.schemas.user import (
     UserResponse,
     UserUpdateRequest,
 )
+from app.services.storage.usage_service import StorageUsageService
 from app.services.user_service import UserService
 
 logger = structlog.get_logger(__name__)
@@ -40,6 +42,11 @@ def _build_service(
 ) -> UserService:
     """@brief DI factory for UserService — overridable in tests."""
     return UserService(db, settings)
+
+
+def _build_storage_service(db: AsyncSession = Depends(get_db)) -> StorageUsageService:
+    """@brief DI factory for StorageUsageService — overridable in tests."""
+    return StorageUsageService.from_session(db)
 
 
 @router.get("/me", response_model=UserDetailResponse)
@@ -118,6 +125,16 @@ async def list_blocked_users(
 ) -> Any:
     """@brief Return users the current user has blocked (UI reference only)."""
     return await svc.list_blocked(user)
+
+
+@router.get("/{user_id}/storage", response_model=StorageUsageResponse)
+async def get_user_storage(
+    user_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    svc: StorageUsageService = Depends(_build_storage_service),
+) -> Any:
+    """@brief Return storage usage; callers may only read their own."""
+    return await svc.get_usage(user, user_id)
 
 
 @router.get("/{user_id}", response_model=UserResponse)

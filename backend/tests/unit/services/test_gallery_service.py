@@ -595,3 +595,19 @@ class TestListItemsBlockFilter:
         repo.list_items.return_value = ([], None)
         await service.list_items(gallery.id, viewer)
         assert repo.list_items.await_args.kwargs["viewer_id"] == viewer
+
+
+class TestActorName:
+    """@brief _actor_name resolves display names for notification payloads."""
+
+    async def test_returns_display_name(self, service: GalleryService, session: AsyncMock) -> None:
+        user = MagicMock()
+        user.display_name = "Alice"
+        session.get.return_value = user
+        assert await service._actor_name(uuid.uuid4()) == "Alice"
+
+    async def test_falls_back_when_user_missing(
+        self, service: GalleryService, session: AsyncMock
+    ) -> None:
+        session.get.return_value = None
+        assert await service._actor_name(uuid.uuid4()) == "Someone"

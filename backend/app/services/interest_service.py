@@ -139,10 +139,10 @@ class InterestService:
         """
         @brief Record an interest suggestion from a prompt reply (non-blocking).
 
-        Logs the suggestion event for later processing. This is a suggestion only,
-        not an auto-add to the user's interests.
-
-        TODO: Implement user_interest_suggestions table backing when available.
+        Logs the suggestion event only. This is a suggestion, not an auto-add to
+        the user's interests. Intentionally not persisted: nothing consumes
+        suggestions (no dismissal or admin review flow), so a table would be
+        unused state. Revisit if such a flow is added.
 
         @param user_id User ID.
         @param category_slug Interest category slug.
