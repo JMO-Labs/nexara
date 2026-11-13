@@ -48,10 +48,11 @@ celery_app.conf.update(
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
+        "app.tasks.list_tasks.*": {"queue": "maintenance"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
-    imports=("app.tasks.plugin_tasks",),
+    imports=("app.tasks.plugin_tasks", "app.tasks.list_tasks"),
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
     worker_prefetch_multiplier=1,
@@ -170,6 +171,14 @@ celery_app.conf.update(
         "trivia-reset-streaks": {
             "task": "plugins.example_trivia.reset_streaks",
             "schedule": crontab(day_of_week="sun", hour="0", minute="5"),
+        },
+        "sweep-list-expirations": {
+            "task": "app.tasks.list_tasks.sweep_list_expirations",
+            "schedule": crontab(hour=2, minute=0),
+        },
+        "dispatch-list-expiry-reminders": {
+            "task": "app.tasks.list_tasks.dispatch_list_expiry_reminders",
+            "schedule": crontab(hour=8, minute=0),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",

@@ -68,7 +68,12 @@ export function PostHeader({
       {showMenu ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <IconButton aria-label="Post options" variant="ghost" size="sm">
+            <IconButton
+              aria-label="Post options"
+              tooltip="Post options"
+              variant="ghost"
+              size="sm"
+            >
               <MoreHorizontal className="size-5" aria-hidden="true" />
             </IconButton>
           </DropdownMenuTrigger>

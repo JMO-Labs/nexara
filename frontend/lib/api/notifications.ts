@@ -3,7 +3,12 @@
  * @brief Notification REST endpoints. The SSE stream is consumed via
  *        useSSE; these calls cover the imperative bits (list, count, mark).
  */
-import { apiGet, apiPost, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
+import type {
+  NotificationItem as ActiveNotificationItem,
+  NotificationTypeDescriptor,
+  PreferencesPayload,
+} from "@/lib/notifications/types";
 
 export interface NotificationPayload {
   message?: string;
@@ -45,3 +50,33 @@ export const clearAllNotifications = () =>
   apiDelete<{ message: string }>("/api/v1/notifications");
 
 export const STREAM_PATH = "/api/v1/notifications/stream";
+
+const BASE = "/api/v1/notifications";
+
+export const listTypes = () =>
+  apiGet<NotificationTypeDescriptor[]>(`${BASE}/types`);
+
+export const listActive = () =>
+  apiGet<{ items: ActiveNotificationItem[] }>(`${BASE}/active`);
+
+export const dismissOne = (id: string) =>
+  apiPost<{ message: string }>(`${BASE}/${seg(id)}/dismiss`);
+
+export const dismissAll = () =>
+  apiPost<{ message: string }>(`${BASE}/dismiss-all`);
+
+export const callAction = (id: string, key: string) =>
+  apiPost<{ message: string }>(`${BASE}/${seg(id)}/actions/${seg(key)}`);
+
+export const getPreferences = () =>
+  apiGet<PreferencesPayload>(`${BASE}/preferences`);
+
+export const patchPreferences = (body: Partial<PreferencesPayload>) =>
+  apiPatch<PreferencesPayload>(`${BASE}/preferences`, body);
+
+/** @param duration e.g. "1h" or "until_morning" */
+export const snooze = (duration: string) =>
+  apiPost<{ message: string }>(`${BASE}/snooze`, { duration });
+
+export const clearSnooze = () =>
+  apiDelete<{ message: string }>(`${BASE}/snooze`);

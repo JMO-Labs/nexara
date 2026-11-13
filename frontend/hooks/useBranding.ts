@@ -34,3 +34,24 @@ export const useUpdateBranding = (successMessage = "Branding saved") => {
     },
   });
 };
+
+/** @brief Fetch preset themes. */
+export const usePresetThemes = () =>
+  useQuery({
+    queryKey: [...qk.admin.branding(), "presets"] as const,
+    queryFn: brandingApi.listPresets,
+    staleTime: 60 * 60 * 1000,
+  });
+
+/** @brief Apply a preset theme; refreshes branding and toasts. */
+export const useApplyPreset = () => {
+  const qc = useQueryClient();
+  const push = useToasts((s) => s.push);
+  return useMutationWithToast({
+    mutationFn: brandingApi.applyPreset,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.admin.branding() });
+      push({ variant: "success", message: "Theme applied" });
+    },
+  });
+};

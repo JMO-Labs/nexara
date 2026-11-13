@@ -15,9 +15,11 @@ import { PostBody } from "./PostBody";
 import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
+import { BookmarkButton } from "./BookmarkButton";
 import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
 import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
+import { PromptBadges } from "./PromptBadges";
 import type { Post } from "@/lib/api/posts";
 
 export interface PostCardProps {
@@ -82,6 +84,10 @@ export function PostCard({
           subgroupSlug={post.subgroup_slug ?? null}
         />
       </div>
+      <PromptBadges
+        isPromptSummary={post.is_prompt_summary}
+        replyToPromptId={post.reply_to_prompt_id}
+      />
       <PostBody content={post.content} truncate={truncateBody} />
       {post.link_previews && post.link_previews.length > 0 ? (
         <div
@@ -105,6 +111,12 @@ export function PostCard({
         commentCount={post.comment_count}
         onReact={(e) => reactMut.mutate(e)}
         onCommentClick={() => setCommentsOpen((v) => !v)}
+        extra={
+          <BookmarkButton
+            postId={post.id}
+            isBookmarked={post.is_bookmarked ?? false}
+          />
+        }
       />
       {commentsOpen ? (
         <CommentThread

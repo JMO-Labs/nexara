@@ -16,10 +16,11 @@ from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth_magic_link import router as magic_link_router
+from app.api.v1.auth_oidc import router as oidc_router
+from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, get_optional_user
+from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
-from app.core.security import get_jwks
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -28,18 +29,14 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     LogoutResponse,
-    PasswordResetConfirmPayload,
-    PasswordResetRequestPayload,
     RegisterRequest,
     TwoFactorEnrollResponse,
     TwoFactorLoginRequest,
     TwoFactorVerifyRequest,
     TwoFactorVerifyResponse,
 )
-from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
 from app.services.notification_service import NotificationService
-from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -150,7 +147,7 @@ async def register(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=_uuid.UUID(settings.COMMUNITY_ID),
-        event_bus=event_bus,
+        dispatcher=get_dispatcher(),
     )
     svc = AuthService(db, settings, notification_service=notification_svc)
     result = await svc.register(
@@ -309,101 +306,6 @@ async def login_2fa(
     )
 
 
-# ── Password Reset ───────────────────────────────────────────────────────
-
-
-@router.post("/password-reset/request", response_model=MessageResponse)
-async def request_password_reset(
-    body: PasswordResetRequestPayload,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """
-    @brief Request a password reset email.
-
-    Always returns the same response to prevent account enumeration.
-    """
-    svc = AuthService(db, settings)
-    await svc.request_password_reset(body.email)
-    return MessageResponse(message=_("If that email is registered, a reset link has been sent"))
-
-
-@router.post("/password-reset/confirm", response_model=MessageResponse)
-async def confirm_password_reset(
-    body: PasswordResetConfirmPayload,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """@brief Apply a new password using a valid reset token."""
-    svc = AuthService(db, settings)
-    await svc.reset_password(body.token, body.new_password)
-    return MessageResponse(message=_("Password has been reset successfully"))
-
-
-# ── OIDC (deprecated, redirects to multi-provider OAuth) ───────────────────
-
-
-@router.get("/oidc/login", deprecated=True)
-async def oidc_login_deprecated(
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """
-    @brief Deprecated — redirects to /oauth/{slug}/login for the default provider.
-    """
-    from starlette.responses import RedirectResponse
-
-    from app.core.exceptions import AuthenticationError
-    from app.services.oauth.provider_manager import ProviderManager
-
-    manager = ProviderManager(db)
-    community_id = uuid.UUID(settings.COMMUNITY_ID)
-    providers = await manager.get_enabled_providers(community_id)
-
-    if not providers:
-        raise AuthenticationError(message=_("No OAuth providers configured"))
-
-    slug = providers[0].slug
-    return RedirectResponse(url=f"/api/v1/oauth/{slug}/login", status_code=307)
-
-
-@router.get("/oidc/callback", deprecated=True)
-async def oidc_callback_deprecated(
-    code: str,
-    state: str,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    oidc_state: str | None = Cookie(None),
-) -> Any:
-    """
-    @brief Deprecated — redirects to /oauth/{slug}/callback for the default provider.
-    """
-    from starlette.responses import RedirectResponse
-
-    from app.core.exceptions import AuthenticationError
-    from app.services.oauth.provider_manager import ProviderManager
-
-    manager = ProviderManager(db)
-    community_id = uuid.UUID(settings.COMMUNITY_ID)
-    providers = await manager.get_enabled_providers(community_id)
-
-    if not providers:
-        raise AuthenticationError(message=_("No OAuth providers configured"))
-
-    slug = providers[0].slug
-    return RedirectResponse(
-        url=f"/api/v1/oauth/{slug}/callback?code={code}&state={state}",
-        status_code=307,
-    )
-
-
-# ── JWKS ─────────────────────────────────────────────────────────────────
-
-
-@router.get("/.well-known/jwks.json")
-async def jwks(settings: Settings = Depends(get_settings)) -> Any:
-    """@brief Serve the JSON Web Key Set for JWT verification by external services."""
-    return get_jwks(settings)
-
-
 router.include_router(magic_link_router, prefix="/magic-link")
+router.include_router(password_reset_router)
+router.include_router(oidc_router)

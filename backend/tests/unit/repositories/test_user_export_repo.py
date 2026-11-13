@@ -70,3 +70,9 @@ async def test_update_status_missing_raises() -> None:
     repo, _ = _repo(None)
     with pytest.raises(LookupError):
         await repo.update_status(uuid.uuid4(), "failed")
+
+
+async def test_commit_commits_session() -> None:
+    repo, session = _repo()
+    await repo.commit()
+    session.commit.assert_awaited_once()

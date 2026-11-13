@@ -38,13 +38,13 @@ def _get_redis() -> Redis:
     return get_pool(get_settings(), DB_CACHE)
 
 
-def _get_enqueue() -> Callable[[str], Any]:
+def _get_enqueue() -> Callable[[str, str], Any]:
     """@brief Return a callable that queues ``generate_user_export``."""
 
-    def enqueue(export_id: str) -> Any:
-        from app.tasks.celery_app import celery_app
+    def enqueue(user_id: str, export_id: str) -> Any:
+        from app.tasks.export_tasks import generate_user_export
 
-        return celery_app.send_task("app.tasks.export_tasks.generate_user_export", args=[export_id])
+        return generate_user_export.apply_async((user_id, export_id), queue="default")
 
     return enqueue
 
@@ -54,7 +54,7 @@ async def request_export(
     user: User = Depends(get_current_user),
     repo: UserExportRepository = Depends(_get_repo),
     redis: Redis = Depends(_get_redis),
-    enqueue: Callable[[str], Any] = Depends(_get_enqueue),
+    enqueue: Callable[[str, str], Any] = Depends(_get_enqueue),
 ) -> Any:
     """@brief Create an export (1 per user per day) and enqueue generation."""
     key = f"export_request:{user.id}:{datetime.now(UTC).date().isoformat()}"
@@ -63,7 +63,7 @@ async def request_export(
     try:
         row = await repo.create(user.id, user.community_id)
         await repo.commit()
-        enqueue(str(row.id))
+        enqueue(str(user.id), str(row.id))
     except Exception:
         await redis.delete(key)  # no export exists; don't lock the user out
         raise

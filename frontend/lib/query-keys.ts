@@ -81,6 +81,7 @@ export const qk = {
       ["search", q, scope ?? "all"] as const,
   },
   admin: {
+    ai: () => ["admin", "ai"] as const,
     users: (filters?: Record<string, unknown>) =>
       ["admin", "users", filters ?? {}] as const,
     branding: () => ["admin", "branding"] as const,
@@ -92,6 +93,9 @@ export const qk = {
     interestsAnalytics: () => ["admin", "interests-analytics"] as const,
     prompts: () => ["admin", "prompts"] as const,
     retention: () => ["admin", "retention"] as const,
+    plugins: () => ["admin", "plugins"] as const,
+    plugin: (id: string) => ["admin", "plugins", id] as const,
+    pluginKeys: (id: string) => ["admin", "plugins", id, "keys"] as const,
   },
   settings: {
     profile: () => ["settings", "profile"] as const,

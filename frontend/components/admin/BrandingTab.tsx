@@ -14,10 +14,17 @@ import {
   checkPairs,
   type ColorKey,
 } from "@/lib/branding-palette";
+import {
+  BrandingExtraFields,
+  extraChanges,
+  extraInitial,
+  extraValid,
+} from "./BrandingExtraFields";
 import { BrandingPreview } from "./BrandingPreview";
 import { CSSEditor } from "./CSSEditor";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
+import { ThemeGallery } from "./ThemeGallery";
 import { AdminLoading, AdminNotice } from "./AdminState";
 
 const ACCENT_ERROR =
@@ -35,6 +42,8 @@ function BrandingForm({ initial }: { initial: Branding }) {
   const [mono, setMono] = useState(
     initial.font_family_mono ?? "JetBrains Mono",
   );
+  const extraInit = extraInitial(initial);
+  const [extra, setExtra] = useState(extraInit);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const changed = COLOR_FIELDS.filter(
@@ -47,7 +56,11 @@ function BrandingForm({ initial }: { initial: Branding }) {
       ? ACCENT_ERROR
       : undefined;
   const canSave =
-    !accentError && !invalid && name.trim().length > 0 && !update.isPending;
+    !accentError &&
+    !invalid &&
+    extraValid(extra) &&
+    name.trim().length > 0 &&
+    !update.isPending;
   const warnings = checkPairs(colors).filter((p) => !p.ok);
 
   const submit = (e: React.FormEvent) => {
@@ -58,6 +71,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
       {
         community_name: name.trim(),
         tagline,
+        ...extraChanges(extra, extraInit),
         ...Object.fromEntries(changed.map((k) => [k, colors[k]])),
         ...(font !== (initial.font_family ?? "Inter")
           ? { font_family: font }
@@ -106,7 +120,9 @@ function BrandingForm({ initial }: { initial: Branding }) {
           value={mono}
           onChange={setMono}
         />
+        <BrandingExtraFields value={extra} onChange={setExtra} />
       </div>
+      <ThemeGallery current={initial} />
       {warnings.map((w) => (
         <p key={w.id} role="status" className="text-sm text-amber-700">
           {w.label}: {w.ratio.toFixed(2)}:1 is below {w.min}:1 (warning only).
@@ -132,9 +148,16 @@ export function BrandingTab() {
   if (isLoading) return <AdminLoading />;
   if (error || !data)
     return <AdminNotice tone="error">Failed to load branding.</AdminNotice>;
+  // Remount on server change (e.g. preset applied) so local state resets.
+  // Custom CSS is excluded so saving CSS keeps unsaved form edits.
+  const formKey = JSON.stringify({
+    ...data,
+    custom_css: undefined,
+    custom_css_enabled: undefined,
+  });
   return (
     <div className="flex flex-col gap-10">
-      <BrandingForm initial={data} />
+      <BrandingForm key={formKey} initial={data} />
       <section
         aria-labelledby="custom-css-heading"
         className="flex flex-col gap-4"
