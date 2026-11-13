@@ -130,3 +130,22 @@ async def test_record_success_resets_counter():
     repo, _ = _repo(one=sub)
     await repo.record_success(uuid.uuid4())
     assert sub.failure_count == 0
+
+
+async def test_update_enable_resets_failure_count():
+    sub = _sub(enabled=False, failure_count=7)
+    repo, _ = _repo(one=sub)
+    await repo.update(uuid.uuid4(), enabled=True)
+    assert sub.enabled is True and sub.failure_count == 0
+
+
+async def test_record_failure_missing_is_noop():
+    repo, session = _repo(one=None)
+    await repo.record_failure(uuid.uuid4())
+    session.flush.assert_not_awaited()
+
+
+async def test_record_success_missing_is_noop():
+    repo, session = _repo(one=None)
+    await repo.record_success(uuid.uuid4())
+    session.flush.assert_not_awaited()

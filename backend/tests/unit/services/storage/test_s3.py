@@ -192,3 +192,46 @@ class TestS3HealthCheck:
 
         with patch.object(backend._session, "client", return_value=mock_ctx):
             assert await backend.check_health() is False
+
+
+class TestS3Streaming:
+    """@brief Verify get_stream() and put_file() use streaming S3 APIs."""
+
+    async def test_put_file_uses_upload_fileobj(self, backend):
+        import io
+
+        mock_s3 = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_s3
+        fobj = io.BytesIO(b"abc")
+        with patch.object(backend._session, "client", return_value=mock_ctx):
+            await backend.put_file("exports/a.zip", fobj, "application/zip")
+        mock_s3.upload_fileobj.assert_awaited_once()
+        args, kwargs = mock_s3.upload_fileobj.await_args
+        assert args[0] is fobj
+        assert kwargs["ExtraArgs"] == {"ContentType": "application/zip"}
+
+    async def test_get_stream_yields_chunks(self, backend):
+        async def _chunks(_size):
+            for c in (b"a", b"b"):
+                yield c
+
+        body = AsyncMock()
+        body.iter_chunks = _chunks
+        mock_s3 = AsyncMock()
+        mock_s3.get_object.return_value = {"Body": body}
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_s3
+        with patch.object(backend._session, "client", return_value=mock_ctx):
+            out = [c async for c in backend.get_stream("k")]
+        assert out == [b"a", b"b"]
+
+    async def test_get_stream_missing_key(self, backend):
+        mock_s3 = AsyncMock()
+        mock_s3.get_object.side_effect = _make_client_error("NoSuchKey")
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_s3
+        with patch.object(backend._session, "client", return_value=mock_ctx):
+            with pytest.raises(StorageKeyNotFoundError):
+                async for _ in backend.get_stream("k"):
+                    pass

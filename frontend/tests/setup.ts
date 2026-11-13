@@ -20,6 +20,15 @@ if (typeof window !== "undefined" && !window.matchMedia) {
   }));
 }
 
+// jsdom lacks ResizeObserver (Radix popper, used by tooltips).
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // jsdom lacks scrollIntoView (Radix Select calls it on open).
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};

@@ -111,6 +111,15 @@ class TestSettings:
         with pytest.raises(KeyError):
             ctx.settings.set("undeclared", 1)
 
+    def test_mapping_protocol(self):
+        ctx = _ctx([], settings={"greeting": "hi", "ignored": 1})
+        assert list(ctx.settings) == ["greeting"]
+        assert len(ctx.settings) == 1
+        del ctx.settings["greeting"]
+        assert len(ctx.settings) == 0
+        with pytest.raises(KeyError):
+            del ctx.settings["greeting"]
+
 
 class TestStorage:
     async def test_requires_permission(self):
@@ -130,6 +139,24 @@ class TestStorage:
         ka = a._storage.put.await_args[0][0]
         kb = b._storage.put.await_args[0][0]
         assert ka != kb and str(other) in kb
+
+    async def test_delete_namespaced(self):
+        ctx = _ctx(["storage_access"])
+        await ctx.storage.delete("a.txt")
+        ctx._storage.delete.assert_awaited_with(f"plugins/hello/{COMMUNITY}/a.txt")
+
+    async def test_get_returns_bytes(self):
+        ctx = _ctx(["storage_access"])
+        ctx._storage.get.return_value = bytearray(b"x")
+        assert await ctx.storage.get("a.txt") == b"x"
+        ctx._storage.get.assert_awaited_with(f"plugins/hello/{COMMUNITY}/a.txt")
+
+    @pytest.mark.parametrize("found", [True, False])
+    async def test_exists_namespaced(self, found):
+        ctx = _ctx(["storage_access"])
+        ctx._storage.exists.return_value = found
+        assert await ctx.storage.exists("a.txt") is found
+        ctx._storage.exists.assert_awaited_with(f"plugins/hello/{COMMUNITY}/a.txt")
 
     @pytest.mark.parametrize("key", ["../other/a", "/abs", "a/../../b", ""])
     async def test_rejects_escape(self, key):
