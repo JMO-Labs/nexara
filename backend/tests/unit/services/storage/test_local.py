@@ -142,3 +142,20 @@ class TestLocalStreaming:
         with pytest.raises(StorageKeyNotFoundError):
             async for _ in storage.get_stream("originals/missing-key"):
                 pass
+
+    async def test_get_stream_os_error_wrapped(self, storage):
+        from unittest.mock import patch
+
+        await storage.put("originals/abcd1234-x.bin", b"data", "application/octet-stream")
+        with patch("app.services.storage.local.aiofiles.open", side_effect=OSError("io")):
+            with pytest.raises(StorageError):
+                async for _ in storage.get_stream("originals/abcd1234-x.bin"):
+                    pass
+
+    async def test_put_file_os_error_wrapped(self, storage):
+        import io
+        from unittest.mock import patch
+
+        with patch("app.services.storage.local.aiofiles.open", side_effect=OSError("io")):
+            with pytest.raises(StorageError):
+                await storage.put_file("exports/abcd1234.zip", io.BytesIO(b"x"), "application/zip")

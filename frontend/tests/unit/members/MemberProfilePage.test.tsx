@@ -28,6 +28,12 @@ describe("MemberProfilePage", () => {
     expect(screen.getByRole("button", { name: /^Block / })).toBeInTheDocument();
   });
 
+  it("keeps the Nudge button alongside Block", () => {
+    asUser("u1");
+    render(<MemberProfilePage />);
+    expect(screen.getByRole("button", { name: /Nudge/ })).toBeInTheDocument();
+  });
+
   it("hides Block on your own profile", () => {
     asUser("u2");
     render(<MemberProfilePage />);

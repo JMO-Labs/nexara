@@ -6,6 +6,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/ui";
+import { NudgeButton } from "@/components/engagement/NudgeButton";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import { BlockButton } from "@/components/common/BlockButton";
 import { useSession } from "@/stores/session";
@@ -27,9 +28,12 @@ export default function MemberProfilePage() {
           <h1 className="text-3xl font-black tracking-tight">Member profile</h1>
           <p className="text-sm text-ink/70">User ID: {userId}</p>
         </div>
-        {viewerId && !isSelf ? (
-          <BlockButton userId={userId} displayName="this member" />
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <NudgeButton userId={userId} />
+          {viewerId && !isSelf ? (
+            <BlockButton userId={userId} displayName="this member" />
+          ) : null}
+        </div>
       </div>
       <Tabs value={currentTab}>
         <div className="overflow-x-auto">
