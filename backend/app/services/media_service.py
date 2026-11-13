@@ -47,6 +47,7 @@ from app.tasks.media_tasks import generate_thumbnail
 logger = structlog.get_logger(__name__)
 
 MAX_IMAGE_SIZE = 20 * 1024 * 1024
+MAX_POST_MEDIA = 10  # max media items per post
 """@brief Maximum upload size in bytes (20 MB)."""
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -295,7 +296,7 @@ class MediaService:
         """
         from app.core.exceptions import AuthorizationError
 
-        if len(media_ids) > 10:
+        if len(media_ids) > MAX_POST_MEDIA:
             raise AppError(
                 code="TOO_MANY_MEDIA",
                 message=_("Maximum 10 media items per post."),

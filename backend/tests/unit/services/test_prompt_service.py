@@ -302,6 +302,83 @@ class TestFinaliseExpired:
         post_repo.list_replies_for_prompt.assert_awaited_once_with(tracker.prompt_id, limit=50)
 
 
+class TestSummaryMediaAttach:
+    async def _run(
+        self,
+        prompt_repo: AsyncMock,
+        post_repo: AsyncMock,
+        session: AsyncMock,
+        replies: list[dict],
+    ) -> tuple[AsyncMock, uuid.UUID]:
+        attacher = AsyncMock()
+        svc = PromptService(
+            prompt_repo=prompt_repo,
+            post_repo=post_repo,
+            community_id=COMMUNITY_ID,
+            session=session,
+            media_attacher=attacher,
+        )
+        prompt = _make_prompt()
+        tracker = MagicMock(spec=PromptPost)
+        tracker.prompt_id = prompt.id
+        tracker.post_id = uuid.uuid4()
+        tracker.response_count = len(replies)
+        prompt_repo.list_expired_unfinalised.return_value = [tracker]
+        prompt_repo.get_by_id.return_value = prompt
+        post_repo.list_replies_for_prompt.return_value = replies
+        post_repo.get_by_id.return_value = MagicMock(spec=Post)
+        summary_id = uuid.uuid4()
+
+        def _fill(p: Post) -> Post:
+            p.id = summary_id
+            return p
+
+        post_repo.create.side_effect = _fill
+        await svc.finalise_expired(datetime.now(UTC))
+        return attacher, summary_id
+
+    @pytest.mark.asyncio
+    async def test_attaches_both_media_in_order(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        m1, m2 = uuid.uuid4(), uuid.uuid4()
+        replies = [{"id": uuid.uuid4(), "media_ids": [m1]}, {"id": uuid.uuid4(), "media_ids": [m2]}]
+        attacher, sid = await self._run(prompt_repo, post_repo, session, replies)
+        attacher.assert_awaited_once_with(sid, [m1, m2])
+
+    @pytest.mark.asyncio
+    async def test_dedupes_preserving_order(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        m1, m2 = uuid.uuid4(), uuid.uuid4()
+        replies = [
+            {"id": uuid.uuid4(), "media_ids": [m1, m2]},
+            {"id": uuid.uuid4(), "media_ids": [m1]},
+        ]
+        attacher, sid = await self._run(prompt_repo, post_repo, session, replies)
+        attacher.assert_awaited_once_with(sid, [m1, m2])
+
+    @pytest.mark.asyncio
+    async def test_caps_at_post_media_limit(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        from app.services.media_service import MAX_POST_MEDIA
+
+        ids = [uuid.uuid4() for _ in range(MAX_POST_MEDIA + 3)]
+        replies = [{"id": uuid.uuid4(), "media_ids": ids}]
+        attacher, sid = await self._run(prompt_repo, post_repo, session, replies)
+        attacher.assert_awaited_once_with(sid, ids[:MAX_POST_MEDIA])
+
+    @pytest.mark.asyncio
+    async def test_no_media_skips_attacher(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        attacher, _sid = await self._run(
+            prompt_repo, post_repo, session, [{"id": uuid.uuid4(), "media_ids": []}]
+        )
+        attacher.assert_not_awaited()
+
+
 class TestCreatePrompt:
     @pytest.mark.asyncio
     async def test_subgroup_scope_requires_subgroup(self, service: PromptService) -> None:

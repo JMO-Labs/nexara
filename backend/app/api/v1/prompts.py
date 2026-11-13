@@ -15,6 +15,7 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.media_repo import MediaRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
@@ -55,6 +56,7 @@ def _build_service(
         community_id=community_id,
         session=db,
         notification_service=notif,
+        media_attacher=MediaRepository(db).attach_to_post,
     )
 
 
