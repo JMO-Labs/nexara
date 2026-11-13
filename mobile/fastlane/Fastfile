@@ -9,7 +9,7 @@ platform :android do
   lane :beta do
     upload_to_play_store(
       track: "internal",
-      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      aab: "build/app/outputs/bundle/release/app-release.aab",
       package_name: "dev.jmolabs.nexara_mobile",
       json_key_data: ENV.fetch("PLAY_JSON_KEY_DATA"),
       skip_upload_metadata: true,
@@ -27,10 +27,13 @@ platform :ios do
       issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
       key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_CONTENT")
     )
-    sh("flutter", "build", "ipa", "--release", "--export-options-plist=ios/ExportOptions.plist")
+    # `sh` runs inside mobile/fastlane/; build from the Flutter project root.
+    Dir.chdir("..") do
+      sh("flutter", "build", "ipa", "--release", "--export-options-plist=ios/ExportOptions.plist")
+    end
     upload_to_testflight(
       api_key: api_key,
-      ipa: "../build/ios/ipa/nexara_mobile.ipa",
+      ipa: "build/ios/ipa/nexara_mobile.ipa",
       skip_waiting_for_build_processing: true
     )
   end

@@ -36,7 +36,8 @@ Required CI variables (protected, masked): `NEXARA_KEYSTORE_BASE64`,
 `NEXARA_KEYSTORE_PASSWORD`, `NEXARA_KEY_ALIAS`, `NEXARA_KEY_PASSWORD`,
 `PLAY_JSON_KEY_DATA`, `APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`,
 `APP_STORE_CONNECT_API_KEY_CONTENT`. The iOS lane also needs a macOS runner tagged `macos`
-and `ios/ExportOptions.plist`.
+and `ios/ExportOptions.plist`. The macOS runner is not containerised, so it must provide
+the pinned Flutter (`cat mobile/.flutter-version`) and fastlane itself; the pin is not applied there.
 
 `wq-workflows/mobile-build.yml` is promoted by the owner to `.github/workflows/mobile-build.yml`
 (the workflow's own `paths` filter already references that final path).

@@ -16,6 +16,9 @@ bash scripts/wq-ci-integration.sh || rc=1
 
 (cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npm run build) || rc=1
 
+# Mobile pipeline static checks (pin parity, signing, fastlane).
+bash scripts/test-mobile-ci.sh || rc=1
+
 # Mobile (Flutter): install the SDK pinned in mobile/.flutter-version when absent, then analyze (infos non-fatal) and test.
 if [ -d mobile ]; then
   ( if ! command -v flutter >/dev/null; then

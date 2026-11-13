@@ -3,6 +3,20 @@
 # @brief Flutter analyze and unit tests for the mobile app.
 ##
 
+# Static pipeline checks: Flutter pin parity, signing, Fastlane, docs (nexara#363).
+lint:mobile-ci:
+  stage: lint
+  image: ubuntu:24.04
+  rules:
+    - changes:
+        - mobile/**/*
+        - scripts/test-mobile-ci.sh
+        - scripts/wq-ci-test.sh
+        - .gitlab/ci/*.yml
+        - wq-workflows/*
+  script:
+    - bash scripts/test-mobile-ci.sh
+
 test:mobile:
   stage: test
   image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
@@ -48,7 +62,11 @@ build:mobile-aab:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/ && $CI_COMMIT_REF_PROTECTED == "true"
   script:
-    - test -n "$NEXARA_KEYSTORE_BASE64" || { echo "NEXARA_KEYSTORE_BASE64 not set"; exit 1; }
+    # All four must be set, else gradle silently falls back to the debug key.
+    - |
+      for v in NEXARA_KEYSTORE_BASE64 NEXARA_KEYSTORE_PASSWORD NEXARA_KEY_ALIAS NEXARA_KEY_PASSWORD; do
+        [ -n "$(printenv "$v")" ] || { echo "$v not set"; exit 1; }
+      done
     - cd mobile
     - flutter create . --platforms android --org dev.jmolabs --project-name nexara_mobile
     - git clean -fdq lib test

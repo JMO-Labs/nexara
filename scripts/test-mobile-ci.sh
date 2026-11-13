@@ -26,6 +26,9 @@ chk "CI builds release unsigned fallback" 'grep -q "build apk --release" .gitlab
 chk "Fastfile has android+ios beta" 'grep -q "platform :android" mobile/fastlane/Fastfile && grep -q "platform :ios" mobile/fastlane/Fastfile && [ "$(grep -c "lane :beta" mobile/fastlane/Fastfile)" -ge 2 ]'
 chk "fastlane jobs manual+protected" 'grep -q "when: manual" .gitlab/ci/test-mobile.yml && grep -q "fastlane:android-beta" .gitlab/ci/test-mobile.yml && grep -q "fastlane:ios-beta" .gitlab/ci/test-mobile.yml'
 chk "wq-workflows target dir matches" '[ -d .github/workflows ] && [ -f wq-workflows/mobile-build.yml ] && grep -q "^name: mobile-build" wq-workflows/mobile-build.yml'
+chk "Fastfile paths relative to project root" '! grep -q "\"\.\./build" mobile/fastlane/Fastfile && grep -q "Dir.chdir" mobile/fastlane/Fastfile'
+chk "AAB job checks all signing vars" 'grep -q "NEXARA_KEY_PASSWORD; do" .gitlab/ci/test-mobile.yml'
+chk "lint job runs this script" 'grep -q "lint:mobile-ci:" .gitlab/ci/test-mobile.yml && grep -q "bash scripts/test-mobile-ci.sh" .gitlab/ci/test-mobile.yml'
 for v in NEXARA_KEYSTORE_BASE64 NEXARA_KEYSTORE_PASSWORD NEXARA_KEY_ALIAS NEXARA_KEY_PASSWORD PLAY_JSON_KEY_DATA APP_STORE_CONNECT_API_KEY_ID; do
   chk "README documents $v" 'grep -q "$v" mobile/README.md'
 done
