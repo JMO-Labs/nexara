@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.core.exceptions import NotFoundError
 from app.models.post import Post
 from app.models.prompt import Prompt, PromptPost
 from app.repositories.post_repo import PostRepository
@@ -442,8 +443,32 @@ class TestPromptPostDetail:
     async def test_get_prompt_post_not_found(
         self, service: PromptService, prompt_repo: AsyncMock
     ) -> None:
-        from app.core.exceptions import NotFoundError
-
         prompt_repo.get_prompt_post.return_value = None
         with pytest.raises(NotFoundError):
             await service.get_prompt_post(uuid.uuid4())
+
+    async def test_returns_envelope(
+        self, service: PromptService, post_repo: AsyncMock, prompt_repo: AsyncMock
+    ) -> None:
+        pid, viewer = uuid.uuid4(), uuid.uuid4()
+        pp = MagicMock(spec=PromptPost)
+        pp.community_id = COMMUNITY_ID
+        prompt_repo.get_prompt_post.return_value = pp
+        post_repo.list_responses.return_value = ([{"id": "x"}], "cur")
+
+        out = await service.list_responses(pid, viewer, limit=5, cursor=None)
+
+        assert out == {"items": [{"id": "x"}], "next_cursor": "cur", "has_more": True}
+        prompt_repo.get_prompt_post.assert_awaited_once_with(pid)
+        post_repo.list_responses.assert_awaited_once_with(
+            COMMUNITY_ID, pid, viewer_id=viewer, cursor=None, limit=5
+        )
+
+    @pytest.mark.asyncio
+    async def test_404_when_prompt_post_missing(
+        self, service: PromptService, post_repo: AsyncMock, prompt_repo: AsyncMock
+    ) -> None:
+        prompt_repo.get_prompt_post.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.list_responses(uuid.uuid4(), uuid.uuid4())
+        post_repo.list_responses.assert_not_awaited()

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -27,6 +28,7 @@ from app.schemas.prompt import (
     PromptSummary,
     PromptUpdate,
 )
+from app.services.media_service import MAX_POST_MEDIA
 
 logger = structlog.get_logger(__name__)
 
@@ -85,12 +87,14 @@ class PromptService:
         session: AsyncSession,
         *,
         notification_service: Any | None = None,
+        media_attacher: Callable[[uuid.UUID, list[uuid.UUID]], Awaitable[None]] | None = None,
     ) -> None:
         self._repo = prompt_repo
         self._post_repo = post_repo
         self._community_id = community_id
         self._session = session
         self._notifications = notification_service
+        self._media_attacher = media_attacher
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -218,6 +222,7 @@ class PromptService:
                         type="prompt",
                         payload={
                             "prompt_id": str(prompt.id),
+                            "prompt_title": prompt.title,
                             "post_id": str(post.id),
                             "message": prompt.notification_body or prompt.title,
                             "link": f"/app/posts/{post.id}",
@@ -230,21 +235,32 @@ class PromptService:
 
     # ── Summary ───────────────────────────────────────────────────────
 
-    async def _collect_summary_media_ids(self, prompt_id: uuid.UUID) -> list[uuid.UUID]:
+    async def _collect_summary_media_ids(
+        self, prompt_id: uuid.UUID, subgroup_id: uuid.UUID | None = None
+    ) -> list[uuid.UUID]:
         """
-        @brief Collect media IDs from replies to a prompt, up to 9 total.
+        @brief Collect media IDs from replies, deduped, in response order.
+
+        Only replies the summary audience can already see are used: community
+        replies always; subgroup replies only when they belong to the
+        summary's subgroup; private replies never.
 
         @param prompt_id Prompt UUID.
-        @return List of media IDs (max 9) from prompt replies.
+        @param subgroup_id Summary subgroup (None for a community summary).
+        @return Media IDs capped at MAX_POST_MEDIA.
         """
         replies = await self._post_repo.list_replies_for_prompt(prompt_id, limit=50)
-        media_ids: list[uuid.UUID] = []
+        seen: dict[uuid.UUID, None] = {}
         for reply in replies:
-            if "media_ids" in reply:
-                media_ids.extend(reply["media_ids"])
-            if len(media_ids) >= 9:
-                break
-        return media_ids[:9]
+            vis = reply.get("visibility")
+            if vis == "subgroup":
+                if subgroup_id is None or reply.get("subgroup_id") != subgroup_id:
+                    continue
+            elif vis != "community":
+                continue
+            for mid in reply.get("media_ids", []):
+                seen.setdefault(mid, None)
+        return list(seen)[:MAX_POST_MEDIA]
 
     async def finalise_expired(self, now: datetime | None = None) -> int:
         """
@@ -270,17 +286,20 @@ class PromptService:
             summary_post_id: uuid.UUID | None = None
             if prompt and prompt.generate_summary:
                 summary_content = self._build_summary_content(prompt, tracker)
-                media_ids = await self._collect_summary_media_ids(tracker.prompt_id)  # noqa: F841
+                sg_id = prompt.subgroup_id if prompt.scope == "subgroup" else None
+                media_ids = await self._collect_summary_media_ids(tracker.prompt_id, sg_id)
                 summary = Post(
                     community_id=self._community_id,
+                    visibility="subgroup" if sg_id else "community",
+                    subgroup_id=sg_id,
                     author_id=prompt.created_by,
                     content=summary_content,
                     is_pinned=False,
                 )
                 summary = await self._post_repo.create(summary)
                 summary_post_id = summary.id
-                # TODO: Attach collected media_ids to summary post if needed
-                # Currently collected media_ids are available but not attached
+                if media_ids and self._media_attacher:
+                    await self._media_attacher(summary.id, media_ids)
 
                 if self._notifications:
                     try:
@@ -290,6 +309,7 @@ class PromptService:
                             payload={
                                 "prompt_id": str(prompt.id),
                                 "summary_post_id": str(summary.id),
+                                "response_count": tracker.response_count,
                                 "message": _("Prompt summary is ready"),
                                 "link": f"/app/posts/{summary.id}",
                             },
@@ -344,3 +364,29 @@ class PromptService:
     def _detail(pp: PromptPost, prompt: Prompt) -> PromptPostDetail:
         base = PromptPostResponse.model_validate(pp).model_dump()
         return PromptPostDetail(**base, prompt=PromptSummary.model_validate(prompt))
+
+    async def list_responses(
+        self,
+        prompt_post_id: uuid.UUID,
+        viewer_id: uuid.UUID,
+        *,
+        limit: int = 20,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        @brief List posts replying to a prompt post, newest first.
+
+        @param prompt_post_id PromptPost UUID.
+        @param viewer_id Viewer UUID (block filter).
+        @param limit Page size.
+        @param cursor Opaque cursor from a previous page.
+        @return Dict with items, next_cursor, has_more.
+        @throws NotFoundError If the prompt post does not exist.
+        """
+        pp = await self._repo.get_prompt_post(prompt_post_id)
+        if pp is None or pp.community_id != self._community_id:
+            raise NotFoundError(message=_("Prompt post not found"))
+        items, next_cursor = await self._post_repo.list_responses(
+            self._community_id, prompt_post_id, viewer_id=viewer_id, cursor=cursor, limit=limit
+        )
+        return {"items": items, "next_cursor": next_cursor, "has_more": next_cursor is not None}

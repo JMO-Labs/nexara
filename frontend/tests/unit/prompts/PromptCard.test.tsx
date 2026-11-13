@@ -1,6 +1,6 @@
 /**
- * @file tests/unit/feed/PromptPostCard.test.tsx
- * @brief PromptPostCard component tests (render, reply callback, live refresh).
+ * @file tests/unit/prompts/PromptCard.test.tsx
+ * @brief PromptPostCard component tests (render, modal, live refresh).
  */
 // Mock the hook BEFORE importing the component
 import { vi } from "vitest";

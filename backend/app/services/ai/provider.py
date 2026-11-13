@@ -72,6 +72,10 @@ class AIProvider(ABC):
         """@brief Embed text. @return (vector, cost_cents, token_count)."""
 
     @abstractmethod
+    async def ping(self) -> None:
+        """@brief Cheap network probe; raises if the provider is unreachable or rejects auth."""
+
+    @abstractmethod
     async def count_tokens(self, text: str) -> CountResult:
         """@brief Count tokens. @return (count, cost_cents, token_count)."""
 
