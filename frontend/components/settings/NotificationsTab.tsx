@@ -56,7 +56,7 @@ export function NotificationsTab() {
     (key: keyof NotificationPreferences, value: boolean | number) => {
       if (debounceTimer) clearTimeout(debounceTimer);
       const timer = setTimeout(() => {
-        mutate({ [key]: value });
+        mutate({ [key]: value } as Partial<NotificationPreferences>);
       }, 400);
       setDebounceTimer(timer);
     },
