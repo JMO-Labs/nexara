@@ -17,6 +17,7 @@ from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.services.notification_service import NotificationService
 from app.services.notifications.dispatcher import Dispatcher
+from app.services.realtime.event_bus import EventBus
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 USER_ID = uuid.uuid4()
@@ -112,13 +113,14 @@ class TestWrappers:
 class TestDispatcherResolution:
     """@brief Dispatcher fallback when none is injected."""
 
-    def test_uses_process_wide_dispatcher_by_default(self):
-        shared = MagicMock(spec=Dispatcher)
-        with patch("app.core.dependencies.get_dispatcher", return_value=shared) as getter:
+    def test_builds_dispatcher_from_event_bus(self):
+        bus = MagicMock(spec=EventBus)
+        with patch("app.services.notification_service.Dispatcher") as ctor:
             svc = NotificationService(
                 AsyncMock(spec=NotificationRepository),
                 AsyncMock(spec=SettingsRepository),
                 COMMUNITY_ID,
+                event_bus=bus,
             )
-        getter.assert_called_once_with()
-        assert svc._dispatcher is shared
+        ctor.assert_called_once_with(bus)
+        assert svc._dispatcher is ctor.return_value
