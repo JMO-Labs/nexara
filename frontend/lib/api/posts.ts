@@ -87,6 +87,7 @@ export interface Post {
     display_name: string;
     avatar_url: string | null;
   } | null;
+  is_bookmarked?: boolean;
   is_prompt_post?: boolean;
   is_prompt_summary?: boolean;
   reply_to_prompt_id?: string | null;

@@ -13,6 +13,8 @@ import { PostComposer } from "@/components/feed/PostComposer";
 import { KudosComposer } from "@/components/feed/KudosComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
+import { PromptPostCard } from "@/components/feed/PromptPostCard";
+import { useActivePrompts } from "@/hooks/useActivePrompts";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import { NewItemsPill } from "./NewItemsPill";
 
@@ -34,6 +36,11 @@ export function HomeFeed() {
     isError,
     refetch,
   } = useHomeFeed();
+  const { data: prompts } = useActivePrompts();
+  const [replyTo, setReplyTo] = React.useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const reduced = useReducedMotion();
   const tk = useTranslations("kudos");
   const [kudosOpen, setKudosOpen] = React.useState(false);
@@ -74,7 +81,12 @@ export function HomeFeed() {
     <div className="flex flex-col gap-4">
       <NewItemsPill count={pending.length} onClick={onPill} />
       <div ref={composerRef}>
-        <PostComposer />
+        <PostComposer
+          replyToPromptId={replyTo?.id}
+          replyToPromptTitle={replyTo?.title}
+          onClearReplyPrompt={() => setReplyTo(null)}
+          onPosted={() => setReplyTo(null)}
+        />
       </div>
       <div className="flex justify-end">
         <Button
@@ -89,6 +101,20 @@ export function HomeFeed() {
       {kudosOpen ? (
         <KudosComposer open onClose={() => setKudosOpen(false)} />
       ) : null}
+      {prompts && prompts.length > 0 && (
+        <section aria-label="Active prompts" className="flex flex-col gap-2">
+          {prompts.map((p) => (
+            <PromptPostCard
+              key={p.id}
+              post={p}
+              onReply={(id, title) => {
+                setReplyTo({ id, title });
+                focusComposer();
+              }}
+            />
+          ))}
+        </section>
+      )}
       <AnimatePresence mode="wait" initial={false}>
         {isLoading ? (
           <motion.div

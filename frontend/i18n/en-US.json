@@ -732,6 +732,16 @@
         "changed": "Password updated"
       }
     },
+    "plugins": {
+      "staged": "Install staged for review",
+      "installed": "Plugin installed",
+      "uninstalled": "Plugin uninstalled",
+      "enabled": "Plugin enabled",
+      "disabled": "Plugin disabled",
+      "settings_saved": "Plugin settings saved",
+      "key_created": "API key generated",
+      "key_revoked": "API key revoked"
+    },
     "invites": {
       "sent": "Invite sent",
       "revoked": "Invite revoked"

@@ -55,6 +55,7 @@ describe("BottomTabBar", () => {
       "Galleries",
       "Media",
       "Kudos",
+      "Bookmarks",
       "Members",
       "Notifications",
       "Settings",
