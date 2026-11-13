@@ -8,12 +8,14 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import { useToasts } from "@/stores/toasts";
+import { ApiError } from "@/lib/api/errors";
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
       "toasts.success.example": "Success!",
       "toasts.errors.generic": "Something went wrong",
+      "toasts.area.failed": "Area failed",
     };
     return translations[key] || key;
   },
@@ -182,5 +184,38 @@ describe("useMutationWithToast", () => {
     });
 
     expect(onError).toHaveBeenCalledWith(err, undefined, undefined);
+  });
+
+  describe("error message source", () => {
+    const run = async (err: Error) => {
+      const { result } = renderHook(
+        () =>
+          useMutationWithToast({
+            mutationFn: vi.fn().mockRejectedValue(err),
+            errorKey: "toasts.area.failed",
+          }),
+        { wrapper: createWrapper() },
+      );
+      act(() => {
+        result.current.mutate(undefined);
+      });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      return useToasts.getState().items[0]?.message;
+    };
+
+    it("uses the envelope message from a real API error", async () => {
+      const err = ApiError.fromUnknown(409, {
+        error: { code: "conflict", message: "Name taken" },
+      });
+      expect(await run(err)).toBe("Name taken");
+    });
+
+    it("falls back to errorKey for a non-envelope ApiError", async () => {
+      expect(await run(ApiError.fromUnknown(500, "oops"))).toBe("Area failed");
+    });
+
+    it("falls back to errorKey for a plain Error", async () => {
+      expect(await run(new Error("boom"))).toBe("Area failed");
+    });
   });
 });

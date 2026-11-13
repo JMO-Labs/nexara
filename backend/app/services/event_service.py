@@ -20,10 +20,12 @@ from app.core.config import get_settings
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
-from app.models.subgroup import Subgroup, SubgroupMember
+from app.models.subgroup import SubgroupMember
+from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
+from app.repositories.subgroup_repo import SubgroupRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionResponse,
@@ -69,8 +71,10 @@ class EventService(EventIcalMixin):
         calendar_service: CalendarService | None = None,
         token_repo: Any | None = None,
         activity_repo: ActivityRepository | None = None,
+        subgroup_repo: SubgroupRepository | None = None,
     ) -> None:
         self._repo = event_repo
+        self._subgroups = subgroup_repo or SubgroupRepository(session)
         self._community_id = community_id
         self._session = session
         self._actor_id = actor_id
@@ -143,14 +147,10 @@ class EventService(EventIcalMixin):
                 continue
         return out
 
-    async def _subgroup_slug(self, subgroup_id: uuid.UUID | None) -> str | None:
-        """@brief Return the URL slug for a subgroup, or None if not found."""
-        if subgroup_id is None:
-            return None
-        result = await self._session.execute(
-            select(Subgroup.slug).where(Subgroup.id == subgroup_id)
-        )
-        return result.scalar_one_or_none()
+    async def _slug_map(self, events: list[Event]) -> dict[uuid.UUID, str]:
+        """@brief Resolve subgroup slugs for ``events`` in a single query."""
+        ids = list({e.subgroup_id for e in events if e.subgroup_id is not None})
+        return await self._subgroups.get_slugs(ids, self._community_id)
 
     async def _build_response(
         self,
@@ -158,7 +158,11 @@ class EventService(EventIcalMixin):
         *,
         user_id: uuid.UUID | None = None,
         gallery_id: uuid.UUID | None = None,
+        slugs: dict[uuid.UUID, str] | None = None,
     ) -> EventResponse:
+        """@brief Build a response; pass ``slugs`` to skip the per-event lookup."""
+        if slugs is None:
+            slugs = await self._slug_map([event])
         rsvp_counts = await self._repo.rsvp_counts(event.id)
         user_rsvp: RSVPResponse | None = None
         if user_id is not None:
@@ -167,9 +171,7 @@ class EventService(EventIcalMixin):
                 user_rsvp = RSVPResponse.model_validate(att)
 
         slots = self._slots_from_db(event.contribution_slots)
-        # TODO(home-redesign): batch subgroup_slug lookups across event list responses
-        # (currently one query per event in _build_response).
-        subgroup_slug = await self._subgroup_slug(event.subgroup_id)
+        subgroup_slug = slugs.get(event.subgroup_id) if event.subgroup_id else None
         gallery_id = gallery_id or await find_event_gallery_id(
             self._session, self._community_id, event.id
         )
@@ -363,8 +365,10 @@ class EventService(EventIcalMixin):
         )
         # Build responses including expanded occurrences for recurring events.
         responses: list[EventResponse] = []
-        for event in events[: limit + 1]:
-            responses.append(await self._build_response(event, user_id=user_id))
+        page = events[: limit + 1]
+        slugs = await self._slug_map(page)
+        for event in page:
+            responses.append(await self._build_response(event, user_id=user_id, slugs=slugs))
         next_cursor: str | None = None
         if len(responses) > limit:
             responses = responses[:limit]
@@ -411,6 +415,11 @@ class EventService(EventIcalMixin):
 
     # ── RSVP ──────────────────────────────────────────────────────────
 
+    async def _actor_name(self, user_id: uuid.UUID) -> str:
+        """@brief Display name of ``user_id`` for notification payloads."""
+        user = await self._session.get(User, user_id)
+        return str(user.display_name) if user is not None else _("Someone")
+
     async def rsvp(
         self, event_id: uuid.UUID, user_id: uuid.UUID, data: RSVPRequest
     ) -> RSVPResponse:
@@ -444,6 +453,8 @@ class EventService(EventIcalMixin):
                     payload={
                         "event_id": str(event.id),
                         "status": data.status,
+                        "actor_name": await self._actor_name(user_id),
+                        "event_title": event.title,
                         "message": _("Someone RSVP'd to your event"),
                         "link": f"/app/events/{event.id}",
                     },
