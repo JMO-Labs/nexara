@@ -42,6 +42,7 @@ from app.models.media import Media  # noqa: F401
 from app.models.media_ai import MediaAIMetadata  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401
+from app.models.notification_digest import NotificationDigestQueue  # noqa: F401
 from app.models.nudge import Nudge  # noqa: F401
 from app.models.oauth_provider import OAuthProvider  # noqa: F401
 from app.models.plugin import Plugin, PluginData  # noqa: F401

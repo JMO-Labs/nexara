@@ -204,3 +204,28 @@ describe("PostCard link previews", () => {
     expect(screen.getByTestId("link-preview-title")).toBeInTheDocument();
   });
 });
+
+describe("PostCard kudos", () => {
+  it("renders a KudosCard when post has a recipient", () => {
+    const kudos = {
+      ...base,
+      content: "Thanks for the help!",
+      recipient_id: "u2",
+      recipient: { id: "u2", display_name: "Ana Lima", avatar_url: null },
+    } as unknown as Post;
+    render(<PostCard post={kudos} />);
+    const card = screen.getByRole("article");
+    expect(card.className).toMatch(/bg-purple-100/);
+    expect(screen.getByText("Ana Lima")).toHaveClass("font-bold");
+    expect(screen.getByTestId("kudos-message")).toHaveTextContent(
+      "Thanks for the help!",
+    );
+    expect(card).toHaveTextContent("Alice");
+  });
+
+  it("renders the normal card without a recipient", () => {
+    render(<PostCard post={base} />);
+    expect(screen.queryByTestId("kudos-trophy")).toBeNull();
+    expect(screen.getByRole("article").className).not.toMatch(/bg-purple-100/);
+  });
+});
