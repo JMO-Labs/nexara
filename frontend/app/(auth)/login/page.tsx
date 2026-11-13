@@ -20,7 +20,7 @@ import {
   type OAuthProvider,
 } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
-import { formatApiError } from "@/lib/api/errors";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
   email: z.string().min(3),
@@ -32,7 +32,6 @@ export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeInternalLink(params.get("next")) ?? "/app";
-  const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
   const [localAuth, setLocalAuth] = useState(true);
 
@@ -55,21 +54,20 @@ export default function LoginPage() {
     defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    try {
-      const resp = await apiLogin(data.email, data.password);
-      const out = await completeLogin(resp);
+  const login = useMutationWithToast({
+    mutationFn: async (data: FormData) =>
+      completeLogin(await apiLogin(data.email, data.password)),
+    errorKey: "toasts.auth.login.failed",
+    onSuccess: (out) => {
       if (out.kind === "two_factor") {
         const url = `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent(next)}`;
         router.push(url);
       } else {
         router.push(next);
       }
-    } catch (e) {
-      setError(formatApiError(e, "Sign-in failed."));
-    }
-  };
+    },
+  });
+  const onSubmit = (data: FormData) => login.mutate(data);
 
   return (
     <AuthCard
@@ -83,14 +81,6 @@ export default function LoginPage() {
         </>
       }
     >
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       {localAuth && (
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -112,7 +102,7 @@ export default function LoginPage() {
             error={formState.errors.password?.message}
             {...register("password")}
           />
-          <Button type="submit" size="lg" loading={formState.isSubmitting}>
+          <Button type="submit" size="lg" loading={login.isPending}>
             Sign in
           </Button>
           <div className="flex justify-between text-sm">
