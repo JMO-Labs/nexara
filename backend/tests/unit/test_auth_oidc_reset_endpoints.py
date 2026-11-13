@@ -75,7 +75,7 @@ class TestJwks:
     async def test_jwks_returns_payload(self, test_app):
         with patch("app.api.v1.auth_oidc.get_jwks", return_value={"keys": []}):
             async with _client(test_app) as c:
-                r = await c.get("/.well-known/jwks.json")
+                r = await c.get("/api/v1/auth/.well-known/jwks.json")
         assert r.status_code == 200
         assert r.json() == {"keys": []}
 
