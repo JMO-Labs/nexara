@@ -1047,3 +1047,19 @@ class TestAdminSharedSubscriptions:
 
         repo.get_subscription.assert_awaited_once_with(sub.id, user_id=admin_id)
         repo.delete_subscription.assert_awaited_once_with(sub.id)
+
+
+class TestActorName:
+    """@brief _actor_name resolves display names for notification payloads."""
+
+    async def test_returns_display_name(self, service: EventService, session: AsyncMock) -> None:
+        user = MagicMock()
+        user.display_name = "Alice"
+        session.get.return_value = user
+        assert await service._actor_name(uuid.uuid4()) == "Alice"
+
+    async def test_falls_back_when_user_missing(
+        self, service: EventService, session: AsyncMock
+    ) -> None:
+        session.get.return_value = None
+        assert await service._actor_name(uuid.uuid4()) == "Someone"
