@@ -174,9 +174,7 @@ class ListService:
             raise AuthorizationError(_("Only the owner can delete this list"))
         await self._lists.soft_delete(lst)
 
-    async def archive(
-        self, list_id: uuid.UUID, user_id: uuid.UUID, is_admin: bool = False
-    ) -> List:
+    async def archive(self, list_id: uuid.UUID, user_id: uuid.UUID, is_admin: bool = False) -> List:
         """@brief Set status='archived'."""
         lst = await self._load_editable(list_id, user_id, is_admin)
         return await self._lists.update(lst, {"status": "archived"})
