@@ -8,9 +8,10 @@ import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { motion } from "framer-motion";
 import { slideUp, fadeInOut, useMotionProps } from "@/components/ui/motion";
-import { Skeleton, EmptyState } from "@/components/ui";
+import { Skeleton, EmptyState, Button } from "@/components/ui";
 import type { ChatMessage } from "@/lib/api/chat";
 import { MessageItem } from "./MessageItem";
+import { dayLabel, isGrouped, startsNewDay } from "./grouping";
 
 export interface MessageListHandle {
   /** Force-scroll the viewport to the bottom on the next frame. */
@@ -26,16 +27,13 @@ export interface MessageListProps {
   selfId?: string | null;
   onReply?: (m: ChatMessage) => void;
   onSendDm?: (userId: string) => void;
-}
-
-const GROUP_GAP_MS = 5 * 60 * 1000;
-
-function isCompact(prev: ChatMessage | undefined, cur: ChatMessage): boolean {
-  if (!prev) return false;
-  if (prev.author?.id !== cur.author?.id) return false;
-  const a = new Date(prev.created_at).getTime();
-  const b = new Date(cur.created_at).getTime();
-  return Math.abs(b - a) < GROUP_GAP_MS;
+  /** Fetch failed: show retry state. */
+  isError?: boolean;
+  onRetry?: () => void;
+  /** CTA in the empty state (e.g. focus the composer). */
+  onStartConversation?: () => void;
+  /** Row density. */
+  density?: "comfortable" | "compact";
 }
 
 /**
@@ -88,6 +86,10 @@ export const MessageList = React.forwardRef<
     selfId,
     onReply,
     onSendDm,
+    isError,
+    onRetry,
+    onStartConversation,
+    density = "comfortable",
   },
   forwardedRef,
 ) {
@@ -143,6 +145,18 @@ export const MessageList = React.forwardRef<
     [hasMore, isFetchingMore, onLoadMore],
   );
 
+  if (ordered.length === 0 && isError) {
+    return (
+      <div className="flex min-h-0 flex-1" role="alert">
+        <EmptyState
+          title="Couldn't load messages"
+          description="Check your connection and try again."
+          action={<Button onClick={onRetry}>Retry</Button>}
+        />
+      </div>
+    );
+  }
+
   if (ordered.length === 0 && isLoading) {
     return (
       <motion.div
@@ -163,6 +177,11 @@ export const MessageList = React.forwardRef<
         <EmptyState
           title="No messages yet"
           description="Send the first message to start the conversation."
+          action={
+            onStartConversation && (
+              <Button onClick={onStartConversation}>Start conversation</Button>
+            )
+          }
         />
       </div>
     );
@@ -172,6 +191,7 @@ export const MessageList = React.forwardRef<
     <div
       ref={parentRef}
       onScroll={onScroll}
+      data-density={density}
       className="relative min-h-0 flex-1 overflow-y-auto"
     >
       {isFetchingMore && (
@@ -197,6 +217,15 @@ export const MessageList = React.forwardRef<
               className="absolute top-0 left-0 w-full"
               style={{ transform: `translateY(${vi.start}px)` }}
             >
+              {startsNewDay(ordered[vi.index - 1], m) && (
+                <div
+                  role="separator"
+                  aria-label={dayLabel(m.created_at)}
+                  className="px-4 py-2 text-center text-xs font-medium text-muted"
+                >
+                  {dayLabel(m.created_at)}
+                </div>
+              )}
               <motion.div
                 data-testid="message-row"
                 data-new={isNew}
@@ -205,10 +234,11 @@ export const MessageList = React.forwardRef<
               >
                 <MessageItem
                   message={m}
-                  compact={isCompact(ordered[vi.index - 1], m)}
+                  compact={isGrouped(ordered[vi.index - 1], m)}
                   isSelf={Boolean(selfId && m.author?.id === selfId)}
                   onReply={onReply}
                   onSendDm={onSendDm}
+                  density={density}
                 />
               </motion.div>
             </div>
