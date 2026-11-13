@@ -35,6 +35,11 @@ class InAppChannel:
                     notification_type=notification.type,
                     payload=notification.payload,
                     created_at=notification.created_at.isoformat(),
+                    updated_at=(
+                        notification.updated_at.isoformat() if notification.updated_at else None
+                    ),
+                    count=notification.count or 1,
+                    actor_ids=notification.actor_ids or [],
                 )
             )
             return ChannelResult(ok=True)
