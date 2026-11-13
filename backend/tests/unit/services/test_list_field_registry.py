@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel
 
-from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
+from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
 from app.services.list_field_types import registry
 from app.services.list_field_types.base import FieldType, FieldTypeBase
 
@@ -39,9 +39,9 @@ def test_register_get_keys():
 
 
 def test_unknown_raises():
-    with pytest.raises(FieldTypeNotFound):
+    with pytest.raises(FieldTypeNotFoundError):
         registry.get("nope")
-    assert issubclass(FieldTypeNotFound, KeyError)
+    assert issubclass(FieldTypeNotFoundError, KeyError)
 
 
 def test_delegation():

@@ -210,7 +210,7 @@ async def test_reset_streaks_zeroes_all(ctx):
 
 
 async def test_on_user_joined_sends_notification(ctx, session, notifier):
-    models, hooks = _load("models"), _load("hooks")
+    hooks = _load("hooks")
     user = await _user(session)
     q = await _today(ctx)
     await hooks.on_user_joined(ctx, user_id=user.id)
