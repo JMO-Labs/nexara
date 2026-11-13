@@ -67,3 +67,30 @@ async def test_delete_ok(repo):
     repo.get.return_value = _sub(UID)
     await WebhookService(repo, CID).delete(UID, uuid.uuid4())
     repo.delete.assert_awaited_once()
+
+
+async def test_list_for_user_delegates(repo):
+    repo.list_for_user.return_value = [_sub(UID)]
+    assert len(await WebhookService(repo, CID).list_for_user(UID)) == 1
+    repo.list_for_user.assert_awaited_once_with(UID)
+
+
+async def test_list_for_community_delegates(repo):
+    repo.list_for_community.return_value = []
+    assert await WebhookService(repo, CID).list_for_community() == []
+    repo.list_for_community.assert_awaited_once_with(CID)
+
+
+async def test_update_ok_returns_updated(repo):
+    sub = _sub(UID)
+    repo.get.return_value = sub
+    repo.update.return_value = sub
+    out = await WebhookService(repo, CID).update(UID, uuid.uuid4(), enabled=True)
+    assert out is sub
+
+
+async def test_update_vanished_row_not_found(repo):
+    repo.get.return_value = _sub(UID)
+    repo.update.return_value = None
+    with pytest.raises(NotFoundError):
+        await WebhookService(repo, CID).update(UID, uuid.uuid4(), url="https://x.io")
