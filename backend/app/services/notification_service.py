@@ -8,17 +8,29 @@ Respects user notification preferences and mutes.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 import structlog
 from pydantic import ValidationError as PydanticValidationError
 
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, NotFoundError
 from app.models.notification import Notification
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
-from app.schemas.notification import NotificationList, NotificationResponse, UnreadCountResponse
+from app.schemas.notification import (
+    NotificationList,
+    NotificationPreferences,
+    NotificationPreferencesUpdate,
+    NotificationResponse,
+    UnreadCountResponse,
+)
 from app.services.notifications import registry
+from app.services.notifications.api_helpers import (
+    build_prefs_update,
+    group_by_category,
+    resolve_types,
+)
 from app.services.notifications.dispatcher import Dispatcher
 from app.services.notifications.prefs import effective_channels
 from app.services.realtime.event_bus import EventBus
@@ -147,10 +159,24 @@ class NotificationService:
         user_id: uuid.UUID,
         cursor: str | None = None,
         limit: int = 20,
+        *,
+        type: str | None = None,  # noqa: A002
+        category: str | None = None,
+        unread_only: bool = False,
     ) -> NotificationList:
-        """@brief List notifications for a user with pagination."""
+        """
+        @brief List notifications for a user with pagination and filters.
+
+        @param type Optional type-key filter (400 NOTIF_TYPE_UNKNOWN if unknown).
+        @param category Optional registry category filter.
+        @param unread_only Only unread rows.
+        """
         items, next_cursor = await self._notification_repo.list_for_user(
-            user_id, cursor=cursor, limit=limit
+            user_id,
+            cursor=cursor,
+            limit=limit,
+            types=resolve_types(type, category),
+            unread_only=unread_only,
         )
         return NotificationList(
             items=[NotificationResponse.model_validate(n) for n in items],
@@ -159,9 +185,11 @@ class NotificationService:
         )
 
     async def get_unread_count(self, user_id: uuid.UUID) -> UnreadCountResponse:
-        """@brief Return unread count for badge display."""
-        count = await self._notification_repo.get_unread_count(user_id)
-        return UnreadCountResponse(count=count)
+        """@brief Return unread total plus per-category breakdown."""
+        per_type = await self._notification_repo.unread_counts_by_type(user_id)
+        return UnreadCountResponse(
+            count=sum(per_type.values()), by_category=group_by_category(per_type)
+        )
 
     async def mark_read(
         self,
@@ -171,13 +199,57 @@ class NotificationService:
         """@brief Mark a notification as read."""
         return await self._notification_repo.mark_read(notification_id, user_id)
 
-    async def mark_all_read(self, user_id: uuid.UUID) -> int:
-        """@brief Mark all notifications as read for a user."""
-        return await self._notification_repo.mark_all_read(user_id)
+    async def mark_all_read(
+        self,
+        user_id: uuid.UUID,
+        *,
+        type: str | None = None,  # noqa: A002
+        category: str | None = None,
+    ) -> int:
+        """@brief Mark notifications read, optionally filtered by type/category."""
+        return await self._notification_repo.mark_all_read(
+            user_id, types=resolve_types(type, category)
+        )
 
-    async def clear_all(self, user_id: uuid.UUID) -> int:
-        """@brief Delete all notifications for a user."""
-        return await self._notification_repo.delete_all_for_user(user_id)
+    async def clear_all(
+        self,
+        user_id: uuid.UUID,
+        *,
+        type: str | None = None,  # noqa: A002
+        before: datetime | None = None,
+    ) -> int:
+        """@brief Delete a user's notifications, optionally by type and age."""
+        return await self._notification_repo.delete_all_for_user(
+            user_id, types=resolve_types(type, None), before=before
+        )
+
+    async def delete(self, user_id: uuid.UUID, notification_id: uuid.UUID) -> None:
+        """
+        @brief Delete one notification owned by the user.
+
+        @throws NotFoundError If missing or owned by someone else.
+        """
+        if not await self._notification_repo.delete_one(user_id, notification_id):
+            raise NotFoundError("Notification not found")
+
+    async def get_preferences(self, user_id: uuid.UUID) -> NotificationPreferences:
+        """@brief Return v2 notification prefs + DnD + digest settings."""
+        row = await self._settings_repo.get_or_create(user_id, self._community_id)
+        return NotificationPreferences.model_validate(row)
+
+    async def update_preferences(
+        self, user_id: uuid.UUID, patch: NotificationPreferencesUpdate
+    ) -> NotificationPreferences:
+        """
+        @brief Validate and apply a partial preferences update.
+
+        @throws AppError NOTIF_TYPE_UNKNOWN / NOTIF_PREF_INVALID (400).
+        """
+        row = await self._settings_repo.get_or_create(user_id, self._community_id)
+        data = build_prefs_update(patch, row.notification_prefs or {})
+        if data:
+            row = await self._settings_repo.update(user_id, data)
+        return NotificationPreferences.model_validate(row)
 
     async def list_active(self, user_id: uuid.UUID, limit: int = 20) -> list[Notification]:
         """@brief List non-dismissed notifications, newest first."""
