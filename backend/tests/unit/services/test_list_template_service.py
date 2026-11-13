@@ -52,13 +52,20 @@ def parts():
     return svc, repo, registry, lists, items
 
 
-FIELD = {"key": "k", "label": "K", "type_key": "select", "config": {"options": [{"value": "a", "label": "A"}]}}
+FIELD = {
+    "key": "k",
+    "label": "K",
+    "type_key": "select",
+    "config": {"options": [{"value": "a", "label": "A"}]},
+}
 
 
 async def test_create_validates_fields(parts):
     svc, repo, registry, *_ = parts
     repo.create.side_effect = lambda e: e
-    out = await svc.create(CID, AUTHOR, {"name": "T", "fields": [FIELD], "items": [{"values": {"k": "a"}}]})
+    out = await svc.create(
+        CID, AUTHOR, {"name": "T", "fields": [FIELD], "items": [{"values": {"k": "a"}}]}
+    )
     registry.validate_config.assert_called_once_with("select", FIELD["config"])
     assert out.name == "T"
     assert len(out.fields) == 1 and len(out.items) == 1
@@ -137,7 +144,13 @@ async def test_clone_freezes_schema_and_items(parts):
     new = await svc.clone_template_to_list(CID, t.id, AUTHOR, title="L", visibility="private")
     assert new.template_id == t.id
     assert new.field_schema == [
-        {"key": "k", "label": "K", "type_key": "select", "required": True, "config": {"options": []}}
+        {
+            "key": "k",
+            "label": "K",
+            "type_key": "select",
+            "required": True,
+            "config": {"options": []},
+        }
     ]
     assert new.item_count == 1
     items.create.assert_awaited_once()
