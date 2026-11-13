@@ -1,6 +1,6 @@
 """@file Built-in notification types.
 
-@brief Importing this package registers all 16 built-in types.
+@brief Importing this package registers all built-in types.
 """
 
 from app.services.notifications.types import (  # noqa: F401
@@ -13,6 +13,10 @@ from app.services.notifications.types import (  # noqa: F401
     gentle_nudge,
     invite_accepted,
     kudos_received,
+    list_completed,
+    list_item,
+    list_member,
+    list_signup,
     mention,
     new_post,
     nudge_received,
@@ -32,6 +36,10 @@ __all__ = [
     "gentle_nudge",
     "invite_accepted",
     "kudos_received",
+    "list_completed",
+    "list_item",
+    "list_member",
+    "list_signup",
     "mention",
     "new_post",
     "nudge_received",

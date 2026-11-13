@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.models.user import User
@@ -77,6 +78,9 @@ class CommentsMixin(PostServiceBase):
             content=content,
             community_id=self._community_id,
             parent_id=parent_id,
+        )
+        await invalidate_search_cache_for_community(
+            self._community_id, service="comment", action="create", user_id=user.id
         )
 
         await self._notify_comment_participants(
