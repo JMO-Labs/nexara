@@ -76,6 +76,7 @@ async def _dispatch_reminders_async() -> dict[str, int]:
                             payload={
                                 "event_id": str(event.id),
                                 "title": event.title,
+                                "event_title": event.title,
                                 "starts_at": event.starts_at.isoformat(),
                                 "message": f"Reminder: {event.title} starts soon",
                                 "link": f"/app/events/{event.id}",

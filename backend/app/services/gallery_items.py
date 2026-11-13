@@ -12,6 +12,7 @@ import structlog
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
+from app.models.user import User
 from app.schemas.gallery import (
     CollaboratorResponse,
     GalleryItemBulkCreate,
@@ -185,6 +186,11 @@ class GalleryItemsMixin(GalleryServiceBase):
         rows = await self._repo.list_collaborators(gallery_id)
         return [CollaboratorResponse.model_validate(r) for r in rows]
 
+    async def _actor_name(self, user_id: uuid.UUID) -> str:
+        """@brief Display name of ``user_id`` for notification payloads."""
+        user = await self._session.get(User, user_id)
+        return str(user.display_name) if user is not None else _("Someone")
+
     async def add_collaborator(
         self,
         gallery_id: uuid.UUID,
@@ -218,6 +224,9 @@ class GalleryItemsMixin(GalleryServiceBase):
                     type="gallery_activity",
                     payload={
                         "gallery_id": str(gallery_id),
+                        "actor_name": await self._actor_name(user_id),
+                        "gallery_title": gallery.title,
+                        "activity": "invited",
                         "message": _("You were invited to a gallery"),
                         "link": f"/app/galleries/{gallery_id}",
                     },

@@ -59,7 +59,7 @@ async def test_register_emits_on_user_joined():
     svc._user_repo.username_exists.return_value = False
     created = _make_user()
     svc._user_repo.create.return_value = created
-    with patch("app.services.auth_service.HookRegistry.emit", new=AsyncMock()) as emit:
+    with patch("app.services.auth.registration.HookRegistry.emit", new=AsyncMock()) as emit:
         await svc.register(
             email="n@example.com", username="n", password="strong-password123", display_name="N"
         )
