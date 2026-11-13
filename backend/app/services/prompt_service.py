@@ -249,7 +249,7 @@ class PromptService:
         replies = await self._post_repo.list_replies_for_prompt(prompt_id, limit=50)
         seen: dict[uuid.UUID, None] = {}
         for reply in replies:
-            vis = reply.get("visibility", "community")
+            vis = reply.get("visibility")
             if vis == "subgroup":
                 if subgroup_id is None or reply.get("subgroup_id") != subgroup_id:
                     continue
