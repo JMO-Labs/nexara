@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth_magic_link import router as magic_link_router
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, get_optional_user
+from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
 from app.core.security import get_jwks
 from app.models.user import User
@@ -39,7 +39,6 @@ from app.schemas.auth import (
 from app.schemas.common import MessageResponse
 from app.services.auth_service import AuthService
 from app.services.notification_service import NotificationService
-from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -150,7 +149,7 @@ async def register(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=_uuid.UUID(settings.COMMUNITY_ID),
-        event_bus=event_bus,
+        dispatcher=get_dispatcher(),
     )
     svc = AuthService(db, settings, notification_service=notification_svc)
     result = await svc.register(
