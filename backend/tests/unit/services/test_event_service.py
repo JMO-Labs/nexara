@@ -16,6 +16,7 @@ from app.models.calendar_token import CalendarToken
 from app.models.event import CalendarSubscription, Event, EventAttendance
 from app.repositories.calendar_token_repo import CalendarTokenRepository
 from app.repositories.event_repo import EventRepository
+from app.repositories.subgroup_repo import SubgroupRepository
 from app.schemas.event import (
     CalendarSubscriptionCreate,
     CalendarSubscriptionUpdate,
@@ -77,6 +78,13 @@ def repo() -> AsyncMock:
 
 
 @pytest.fixture
+def subgroup_repo() -> AsyncMock:
+    r = AsyncMock(spec=SubgroupRepository)
+    r.get_slugs.return_value = {}
+    return r
+
+
+@pytest.fixture
 def session() -> AsyncMock:
     s = AsyncMock()
     exec_result = MagicMock()
@@ -96,7 +104,12 @@ def calendar_service() -> AsyncMock:
 
 
 @pytest.fixture
-def service(repo: AsyncMock, session: AsyncMock, calendar_service: AsyncMock) -> EventService:
+def service(
+    repo: AsyncMock,
+    session: AsyncMock,
+    calendar_service: AsyncMock,
+    subgroup_repo: AsyncMock,
+) -> EventService:
     user_id = uuid.uuid4()
     return EventService(
         event_repo=repo,
@@ -104,7 +117,37 @@ def service(repo: AsyncMock, session: AsyncMock, calendar_service: AsyncMock) ->
         session=session,
         actor_id=user_id,
         calendar_service=calendar_service,
+        subgroup_repo=subgroup_repo,
     )
+
+
+class TestListEventsSubgroupSlugs:
+    @pytest.mark.asyncio
+    async def test_list_batches_slug_lookup_once(
+        self, service: EventService, repo: AsyncMock, subgroup_repo: AsyncMock
+    ) -> None:
+        sg_a, sg_b = uuid.uuid4(), uuid.uuid4()
+        events = [
+            _make_event(visibility="subgroup", subgroup_id=sg_a),
+            _make_event(visibility="subgroup", subgroup_id=sg_b),
+            _make_event(visibility="subgroup", subgroup_id=sg_a),
+            _make_event(),
+        ]
+        repo.list_in_range.return_value = events
+        subgroup_repo.get_slugs.return_value = {sg_a: "alpha", sg_b: "beta"}
+
+        result = await service.list_events(
+            uuid.uuid4(),
+            datetime(2026, 5, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, tzinfo=UTC),
+        )
+
+        subgroup_repo.get_slugs.assert_awaited_once()
+        ids, community_id = subgroup_repo.get_slugs.await_args.args
+        assert set(ids) == {sg_a, sg_b}
+        assert len(ids) == 2
+        assert community_id == COMMUNITY_ID
+        assert [e.subgroup_slug for e in result.items] == ["alpha", "beta", "alpha", None]
 
 
 class TestCreateEvent:
@@ -1004,3 +1047,19 @@ class TestAdminSharedSubscriptions:
 
         repo.get_subscription.assert_awaited_once_with(sub.id, user_id=admin_id)
         repo.delete_subscription.assert_awaited_once_with(sub.id)
+
+
+class TestActorName:
+    """@brief _actor_name resolves display names for notification payloads."""
+
+    async def test_returns_display_name(self, service: EventService, session: AsyncMock) -> None:
+        user = MagicMock()
+        user.display_name = "Alice"
+        session.get.return_value = user
+        assert await service._actor_name(uuid.uuid4()) == "Alice"
+
+    async def test_falls_back_when_user_missing(
+        self, service: EventService, session: AsyncMock
+    ) -> None:
+        session.get.return_value = None
+        assert await service._actor_name(uuid.uuid4()) == "Someone"

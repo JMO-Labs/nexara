@@ -6,15 +6,17 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.dependencies import get_current_user, get_db, get_dispatcher, require_role
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.media_repo import MediaRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
@@ -22,7 +24,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse
 from app.schemas.prompt import (
     PromptCreate,
-    PromptPostResponse,
+    PromptPostDetail,
     PromptResponse,
     PromptUpdate,
 )
@@ -48,6 +50,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
+        dispatcher=get_dispatcher(),
     )
     return PromptService(
         prompt_repo=PromptRepository(db),
@@ -55,6 +58,7 @@ def _build_service(
         community_id=community_id,
         session=db,
         notification_service=notif,
+        media_attacher=MediaRepository(db).attach_to_post,
     )
 
 
@@ -80,13 +84,35 @@ async def create_prompt(
     return await service.create_prompt(user.id, body)
 
 
-@router.get("/active", response_model=list[PromptPostResponse])
+@router.get("/active", response_model=list[PromptPostDetail])
 async def list_active(
     user: User = Depends(get_current_user),
     service: PromptService = Depends(_build_service),
-) -> list[PromptPostResponse]:
-    """@brief List currently-pinned prompt posts."""
+) -> list[PromptPostDetail]:
+    """@brief List currently-pinned prompt posts with prompt details."""
     return await service.list_active()
+
+
+@router.get("/posts/{prompt_post_id}", response_model=PromptPostDetail)
+async def get_prompt_post(
+    prompt_post_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: PromptService = Depends(_build_service),
+) -> PromptPostDetail:
+    """@brief Get one fired prompt post with prompt details (any member)."""
+    return await service.get_prompt_post(prompt_post_id)
+
+
+@router.get("/posts/{prompt_post_id}/responses")
+async def list_responses(
+    prompt_post_id: uuid.UUID,
+    limit: int = Query(20, ge=1, le=50),
+    cursor: str | None = Query(None),
+    user: User = Depends(get_current_user),
+    service: PromptService = Depends(_build_service),
+) -> dict[str, Any]:
+    """@brief List posts replying to a prompt post (newest first)."""
+    return await service.list_responses(prompt_post_id, user.id, limit=limit, cursor=cursor)
 
 
 @router.get("/{prompt_id}", response_model=PromptResponse)

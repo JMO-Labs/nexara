@@ -35,7 +35,7 @@ Self-hosted first, container-native, and scaleable to Kubernetes.
 
 - [Getting Started](getting-started.md) -- Set up a development environment
 - [Development Guide](development.md) -- Architecture, conventions, testing
-- [Deployment Guide](deployment.md) -- Docker Compose, Helm, unRAID
+- [Deployment Guide](deployment/deployment-guide.md) -- Docker Compose, Helm, unRAID
 - [Branding Guide](user/branding.md) -- Admin palette, fonts, email and PWA branding
 - [API Reference](api/) -- Doxygen-generated Python backend documentation
 - [Backend Coverage](coverage/backend/) -- pytest coverage report

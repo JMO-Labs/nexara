@@ -804,3 +804,23 @@ class TestAccentColor:
         await service.update_subgroup("family", owner, {"accent_color": None})
         data = subgroup_repo.update_fields.await_args[0][1]
         assert data["accent_color"] is None
+
+
+class TestListWithMembership:
+    """@brief Viewer is_member flag computed with one batched query."""
+
+    @pytest.mark.asyncio
+    async def test_flags_member_and_non_member_with_single_query(
+        self, service, subgroup_repo, member_repo
+    ):
+        user = _make_user()
+        joined = _make_subgroup(slug="joined")
+        other = _make_subgroup(slug="other")
+        subgroup_repo.list_visible_for_user.return_value = [joined, other]
+        member_repo.list_my_roles.return_value = {joined.id: "member"}
+
+        rows = await service.list_subgroups_with_membership(user)
+
+        assert [(s.slug, role) for s, role in rows] == [("joined", "member"), ("other", None)]
+        member_repo.list_my_roles.assert_awaited_once_with(user.id)
+        member_repo.get_membership.assert_not_awaited()

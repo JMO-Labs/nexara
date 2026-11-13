@@ -36,25 +36,58 @@ def _tolerant_layout(value: Any) -> Any:
 
 class NotificationPreferences(BaseModel):
     """
-    @brief Per-type notification channel toggles.
+    @brief Per-type x per-channel notification toggles plus mute/digest settings.
 
-    Phase 1 types: mention, comment, reaction, new_post, system, invite_accepted.
-    Each type has inapp and email booleans (push deferred to Phase 2).
+    Mirrors every notification preference column of ``user_settings``.
+    All fields are optional so the model doubles as a partial-update payload.
     """
 
     notif_mention_inapp: bool | None = None
     notif_mention_email: bool | None = None
+    notif_mention_push: bool | None = None
     notif_comment_inapp: bool | None = None
     notif_comment_email: bool | None = None
+    notif_comment_push: bool | None = None
     notif_reaction_inapp: bool | None = None
     notif_reaction_email: bool | None = None
+    notif_reaction_push: bool | None = None
     notif_new_post_inapp: bool | None = None
     notif_new_post_email: bool | None = None
+    notif_new_post_push: bool | None = None
     notif_system_inapp: bool | None = None
     notif_system_email: bool | None = None
+    notif_system_push: bool | None = None
     notif_invite_accepted_inapp: bool | None = None
     notif_invite_accepted_email: bool | None = None
+    notif_invite_accepted_push: bool | None = None
+    notif_event_reminder_inapp: bool | None = None
+    notif_event_reminder_email: bool | None = None
+    notif_event_reminder_push: bool | None = None
+    notif_event_rsvp_inapp: bool | None = None
+    notif_event_rsvp_email: bool | None = None
+    notif_event_rsvp_push: bool | None = None
+    notif_gallery_activity_inapp: bool | None = None
+    notif_gallery_activity_email: bool | None = None
+    notif_gallery_activity_push: bool | None = None
+    notif_prompt_inapp: bool | None = None
+    notif_prompt_email: bool | None = None
+    notif_prompt_push: bool | None = None
+    notif_prompt_summary_inapp: bool | None = None
+    notif_prompt_summary_email: bool | None = None
+    notif_prompt_summary_push: bool | None = None
+    notif_poll_inapp: bool | None = None
+    notif_poll_email: bool | None = None
+    notif_poll_push: bool | None = None
+    notif_dm_inapp: bool | None = None
+    notif_dm_email: bool | None = None
+    notif_dm_push: bool | None = None
+    notif_birthday_inapp: bool | None = None
+    notif_birthday_email: bool | None = None
+    notif_birthday_push: bool | None = None
     mute_all_email: bool | None = None
+    mute_all_push: bool | None = None
+    email_digest_enabled: bool | None = None
+    email_digest_hour: int | None = Field(default=None, ge=0, le=23)
 
 
 class UserSettingsResponse(BaseModel):
@@ -83,6 +116,8 @@ class UserSettingsResponse(BaseModel):
     allow_sassybot: bool = True
     font_size: str = "medium"
     compact_feed: bool = False
+    receive_nudges: bool = True
+    receive_gentle_nudges: bool = True
     home_layout: HomeLayoutSchema | None = None
 
     model_config = {"from_attributes": True}
@@ -103,6 +138,8 @@ class UserSettingsUpdate(BaseModel):
     allow_sassybot: bool | None = None
     font_size: str | None = Field(default=None, pattern=r"^(small|medium|large)$")
     compact_feed: bool | None = None
+    receive_nudges: bool | None = None
+    receive_gentle_nudges: bool | None = None
     home_layout: HomeLayoutSchema | None = None
 
 

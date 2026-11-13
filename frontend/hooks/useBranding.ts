@@ -17,8 +17,11 @@ export const useBranding = () =>
     staleTime: 5 * 60 * 1000,
   });
 
-/** @brief Update branding; refreshes the cache and toasts on success. */
-export const useUpdateBranding = () => {
+/**
+ * @brief Update branding; refreshes the cache and toasts on success.
+ * @param successMessage toast text shown after a successful save
+ */
+export const useUpdateBranding = (successMessage = "Branding saved") => {
   const qc = useQueryClient();
   const push = useToasts((s) => s.push);
   return useMutationWithToast({
@@ -27,7 +30,28 @@ export const useUpdateBranding = () => {
     silentSuccess: true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.admin.branding() });
-      push({ variant: "success", message: "Branding saved" });
+      push({ variant: "success", message: successMessage });
+    },
+  });
+};
+
+/** @brief Fetch preset themes. */
+export const usePresetThemes = () =>
+  useQuery({
+    queryKey: [...qk.admin.branding(), "presets"] as const,
+    queryFn: brandingApi.listPresets,
+    staleTime: 60 * 60 * 1000,
+  });
+
+/** @brief Apply a preset theme; refreshes branding and toasts. */
+export const useApplyPreset = () => {
+  const qc = useQueryClient();
+  const push = useToasts((s) => s.push);
+  return useMutationWithToast({
+    mutationFn: brandingApi.applyPreset,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.admin.branding() });
+      push({ variant: "success", message: "Theme applied" });
     },
   });
 };
