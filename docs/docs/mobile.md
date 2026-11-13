@@ -42,7 +42,7 @@ Native push uses Firebase Cloud Messaging for both Android and iOS.
 ### Create the Firebase project
 
 1. Create a project in the [Firebase console](https://console.firebase.google.com).
-2. Add an **Android** app with package name `dev.jmolabs.nexara` (check
+2. Add an **Android** app with package name `dev.jmolabs.nexara_mobile` (check
    `mobile/android/app/build.gradle*` for the exact application id) and
    download `google-services.json` into `mobile/android/app/`.
 3. Add an **iOS** app with the bundle id from Xcode and download
