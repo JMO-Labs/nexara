@@ -114,8 +114,9 @@ async def test_status_pending_no_url() -> None:
 
 
 def test_generate_user_export_returns_id() -> None:
-    with patch("app.tasks.export_tasks._generate", new=MagicMock()), patch(
-        "app.tasks.export_tasks.asyncio.run"
-    ) as run:
+    with (
+        patch("app.tasks.export_tasks._generate", new=MagicMock()),
+        patch("app.tasks.export_tasks.asyncio.run") as run,
+    ):
         assert generate_user_export("uid", "abc") == "abc"
     run.assert_called_once()
