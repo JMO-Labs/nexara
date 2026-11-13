@@ -51,6 +51,8 @@ describe("GalleryGrid", () => {
   it("renders the empty state and navigates to media", async () => {
     vi.mocked(api.listGalleries).mockResolvedValue({
       items: [],
+      next_cursor: null,
+      has_more: false,
     } as Awaited<ReturnType<typeof api.listGalleries>>);
     renderWithProviders(<GalleryGrid onSelect={() => {}} />);
     expect(await screen.findByText("No galleries yet")).toBeInTheDocument();
@@ -61,6 +63,8 @@ describe("GalleryGrid", () => {
   it("uses onCreate for the empty-state action when provided", async () => {
     vi.mocked(api.listGalleries).mockResolvedValue({
       items: [],
+      next_cursor: null,
+      has_more: false,
     } as Awaited<ReturnType<typeof api.listGalleries>>);
     const onCreate = vi.fn();
     renderWithProviders(
