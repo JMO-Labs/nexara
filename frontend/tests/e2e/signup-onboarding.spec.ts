@@ -18,14 +18,21 @@ test("new user registers, skips onboarding, modal stays dismissed", async ({
   await page.goto("/register");
   await page.getByLabel("Display name").fill(`E2E ${uid}`);
   await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/app/);
   const dialog = page.getByRole("dialog", { name: /welcome/i });
   await expect(dialog).toBeVisible();
+  const done = page.waitForResponse(
+    (r) =>
+      r.url().includes("/api/v1/users/me/onboarding") &&
+      r.request().method() === "PATCH" &&
+      r.ok(),
+  );
   await dialog.getByRole("button", { name: "Skip for now" }).click();
+  await done;
   await expect(dialog).toBeHidden();
 
   await page.reload();
