@@ -99,7 +99,7 @@ class TestRequest:
         assert body["export_id"] == str(row.id)
         assert body["status"] == "pending"
         repo.create.assert_awaited_once_with(user.id, user.community_id)
-        enqueue.assert_called_once_with(str(row.id))
+        enqueue.assert_called_once_with(str(user.id), str(row.id))
         key = f"export_request:{user.id}:{datetime.now(UTC).date().isoformat()}"
         assert key in redis.data
         assert redis.ttls[key] == 86400

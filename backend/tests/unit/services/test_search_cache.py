@@ -340,7 +340,7 @@ class TestInvocationPoints:
         )
         svc._notify_comment_participants = AsyncMock()  # type: ignore[method-assign]
         svc._notify_mentions = AsyncMock()  # type: ignore[method-assign]
-        with _inv("post_service") as inv:
+        with _inv("post_comments") as inv:
             await svc.add_comment(uuid.uuid4(), _user(), "hi")
         _assert_inv(inv, "comment", "create")
 

@@ -63,6 +63,9 @@ class NotificationRepository(BaseRepository[Notification]):
         user_id: uuid.UUID,
         cursor: str | None = None,
         limit: int = 20,
+        *,
+        types: list[str] | None = None,
+        unread_only: bool = False,
     ) -> tuple[list[Notification], str | None]:
         """
         @brief List notifications for a user with cursor pagination.
@@ -70,9 +73,15 @@ class NotificationRepository(BaseRepository[Notification]):
         @param user_id Recipient user UUID.
         @param cursor Opaque cursor from previous page.
         @param limit Max items per page.
+        @param types Restrict to these type keys (None = all).
+        @param unread_only Only rows with read_at NULL.
         @return Tuple of (items, next_cursor).
         """
         stmt = select(Notification).where(Notification.user_id == user_id)
+        if types is not None:
+            stmt = stmt.where(Notification.type.in_(types))
+        if unread_only:
+            stmt = stmt.where(Notification.read_at.is_(None))
         stmt = stmt.order_by(Notification.created_at.desc())
 
         if cursor:
@@ -226,6 +235,21 @@ class NotificationRepository(BaseRepository[Notification]):
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
 
+    async def unread_counts_by_type(self, user_id: uuid.UUID) -> dict[str, int]:
+        """
+        @brief Count unread notifications per type for a user.
+
+        @param user_id Recipient user UUID.
+        @return {type_key: unread_count} (non-zero only).
+        """
+        stmt = (
+            select(Notification.type, func.count())
+            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+            .group_by(Notification.type)
+        )
+        result = await self._session.execute(stmt)
+        return {str(t): int(c) for t, c in result.all()}
+
     async def mark_read(self, notification_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """
         @brief Mark a single notification as read.
@@ -246,11 +270,12 @@ class NotificationRepository(BaseRepository[Notification]):
         await self._session.flush()
         return True
 
-    async def mark_all_read(self, user_id: uuid.UUID) -> int:
+    async def mark_all_read(self, user_id: uuid.UUID, *, types: list[str] | None = None) -> int:
         """
         @brief Mark all unread notifications as read for a user.
 
         @param user_id Recipient user UUID.
+        @param types Restrict to these type keys (None = all).
         @return Number of notifications updated.
         """
         stmt = (
@@ -258,6 +283,8 @@ class NotificationRepository(BaseRepository[Notification]):
             .where(Notification.user_id == user_id)
             .where(Notification.read_at.is_(None))
         )
+        if types is not None:
+            stmt = stmt.where(Notification.type.in_(types))
         result = await self._session.execute(stmt)
         notifications = result.scalars().all()
         now = datetime.now(UTC)
@@ -266,16 +293,42 @@ class NotificationRepository(BaseRepository[Notification]):
         await self._session.flush()
         return len(notifications)
 
-    async def delete_all_for_user(self, user_id: uuid.UUID) -> int:
+    async def delete_all_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        types: list[str] | None = None,
+        before: datetime | None = None,
+    ) -> int:
         """
-        @brief Delete all notifications for a user (clear all).
+        @brief Delete a user's notifications, optionally filtered.
 
         @param user_id Recipient user UUID.
+        @param types Restrict to these type keys (None = all).
+        @param before Only rows created strictly before this instant.
         @return Number of rows deleted.
         """
         stmt = delete(Notification).where(Notification.user_id == user_id)
+        if types is not None:
+            stmt = stmt.where(Notification.type.in_(types))
+        if before is not None:
+            stmt = stmt.where(Notification.created_at < before)
         result = await self._session.execute(stmt)
         return cast(int, getattr(result, "rowcount", 0)) or 0
+
+    async def delete_one(self, user_id: uuid.UUID, notification_id: uuid.UUID) -> bool:
+        """
+        @brief Delete one notification owned by the user.
+
+        @param user_id Owner UUID.
+        @param notification_id Notification UUID.
+        @return True if a row was deleted, False if missing or not owned.
+        """
+        stmt = delete(Notification).where(
+            Notification.id == notification_id, Notification.user_id == user_id
+        )
+        result = await self._session.execute(stmt)
+        return bool(cast(int, getattr(result, "rowcount", 0)))
 
     async def delete_old(self, days: int) -> int:
         """

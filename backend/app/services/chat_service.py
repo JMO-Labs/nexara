@@ -21,11 +21,8 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-import structlog
-
-from app.core.exceptions import AuthorizationError, NotFoundError, RateLimitError
+from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
-from app.models.chat import ChatMessage
 from app.models.subgroup import ChatChannel
 from app.models.user import User
 from app.plugins.hooks import HookRegistry
@@ -36,55 +33,27 @@ from app.repositories.chat_repo import (
     ChatMessageRepository,
 )
 from app.services.activity_publish import record_activity
-from app.services.link_preview_service import extract_urls
+from app.services.chat_helpers import (
+    CHAT_PUBSUB_CHANNEL_PREFIX,
+    CHAT_RATE_LIMIT_PER_MINUTE,
+    channel_pubsub_name,
+    serialize_message,
+)
+from app.services.chat_internals import ChatInternalsMixin
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
-logger = structlog.get_logger(__name__)
-
-CHAT_RATE_LIMIT_PER_MINUTE = 30
-"""@brief Maximum messages per user per 60-second window."""
-
-CHAT_PUBSUB_CHANNEL_PREFIX = "chat:"
-"""@brief Valkey pub/sub channel prefix for chat broadcasts."""
-
-
-def channel_pubsub_name(channel_id: uuid.UUID) -> str:
-    """@brief Return the Valkey pub/sub channel for a chat channel."""
-    return f"{CHAT_PUBSUB_CHANNEL_PREFIX}{channel_id}"
+__all__ = [
+    "CHAT_PUBSUB_CHANNEL_PREFIX",
+    "CHAT_RATE_LIMIT_PER_MINUTE",
+    "ChatService",
+    "channel_pubsub_name",
+    "serialize_message",
+]
 
 
-def serialize_message(message: ChatMessage, author: User | None) -> dict[str, Any]:
-    """
-    @brief Build the wire-format dict for a chat message.
-
-    @param message The ChatMessage ORM instance.
-    @param author Optional author User (None when the user was deleted).
-    @return Dict ready for JSON serialization.
-    """
-    is_deleted = message.content == TOMBSTONE_CONTENT
-    return {
-        "id": str(message.id),
-        "channel_id": str(message.channel_id) if message.channel_id else None,
-        "author": (
-            {
-                "id": str(author.id),
-                "username": author.username,
-                "display_name": author.display_name,
-                "avatar_url": author.avatar_url,
-            }
-            if author is not None
-            else None
-        ),
-        "content": message.content,
-        "edited_at": message.edited_at.isoformat() if message.edited_at else None,
-        "deleted": is_deleted,
-        "created_at": message.created_at.isoformat(),
-    }
-
-
-class ChatService:
+class ChatService(ChatInternalsMixin):
     """
     @brief Service layer for chat channels and message flow.
 
@@ -428,100 +397,3 @@ class ChatService:
             raise NotFoundError(_("Direct message thread not found"))
 
         await self._channel_repo.remove_dm_participant(channel_id, user.id)
-
-    # ── Internals ────────────────────────────────────────────────────
-
-    async def _broadcast(
-        self,
-        channel_id: uuid.UUID,
-        type_: str,
-        payload: dict[str, Any],
-        *,
-        channel: ChatChannel | None = None,
-    ) -> int:
-        """
-        @brief Publish a typed envelope to every member of the channel.
-
-        Fans out via per-user pub/sub (``user:{uid}``) so the realtime
-        subscriber, which psubscribes ``user:*``/``community:*``, routes
-        each frame to the correct WebSocket connections. Falls back to
-        the legacy ``chat:{channel_id}`` topic when the channel cannot
-        be resolved (preserves backwards-compat for any external
-        listener still using it).
-        """
-        if self._broadcaster is None:
-            from app.services.realtime.pubsub import publish as default_publish
-
-            publish = default_publish
-        else:
-            publish = self._broadcaster
-
-        message = {"type": type_, "payload": payload}
-
-        ch = channel
-        if ch is None:
-            ch = await self._channel_repo.get(channel_id, self._community_id)
-        if ch is None:
-            return await publish(channel_pubsub_name(channel_id), message)
-
-        member_ids = await self._channel_repo.list_member_ids(
-            ch,
-            self._community_id,
-        )
-
-        total = 0
-        for uid in member_ids:
-            total += await publish(f"user:{uid}", message)
-        return total
-
-    async def _enqueue_link_previews(
-        self,
-        content: str,
-        message_id: uuid.UUID,
-    ) -> None:
-        """@brief Dispatch a Celery task per URL found in ``content``."""
-        urls = extract_urls(content)
-        if not urls:
-            return
-
-        if self._link_preview_enqueue is None:
-            try:
-                from app.tasks.link_preview_tasks import scrape_link_preview
-
-                enqueue = scrape_link_preview.delay
-            except Exception:
-                logger.warning("chat_link_preview_task_unavailable", exc_info=True)
-                return
-        else:
-            enqueue = self._link_preview_enqueue
-
-        for url in urls:
-            try:
-                enqueue(url, message_id=str(message_id))
-            except Exception:
-                logger.warning(
-                    "chat_link_preview_enqueue_failed",
-                    url=url,
-                    message_id=str(message_id),
-                    exc_info=True,
-                )
-
-    async def _enforce_rate_limit(self, user_id: uuid.UUID) -> None:
-        """
-        @brief Enforce 30 msg/min/user via Valkey ``INCR`` + ``EXPIRE``.
-
-        Silently passes when no Valkey client is configured (e.g. tests).
-        """
-        if self._rate_limiter is None:
-            return
-        key = f"rl:chat:send:{user_id}"
-        try:
-            count = await self._rate_limiter.incr(key)
-            if count == 1:
-                await self._rate_limiter.expire(key, 60)
-        except Exception:
-            logger.debug("chat_rate_limit_backend_unavailable", exc_info=True)
-            return
-
-        if count > CHAT_RATE_LIMIT_PER_MINUTE:
-            raise RateLimitError(_("Chat rate limit exceeded"))

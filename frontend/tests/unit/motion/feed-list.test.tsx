@@ -11,6 +11,9 @@ vi.mock("framer-motion", async () => {
     await vi.importActual<typeof import("framer-motion")>("framer-motion");
   return { ...actual, useReducedMotion: () => reduced };
 });
+vi.mock("@/hooks/useActivePrompts", () => ({
+  useActivePrompts: () => ({ data: [] }),
+}));
 vi.mock("@/hooks/useHomeFeed", () => ({
   useHomeFeed: () => ({
     items: [
