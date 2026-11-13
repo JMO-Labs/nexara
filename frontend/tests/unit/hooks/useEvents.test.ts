@@ -41,8 +41,8 @@ describe("useRsvp optimistic", () => {
     return spy.mock.results.at(-1)!.value as Opts;
   };
   const status = () =>
-    (qc.getQueryData(qk.events.detail("e1")) as ReturnType<typeof ev>)
-      .user_rsvp?.status;
+    (qc.getQueryData(qk.events.detail("e1")) as ReturnType<typeof ev>).user_rsvp
+      ?.status;
   const listStatus = () =>
     (qc.getQueryData(listKey) as { items: ReturnType<typeof ev>[] }).items[0]
       .user_rsvp?.status;
