@@ -83,7 +83,9 @@ class GalleryItemsMixin(GalleryServiceBase):
             raise NotFoundError(_("Gallery not found"))
         if not await self._can_view(gallery, user_id):
             raise AuthorizationError(_("You cannot view this gallery"))
-        rows, _next = await self._repo.list_items(gallery_id, limit=limit, cursor=cursor)
+        rows, _next = await self._repo.list_items(
+            gallery_id, limit=limit, cursor=cursor, viewer_id=user_id
+        )
         return [GalleryItemResponse.model_validate(r) for r in rows]
 
     async def add_item(

@@ -32,6 +32,7 @@ from app.repositories.chat_repo import (
     ChatChannelRepository,
     ChatMessageRepository,
 )
+from app.repositories.moderation_repo import ModerationRepository
 from app.services.activity_publish import record_activity
 from app.services.chat_helpers import (
     CHAT_PUBSUB_CHANNEL_PREFIX,
@@ -77,6 +78,7 @@ class ChatService(ChatInternalsMixin):
         broadcaster: Any = None,
         link_preview_enqueue: Any = None,
         activity_repo: ActivityRepository | None = None,
+        moderation_repo: ModerationRepository | None = None,
     ) -> None:
         self._channel_repo = channel_repo
         self._message_repo = message_repo
@@ -85,6 +87,7 @@ class ChatService(ChatInternalsMixin):
         self._broadcaster = broadcaster
         self._link_preview_enqueue = link_preview_enqueue
         self._activity_repo = activity_repo
+        self._moderation_repo = moderation_repo
 
     # ── Channel management ───────────────────────────────────────────
 
@@ -113,6 +116,7 @@ class ChatService(ChatInternalsMixin):
         """
         if peer_id == user.id:
             raise AuthorizationError(_("Cannot DM yourself"))
+        await self._ensure_not_blocked(user.id, peer_id)
 
         channel, _created = await self._channel_repo.get_or_create_dm(
             user.id,
@@ -220,6 +224,7 @@ class ChatService(ChatInternalsMixin):
         )
         if channel is None:
             raise NotFoundError(_("Channel not found"))
+        await self._ensure_dm_not_blocked(channel, user.id)
 
         hook_kw: dict[str, Any] = {
             "community_id": self._community_id,
