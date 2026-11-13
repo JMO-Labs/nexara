@@ -8,8 +8,8 @@ from typing import Any
 from app.services.notifications.registry import Channel, NotificationType
 
 _CHANNELS: tuple[Channel, ...] = ("inapp", "email", "push", "toast", "apprise")
-# Channels on unless the type says otherwise; apprise is a no-op without URLs.
-_DEFAULT_ON: frozenset[Channel] = frozenset({"apprise"})
+# Channels on unless the type says otherwise. Apprise is opt-in (off by default).
+_DEFAULT_ON: frozenset[Channel] = frozenset()
 
 
 def effective_channels(
