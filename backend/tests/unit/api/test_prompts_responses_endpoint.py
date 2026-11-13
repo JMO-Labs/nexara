@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -47,15 +48,34 @@ async def test_get_prompt_post_delegates_to_service(test_app):
     user.id = uuid.uuid4()
     pid = uuid.uuid4()
     svc = AsyncMock()
-    svc.get_prompt_post.return_value = MagicMock()
+    now = datetime.now(UTC)
+    svc.get_prompt_post.return_value = {
+        "id": str(pid),
+        "prompt_id": str(uuid.uuid4()),
+        "post_id": str(uuid.uuid4()),
+        "fired_at": now.date().isoformat(),
+        "expires_at": now.isoformat(),
+        "response_count": 0,
+        "is_finalised": False,
+        "summary_post_id": None,
+        "prompt": {
+            "id": str(uuid.uuid4()),
+            "title": "t",
+            "body": "b",
+            "prompt_type": "text",
+            "interest_category_slug": None,
+            "interest_capture_hint": None,
+        },
+    }
     test_app.dependency_overrides[get_current_user] = lambda: user
     test_app.dependency_overrides[prompts_module._build_service] = lambda: svc
     try:
         async with AsyncClient(
             transport=ASGITransport(app=test_app), base_url="http://test"
         ) as client:
-            await client.get(f"/api/v1/prompts/posts/{pid}")
+            resp = await client.get(f"/api/v1/prompts/posts/{pid}")
     finally:
         test_app.dependency_overrides.clear()
 
+    assert resp.status_code == 200
     svc.get_prompt_post.assert_awaited_once_with(pid)

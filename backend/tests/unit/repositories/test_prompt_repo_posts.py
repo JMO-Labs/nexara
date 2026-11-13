@@ -57,7 +57,7 @@ async def test_get_prompt_post_without_community():
     pp = MagicMock()
     repo, session = _repo(scalar_one=pp)
     assert await repo.get_prompt_post(uuid.uuid4()) is pp
-    assert "community_id" not in _sql(session)
+    assert "community_id" not in _sql(session).split("WHERE", 1)[1]
 
 
 @pytest.mark.asyncio
@@ -65,4 +65,4 @@ async def test_get_prompt_post_with_community_filters():
     """@brief Community arg adds a community_id filter; miss returns None."""
     repo, session = _repo(scalar_one=None)
     assert await repo.get_prompt_post(uuid.uuid4(), COMMUNITY_ID) is None
-    assert "community_id" in _sql(session)
+    assert "community_id" in _sql(session).split("WHERE", 1)[1]
