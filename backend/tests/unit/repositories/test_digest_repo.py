@@ -14,6 +14,11 @@ from app.models.notification_digest import NotificationDigestQueue
 from app.repositories.digest_repo import DigestRepository
 
 
+def _sql(s: AsyncMock) -> str:
+    stmt = s.execute.await_args.args[0]
+    return str(stmt.compile(dialect=postgresql.dialect()))
+
+
 def _session() -> AsyncMock:
     s = AsyncMock()
     s.add = MagicMock()
@@ -47,6 +52,11 @@ async def test_drain_returns_ids_and_deletes():
     out = await DigestRepository(s).drain(uuid.uuid4(), "comment")
     assert out == ids
     assert s.execute.await_count == 1  # single DELETE ... RETURNING
+    sql = _sql(s)
+    assert sql.startswith("DELETE FROM notification_digest_queue")
+    where = sql.split("WHERE", 1)[1].split("RETURNING")[0]
+    assert "user_id" in where and "type_key" in where
+    assert "RETURNING notification_digest_queue.notification_id" in sql
 
 
 async def test_drain_idempotent_when_empty():
@@ -57,6 +67,8 @@ async def test_drain_idempotent_when_empty():
     repo = DigestRepository(s)
     assert await repo.drain(uuid.uuid4(), "x") == []
     assert await repo.drain(uuid.uuid4(), "x") == []
+    assert s.execute.await_count == 2
+    assert _sql(s).startswith("DELETE FROM notification_digest_queue")
 
 
 async def test_list_users_with_pending():
@@ -66,6 +78,9 @@ async def test_list_users_with_pending():
     res.scalars.return_value.all.return_value = ids
     s.execute.return_value = res
     assert await DigestRepository(s).list_users_with_pending() == ids
+    sql = _sql(s)
+    assert sql.startswith("SELECT DISTINCT notification_digest_queue.user_id")
+    assert "WHERE" not in sql
 
 
 async def test_list_pending_types():
@@ -74,3 +89,6 @@ async def test_list_pending_types():
     res.scalars.return_value.all.return_value = ["a", "b"]
     s.execute.return_value = res
     assert await DigestRepository(s).list_pending_types(uuid.uuid4()) == ["a", "b"]
+    sql = _sql(s)
+    assert sql.startswith("SELECT DISTINCT notification_digest_queue.type_key")
+    assert "WHERE notification_digest_queue.user_id" in sql
