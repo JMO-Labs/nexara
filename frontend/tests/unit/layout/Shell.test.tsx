@@ -32,6 +32,7 @@ vi.mock("@/components/chat/FloatingChatDock", () =>
 
 import { Shell } from "@/components/layout/Shell";
 import { useSession } from "@/stores/session";
+import { useUI } from "@/stores/ui";
 
 function setup() {
   useSession.setState({
@@ -80,5 +81,15 @@ describe("Shell", () => {
   it("does not mount the right rail", () => {
     setup();
     expect(screen.queryByTestId("rail")).not.toBeInTheDocument();
+  });
+
+  it("exposes density on the root element", () => {
+    useUI.setState({ density: "compact" });
+    const { container } = setup();
+    expect(container.querySelector("[data-density]")).toHaveAttribute(
+      "data-density",
+      "compact",
+    );
+    useUI.setState({ density: "comfortable" });
   });
 });
