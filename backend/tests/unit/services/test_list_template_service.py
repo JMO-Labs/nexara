@@ -15,7 +15,7 @@ from app.models.list_template import ListTemplate, ListTemplateField, ListTempla
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.repositories.list_template_repo import ListTemplateRepository
-from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
+from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
 from app.services.list_template_service import ListTemplateService
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -71,7 +71,7 @@ async def test_create_validates_fields(parts):
     assert len(out.fields) == 1 and len(out.items) == 1
 
 
-@pytest.mark.parametrize("exc", [ValueError("bad"), FieldTypeNotFound("x")])
+@pytest.mark.parametrize("exc", [ValueError("bad"), FieldTypeNotFoundError("x")])
 async def test_create_invalid_config_raises_app_error(parts, exc):
     svc, repo, registry, *_ = parts
     registry.validate_config.side_effect = exc
