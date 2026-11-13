@@ -14,7 +14,7 @@ ROOT=$PWD; rc=0
 # Integration (dockerized Postgres + Valkey); appends to coverage.xml. Skips locally without docker.
 bash scripts/wq-ci-integration.sh || rc=1
 
-(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml") || rc=1
+(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npm run build) || rc=1
 
 # Mobile (Flutter): install the stable SDK when absent, then analyze (infos non-fatal) and test.
 if [ -d mobile ]; then
