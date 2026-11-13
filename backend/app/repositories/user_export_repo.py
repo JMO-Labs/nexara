@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -72,6 +72,23 @@ class UserExportRepository(BaseRepository[UserExport]):
         await self._session.flush()
         await self._session.refresh(row)
         return row
+
+    async def mark_downloaded(self, row: UserExport) -> None:
+        """@brief Stamp ``downloaded_at`` with the current time."""
+        row.downloaded_at = datetime.now(UTC)
+        await self._session.flush()
+
+    async def list_expired(self, cutoff: datetime) -> list[UserExport]:
+        """@brief Exports with a stored file that became ready before ``cutoff``."""
+        stmt = select(UserExport).where(
+            UserExport.ready_at < cutoff, UserExport.file_key.isnot(None)
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def delete_row(self, row: UserExport) -> None:
+        """@brief Hard-delete an export row."""
+        await self._session.delete(row)
+        await self._session.flush()
 
     async def commit(self) -> None:
         """@brief Commit so a queued worker can see the row."""
