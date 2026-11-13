@@ -19,6 +19,7 @@ from tests.unit.services._gallery_fixtures import (  # noqa: F401
     session,
 )
 
+
 class TestBaseVisibility:
     async def test_subgroup_without_id_is_hidden(self, service: GalleryService) -> None:
         g = _gallery(visibility="subgroup", subgroup_id=None)
@@ -91,5 +92,3 @@ class TestAdminNotFound:
         repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError):
             await service.admin_delete(uuid.uuid4(), uuid.uuid4())
-
-

@@ -28,6 +28,7 @@ from tests.unit.services._gallery_fixtures import (  # noqa: F401
     session,
 )
 
+
 class TestEnsureGalleries:
     async def test_default_returns_existing(self, service: GalleryService, repo: AsyncMock) -> None:
         repo.get_default_for_user.return_value = _gallery()

@@ -86,5 +86,3 @@ def session() -> AsyncMock:
 @pytest.fixture
 def service(repo: AsyncMock, session: AsyncMock) -> GalleryService:
     return GalleryService(gallery_repo=repo, community_id=COMMUNITY_ID, session=session)
-
-
