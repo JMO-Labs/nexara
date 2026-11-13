@@ -99,7 +99,7 @@ class TestRemoveContent:
         ("target_type", "table"),
         [("comment", "comments"), ("message", "chat_messages"), ("media", "media")],
     )
-    async def test_models_without_deleted_at_are_hard_deleted(self, target_type, table):
+    async def test_delete_without_deleted_at_is_hard_delete(self, target_type, table):
         session = _session()
         await ModerationRepository(session).soft_delete_content(
             target_type, TARGET_ID, COMMUNITY_ID
@@ -107,6 +107,27 @@ class TestRemoveContent:
         sql = _sql(session)
         assert sql.startswith(f"delete from {table}")
         assert f"{table}.community_id" in sql
+
+    async def test_hide_post_is_reversible_soft_delete(self):
+        session = _session()
+        assert await ModerationRepository(session).hide_content("post", TARGET_ID, COMMUNITY_ID)
+        sql = _sql(session)
+        assert sql.startswith("update posts") and "deleted_at" in sql
+        assert "posts.community_id" in sql
+
+    @pytest.mark.parametrize("target_type", ["comment", "message", "media"])
+    async def test_hide_never_issues_delete(self, target_type):
+        session = _session()
+        hidden = await ModerationRepository(session).hide_content(
+            target_type, TARGET_ID, COMMUNITY_ID
+        )
+        assert hidden is False
+        session.execute.assert_not_awaited()
+
+    async def test_get_user_role_scoped(self):
+        session = _session(_scalar("admin"))
+        assert await ModerationRepository(session).get_user_role(USER_ID, COMMUNITY_ID) == "admin"
+        assert "users.community_id" in _sql(session)
 
     async def test_deactivate_user_scoped(self):
         session = _session()

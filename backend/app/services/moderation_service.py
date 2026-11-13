@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import invalidate_search_cache_for_community
-from app.core.exceptions import AppError, ConflictError, NotFoundError
+from app.core.exceptions import AppError, AuthorizationError, ConflictError, NotFoundError
 from app.core.i18n import _
 from app.models.moderation import ContentReport, UserBlock
 from app.repositories.audit_repo import AuditRepository
@@ -27,11 +27,15 @@ ACTIONS = {"dismiss", "warn_user", "hide_content", "delete_content", "ban_user"}
 """@brief Valid admin actions."""
 
 _NOTIFY_TEXT = {
-    "warn_user": "You received a warning from the moderators.",
-    "hide_content": "Your content was hidden by the moderators.",
-    "delete_content": "Your content was removed by the moderators.",
-    "ban_user": "Your account was suspended by the moderators.",
+    "warn_user": _("You received a warning from the moderators."),
+    "hide_content": _("Your content was hidden by the moderators."),
+    "delete_content": _("Your content was removed by the moderators."),
+    "ban_user": _("Your account was suspended by the moderators."),
 }
+"""@brief Notification text per action; each literal is marked for extraction."""
+
+_PROTECTED_ROLES = {"admin"}
+"""@brief Roles that cannot be banned through moderation actions."""
 
 
 class ModerationService:
@@ -139,6 +143,8 @@ class ModerationService:
         @return The updated report.
         @throws NotFoundError If the report does not exist.
         @throws ConflictError If already handled.
+        @throws AppError 422 if hiding a target type that cannot be hidden.
+        @throws AuthorizationError If banning oneself or another admin.
         """
         report = await self._repo.get_report(report_id, self._community_id)
         if report is None:
@@ -153,11 +159,21 @@ class ModerationService:
             author_id = await self._repo.get_content_author_id(
                 report.target_type, report.target_id, self._community_id
             )
-        if action in ("hide_content", "delete_content"):
+        if action == "hide_content":
+            if not await self._repo.hide_content(
+                report.target_type, report.target_id, self._community_id
+            ):
+                raise AppError(
+                    "HIDE_UNSUPPORTED",
+                    _("This content type cannot be hidden; use delete instead"),
+                    422,
+                )
+        elif action == "delete_content":
             await self._repo.soft_delete_content(
                 report.target_type, report.target_id, self._community_id
             )
         elif action == "ban_user" and author_id is not None:
+            await self._guard_ban(author_id, admin_id)
             await self._repo.deactivate_user(author_id, self._community_id)
 
         updated = await self._repo.mark_reviewed(
@@ -172,16 +188,33 @@ class ModerationService:
             action=f"moderation.report.{action}",
             target_type=report.target_type,
             target_id=report.target_id,
-            extra_data={"report_id": str(report.id), "affected_user": str(author_id)},
+            extra_data={
+                "report_id": str(report.id),
+                "affected_user": str(author_id) if author_id else None,
+            },
         )
         if author_id is not None:
             await self._notifier.notify(
                 author_id,
                 "system",
-                {"message": _(_NOTIFY_TEXT[action]), "report_id": str(report.id)},
+                {"message": _NOTIFY_TEXT[action], "report_id": str(report.id)},
                 admin_id,
             )
         return updated
+
+    async def _guard_ban(self, author_id: uuid.UUID, admin_id: uuid.UUID) -> None:
+        """
+        @brief Refuse to ban oneself or another admin.
+
+        @param author_id User to ban.
+        @param admin_id Acting admin.
+        @throws AuthorizationError If the ban is not allowed.
+        """
+        if author_id == admin_id:
+            raise AuthorizationError(_("You cannot ban yourself"))
+        role = await self._repo.get_user_role(author_id, self._community_id)
+        if role in _PROTECTED_ROLES:
+            raise AuthorizationError(_("Administrators cannot be banned"))
 
     async def block_user(self, blocker_id: uuid.UUID, blocked_id: uuid.UUID) -> UserBlock:
         """

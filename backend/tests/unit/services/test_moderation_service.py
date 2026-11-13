@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.core.exceptions import AppError, ConflictError, NotFoundError
+from app.core.exceptions import AppError, AuthorizationError, ConflictError, NotFoundError
 from app.models.moderation import ContentReport
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.moderation_repo import ModerationRepository
@@ -119,8 +119,56 @@ class TestAction:
         repo.get_report.return_value = report
         repo.mark_reviewed.return_value = report
         repo.get_content_author_id.return_value = AUTHOR_ID
+        repo.get_user_role.return_value = "member"
         await service.take_action(report.id, ADMIN_ID, "ban_user", None)
         repo.deactivate_user.assert_awaited_once_with(AUTHOR_ID, COMMUNITY_ID)
+
+    async def test_ban_self_forbidden(self, service, repo):
+        repo.get_report.return_value = _report()
+        repo.get_content_author_id.return_value = ADMIN_ID
+        repo.get_user_role.return_value = "admin"
+        with pytest.raises(AuthorizationError):
+            await service.take_action(uuid.uuid4(), ADMIN_ID, "ban_user", None)
+        repo.deactivate_user.assert_not_awaited()
+        repo.mark_reviewed.assert_not_awaited()
+
+    async def test_ban_other_admin_forbidden(self, service, repo):
+        repo.get_report.return_value = _report()
+        repo.get_content_author_id.return_value = AUTHOR_ID
+        repo.get_user_role.return_value = "admin"
+        with pytest.raises(AuthorizationError):
+            await service.take_action(uuid.uuid4(), ADMIN_ID, "ban_user", None)
+        repo.deactivate_user.assert_not_awaited()
+
+    async def test_hide_post_uses_reversible_hide(self, service, repo):
+        report = _report()
+        repo.get_report.return_value = report
+        repo.mark_reviewed.return_value = report
+        repo.get_content_author_id.return_value = AUTHOR_ID
+        repo.hide_content.return_value = True
+        await service.take_action(report.id, ADMIN_ID, "hide_content", None)
+        repo.hide_content.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID)
+        repo.soft_delete_content.assert_not_awaited()
+
+    async def test_hide_comment_never_deletes(self, service, repo, notifier):
+        report = _report()
+        report.target_type = "comment"
+        repo.get_report.return_value = report
+        repo.get_content_author_id.return_value = AUTHOR_ID
+        repo.hide_content.return_value = False
+        with pytest.raises(AppError) as exc:
+            await service.take_action(report.id, ADMIN_ID, "hide_content", None)
+        assert exc.value.status_code == 422
+        repo.soft_delete_content.assert_not_awaited()
+        repo.mark_reviewed.assert_not_awaited()
+        notifier.notify.assert_not_awaited()
+
+    async def test_dismiss_audit_affected_user_is_none(self, service, repo, audit):
+        report = _report()
+        repo.get_report.return_value = report
+        repo.mark_reviewed.return_value = report
+        await service.take_action(report.id, ADMIN_ID, "dismiss", None)
+        assert audit.append.call_args.kwargs["extra_data"]["affected_user"] is None
 
     async def test_delete_content_removes_content(self, service, repo):
         report = _report()
