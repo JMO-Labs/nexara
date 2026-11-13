@@ -397,5 +397,3 @@ class ChatService(ChatInternalsMixin):
             raise NotFoundError(_("Direct message thread not found"))
 
         await self._channel_repo.remove_dm_participant(channel_id, user.id)
-
-    # ── Internals ────────────────────────────────────────────────────
