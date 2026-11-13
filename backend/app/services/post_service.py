@@ -13,6 +13,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import structlog
+from sqlalchemy import select
 
 from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
@@ -26,9 +27,9 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
+from app.services import mentions
 from app.services.activity_publish import record_activity
 from app.services.ai.sassybot_service import wants_sassybot
-from app.services.mention_notify import notify_mentions
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -417,6 +418,7 @@ class PostService:
                 type="reaction",
                 payload={
                     "post_id": str(post_id),
+                    "actor_name": user.display_name,
                     "emoji": emoji,
                     "message": _("%(user)s reacted to your post") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
@@ -494,6 +496,7 @@ class PostService:
                 payload={
                     "post_id": str(post_id),
                     "comment_id": str(comment_id),
+                    "actor_name": user.display_name,
                     "emoji": emoji,
                     "message": _("%(user)s reacted to your comment") % {"user": user.display_name},
                     "link": f"/app/post/{post_id}",
@@ -586,14 +589,29 @@ class PostService:
 
     async def _notify_mentions(self, content: str, actor: User, post_id: uuid.UUID) -> None:
         """@brief Notify @mentioned users in this community (never the actor)."""
-        await notify_mentions(
-            self._post_repo._session,
-            self._notification,
-            self._community_id,
-            content,
-            actor,
-            post_id,
+        usernames = mentions.extract(content)
+        if not usernames:
+            return
+        stmt = select(User).where(
+            User.username.in_(usernames),
+            User.community_id == self._community_id,
+            User.deleted_at.is_(None),
         )
+        result = await self._post_repo._session.execute(stmt)
+        for mentioned in result.scalars().all():
+            if mentioned.id == actor.id:
+                continue
+            await self._notification.notify(
+                user_id=mentioned.id,
+                type="mention",
+                payload={
+                    "post_id": str(post_id),
+                    "actor_name": actor.display_name,
+                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
+                    "link": f"/app/post/{post_id}",
+                },
+                actor_id=actor.id,
+            )
 
     async def _notify_comment_participants(
         self,
@@ -608,6 +626,7 @@ class PostService:
         base_payload = {
             "post_id": str(post_id),
             "comment_id": str(comment.id),
+            "actor_name": user.display_name,
             "link": link,
         }
 
