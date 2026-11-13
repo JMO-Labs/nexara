@@ -142,6 +142,8 @@ class TestAdminEndpoints:
             )
             d = await c.delete(f"/api/v1/communities/{CID}/webhooks/{WID}")
         assert p.status_code == 200 and d.status_code == 200
+        assert service.update.await_args.args[0] is None
+        assert service.delete.await_args.args[0] is None
 
     async def test_member_forbidden(self, member):
         async with member as c:

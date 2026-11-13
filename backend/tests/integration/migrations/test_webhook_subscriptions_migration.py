@@ -21,7 +21,7 @@ BASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
 )
 REV = "d4e5f6a7b8c9"
-PREV = "b2c3d4e5f6a7"
+PREV = "0026_user_exports_table"
 
 
 def _admin(url):
