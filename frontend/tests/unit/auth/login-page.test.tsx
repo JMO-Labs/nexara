@@ -118,3 +118,19 @@ describe("LoginPage", () => {
     expect(screen.getByLabelText("Email")).toBeTruthy();
   });
 });
+
+describe("LoginPage validation", () => {
+  it("shows inline email format error on blur and does not submit", async () => {
+    vi.mocked(api.getAuthConfig).mockResolvedValue({
+      oidc_enabled: false,
+      registration_enabled: true,
+      local_auth_enabled: true,
+      oauth_providers: [],
+    });
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText("Email"), "not-an-email");
+    await userEvent.tab();
+    expect(await screen.findByText("Enter a valid email address")).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+});

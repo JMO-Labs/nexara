@@ -23,8 +23,8 @@ import { completeLogin } from "@/lib/auth/flow";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
-  email: z.string().min(3),
-  password: z.string().min(1),
+  email: z.string().email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 type FormData = z.infer<typeof Schema>;
 
@@ -51,6 +51,7 @@ export default function LoginPage() {
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
+    mode: "onTouched",
     defaultValues: { email: "", password: "" },
   });
 
