@@ -3,7 +3,7 @@
  * @brief NotificationsTab component tests. Verify toggle switches.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotificationsTab } from "@/components/settings/NotificationsTab";
@@ -229,10 +229,10 @@ describe("NotificationsTab", () => {
       isSuccess: true,
     } as any);
     const mutate = setup();
-    const user = userEvent.setup();
-    screen.getByRole("combobox", { name: "Digest hour" }).focus();
-    await user.keyboard("{Enter}");
-    await user.click(await screen.findByRole("option", { name: "21:00" }));
-    expect(mutate).toHaveBeenCalledWith({ email_digest_hour: 21 });
+    fireEvent.click(screen.getByRole("combobox", { name: "Digest hour" }));
+    fireEvent.click(await screen.findByRole("option", { name: "21:00" }));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ email_digest_hour: 21 }),
+    );
   });
 });
