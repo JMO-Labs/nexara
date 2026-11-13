@@ -17,6 +17,7 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import StrEnum
 from typing import Any
 from uuid import UUID
@@ -174,15 +175,22 @@ def user_notification(
     notification_type: str,
     payload: dict[str, Any],
     created_at: str,
+    *,
+    updated_at: str | None = None,
+    count: int = 1,
+    actor_ids: Sequence[UUID] | None = None,
 ) -> RealtimeEvent:
     """
     @brief Build a notification event targeted at a single user.
 
     @param user_id Recipient user UUID.
     @param notification_id DB notification ID.
-    @param notification_type Notification category (mention, comment, etc.).
+    @param notification_type Notification type key (mention, comment, etc.).
     @param payload Notification content.
     @param created_at ISO 8601 timestamp.
+    @param updated_at ISO 8601 last-update timestamp (defaults to created_at).
+    @param count Grouped occurrence count.
+    @param actor_ids Actors folded into the notification.
     """
     return RealtimeEvent(
         type=EventType.NOTIFICATION,
@@ -192,6 +200,9 @@ def user_notification(
             "type": notification_type,
             "payload": payload,
             "created_at": created_at,
+            "updated_at": updated_at or created_at,
+            "count": count,
+            "actor_ids": [str(a) for a in actor_ids or ()],
         },
     )
 
