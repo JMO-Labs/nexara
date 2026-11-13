@@ -76,9 +76,7 @@ async def test_user_update(client, service, user):
     wid = uuid.uuid4()
     r = await client.patch(f"{USER_BASE}/{wid}", json={"enabled": False})
     assert r.status_code == 200
-    service.update.assert_awaited_once_with(
-        user.id, wid, url=None, type_keys=None, enabled=False
-    )
+    service.update.assert_awaited_once_with(user.id, wid, url=None, type_keys=None, enabled=False)
 
 
 async def test_user_delete(client, service, user):
