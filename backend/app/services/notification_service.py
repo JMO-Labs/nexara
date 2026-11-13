@@ -8,17 +8,20 @@ Respects user notification preferences and mutes.
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
+from pydantic import ValidationError as PydanticValidationError
 
-if TYPE_CHECKING:
-    from app.services.realtime.event_bus import EventBus
-
+from app.core.exceptions import AppError
 from app.models.notification import Notification
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.notification import NotificationList, NotificationResponse, UnreadCountResponse
+from app.services.notifications import registry
+from app.services.notifications.dispatcher import Dispatcher
+from app.services.notifications.prefs import effective_channels
+from app.services.realtime.event_bus import EventBus
 
 logger = structlog.get_logger(__name__)
 
@@ -66,7 +69,8 @@ class NotificationService:
     @param notification_repo NotificationRepository instance.
     @param settings_repo SettingsRepository instance.
     @param community_id Community scope.
-    @param event_bus Optional EventBus for real-time SSE delivery.
+    @param event_bus Optional EventBus; builds a default Dispatcher when no dispatcher given.
+    @param dispatcher Optional Dispatcher (see core.dependencies.get_dispatcher).
     """
 
     def __init__(
@@ -76,68 +80,66 @@ class NotificationService:
         community_id: uuid.UUID,
         *,
         event_bus: EventBus | None = None,
+        dispatcher: Dispatcher | None = None,
     ) -> None:
         self._notification_repo = notification_repo
         self._settings_repo = settings_repo
         self._community_id = community_id
-        self._event_bus = event_bus
+        if dispatcher is None:
+            if event_bus is not None:
+                dispatcher = Dispatcher(event_bus)
+            else:
+                from app.core.dependencies import get_dispatcher
+
+                dispatcher = get_dispatcher()
+        self._dispatcher = dispatcher
 
     async def notify(
         self,
         user_id: uuid.UUID,
-        type: str,
+        type: str,  # noqa: A002
         payload: dict[str, Any],
         actor_id: uuid.UUID | None = None,
-    ) -> Notification | None:
+    ) -> Notification:
         """
-        @brief Create and deliver a notification based on user preferences.
-
-        If in-app enabled: create DB record and publish SSE event.
-        If email enabled and not mute_all_email: enqueue Celery task.
+        @brief Validate, persist and dispatch a notification.
 
         @param user_id Recipient user UUID.
-        @param type Notification type (mention, comment, etc.).
-        @param payload JSON payload (message, link, etc.).
+        @param type Registered notification type key.
+        @param payload Payload validated against the type's schema.
         @param actor_id Optional actor UUID.
-        @return Created Notification or None if in-app disabled.
+        @return The persisted Notification.
+        @throws AppError NOTIF_TYPE_UNKNOWN or NOTIF_PREF_INVALID (400).
         """
-        if type not in PREF_MAP:
-            logger.warning("notification_unknown_type", type=type)
-            return None
+        try:
+            type_ = registry.get(type)
+        except KeyError:
+            raise AppError(
+                code="NOTIF_TYPE_UNKNOWN",
+                message=f"Unknown notification type: {type}",
+                status_code=400,
+            ) from None
+        try:
+            type_.payload_schema.model_validate(payload)
+        except PydanticValidationError as exc:
+            raise AppError(
+                code="NOTIF_PREF_INVALID",
+                message=f"Invalid payload for {type}",
+                status_code=400,
+                details={"errors": exc.errors(include_url=False, include_context=False)},
+            ) from exc
 
-        inapp_key, email_key = PREF_MAP[type]
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
-        inapp_enabled = getattr(settings, inapp_key, True)
-        email_enabled = getattr(settings, email_key, False)
-        mute_email = getattr(settings, "mute_all_email", False)
-
-        notification: Notification | None = None
-        if inapp_enabled:
-            notification = await self._notification_repo.create(
-                user_id, type, payload, self._community_id
-            )
-            if self._event_bus:
-                from app.services.realtime import events
-
-                await self._event_bus.emit(
-                    events.user_notification(
-                        user_id=user_id,
-                        notification_id=notification.id,
-                        notification_type=type,
-                        payload=payload,
-                        created_at=notification.created_at.isoformat(),
-                    ),
-                )
-
-        if email_enabled and not mute_email:
-            from app.tasks.notification_tasks import send_email_notification
-
-            send_email_notification.delay(
-                str(user_id),
-                type,
-                {**payload, "actor_id": str(actor_id) if actor_id else None},
-            )
-
+        eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})
+        notification = await self._notification_repo.upsert_grouped(
+            user_id,
+            type,
+            payload,
+            self._community_id,
+            group_key=None,
+            actor_id=actor_id,
+        )
+        await self._dispatcher.dispatch(notification, type_, dict(eff))
         return notification
 
     async def list_for_user(
@@ -176,3 +178,15 @@ class NotificationService:
     async def clear_all(self, user_id: uuid.UUID) -> int:
         """@brief Delete all notifications for a user."""
         return await self._notification_repo.delete_all_for_user(user_id)
+
+    async def list_active(self, user_id: uuid.UUID, limit: int = 20) -> list[Notification]:
+        """@brief List non-dismissed notifications, newest first."""
+        return await self._notification_repo.list_active(user_id, limit)
+
+    async def dismiss(self, user_id: uuid.UUID, notification_id: uuid.UUID) -> None:
+        """@brief Dismiss one notification owned by the user."""
+        await self._notification_repo.dismiss(user_id, notification_id)
+
+    async def dismiss_all(self, user_id: uuid.UUID) -> int:
+        """@brief Dismiss all active notifications; returns count."""
+        return await self._notification_repo.dismiss_all(user_id)

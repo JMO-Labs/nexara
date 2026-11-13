@@ -216,6 +216,7 @@ class PromptService:
                         type="prompt",
                         payload={
                             "prompt_id": str(prompt.id),
+                            "prompt_title": prompt.title,
                             "post_id": str(post.id),
                             "message": prompt.notification_body or prompt.title,
                             "link": f"/app/posts/{post.id}",
@@ -288,6 +289,7 @@ class PromptService:
                             payload={
                                 "prompt_id": str(prompt.id),
                                 "summary_post_id": str(summary.id),
+                                "response_count": tracker.response_count,
                                 "message": _("Prompt summary is ready"),
                                 "link": f"/app/posts/{summary.id}",
                             },

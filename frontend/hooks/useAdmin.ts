@@ -118,6 +118,7 @@ export const useRestoreUser = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
     mutationFn: (userId: string) => adminApi.restoreUser(userId),
+    successKey: "toasts.admin.user.restored",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.users() });
     },
@@ -131,6 +132,7 @@ export const useDeleteUser = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
     mutationFn: (userId: string) => adminApi.deleteUser(userId),
+    successKey: "toasts.admin.user.deleted",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.users() });
     },
@@ -145,6 +147,7 @@ export const useUpdateAdminSettings = () => {
   return useMutationWithToast({
     mutationFn: (updates: adminApi.AdminSettingsUpdate) =>
       adminApi.updateAdminSettings(updates),
+    successKey: "toasts.admin.settings.saved",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.settings() });
     },

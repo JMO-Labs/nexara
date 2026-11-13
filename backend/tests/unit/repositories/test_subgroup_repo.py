@@ -305,3 +305,43 @@ class TestSubgroupMemberRepositoryListMembers:
         rows = await repo.list_members(SUBGROUP_ID)
 
         assert rows == [(m, u)]
+
+
+class TestSubgroupRepositoryGetSlugs:
+    """@brief Tests for SubgroupRepository.get_slugs()."""
+
+    @pytest.mark.asyncio
+    async def test_returns_id_to_slug_map_in_one_query(self):
+        """get_slugs maps ids to slugs with a single execute."""
+        session = _make_session()
+        other = uuid.uuid4()
+        result = MagicMock()
+        result.all.return_value = [(SUBGROUP_ID, "alpha"), (other, "beta")]
+        session.execute.return_value = result
+
+        slugs = await SubgroupRepository(session).get_slugs([SUBGROUP_ID, other], COMMUNITY_ID)
+
+        assert slugs == {SUBGROUP_ID: "alpha", other: "beta"}
+        session.execute.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_empty_ids_skips_query(self):
+        """get_slugs with no ids returns {} without touching the DB."""
+        session = _make_session()
+        assert await SubgroupRepository(session).get_slugs([], COMMUNITY_ID) == {}
+        session.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_query_is_community_scoped(self):
+        """The emitted statement filters on community_id."""
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+
+        await SubgroupRepository(session).get_slugs([SUBGROUP_ID], COMMUNITY_ID)
+
+        stmt = session.execute.await_args.args[0]
+        compiled = stmt.compile()
+        assert "community_id" in str(compiled)
+        assert COMMUNITY_ID in compiled.params.values()
