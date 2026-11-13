@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
+
 from app.tasks import notification_tasks as nt
 
 
@@ -160,3 +162,54 @@ async def test_dispatch_instant_cadence_sends():
         n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
     assert n == 1
     delay.assert_called_once_with(str(uid), "comment", [str(nid)])
+
+
+async def test_dispatch_not_due_type_is_left_queued():
+    uid = uuid4()
+    session = MagicMock()
+    session.commit = AsyncMock()
+    repo = MagicMock()
+    repo.list_users_with_pending = AsyncMock(return_value=[uid])
+    repo.list_pending_types = AsyncMock(return_value=["comment"])
+    repo.drain = AsyncMock()
+    st = MagicMock(
+        digest_cadence={"comment": "hourly"},
+        digest_last_sent_at=datetime(2026, 11, 13, 11, 59, tzinfo=UTC),
+        dnd_timezone="UTC",
+    )
+    p1, p2, p3 = _dispatch_patches(session, repo, st)
+    with p1, p2, p3, patch.object(nt.send_digest_email, "delay") as delay:
+        n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
+    assert n == 0
+    repo.drain.assert_not_awaited()
+    delay.assert_not_called()
+
+
+def test_digest_dispatch_task_runs_async_impl():
+    with patch.object(nt, "_digest_dispatch_async", new=AsyncMock(return_value=3)) as impl:
+        assert nt.digest_dispatch() == 3
+    impl.assert_awaited_once()
+
+
+def test_send_digest_email_invalid_uuid_returns_error():
+    assert nt.send_digest_email("nope", "comment", []) == {"status": "error"}
+    assert nt.send_digest_email(str(uuid4()), "comment", ["bad"]) == {"status": "error"}
+
+
+def test_send_digest_email_runs_async_impl():
+    with patch.object(
+        nt, "_send_digest_email_async", new=AsyncMock(return_value={"status": "sent"})
+    ):
+        out = nt.send_digest_email(str(uuid4()), "comment", [str(uuid4())])
+    assert out == {"status": "sent"}
+
+
+def test_send_digest_email_retries_on_failure():
+    boom = RuntimeError("smtp down")
+    with (
+        patch.object(nt, "_send_digest_email_async", new=AsyncMock(side_effect=boom)),
+        patch.object(nt.send_digest_email, "retry", side_effect=Exception("retry")) as retry,
+        pytest.raises(Exception, match="retry"),
+    ):
+        nt.send_digest_email.run(str(uuid4()), "comment", [str(uuid4())])
+    retry.assert_called_once_with(exc=boom)
