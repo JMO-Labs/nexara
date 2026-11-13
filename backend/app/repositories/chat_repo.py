@@ -302,6 +302,21 @@ class ChatChannelRepository(BaseRepository[ChatChannel]):
         result = await self._session.execute(stmt)
         return [(c, u) for c, u in result.all()]
 
+    async def get_dm_peer_id(self, channel_id: uuid.UUID, user_id: uuid.UUID) -> uuid.UUID | None:
+        """
+        @brief Return the other participant of a DM channel.
+
+        @param channel_id DM channel UUID.
+        @param user_id The known participant.
+        @return Peer UUID or None if not found.
+        """
+        stmt = select(DirectMessageParticipant.user_id).where(
+            DirectMessageParticipant.channel_id == channel_id,
+            DirectMessageParticipant.user_id != user_id,
+        )
+        result = await self._session.execute(stmt.limit(1))
+        return result.scalar_one_or_none()
+
     async def get_or_create_dm(
         self,
         user_a: uuid.UUID,

@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.media import Media
 from app.models.moderation import ContentReport, UserBlock
 from app.models.post import Post
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
@@ -93,6 +94,40 @@ class ModerationRepository(BaseRepository[UserBlock]):
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def is_blocked_either(self, user_a: uuid.UUID, user_b: uuid.UUID) -> bool:
+        """
+        @brief Check whether either user has blocked the other.
+
+        @param user_a First user UUID.
+        @param user_b Second user UUID.
+        @return True if a block exists in either direction.
+        """
+        stmt = select(UserBlock.id).where(
+            or_(
+                and_(UserBlock.blocker_id == user_a, UserBlock.blocked_id == user_b),
+                and_(UserBlock.blocker_id == user_b, UserBlock.blocked_id == user_a),
+            )
+        )
+        result = await self._session.execute(stmt.limit(1))
+        return result.scalar_one_or_none() is not None
+
+    async def list_blocked_users(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[User]:
+        """
+        @brief Return users the given user has blocked, newest block first.
+
+        @param user_id Blocker UUID.
+        @param community_id Community scope.
+        @return List of blocked User rows.
+        """
+        stmt = (
+            select(User)
+            .join(UserBlock, UserBlock.blocked_id == User.id)
+            .where(UserBlock.blocker_id == user_id, UserBlock.community_id == community_id)
+            .order_by(UserBlock.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_blocked_user_ids(self, user_id: uuid.UUID) -> set[uuid.UUID]:
         """

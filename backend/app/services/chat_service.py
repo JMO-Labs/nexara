@@ -35,6 +35,7 @@ from app.repositories.chat_repo import (
     ChatChannelRepository,
     ChatMessageRepository,
 )
+from app.repositories.moderation_repo import ModerationRepository
 from app.services.activity_publish import record_activity
 from app.services.link_preview_service import extract_urls
 
@@ -108,6 +109,7 @@ class ChatService:
         broadcaster: Any = None,
         link_preview_enqueue: Any = None,
         activity_repo: ActivityRepository | None = None,
+        moderation_repo: ModerationRepository | None = None,
     ) -> None:
         self._channel_repo = channel_repo
         self._message_repo = message_repo
@@ -116,6 +118,7 @@ class ChatService:
         self._broadcaster = broadcaster
         self._link_preview_enqueue = link_preview_enqueue
         self._activity_repo = activity_repo
+        self._moderation_repo = moderation_repo
 
     # ── Channel management ───────────────────────────────────────────
 
@@ -144,6 +147,7 @@ class ChatService:
         """
         if peer_id == user.id:
             raise AuthorizationError(_("Cannot DM yourself"))
+        await self._ensure_not_blocked(user.id, peer_id)
 
         channel, _created = await self._channel_repo.get_or_create_dm(
             user.id,
@@ -251,6 +255,11 @@ class ChatService:
         )
         if channel is None:
             raise NotFoundError(_("Channel not found"))
+
+        if getattr(channel, "channel_type", None) == "direct":
+            peer_id = await self._channel_repo.get_dm_peer_id(channel.id, user.id)
+            if peer_id is not None:
+                await self._ensure_not_blocked(user.id, peer_id)
 
         hook_kw: dict[str, Any] = {
             "community_id": self._community_id,
@@ -505,6 +514,17 @@ class ChatService:
                     message_id=str(message_id),
                     exc_info=True,
                 )
+
+    async def _ensure_not_blocked(self, sender_id: uuid.UUID, peer_id: uuid.UUID) -> None:
+        """
+        @brief Reject DM activity when either user has blocked the other.
+
+        @raises AuthorizationError If a block exists in either direction.
+        """
+        if self._moderation_repo is None:
+            return
+        if await self._moderation_repo.is_blocked_either(sender_id, peer_id):
+            raise AuthorizationError(_("Cannot send message to this user"))
 
     async def _enforce_rate_limit(self, user_id: uuid.UUID) -> None:
         """
