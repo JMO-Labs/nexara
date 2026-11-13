@@ -17,6 +17,7 @@ import {
 import { BrandingPreview } from "./BrandingPreview";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
+import { ThemeGallery } from "./ThemeGallery";
 import { AdminLoading, AdminNotice } from "./AdminState";
 
 const ACCENT_ERROR =
@@ -106,6 +107,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
           onChange={setMono}
         />
       </div>
+      <ThemeGallery current={initial} />
       {warnings.map((w) => (
         <p key={w.id} role="status" className="text-sm text-amber-700">
           {w.label}: {w.ratio.toFixed(2)}:1 is below {w.min}:1 (warning only).
@@ -131,5 +133,6 @@ export function BrandingTab() {
   if (isLoading) return <AdminLoading />;
   if (error || !data)
     return <AdminNotice tone="error">Failed to load branding.</AdminNotice>;
-  return <BrandingForm initial={data} />;
+  // Remount on server change (e.g. preset applied) so local state resets.
+  return <BrandingForm key={JSON.stringify(data)} initial={data} />;
 }

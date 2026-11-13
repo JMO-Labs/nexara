@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import json
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from redis.asyncio import Redis
 
 from app.core.cache import DEFAULT_TTL, cache_delete, cache_get, cache_set
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, NotFoundError
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
 from app.schemas.branding import (
@@ -24,6 +25,7 @@ from app.schemas.branding import (
     BrandingUpdate,
     BrandingUpdateResponse,
     ContrastWarning,
+    PresetTheme,
 )
 from app.services.branding.contrast import contrast_ratio
 from app.services.branding.css import sanitize_css
@@ -52,6 +54,10 @@ ALLOWED_FONTS = frozenset(
         "IBM Plex Mono",
     }
 )
+
+
+_PRESETS_PATH = Path(__file__).resolve().parents[2] / "data" / "preset_themes.json"
+"""@brief Location of the bundled preset themes file."""
 
 
 def _cache_key(community_id: uuid.UUID) -> str:
@@ -183,6 +189,46 @@ class BrandingService:
         response = _row_to_response(row)
         warnings = self.check_contrast(row)
         return BrandingUpdateResponse(branding=response, contrast_warnings=warnings)
+
+    async def get_preset_themes(self) -> list[PresetTheme]:
+        """
+        @brief Load preset themes from the bundled JSON file.
+
+        @return List of PresetTheme.
+        """
+        raw = json.loads(_PRESETS_PATH.read_text(encoding="utf-8"))
+        return [PresetTheme(**t) for t in raw["themes"]]
+
+    async def apply_preset_theme(
+        self,
+        theme_name: str,
+        *,
+        user_id: uuid.UUID,
+        ip_address: str | None = None,
+    ) -> BrandingUpdateResponse:
+        """
+        @brief Apply a preset theme's colours via update_branding().
+
+        @param theme_name Theme name (case-insensitive).
+        @param user_id Admin applying the theme.
+        @param ip_address Request IP for the audit log.
+        @return Updated branding with contrast warnings.
+        @throws NotFoundError if no theme has that name.
+        """
+        wanted = theme_name.strip().lower()
+        theme = next((t for t in await self.get_preset_themes() if t.name.lower() == wanted), None)
+        if theme is None:
+            raise NotFoundError(f"Preset theme not found: {theme_name}")
+        data = BrandingUpdate(
+            color_primary=theme.primary,
+            color_primary_dark=theme.primary_dark,
+            color_accent=theme.accent,
+            color_surface_light=theme.surface_light,
+            color_surface_dark=theme.surface_dark,
+            color_text_light=theme.text_light,
+            color_text_dark=theme.text_dark,
+        )
+        return await self.update_branding(user_id=user_id, data=data, ip_address=ip_address)
 
     @staticmethod
     def _sanitize(raw: str) -> str:

@@ -2,7 +2,7 @@
  * @file lib/api/branding.ts
  * @brief Branding API (GET public, PUT admin) plus accent-contrast check.
  */
-import { apiGet, apiPut } from "./client";
+import { apiGet, apiPost, apiPut, seg } from "./client";
 import { contrastRatio } from "@/lib/contrast";
 import { palette } from "@/theme/palette";
 
@@ -48,6 +48,30 @@ export const getBranding = () => apiGet<Branding>(BASE);
  */
 export const updateBranding = (body: BrandingUpdate) =>
   apiPut<{ branding: Branding }>(BASE, body);
+
+export interface PresetTheme {
+  name: string;
+  description: string;
+  primary: string;
+  primary_dark: string;
+  accent: string;
+  surface_light: string;
+  surface_dark: string;
+  text_light: string;
+  text_dark: string;
+}
+
+/** @brief Fetch preset themes (public). */
+export const listPresets = () =>
+  apiGet<{ themes: PresetTheme[] }>(`${BASE}presets`);
+
+/**
+ * @brief Apply a preset theme (admin only).
+ * @param name theme name
+ * @return updated branding
+ */
+export const applyPreset = (name: string) =>
+  apiPost<{ branding: Branding }>(`${BASE}presets/${seg(name)}/apply`);
 
 /**
  * @brief Whether forest text on this accent meets WCAG AA (4.5:1).
