@@ -15,12 +15,13 @@ import uuid
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Body, Depends, Query, Request, Response
+from fastapi import APIRouter, Body, Depends, Query, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, get_dispatcher
+from app.core.dependencies import get_webhook_service as _webhook_service
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.models.user import User
@@ -34,10 +35,17 @@ from app.schemas.notification import (
     NotificationResponse,
     UnreadCountResponse,
 )
+from app.schemas.webhook import (
+    WebhookCreateRequest,
+    WebhookCreateResponse,
+    WebhookListItem,
+    WebhookUpdateRequest,
+)
 from app.services.notification_service import NotificationService
 from app.services.notifications import Category, to_json_schema
 from app.services.notifications.dnd import resolve_snooze
 from app.services.realtime.event_bus import event_bus
+from app.services.webhook_service import WebhookService
 
 logger = structlog.get_logger(__name__)
 
@@ -226,6 +234,51 @@ async def clear_notifications(
     """@brief Bulk delete, optionally by type and/or created before a timestamp."""
     count = await service.clear_all(user.id, type=type, before=before)
     return MessageResponse(message=_("Cleared {count} notifications").format(count=count))
+
+
+@router.get("/webhooks", response_model=list[WebhookListItem])
+async def list_webhooks(
+    user: User = Depends(get_current_user),
+    service: WebhookService = Depends(_webhook_service),
+) -> list[WebhookListItem]:
+    """@brief List the current user's webhook subscriptions (no secrets)."""
+    return [WebhookListItem.model_validate(s) for s in await service.list_for_user(user.id)]
+
+
+@router.post("/webhooks", response_model=WebhookCreateResponse, status_code=status.HTTP_201_CREATED)
+async def create_webhook(
+    body: WebhookCreateRequest,
+    user: User = Depends(get_current_user),
+    service: WebhookService = Depends(_webhook_service),
+) -> WebhookCreateResponse:
+    """@brief Create a user-level webhook; the secret is returned only here."""
+    sub, secret = await service.create(user.id, body.url, body.type_keys)
+    return WebhookCreateResponse(**WebhookListItem.model_validate(sub).model_dump(), secret=secret)
+
+
+@router.patch("/webhooks/{webhook_id}", response_model=WebhookListItem)
+async def update_webhook(
+    webhook_id: uuid.UUID,
+    body: WebhookUpdateRequest,
+    user: User = Depends(get_current_user),
+    service: WebhookService = Depends(_webhook_service),
+) -> WebhookListItem:
+    """@brief Partially update one of the user's webhooks."""
+    sub = await service.update(
+        user.id, webhook_id, url=body.url, type_keys=body.type_keys, enabled=body.enabled
+    )
+    return WebhookListItem.model_validate(sub)
+
+
+@router.delete("/webhooks/{webhook_id}", response_model=MessageResponse)
+async def delete_webhook(
+    webhook_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: WebhookService = Depends(_webhook_service),
+) -> MessageResponse:
+    """@brief Delete one of the user's webhooks."""
+    await service.delete(user.id, webhook_id)
+    return MessageResponse(message=_("Webhook deleted"))
 
 
 @router.delete("/{notification_id}", response_model=MessageResponse)

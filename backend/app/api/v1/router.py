@@ -19,6 +19,7 @@ from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
 from app.api.v1.calendars import router as calendars_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.communities import router as communities_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.export import router as export_router
@@ -78,6 +79,7 @@ api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(suggestions_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)
+api_v1_router.include_router(communities_router)
 api_v1_router.include_router(polls_router)
 api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
