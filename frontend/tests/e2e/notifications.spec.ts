@@ -1,3 +1,7 @@
+/**
+ * @file tests/e2e/notifications.spec.ts
+ * @brief Mention by user B notifies user A: bell badge, unread item, acknowledge.
+ */
 import { test, expect } from "@playwright/test";
 import { createSecondUser } from "./fixtures/second-user";
 
