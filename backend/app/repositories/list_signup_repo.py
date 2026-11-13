@@ -6,15 +6,21 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.engine import CursorResult
 
 from app.models.list import ListItemSignup
 from app.repositories.base import BaseRepository
 
 
 class ListSignupRepository(BaseRepository[ListItemSignup]):
-    """@brief Async repo for ListItemSignup rows."""
+    """@brief Async repo for ListItemSignup rows.
+
+    @note Composite PK, no ``id``: inherited ``get_by_id`` is unusable; use
+        ``list_for_item``/``create_claim``/``delete_claim``.
+    """
 
     model = ListItemSignup
 
@@ -40,7 +46,7 @@ class ListSignupRepository(BaseRepository[ListItemSignup]):
         )
         result = await self._session.execute(stmt)
         await self._session.flush()
-        return bool(result.rowcount)
+        return (cast(CursorResult[Any], result).rowcount or 0) > 0
 
     async def list_for_item(self, item_id: uuid.UUID) -> list[ListItemSignup]:
         """@brief All claims on an item, oldest first."""

@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
-from sqlalchemy import and_, literal, or_, select, tuple_, update
+from sqlalchemy import Select, and_, literal, or_, select, tuple_, update
 
 from app.models.list import List, ListMember
 from app.models.moderation import UserBlock
@@ -80,7 +81,7 @@ class ListRepository(BaseRepository[List]):
         return rows, nxt
 
     @staticmethod
-    def _block_filter(stmt, viewer_id: uuid.UUID):  # type: ignore[no-untyped-def]
+    def _block_filter(stmt: Select[Any], viewer_id: uuid.UUID) -> Select[Any]:
         """@brief Hide lists owned by users in a block relation with the viewer."""
         by_viewer = select(UserBlock.blocked_id).where(UserBlock.blocker_id == viewer_id)
         of_viewer = select(UserBlock.blocker_id).where(UserBlock.blocked_id == viewer_id)

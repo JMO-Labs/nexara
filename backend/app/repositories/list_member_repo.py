@@ -13,7 +13,10 @@ from app.repositories.base import BaseRepository
 
 
 class ListMemberRepository(BaseRepository[ListMember]):
-    """@brief Async repo for ListMember rows (composite PK list_id, user_id)."""
+    """@brief Async repo for ListMember rows (composite PK list_id, user_id).
+
+    @note No ``id`` column: inherited ``get_by_id`` is unusable; use ``get_member``.
+    """
 
     model = ListMember
 

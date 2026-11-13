@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import or_, tuple_
+from sqlalchemy import and_, or_, select, tuple_
 
 from app.models.list_template import ListTemplate
+from app.models.moderation import UserBlock
 from app.repositories.base import BaseRepository
 from app.repositories.list_keyset import decode_cursor, encode_cursor, parse_dt
 
@@ -43,7 +44,19 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
                 ListTemplate.is_system.is_(True),
             ),
         )
-        stmt = self.apply_block_filter(stmt, viewer_id)
+        # Custom clause: system/orphaned templates have NULL author_id and
+        # NOT IN would evaluate to NULL, hiding them.
+        by_viewer = select(UserBlock.blocked_id).where(UserBlock.blocker_id == viewer_id)
+        of_viewer = select(UserBlock.blocker_id).where(UserBlock.blocked_id == viewer_id)
+        stmt = stmt.where(
+            or_(
+                ListTemplate.author_id.is_(None),
+                and_(
+                    ListTemplate.author_id.notin_(by_viewer),
+                    ListTemplate.author_id.notin_(of_viewer),
+                ),
+            )
+        )
         decoded = decode_cursor(cursor, parse_dt)
         if decoded is not None:
             stmt = stmt.where(tuple_(ListTemplate.created_at, ListTemplate.id) < tuple_(*decoded))

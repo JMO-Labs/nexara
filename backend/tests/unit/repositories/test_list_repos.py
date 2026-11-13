@@ -124,6 +124,7 @@ async def test_template_visibility_and_block() -> None:
     sql = _sql(s)
     assert "is_shared" in sql and "author_id" in sql and "deleted_at IS NULL" in sql
     assert "user_blocks" in sql
+    assert "author_id IS NULL OR" in sql
 
 
 async def test_increment_counters_validates() -> None:

@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import delete
+from sqlalchemy.engine import CursorResult
 
 from app.models.list import ListItemCompletion
 from app.repositories.base import BaseRepository
@@ -38,4 +40,4 @@ class ListCompletionRepository(BaseRepository[ListItemCompletion]):
         )
         result = await self._session.execute(stmt)
         await self._session.flush()
-        return bool(result.rowcount)
+        return (cast(CursorResult[Any], result).rowcount or 0) > 0
