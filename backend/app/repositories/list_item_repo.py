@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.list import ListItem, ListItemCompletion
+from app.models.list import List, ListItem, ListItemCompletion
 from app.repositories.base import BaseRepository
 from app.repositories.list_keyset import decode_cursor, encode_cursor, parse_dt
 
@@ -90,3 +90,28 @@ class ListItemRepository(BaseRepository[ListItem]):
         stmt = select(func.count(ListItem.id), done + per_user).where(*live)
         total, completed = (await self._session.execute(stmt)).one()
         return int(total), int(completed)
+
+    async def get_many(
+        self, list_id: uuid.UUID, item_ids: list[uuid.UUID], community_id: uuid.UUID
+    ) -> list[ListItem]:
+        """
+        @brief Batch-fetch live items of a live list in the given community.
+
+        @param list_id Parent list.
+        @param item_ids Item ids to fetch.
+        @param community_id Tenant scope (enforced via the parent list).
+        @return Matching items (missing/deleted ids are skipped).
+        """
+        if not item_ids:
+            return []
+        stmt = (
+            self._base_query()
+            .join(List, List.id == ListItem.list_id)
+            .where(
+                ListItem.id.in_(item_ids),
+                ListItem.list_id == list_id,
+                List.community_id == community_id,
+                List.deleted_at.is_(None),
+            )
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
