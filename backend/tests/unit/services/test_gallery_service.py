@@ -584,3 +584,19 @@ class TestAdminModeration:
         repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError):
             await service.admin_feature(uuid.uuid4(), featured=True, admin_id=uuid.uuid4())
+
+
+class TestActorName:
+    """@brief _actor_name resolves display names for notification payloads."""
+
+    async def test_returns_display_name(self, service: GalleryService, session: AsyncMock) -> None:
+        user = MagicMock()
+        user.display_name = "Alice"
+        session.get.return_value = user
+        assert await service._actor_name(uuid.uuid4()) == "Alice"
+
+    async def test_falls_back_when_user_missing(
+        self, service: GalleryService, session: AsyncMock
+    ) -> None:
+        session.get.return_value = None
+        assert await service._actor_name(uuid.uuid4()) == "Someone"
