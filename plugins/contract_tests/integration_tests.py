@@ -70,6 +70,18 @@ def _hooks_check(plugin_dir: Path, fn) -> Check:  # type: ignore[no-untyped-def]
     return ok(name)
 
 
+def _defined_in(task, root: Path) -> bool:  # type: ignore[no-untyped-def]
+    """@brief True if the task function's source file lives inside ``root``.
+
+    Path-based so tasks preloaded under another module name still count.
+    """
+    try:
+        src = inspect.getsourcefile(inspect.unwrap(task.run))
+    except (TypeError, OSError):
+        return False
+    return src is not None and Path(src).resolve().is_relative_to(root)
+
+
 def _tasks_check(plugin_dir: Path, m) -> Check:  # type: ignore[no-untyped-def]
     name = "integration.celery_tasks"
     try:
@@ -78,12 +90,8 @@ def _tasks_check(plugin_dir: Path, m) -> Check:  # type: ignore[no-untyped-def]
         return fail(name, f"Importing {m.backend.tasks}: {exc!r}")
     from app.tasks.celery_app import celery_app
 
-    prefix = mod.__name__
-    mine = [
-        t
-        for t in celery_app.tasks.values()
-        if (getattr(t, "__module__", "") or "").startswith(prefix)
-    ]
+    root = plugin_dir.resolve()
+    mine = [t for t in celery_app.tasks.values() if _defined_in(t, root)]
     if not mine:
         return fail(name, "tasks module registered no Celery tasks (use @celery_app.task).")
     return ok(name, f"{len(mine)} task(s) registered")
