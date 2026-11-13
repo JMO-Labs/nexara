@@ -86,6 +86,9 @@ class TestAddCommentParent:
     async def test_sassybot_enqueued(self, service, post_repo, comment_repo, sassybot_delay):
         post_repo.get_by_id.return_value = _make_post()
         comment_repo.create_comment.return_value = _comment()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        post_repo._session.execute.return_value = result
         await service.add_comment(POST_ID, _make_user(), "hey @sassybot")
         sassybot_delay.assert_called_once()
 
