@@ -42,6 +42,7 @@ class FeedEvent(StrEnum):
     COMMENT_CREATED = "comment_created"
     REACTION_TOGGLED = "reaction_toggled"
     POLL_VOTED = "poll_voted"
+    LIST_EXPIRED = "list_expired"
 
 
 # ── Routing targets ──────────────────────────────────────────────────────
@@ -247,4 +248,19 @@ def typing_indicator(
         type=EventType.TYPING,
         target=CommunityTarget(community_id=community_id),
         payload={"user_id": str(user_id)},
+    )
+
+
+def list_expired(target: EventTarget, list_id: UUID, title: str) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a list that has expired.
+
+    @param target Routing target (see :mod:`audience`).
+    @param list_id ID of the expired list.
+    @param title List title.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=target,
+        payload={"event": FeedEvent.LIST_EXPIRED, "list_id": str(list_id), "title": title},
     )
