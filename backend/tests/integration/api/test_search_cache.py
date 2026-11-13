@@ -308,8 +308,8 @@ class TestInvocationPoints:
         svc._can_contribute = AsyncMock(return_value=True)  # type: ignore[method-assign]
         svc._repo.get_item.return_value = None
         data = MagicMock(position=None)
-        with _inv("gallery_service") as inv, patch("app.services.gallery_service.GalleryResponse"):
-            with patch("app.services.gallery_service.GalleryItemResponse"):
+        with _inv("gallery_items") as inv, patch("app.services.gallery_service.GalleryResponse"):
+            with patch("app.services.gallery_items.GalleryItemResponse"):
                 await svc.add_item(uuid.uuid4(), uid, data)
         _assert_inv(inv, "gallery", "add_item")
 
@@ -320,8 +320,8 @@ class TestInvocationPoints:
         svc._can_contribute = AsyncMock(return_value=True)  # type: ignore[method-assign]
         svc._repo.get_item.return_value = None
         data = MagicMock(media_ids=[uuid.uuid4(), uuid.uuid4()])
-        with _inv("gallery_service") as inv:
-            with patch("app.services.gallery_service.GalleryItemResponse"):
+        with _inv("gallery_items") as inv:
+            with patch("app.services.gallery_items.GalleryItemResponse"):
                 await svc.bulk_add_items(uuid.uuid4(), uid, data)
         _assert_inv(inv, "gallery", "add_item")
 
