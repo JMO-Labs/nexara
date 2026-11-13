@@ -75,6 +75,17 @@ class TestNotify:
         dispatcher.dispatch.assert_not_awaited()
 
 
+class TestGrouping:
+    async def test_passes_group_key_and_window(self):
+        svc, repo, _, _ = _build()
+        await svc.notify(USER_ID, "comment", {**PAYLOAD, "target_id": "p1"}, actor_id=USER_ID)
+        kw = repo.upsert_grouped.call_args.kwargs
+        assert kw["group_key"] == "comment:p1"
+        assert kw["group_window_seconds"] == 300
+        assert kw["actor_id"] == USER_ID
+        assert kw["community_id"] == COMMUNITY_ID
+
+
 class TestWrappers:
     """@brief Thin repo-delegating wrappers."""
 

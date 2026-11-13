@@ -25,7 +25,7 @@ from app.schemas.notification import (
     NotificationResponse,
     UnreadCountResponse,
 )
-from app.services.notifications import registry
+from app.services.notifications import coalescer, registry
 from app.services.notifications.api_helpers import (
     build_prefs_update,
     group_by_category,
@@ -147,9 +147,10 @@ class NotificationService:
             user_id,
             type,
             payload,
-            self._community_id,
-            group_key=None,
+            community_id=self._community_id,
+            group_key=coalescer.compose_group_key(type_, payload),
             actor_id=actor_id,
+            group_window_seconds=type_.group_window_seconds,
         )
         await self._dispatcher.dispatch(notification, type_, dict(eff))
         return notification
