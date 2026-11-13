@@ -1,8 +1,7 @@
-"""apprise per-type prefs: backfill apprise=false; merge heads.
+"""apprise per-type prefs: backfill apprise=false.
 
 No new columns: notification_prefs JSONB already exists. Every type entry
-gets ``apprise: false`` (opt-in). Also merges the apprise-urls and
-webhook-subscriptions heads.
+gets ``apprise: false`` (opt-in). Linear child of ``0030_merge_heads``.
 
 Revision ID: c5d6e7f8a9b0
 Revises: 0030_merge_heads

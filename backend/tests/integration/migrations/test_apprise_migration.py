@@ -58,6 +58,12 @@ def test_no_new_columns_and_downgrade_strips(scratch):  # noqa: F811
             )
         }  # fmt: skip
         u = _seed_user(conn)
+        seeded = json.dumps({"mention": {"push": True}, "comment": {"apprise": True}})
+        conn.execute(
+            sa.text("UPDATE user_settings SET notification_prefs = CAST(:p AS jsonb) "
+                    "WHERE user_id = :u"),
+            {"p": seeded, "u": u},
+        )  # fmt: skip
     command.upgrade(cfg, REV)
     with engine.begin() as conn:
         after = {
@@ -68,7 +74,10 @@ def test_no_new_columns_and_downgrade_strips(scratch):  # noqa: F811
             )
         }  # fmt: skip
         assert before == after
-        assert all(v["apprise"] is False for v in _prefs(conn, u).values())
+        assert _prefs(conn, u) == {
+            "mention": {"push": True, "apprise": False},
+            "comment": {"apprise": True},
+        }
     command.downgrade(cfg, PREV)
     with engine.begin() as conn:
-        assert all("apprise" not in v for v in _prefs(conn, u).values())
+        assert _prefs(conn, u) == {"mention": {"push": True}, "comment": {}}
