@@ -28,6 +28,7 @@ import { NewDmModal } from "./NewDmModal";
 import { SidebarPane } from "./chat-layout/SidebarPane";
 import { ThreadPane, DetailsPane } from "./chat-layout/ThreadPane";
 import {
+  gridClass,
   isDesktop,
   pickDefaultChannel,
   readLastChannel,
@@ -224,13 +225,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   const showDetails = threadPaneOpen && Boolean(activeId);
 
   return (
-    <div
-      className={`bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden ${
-        showDetails
-          ? "md:grid-cols-[280px_1fr_320px]"
-          : "md:grid-cols-[280px_1fr]"
-      }`}
-    >
+    <div className={gridClass(showDetails)}>
       <SidebarPane
         className={activeId ? "hidden md:flex" : "flex"}
         channels={channels}
@@ -247,6 +242,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
 
       {activeId ? (
         <ThreadPane
+          key={activeId}
           title={resolveTitle(channels, dms, activeId)}
           onBack={back}
           detailsOpen={threadPaneOpen}
@@ -254,6 +250,8 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           list={{
             messages,
             isLoading: messagesQ.isLoading,
+            isError: messagesQ.isError,
+            onRetry: () => void messagesQ.refetch(),
             hasMore: messagesQ.hasNextPage ?? false,
             isFetchingMore: messagesQ.isFetchingNextPage,
             onLoadMore: () => messagesQ.fetchNextPage(),
