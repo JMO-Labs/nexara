@@ -12,7 +12,7 @@ ROOT=$PWD; rc=0
 (cd backend && { command -v uv >/dev/null || pipx install -q uv; } && uv venv -q .venv --clear && { uv sync -q --frozen --extra dev || uv sync -q --extra dev; } \
   && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
 
-(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml") || rc=1
+(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npm run build) || rc=1
 
 # Mobile (Flutter): install the stable SDK when absent, then analyze (infos non-fatal) and test.
 if [ -d mobile ]; then
