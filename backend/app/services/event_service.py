@@ -270,7 +270,9 @@ class EventService(
                 },
             )
 
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="event", action="create", user_id=user_id
+        )
         gallery_id = None
         if data.auto_create_gallery:
             gallery_id = await create_event_gallery(
@@ -313,7 +315,9 @@ class EventService(
 
         update_data["updated_at"] = datetime.now(UTC)
         event = await self._repo.update(event, update_data)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="event", action="update", user_id=user_id
+        )
         return await self._build_response(event, user_id=user_id)
 
     async def delete_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -324,7 +328,9 @@ class EventService(
             raise AuthorizationError(_("Only the event organizer can delete this event"))
         await self._session.delete(event)
         await self._session.flush()
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="event", action="delete", user_id=user_id
+        )
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("event", event_id)
 

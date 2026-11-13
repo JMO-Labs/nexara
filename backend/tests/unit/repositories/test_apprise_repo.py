@@ -65,3 +65,30 @@ async def test_record_success_resets_failures() -> None:
     s.get.return_value = row
     await AppriseRepository(s).record_success(uuid4())
     assert row.failure_count == 0
+
+
+async def test_get_decrypts_and_detaches() -> None:
+    from app.services.notifications.secrets import encrypt_url
+
+    s = _session()
+    row = MagicMock(spec=AppriseURL)
+    row.apprise_url = encrypt_url("slack://a/b/c")
+    s.get.return_value = row
+    out = await AppriseRepository(s).get(uuid4())
+    assert out is row
+    assert out.apprise_url == "slack://a/b/c"
+    s.expunge.assert_called_once_with(row)
+
+
+async def test_get_missing_returns_none() -> None:
+    s = _session()
+    s.get.return_value = None
+    assert await AppriseRepository(s).get(uuid4()) is None
+    s.expunge.assert_not_called()
+
+
+async def test_record_failure_missing_row_returns_zero() -> None:
+    s = _session()
+    s.get.return_value = None
+    assert await AppriseRepository(s).record_failure(uuid4()) == 0
+    s.flush.assert_not_awaited()

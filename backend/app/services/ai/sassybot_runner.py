@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
 
@@ -60,7 +61,7 @@ async def run_sassybot(
     found = await repo.get_post_and_author(post_id, community_id)
     if event_bus is not None and found is not None:
         post = found[0]
-        payload = {
+        payload: dict[str, Any] = {
             "id": str(comment.id),
             "content": comment.content,
             "author": {
