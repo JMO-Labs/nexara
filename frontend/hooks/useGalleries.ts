@@ -135,6 +135,7 @@ export function useAddCollaborator(galleryId: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (userId: string) => addCollaborator(galleryId, userId),
+    successKey: "toasts.galleries.collaborator.added",
     onSuccess: () => qc.invalidateQueries({ queryKey: collabKey(galleryId) }),
   });
 }
@@ -143,6 +144,7 @@ export function useRemoveCollaborator(galleryId: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (userId: string) => removeCollaborator(galleryId, userId),
+    successKey: "toasts.galleries.collaborator.removed",
     onSuccess: () => qc.invalidateQueries({ queryKey: collabKey(galleryId) }),
   });
 }

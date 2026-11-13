@@ -673,6 +673,10 @@
     },
     "galleries": {
       "created": "Gallery created",
+      "collaborator": {
+        "added": "Collaborator added",
+        "removed": "Collaborator removed"
+      },
       "item": {
         "added": "Added to gallery",
         "removed": "Removed from gallery"
