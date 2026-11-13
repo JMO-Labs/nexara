@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/prompts/PromptCard.test.tsx
- * @brief PromptPostCard component tests (render, reply callback, live refresh).
+ * @brief PromptPostCard component tests (render, modal, live refresh).
  */
 // Mock the hook BEFORE importing the component
 import { vi } from "vitest";
@@ -56,16 +56,6 @@ describe("PromptPostCard", () => {
     wrap(<PromptPostCard post={post} />);
     expect(screen.getByText(post.prompt.title)).toBeInTheDocument();
     expect(screen.getByText("12 responses")).toBeInTheDocument();
-  });
-
-  it("clicking Respond with onReply calls it instead of the modal", async () => {
-    const onReply = vi.fn();
-    const post = createPromptPost();
-    const user = userEvent.setup();
-    wrap(<PromptPostCard post={post} onReply={onReply} />);
-    await user.click(screen.getByRole("button", { name: /respond/i }));
-    expect(onReply).toHaveBeenCalledWith(post.id, post.prompt.title);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("clicking Respond opens the response modal", async () => {

@@ -34,6 +34,7 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
 
   return (
     <Card
+      role="article"
       aria-label={`Prompt: ${post.prompt.title}`}
       className="relative flex flex-col gap-4 border-l-4 border-accent p-4"
     >
