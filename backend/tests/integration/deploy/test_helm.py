@@ -187,6 +187,16 @@ def test_postgres_is_statefulset_with_headless_service() -> None:
     assert sts["spec"]["replicas"] == 1
 
 
+def test_apprise_key_rendered_when_supplied_and_optional_otherwise() -> None:
+    import base64
+
+    docs = _render("secrets.appriseEncryptionKey=fernetkey")
+    assert base64.b64decode(_secret_data(docs, "-app")["apprise-encryption-key"]) == b"fernetkey"
+    assert "apprise-encryption-key" not in _secret_data(_render(), "-app")
+    text = (CHART / "templates" / "_helpers.tpl").read_text()
+    assert "APPRISE_ENCRYPTION_KEY" in text and "optional: true" in text
+
+
 def test_nginx_proxies_livez_to_api() -> None:
     conf = (Path(__file__).resolve().parents[4] / "deploy/nginx/nginx.conf").read_text()
     assert "location = /livez" in conf
