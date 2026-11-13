@@ -77,6 +77,10 @@ const createWrapper = () => {
   );
 };
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};
+
 describe("NotificationsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -216,5 +220,19 @@ describe("NotificationsTab", () => {
     } as any);
     setup();
     expect(screen.getByRole("combobox", { name: "Digest hour" })).toBeEnabled();
+  });
+
+  it("changes digest hour as a number", async () => {
+    vi.mocked(settingsHooks.useNotificationPrefs).mockReturnValue({
+      data: { ...mockPrefs, email_digest_enabled: true },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    const mutate = setup();
+    const user = userEvent.setup();
+    screen.getByRole("combobox", { name: "Digest hour" }).focus();
+    await user.keyboard("{Enter}");
+    await user.click(await screen.findByRole("option", { name: "21:00" }));
+    expect(mutate).toHaveBeenCalledWith({ email_digest_hour: 21 });
   });
 });
