@@ -163,3 +163,24 @@ async def test_clone_without_items(parts):
     new = await svc.clone_template_to_list(CID, t.id, AUTHOR, include_items=False)
     assert new.item_count == 0 and new.title == t.name
     items.create.assert_not_called()
+
+
+async def test_update_replaces_items(parts):
+    svc, repo, *_ = parts
+    t = _tpl()
+    repo.get_by_id.return_value = t
+    repo.update.side_effect = lambda e, d: e
+    await svc.update(CID, t.id, AUTHOR, {"items": [{"values": {"k": "b"}}, {}]})
+    changes = repo.update.await_args.args[1]
+    assert [(i.position, i.values) for i in changes["items"]] == [(0, {"k": "b"}), (1, {})]
+
+
+@pytest.mark.parametrize("kw", [{"list_repo": None}, {"item_repo": None}])
+async def test_clone_requires_repositories(parts, kw):
+    _, repo, registry, lists, items = parts
+    args = {"list_repo": lists, "item_repo": items} | kw
+    svc = ListTemplateService(repo, registry, **args)
+    with pytest.raises(AppError) as ei:
+        await svc.clone_template_to_list(CID, uuid.uuid4(), AUTHOR)
+    assert ei.value.code == "INTERNAL_ERROR"
+    repo.get_by_id.assert_not_called()
