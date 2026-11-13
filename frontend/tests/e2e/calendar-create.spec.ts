@@ -22,11 +22,13 @@ test("user creates an event, sees it on the month grid and opens details", async
   page,
 }) => {
   const title = `E2E event ${uniqueId()}`;
-  const today = new Date();
+  // Mid-month date in the month the grid opens on, so a run near
+  // midnight or a month boundary still lands inside the visible grid.
+  const now = new Date();
   const date = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    "15",
   ].join("-");
 
   await login(page);
@@ -49,7 +51,7 @@ test("user creates an event, sees it on the month grid and opens details", async
       r.request().method() === "POST" &&
       r.status() === 201,
   );
-  await dialog.getByRole("button", { name: "Create" }).click();
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
   eventId = ((await (await created).json()) as { id: string }).id;
 
   const grid = page.getByRole("grid");
