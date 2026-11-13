@@ -86,3 +86,32 @@ class TestFontValidation:
 
         service = BrandingService(repo=AsyncMock(), cache_client=None, community_id=MagicMock())
         assert service.validate_font_family("Comic Sans MS") is False
+
+
+class TestPwaManifestVersion:
+    def _service(self):
+        from app.services.branding_service import BrandingService
+
+        return BrandingService(repo=AsyncMock(), cache_client=None, community_id=MagicMock())
+
+    def _branding(self, name="Test", icon=None):
+        b = MagicMock()
+        b.community_name = name
+        b.color_primary = "#3b82f6"
+        b.color_surface_light = "#ffffff"
+        b.pwa_icon_192_media_id = icon
+        b.pwa_icon_512_media_id = None
+        return b
+
+    def test_version_present_and_stable(self):
+        s = self._service()
+        m1 = s.generate_pwa_manifest(self._branding())
+        m2 = s.generate_pwa_manifest(self._branding())
+        assert m1["version"] == m2["version"]
+
+    def test_version_changes_when_icon_or_name_changes(self):
+        s = self._service()
+        base = s.generate_pwa_manifest(self._branding())["version"]
+        assert s.generate_pwa_manifest(self._branding(name="Other"))["version"] != base
+        icon = "11111111-1111-1111-1111-111111111111"
+        assert s.generate_pwa_manifest(self._branding(icon=icon))["version"] != base

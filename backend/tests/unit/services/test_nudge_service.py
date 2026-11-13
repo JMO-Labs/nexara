@@ -18,6 +18,7 @@ from app.repositories.nudge_repo import NudgeRepository
 from app.repositories.user_repo import UserRepository
 from app.services.notification_service import PREF_MAP
 from app.services.nudge_service import NudgeService
+from tests.unit.services.strict_notify import strict_notify
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 SENDER = uuid.uuid4()
@@ -38,7 +39,7 @@ def _nudge() -> MagicMock:
 def deps():
     repo = AsyncMock(spec=NudgeRepository)
     users = AsyncMock(spec=UserRepository)
-    notify = AsyncMock()
+    notify = strict_notify()
     target = MagicMock(spec=User)
     target.id = TARGET
     users.get_by_id.return_value = target

@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PostHeader } from "@/components/feed/PostHeader";
 import type { Post } from "@/lib/api/posts";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 
 const post = {
   id: "p1",
@@ -34,5 +35,17 @@ describe("PostHeader", () => {
     await user.click(screen.getByRole("button", { name: "Post options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("shows a Post options tooltip on keyboard focus", async () => {
+    render(
+      <TooltipProvider>
+        <PostHeader post={post} isAuthor onDelete={vi.fn()} />
+      </TooltipProvider>,
+    );
+    await userEvent.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Post options",
+    );
   });
 });
