@@ -9,6 +9,7 @@ import uuid
 
 import structlog
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
@@ -106,6 +107,9 @@ class GalleryItemsMixin(GalleryServiceBase):
             position=data.position if data.position is not None else gallery.item_count,
         )
         item = await self._repo.add_item(item)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="add_item", user_id=user_id
+        )
         return GalleryItemResponse.model_validate(item)
 
     async def bulk_add_items(
@@ -137,6 +141,9 @@ class GalleryItemsMixin(GalleryServiceBase):
             item = await self._repo.add_item(item)
             position += 1
             out.append(GalleryItemResponse.model_validate(item))
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="add_item", user_id=user_id
+        )
         return out
 
     async def update_item(
