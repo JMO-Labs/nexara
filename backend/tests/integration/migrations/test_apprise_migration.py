@@ -30,7 +30,9 @@ def test_backfills_apprise_false_and_keeps_existing(scratch):  # noqa: F811
             sa.text("UPDATE user_settings SET notification_prefs = '{}' WHERE user_id = :u"),
             {"u": empty},
         )
-        custom = json.dumps({"mention": {"push": True, "apprise": True}, "comment": {"push": False}})
+        custom = json.dumps(
+            {"mention": {"push": True, "apprise": True}, "comment": {"push": False}}
+        )
         conn.execute(
             sa.text("UPDATE user_settings SET notification_prefs = CAST(:p AS jsonb) "
                     "WHERE user_id = :u"),
