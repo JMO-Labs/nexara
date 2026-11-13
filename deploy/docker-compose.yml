@@ -36,6 +36,7 @@ services:
       DATABASE_URL: "postgresql+asyncpg://nexara:${POSTGRES_PASSWORD}@nexara-db:5432/nexara"
       REDIS_URL: "redis://127.0.0.1:6379"
       SECRET_KEY: "${SECRET_KEY}"
+      APPRISE_ENCRYPTION_KEY: "${APPRISE_ENCRYPTION_KEY:-}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       STORAGE_BACKEND: "${STORAGE_BACKEND:-local}"
