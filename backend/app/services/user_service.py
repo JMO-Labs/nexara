@@ -210,5 +210,7 @@ class UserService:
         """
         if user.avatar_url:
             return user.avatar_url
-        email_hash = hashlib.md5(user.email.strip().lower().encode()).hexdigest()  # noqa: S324
+        # MD5 is mandated by the Gravatar URL scheme, not used for security.
+        email_bytes = user.email.strip().lower().encode()
+        email_hash = hashlib.md5(email_bytes, usedforsecurity=False).hexdigest()
         return f"{GRAVATAR_BASE}/{email_hash}?s={size}&d=mp"

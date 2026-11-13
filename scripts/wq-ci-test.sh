@@ -12,7 +12,11 @@ ROOT=$PWD; rc=0
   && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
 
 # Security (ported from .gitlab/ci/security.yml; fail on findings). gitleaks is not run here.
-(cd backend && uv export --frozen --no-hashes -q > /tmp/req.txt && pipx run pip-audit -r /tmp/req.txt) || rc=1
+# pip-audit ignores (no upstream fix; not exploitable here, see docs/docs/development.md):
+#   PYSEC-2026-1325 ecdsa Minerva timing: we never sign with ecdsa (RS256 via cryptography backend).
+#   PYSEC-2026-4298 python-jose HMAC key confusion: decode pins algorithms=[JWT_ALGORITHM].
+(cd backend && uv export --frozen --no-hashes -q > /tmp/req.txt \
+  && pipx run pip-audit -r /tmp/req.txt --ignore-vuln PYSEC-2026-1325 --ignore-vuln PYSEC-2026-4298) || rc=1
 pipx run bandit -r backend/app -ll -q || rc=1
 (cd frontend && npm ci --no-audit --no-fund && npm audit --omit=dev --audit-level=high) || rc=1
 

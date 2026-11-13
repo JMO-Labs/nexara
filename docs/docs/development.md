@@ -141,6 +141,13 @@ The GitHub test script also runs, and fails on any finding:
   add `# nosec <id>` with a comment explaining why it is a false positive.
 - `npm audit --omit=dev --audit-level=high` in `frontend`.
 
+Accepted pip-audit advisories (no upstream fix, passed via `--ignore-vuln`):
+
+| ID              | Package     | Why it does not apply                                         |
+|-----------------|-------------|---------------------------------------------------------------|
+| PYSEC-2026-1325 | ecdsa       | Minerva timing on signing; we sign RS256 via `cryptography`.  |
+| PYSEC-2026-4298 | python-jose | HMAC key confusion; decode pins `algorithms=[JWT_ALGORITHM]`. |
+
 Gitleaks stays GitLab-only.
 
 The documentation site is published to GitHub Pages at
