@@ -265,3 +265,24 @@ async def test_routes_require_auth(test_app: FastAPI) -> None:
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
         resp = await c.get(f"{BASE}/active")
     assert resp.status_code == 401
+
+
+async def test_snooze_route_sets_until(
+    client: AsyncClient, service: AsyncMock, user: MagicMock
+) -> None:
+    service.get_preferences.return_value = NotificationPreferences(
+        notification_prefs={},
+        dnd_schedule=None,
+        dnd_until=None,
+        dnd_timezone="UTC",
+        digest_cadence={},
+    )
+    r = await client.post(f"{BASE}/snooze", json={"duration": "1h"})
+    assert r.status_code == 200
+    assert service.snooze.await_args.args[0] == user.id
+
+
+async def test_clear_snooze_route(client: AsyncClient, service: AsyncMock, user: MagicMock) -> None:
+    r = await client.delete(f"{BASE}/snooze")
+    assert r.status_code == 200
+    service.clear_snooze.assert_awaited_once_with(user.id)

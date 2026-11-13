@@ -153,3 +153,16 @@ async def test_template_get_by_id_eager_loads_children() -> None:
     assert "ListTemplate.fields" in paths and "ListTemplate.items" in paths
     sql = _sql(s)
     assert "list_template.community_id" in sql and "deleted_at IS NULL" in sql
+
+
+async def test_is_member_and_count_live_and_completed() -> None:
+    s = AsyncMock()
+    res = MagicMock()
+    res.first.return_value = (UID,)
+    res.one.return_value = (3, 1)
+    s.execute = AsyncMock(return_value=res)
+    assert await ListRepository(s).is_member(LID, UID) is True
+    assert "list_member.user_id" in _sql(s)
+    assert await ListItemRepository(s).count_live_and_completed(LID) == (3, 1)
+    sql = _sql(s)
+    assert "list_item.deleted_at IS NULL" in sql and "list_item_completion" in sql

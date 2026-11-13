@@ -17,12 +17,14 @@ const mockSubgroupMember: any = {
   created_at: "2025-01-01T00:00:00Z",
   avatar_url: null,
   my_role: "member",
+  is_member: true,
   member_count: 5,
 };
 
 const mockSubgroupNonMember: any = {
   ...mockSubgroupMember,
   my_role: null,
+  is_member: false,
 };
 
 function wrap(ui: React.ReactNode) {
