@@ -3,7 +3,6 @@
  * @file app/(auth)/register/page.tsx
  * @brief Local-account registration. Honours `?invite=` for closed instances.
  */
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -13,7 +12,7 @@ import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { register as apiRegister } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
-import { formatApiError } from "@/lib/api/errors";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
   display_name: z.string().min(1, "Required").max(100),
@@ -31,23 +30,19 @@ export default function RegisterPage() {
   const router = useRouter();
   const params = useSearchParams();
   const invite = params.get("invite") ?? undefined;
-  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: { display_name: "", username: "", email: "", password: "" },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    try {
-      const resp = await apiRegister({ ...data, invite_token: invite });
-      await completeLogin(resp);
-      router.push("/app");
-    } catch (e) {
-      setError(formatApiError(e, "Registration failed."));
-    }
-  };
+  const signUp = useMutationWithToast({
+    mutationFn: async (data: FormData) =>
+      completeLogin(await apiRegister({ ...data, invite_token: invite })),
+    errorKey: "toasts.auth.register.failed",
+    onSuccess: () => router.push("/app"),
+  });
+  const onSubmit = (data: FormData) => signUp.mutate(data);
 
   return (
     <AuthCard
@@ -61,14 +56,6 @@ export default function RegisterPage() {
         </>
       }
     >
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -101,7 +88,7 @@ export default function RegisterPage() {
           error={formState.errors.password?.message}
           {...register("password")}
         />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" loading={signUp.isPending}>
           Create account
         </Button>
       </form>
