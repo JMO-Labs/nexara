@@ -107,3 +107,18 @@ class TestWrappers:
             svc = NotificationService(repo, settings_repo, COMMUNITY_ID)
         await svc.notify(USER_ID, "system", PAYLOAD)
         disp.dispatch.assert_awaited_once()
+
+
+class TestDispatcherResolution:
+    """@brief Dispatcher fallback when none is injected."""
+
+    def test_uses_process_wide_dispatcher_by_default(self):
+        shared = MagicMock(spec=Dispatcher)
+        with patch("app.core.dependencies.get_dispatcher", return_value=shared) as getter:
+            svc = NotificationService(
+                AsyncMock(spec=NotificationRepository),
+                AsyncMock(spec=SettingsRepository),
+                COMMUNITY_ID,
+            )
+        getter.assert_called_once_with()
+        assert svc._dispatcher is shared
