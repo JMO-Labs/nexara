@@ -49,8 +49,13 @@ class TestUpsertGrouped:
         session = _session(None)
         actor = uuid.uuid4()
         n = await NotificationRepository(session).upsert_grouped(
-            USER, "comment", {"a": 1}, group_key="comment:p1", actor_id=actor,
-            community_id=COMMUNITY, group_window_seconds=300,
+            USER,
+            "comment",
+            {"a": 1},
+            group_key="comment:p1",
+            actor_id=actor,
+            community_id=COMMUNITY,
+            group_window_seconds=300,
         )
         session.add.assert_called_once()
         assert n.count == 1
@@ -60,13 +65,23 @@ class TestUpsertGrouped:
     async def test_second_within_window_increments(self) -> None:
         a1, a2 = uuid.uuid4(), uuid.uuid4()
         existing = Notification(
-            user_id=USER, community_id=COMMUNITY, type="comment",
-            payload={"a": 1}, group_key="comment:p1", count=1, actor_ids=[a1],
+            user_id=USER,
+            community_id=COMMUNITY,
+            type="comment",
+            payload={"a": 1},
+            group_key="comment:p1",
+            count=1,
+            actor_ids=[a1],
         )
         session = _session(existing)
         n = await NotificationRepository(session).upsert_grouped(
-            USER, "comment", {"a": 2}, group_key="comment:p1", actor_id=a2,
-            community_id=COMMUNITY, group_window_seconds=300,
+            USER,
+            "comment",
+            {"a": 2},
+            group_key="comment:p1",
+            actor_id=a2,
+            community_id=COMMUNITY,
+            group_window_seconds=300,
         )
         assert n is existing
         assert n.count == 2
@@ -77,12 +92,22 @@ class TestUpsertGrouped:
     async def test_same_actor_deduped(self) -> None:
         a1 = uuid.uuid4()
         existing = Notification(
-            user_id=USER, community_id=COMMUNITY, type="comment",
-            payload={}, group_key="k", count=1, actor_ids=[a1],
+            user_id=USER,
+            community_id=COMMUNITY,
+            type="comment",
+            payload={},
+            group_key="k",
+            count=1,
+            actor_ids=[a1],
         )
         n = await NotificationRepository(_session(existing)).upsert_grouped(
-            USER, "comment", {}, group_key="k", actor_id=a1,
-            community_id=COMMUNITY, group_window_seconds=300,
+            USER,
+            "comment",
+            {},
+            group_key="k",
+            actor_id=a1,
+            community_id=COMMUNITY,
+            group_window_seconds=300,
         )
         assert n.count == 2
         assert n.actor_ids == [a1]
@@ -90,8 +115,13 @@ class TestUpsertGrouped:
     async def test_select_filters_window_and_skip_locked(self) -> None:
         session = _session(None)
         await NotificationRepository(session).upsert_grouped(
-            USER, "comment", {}, group_key="k", actor_id=None,
-            community_id=COMMUNITY, group_window_seconds=300,
+            USER,
+            "comment",
+            {},
+            group_key="k",
+            actor_id=None,
+            community_id=COMMUNITY,
+            group_window_seconds=300,
         )
         stmt = session.execute.call_args[0][0]
         sql = str(stmt.compile(dialect=postgresql.dialect())).lower()
@@ -103,8 +133,13 @@ class TestUpsertGrouped:
     async def test_no_group_key_always_inserts_without_select(self) -> None:
         session = _session(MagicMock())
         n = await NotificationRepository(session).upsert_grouped(
-            USER, "mention", {}, group_key=None, actor_id=None,
-            community_id=COMMUNITY, group_window_seconds=None,
+            USER,
+            "mention",
+            {},
+            group_key=None,
+            actor_id=None,
+            community_id=COMMUNITY,
+            group_window_seconds=None,
         )
         session.execute.assert_not_awaited()
         session.add.assert_called_once()
