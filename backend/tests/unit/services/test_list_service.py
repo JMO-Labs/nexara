@@ -201,3 +201,58 @@ class TestMembers:
         uid = uuid.uuid4()
         await svc.update_member_share(lst.id, uid, True)
         members.update_member.assert_awaited_once_with(m, {"share_personal": True})
+
+
+class TestUncoveredBranches:
+    async def test_subgroup_ids_expands_descendants(self, monkeypatch):
+        direct, child = uuid.uuid4(), uuid.uuid4()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = [direct]
+        session = AsyncMock()
+        session.execute.return_value = result
+        expand = AsyncMock(return_value=[direct, child])
+        monkeypatch.setattr("app.repositories.subgroup_repo.expand_with_descendants", expand)
+        svc = ListService(
+            AsyncMock(spec=ListRepository),
+            AsyncMock(spec=ListMemberRepository),
+            MagicMock(),
+            CID,
+            session,
+        )
+        out = await ListService._subgroup_ids(svc, uuid.uuid4())
+        assert out == [direct, child]
+        expand.assert_awaited_once_with(session, [direct])
+
+    async def test_unknown_visibility_not_viewable(self):
+        svc, _, _ = _svc()
+        assert not await svc._can_view(_list("bogus"), uuid.uuid4())
+
+    async def test_create_invalid_visibility(self):
+        svc, _, _ = _svc()
+        with pytest.raises(AppError) as exc:
+            await svc.create(uuid.uuid4(), title="T", visibility="bogus")
+        assert exc.value.status_code == 422
+
+    @pytest.mark.parametrize("err", [ValueError("bad"), KeyError("x")])
+    async def test_create_invalid_field_config(self, err):
+        svc, repo, _ = _svc()
+        svc._registry.validate_config.side_effect = err
+        with pytest.raises(AppError):
+            await svc.create(
+                uuid.uuid4(), title="T", visibility="community", field_schema=[{"type": "text"}]
+            )
+        repo.create.assert_not_awaited()
+
+    async def test_create_field_missing_type(self):
+        svc, _, _ = _svc()
+        with pytest.raises(AppError):
+            await svc.create(uuid.uuid4(), title="T", visibility="community", field_schema=[{}])
+
+    async def test_update_member_share_not_member(self):
+        svc, repo, members = _svc()
+        lst = _list("community")
+        repo.get_by_id.return_value = lst
+        members.get_member.return_value = None
+        with pytest.raises(NotFoundError):
+            await svc.update_member_share(lst.id, uuid.uuid4(), True)
+        members.update_member.assert_not_awaited()
