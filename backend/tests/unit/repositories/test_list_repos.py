@@ -149,7 +149,7 @@ async def test_template_get_by_id_eager_loads_children() -> None:
     s = _session([MagicMock()])
     await ListTemplateRepository(s).get_by_id(LID, CID)
     stmt = s.execute.call_args_list[-1].args[0]
-    loaded = {str(opt.path[-1]) for opt in stmt._with_options}  # noqa: SLF001
-    assert any("fields" in p for p in loaded) and any("items" in p for p in loaded)
+    paths = " ".join(str(opt.path) for opt in stmt._with_options)
+    assert "ListTemplate.fields" in paths and "ListTemplate.items" in paths
     sql = _sql(s)
     assert "list_template.community_id" in sql and "deleted_at IS NULL" in sql
