@@ -88,6 +88,27 @@ class SubgroupRepository(BaseRepository[Subgroup]):
 
     model = Subgroup
 
+    async def get_slugs(
+        self,
+        ids: list[uuid.UUID],
+        community_id: uuid.UUID,
+    ) -> dict[uuid.UUID, str]:
+        """
+        @brief Fetch slugs for many subgroups in one community-scoped query.
+
+        @param ids Subgroup IDs (duplicates allowed).
+        @param community_id Community scope.
+        @return Mapping of subgroup ID to slug; unknown IDs are omitted.
+        """
+        if not ids:
+            return {}
+        stmt = select(Subgroup.id, Subgroup.slug).where(
+            Subgroup.id.in_(set(ids)),
+            Subgroup.community_id == community_id,
+        )
+        result = await self._session.execute(stmt)
+        return {row[0]: row[1] for row in result.all()}
+
     async def get_ancestor_ids(
         self,
         subgroup_id: uuid.UUID,
