@@ -34,7 +34,7 @@ def _all(docs: list[dict], kind: str) -> dict[str, dict]:
 
 def test_worker_hpa_targets_worker_deployment() -> None:
     hpas = _all(_render(), "HorizontalPodAutoscaler")
-    assert set(hpas) == {"api", "worker"}
+    assert set(hpas) == {"api", "worker", "beat"}
     api = hpas["api"]["spec"]
     assert api["scaleTargetRef"]["name"] == "nexara-nexara-api"
     assert api["metrics"][0]["resource"]["target"]["averageUtilization"] == 70

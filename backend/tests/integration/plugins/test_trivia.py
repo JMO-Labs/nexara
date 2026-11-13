@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.dependencies import get_current_user
+from app.models.plugin import Plugin
 from app.models.user import User
 from app.plugins.context import PluginContext
 from app.plugins.manifest import load_manifest
@@ -50,6 +51,10 @@ async def session():
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         async with sess.begin():
+            await sess.merge(
+                Plugin(id="example-trivia", community_id=C1, name="Trivia", version="1.0.0")
+            )
+            await sess.flush()
             yield sess
             await sess.rollback()
     await engine.dispose()
