@@ -323,3 +323,29 @@ class PromptService:
         """@brief List currently-pinned prompt posts."""
         rows = await self._repo.list_active(self._community_id, datetime.now(UTC))
         return [PromptPostResponse.model_validate(r) for r in rows]
+
+    async def list_responses(
+        self,
+        prompt_post_id: uuid.UUID,
+        viewer_id: uuid.UUID,
+        *,
+        limit: int = 20,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        @brief List posts replying to a prompt post, newest first.
+
+        @param prompt_post_id PromptPost UUID.
+        @param viewer_id Viewer UUID (block filter).
+        @param limit Page size.
+        @param cursor Opaque cursor from a previous page.
+        @return Dict with items, next_cursor, has_more.
+        @throws NotFoundError If the prompt post does not exist.
+        """
+        pp = await self._repo.get_prompt_post(prompt_post_id)
+        if pp is None or pp.community_id != self._community_id:
+            raise NotFoundError(message=_("Prompt post not found"))
+        items, next_cursor = await self._post_repo.list_responses(
+            self._community_id, prompt_post_id, viewer_id=viewer_id, cursor=cursor, limit=limit
+        )
+        return {"items": items, "next_cursor": next_cursor, "has_more": next_cursor is not None}

@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -88,6 +89,18 @@ async def list_active(
 ) -> list[PromptPostResponse]:
     """@brief List currently-pinned prompt posts."""
     return await service.list_active()
+
+
+@router.get("/posts/{prompt_post_id}/responses")
+async def list_responses(
+    prompt_post_id: uuid.UUID,
+    limit: int = Query(20, ge=1, le=50),
+    cursor: str | None = Query(None),
+    user: User = Depends(get_current_user),
+    service: PromptService = Depends(_build_service),
+) -> dict[str, Any]:
+    """@brief List posts replying to a prompt post (newest first)."""
+    return await service.list_responses(prompt_post_id, user.id, limit=limit, cursor=cursor)
 
 
 @router.get("/{prompt_id}", response_model=PromptResponse)
