@@ -24,7 +24,7 @@ test("mention notifies recipient and can be marked read", async ({
     await b.page.getByRole("button", { name: /^post$/i }).click();
 
     const bell = a.page.getByRole("button", {
-      name: /Notifications, \d+ unread/,
+      name: "Notifications, 1 unread",
     });
     await expect(async () => {
       await a.page.reload();
