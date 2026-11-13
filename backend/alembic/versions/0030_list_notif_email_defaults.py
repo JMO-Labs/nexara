@@ -1,7 +1,7 @@
 """list.expiring and list.member email notifications default on
 
 Revision ID: 0030_list_notif_email_defaults
-Revises: 0025_add_nsfw_fields
+Revises: 0026_user_exports_table
 """
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0030_list_notif_email_defaults"
-down_revision = "0025_add_nsfw_fields"
+down_revision = "0026_user_exports_table"
 branch_labels = None
 depends_on = None
 
