@@ -41,6 +41,7 @@ build:mobile-apk:
     - changes:
         - mobile/**/*
         - .gitlab/ci/test-mobile.yml
+        - scripts/check-apk-signer.sh
   script:
     - cd mobile
     - flutter create . --platforms android --org dev.jmolabs --project-name nexara_mobile
@@ -49,6 +50,11 @@ build:mobile-apk:
     - flutter build apk --debug
     # No signing env present: exercises the debug-signing fallback.
     - flutter build apk --release
+    - bash ../scripts/check-apk-signer.sh build/app/outputs/flutter-apk/app-release.apk "CN=Android Debug"
+    # Env-signed path with a throwaway key, so signing breakage fails here, not at release.
+    - keytool -genkeypair -keystore android/ci-test.jks -storepass ci-pass -keypass ci-pass -alias ci -keyalg RSA -keysize 2048 -validity 1 -dname CN=ci
+    - NEXARA_KEYSTORE_PATH=ci-test.jks NEXARA_KEYSTORE_PASSWORD=ci-pass NEXARA_KEY_ALIAS=ci NEXARA_KEY_PASSWORD=ci-pass flutter build apk --release
+    - bash ../scripts/check-apk-signer.sh build/app/outputs/flutter-apk/app-release.apk "CN=ci"
   artifacts:
     paths:
       - mobile/build/app/outputs/flutter-apk/app-debug.apk
@@ -97,7 +103,7 @@ fastlane:android-beta:
     - gem install fastlane --no-document
     - fastlane android beta
 
-# iOS needs a macOS runner (tag via IOS_RUNNER_TAG at project level).
+# iOS needs a macOS runner registered with the `macos` tag.
 fastlane:ios-beta:
   extends: .fastlane
   image: null

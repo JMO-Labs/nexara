@@ -2,8 +2,8 @@
 # @brief Flutter platform builds: APK (ubuntu) and iOS no-codesign (macOS). nexara#287
 name: mobile-build
 on:
-  pull_request: {branches: [dev], paths: ["mobile/**", ".github/workflows/mobile-build.yml"]}
-  push: {branches: [dev], paths: ["mobile/**", ".github/workflows/mobile-build.yml"]}
+  pull_request: {branches: [dev], paths: ["mobile/**", "scripts/check-apk-signer.sh", ".github/workflows/mobile-build.yml"]}
+  push: {branches: [dev], paths: ["mobile/**", "scripts/check-apk-signer.sh", ".github/workflows/mobile-build.yml"]}
   workflow_dispatch:
 permissions: {contents: read}
 defaults:
@@ -28,6 +28,12 @@ jobs:
       - run: flutter build apk --debug
       # No key.properties/env here, so this exercises the debug-signing fallback.
       - run: flutter build apk --release
+      - run: bash ../scripts/check-apk-signer.sh build/app/outputs/flutter-apk/app-release.apk "CN=Android Debug"
+      # Env-signed path with a throwaway key (dummy values, not secrets).
+      - run: keytool -genkeypair -keystore android/ci-test.jks -storepass ci-pass -keypass ci-pass -alias ci -keyalg RSA -keysize 2048 -validity 1 -dname CN=ci
+      - run: flutter build apk --release
+        env: {NEXARA_KEYSTORE_PATH: ci-test.jks, NEXARA_KEYSTORE_PASSWORD: ci-pass, NEXARA_KEY_ALIAS: ci, NEXARA_KEY_PASSWORD: ci-pass}
+      - run: bash ../scripts/check-apk-signer.sh build/app/outputs/flutter-apk/app-release.apk "CN=ci"
   ios:
     runs-on: macos-latest
     steps:
