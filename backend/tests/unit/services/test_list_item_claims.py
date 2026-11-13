@@ -153,3 +153,35 @@ class TestRelease:
         with pytest.raises(NotFoundError):
             await svc.release(uuid.uuid4(), UID)
         lists.increment_counters.assert_not_awaited()
+
+
+class TestTenantIsolation:
+    """Items whose parent list is outside the community must look missing."""
+
+    async def test_complete_foreign_list(self):
+        svc, lists, items, signups, _ = _svc()
+        item = _item()
+        items.get_by_id.return_value = item
+        lists.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            await svc.complete(item.id)
+        assert item.completed is False
+        lists.increment_counters.assert_not_awaited()
+
+    async def test_claim_foreign_list(self):
+        svc, lists, items, signups, _ = _svc()
+        items.lock_item_for_update.return_value = _item()
+        lists.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            await svc.claim(uuid.uuid4(), UID)
+        signups.create_claim.assert_not_awaited()
+        lists.increment_counters.assert_not_awaited()
+
+    async def test_release_foreign_list(self):
+        svc, lists, items, signups, _ = _svc()
+        items.lock_item_for_update.return_value = _item()
+        lists.get_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            await svc.release(uuid.uuid4(), UID)
+        signups.delete_claim.assert_not_awaited()
+        lists.increment_counters.assert_not_awaited()

@@ -46,7 +46,13 @@ class ListItemService:
         item = await self._items.get_by_id(item_id)
         if item is None:
             raise NotFoundError(_("List item not found"))
+        await self._ensure_in_community(item)
         return item
+
+    async def _ensure_in_community(self, item: ListItem) -> None:
+        """@raises NotFoundError If the item's list is outside this community."""
+        if await self._lists.get_by_id(item.list_id, self._community_id) is None:
+            raise NotFoundError(_("List item not found"))
 
     async def add_item(
         self,
@@ -115,6 +121,7 @@ class ListItemService:
         item = await self._items.lock_item_for_update(item_id)
         if item is None:
             raise NotFoundError(_("List item not found"))
+        await self._ensure_in_community(item)
         needed = item.signup_quantity_needed
         if needed is not None:
             claimed = await self._signups.sum_claimed(item_id)
@@ -133,6 +140,7 @@ class ListItemService:
         item = await self._items.lock_item_for_update(item_id)
         if item is None:
             raise NotFoundError(_("List item not found"))
+        await self._ensure_in_community(item)
         if not await self._signups.delete_claim(item_id, user_id):
             raise NotFoundError(_("Claim not found"))
         await self._lists.increment_counters(item.list_id, {"signup_count": -1})
