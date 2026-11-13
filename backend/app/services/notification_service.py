@@ -16,6 +16,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from app.core.exceptions import AppError, NotFoundError
 from app.models.notification import Notification
+from app.repositories.digest_repo import DigestRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.notification import (
@@ -86,6 +87,7 @@ class NotificationService:
     @param community_id Community scope.
     @param event_bus Optional EventBus; builds a default Dispatcher when no dispatcher given.
     @param dispatcher Optional Dispatcher (see core.dependencies.get_dispatcher).
+    @param digest_repo Optional DigestRepository; defaults to one on the notification session.
     """
 
     def __init__(
@@ -96,10 +98,12 @@ class NotificationService:
         *,
         event_bus: EventBus | None = None,
         dispatcher: Dispatcher | None = None,
+        digest_repo: DigestRepository | None = None,
     ) -> None:
         self._notification_repo = notification_repo
         self._settings_repo = settings_repo
         self._community_id = community_id
+        self._digest_repo = digest_repo
         self._event_bus = event_bus
         if dispatcher is None:
             if event_bus is not None:
@@ -160,7 +164,14 @@ class NotificationService:
             actor_id=actor_id,
             group_window_seconds=type_.group_window_seconds,
         )
-        await self._dispatcher.dispatch(notification, type_, dict(eff))
+        channels = dict(eff)
+        cadence = (settings.digest_cadence or {}).get(type, "instant")
+        if cadence not in ("instant", "off") and channels.get("email"):
+            # Email is deferred to the digest; other channels still fire now.
+            channels["email"] = False
+            digest_repo = self._digest_repo or DigestRepository(self._notification_repo._session)
+            await digest_repo.enqueue(user_id, type, notification.id)
+        await self._dispatcher.dispatch(notification, type_, channels)
         return notification
 
     async def list_for_user(

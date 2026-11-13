@@ -197,7 +197,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]
+def _register_middleware(app: FastAPI, settings: Settings) -> None:
     """
     @brief Register the middleware stack in the correct order.
 
@@ -213,7 +213,7 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
     app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]  # slowapi handler typed for RateLimitExceeded, not Exception
     app.add_middleware(SlowAPIMiddleware)
 
     app.add_middleware(
@@ -231,14 +231,14 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
         logger.warning("waf_cache_client_unavailable", exc_info=True)
 
     app.add_middleware(
-        WAFMiddleware,  # type: ignore[arg-type]
+        WAFMiddleware,  # type: ignore[arg-type]  # Starlette _MiddlewareFactory protocol vs class __init__
         settings=settings,
         cache_client=cache_client,
     )
     app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
-        CloudflareRealIPMiddleware,  # type: ignore[arg-type]
+        CloudflareRealIPMiddleware,  # type: ignore[arg-type]  # Starlette _MiddlewareFactory protocol vs class __init__
         settings=settings,
     )
 
@@ -266,7 +266,7 @@ def _register_routers(app: FastAPI) -> None:
             return {"keys": []}
 
 
-def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]
+def _setup_instrumentator(app: FastAPI, settings: Settings) -> None:
     """
     @brief Configure prometheus-fastapi-instrumentator for auto HTTP metrics.
 
