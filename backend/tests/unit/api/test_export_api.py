@@ -44,11 +44,9 @@ def test_get_repo_and_redis_and_enqueue_factories() -> None:
     with patch.object(api, "get_pool", return_value="pool") as pool:
         assert api._get_redis() == "pool"
         pool.assert_called_once()
-    with patch("app.tasks.celery_app.celery_app") as app:
-        api._get_enqueue()("abc")
-        app.send_task.assert_called_once_with(
-            "app.tasks.export_tasks.generate_user_export", args=["abc"]
-        )
+    with patch.object(generate_user_export, "apply_async") as apply:
+        api._get_enqueue()("uid", "abc")
+        apply.assert_called_once_with(("uid", "abc"), queue="default")
 
 
 async def test_request_export_creates_and_enqueues() -> None:
@@ -60,7 +58,7 @@ async def test_request_export_creates_and_enqueues() -> None:
     out = await api.request_export(user, repo, redis, enqueue)
     assert out.export_id == row.id
     repo.commit.assert_awaited_once()
-    enqueue.assert_called_once_with(str(row.id))
+    enqueue.assert_called_once_with(str(user.id), str(row.id))
 
 
 async def test_request_export_rate_limited() -> None:
@@ -122,7 +120,12 @@ async def test_status_pending_no_url() -> None:
 
 
 def test_generate_user_export_returns_id() -> None:
-    assert generate_user_export("abc") == "abc"
+    with (
+        patch("app.tasks.export_tasks._generate", new=MagicMock()),
+        patch("app.tasks.export_tasks.asyncio.run") as run,
+    ):
+        assert generate_user_export("uid", "abc") == "abc"
+    run.assert_called_once()
 
 
 def test_get_storage_uses_configured_backend() -> None:
