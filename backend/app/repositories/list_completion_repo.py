@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.engine import CursorResult
 
 from app.models.list import ListItemCompletion
@@ -41,3 +41,12 @@ class ListCompletionRepository(BaseRepository[ListItemCompletion]):
         result = await self._session.execute(stmt)
         await self._session.flush()
         return (cast(CursorResult[Any], result).rowcount or 0) > 0
+
+    async def count_for_item(self, item_id: uuid.UUID) -> int:
+        """@brief Count users who completed an item."""
+        stmt = (
+            select(func.count())
+            .select_from(ListItemCompletion)
+            .where(ListItemCompletion.item_id == item_id)
+        )
+        return int((await self._session.execute(stmt)).scalar_one())

@@ -187,3 +187,95 @@ async def test_create_with_real_registry_optional_fields_omitted(lst):
     item = await s.create(CID, lst.id, lst.owner_id, {"where": {"lat": 1, "lon": 2}})
     assert item.values == {"where": {"lat": 1.0, "lon": 2.0}}
     assert item.due_at is None and item.lat == 1.0
+
+
+async def test_owner_can_view_private_list(svc, lst):
+    s, items, _, _ = svc
+    lst.visibility = "private"
+    items.list_items_keyset.return_value = ([], None)
+    assert await s.list_items(CID, lst.id, lst.owner_id) == ([], None)
+
+
+async def test_subgroup_visibility(svc, lst):
+    s, items, _, _ = svc
+    sg = uuid.uuid4()
+    lst.visibility, lst.subgroup_id = "subgroup", sg
+    items.list_items_keyset.return_value = ([], None)
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=None)
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[uuid.uuid4()])
+    lst.subgroup_id = None
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[sg])
+    lst.subgroup_id = sg
+    assert await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[sg]) == ([], None)
+
+
+async def test_missing_item_not_found(svc):
+    s, items, _, _ = svc
+    items.get_by_id.return_value = None
+    with pytest.raises(NotFoundError):
+        await s.update(CID, uuid.uuid4(), uuid.uuid4(), {})
+
+
+async def test_list_items_bad_cursor_is_validation_error(svc, lst):
+    s, items, _, _ = svc
+    items.list_items_keyset.side_effect = ValueError("bad cursor")
+    with pytest.raises(ValidationError, match="bad cursor"):
+        await s.list_items(CID, lst.id, uuid.uuid4(), cursor="zzz")
+
+
+async def test_create_non_owner_denied(svc, lst):
+    s, items, lists, _ = svc
+    with pytest.raises(AuthorizationError):
+        await s.create(CID, lst.id, uuid.uuid4(), {})
+    items.create.assert_not_awaited()
+    lists.increment_counters.assert_not_awaited()
+
+
+async def test_update_and_delete_non_owner_denied(svc, lst):
+    s, items, lists, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.id, item.list_id, item.values = uuid.uuid4(), lst.id, {}
+    items.get_by_id.return_value = item
+    other = uuid.uuid4()
+    with pytest.raises(AuthorizationError):
+        await s.update(CID, item.id, other, {"where": "y"})
+    with pytest.raises(AuthorizationError):
+        await s.delete(CID, item.id, other)
+    items.update.assert_not_awaited()
+    items.soft_delete.assert_not_awaited()
+    lists.increment_counters.assert_not_awaited()
+
+
+async def test_create_notifies_audience_except_adder(lst):
+    from app.services.notification_service import NotificationService
+
+    items = AsyncMock(spec=ListItemRepository)
+    lists = AsyncMock(spec=ListRepository)
+    lists.get_by_id.return_value = lst
+    member = uuid.uuid4()
+    lists.audience_ids.return_value = {member, lst.owner_id}
+    items.create.side_effect = lambda e: setattr(e, "id", uuid.uuid4()) or e
+    reg = MagicMock(spec=ListFieldRegistry)
+    reg.validate_value.side_effect = lambda k, v, c: v
+    reg.project_columns.return_value = {}
+    notif = AsyncMock(spec=NotificationService)
+    svc = ListItemService(items, lists, reg, notification_service=notif)
+    item = await svc.create(CID, lst.id, lst.owner_id, {"due": "Buy milk"})
+    notif.notify.assert_awaited_once()
+    args, kwargs = notif.notify.await_args
+    assert args[0] == member
+    assert args[1] == "list_item"
+    assert {"list_id", "item_id", "item_title", "adder_id"} <= set(args[2])
+    assert args[2]["item_id"] == str(item.id)
+    assert args[2]["item_title"] == "Buy milk"
+    assert args[2]["adder_id"] == str(lst.owner_id)
+    assert kwargs["actor_id"] == lst.owner_id
+
+
+async def test_create_without_notifier_does_not_fail(svc, lst):
+    s, _, lists, _ = svc
+    await s.create(CID, lst.id, lst.owner_id, {})
+    lists.audience_ids.assert_not_called()

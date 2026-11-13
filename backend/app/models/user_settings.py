@@ -114,6 +114,7 @@ class UserSettings(Base):
     notif_nudge_push: Mapped[bool] = _bool_col("false")
     notif_nudge_email: Mapped[bool] = _bool_col("false")
     receive_gentle_nudges: Mapped[bool] = _bool_col()
+    receive_nudges: Mapped[bool] = _bool_col()
 
     # Email digest
     email_digest_enabled: Mapped[bool] = _bool_col("false")
