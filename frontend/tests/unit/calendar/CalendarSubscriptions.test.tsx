@@ -83,6 +83,7 @@ describe("SubscriptionRow", () => {
         sub={sub}
         onDelete={vi.fn()}
         onSync={vi.fn()}
+        onUpdate={vi.fn()}
         isSyncing={false}
       />,
     );
@@ -97,6 +98,7 @@ describe("SubscriptionRow", () => {
         sub={sub}
         onDelete={vi.fn()}
         onSync={onSync}
+        onUpdate={vi.fn()}
         isSyncing={false}
       />,
     );
@@ -111,6 +113,7 @@ describe("SubscriptionRow", () => {
         sub={sub}
         onDelete={onDelete}
         onSync={vi.fn()}
+        onUpdate={vi.fn()}
         isSyncing={false}
       />,
     );

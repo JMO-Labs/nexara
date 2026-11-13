@@ -10,6 +10,8 @@ from app.services.notifications.channels.inapp import InAppChannel
 from app.services.realtime.event_bus import EventBus
 from app.services.realtime.events import EventType, UserTarget
 
+ACTOR = uuid4()
+
 
 def _notif() -> MagicMock:
     n = MagicMock(spec=Notification)
@@ -18,6 +20,9 @@ def _notif() -> MagicMock:
     n.type = "mention"
     n.payload = {"message": "hi"}
     n.created_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    n.updated_at = datetime(2026, 1, 2, 3, 9, 0, tzinfo=UTC)
+    n.count = 2
+    n.actor_ids = [ACTOR]
     return n
 
 
@@ -35,6 +40,9 @@ async def test_send_emits_event() -> None:
         "type": "mention",
         "payload": {"message": "hi"},
         "created_at": n.created_at.isoformat(),
+        "updated_at": n.updated_at.isoformat(),
+        "count": 2,
+        "actor_ids": [str(ACTOR)],
     }
 
 
