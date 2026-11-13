@@ -3,7 +3,7 @@
  * @brief NotificationsTab component tests. Verify toggle switches.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotificationsTab } from "@/components/settings/NotificationsTab";
@@ -28,7 +28,33 @@ vi.mock("@/components/settings/AppriseList", () => ({
   useAppriseUrls: () => ({ data: apprise.data }),
 }));
 
+const TYPES = [
+  "mention",
+  "comment",
+  "reaction",
+  "new_post",
+  "system",
+  "invite_accepted",
+  "event_reminder",
+  "event_rsvp",
+  "gallery_activity",
+  "prompt",
+  "prompt_summary",
+  "poll",
+  "dm",
+  "birthday",
+];
+const allFields = Object.fromEntries(
+  TYPES.flatMap((t) =>
+    ["inapp", "email", "push"].map((c) => [`notif_${t}_${c}`, false]),
+  ),
+);
+
 const mockPrefs = {
+  ...allFields,
+  mute_all_push: false,
+  email_digest_enabled: false,
+  email_digest_hour: 8,
   notif_mention_inapp: true,
   notif_mention_email: false,
   notif_comment_inapp: true,
@@ -50,6 +76,10 @@ const createWrapper = () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 };
+
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};
 
 describe("NotificationsTab", () => {
   beforeEach(() => {
@@ -119,5 +149,90 @@ describe("NotificationsTab", () => {
     render(<NotificationsTab />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/mute all email/i)).toBeInTheDocument();
+  });
+
+  const setup = () => {
+    const mutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateNotificationPrefs).mockReturnValue({
+      mutate,
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isSuccess: false,
+    } as any);
+    render(<NotificationsTab />, { wrapper: createWrapper() });
+    return mutate;
+  };
+
+  it("renders 14 rows with three switches each", () => {
+    setup();
+    for (const ch of ["In-app", "Email", "Push"]) {
+      expect(
+        screen.getByRole("switch", { name: `Direct message ${ch}` }),
+      ).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("switch", { name: "Birthday Push" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("switch", { name: / Push$/ })).toHaveLength(14);
+    expect(screen.getAllByRole("switch", { name: / In-app$/ })).toHaveLength(
+      14,
+    );
+  });
+
+  it("toggles a push switch with only that field", async () => {
+    const mutate = setup();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("switch", { name: "Direct message Push" }));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ notif_dm_push: true }),
+    );
+  });
+
+  it("toggles mute all push with only that field", async () => {
+    const mutate = setup();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("switch", { name: "Mute all push" }));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ mute_all_push: true }),
+    );
+  });
+
+  it("enables digest and disables hour select while off", async () => {
+    const mutate = setup();
+    expect(
+      screen.getByRole("combobox", { name: "Digest hour" }),
+    ).toBeDisabled();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("switch", { name: "Email digest" }));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ email_digest_enabled: true }),
+    );
+  });
+
+  it("enables hour select when digest is on", () => {
+    vi.mocked(settingsHooks.useNotificationPrefs).mockReturnValue({
+      data: { ...mockPrefs, email_digest_enabled: true },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    setup();
+    expect(screen.getByRole("combobox", { name: "Digest hour" })).toBeEnabled();
+  });
+
+  it("changes digest hour as a number", async () => {
+    vi.mocked(settingsHooks.useNotificationPrefs).mockReturnValue({
+      data: { ...mockPrefs, email_digest_enabled: true },
+      isLoading: false,
+      isSuccess: true,
+    } as any);
+    const mutate = setup();
+    fireEvent.click(screen.getByRole("combobox", { name: "Digest hour" }));
+    fireEvent.click(await screen.findByRole("option", { name: "21:00" }));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith({ email_digest_hour: 21 }),
+    );
   });
 });
