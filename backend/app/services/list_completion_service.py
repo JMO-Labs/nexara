@@ -18,6 +18,7 @@ from app.repositories.list_completion_repo import ListCompletionRepository
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.services.list_field_registry import ListFieldRegistry
+from app.services.notifications.types.list_payloads import item_title
 from app.services.realtime.event_bus import EventBus
 from app.services.realtime.events import CommunityTarget, EventType, RealtimeEvent, UserTarget
 
@@ -114,9 +115,12 @@ class ListCompletionService:
                 lst.owner_id,
                 "list_completed",
                 {
+                    "message": f"An item on {lst.title} was completed",
                     "list_id": str(lst.id),
                     "list_title": lst.title,
                     "item_id": str(item.id),
+                    "item_title": item_title(item.values),
+                    "completer_id": str(user_id),
                     "completion_mode": mode,
                 },
                 actor_id=user_id,

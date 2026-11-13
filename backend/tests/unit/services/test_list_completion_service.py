@@ -17,6 +17,7 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.services.list_completion_service import ListCompletionService
 from app.services.list_field_registry import ListFieldRegistry
+from app.services.notification_service import NotificationService
 from app.services.realtime.events import CommunityTarget, UserTarget
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -50,7 +51,7 @@ def _setup(
     comps.get_completion.return_value = MagicMock() if existing else None
     comps.delete_completion.return_value = existing
     comps.count_for_item.return_value = 1 if existing else 0
-    bus, notif = AsyncMock(), AsyncMock()
+    bus, notif = AsyncMock(), AsyncMock(spec=NotificationService)
     svc = ListCompletionService(
         items, lists, comps, ListFieldRegistry(), bus, notif, community_id=CID
     )
@@ -189,3 +190,18 @@ class TestAccess:
         svc, item, _, _, bus, _ = _setup("shared")
         await svc.complete_item(item.id, USER)
         assert isinstance(bus.emit.await_args.args[0].target, CommunityTarget)
+
+
+async def test_complete_notifies_owner_with_context():
+    svc, item, _, _, _, notif = _setup("shared")
+    item.values = {"title": "Milk"}
+    await svc.complete_item(item.id, USER)
+    args, kwargs = notif.notify.await_args
+    assert args[0] == OWNER
+    assert args[1] == "list_completed"
+    ctx = args[2]
+    assert {"message", "list_id", "item_id", "item_title", "completer_id"} <= set(ctx)
+    assert ctx["item_title"] == "Milk"
+    assert ctx["completer_id"] == str(USER)
+    assert ctx["item_id"] == str(item.id)
+    assert kwargs["actor_id"] == USER

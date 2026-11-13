@@ -128,7 +128,7 @@ async def _generate_thumbnail_async(media_id: uuid.UUID) -> dict[str, str]:
     return {"status": "processed"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.media_tasks.generate_thumbnail",
     max_retries=2,
@@ -162,7 +162,7 @@ def generate_thumbnail(self: Task, media_id: str) -> dict[str, str]:
         raise self.retry(exc=exc)
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.media_tasks.transcode_video",
     max_retries=1,
@@ -335,7 +335,7 @@ async def _transcode_video_async(media_id: str) -> dict[str, str]:
     return {"status": "processed"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.media_tasks.delete_orphaned_media",
     queue="media",
 )
