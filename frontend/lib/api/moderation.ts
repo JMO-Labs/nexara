@@ -6,9 +6,17 @@ import { apiDelete, apiGet, apiPost, seg } from "./client";
 
 export type ReportTarget = "post" | "comment" | "message" | "media";
 export type ReportReason =
-  "spam" | "harassment" | "inappropriate" | "misinformation" | "other";
+  | "spam"
+  | "harassment"
+  | "inappropriate"
+  | "misinformation"
+  | "other";
 export type ReportActionType =
-  "dismiss" | "warn_user" | "hide_content" | "delete_content" | "ban_user";
+  | "dismiss"
+  | "warn_user"
+  | "hide_content"
+  | "delete_content"
+  | "ban_user";
 
 export interface ReportInput {
   target_type: ReportTarget;
