@@ -21,6 +21,7 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import CalendarSubscription, Event
 from app.models.subgroup import SubgroupMember
+from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
@@ -408,6 +409,11 @@ class EventService(EventIcalMixin):
 
     # ── RSVP ──────────────────────────────────────────────────────────
 
+    async def _actor_name(self, user_id: uuid.UUID) -> str:
+        """@brief Display name of ``user_id`` for notification payloads."""
+        user = await self._session.get(User, user_id)
+        return str(user.display_name) if user is not None else _("Someone")
+
     async def rsvp(
         self, event_id: uuid.UUID, user_id: uuid.UUID, data: RSVPRequest
     ) -> RSVPResponse:
@@ -441,6 +447,8 @@ class EventService(EventIcalMixin):
                     payload={
                         "event_id": str(event.id),
                         "status": data.status,
+                        "actor_name": await self._actor_name(user_id),
+                        "event_title": event.title,
                         "message": _("Someone RSVP'd to your event"),
                         "link": f"/app/events/{event.id}",
                     },

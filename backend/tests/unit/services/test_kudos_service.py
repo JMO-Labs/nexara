@@ -19,7 +19,8 @@ from app.repositories.subgroup_repo import SubgroupRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.kudos import KudosCreate
 from app.services.kudos_service import KudosService
-from app.services.notification_service import PREF_MAP, NotificationService
+from app.services.notification_service import PREF_MAP
+from tests.unit.services.strict_notify import strict_notify
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 AUTHOR_ID = uuid.uuid4()
@@ -31,7 +32,7 @@ def repos():
     kudos = AsyncMock(spec=KudosRepository)
     users = AsyncMock(spec=UserRepository)
     subs = AsyncMock(spec=SubgroupRepository)
-    notif = AsyncMock(spec=NotificationService)
+    notif = strict_notify()
     recipient = MagicMock(spec=User)
     recipient.id = RECIPIENT_ID
     recipient.username = "bob"
