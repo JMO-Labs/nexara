@@ -54,9 +54,7 @@ class ListItemService:
             return await self._lists.is_member(lst.id, viewer_id)
         return False
 
-    async def _get_item(
-        self, community_id: uuid.UUID, item_id: uuid.UUID
-    ) -> tuple[ListItem, List]:
+    async def _get_item(self, community_id: uuid.UUID, item_id: uuid.UUID) -> tuple[ListItem, List]:
         item = await self._items.get_by_id(item_id)
         if item is None:
             raise NotFoundError("Item not found")
@@ -160,9 +158,7 @@ class ListItemService:
             item, {"values": item.values, **self._project_item(lst, item)}
         )
 
-    async def delete(
-        self, community_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID
-    ) -> None:
+    async def delete(self, community_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID) -> None:
         """@brief Soft-delete an item and decrement counters."""
         item, lst = await self._get_item(community_id, item_id)
         if lst.owner_id != user_id:
