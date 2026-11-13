@@ -18,6 +18,7 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.services.post_service import PostService
 from app.services.realtime.event_bus import EventBus
+from tests.unit.services.strict_notify import strict_notify
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 AUTHOR_ID = uuid.uuid4()
@@ -78,8 +79,8 @@ def prompt_repo():
 
 @pytest.fixture
 def notification_svc():
-    """@brief Mock NotificationService."""
-    return AsyncMock()
+    """@brief NotificationService mock running the real payload validation."""
+    return strict_notify()
 
 
 @pytest.fixture
