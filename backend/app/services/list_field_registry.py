@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from app.services.list_field_types.base import FieldType
 
 
-class FieldTypeNotFound(KeyError):
+class FieldTypeNotFoundError(KeyError):
     """@brief Raised when a field type key is not registered."""
 
 
@@ -28,11 +28,11 @@ class ListFieldRegistry:
         self._types[field_type.key] = field_type
 
     def get(self, key: str) -> "FieldType":
-        """@brief Return the field type or raise FieldTypeNotFound."""
+        """@brief Return the field type or raise FieldTypeNotFoundError."""
         try:
             return self._types[key]
         except KeyError:
-            raise FieldTypeNotFound(key) from None
+            raise FieldTypeNotFoundError(key) from None
 
     def keys(self) -> list[str]:
         """@brief List registered keys."""

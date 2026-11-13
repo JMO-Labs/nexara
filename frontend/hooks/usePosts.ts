@@ -185,6 +185,8 @@ export function useTogglePostReaction(postId: string) {
     successKey: "toasts.posts.reaction.added",
     silentSuccess: true,
     onMutate: async (emoji) => {
+      await qc.cancelQueries({ queryKey: qk.feed.all() });
+      const prev = qc.getQueriesData<unknown>({ queryKey: qk.feed.all() });
       // optimistic toggle
       const prevReacted = qc
         .getQueryData<Post>(qk.feed.post(postId))
@@ -218,7 +220,7 @@ export function useTogglePostReaction(postId: string) {
           })),
         };
       });
-      return { emoji };
+      return { prev };
     },
     onSuccess: (resp) => {
       const apply = (reactions: ReactionSummary[]) =>
@@ -241,8 +243,10 @@ export function useTogglePostReaction(postId: string) {
         };
       });
     },
-    onError: () => {
-      qc.invalidateQueries({ queryKey: qk.feed.post(postId) });
+    onError: (_e, _v, ctx) => {
+      ctx?.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.feed.all() });
     },
   });

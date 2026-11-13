@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Card, SettingsRow, Select, Option, Switch } from "@/components/ui";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { UserSettings } from "@/lib/api/settings";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
@@ -17,6 +18,11 @@ const THEMES = [
   { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
+] as const;
+
+const DENSITIES = [
+  { value: "comfortable", label: "Comfortable" },
+  { value: "compact", label: "Compact" },
 ] as const;
 
 const FONT_SIZES = [
@@ -33,6 +39,8 @@ export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
   const { data: settings } = useUserSettings();
   const { mutate, isPending } = useUpdateSettings();
+  const density = useUI((s) => s.density);
+  const setDensity = useUI((s) => s.setDensity);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -131,6 +139,28 @@ export function AppearanceTab() {
           <p>Text sizing and spacing update as you change settings.</p>
           <p className="text-muted">Posted just now</p>
         </div>
+      </SettingsRow>
+
+      <SettingsRow
+        label="Density"
+        description="Comfortable keeps today's spacing; Compact fits more on screen."
+      >
+        <RadioGroup
+          aria-label="Density"
+          value={density}
+          onValueChange={(v) => setDensity(v as "comfortable" | "compact")}
+        >
+          {DENSITIES.map(({ value, label }) => (
+            <label
+              key={value}
+              htmlFor={`density-${value}`}
+              className="flex min-h-11 items-center gap-3 text-sm"
+            >
+              <RadioGroupItem id={`density-${value}`} value={value} />
+              {label}
+            </label>
+          ))}
+        </RadioGroup>
       </SettingsRow>
 
       <SettingsRow
