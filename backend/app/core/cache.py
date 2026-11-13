@@ -120,13 +120,16 @@ async def invalidate_search_cache_for_community(
 
             client = get_pool(get_settings(), DB_CACHE)
         deleted = 0
-        cursor: int | str = 0
+        cursor = 0
         while True:
-            cursor, keys = await client.scan(cursor=cursor, match=SEARCH_KEY_PATTERN, count=100)
+            next_cursor, keys = await client.scan(
+                cursor=cursor, match=SEARCH_KEY_PATTERN, count=100
+            )
+            cursor = int(next_cursor)
             if keys:
                 await client.delete(*keys)
                 deleted += len(keys)
-            if int(cursor) == 0:
+            if cursor == 0:
                 break
     except Exception:
         logger.warning("search_cache_invalidate_failed", exc_info=True)

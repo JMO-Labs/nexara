@@ -165,3 +165,17 @@ class TestActiveKeysQuery:
 class TestVerifyMalformedHash:
     def test_invalid_hash_returns_false(self) -> None:
         assert verify_api_key("nxr_plugin_hello_" + "a" * 32, "not-a-bcrypt-hash") is False
+
+
+def test_check_permission_reads_context_manifest():
+    """check_permission enforces against ctx.manifest."""
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from app.plugins.permissions import check_permission
+
+    manifest = MagicMock()
+    manifest.id = "p"
+    manifest.permissions = set()
+    with pytest.raises(PermissionError):
+        check_permission(SimpleNamespace(manifest=manifest), "db_read")
