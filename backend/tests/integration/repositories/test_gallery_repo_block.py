@@ -83,7 +83,7 @@ async def _setup(session: AsyncSession):
 
 async def test_item_by_blocked_user_hidden(session: AsyncSession) -> None:
     viewer, other, gallery, _bad, good = await _setup(session)
-    session.add(UserBlock(blocker_id=viewer.id, blocked_id=other.id))
+    session.add(UserBlock(blocker_id=viewer.id, blocked_id=other.id, community_id=COMMUNITY_ID))
     await session.flush()
 
     rows, _ = await GalleryRepository(session).list_items(gallery.id, viewer_id=viewer.id)
@@ -93,7 +93,7 @@ async def test_item_by_blocked_user_hidden(session: AsyncSession) -> None:
 
 async def test_item_by_blocking_user_hidden(session: AsyncSession) -> None:
     viewer, other, gallery, _bad, good = await _setup(session)
-    session.add(UserBlock(blocker_id=other.id, blocked_id=viewer.id))
+    session.add(UserBlock(blocker_id=other.id, blocked_id=viewer.id, community_id=COMMUNITY_ID))
     await session.flush()
 
     rows, _ = await GalleryRepository(session).list_items(gallery.id, viewer_id=viewer.id)
