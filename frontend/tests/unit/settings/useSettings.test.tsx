@@ -14,6 +14,7 @@ import {
   useUpdateNotificationPrefs,
 } from "@/hooks/useSettings";
 import * as settingsApi from "@/lib/api/settings";
+import type { PrivacyAppearanceSettings } from "@/lib/api/settings";
 import { useToasts } from "@/stores/toasts";
 import { qk } from "@/lib/query-keys";
 
@@ -28,6 +29,17 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/lib/api/settings");
+
+const privacy: PrivacyAppearanceSettings = {
+  profile_visible_to: "community",
+  show_online_status: true,
+  show_last_seen: true,
+  show_birthday_to: "community",
+  show_birthday_year: false,
+  allow_sassybot: false,
+  font_size: "medium",
+  compact_feed: false,
+};
 
 const createWrapper = () => {
   const queryClient = new QueryClient();
@@ -49,6 +61,7 @@ describe("Settings hooks", () => {
       const mockSettings = {
         theme: "system" as const,
         locale: "en-US",
+        ...privacy,
         notif_mention_inapp: true,
         notif_mention_email: false,
         notif_comment_inapp: true,
@@ -111,6 +124,7 @@ describe("Settings hooks", () => {
       const mockResp = { theme: "dark" as const, locale: "en-US" };
       vi.mocked(settingsApi.updateSettings).mockResolvedValue({
         ...mockResp,
+        ...privacy,
         notif_mention_inapp: true,
         notif_mention_email: false,
         notif_comment_inapp: true,
@@ -268,6 +282,7 @@ describe("Settings hooks", () => {
       const mockResp = {
         theme: "system" as const,
         locale: "en-US",
+        ...privacy,
         notif_mention_inapp: false,
         notif_mention_email: true,
         notif_comment_inapp: true,

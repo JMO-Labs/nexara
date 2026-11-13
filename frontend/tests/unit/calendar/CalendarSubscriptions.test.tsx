@@ -81,6 +81,7 @@ describe("SubscriptionRow", () => {
     wrap(
       <SubscriptionRow
         sub={sub}
+        onUpdate={vi.fn()}
         onDelete={vi.fn()}
         onSync={vi.fn()}
         isSyncing={false}
@@ -95,6 +96,7 @@ describe("SubscriptionRow", () => {
     wrap(
       <SubscriptionRow
         sub={sub}
+        onUpdate={vi.fn()}
         onDelete={vi.fn()}
         onSync={onSync}
         isSyncing={false}
@@ -109,6 +111,7 @@ describe("SubscriptionRow", () => {
     wrap(
       <SubscriptionRow
         sub={sub}
+        onUpdate={vi.fn()}
         onDelete={onDelete}
         onSync={vi.fn()}
         isSyncing={false}
