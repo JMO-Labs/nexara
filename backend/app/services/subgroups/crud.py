@@ -263,6 +263,21 @@ class SubgroupCrudMixin:
             is_admin=is_admin(user),
         )
 
+    async def list_subgroups_with_membership(
+        self, user: User
+    ) -> list[tuple[Subgroup, str | None]]:
+        """
+        @brief List visible subgroups paired with the viewer's role (None = not a member).
+
+        Uses one batched role lookup for the whole list (no N+1).
+
+        @param user Requesting user.
+        @return List of (Subgroup, role-or-None) tuples.
+        """
+        subgroups = await self.list_subgroups(user)
+        roles = await self._member_repo.list_my_roles(user.id)
+        return [(s, roles.get(s.id)) for s in subgroups]
+
     async def update_subgroup(
         self,
         slug: str,
