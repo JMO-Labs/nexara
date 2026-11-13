@@ -94,6 +94,25 @@ describe("StorageTab", () => {
       .forEach((r) => expect(r).toHaveAttribute("tabindex", "0"));
   });
 
+  it("links to the media page when usage is loaded", () => {
+    mockHook(usage(2.5));
+    render(<StorageTab />);
+    expect(screen.getByRole("link", { name: "Manage media" })).toHaveAttribute(
+      "href",
+      "/app/media",
+    );
+  });
+
+  it("hides the media link while loading or on error", () => {
+    mockHook(undefined, { isLoading: true });
+    const { unmount } = render(<StorageTab />);
+    expect(screen.queryByRole("link", { name: "Manage media" })).toBeNull();
+    unmount();
+    mockHook(undefined, { isError: true });
+    render(<StorageTab />);
+    expect(screen.queryByRole("link", { name: "Manage media" })).toBeNull();
+  });
+
   it("shows loading and error states", () => {
     mockHook(undefined, { isLoading: true });
     const { unmount } = render(<StorageTab />);

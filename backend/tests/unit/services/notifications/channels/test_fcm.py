@@ -6,7 +6,7 @@ from uuid import uuid4
 from app.models.device_token import DeviceToken
 from app.models.notification import Notification
 from app.services.notifications.channels.base import ChannelResult
-from app.services.notifications.channels.fcm import FCMChannel, FCMTokenInvalid
+from app.services.notifications.channels.fcm import FCMChannel, FCMTokenInvalidError
 
 
 def _notif() -> MagicMock:
@@ -32,7 +32,7 @@ class FakeClient:
 
     async def send(self, token: str, title: str, body: str, data: dict[str, str]) -> None:
         if token in self.invalid:
-            raise FCMTokenInvalid(token)
+            raise FCMTokenInvalidError(token)
         self.sent.append((token, {"title": title, "body": body, **data}))
 
 
