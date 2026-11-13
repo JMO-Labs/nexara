@@ -174,6 +174,7 @@ class NotificationRepository(BaseRepository[Notification]):
             stmt = (
                 select(Notification)
                 .where(
+                    Notification.community_id == community_id,
                     Notification.user_id == user_id,
                     Notification.group_key == group_key,
                     Notification.read_at.is_(None),
