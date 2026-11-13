@@ -399,7 +399,12 @@ class TestSummaryMediaAttach:
         mine, theirs, priv = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         replies = [
             {"id": uuid.uuid4(), "media_ids": [mine], "visibility": "subgroup", "subgroup_id": sg},
-            {"id": uuid.uuid4(), "media_ids": [theirs], "visibility": "subgroup", "subgroup_id": other},
+            {
+                "id": uuid.uuid4(),
+                "media_ids": [theirs],
+                "visibility": "subgroup",
+                "subgroup_id": other,
+            },
             {"id": uuid.uuid4(), "media_ids": [priv], "visibility": "private"},
         ]
         attacher, sid = await self._run(
