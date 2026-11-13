@@ -31,6 +31,7 @@ class EventType(StrEnum):
     FEED_UPDATE = "feed_update"
     FEED_PING = "feed_ping"
     NOTIFICATION = "notification"
+    USER_NOTIFICATION_DISMISSED = "user_notification_dismissed"
     TYPING = "typing"
     PRESENCE = "presence"
 
@@ -203,6 +204,26 @@ def user_notification(
             "updated_at": updated_at or created_at,
             "count": count,
             "actor_ids": [str(a) for a in actor_ids or ()],
+        },
+    )
+
+
+def user_notification_dismissed(
+    user_id: UUID,
+    notification_ids: Sequence[UUID],
+) -> RealtimeEvent:
+    """
+    @brief Build an event telling a user's other tabs notifications were dismissed.
+
+    @param user_id User who dismissed (sole recipient).
+    @param notification_ids Dismissed notification UUIDs.
+    """
+    return RealtimeEvent(
+        type=EventType.USER_NOTIFICATION_DISMISSED,
+        target=UserTarget(user_id=user_id),
+        payload={
+            "user_id": str(user_id),
+            "notification_ids": [str(n) for n in notification_ids],
         },
     )
 
