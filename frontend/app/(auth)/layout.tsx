@@ -8,7 +8,7 @@ import { ToastRoot } from "@/components/ui/Toast";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-8 text-ink">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-[400px]">
         {/* pages read useSearchParams(); required for static prerender */}
         <Suspense>{children}</Suspense>
       </div>

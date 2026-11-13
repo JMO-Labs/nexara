@@ -94,6 +94,7 @@ export default function LoginPage() {
             autoFocus
             autoComplete="email"
             error={formState.errors.email?.message}
+            disabled={login.isPending}
             {...register("email")}
           />
           <Input
@@ -101,6 +102,7 @@ export default function LoginPage() {
             type="password"
             autoComplete="current-password"
             error={formState.errors.password?.message}
+            disabled={login.isPending}
             {...register("password")}
           />
           <Button type="submit" size="lg" loading={login.isPending}>

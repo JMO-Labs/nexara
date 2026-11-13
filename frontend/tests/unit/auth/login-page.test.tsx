@@ -133,4 +133,18 @@ describe("LoginPage validation", () => {
     expect(await screen.findByText("Enter a valid email address")).toBeTruthy();
     expect(api.login).not.toHaveBeenCalled();
   });
+
+  it("disables inputs and shows a spinner while submitting", async () => {
+    vi.mocked(api.login).mockReturnValue(new Promise(() => {}));
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
+    await userEvent.type(screen.getByLabelText("Password"), "pw");
+    const btn = screen.getByRole("button", { name: "Sign in" });
+    await userEvent.click(btn);
+    await waitFor(() => expect(btn).toBeDisabled());
+    expect(btn).toHaveAttribute("aria-busy", "true");
+    expect(btn.querySelector("svg")).not.toBeNull();
+    expect(screen.getByLabelText("Email")).toBeDisabled();
+    expect(screen.getByLabelText("Password")).toBeDisabled();
+  });
 });
