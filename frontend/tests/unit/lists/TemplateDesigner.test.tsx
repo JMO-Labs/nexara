@@ -90,3 +90,56 @@ describe("TemplateGallery", () => {
     expect(onEdit).toHaveBeenCalledWith(t);
   });
 });
+
+describe("TemplateDesigner field config and add flow", () => {
+  it("shows the select ConfigEditor and updates preview live", () => {
+    render(
+      <TemplateDesigner
+        initial={{
+          name: "T",
+          fields: [
+            {
+              ...field("s", "Pick"),
+              type_key: "select",
+              config: { options: [] },
+            },
+          ],
+        }}
+        onSave={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add option/i }));
+    fireEvent.change(screen.getByLabelText("Value 1"), {
+      target: { value: "red" },
+    });
+    fireEvent.change(screen.getByLabelText("Label 1"), {
+      target: { value: "Crimson" },
+    });
+    expect(screen.getByTestId("template-preview").innerHTML).toContain(
+      "Crimson",
+    );
+  });
+
+  it("adds a field via the Add field modal", () => {
+    render(
+      <TemplateDesigner
+        initial={{ name: "T", fields: [field("a", "First")] }}
+        onSave={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add field/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    expect(screen.getAllByTestId(/^field-row-/)).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText("Key"), { target: { value: "k2" } });
+    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    expect(screen.getAllByTestId(/^field-row-/)).toHaveLength(1);
+    fireEvent.change(screen.getByLabelText("Field label"), {
+      target: { value: "Second" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    expect(screen.getAllByTestId(/^field-row-/)).toHaveLength(2);
+    expect(screen.getByTestId("template-preview").textContent).toContain(
+      "Second",
+    );
+  });
+});

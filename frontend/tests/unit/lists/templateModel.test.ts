@@ -31,26 +31,41 @@ describe("reorder", () => {
 
 describe("validateTemplate", () => {
   it("accepts valid fields", () => {
-    expect(validateTemplate("T", [f("a")])).toEqual({});
+    expect(validateTemplate("T", [f("a")])).toEqual({ fields: {} });
   });
   it("requires a template name", () => {
     expect(validateTemplate(" ", [f("a")]).name).toBeTruthy();
   });
   it("flags empty labels", () => {
-    expect(validateTemplate("T", [f("a", { label: " " })]).a).toMatch(/label/i);
+    expect(validateTemplate("T", [f("a", { label: " " })]).fields.a).toMatch(
+      /label/i,
+    );
   });
   it("flags unknown types", () => {
     expect(
-      validateTemplate("T", [f("a", { type_key: "nope" })]).a,
+      validateTemplate("T", [f("a", { type_key: "nope" })]).fields.a,
     ).toBeTruthy();
   });
   it("select needs options with values", () => {
     const bad = f("a", { type_key: "select", config: { options: [] } });
-    expect(validateTemplate("T", [bad]).a).toMatch(/option/i);
+    expect(validateTemplate("T", [bad]).fields.a).toMatch(/option/i);
     const ok = f("a", {
       type_key: "select",
       config: { options: [{ value: "x", label: "X" }] },
     });
-    expect(validateTemplate("T", [ok])).toEqual({});
+    expect(validateTemplate("T", [ok])).toEqual({ fields: {} });
+  });
+  it("keeps a field id of 'name' separate from the name error", () => {
+    const r = validateTemplate(" ", [f("name", { label: "" })]);
+    expect(r.name).toMatch(/name/i);
+    expect(r.fields.name).toMatch(/label/i);
+  });
+  it("rejects duplicate field keys", () => {
+    const r = validateTemplate("T", [
+      f("a", { key: "k" }),
+      f("b", { key: "k" }),
+    ]);
+    expect(r.fields.b).toMatch(/unique|duplicate/i);
+    expect(r.fields.a).toBeUndefined();
   });
 });

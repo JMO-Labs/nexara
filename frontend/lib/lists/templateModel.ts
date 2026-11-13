@@ -47,29 +47,40 @@ export function reorder(
   return next.map((f, i) => ({ ...f, position: i }));
 }
 
+/** Validation result: template-level name error and per-field errors. */
+export interface TemplateErrors {
+  name?: string;
+  fields: Record<string, string>;
+}
+
 /**
- * @brief Validate a template; returns errors keyed by field id (or "name").
+ * @brief Validate a template.
  * @param name template name
  * @param fields template fields
- * @return error map, empty when valid
+ * @return errors; `fields` keyed by field id, empty when valid
  */
 export function validateTemplate(
   name: string,
   fields: TemplateField[],
-): Record<string, string> {
-  const errs: Record<string, string> = {};
+): TemplateErrors {
+  const errs: TemplateErrors = { fields: {} };
   if (!name.trim()) errs.name = "Template name is required";
+  const seen = new Set<string>();
   for (const f of fields) {
+    const key = f.key.trim();
     if (!f.label.trim()) {
-      errs[f.id] = "Label is required";
+      errs.fields[f.id] = "Label is required";
     } else if (!fieldRegistry.get(f.type_key)) {
-      errs[f.id] = `Unknown field type: ${f.type_key}`;
+      errs.fields[f.id] = `Unknown field type: ${f.type_key}`;
+    } else if (seen.has(key)) {
+      errs.fields[f.id] = "Key must be unique";
     } else if (
       (f.type_key === "select" || f.type_key === "multiselect") &&
       !optionsOf(f.config).some((o) => o.value.trim())
     ) {
-      errs[f.id] = "Add at least one option with a value";
+      errs.fields[f.id] = "Add at least one option with a value";
     }
+    seen.add(key);
   }
   return errs;
 }

@@ -31,6 +31,7 @@ import {
   reorder,
   validateTemplate,
   type TemplateDraft,
+  type TemplateErrors,
   type TemplateField,
 } from "@/lib/lists/templateModel";
 import { cn } from "@/lib/utils";
@@ -114,7 +115,7 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
   const [selId, setSelId] = useState<string | null>(
     initial.fields[0]?.id ?? null,
   );
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<TemplateErrors>({ fields: {} });
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ key: "", label: "", type_key: "text" });
   const sensors = useSensors(
@@ -151,7 +152,7 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
   const save = () => {
     const errs = validateTemplate(name, fields);
     setErrors(errs);
-    if (Object.keys(errs).length) return;
+    if (errs.name || Object.keys(errs.fields).length) return;
     onSave({
       ...initial,
       name: name.trim(),
@@ -198,7 +199,7 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
                     key={f.id}
                     field={f}
                     selected={f.id === selId}
-                    error={errors[f.id]}
+                    error={errors.fields[f.id]}
                     onSelect={() => setSelId(f.id)}
                     onDelete={() => remove(f.id)}
                   />
