@@ -34,7 +34,7 @@ def _all(docs: list[dict], kind: str) -> dict[str, dict]:
 
 def test_worker_hpa_targets_worker_deployment() -> None:
     hpas = _all(_render(), "HorizontalPodAutoscaler")
-    assert set(hpas) == {"api", "worker", "beat"}
+    assert set(hpas) == {"api", "worker"}
     api = hpas["api"]["spec"]
     assert api["scaleTargetRef"]["name"] == "nexara-nexara-api"
     assert api["metrics"][0]["resource"]["target"]["averageUtilization"] == 70
@@ -97,7 +97,7 @@ def test_networkpolicy_skips_disabled_internal_services() -> None:
         "valkey.enabled=false",
         "valkey.external.url=redis://c:6379",
     )
-    assert set(_all(docs, "NetworkPolicy")) == {"api", "worker"}
+    assert set(_all(docs, "NetworkPolicy")) == {"api", "worker", "beat"}
 
 
 def test_worker_beat_run_nonroot_as_image_uid() -> None:

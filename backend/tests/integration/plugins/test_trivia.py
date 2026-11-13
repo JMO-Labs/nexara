@@ -244,8 +244,12 @@ def test_celery_tasks_registered_and_executable():
     sched = celery_app.conf.beat_schedule
     assert any(v["task"] == "plugins.example_trivia.select_daily_question" for v in sched.values())
     assert any(v["task"] == "plugins.example_trivia.reset_streaks" for v in sched.values())
-    with patch.object(tasks, "_select", new=AsyncMock(return_value={"id": "q1"})):
-        assert tasks.select_daily_question.apply().get() == {"id": "q1"}
+    task = celery_app.tasks["plugins.example_trivia.select_daily_question"]
+    # The plugin task loader may have registered the task from another module
+    # instance; patch the module that owns the registered task.
+    owner = sys.modules.get(task.run.__module__, tasks)
+    with patch.object(owner, "_select", new=AsyncMock(return_value={"id": "q1"})):
+        assert task.apply().get() == {"id": "q1"}
 
 
 async def _client(ctx, user) -> AsyncClient:
