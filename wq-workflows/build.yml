@@ -1,3 +1,9 @@
+# @file build.yml
+# @brief Build and push the single Nexara image (deploy/docker/nexara.Dockerfile) to GHCR.
+# Tags: short SHA (plain, matches GitLab :$CI_COMMIT_SHORT_SHA), branch name,
+# and semver {{version}} on v* tags. `latest` comes from metadata-action's
+# default `flavor: latest=auto`, applied on v* tags only. deploy/docker-compose.yml
+# and deploy/unraid/nexara.xml depend on the :latest tag.
 name: build
 on:
   push:
