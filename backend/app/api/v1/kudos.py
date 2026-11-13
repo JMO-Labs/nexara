@@ -33,7 +33,10 @@ def _build_service(
     """@brief Build KudosService with injected dependencies."""
     community_id = uuid.UUID(settings.COMMUNITY_ID)
     notif = NotificationService(
-        NotificationRepository(db), SettingsRepository(db), community_id, dispatcher=get_dispatcher()
+        NotificationRepository(db),
+        SettingsRepository(db),
+        community_id,
+        dispatcher=get_dispatcher(),
     )
     return KudosService(
         KudosRepository(db), UserRepository(db), SubgroupRepository(db), notif, community_id

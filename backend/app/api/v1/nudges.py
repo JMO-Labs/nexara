@@ -32,7 +32,10 @@ def _build_service(
     """@brief Build NudgeService with injected dependencies."""
     community_id = uuid.UUID(settings.COMMUNITY_ID)
     notif = NotificationService(
-        NotificationRepository(db), SettingsRepository(db), community_id, dispatcher=get_dispatcher()
+        NotificationRepository(db),
+        SettingsRepository(db),
+        community_id,
+        dispatcher=get_dispatcher(),
     )
     return NudgeService(NudgeRepository(db), UserRepository(db), notif, community_id)
 

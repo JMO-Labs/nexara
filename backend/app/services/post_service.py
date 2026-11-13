@@ -27,8 +27,8 @@ from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import ReactionResponse
-from app.services.activity_publish import record_activity
 from app.services import mentions
+from app.services.activity_publish import record_activity
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
