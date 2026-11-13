@@ -46,9 +46,7 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
         stmt = self.apply_block_filter(stmt, viewer_id)
         decoded = decode_cursor(cursor, parse_dt)
         if decoded is not None:
-            stmt = stmt.where(
-                tuple_(ListTemplate.created_at, ListTemplate.id) < tuple_(*decoded)
-            )
+            stmt = stmt.where(tuple_(ListTemplate.created_at, ListTemplate.id) < tuple_(*decoded))
         stmt = stmt.order_by(ListTemplate.created_at.desc(), ListTemplate.id.desc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None

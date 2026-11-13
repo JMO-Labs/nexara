@@ -27,9 +27,7 @@ class ListCompletionRepository(BaseRepository[ListItemCompletion]):
         )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def create_completion(
-        self, item_id: uuid.UUID, user_id: uuid.UUID
-    ) -> ListItemCompletion:
+    async def create_completion(self, item_id: uuid.UUID, user_id: uuid.UUID) -> ListItemCompletion:
         """@brief Mark an item complete for a user."""
         return await self.create(ListItemCompletion(item_id=item_id, user_id=user_id))
 

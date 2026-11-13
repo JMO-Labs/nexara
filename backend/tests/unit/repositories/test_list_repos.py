@@ -56,7 +56,13 @@ def test_extends_base(repo: type) -> None:
 
 def test_signatures() -> None:
     assert list(inspect.signature(ListRepository.list_visible).parameters) == [
-        "self", "community_id", "viewer_id", "subgroup_ids", "member_list_ids", "cursor", "limit",
+        "self",
+        "community_id",
+        "viewer_id",
+        "subgroup_ids",
+        "member_list_ids",
+        "cursor",
+        "limit",
     ]
     assert "session" in inspect.signature(ListItemRepository.lock_item_for_update).parameters
     for name in ("sum_claimed", "create_claim", "delete_claim", "list_for_item"):

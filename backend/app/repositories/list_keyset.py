@@ -25,9 +25,7 @@ def encode_cursor(sort_value: Any, row_id: uuid.UUID) -> str:
     return base64.urlsafe_b64encode(json.dumps([raw, str(row_id)]).encode()).decode()
 
 
-def decode_cursor(
-    cursor: str | None, cast: Callable[[str], Any]
-) -> tuple[Any, uuid.UUID] | None:
+def decode_cursor(cursor: str | None, cast: Callable[[str], Any]) -> tuple[Any, uuid.UUID] | None:
     """
     @brief Decode a cursor; malformed cursors yield None (first page).
 

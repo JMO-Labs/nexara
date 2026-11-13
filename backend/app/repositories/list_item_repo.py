@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.list import ListItem
