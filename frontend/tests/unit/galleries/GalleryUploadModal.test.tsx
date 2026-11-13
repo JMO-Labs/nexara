@@ -61,9 +61,7 @@ describe("GalleryUploadModal", () => {
     vi.mocked(mediaApi.uploadFile).mockResolvedValue({
       id: "media-1",
     } as Awaited<ReturnType<typeof mediaApi.uploadFile>>);
-    vi.mocked(galleryApi.addItem).mockResolvedValue(
-      {} as Awaited<ReturnType<typeof galleryApi.addItem>>,
-    );
+    vi.mocked(galleryApi.bulkAddItems).mockResolvedValue([]);
     const { baseElement } = renderWithProviders(
       <GalleryUploadModal open onClose={() => {}} subgroupId="s1" />,
     );
@@ -81,7 +79,7 @@ describe("GalleryUploadModal", () => {
     await waitFor(() => expect(mediaApi.uploadFile).toHaveBeenCalled());
     expect(vi.mocked(mediaApi.uploadFile).mock.calls[0][0]).toBe(file);
     await waitFor(() =>
-      expect(galleryApi.addItem).toHaveBeenCalledWith("g1", "media-1"),
+      expect(galleryApi.bulkAddItems).toHaveBeenCalledWith("g1", ["media-1"]),
     );
   });
 

@@ -38,6 +38,12 @@ env:
     secretKeyRef:
       name: {{ include "nexara.appSecret" . }}
       key: secret-key
+- name: APPRISE_ENCRYPTION_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "nexara.appSecret" . }}
+      key: apprise-encryption-key
+      optional: true
 {{- if eq .Values.storage.backend "s3" }}
 - name: S3_ACCESS_KEY
   valueFrom:
