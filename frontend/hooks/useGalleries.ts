@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file hooks/useGalleries.ts
- * @brief Gallery CRUD + items hooks.
+ * @brief Gallery CRUD + items + collaborators hooks.
  */
 import {
   useInfiniteQuery,
@@ -18,6 +18,9 @@ import {
   deleteGallery,
   listItems,
   removeItem,
+  listCollaborators,
+  addCollaborator,
+  removeCollaborator,
   type CreateGalleryBody,
   type ListGalleriesParams,
 } from "@/lib/api/galleries";
@@ -113,5 +116,32 @@ export function useRemoveItem(galleryId: string) {
   return useMutationWithToast({
     mutationFn: (itemId: string) => removeItem(galleryId, itemId),
     onSuccess: () => invalidateAll(qc, galleryId),
+  });
+}
+
+const collabKey = (id: string) =>
+  [...qk.galleries.detail(id), "collaborators"] as const;
+
+export function useCollaborators(id: string | null | undefined) {
+  return useQuery({
+    queryKey: collabKey(id ?? ""),
+    queryFn: () => listCollaborators(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useAddCollaborator(galleryId: string) {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: (userId: string) => addCollaborator(galleryId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: collabKey(galleryId) }),
+  });
+}
+
+export function useRemoveCollaborator(galleryId: string) {
+  const qc = useQueryClient();
+  return useMutationWithToast({
+    mutationFn: (userId: string) => removeCollaborator(galleryId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: collabKey(galleryId) }),
   });
 }
