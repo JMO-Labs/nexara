@@ -17,7 +17,7 @@ vi.mock("@/hooks/useSSE", () => ({
     handler = opts.onMessage;
   },
 }));
-const dismissOne = vi.fn(() => Promise.resolve({ message: "ok" }));
+const dismissOne = vi.fn((_id: string) => Promise.resolve({ message: "ok" }));
 vi.mock("@/lib/api/notifications", () => ({
   STREAM_PATH: "/api/v1/notifications/stream",
   dismissOne: (id: string) => dismissOne(id),
