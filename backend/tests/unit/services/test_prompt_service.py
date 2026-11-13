@@ -309,6 +309,8 @@ class TestSummaryMediaAttach:
         post_repo: AsyncMock,
         session: AsyncMock,
         replies: list[dict],
+        scope: str = "community",
+        subgroup_id: uuid.UUID | None = None,
     ) -> tuple[AsyncMock, uuid.UUID]:
         attacher = AsyncMock()
         svc = PromptService(
@@ -319,6 +321,8 @@ class TestSummaryMediaAttach:
             media_attacher=attacher,
         )
         prompt = _make_prompt()
+        prompt.scope = scope
+        prompt.subgroup_id = subgroup_id
         tracker = MagicMock(spec=PromptPost)
         tracker.prompt_id = prompt.id
         tracker.post_id = uuid.uuid4()
@@ -368,6 +372,43 @@ class TestSummaryMediaAttach:
         replies = [{"id": uuid.uuid4(), "media_ids": ids}]
         attacher, sid = await self._run(prompt_repo, post_repo, session, replies)
         attacher.assert_awaited_once_with(sid, ids[:MAX_POST_MEDIA])
+
+    @pytest.mark.asyncio
+    async def test_excludes_private_and_other_subgroup_media(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        pub, priv, sub = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        replies = [
+            {"id": uuid.uuid4(), "media_ids": [pub], "visibility": "community"},
+            {"id": uuid.uuid4(), "media_ids": [priv], "visibility": "private"},
+            {
+                "id": uuid.uuid4(),
+                "media_ids": [sub],
+                "visibility": "subgroup",
+                "subgroup_id": uuid.uuid4(),
+            },
+        ]
+        attacher, sid = await self._run(prompt_repo, post_repo, session, replies)
+        attacher.assert_awaited_once_with(sid, [pub])
+
+    @pytest.mark.asyncio
+    async def test_subgroup_prompt_summary_is_subgroup_scoped(
+        self, prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock
+    ) -> None:
+        sg, other = uuid.uuid4(), uuid.uuid4()
+        mine, theirs, priv = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        replies = [
+            {"id": uuid.uuid4(), "media_ids": [mine], "visibility": "subgroup", "subgroup_id": sg},
+            {"id": uuid.uuid4(), "media_ids": [theirs], "visibility": "subgroup", "subgroup_id": other},
+            {"id": uuid.uuid4(), "media_ids": [priv], "visibility": "private"},
+        ]
+        attacher, sid = await self._run(
+            prompt_repo, post_repo, session, replies, scope="subgroup", subgroup_id=sg
+        )
+        attacher.assert_awaited_once_with(sid, [mine])
+        created = post_repo.create.call_args.args[0]
+        assert created.visibility == "subgroup"
+        assert created.subgroup_id == sg
 
     @pytest.mark.asyncio
     async def test_no_media_skips_attacher(

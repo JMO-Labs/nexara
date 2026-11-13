@@ -232,16 +232,29 @@ class PromptService:
 
     # ── Summary ───────────────────────────────────────────────────────
 
-    async def _collect_summary_media_ids(self, prompt_id: uuid.UUID) -> list[uuid.UUID]:
+    async def _collect_summary_media_ids(
+        self, prompt_id: uuid.UUID, subgroup_id: uuid.UUID | None = None
+    ) -> list[uuid.UUID]:
         """
         @brief Collect media IDs from replies, deduped, in response order.
 
+        Only replies the summary audience can already see are used: community
+        replies always; subgroup replies only when they belong to the
+        summary's subgroup; private replies never.
+
         @param prompt_id Prompt UUID.
+        @param subgroup_id Summary subgroup (None for a community summary).
         @return Media IDs capped at MAX_POST_MEDIA.
         """
         replies = await self._post_repo.list_replies_for_prompt(prompt_id, limit=50)
         seen: dict[uuid.UUID, None] = {}
         for reply in replies:
+            vis = reply.get("visibility", "community")
+            if vis == "subgroup":
+                if subgroup_id is None or reply.get("subgroup_id") != subgroup_id:
+                    continue
+            elif vis != "community":
+                continue
             for mid in reply.get("media_ids", []):
                 seen.setdefault(mid, None)
         return list(seen)[:MAX_POST_MEDIA]
@@ -270,9 +283,12 @@ class PromptService:
             summary_post_id: uuid.UUID | None = None
             if prompt and prompt.generate_summary:
                 summary_content = self._build_summary_content(prompt, tracker)
-                media_ids = await self._collect_summary_media_ids(tracker.prompt_id)
+                sg_id = prompt.subgroup_id if prompt.scope == "subgroup" else None
+                media_ids = await self._collect_summary_media_ids(tracker.prompt_id, sg_id)
                 summary = Post(
                     community_id=self._community_id,
+                    visibility="subgroup" if sg_id else "community",
+                    subgroup_id=sg_id,
                     author_id=prompt.created_by,
                     content=summary_content,
                     is_pinned=False,
