@@ -12,7 +12,8 @@ from app.core.exceptions import AuthorizationError, NotFoundError, ValidationErr
 from app.models.list import List, ListItem
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
-from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
+from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
+from app.services.notifications.types.list_payloads import item_title
 
 HOT_COLUMNS = ("due_at", "lat", "lon", "signup_quantity_needed")
 
@@ -25,15 +26,35 @@ class ListItemService:
         repo_item: ListItemRepository,
         repo_list: ListRepository,
         field_registry: ListFieldRegistry,
+        notification_service: Any | None = None,
     ) -> None:
         """
         @param repo_item Item repository.
         @param repo_list List repository.
         @param field_registry Field type registry.
+        @param notification_service Optional NotificationService for list_item.
         """
         self._items = repo_item
         self._lists = repo_list
         self._registry = field_registry
+        self._notify = notification_service
+
+    async def _notify_item_added(self, lst: List, item: ListItem, adder_id: uuid.UUID) -> None:
+        """@brief Send ``list_item`` to the owner and list audience, minus the adder."""
+        if self._notify is None:
+            return
+        recipients = (await self._lists.audience_ids(lst)) | {lst.owner_id}
+        recipients.discard(adder_id)
+        title = item_title(item.values)
+        payload = {
+            "message": f"New item on {lst.title}: {title}" if title else f"New item on {lst.title}",
+            "list_id": str(lst.id),
+            "item_id": str(item.id),
+            "item_title": title,
+            "adder_id": str(adder_id),
+        }
+        for uid in sorted(recipients, key=str):
+            await self._notify.notify(uid, "list_item", payload, actor_id=adder_id)
 
     async def _get_list(self, community_id: uuid.UUID, list_id: uuid.UUID) -> List:
         lst = await self._lists.get_by_id(list_id, community_id)
@@ -96,7 +117,7 @@ class ListItemService:
                 out[key] = self._registry.validate_value(
                     field["type_key"], values[key], field.get("config", {})
                 )
-            except (ValueError, FieldTypeNotFound) as exc:
+            except (ValueError, FieldTypeNotFoundError) as exc:
                 raise ValidationError(f"Invalid value for {key}", {"field": key}) from exc
         return out
 
@@ -139,6 +160,7 @@ class ListItemService:
         self._apply_projection(lst, item)
         item = await self._items.create(item)
         await self._lists.increment_counters(list_id, {"item_count": 1})
+        await self._notify_item_added(lst, item, user_id)
         return item
 
     async def update(

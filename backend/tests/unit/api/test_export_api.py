@@ -12,7 +12,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.api.v1 import export as api
-from app.core.exceptions import AuthorizationError, NotFoundError, RateLimitError
+from app.core.exceptions import (
+    AppError,
+    AuthorizationError,
+    GoneError,
+    NotFoundError,
+    RateLimitError,
+)
 from app.tasks.export_tasks import generate_user_export
 
 NOW = datetime.now(UTC)
@@ -38,11 +44,9 @@ def test_get_repo_and_redis_and_enqueue_factories() -> None:
     with patch.object(api, "get_pool", return_value="pool") as pool:
         assert api._get_redis() == "pool"
         pool.assert_called_once()
-    with patch("app.tasks.celery_app.celery_app") as app:
-        api._get_enqueue()("abc")
-        app.send_task.assert_called_once_with(
-            "app.tasks.export_tasks.generate_user_export", args=["abc"]
-        )
+    with patch.object(generate_user_export, "apply_async") as apply:
+        api._get_enqueue()("uid", "abc")
+        apply.assert_called_once_with(("uid", "abc"), queue="default")
 
 
 async def test_request_export_creates_and_enqueues() -> None:
@@ -54,7 +58,7 @@ async def test_request_export_creates_and_enqueues() -> None:
     out = await api.request_export(user, repo, redis, enqueue)
     assert out.export_id == row.id
     repo.commit.assert_awaited_once()
-    enqueue.assert_called_once_with(str(row.id))
+    enqueue.assert_called_once_with(str(user.id), str(row.id))
 
 
 async def test_request_export_rate_limited() -> None:
@@ -116,4 +120,83 @@ async def test_status_pending_no_url() -> None:
 
 
 def test_generate_user_export_returns_id() -> None:
-    assert generate_user_export("abc") == "abc"
+    with (
+        patch("app.tasks.export_tasks._generate", new=MagicMock()),
+        patch("app.tasks.export_tasks.asyncio.run") as run,
+    ):
+        assert generate_user_export("uid", "abc") == "abc"
+    run.assert_called_once()
+
+
+def test_get_storage_uses_configured_backend() -> None:
+    with patch.object(api, "get_storage_backend", return_value="s") as factory:
+        assert api._get_storage() == "s"
+        factory.assert_called_once()
+
+
+def _dl_row(user_id: uuid.UUID, **kw: object) -> MagicMock:
+    row = _row(user_id, expires=NOW + timedelta(days=1))
+    row.file_key = "exports/a.zip"
+    for k, v in kw.items():
+        setattr(row, k, v)
+    return row
+
+
+async def _download(row: MagicMock | None, user: MagicMock, storage: AsyncMock | None = None):
+    repo = AsyncMock()
+    repo.get_by_id.return_value = row
+    return await api.download_export(
+        row.id if row else uuid.uuid4(), user, repo, storage or AsyncMock()
+    ), repo
+
+
+async def test_download_streams_and_marks_downloaded() -> None:
+    user = _user()
+    storage = AsyncMock()
+    storage.get.return_value = b"zip"
+    row = _dl_row(user.id)
+    resp, repo = await _download(row, user, storage)
+    assert resp.media_type == "application/zip"
+    assert "attachment" in resp.headers["content-disposition"]
+    repo.mark_downloaded.assert_awaited_once_with(row)
+    repo.commit.assert_awaited_once()
+
+
+async def test_download_missing_not_found() -> None:
+    with pytest.raises(NotFoundError):
+        await _download(None, _user())
+
+
+async def test_download_wrong_owner_forbidden() -> None:
+    with pytest.raises(AuthorizationError):
+        await _download(_dl_row(uuid.uuid4()), _user())
+
+
+async def test_download_not_ready_is_400() -> None:
+    user = _user()
+    with pytest.raises(AppError) as exc:
+        await _download(_dl_row(user.id, status="pending"), user)
+    assert exc.value.status_code == 400
+
+
+async def test_download_expired_is_gone() -> None:
+    user = _user()
+    with pytest.raises(GoneError):
+        await _download(_dl_row(user.id, expires_at=NOW - timedelta(seconds=1)), user)
+
+
+async def test_download_failed_or_no_file_is_gone() -> None:
+    user = _user()
+    with pytest.raises(GoneError):
+        await _download(_dl_row(user.id, status="failed"), user)
+    with pytest.raises(GoneError):
+        await _download(_dl_row(user.id, file_key=None), user)
+
+
+async def test_download_storage_error_is_500() -> None:
+    user = _user()
+    storage = AsyncMock()
+    storage.get.side_effect = OSError("disk")
+    with pytest.raises(AppError) as exc:
+        await _download(_dl_row(user.id), user, storage)
+    assert exc.value.status_code == 500

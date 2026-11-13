@@ -1,5 +1,7 @@
 # Monitoring with Grafana
 
+See also the [deployment guide](deployment-guide.md) and [Kubernetes](kubernetes.md) pages.
+
 Nexara ships a Grafana dashboard at `deploy/grafana/nexara-dashboard.json`.
 
 ## Enable backend metrics
@@ -47,3 +49,9 @@ full-size with the current time range. Deployments are annotated from
   approximations until dedicated counters exist.
 - **Per-community storage empty:** `nexara_storage_used_bytes` currently has
   no `community_id` label.
+
+## Kubernetes
+
+The chart does not install Prometheus or Grafana. See
+[Kubernetes: Prometheus and Grafana](kubernetes.md#prometheus-and-grafana)
+for scrape configuration.

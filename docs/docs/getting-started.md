@@ -98,4 +98,4 @@ The app is available through the proxy on `http://localhost:8080`.
 ## Next Steps
 
 - [Development Guide](development.md) for architecture and conventions
-- [Deployment Guide](deployment.md) for production setup
+- [Deployment Guide](deployment/deployment-guide.md) for production setup

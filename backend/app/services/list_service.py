@@ -33,6 +33,7 @@ class ListService:
         field_registry: ListFieldRegistry,
         community_id: uuid.UUID,
         session: AsyncSession,
+        notification_service: Any | None = None,
     ) -> None:
         """
         @param repo_list List repository.
@@ -40,12 +41,14 @@ class ListService:
         @param field_registry Field type registry (for field_schema validation).
         @param community_id Tenant scope.
         @param session Request-scoped async session.
+        @param notification_service Optional NotificationService for list_member.
         """
         self._lists = repo_list
         self._members = repo_member
         self._registry = field_registry
         self._community_id = community_id
         self._session = session
+        self._notify = notification_service
 
     async def _subgroup_ids(self, user_id: uuid.UUID) -> list[uuid.UUID]:
         """@brief Subgroups the user belongs to (descendants included)."""
@@ -199,7 +202,21 @@ class ListService:
         lst = await self._load_members_list(list_id, user_id, is_admin)
         if await self._members.get_member(lst.id, member_id) is not None:
             raise AppError("CONFLICT", _("Already a member"), 409)
-        return await self._members.add_member(lst.id, member_id, role)
+        member = await self._members.add_member(lst.id, member_id, role)
+        if self._notify is not None and member_id != user_id:
+            await self._notify.notify(
+                member_id,
+                "list_member",
+                {
+                    "message": f"You were added to the list {lst.title}",
+                    "list_id": str(lst.id),
+                    "list_title": lst.title,
+                    "inviter_id": str(user_id),
+                    "invitee_id": str(member_id),
+                },
+                actor_id=user_id,
+            )
+        return member
 
     async def remove_member(
         self,

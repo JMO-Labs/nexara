@@ -78,7 +78,9 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
                 },
             )
 
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="create", user_id=user_id
+        )
         return GalleryResponse.model_validate(gallery)
 
     async def get_or_create_for_event(
@@ -151,7 +153,9 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         update_data = data.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(UTC)
         gallery = await self._repo.update(gallery, update_data)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="update", user_id=user_id
+        )
         return GalleryResponse.model_validate(gallery)
 
     async def delete_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -164,6 +168,9 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         await self._session.flush()
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("gallery", gallery_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="gallery", action="delete", user_id=user_id
+        )
 
     async def search(
         self,
