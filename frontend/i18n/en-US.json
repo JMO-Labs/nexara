@@ -656,7 +656,29 @@
   "members": {
     "empty": "No members yet."
   },
+  "kudos": {
+    "title": "Send Kudos",
+    "recipient": "Recipient",
+    "recipientPlaceholder": "Search members",
+    "message": "Message (optional)",
+    "group": "Group (optional)",
+    "noGroup": "No group",
+    "send": "Send",
+    "cancel": "Cancel",
+    "sendButton": "Send Kudos",
+    "wallTitle": "Kudos Wall",
+    "sort": "Sort",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "filterGroup": "Group",
+    "allGroups": "All groups",
+    "loadMore": "Load more",
+    "emptyTitle": "No kudos yet",
+    "emptyDesc": "Be the first to cheer someone on.",
+    "error": "Failed to load kudos"
+  },
   "toasts": {
+    "kudos": { "sent": "Kudos sent" },
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",

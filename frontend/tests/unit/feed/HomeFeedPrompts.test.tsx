@@ -2,7 +2,9 @@
  * @file tests/unit/feed/HomeFeedPrompts.test.tsx
  * @brief HomeFeed active-prompt section and reply-to-composer wiring.
  */
-import { render, screen, within } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
@@ -37,7 +39,18 @@ vi.mock("@/components/feed/PostComposer", () => ({
   },
 }));
 
+vi.mock("@/components/feed/KudosComposer", () => ({
+  KudosComposer: () => null,
+}));
+
 import { HomeFeed } from "@/components/home/HomeFeed";
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 const pp = (id: string, promptId: string, title: string) => ({
   id,

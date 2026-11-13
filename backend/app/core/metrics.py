@@ -113,7 +113,7 @@ search_cache_misses_total: Counter = Counter(
 search_cache_invalidations_total: Counter = Counter(
     "search_cache_invalidations_total",
     "Number of times the search cache was invalidated",
-    ["community_id"],
+    ["service", "action"],
 )
 """@brief Counter of search cache invalidations."""
 
