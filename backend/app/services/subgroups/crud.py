@@ -263,9 +263,7 @@ class SubgroupCrudMixin:
             is_admin=is_admin(user),
         )
 
-    async def list_subgroups_with_membership(
-        self, user: User
-    ) -> list[tuple[Subgroup, str | None]]:
+    async def list_subgroups_with_membership(self, user: User) -> list[tuple[Subgroup, str | None]]:
         """
         @brief List visible subgroups paired with the viewer's role (None = not a member).
 

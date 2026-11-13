@@ -81,9 +81,7 @@ describe("GroupMosaic", () => {
         is_member,
         my_role: null,
       }) as never;
-    render(
-      <GroupMosaic {...base} data={[mk("in", true), mk("out", false)]} />,
-    );
+    render(<GroupMosaic {...base} data={[mk("in", true), mk("out", false)]} />);
     expect(screen.getAllByRole("button", { name: /^leave$/i })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: /^join$/i })).toHaveLength(1);
   });
