@@ -29,7 +29,7 @@ AUDIENCE = [AUTHOR_ID, VIEWER_ID]
 def _audience():
     """@brief Stub audience resolution; assert it is the only source of targets."""
     with patch(
-        "app.services.post_service.resolve_audience", new=AsyncMock(return_value=AUDIENCE)
+        "app.services.post_service_base.resolve_audience", new=AsyncMock(return_value=AUDIENCE)
     ) as m:
         yield m
 

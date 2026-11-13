@@ -61,6 +61,11 @@ class OllamaProvider(AIProvider):
         data = await self._post("embeddings", {"model": self._model, "prompt": text})
         return data["embedding"], 0.0, estimate_tokens(text)
 
+    async def ping(self) -> None:
+        """@brief ``GET /api/tags`` to verify the Ollama host is reachable."""
+        resp = await self._client.get(f"{self._base}/api/tags")
+        resp.raise_for_status()
+
     async def count_tokens(self, text: str) -> CountResult:
         n = estimate_tokens(text)
         return n, 0.0, n

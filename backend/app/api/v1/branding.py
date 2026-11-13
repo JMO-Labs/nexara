@@ -22,7 +22,12 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.branding_repo import BrandingRepository
-from app.schemas.branding import BrandingResponse, BrandingUpdate, BrandingUpdateResponse
+from app.schemas.branding import (
+    BrandingResponse,
+    BrandingUpdate,
+    BrandingUpdateResponse,
+    PresetThemeList,
+)
 from app.services.branding_service import BrandingService
 
 logger = structlog.get_logger(__name__)
@@ -78,6 +83,39 @@ async def get_pwa_manifest(
     service = BrandingService(repo=repo, cache_client=cache_client, community_id=community_id)
     branding = await service.get_branding()
     return service.generate_pwa_manifest(branding, base_url=settings.APP_BASE_URL)
+
+
+@router.get("/presets", response_model=PresetThemeList)
+async def list_presets(
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> PresetThemeList:
+    """@brief Return the preset colour themes (public)."""
+    service = BrandingService(repo=BrandingRepository(db), community_id=community_id)
+    return PresetThemeList(themes=await service.get_preset_themes())
+
+
+@router.post("/presets/{theme_name}/apply", response_model=BrandingUpdateResponse)
+async def apply_preset(
+    theme_name: str,
+    request: Request,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    cache_client: Redis | None = Depends(_get_cache_client),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> BrandingUpdateResponse:
+    """@brief Apply a preset theme's colours to the branding (admin only)."""
+    service = BrandingService(
+        repo=BrandingRepository(db),
+        cache_client=cache_client,
+        community_id=community_id,
+        audit_repo=AuditRepository(db),
+    )
+    return await service.apply_preset_theme(
+        theme_name,
+        user_id=admin.id,
+        ip_address=request.client.host if request.client else None,
+    )
 
 
 @router.put("/", response_model=BrandingUpdateResponse)
