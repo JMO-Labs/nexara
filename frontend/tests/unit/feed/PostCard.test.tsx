@@ -37,6 +37,19 @@ vi.mock("@/hooks/usePosts", () => ({
 vi.mock("@/components/feed/CommentThread", () => ({
   CommentThread: () => null,
 }));
+vi.mock("@/components/feed/BookmarkButton", () => ({
+  BookmarkButton: ({
+    postId,
+    isBookmarked,
+  }: {
+    postId: string;
+    isBookmarked: boolean;
+  }) => (
+    <span data-testid="bookmark-btn" data-post={postId}>
+      {String(isBookmarked)}
+    </span>
+  ),
+}));
 
 /** @brief Build a minimal post with optional overrides. */
 function makePost(over: Partial<Post> = {}): Post {
@@ -134,6 +147,15 @@ const video = {
   provider_type: "youtube",
   provider_id: "abc123",
 };
+
+describe("PostCard bookmark", () => {
+  it("renders BookmarkButton with post id and state", () => {
+    render(<PostCard post={{ ...base, is_bookmarked: true }} />);
+    const btn = screen.getByTestId("bookmark-btn");
+    expect(btn).toHaveAttribute("data-post", "p1");
+    expect(btn).toHaveTextContent("true");
+  });
+});
 
 describe("PostCard link previews", () => {
   it("renders no wrapper without previews", () => {
