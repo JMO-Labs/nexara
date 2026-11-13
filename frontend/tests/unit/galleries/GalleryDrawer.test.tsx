@@ -7,13 +7,14 @@ import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { GalleryDrawer } from "@/components/galleries/galleries-page/GalleryDrawer";
 
-const detail = vi.hoisted(() => ({ event_id: null as string | null }));
+const detail = vi.hoisted(() => ({
+  current: { id: "g1", title: "Camping" } as Record<string, unknown>,
+}));
+
 vi.mock("@/hooks/useGalleries", () => {
   const mut = () => ({ mutate: vi.fn(), isPending: false });
   return {
-    useGalleryDetail: () => ({
-      data: { id: "g1", title: "Camping", event_id: detail.event_id },
-    }),
+    useGalleryDetail: () => ({ data: detail.current }),
     useGalleryItems: () => ({ data: [], isLoading: false }),
     useUpdateGallery: mut,
     useDeleteGallery: mut,
@@ -25,6 +26,9 @@ vi.mock("@/hooks/useEvents", () => ({
 }));
 vi.mock("@/components/galleries/GalleryUpload", () => ({
   GalleryUpload: () => null,
+}));
+vi.mock("@/components/galleries/galleries-page/GalleryCollaborators", () => ({
+  GalleryCollaborators: () => <div data-testid="collabs" />,
 }));
 
 const props = { galleryId: "g1", onClose: vi.fn(), onOpenItem: vi.fn() };
@@ -39,12 +43,30 @@ test("drawer closes while the lightbox is suspended over it", () => {
   expect(screen.queryByRole("dialog")).toBeNull();
 });
 
+test("contributors section shows only for the collaborators policy", () => {
+  detail.current = {
+    id: "g1",
+    title: "Camping",
+    contribution_policy: "owner_only",
+  };
+  const { unmount } = render(<GalleryDrawer {...props} />);
+  expect(screen.queryByTestId("collabs")).toBeNull();
+  unmount();
+  detail.current = {
+    id: "g1",
+    title: "Camping",
+    contribution_policy: "collaborators",
+  };
+  render(<GalleryDrawer {...props} />);
+  expect(screen.getByTestId("collabs")).toBeInTheDocument();
+});
+
 test("drawer shows Event gallery badge only when event_id is set", () => {
-  detail.event_id = "e1";
+  detail.current = { id: "g1", title: "Camping", event_id: "e1" };
   const { unmount } = render(<GalleryDrawer {...props} />);
   expect(screen.getByText("Event gallery")).toBeInTheDocument();
   unmount();
-  detail.event_id = null;
+  detail.current = { id: "g1", title: "Camping", event_id: null };
   render(<GalleryDrawer {...props} />);
   expect(screen.queryByText("Event gallery")).toBeNull();
 });
