@@ -197,7 +197,6 @@ def create_app() -> FastAPI:
     return app
 
 
-# settings type is a runtime-built object
 def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]
     """
     @brief Register the middleware stack in the correct order.
@@ -214,7 +213,6 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
     app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     app.state.limiter = limiter
-    # third-party signature is wider than its stub
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(SlowAPIMiddleware)
 
@@ -233,14 +231,13 @@ def _register_middleware(app: FastAPI, settings) -> None:  # type: ignore[no-unt
         logger.warning("waf_cache_client_unavailable", exc_info=True)
 
     app.add_middleware(
-        WAFMiddleware,  # type: ignore[arg-type] # third-party signature is wider than its stub
+        WAFMiddleware,  # type: ignore[arg-type]
         settings=settings,
         cache_client=cache_client,
     )
     app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
-        # third-party signature is wider than its stub
         CloudflareRealIPMiddleware,  # type: ignore[arg-type]
         settings=settings,
     )
@@ -269,7 +266,6 @@ def _register_routers(app: FastAPI) -> None:
             return {"keys": []}
 
 
-# settings type is a runtime-built object
 def _setup_instrumentator(app: FastAPI, settings) -> None:  # type: ignore[no-untyped-def]
     """
     @brief Configure prometheus-fastapi-instrumentator for auto HTTP metrics.

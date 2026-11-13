@@ -105,7 +105,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
         """@brief Toggle the enabled flag; returns the row or None."""
         return await self.update(sub_id, enabled=enabled)
 
-    # create() takes extra domain args, narrower than base
+    # update() takes (sub_id, **named fields); narrower than BaseRepository.update
     async def update(  # type: ignore[override]
         self,
         sub_id: uuid.UUID,
