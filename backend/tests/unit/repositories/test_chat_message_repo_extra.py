@@ -9,8 +9,6 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from app.models.chat import ChatMessage
 from app.repositories.chat_message_repo import (
     TOMBSTONE_CONTENT,
@@ -96,9 +94,7 @@ class TestListWithBlockFilter:
         session = _session(res)
         repo = ChatMessageRepository(session)
         repo.apply_block_filter = MagicMock(side_effect=lambda s, v: s)  # type: ignore[method-assign]
-        out = await repo.list_with_block_filter(
-            uuid.uuid4(), COMMUNITY_ID, uuid.uuid4(), limit=2
-        )
+        out = await repo.list_with_block_filter(uuid.uuid4(), COMMUNITY_ID, uuid.uuid4(), limit=2)
         assert out == msgs
         repo.apply_block_filter.assert_called_once()
 

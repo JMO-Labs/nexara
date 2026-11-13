@@ -35,7 +35,9 @@ def _svc(**kw: object) -> ChatInternalsMixin:
 class TestBroadcast:
     """@brief _broadcast()."""
 
-    async def test_default_publisher_and_legacy_topic(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_default_publisher_and_legacy_topic(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """No broadcaster and no channel: default publish on legacy topic."""
         pub = AsyncMock(return_value=3)
         monkeypatch.setattr("app.services.realtime.pubsub.publish", pub)
