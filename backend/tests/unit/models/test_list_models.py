@@ -60,6 +60,7 @@ EXPECTED = {
             "subgroup_id",
             "cover_media_id",
             "expires_at",
+            "notified_at",
             "status",
             "field_schema",
             "item_count",

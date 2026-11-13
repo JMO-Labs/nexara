@@ -7,7 +7,9 @@ from typing import Any
 
 from app.services.notifications.registry import Channel, NotificationType
 
-_CHANNELS: tuple[Channel, ...] = ("inapp", "email", "push", "toast")
+_CHANNELS: tuple[Channel, ...] = ("inapp", "email", "push", "toast", "apprise")
+# Channels on unless the type says otherwise; apprise is a no-op without URLs.
+_DEFAULT_ON: frozenset[Channel] = frozenset({"apprise"})
 
 
 def effective_channels(
@@ -18,13 +20,13 @@ def effective_channels(
 
     @param type Registered notification type.
     @param user_prefs Per-type user overrides keyed by type key.
-    @return Map with inapp, email, push, toast always present; overrides
+    @return Map with inapp, email, push, toast, apprise always present; overrides
         apply only to channels in ``type.user_configurable``.
     """
     out: dict[Channel, bool] = dict(type.default_channels)
     for ch in _CHANNELS:
         if ch not in out:
-            out[ch] = False
+            out[ch] = ch in _DEFAULT_ON
     overrides = user_prefs.get(type.key) or {}
     for ch, value in overrides.items():
         if ch in type.user_configurable:

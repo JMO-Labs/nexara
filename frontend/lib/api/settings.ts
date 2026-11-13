@@ -33,20 +33,36 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   mute_all_email: boolean;
 }
 
-export interface NotificationPreferences {
-  notif_mention_inapp: boolean;
-  notif_mention_email: boolean;
-  notif_comment_inapp: boolean;
-  notif_comment_email: boolean;
-  notif_reaction_inapp: boolean;
-  notif_reaction_email: boolean;
-  notif_new_post_inapp: boolean;
-  notif_new_post_email: boolean;
-  notif_system_inapp: boolean;
-  notif_system_email: boolean;
-  notif_invite_accepted_inapp: boolean;
-  notif_invite_accepted_email: boolean;
+export type NotificationType =
+  | "mention"
+  | "comment"
+  | "reaction"
+  | "new_post"
+  | "system"
+  | "invite_accepted"
+  | "event_reminder"
+  | "event_rsvp"
+  | "gallery_activity"
+  | "prompt"
+  | "prompt_summary"
+  | "poll"
+  | "dm"
+  | "birthday";
+
+export type NotificationChannel = "inapp" | "email" | "push";
+
+/** All 42 notif_<type>_<channel> flags. */
+export type NotificationChannelFlags = Record<
+  `notif_${NotificationType}_${NotificationChannel}`,
+  boolean
+>;
+
+export interface NotificationPreferences extends NotificationChannelFlags {
   mute_all_email: boolean;
+  mute_all_push: boolean;
+  email_digest_enabled: boolean;
+  /** Local hour of day (0-23) for the digest. */
+  email_digest_hour: number;
   /** Per-type Apprise channel flags, e.g. notif_mention_apprise. */
   [apprise: `notif_${string}_apprise`]: boolean | undefined;
 }

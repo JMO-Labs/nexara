@@ -83,6 +83,7 @@ class SubgroupResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     my_role: str | None = None
+    is_member: bool = False
 
     model_config = {"from_attributes": True}
 
