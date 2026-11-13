@@ -14,6 +14,7 @@ from app.plugins.api_keys import (
     resolve_plugin_from_key,
     verify_api_key,
 )
+from app.plugins.context import PluginContext
 from app.plugins.manifest import PluginManifest, PluginPermission
 from app.plugins.permissions import check_permission, enforce_permission
 from app.repositories.plugin_key_repo import PluginApiKeyRepository
@@ -167,15 +168,21 @@ class TestVerifyMalformedHash:
         assert verify_api_key("nxr_plugin_hello_" + "a" * 32, "not-a-bcrypt-hash") is False
 
 
-def test_check_permission_reads_context_manifest():
-    """check_permission enforces against ctx.manifest."""
-    from types import SimpleNamespace
-    from unittest.mock import MagicMock
+def _real_ctx(perms: list[str]) -> PluginContext:
+    return PluginContext(
+        plugin_id="hello",
+        manifest=_manifest(perms),
+        session=AsyncMock(),
+        community_id=COMMUNITY,
+        storage_client=MagicMock(),
+        notification_service=MagicMock(),
+    )
 
-    from app.plugins.permissions import check_permission
 
-    manifest = MagicMock()
-    manifest.id = "p"
-    manifest.permissions = set()
+def test_check_permission_reads_context_manifest() -> None:
+    """check_permission enforces against a real PluginContext.manifest."""
+    ctx = _real_ctx([])
+    assert ctx.manifest.id == "hello"
     with pytest.raises(PermissionError):
-        check_permission(SimpleNamespace(manifest=manifest), "db_read")
+        check_permission(ctx, "db_read")
+    check_permission(_real_ctx(["db_read"]), "db_read")
