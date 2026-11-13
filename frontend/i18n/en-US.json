@@ -657,18 +657,6 @@
     "empty": "No members yet."
   },
   "toasts": {
-    "subgroups": {
-      "created": "Group created",
-      "updated": "Group updated",
-      "deleted": "Group deleted",
-      "joined": "Joined group",
-      "left": "Left group",
-      "member": {
-        "added": "Member added",
-        "roleChanged": "Member role changed",
-        "removed": "Member removed"
-      }
-    },
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",
