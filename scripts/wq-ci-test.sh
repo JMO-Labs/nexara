@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ##
 # @file scripts/wq-ci-test.sh
-# @brief wq-ci test entrypoint: backend unit + integration + frontend vitest + mobile flutter test.
+# @brief wq-ci test entrypoint: backend unit + integration + pip-audit + bandit + npm audit + frontend vitest + mobile flutter test.
 #        Writes coverage.xml (backend Cobertura) and junit.xml (merged) to repo root.
 ##
 set -uo pipefail
@@ -10,6 +10,11 @@ ROOT=$PWD; rc=0
 
 (cd backend && { command -v uv >/dev/null || pipx install -q uv; } && uv venv -q .venv --clear && { uv sync -q --frozen --extra dev || uv sync -q --extra dev; } \
   && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
+
+# Security (ported from .gitlab/ci/security.yml; fail on findings). gitleaks is not run here.
+(cd backend && uv export --frozen --no-hashes -q > /tmp/req.txt && pipx run pip-audit -r /tmp/req.txt) || rc=1
+pipx run bandit -r backend/app -ll -q || rc=1
+(cd frontend && npm ci --no-audit --no-fund && npm audit --omit=dev --audit-level=high) || rc=1
 
 # Integration (dockerized Postgres + Valkey); appends to coverage.xml. Skips locally without docker.
 bash scripts/wq-ci-integration.sh || rc=1

@@ -119,3 +119,15 @@ to `main`. See `.gitlab-ci.yml` and `.gitlab/ci/` for the full configuration.
 | report   | Coverage badges                                |
 | pages    | MkDocs + Doxygen + reports                     |
 | release  | GitLab Release on version tags                 |
+
+### Security checks in `scripts/wq-ci-test.sh`
+
+The GitHub test script also runs, and fails on any finding:
+
+- `pip-audit` on the frozen backend dependencies (`uv export --frozen --no-hashes`).
+  Fix by upgrading the package in `uv.lock`.
+- `bandit -r backend/app -ll -q` (medium severity and above). Fix the finding, or
+  add `# nosec <id>` with a comment explaining why it is a false positive.
+- `npm audit --omit=dev --audit-level=high` in `frontend`.
+
+Gitleaks stays GitLab-only.
