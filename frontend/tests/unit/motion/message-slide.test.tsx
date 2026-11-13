@@ -118,8 +118,11 @@ describe("NotificationsBell badge motion", () => {
     MotionGlobalConfig.skipAnimations = true;
     try {
       setup();
-      const badge = await screen.findByTestId("unread-badge");
+      await screen.findByTestId("unread-badge");
+      // Re-query each tick: the badge is keyed and remounts when the unread
+      // count rises, so an early reference can be a detached node.
       await waitFor(() => {
+        const badge = screen.getByTestId("unread-badge");
         expect(badge.style.opacity).toBe("1");
         expect(badge.style.transform).toMatch(/^(none)?$/);
       });
