@@ -16,6 +16,7 @@ import structlog
 
 from app.core.config import get_settings
 from app.db.session import async_session_factory
+from app.repositories.media_repo import MediaRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
@@ -47,6 +48,7 @@ async def _fire_prompts_async() -> dict[str, int]:
             community_id=community_id,
             session=session,
             notification_service=notif,
+            media_attacher=MediaRepository(session).attach_to_post,
         )
         fired = await service.fire_due_prompts(today)
         await session.commit()
@@ -78,6 +80,7 @@ async def _generate_summaries_async() -> dict[str, int]:
             community_id=community_id,
             session=session,
             notification_service=notif,
+            media_attacher=MediaRepository(session).attach_to_post,
         )
         finalised = await service.finalise_expired()
         await session.commit()

@@ -12,6 +12,7 @@ from sqlalchemy import Select, and_, literal, or_, select, tuple_, update
 
 from app.models.list import List, ListMember
 from app.models.moderation import UserBlock
+from app.models.subgroup import SubgroupMember
 from app.repositories.base import BaseRepository
 from app.repositories.list_keyset import decode_cursor, encode_cursor, parse_dt
 
@@ -104,3 +105,63 @@ class ListRepository(BaseRepository[List]):
         values = {k: getattr(List, k) + v for k, v in delta.items()}
         await self._session.execute(update(List).where(List.id == list_id).values(**values))
         await self._session.flush()
+
+    async def can_view(self, lst: List, user_id: uuid.UUID) -> bool:
+        """
+        @brief Whether the user may view the list (mirrors ``list_visible``).
+
+        @param lst The list.
+        @param user_id Viewing user.
+        @return True if visible to the user.
+        """
+        if lst.visibility == "community":
+            return True
+        if lst.visibility == "private":
+            return lst.owner_id == user_id
+        if lst.visibility == "subgroup":
+            if lst.subgroup_id is None:
+                return False
+            from app.repositories.subgroup_repo import expand_with_descendants
+
+            res = await self._session.execute(
+                select(SubgroupMember.subgroup_id).where(SubgroupMember.user_id == user_id)
+            )
+            ids = await expand_with_descendants(self._session, list(res.scalars().all()))
+            return lst.subgroup_id in ids
+        if lst.visibility == "members":
+            if lst.owner_id == user_id:
+                return True
+            res = await self._session.execute(
+                select(ListMember.user_id).where(
+                    ListMember.list_id == lst.id, ListMember.user_id == user_id
+                )
+            )
+            return res.first() is not None
+        return False
+
+    async def audience_ids(self, lst: List) -> set[uuid.UUID]:
+        """
+        @brief Users (besides the owner) who can view a non-community list.
+
+        Subgroup lists return direct subgroup members; members lists return
+        explicit list members.
+
+        @param lst The list.
+        @return Set of user ids.
+        """
+        if lst.visibility == "members":
+            stmt = select(ListMember.user_id).where(ListMember.list_id == lst.id)
+        elif lst.visibility == "subgroup" and lst.subgroup_id is not None:
+            stmt = select(SubgroupMember.user_id).where(
+                SubgroupMember.subgroup_id == lst.subgroup_id
+            )
+        else:
+            return set()
+        return set((await self._session.execute(stmt)).scalars().all())
+
+    async def is_member(self, list_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """@brief True when ``user_id`` has an explicit membership on the list."""
+        stmt = select(ListMember.user_id).where(
+            ListMember.list_id == list_id, ListMember.user_id == user_id
+        )
+        return (await self._session.execute(stmt)).first() is not None
