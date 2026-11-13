@@ -32,7 +32,7 @@ describe("toast keys", () => {
     expect(last().successKey).toBe("toasts.events.created");
     renderHook(() => useUpdateEvent("e1"));
     expect(last().successKey).toBe("toasts.events.updated");
-    renderHook(() => useDeleteEvent("e1"));
+    renderHook(() => useDeleteEvent());
     expect(last().successKey).toBe("toasts.events.cancelled");
   });
 
