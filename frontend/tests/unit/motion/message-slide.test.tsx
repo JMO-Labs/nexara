@@ -111,7 +111,8 @@ describe("NotificationsBell badge motion", () => {
       </QueryClientProvider>,
     );
   };
-  it("pops the badge in", async () => {
+  // repeats: 19 => 20 consecutive runs per CI job (nexara#302 AC2 guard).
+  it("pops the badge in", { repeats: 19 }, async () => {
     // Skip animations so the final state applies immediately instead of
     // depending on jsdom frame timing.
     MotionGlobalConfig.skipAnimations = true;
