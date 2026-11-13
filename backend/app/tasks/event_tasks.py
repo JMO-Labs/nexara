@@ -95,7 +95,7 @@ async def _dispatch_reminders_async() -> dict[str, int]:
     return {"reminders_sent": sent}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.event_tasks.dispatch_event_reminders",
     queue="notifications",
 )
@@ -153,7 +153,7 @@ async def _sync_subscriptions_async() -> dict[str, Any]:
     return {"synced": synced, "failed": failed, "events_upserted": upserted_total}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.event_tasks.sync_subscriptions",
     queue="maintenance",

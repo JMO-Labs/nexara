@@ -151,6 +151,35 @@ class TestUpdateNotificationPreferences:
         assert result.notif_mention_email is False
 
 
+class TestNudgeOptOuts:
+    """@brief receive_nudges / receive_gentle_nudges persist via update_settings (nexara#62)."""
+
+    @pytest.mark.asyncio
+    async def test_put_updates_nudge_opt_outs_and_get_returns_them(self):
+        """A PUT with nudge toggles reaches the repo and GET reflects them."""
+        repo = AsyncMock()
+        repo.get_or_create.return_value = _make_settings_row()
+        stored = _make_settings_row()
+        stored.receive_nudges = False
+        stored.receive_gentle_nudges = False
+        repo.update.return_value = stored
+        service = SettingsService(repo, AsyncMock(), COMMUNITY_ID)
+
+        payload = UserSettingsUpdate(receive_nudges=False, receive_gentle_nudges=False)
+        result = await service.update_settings(USER_ID, payload)
+
+        repo.update.assert_awaited_once_with(
+            USER_ID, {"receive_nudges": False, "receive_gentle_nudges": False}
+        )
+        assert result.receive_nudges is False
+        assert result.receive_gentle_nudges is False
+
+        repo.get_or_create.return_value = stored
+        fetched = await service.get_settings(USER_ID)
+        assert fetched.receive_nudges is False
+        assert fetched.receive_gentle_nudges is False
+
+
 NOTIF_TYPES = (
     "mention",
     "comment",
