@@ -20,7 +20,6 @@ from app.models.chat import ChatMessage
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
-
 TOMBSTONE_CONTENT = "[deleted]"
 """@brief Content placeholder written when a message is soft-deleted."""
 

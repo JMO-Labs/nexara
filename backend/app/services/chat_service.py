@@ -35,7 +35,6 @@ from app.repositories.chat_repo import (
 from app.services.activity_publish import record_activity
 from app.services.chat_helpers import (
     CHAT_PUBSUB_CHANNEL_PREFIX,  # noqa: F401  (re-export)
-    CHAT_RATE_LIMIT_PER_MINUTE,
     channel_pubsub_name,  # noqa: F401  (re-export)
     serialize_message,
 )

@@ -22,8 +22,6 @@ from history pages.
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 from app.repositories.chat_channel_repo import ChatChannelRepository
 from app.repositories.chat_message_repo import (
     DEFAULT_HISTORY_LIMIT,
