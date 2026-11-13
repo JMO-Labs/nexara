@@ -25,7 +25,7 @@ def test_no_overrides_returns_defaults_with_all_channels():
         "email": True,
         "push": False,
         "toast": False,
-        "apprise": True,
+        "apprise": False,
     }
 
 
