@@ -21,6 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.dependencies import get_current_user
+from app.core.exceptions import register_exception_handlers
+from app.models.plugin import Plugin
 from app.models.user import User
 from app.plugins.context import PluginContext
 from app.plugins.manifest import load_manifest
@@ -50,6 +52,10 @@ async def session():
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as sess:
         async with sess.begin():
+            await sess.merge(
+                Plugin(id="example-trivia", community_id=C1, name="Trivia", version="1.0.0")
+            )
+            await sess.flush()
             yield sess
             await sess.rollback()
     await engine.dispose()
@@ -210,7 +216,7 @@ async def test_reset_streaks_zeroes_all(ctx):
 
 
 async def test_on_user_joined_sends_notification(ctx, session, notifier):
-    models, hooks = _load("models"), _load("hooks")
+    hooks = _load("hooks")
     user = await _user(session)
     q = await _today(ctx)
     await hooks.on_user_joined(ctx, user_id=user.id)
@@ -239,13 +245,18 @@ def test_celery_tasks_registered_and_executable():
     sched = celery_app.conf.beat_schedule
     assert any(v["task"] == "plugins.example_trivia.select_daily_question" for v in sched.values())
     assert any(v["task"] == "plugins.example_trivia.reset_streaks" for v in sched.values())
-    with patch.object(tasks, "_select", new=AsyncMock(return_value={"id": "q1"})):
-        assert tasks.select_daily_question.apply().get() == {"id": "q1"}
+    task = celery_app.tasks["plugins.example_trivia.select_daily_question"]
+    # The plugin task loader may have registered the task from another module
+    # instance; patch the module that owns the registered task.
+    owner = sys.modules.get(task.run.__module__, tasks)
+    with patch.object(owner, "_select", new=AsyncMock(return_value={"id": "q1"})):
+        assert task.apply().get() == {"id": "q1"}
 
 
 async def _client(ctx, user) -> AsyncClient:
     router = _load("router")
     app = FastAPI()
+    register_exception_handlers(app)  # AppError -> envelope (409 etc.)
     app.include_router(router.router, prefix="/api/v1/plugins/example-trivia")
     app.dependency_overrides[router.get_ctx] = lambda: ctx
     app.dependency_overrides[get_current_user] = lambda: user

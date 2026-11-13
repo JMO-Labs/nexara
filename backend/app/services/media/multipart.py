@@ -16,6 +16,7 @@ from typing import Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.core.transcode import ALLOWED_VIDEO_TYPES, MAX_VIDEO_SIZE
@@ -220,5 +221,8 @@ async def complete_multipart_upload(
         transcode_video.delay(str(media.id))
     else:
         generate_thumbnail.delay(str(media.id))
+    await invalidate_search_cache_for_community(
+        community_id, service="media", action="create", user_id=user.id
+    )
 
     return MediaResponse.model_validate(media)

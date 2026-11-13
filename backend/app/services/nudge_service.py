@@ -44,6 +44,7 @@ class NudgeService:
         """
         @brief Nudge another user.
         @raises AppError NUDGE_SELF (400), NotFoundError, AuthorizationError (blocked),
+                AppError NUDGE_OPTED_OUT (403, target has receive_nudges off),
                 RateLimitError (already nudged within 24h).
         """
         if sender.id == target_id:
@@ -52,6 +53,8 @@ class NudgeService:
             raise NotFoundError(_("User not found"))
         if await self._repo.is_blocked(sender.id, target_id, self._community_id):
             raise AuthorizationError(_("You cannot nudge this user"))
+        if not await self._repo.accepts_user_nudges(target_id, self._community_id):
+            raise AppError("NUDGE_OPTED_OUT", _("This member has turned off nudges"), 403)
         if await self._repo.has_recent_user_nudge(sender.id, target_id, self._community_id):
             raise RateLimitError(_("You can nudge this user once every 24 hours"))
         nudge = await self._repo.create_nudge(

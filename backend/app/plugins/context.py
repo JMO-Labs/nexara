@@ -155,6 +155,17 @@ class PluginContext:
         "community_id", "db", "manifest", "plugin_id", "settings", "storage",
     )  # fmt: skip
 
+    plugin_id: str
+    manifest: PluginManifest
+    community_id: uuid.UUID
+    db: "PluginDB"
+    settings: "PluginSettings"
+    storage: "PluginStorage"
+    _session: AsyncSession
+    _storage: Any
+    _notifications: Any
+    _clock: Callable[[], float]
+
     def __init__(
         self,
         plugin_id: str,
@@ -164,7 +175,7 @@ class PluginContext:
         storage_client: Any,
         notification_service: Any,
         settings: dict[str, Any] | None = None,
-        clock: Callable[[], float] = time.monotonic,
+        clock: Callable[[], float] | None = time.monotonic,
     ) -> None:
         """@param settings Saved config (Plugin.settings) merged over manifest declarations."""
         set_ = object.__setattr__

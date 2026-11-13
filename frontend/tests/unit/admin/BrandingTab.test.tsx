@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/admin/BrandingTab.test.tsx
- * @brief BrandingTab AA rejection, server 422 path; BrandingStyle CSS var.
+ * @brief BrandingTab AA rejection, server 422 path, preset apply; BrandingStyle.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -12,11 +12,20 @@ import * as api from "@/lib/api/branding";
 import { BrandingTab } from "@/components/admin/BrandingTab";
 import { BrandingStyle } from "@/components/layout/BrandingStyle";
 
+// jsdom lacks ResizeObserver (used by Radix Select).
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("@/lib/api/branding", async (orig) => ({
   ...(await orig<typeof api>()),
   getBranding: vi.fn(),
   updateBranding: vi.fn(),
+  listPresets: vi.fn(),
+  applyPreset: vi.fn(),
 }));
 
 const base = {
@@ -45,6 +54,54 @@ beforeEach(() => {
 });
 
 describe("BrandingTab", () => {
+  it("saves email, landing and PWA icon fields", async () => {
+    vi.mocked(api.updateBranding).mockResolvedValue({ branding: base });
+    wrap(<BrandingTab />);
+    const id = "11111111-1111-4111-8111-111111111111";
+    await userEvent.type(
+      await screen.findByLabelText("Email logo media ID"),
+      id,
+    );
+    await userEvent.type(screen.getByLabelText("Email footer text"), "Bye");
+    await userEvent.type(screen.getByLabelText("Email sender name"), "Garden");
+    await userEvent.type(screen.getByLabelText("Landing CTA text"), "Join");
+    await userEvent.type(
+      screen.getByLabelText("PWA icon 192x192 media ID"),
+      id,
+    );
+    await userEvent.type(
+      screen.getByLabelText("PWA icon 512x512 media ID"),
+      id,
+    );
+    await userEvent.click(
+      screen.getByRole("switch", { name: "Show feature list on landing page" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /save branding/i }),
+    );
+    await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
+    expect(vi.mocked(api.updateBranding).mock.calls[0][0]).toMatchObject({
+      email_logo_media_id: id,
+      email_footer_text: "Bye",
+      email_sender_name: "Garden",
+      landing_cta_text: "Join",
+      landing_show_feature_list: false,
+      pwa_icon_192_media_id: id,
+      pwa_icon_512_media_id: id,
+    });
+  });
+
+  it("disables save on an invalid media ID", async () => {
+    wrap(<BrandingTab />);
+    await userEvent.type(
+      await screen.findByLabelText("Email logo media ID"),
+      "nope",
+    );
+    expect(
+      screen.getByRole("button", { name: /save branding/i }),
+    ).toBeDisabled();
+  });
+
   it("saves name when the stored accent is legacy low-contrast, without resending it", async () => {
     vi.mocked(api.getBranding).mockResolvedValue({
       ...base,
@@ -57,7 +114,7 @@ describe("BrandingTab", () => {
     const name = await screen.findByLabelText("Community name");
     await userEvent.clear(name);
     await userEvent.type(name, "Soto crew");
-    const save = screen.getByRole("button", { name: /save/i });
+    const save = screen.getByRole("button", { name: /save branding/i });
     expect(save).toBeEnabled();
     await userEvent.click(save);
     await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
@@ -166,5 +223,56 @@ describe("BrandingTab full palette", () => {
     expect(
       screen.getByRole("button", { name: "Save branding" }),
     ).toBeDisabled();
+  });
+});
+
+describe("BrandingTab preset apply", () => {
+  const ocean = {
+    name: "Ocean",
+    description: "Blue",
+    primary: "#1e40af",
+    primary_dark: "#1e3a8a",
+    accent: "#bae6fd",
+    surface_light: "#f8fafc",
+    surface_dark: "#0f172a",
+    text_light: "#0f172a",
+    text_dark: "#e2e8f0",
+  };
+  const applied = {
+    ...base,
+    color_primary: ocean.primary,
+    color_primary_dark: ocean.primary_dark,
+    color_accent: ocean.accent,
+    color_surface_light: ocean.surface_light,
+    color_surface_dark: ocean.surface_dark,
+    color_text_light: ocean.text_light,
+    color_text_dark: ocean.text_dark,
+  };
+
+  it("does not revert preset colors when saving afterwards", async () => {
+    vi.mocked(api.listPresets).mockResolvedValue({ themes: [ocean] });
+    vi.mocked(api.applyPreset).mockImplementation(async () => {
+      vi.mocked(api.getBranding).mockResolvedValue(applied);
+      return { branding: applied };
+    });
+    vi.mocked(api.updateBranding).mockResolvedValue({ branding: applied });
+    wrap(<BrandingTab />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Apply Ocean" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Primary")).toHaveValue(ocean.primary),
+    );
+    const name = screen.getByLabelText("Community name");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Blue crew");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save branding" }),
+    );
+    await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
+    const body = vi.mocked(api.updateBranding).mock.calls[0][0];
+    expect(body.community_name).toBe("Blue crew");
+    for (const k of Object.keys(applied).filter((k) => k.startsWith("color_")))
+      expect(body).not.toHaveProperty(k);
   });
 });

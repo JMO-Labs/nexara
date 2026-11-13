@@ -3,7 +3,7 @@
 from app.services.notifications import NotificationPayload, NotificationType
 from app.services.notifications.prefs import effective_channels
 
-ALL = {"inapp", "email", "push", "toast"}
+ALL = {"inapp", "email", "push", "toast", "apprise"}
 
 
 def _type(**kw) -> NotificationType:
@@ -20,7 +20,13 @@ def _type(**kw) -> NotificationType:
 def test_no_overrides_returns_defaults_with_all_channels():
     out = effective_channels(_type(), {})
     assert set(out) == ALL
-    assert out == {"inapp": True, "email": True, "push": False, "toast": False}
+    assert out == {
+        "inapp": True,
+        "email": True,
+        "push": False,
+        "toast": False,
+        "apprise": True,
+    }
 
 
 def test_none_override_entry_returns_defaults():
@@ -57,3 +63,10 @@ def test_does_not_mutate_defaults():
     t = _type()
     effective_channels(t, {"mention": {"email": False}})
     assert t.default_channels == {"inapp": True, "email": True}
+
+
+def test_apprise_defaults_on_and_is_user_configurable():
+    t = _type()
+    assert "apprise" in t.user_configurable
+    assert effective_channels(t, {})["apprise"] is True
+    assert effective_channels(t, {"mention": {"apprise": False}})["apprise"] is False

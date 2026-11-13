@@ -14,6 +14,7 @@ import {
   useUpdateNotificationPrefs,
 } from "@/hooks/useSettings";
 import * as settingsApi from "@/lib/api/settings";
+import type { NotificationPreferences } from "@/lib/api/settings";
 import { useToasts } from "@/stores/toasts";
 import { qk } from "@/lib/query-keys";
 
@@ -38,6 +39,17 @@ const createWrapper = () => {
   return Wrapper;
 };
 
+const PRIVACY: settingsApi.PrivacyAppearanceSettings = {
+  profile_visible_to: "community",
+  show_online_status: true,
+  show_last_seen: true,
+  show_birthday_to: "community",
+  show_birthday_year: false,
+  allow_sassybot: true,
+  font_size: "medium",
+  compact_feed: false,
+};
+
 describe("Settings hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,6 +59,7 @@ describe("Settings hooks", () => {
   describe("useUserSettings", () => {
     it("fetches settings on mount", async () => {
       const mockSettings = {
+        ...PRIVACY,
         theme: "system" as const,
         locale: "en-US",
         notif_mention_inapp: true,
@@ -93,7 +106,9 @@ describe("Settings hooks", () => {
         notif_invite_accepted_email: false,
         mute_all_email: false,
       };
-      vi.mocked(settingsApi.getNotificationPrefs).mockResolvedValue(mockPrefs);
+      vi.mocked(settingsApi.getNotificationPrefs).mockResolvedValue(
+        mockPrefs as unknown as NotificationPreferences,
+      );
 
       const { result } = renderHook(() => useNotificationPrefs(), {
         wrapper: createWrapper(),
@@ -110,6 +125,7 @@ describe("Settings hooks", () => {
     it("calls updateSettings and shows success toast", async () => {
       const mockResp = { theme: "dark" as const, locale: "en-US" };
       vi.mocked(settingsApi.updateSettings).mockResolvedValue({
+        ...PRIVACY,
         ...mockResp,
         notif_mention_inapp: true,
         notif_mention_email: false,
@@ -266,6 +282,7 @@ describe("Settings hooks", () => {
     it("calls updateNotificationPrefs and shows success toast", async () => {
       const body = { notif_mention_inapp: false };
       const mockResp = {
+        ...PRIVACY,
         theme: "system" as const,
         locale: "en-US",
         notif_mention_inapp: false,

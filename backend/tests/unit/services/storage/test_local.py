@@ -123,3 +123,39 @@ class TestLocalResolve:
     def test_short_filename_raises(self, storage):
         with pytest.raises(StorageError, match="too short"):
             storage._resolve("ab")
+
+
+class TestLocalStreaming:
+    """@brief Verify chunked get_stream() and put_file()."""
+
+    async def test_put_file_then_get_stream_roundtrip(self, storage, tmp_path):
+        import io
+
+        data = b"x" * 10_000
+        src = io.BytesIO(data)
+        await storage.put_file("exports/abcd1234.zip", src, "application/zip", chunk_size=4096)
+        chunks = [c async for c in storage.get_stream("exports/abcd1234.zip", chunk_size=4096)]
+        assert len(chunks) == 3
+        assert b"".join(chunks) == data
+
+    async def test_get_stream_missing_raises(self, storage):
+        with pytest.raises(StorageKeyNotFoundError):
+            async for _ in storage.get_stream("originals/missing-key"):
+                pass
+
+    async def test_get_stream_os_error_wrapped(self, storage):
+        from unittest.mock import patch
+
+        await storage.put("originals/abcd1234-x.bin", b"data", "application/octet-stream")
+        with patch("app.services.storage.local.aiofiles.open", side_effect=OSError("io")):
+            with pytest.raises(StorageError):
+                async for _ in storage.get_stream("originals/abcd1234-x.bin"):
+                    pass
+
+    async def test_put_file_os_error_wrapped(self, storage):
+        import io
+        from unittest.mock import patch
+
+        with patch("app.services.storage.local.aiofiles.open", side_effect=OSError("io")):
+            with pytest.raises(StorageError):
+                await storage.put_file("exports/abcd1234.zip", io.BytesIO(b"x"), "application/zip")
