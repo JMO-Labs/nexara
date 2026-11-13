@@ -1,4 +1,4 @@
-"""@file Tests for the 12 built-in notification types."""
+"""@file Tests for the built-in notification types."""
 
 from datetime import UTC, datetime
 
@@ -98,3 +98,11 @@ def test_default_channels_and_label(key: str) -> None:
         "toast": toast,
     }
     assert t.label_i18n == f"notif.{key}.label"
+
+
+@pytest.mark.parametrize(
+    "key", ["kudos_received", "nudge_received", "gentle_nudge", "birthday_reminder"]
+)
+def test_legacy_types_registered_and_validate(key: str) -> None:
+    t = get(key)
+    assert t.payload_schema.model_validate({"message": "m"}).message == "m"

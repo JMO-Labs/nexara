@@ -13,13 +13,14 @@ import type { PromptPost } from "@/lib/api/prompts";
 
 export interface PromptPostCardProps {
   post: PromptPost;
-  onReply?: (promptId: string) => void;
+  onReply?: (promptPostId: string, title: string) => void;
 }
 
 /**
  * @brief Prompt post card.
  * @param post the prompt post
- * @param onReply called with the prompt id when Reply is pressed
+ * @param onReply if set, called with the prompt post id and title on Respond
+ *        (instead of opening the response modal)
  * @return card element
  */
 export const PromptPostCard: React.FC<PromptPostCardProps> = ({
@@ -32,7 +33,11 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
   const isInterestCapture = post.prompt.prompt_type === "interest_capture";
 
   return (
-    <Card className="relative flex flex-col gap-4 border-l-4 border-accent p-4">
+    <Card
+      role="article"
+      aria-label={`Prompt: ${post.prompt.title}`}
+      className="relative flex flex-col gap-4 border-l-4 border-accent p-4"
+    >
       {post.is_pinned && (
         <div
           data-testid="pinned-icon"
@@ -72,10 +77,10 @@ export const PromptPostCard: React.FC<PromptPostCardProps> = ({
         </div>
         <Button
           size="sm"
-          onClick={() => {
-            onReply?.(post.prompt.id);
-            setOpen(true);
-          }}
+          aria-label={`Respond to prompt: ${post.prompt.title}`}
+          onClick={() =>
+            onReply ? onReply(post.id, post.prompt.title) : setOpen(true)
+          }
         >
           Respond
         </Button>

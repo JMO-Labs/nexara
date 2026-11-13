@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, get_dispatcher
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.event_repo import EventRepository
@@ -44,7 +44,6 @@ from app.schemas.gallery import (
 from app.services.event_service import EventService
 from app.services.gallery_service import GalleryService
 from app.services.notification_service import NotificationService
-from app.services.realtime.event_bus import event_bus
 
 logger = structlog.get_logger(__name__)
 
@@ -65,7 +64,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
-        event_bus=event_bus,
+        dispatcher=get_dispatcher(),
     )
     return EventService(
         event_repo=EventRepository(db),
@@ -116,6 +115,22 @@ async def list_events(
     e = end or now + timedelta(days=90)
     return await service.list_events(
         user.id, s, e, cursor=cursor, limit=limit, subgroup_id=subgroup_id
+    )
+
+
+@router.get("/feed.ics")
+async def export_feed_ical(
+    start: datetime | None = Query(None, description="Range start (UTC)"),
+    end: datetime | None = Query(None, description="Range end (UTC)"),
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> Response:
+    """@brief Export the user's full event feed as .ics."""
+    body = await service.export_feed_ical(user.id, start=start, end=end)
+    return Response(
+        content=body,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
     )
 
 
@@ -227,22 +242,6 @@ async def export_event_ical(
         content=body,
         media_type="text/calendar",
         headers={"Content-Disposition": f'attachment; filename="event-{event_id}.ics"'},
-    )
-
-
-@router.get("/feed.ics")
-async def export_feed_ical(
-    start: datetime | None = Query(None, description="Range start (UTC)"),
-    end: datetime | None = Query(None, description="Range end (UTC)"),
-    user: User = Depends(get_current_user),
-    service: EventService = Depends(_build_service),
-) -> Response:
-    """@brief Export the user's full event feed as .ics."""
-    body = await service.export_feed_ical(user.id, start=start, end=end)
-    return Response(
-        content=body,
-        media_type="text/calendar",
-        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
     )
 
 
