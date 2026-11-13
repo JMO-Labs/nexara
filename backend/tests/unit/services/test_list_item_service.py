@@ -39,7 +39,11 @@ def svc(lst):
     reg.validate_value.side_effect = lambda k, v, c: v
     due = datetime(2026, 1, 1, tzinfo=UTC)
     reg.project_columns.side_effect = lambda k, v, c: (
-        {"due_at": due} if k == "date" and v else {"lat": 1.0, "lon": 2.0} if k == "location" else {}
+        {"due_at": due}
+        if k == "date" and v
+        else {"lat": 1.0, "lon": 2.0}
+        if k == "location"
+        else {}
     )
     items.create.side_effect = lambda e: e
     items.update.side_effect = lambda e, d: [setattr(e, k, v) for k, v in d.items()] and e
