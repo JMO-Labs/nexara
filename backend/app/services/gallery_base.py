@@ -19,6 +19,7 @@ from app.repositories.gallery_repo import GalleryRepository
 
 class GalleryServiceBase:
     """@brief Constructor and permission helpers shared by gallery service parts."""
+
     """@brief Service layer for galleries."""
 
     def __init__(

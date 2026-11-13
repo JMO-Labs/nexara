@@ -81,7 +81,6 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         await invalidate_search_cache_for_community(self._community_id)
         return GalleryResponse.model_validate(gallery)
 
-
     async def get_or_create_for_event(
         self, event_id: uuid.UUID, *, viewer_id: uuid.UUID
     ) -> GalleryResponse:
