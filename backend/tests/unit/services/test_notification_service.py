@@ -156,8 +156,11 @@ class TestSnoozeMethods:
         svc, *_ = _build()
         repo = svc._settings_repo
         repo.update.return_value = MagicMock(
-            notification_prefs={}, dnd_schedule=None, dnd_until=None,
-            dnd_timezone="UTC", digest_cadence={},
+            notification_prefs={},
+            dnd_schedule=None,
+            dnd_until=None,
+            dnd_timezone="UTC",
+            digest_cadence={},
         )
         await svc.set_dnd(USER_ID, {"mon": []}, "UTC")
         repo.update.assert_awaited_with(
