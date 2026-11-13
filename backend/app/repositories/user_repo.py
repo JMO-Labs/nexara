@@ -199,3 +199,34 @@ class UserRepository(BaseRepository[User]):
             stmt = stmt.where(User.community_id == community_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_many(
+        self,
+        user_ids: list[uuid.UUID] | set[uuid.UUID],
+        community_id: uuid.UUID,
+        *,
+        viewer_id: uuid.UUID,
+    ) -> list[User]:
+        """
+        @brief Batch-fetch live users of a community visible to ``viewer_id``.
+
+        Users who blocked the viewer, or whom the viewer blocked, are excluded.
+
+        @param user_ids Ids to fetch.
+        @param community_id Tenant scope.
+        @param viewer_id Requesting user (block filter).
+        @return Matching users.
+        """
+        if not user_ids:
+            return []
+        from app.models.moderation import UserBlock
+
+        blocked = select(UserBlock.blocked_id).where(UserBlock.blocker_id == viewer_id)
+        blockers = select(UserBlock.blocker_id).where(UserBlock.blocked_id == viewer_id)
+        stmt = self._base_query().where(
+            User.id.in_(user_ids),
+            User.community_id == community_id,
+            User.id.notin_(blocked),
+            User.id.notin_(blockers),
+        )
+        return list((await self._session.execute(stmt)).scalars().all())

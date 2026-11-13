@@ -3,7 +3,7 @@
 # -- Container image (single image runs API, worker and beat)
 image:
   registry: ghcr.io
-  repository: com-nexara/nexara
+  repository: jmo-labs/nexara
   tag: ""            # defaults to Chart appVersion
   pullPolicy: IfNotPresent
 imagePullSecrets: []
