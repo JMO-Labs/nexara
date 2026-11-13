@@ -5,7 +5,6 @@
  *        the strong surface; the leaf corner sits on the sender side.
  *        Hover/focus reveals Reply; other authors offer a Send DM action.
  */
-import * as React from "react";
 import { format } from "date-fns";
 import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
@@ -20,6 +19,8 @@ export interface MessageItemProps {
   isSelf?: boolean;
   onReply?: (message: ChatMessage) => void;
   onSendDm?: (userId: string) => void;
+  /** Spacing/font density. */
+  density?: "comfortable" | "compact";
 }
 
 /**
@@ -33,6 +34,7 @@ export function MessageItem({
   isSelf,
   onReply,
   onSendDm,
+  density = "comfortable",
 }: MessageItemProps) {
   let time = "";
   try {
@@ -46,9 +48,17 @@ export function MessageItem({
 
   return (
     <div
+      data-density={density}
+      data-message-id={message.id}
       className={cn(
         "group relative flex items-start gap-3 px-4",
-        compact ? "py-0.5" : "py-1.5",
+        density === "compact"
+          ? compact
+            ? "py-0"
+            : "py-0.5"
+          : compact
+            ? "py-0.5"
+            : "py-1.5",
         isSelf && "flex-row-reverse",
         message.id.startsWith("optimistic-") && "opacity-60",
       )}
@@ -79,7 +89,8 @@ export function MessageItem({
         )}
         <div
           className={cn(
-            "rounded-2xl px-3 py-2 text-sm",
+            "rounded-2xl px-3 text-sm",
+            density === "compact" ? "py-1 text-xs" : "py-2",
             isSelf
               ? "rounded-tr-sm bg-surface-strong text-bg"
               : "rounded-tl-sm bg-surface",
