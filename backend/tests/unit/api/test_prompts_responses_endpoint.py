@@ -38,3 +38,24 @@ async def test_list_responses_delegates_to_service(test_app):
     assert resp.status_code == 200
     assert resp.json() == {"items": [], "cursor": None, "has_more": False}
     svc.list_responses.assert_awaited_once_with(pid, user.id, limit=5, cursor="c")
+
+
+@pytest.mark.asyncio
+async def test_get_prompt_post_delegates_to_service(test_app):
+    """@brief GET /prompts/posts/{id} returns the service's detail payload."""
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    pid = uuid.uuid4()
+    svc = AsyncMock()
+    svc.get_prompt_post.return_value = MagicMock()
+    test_app.dependency_overrides[get_current_user] = lambda: user
+    test_app.dependency_overrides[prompts_module._build_service] = lambda: svc
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=test_app), base_url="http://test"
+        ) as client:
+            await client.get(f"/api/v1/prompts/posts/{pid}")
+    finally:
+        test_app.dependency_overrides.clear()
+
+    svc.get_prompt_post.assert_awaited_once_with(pid)
