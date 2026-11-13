@@ -5,7 +5,10 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/hooks/usePromptResponses", () => ({
-  usePromptResponses: () => ({ data: { response_count: 3 }, isLoading: false }),
+  usePromptResponses: () => ({
+    data: { response_count: 3 },
+    isLoading: false,
+  }),
 }));
 
 import { render, screen } from "@testing-library/react";
