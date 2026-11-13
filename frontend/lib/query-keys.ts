@@ -24,6 +24,7 @@ export const qk = {
       ["feed", "infinite", filters ?? {}] as const,
     post: (id: string) => ["feed", "post", id] as const,
     comments: (postId: string) => ["feed", "post", postId, "comments"] as const,
+    activePrompts: () => ["feed", "active-prompts"] as const,
     promptPost: (id: string) => ["feed", "prompt-post", id] as const,
     promptResponses: (promptPostId: string) =>
       ["feed", "prompt-responses", promptPostId] as const,

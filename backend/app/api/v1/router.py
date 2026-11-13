@@ -53,7 +53,6 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
-api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(oauth_admin_router)
 api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_storage_router)
@@ -71,6 +70,8 @@ api_v1_router.include_router(export_router)
 api_v1_router.include_router(calendar_subscriptions_router)
 api_v1_router.include_router(galleries_router)
 api_v1_router.include_router(home_router)
+# Before users_router so /users/blocked is not captured by /users/{user_id}.
+api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
