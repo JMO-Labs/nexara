@@ -148,3 +148,11 @@ async def test_missing_or_blocked_user_resolves_none():
     repos.users.get_many.return_value = []  # filtered out (blocked/deleted/other community)
     out = await _resolve(UserPullResolver(), items[:1], repos)
     assert out[items[0].id]["mail"] is None
+
+
+async def test_invalid_target_user_id_resolves_none():
+    items, repos = _setup({U1: True})
+    items[0].values = {"who": "not-a-uuid"}
+    out = await _resolve(UserPullResolver(), items, repos)
+    assert out[items[0].id]["mail"] is None
+    assert out[items[1].id]["mail"] is None  # U2 not shared
