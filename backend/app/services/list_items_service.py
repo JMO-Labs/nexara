@@ -12,7 +12,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError, ValidationErr
 from app.models.list import List, ListItem
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
-from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
+from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
 
 HOT_COLUMNS = ("due_at", "lat", "lon", "signup_quantity_needed")
 
@@ -96,7 +96,7 @@ class ListItemService:
                 out[key] = self._registry.validate_value(
                     field["type_key"], values[key], field.get("config", {})
                 )
-            except (ValueError, FieldTypeNotFound) as exc:
+            except (ValueError, FieldTypeNotFoundError) as exc:
                 raise ValidationError(f"Invalid value for {key}", {"field": key}) from exc
         return out
 
