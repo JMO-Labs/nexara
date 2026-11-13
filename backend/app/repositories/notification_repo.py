@@ -152,18 +152,49 @@ class NotificationRepository(BaseRepository[Notification]):
         community_id: uuid.UUID,
         group_key: str | None = None,
         actor_id: uuid.UUID | None = None,
+        group_window_seconds: int | None = None,
     ) -> Notification:
         """
-        @brief Insert a notification (stub; windowed merge lands in #81).
+        @brief Insert a notification, or merge into an open one in the window.
+
+        Merges when an unread, undismissed row with the same group_key was
+        created within group_window_seconds (row-locked, SKIP LOCKED).
 
         @param user_id Recipient user UUID.
         @param type Notification type.
         @param payload JSON payload.
         @param community_id Community scope.
-        @param group_key Grouping key; currently stored, no merge performed.
-        @param actor_id Optional actor, recorded in actor_ids.
-        @return The persisted Notification.
+        @param group_key Grouping key; None disables merging.
+        @param actor_id Optional actor, deduped into actor_ids.
+        @param group_window_seconds Merge window; None disables merging.
+        @return The merged or newly persisted Notification.
         """
+        if group_key is not None and group_window_seconds is not None:
+            cutoff = datetime.now(UTC) - timedelta(seconds=group_window_seconds)
+            stmt = (
+                select(Notification)
+                .where(
+                    Notification.user_id == user_id,
+                    Notification.group_key == group_key,
+                    Notification.read_at.is_(None),
+                    Notification.dismissed_at.is_(None),
+                    Notification.created_at >= cutoff,
+                )
+                .order_by(Notification.created_at.desc())
+                .limit(1)
+                .with_for_update(skip_locked=True)
+            )
+            existing = (await self._session.execute(stmt)).scalar_one_or_none()
+            if existing is not None:
+                existing.count = (existing.count or 1) + 1
+                actors = list(existing.actor_ids or [])
+                if actor_id is not None and actor_id not in actors:
+                    actors.append(actor_id)
+                existing.actor_ids = actors
+                existing.payload = payload
+                existing.updated_at = datetime.now(UTC)
+                await self._session.flush()
+                return existing
         notification = Notification(
             user_id=user_id,
             community_id=community_id,
