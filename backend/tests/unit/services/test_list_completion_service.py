@@ -17,13 +17,21 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.services.list_completion_service import ListCompletionService
 from app.services.list_field_registry import ListFieldRegistry
+from app.services.realtime.events import CommunityTarget, UserTarget
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 OWNER = uuid.uuid4()
 USER = uuid.uuid4()
 
 
-def _setup(mode: str | None, *, completed: bool = False, existing: bool = False):
+def _setup(
+    mode: str | None,
+    *,
+    completed: bool = False,
+    existing: bool = False,
+    visibility: str = "community",
+    can_view: bool = True,
+):
     cfg = {} if mode is None else {"completion_mode": mode}
     lst = MagicMock(spec=List)
     lst.id, lst.owner_id, lst.title = uuid.uuid4(), OWNER, "Groceries"
@@ -33,8 +41,11 @@ def _setup(mode: str | None, *, completed: bool = False, existing: bool = False)
     items = AsyncMock(spec=ListItemRepository)
     items.lock_item_for_update.return_value = item
     items.update.side_effect = lambda e, d: [setattr(e, k, v) for k, v in d.items()] and e
+    lst.visibility = visibility
     lists = AsyncMock(spec=ListRepository)
     lists.get_by_id.return_value = lst
+    lists.can_view.return_value = can_view
+    lists.audience_ids.return_value = {OWNER, USER}
     comps = AsyncMock(spec=ListCompletionRepository)
     comps.get_completion.return_value = MagicMock() if existing else None
     comps.delete_completion.return_value = existing
@@ -143,3 +154,38 @@ async def test_unknown_field_key_raises():
     svc, item, *_ = _setup("shared")
     with pytest.raises(AppError):
         await svc.complete_item(item.id, USER, field_key="nope")
+
+
+class TestAccess:
+    async def test_private_list_non_owner_cannot_complete(self):
+        svc, item, lists, _, bus, _ = _setup("shared", visibility="private", can_view=False)
+        with pytest.raises(NotFoundError):
+            await svc.complete_item(item.id, USER)
+        lists.increment_counters.assert_not_called()
+        bus.emit.assert_not_called()
+
+    async def test_subgroup_list_non_member_cannot_uncomplete(self):
+        svc, item, _, _, bus, _ = _setup(
+            "shared", completed=True, visibility="subgroup", can_view=False
+        )
+        with pytest.raises(NotFoundError):
+            await svc.uncomplete_item(item.id, USER)
+        bus.emit.assert_not_called()
+
+    async def test_view_check_uses_acting_user(self):
+        svc, item, lists, *_ = _setup("shared")
+        await svc.complete_item(item.id, USER)
+        lists.can_view.assert_awaited_once()
+        assert lists.can_view.await_args.args[1] == USER
+
+    async def test_private_list_events_not_community_wide(self):
+        svc, item, _, _, bus, _ = _setup("shared", visibility="private")
+        await svc.complete_item(item.id, USER)
+        targets = [c.args[0].target for c in bus.emit.await_args_list]
+        assert targets and all(isinstance(t, UserTarget) for t in targets)
+        assert {t.user_id for t in targets} == {OWNER, USER}
+
+    async def test_community_list_event_is_community_wide(self):
+        svc, item, _, _, bus, _ = _setup("shared")
+        await svc.complete_item(item.id, USER)
+        assert isinstance(bus.emit.await_args.args[0].target, CommunityTarget)

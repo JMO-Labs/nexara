@@ -19,7 +19,7 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.services.list_field_registry import ListFieldRegistry
 from app.services.realtime.event_bus import EventBus
-from app.services.realtime.events import CommunityTarget, EventType, RealtimeEvent
+from app.services.realtime.events import CommunityTarget, EventType, UserTarget, RealtimeEvent
 
 COMPLETED_BY_KEY = "_completed_by"
 
@@ -71,10 +71,14 @@ class ListCompletionService:
         mode = (field.get("config") or {}).get("completion_mode")
         return "per_user" if mode == "per_user" else "shared"
 
-    async def _load(self, item_id: uuid.UUID, field_key: str | None) -> tuple[ListItem, List, str]:
+    async def _load(
+        self, item_id: uuid.UUID, user_id: uuid.UUID, field_key: str | None
+    ) -> tuple[ListItem, List, str]:
         item = await self._items.lock_item_for_update(item_id)
         lst = await self._lists.get_by_id(item.list_id, self._community_id) if item else None
         if item is None or lst is None:
+            raise NotFoundError("List item not found")
+        if not await self._lists.can_view(lst, user_id):
             raise NotFoundError("List item not found")
         return item, lst, self._get_completion_mode(lst.field_schema, field_key)
 
@@ -89,7 +93,7 @@ class ListCompletionService:
         @param field_key Optional checkbox field key.
         @return The item.
         """
-        item, lst, mode = await self._load(item_id, field_key)
+        item, lst, mode = await self._load(item_id, user_id, field_key)
         was_completed = item.completed
         if mode == "shared":
             if was_completed:
@@ -130,7 +134,7 @@ class ListCompletionService:
         @param field_key Optional checkbox field key.
         @return The item.
         """
-        item, lst, mode = await self._load(item_id, field_key)
+        item, lst, mode = await self._load(item_id, user_id, field_key)
         if mode == "shared":
             if not item.completed:
                 return item
@@ -150,17 +154,22 @@ class ListCompletionService:
     async def _emit(
         self, name: str, lst: List, item: ListItem, user_id: uuid.UUID, mode: str
     ) -> None:
-        await self._bus.emit(
-            RealtimeEvent(
-                type=EventType.FEED_UPDATE,
-                target=CommunityTarget(community_id=self._community_id),
-                payload={
-                    "event": name,
-                    "list_id": str(lst.id),
-                    "item_id": str(item.id),
-                    "user_id": str(user_id),
-                    "completion_mode": mode,
-                    "completed": item.completed,
-                },
+        payload = {
+            "event": name,
+            "list_id": str(lst.id),
+            "item_id": str(item.id),
+            "user_id": str(user_id),
+            "completion_mode": mode,
+            "completed": item.completed,
+        }
+        if lst.visibility == "community":
+            targets: list[CommunityTarget | UserTarget] = [
+                CommunityTarget(community_id=self._community_id)
+            ]
+        else:
+            audience = await self._lists.audience_ids(lst) | {lst.owner_id, user_id}
+            targets = [UserTarget(user_id=uid) for uid in audience]
+        for target in targets:
+            await self._bus.emit(
+                RealtimeEvent(type=EventType.FEED_UPDATE, target=target, payload=payload)
             )
-        )
