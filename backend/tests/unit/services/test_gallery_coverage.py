@@ -266,9 +266,7 @@ class TestBulkAddBranches:
 
 
 class TestUpdateRemoveItem:
-    async def test_update_gallery_not_found(
-        self, service: GalleryService, repo: AsyncMock
-    ) -> None:
+    async def test_update_gallery_not_found(self, service: GalleryService, repo: AsyncMock) -> None:
         repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError):
             await service.update_item(
@@ -315,9 +313,7 @@ class TestUpdateRemoveItem:
         await service.update_item(g.id, item.id, owner, GalleryItemUpdate(caption="c"))
         repo.update_item.assert_awaited_once_with(item, {"caption": "c"})
 
-    async def test_remove_gallery_not_found(
-        self, service: GalleryService, repo: AsyncMock
-    ) -> None:
+    async def test_remove_gallery_not_found(self, service: GalleryService, repo: AsyncMock) -> None:
         repo.get_by_id.return_value = None
         with pytest.raises(NotFoundError):
             await service.remove_item(uuid.uuid4(), uuid.uuid4(), uuid.uuid4())
