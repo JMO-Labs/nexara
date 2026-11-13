@@ -230,7 +230,9 @@ async def _webhook_deliver_async(
         except KeyError:
             category = None
         try:
-            async with httpx.AsyncClient(timeout=WEBHOOK_TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(
+                timeout=WEBHOOK_TIMEOUT_SECONDS, follow_redirects=False
+            ) as client:
                 outcome = await deliver_webhook(
                     repo, sub, notif, category, client, final_attempt=final_attempt
                 )

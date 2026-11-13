@@ -23,6 +23,7 @@ from app.services.notifications.webhook_delivery import (
 )
 from app.tasks.notification_tasks import webhook_deliver
 
+RESOLVE = "app.services.notifications.webhook_guard.resolve_host"
 TASK = "app.services.notifications.channels.webhook.webhook_deliver"
 TS = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
@@ -122,6 +123,13 @@ def test_sign_is_stripe_style_hmac_sha256() -> None:
 # --- delivery ---------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _public_dns() -> object:
+    """Resolve every host to a public address unless a test overrides it."""
+    with patch(RESOLVE, new=AsyncMock(return_value=["93.184.215.14"])) as r:
+        yield r
+
+
 def _client(status: int | Exception) -> tuple[httpx.AsyncClient, list[httpx.Request]]:
     seen: list[httpx.Request] = []
 
@@ -194,6 +202,62 @@ async def test_timeout_on_final_attempt_records_failure_and_raises() -> None:
     with pytest.raises(httpx.TimeoutException):
         await deliver_webhook(repo, sub, _notif(), "social", client, final_attempt=True)
     repo.record_failure.assert_awaited_once_with(sub.id)
+
+
+# --- SSRF guard -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("url", "addrs"),
+    [
+        ("http://127.0.0.1:6379/", ["127.0.0.1"]),
+        ("http://169.254.169.254/latest/meta-data", ["169.254.169.254"]),
+        ("https://rebind.example.com/x", ["10.0.0.5"]),
+        ("https://mixed.example.com/x", ["93.184.215.14", "192.168.1.2"]),
+        ("http://[::1]/x", ["::1"]),
+        ("http://v6map.example.com/", ["::ffff:127.0.0.1"]),
+    ],
+)
+async def test_non_global_destination_blocked(
+    _public_dns: AsyncMock, url: str, addrs: list[str]
+) -> None:
+    _public_dns.return_value = addrs
+    sub = _sub()
+    sub.url = url
+    repo = AsyncMock(spec=WebhookRepository)
+    client, seen = _client(204)
+    with patch("app.services.notifications.webhook_delivery.logger") as log:
+        out = await deliver_webhook(repo, sub, _notif(), "social", client, final_attempt=False)
+    assert out == "failed"
+    assert seen == []
+    repo.record_failure.assert_awaited_once_with(sub.id)
+    repo.record_success.assert_not_awaited()
+    log.bind.return_value.warning.assert_any_call(
+        "notif.channel.failed", channel="webhook", reason="blocked_destination"
+    )
+
+
+async def test_allowlisted_host_bypasses_guard(_public_dns: AsyncMock) -> None:
+    _public_dns.return_value = ["192.168.1.10"]
+    sub = _sub()
+    sub.url = "http://ha.lan:8123/hook"
+    repo = AsyncMock(spec=WebhookRepository)
+    client, seen = _client(200)
+    with patch("app.services.notifications.webhook_delivery.get_settings") as gs:
+        gs.return_value.webhook_allowed_hosts = frozenset({"ha.lan"})
+        out = await deliver_webhook(repo, sub, _notif(), "social", client, final_attempt=False)
+    assert out == "delivered"
+    assert len(seen) == 1
+
+
+async def test_unresolvable_host_is_retryable(_public_dns: AsyncMock) -> None:
+    _public_dns.side_effect = httpx.ConnectError("cannot resolve")
+    repo = AsyncMock(spec=WebhookRepository)
+    client, seen = _client(204)
+    with pytest.raises(httpx.ConnectError):
+        await deliver_webhook(repo, _sub(), _notif(), "social", client, final_attempt=False)
+    assert seen == []
+    repo.record_failure.assert_not_awaited()
 
 
 # --- celery task config -----------------------------------------------------

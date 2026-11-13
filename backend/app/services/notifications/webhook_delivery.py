@@ -18,9 +18,11 @@ from typing import Any, Literal
 import httpx
 import structlog
 
+from app.core.config import get_settings
 from app.models.notification import Notification
 from app.models.webhook import WebhookSubscription
 from app.repositories.webhook_repo import WebhookRepository
+from app.services.notifications.webhook_guard import is_blocked_destination
 
 logger = structlog.get_logger(__name__)
 
@@ -81,7 +83,8 @@ async def deliver_webhook(
     @param client HTTP client (no redirects followed).
     @param final_attempt True when Celery will not retry again; a retryable
         error then counts as a failure before being re-raised.
-    @return ``delivered``, ``failed`` (4xx) or ``disabled`` (4xx hit threshold).
+    @return ``delivered``, ``failed`` (4xx or blocked non-public destination)
+        or ``disabled`` (failure threshold hit).
     @raises httpx.HTTPError on 5xx, timeouts or transport errors (retryable).
     """
     body = json.dumps(build_payload(notification, category), separators=(",", ":"))
@@ -91,6 +94,9 @@ async def deliver_webhook(
     }
     log = logger.bind(webhook_id=str(sub.id), notification_id=str(notification.id))
     try:
+        if await is_blocked_destination(sub.url, get_settings().webhook_allowed_hosts):
+            log.warning("notif.channel.failed", channel="webhook", reason="blocked_destination")
+            return await _record_failure(repo, sub, log)
         resp = await client.post(sub.url, content=body, headers=headers)
         if resp.status_code >= 500:
             raise httpx.HTTPStatusError(
