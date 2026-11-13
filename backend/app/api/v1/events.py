@@ -118,6 +118,22 @@ async def list_events(
     )
 
 
+@router.get("/feed.ics")
+async def export_feed_ical(
+    start: datetime | None = Query(None, description="Range start (UTC)"),
+    end: datetime | None = Query(None, description="Range end (UTC)"),
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> Response:
+    """@brief Export the user's full event feed as .ics."""
+    body = await service.export_feed_ical(user.id, start=start, end=end)
+    return Response(
+        content=body,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
+    )
+
+
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(
     event_id: uuid.UUID,
@@ -226,22 +242,6 @@ async def export_event_ical(
         content=body,
         media_type="text/calendar",
         headers={"Content-Disposition": f'attachment; filename="event-{event_id}.ics"'},
-    )
-
-
-@router.get("/feed.ics")
-async def export_feed_ical(
-    start: datetime | None = Query(None, description="Range start (UTC)"),
-    end: datetime | None = Query(None, description="Range end (UTC)"),
-    user: User = Depends(get_current_user),
-    service: EventService = Depends(_build_service),
-) -> Response:
-    """@brief Export the user's full event feed as .ics."""
-    body = await service.export_feed_ical(user.id, start=start, end=end)
-    return Response(
-        content=body,
-        media_type="text/calendar",
-        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
     )
 
 

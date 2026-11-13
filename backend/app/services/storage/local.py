@@ -10,8 +10,9 @@ characters of the key filename are used as a two-level directory prefix:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import cast
+from typing import IO, cast
 
 import aiofiles  # type: ignore[import-untyped]
 import structlog
@@ -80,6 +81,32 @@ class LocalStorageBackend:
                 return cast(bytes, await f.read())
         except OSError as exc:
             raise StorageError(f"Failed to read key {key}: {exc}") from exc
+
+    async def get_stream(self, key: str, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
+        """@brief Yield file bytes in chunks."""
+        path = self._resolve(key)
+        if not path.exists():
+            raise StorageKeyNotFoundError(key)
+        try:
+            async with aiofiles.open(path, "rb") as f:
+                while chunk := await f.read(chunk_size):
+                    yield cast(bytes, chunk)
+        except OSError as exc:
+            raise StorageError(f"Failed to read key {key}: {exc}") from exc
+
+    async def put_file(
+        self, key: str, fileobj: IO[bytes], content_type: str, chunk_size: int = 1024 * 1024
+    ) -> None:
+        """@brief Copy a file object to disk in chunks."""
+        path = self._resolve(key)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            async with aiofiles.open(path, "wb") as f:
+                while chunk := fileobj.read(chunk_size):
+                    await f.write(chunk)
+            logger.debug("storage_put_file", key=key)
+        except OSError as exc:
+            raise StorageError(f"Failed to write key {key}: {exc}") from exc
 
     async def delete(self, key: str) -> None:
         """@brief Remove the file from disk. No-op if already missing."""

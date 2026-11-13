@@ -10,6 +10,7 @@ root level (``/healthz``) in ``main.py`` for Docker HEALTHCHECK compatibility.
 from fastapi import APIRouter
 
 from app.api.v1.admin import router as admin_router
+from app.api.v1.admin_ai import router as admin_ai_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_sso import router as admin_sso_router
@@ -52,11 +53,11 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
-api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(oauth_admin_router)
 api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
+api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(plugins_router)
 api_v1_router.include_router(auth_router)
@@ -69,6 +70,8 @@ api_v1_router.include_router(export_router)
 api_v1_router.include_router(calendar_subscriptions_router)
 api_v1_router.include_router(galleries_router)
 api_v1_router.include_router(home_router)
+# Before users_router so /users/blocked is not captured by /users/{user_id}.
+api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
