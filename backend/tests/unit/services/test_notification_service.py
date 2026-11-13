@@ -28,6 +28,9 @@ def _build(prefs: dict | None = None):
     settings_repo = AsyncMock(spec=SettingsRepository)
     row = MagicMock()
     row.notification_prefs = prefs or {}
+    row.dnd_schedule = None
+    row.dnd_until = None
+    row.dnd_timezone = "UTC"
     settings_repo.get_or_create.return_value = row
     dispatcher = AsyncMock(spec=Dispatcher)
     notif = MagicMock(spec=Notification)
@@ -111,6 +114,9 @@ class TestWrappers:
         settings_repo = AsyncMock(spec=SettingsRepository)
         row = MagicMock()
         row.notification_prefs = {}
+        row.dnd_schedule = None
+        row.dnd_until = None
+        row.dnd_timezone = "UTC"
         settings_repo.get_or_create.return_value = row
         repo.upsert_grouped.return_value = MagicMock(spec=Notification)
         disp = AsyncMock(spec=Dispatcher)
@@ -118,3 +124,50 @@ class TestWrappers:
             svc = NotificationService(repo, settings_repo, COMMUNITY_ID)
         await svc.notify(USER_ID, "system", PAYLOAD)
         disp.dispatch.assert_awaited_once()
+
+
+class TestDndGating:
+    async def test_snoozed_suppresses_external_channels(self):
+        from datetime import UTC, datetime, timedelta
+
+        svc, repo, dispatcher, _ = _build()
+        row = svc._settings_repo.get_or_create.return_value
+        row.dnd_until = datetime.now(UTC) + timedelta(hours=1)
+        await svc.notify(USER_ID, "mention", PAYLOAD)
+        eff = dispatcher.dispatch.call_args.args[2]
+        assert eff["inapp"] is True
+        assert not (eff["email"] or eff["push"] or eff["toast"])
+
+    async def test_bypass_type_not_suppressed(self):
+        from datetime import UTC, datetime, timedelta
+
+        svc, repo, dispatcher, _ = _build()
+        row = svc._settings_repo.get_or_create.return_value
+        row.dnd_until = datetime.now(UTC) + timedelta(hours=1)
+        await svc.notify(USER_ID, "system", PAYLOAD)
+        eff = dispatcher.dispatch.call_args.args[2]
+        assert eff["email"] is True or eff["push"] is True or eff["toast"] is True
+
+
+class TestSnoozeMethods:
+    async def test_set_dnd_snooze_clear(self):
+        from datetime import UTC, datetime
+
+        svc, *_ = _build()
+        repo = svc._settings_repo
+        repo.update.return_value = MagicMock(
+            notification_prefs={},
+            dnd_schedule=None,
+            dnd_until=None,
+            dnd_timezone="UTC",
+            digest_cadence={},
+        )
+        await svc.set_dnd(USER_ID, {"mon": []}, "UTC")
+        repo.update.assert_awaited_with(
+            USER_ID, {"dnd_schedule": {"mon": []}, "dnd_timezone": "UTC"}
+        )
+        until = datetime(2026, 1, 1, tzinfo=UTC)
+        await svc.snooze(USER_ID, until)
+        repo.update.assert_awaited_with(USER_ID, {"dnd_until": until})
+        await svc.clear_snooze(USER_ID)
+        repo.update.assert_awaited_with(USER_ID, {"dnd_until": None})
