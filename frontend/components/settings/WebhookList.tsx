@@ -37,7 +37,10 @@ export function WebhookList() {
       updateWebhook(w.id, { enabled: !w.enabled }),
     onSuccess: refresh,
   });
-  const remove = useMutation({ mutationFn: deleteWebhook, onSuccess: refresh });
+  const remove = useMutation({
+    mutationFn: (id: string) => deleteWebhook(id),
+    onSuccess: refresh,
+  });
 
   const save = async (form: WebhookForm) => {
     if (editing && editing !== "new") {

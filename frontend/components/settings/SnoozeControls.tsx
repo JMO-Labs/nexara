@@ -29,8 +29,14 @@ export function SnoozeControls({ until }: { until: string | null }) {
   const qc = useQueryClient();
   const [custom, setCustom] = useState("");
   const done = () => qc.invalidateQueries({ queryKey: PREFS_KEY });
-  const set = useMutation({ mutationFn: snooze, onSuccess: done });
-  const clear = useMutation({ mutationFn: clearSnooze, onSuccess: done });
+  const set = useMutation({
+    mutationFn: (d: string) => snooze(d),
+    onSuccess: done,
+  });
+  const clear = useMutation({
+    mutationFn: () => clearSnooze(),
+    onSuccess: done,
+  });
   const active = until !== null && new Date(until) > new Date();
 
   return (
