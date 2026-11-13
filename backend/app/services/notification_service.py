@@ -8,7 +8,7 @@ Respects user notification preferences and mutes.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -25,7 +25,7 @@ from app.schemas.notification import (
     NotificationResponse,
     UnreadCountResponse,
 )
-from app.services.notifications import coalescer, registry
+from app.services.notifications import coalescer, dnd, registry
 from app.services.notifications.api_helpers import (
     build_prefs_update,
     group_by_category,
@@ -143,6 +143,10 @@ class NotificationService:
 
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
         eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})
+        in_dnd_now = dnd.in_dnd(
+            settings.dnd_schedule, settings.dnd_until, settings.dnd_timezone, datetime.now(UTC)
+        )
+        eff = dnd.gate_channels(eff, type_, in_dnd_now)
         notification = await self._notification_repo.upsert_grouped(
             user_id,
             type,
@@ -251,6 +255,26 @@ class NotificationService:
         if data:
             row = await self._settings_repo.update(user_id, data)
         return NotificationPreferences.model_validate(row)
+
+    async def set_dnd(
+        self, user_id: uuid.UUID, schedule: dict[str, Any] | None, tz: str
+    ) -> NotificationPreferences:
+        """@brief Set the weekly DnD schedule and its timezone."""
+        await self._settings_repo.get_or_create(user_id, self._community_id)
+        row = await self._settings_repo.update(
+            user_id, {"dnd_schedule": schedule, "dnd_timezone": tz}
+        )
+        return NotificationPreferences.model_validate(row)
+
+    async def snooze(self, user_id: uuid.UUID, until: datetime) -> None:
+        """@brief Snooze external channels until ``until``."""
+        await self._settings_repo.get_or_create(user_id, self._community_id)
+        await self._settings_repo.update(user_id, {"dnd_until": until})
+
+    async def clear_snooze(self, user_id: uuid.UUID) -> None:
+        """@brief End any active snooze."""
+        await self._settings_repo.get_or_create(user_id, self._community_id)
+        await self._settings_repo.update(user_id, {"dnd_until": None})
 
     async def list_active(self, user_id: uuid.UUID, limit: int = 20) -> list[Notification]:
         """@brief List non-dismissed notifications, newest first."""
