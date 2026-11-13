@@ -16,6 +16,9 @@ overwrites existing files (delete any stray `test/widget_test.dart` it adds).
     flutter build apk
     flutter build ios --no-codesign
 
+Full build, server configuration and push (FCM) setup guide:
+[docs/docs/mobile.md](../docs/docs/mobile.md).
+
 ## CI / release pipeline
 
 - **Flutter pin**: `mobile/.flutter-version` is the source of truth. GitHub
