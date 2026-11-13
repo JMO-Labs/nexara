@@ -307,7 +307,7 @@ class PostRepository(BaseRepository[Post]):
 
         @param prompt_id Prompt UUID to filter replies.
         @param limit Maximum number of posts to return.
-        @return List of dicts with post data and media_ids list.
+        @return List of dicts with id, visibility, subgroup_id and media_ids.
         """
         stmt = (
             self._base_query()
@@ -337,6 +337,8 @@ class PostRepository(BaseRepository[Post]):
         return [
             {
                 "id": p.id,
+                "visibility": p.visibility,
+                "subgroup_id": p.subgroup_id,
                 "media_ids": media_map.get(p.id, []),
             }
             for p in posts

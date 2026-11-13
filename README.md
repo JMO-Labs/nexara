@@ -6,9 +6,13 @@
 [![Python](https://img.shields.io/badge/python-3.12-3776ab?logo=python&logoColor=white)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-25-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-latest-blue)](https://jmo-labs.github.io/nexara)
+[![Build Status](https://github.com/JMO-Labs/nexara/actions/workflows/docs-deploy.yml/badge.svg)](https://github.com/JMO-Labs/nexara/actions/workflows/docs-deploy.yml)
 [![Security](https://img.shields.io/badge/security-passing-brightgreen)](https://gitlab.com/richardsoto1010/nexara/-/pipelines)
 
 ---
+
+[View Documentation](https://jmo-labs.github.io/nexara) | [Report Issues](https://github.com/JMO-Labs/nexara/issues) | [Contributing Guide](https://jmo-labs.github.io/nexara/developer/contributing/)
 
 A modern, fast, and attractive platform for small communities (families, clubs,
 groups) to share events, photos, messages, and more. Self-hosted first,
@@ -34,7 +38,7 @@ container-native, and scaleable to Kubernetes.
 
 | Layer          | Technology                                    |
 | -------------- | --------------------------------------------- |
-| Frontend       | Nuxt 3, Tailwind CSS, Flowbite, Pinia         |
+| Frontend       | Next.js 16, React 19, Tailwind v4, shadcn/ui  |
 | Backend        | FastAPI, SQLAlchemy, Celery, Alembic           |
 | Database       | PostgreSQL 16+                                 |
 | Cache/Pub-Sub  | Valkey (Redis-compatible)                      |
@@ -65,11 +69,13 @@ uvicorn app.main:app --reload --port 8000
 cd frontend && npm install && npm run dev
 ```
 
-See the [Development Guide](docs/docs/development.md) for architecture details.
+See the [Getting Started](docs/docs/getting-started.md) walkthrough and the
+[Development Guide](docs/docs/development.md) for architecture details.
 
 ## Documentation
 
-Full documentation is published to GitLab Pages on every push to `main`:
+Full documentation is published at <https://jmo-labs.github.io/nexara>
+(GitHub Pages) and mirrored on GitLab Pages on every push to `main`:
 
 - **Project Docs** -- MkDocs Material site
 - **API Reference** -- Doxygen-generated Python backend docs
@@ -98,6 +104,7 @@ The GitLab CI/CD pipeline automates quality, security, and delivery:
 | --------------------- | ------------------------------------- |
 | Docker Compose        | `deploy/docker-compose.yml` (primary) |
 | Kubernetes            | Helm chart in `deploy/helm/nexara/`   |
+| Docs site             | GitHub Pages (MkDocs Material)        |
 | unRAID                | Community Applications template       |
 
 ## License
