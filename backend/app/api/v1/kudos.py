@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, get_dispatcher
 from app.models.user import User
 from app.repositories.kudos_repo import KudosRepository
 from app.repositories.notification_repo import NotificationRepository
@@ -22,7 +22,6 @@ from app.repositories.user_repo import UserRepository
 from app.schemas.kudos import KudosCreate, KudosList, KudosResponse
 from app.services.kudos_service import KudosService
 from app.services.notification_service import NotificationService
-from app.services.realtime.event_bus import event_bus
 
 router = APIRouter(prefix="/kudos", tags=["kudos"])
 
@@ -34,7 +33,7 @@ def _build_service(
     """@brief Build KudosService with injected dependencies."""
     community_id = uuid.UUID(settings.COMMUNITY_ID)
     notif = NotificationService(
-        NotificationRepository(db), SettingsRepository(db), community_id, event_bus=event_bus
+        NotificationRepository(db), SettingsRepository(db), community_id, dispatcher=get_dispatcher()
     )
     return KudosService(
         KudosRepository(db), UserRepository(db), SubgroupRepository(db), notif, community_id

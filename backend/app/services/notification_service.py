@@ -85,8 +85,13 @@ class NotificationService:
         self._notification_repo = notification_repo
         self._settings_repo = settings_repo
         self._community_id = community_id
-        if dispatcher is None and event_bus is not None:
-            dispatcher = Dispatcher(event_bus)
+        if dispatcher is None:
+            if event_bus is not None:
+                dispatcher = Dispatcher(event_bus)
+            else:
+                from app.core.dependencies import get_dispatcher
+
+                dispatcher = get_dispatcher()
         self._dispatcher = dispatcher
 
     async def notify(
@@ -134,8 +139,7 @@ class NotificationService:
             group_key=None,
             actor_id=actor_id,
         )
-        if self._dispatcher is not None:
-            await self._dispatcher.dispatch(notification, type_, dict(eff))
+        await self._dispatcher.dispatch(notification, type_, dict(eff))
         return notification
 
     async def list_for_user(

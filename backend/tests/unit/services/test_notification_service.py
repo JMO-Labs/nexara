@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -90,4 +90,20 @@ class TestWrappers:
         assert await svc.dismiss_all(USER_ID) == 3
 
     def test_notify_mentions_removed(self):
-        assert not hasattr(NotificationService, "notify_mentions")
+        import importlib
+
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("app.services.mention_notify")
+
+    async def test_default_dispatcher_used_without_event_bus(self):
+        repo = AsyncMock(spec=NotificationRepository)
+        settings_repo = AsyncMock(spec=SettingsRepository)
+        row = MagicMock()
+        row.notification_prefs = {}
+        settings_repo.get_or_create.return_value = row
+        repo.upsert_grouped.return_value = MagicMock(spec=Notification)
+        disp = AsyncMock(spec=Dispatcher)
+        with patch("app.core.dependencies.get_dispatcher", return_value=disp):
+            svc = NotificationService(repo, settings_repo, COMMUNITY_ID)
+        await svc.notify(USER_ID, "system", PAYLOAD)
+        disp.dispatch.assert_awaited_once()
