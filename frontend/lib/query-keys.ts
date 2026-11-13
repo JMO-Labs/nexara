@@ -81,6 +81,7 @@ export const qk = {
       ["search", q, scope ?? "all"] as const,
   },
   admin: {
+    ai: () => ["admin", "ai"] as const,
     users: (filters?: Record<string, unknown>) =>
       ["admin", "users", filters ?? {}] as const,
     branding: () => ["admin", "branding"] as const,
