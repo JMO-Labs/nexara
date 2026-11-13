@@ -138,3 +138,18 @@ ai_budget_exceeded_total: Counter = Counter(
     "Times the daily AI budget blocked a call",
     ["community_id"],
 )
+
+# ── Data export ───────────────────────────────────────────────────────────
+
+export_downloads_total: Counter = Counter(
+    "nexara_export_downloads_total",
+    "Export download attempts by outcome",
+    ["status"],
+)
+"""@brief Counter of export downloads (success, expired, not_found)."""
+
+export_cleanup_total: Counter = Counter(
+    "nexara_export_cleanup_total",
+    "Total expired exports deleted by the cleanup task",
+)
+"""@brief Counter incremented by the number of exports deleted per run."""
