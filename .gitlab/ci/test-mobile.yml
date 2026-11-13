@@ -5,7 +5,7 @@
 
 test:mobile:
   stage: test
-  image: ghcr.io/cirruslabs/flutter:stable
+  image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
   rules:
     - changes:
         - mobile/**/*
@@ -13,6 +13,7 @@ test:mobile:
   script:
     - cd mobile
     - flutter pub get
+    - dart format --output=none --set-exit-if-changed .
     - flutter analyze
     - flutter test
 
@@ -21,7 +22,7 @@ test:mobile:
 # it never overwrites existing ones. Stray template files in lib/ and test/ are removed.
 build:mobile-apk:
   stage: test
-  image: ghcr.io/cirruslabs/flutter:stable
+  image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
   rules:
     - changes:
         - mobile/**/*
@@ -32,7 +33,58 @@ build:mobile-apk:
     - git clean -fdq lib test
     - flutter pub get
     - flutter build apk --debug
+    # No signing env present: exercises the debug-signing fallback.
+    - flutter build apk --release
   artifacts:
     paths:
       - mobile/build/app/outputs/flutter-apk/app-debug.apk
     expire_in: 1 week
+
+# Signed release AAB: tag-only, protected refs only. Secrets are CI variables
+# (protected + masked); see mobile/README.md for names.
+build:mobile-aab:
+  stage: build
+  image: ghcr.io/cirruslabs/flutter:$FLUTTER_VERSION
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/ && $CI_COMMIT_REF_PROTECTED == "true"
+  script:
+    - test -n "$NEXARA_KEYSTORE_BASE64" || { echo "NEXARA_KEYSTORE_BASE64 not set"; exit 1; }
+    - cd mobile
+    - flutter create . --platforms android --org dev.jmolabs --project-name nexara_mobile
+    - git clean -fdq lib test
+    - flutter pub get
+    - echo "$NEXARA_KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+    - export NEXARA_KEYSTORE_PATH=upload-keystore.jks
+    - flutter build appbundle --release
+  after_script:
+    - rm -f mobile/android/upload-keystore.jks
+  artifacts:
+    paths:
+      - mobile/build/app/outputs/bundle/release/app-release.aab
+    expire_in: 30 days
+
+.fastlane:
+  stage: release
+  image: ruby:3.3
+  needs: ["build:mobile-aab"]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/ && $CI_COMMIT_REF_PROTECTED == "true"
+      when: manual
+      allow_failure: true
+
+fastlane:android-beta:
+  extends: .fastlane
+  script:
+    - cd mobile
+    - gem install fastlane --no-document
+    - fastlane android beta
+
+# iOS needs a macOS runner (tag via IOS_RUNNER_TAG at project level).
+fastlane:ios-beta:
+  extends: .fastlane
+  image: null
+  needs: []
+  tags: [macos]
+  script:
+    - cd mobile
+    - fastlane ios beta

@@ -1,0 +1,37 @@
+# @file mobile/fastlane/Fastfile
+# @brief Beta distribution lanes: Play internal track (Android), TestFlight (iOS).
+# Credentials come from CI variables only; see mobile/README.md.
+
+default_platform(:android)
+
+platform :android do
+  desc "Upload the signed AAB to the Play internal track"
+  lane :beta do
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      package_name: "dev.jmolabs.nexara_mobile",
+      json_key_data: ENV.fetch("PLAY_JSON_KEY_DATA"),
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
+
+platform :ios do
+  desc "Build a signed IPA and upload it to TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_CONTENT")
+    )
+    sh("flutter", "build", "ipa", "--release", "--export-options-plist=ios/ExportOptions.plist")
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "../build/ios/ipa/nexara_mobile.ipa",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
