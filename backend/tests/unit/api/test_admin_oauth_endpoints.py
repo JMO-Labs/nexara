@@ -326,3 +326,54 @@ class TestAdminOAuthDiscover:
             assert resp.status_code == 200
             data = resp.json()
             assert "authorization_endpoint" in data
+
+
+class TestAdminOAuthGroupMappingPreview:
+    """@brief GET /api/v1/admin/oauth/providers/{id}/group-mapping-preview tests."""
+
+    @pytest.mark.asyncio
+    async def test_preview_returns_entries(self, test_app, admin_override):
+        """Preview resolves the provider mapping for sample groups."""
+        provider = MagicMock()
+        provider.claim_mapping = {"group_mapping": {}}
+        entries = [
+            {
+                "group": "eng",
+                "subgroup_id": None,
+                "role": "admin",
+                "subgroup_exists": None,
+                "matched": True,
+            }
+        ]
+        with (
+            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls,
+            patch(
+                "app.api.v1.admin_oauth.preview_group_mapping",
+                new_callable=AsyncMock,
+                return_value=entries,
+            ) as preview,
+        ):
+            repo_cls.return_value.get_by_id = AsyncMock(return_value=provider)
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get(
+                    f"/api/v1/admin/oauth/providers/{uuid.uuid4()}/group-mapping-preview",
+                    params={"groups": ["eng"]},
+                )
+
+        assert resp.status_code == 200
+        assert resp.json() == {"entries": entries}
+        assert preview.await_args.args[3] == ["eng"]
+
+    @pytest.mark.asyncio
+    async def test_preview_unknown_provider_returns_404(self, test_app, admin_override):
+        """Preview for a missing provider yields the not-found envelope."""
+        with patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls:
+            repo_cls.return_value.get_by_id = AsyncMock(return_value=None)
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get(
+                    f"/api/v1/admin/oauth/providers/{uuid.uuid4()}/group-mapping-preview"
+                )
+
+        assert resp.status_code == 404

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.dependencies import get_current_user, get_db, get_dispatcher, require_role
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
@@ -48,6 +48,7 @@ def _build_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=community_id,
+        dispatcher=get_dispatcher(),
     )
     return PromptService(
         prompt_repo=PromptRepository(db),
