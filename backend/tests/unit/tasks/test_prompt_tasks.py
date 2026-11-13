@@ -78,11 +78,11 @@ async def test_seed_async_skips_existing_and_inserts_new():
     with (
         patch.object(prompt_tasks, "async_session_factory", _factory(session)),
         patch.object(prompt_tasks, "_community_id", return_value=uuid.uuid4()),
-        patch("app.models.prompt.Prompt") as prompt_cls,
     ):
         result = await prompt_tasks._seed_builtin_prompts_async(entries)
     assert result == {"inserted": 1}
-    session.add.assert_called_once_with(prompt_cls.return_value)
-    assert prompt_cls.call_args.kwargs["title"] == "B"
-    assert "id" not in prompt_cls.call_args.kwargs
+    session.add.assert_called_once()
+    added = session.add.call_args.args[0]
+    assert added.title == "B"
+    assert added.source == "builtin"
     session.commit.assert_awaited_once()
