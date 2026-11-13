@@ -20,8 +20,11 @@ from app.repositories.chat_repo import (
     ChatChannelRepository,
     ChatMessageRepository,
 )
-from app.services.chat_helpers import CHAT_RATE_LIMIT_PER_MINUTE
-from app.services.chat_service import ChatService, serialize_message
+from app.services.chat_service import (
+    CHAT_RATE_LIMIT_PER_MINUTE,
+    ChatService,
+    serialize_message,
+)
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 USER_ID = uuid.uuid4()

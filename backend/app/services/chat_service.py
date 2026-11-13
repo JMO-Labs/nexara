@@ -34,14 +34,23 @@ from app.repositories.chat_repo import (
 )
 from app.services.activity_publish import record_activity
 from app.services.chat_helpers import (
-    CHAT_PUBSUB_CHANNEL_PREFIX,  # noqa: F401  (re-export)
-    channel_pubsub_name,  # noqa: F401  (re-export)
+    CHAT_PUBSUB_CHANNEL_PREFIX,
+    CHAT_RATE_LIMIT_PER_MINUTE,
+    channel_pubsub_name,
     serialize_message,
 )
 from app.services.chat_internals import ChatInternalsMixin
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
+
+__all__ = [
+    "CHAT_PUBSUB_CHANNEL_PREFIX",
+    "CHAT_RATE_LIMIT_PER_MINUTE",
+    "ChatService",
+    "channel_pubsub_name",
+    "serialize_message",
+]
 
 
 class ChatService(ChatInternalsMixin):

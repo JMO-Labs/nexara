@@ -10,7 +10,7 @@ from typing import Any
 
 from app.models.chat import ChatMessage
 from app.models.user import User
-from app.repositories.chat_repo import TOMBSTONE_CONTENT
+from app.repositories.chat_message_repo import TOMBSTONE_CONTENT
 
 CHAT_RATE_LIMIT_PER_MINUTE = 30
 """@brief Maximum messages per user per 60-second window."""
