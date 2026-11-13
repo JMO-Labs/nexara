@@ -133,4 +133,3 @@ class CommentsMixin(PostServiceBase):
             )
 
         return comment_dict
-

@@ -229,4 +229,3 @@ class PostService(CommentsMixin, ReactionsMixin):
         await invalidate_search_cache_for_community(self._community_id)
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("post", post_id)
-

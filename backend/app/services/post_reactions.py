@@ -165,4 +165,3 @@ class ReactionsMixin(PostServiceBase):
         )
 
         return ReactionResponse(action=action, emoji=emoji, count=count)
-
