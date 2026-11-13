@@ -9,6 +9,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button, Checkbox, Option, Select, Skeleton } from "@/components/ui";
 import { useReportAction, useReports } from "@/hooks/useModeration";
 import type { ReportActionType } from "@/lib/api/moderation";
+import { useConfirmDialog } from "@/stores/confirmDialog";
+import { useToasts } from "@/stores/toasts";
 
 const ACTIONS: { value: ReportActionType; label: string }[] = [
   { value: "dismiss", label: "Dismiss" },
@@ -18,10 +20,30 @@ const ACTIONS: { value: ReportActionType; label: string }[] = [
   { value: "ban_user", label: "Ban" },
 ];
 
+const DESTRUCTIVE = new Set<ReportActionType>(["delete_content", "ban_user"]);
+
+/**
+ * @brief Ask for confirmation when an action is destructive.
+ * @param action chosen action
+ * @param count number of reports affected
+ * @return true when the action may proceed
+ */
+function confirmAction(action: ReportActionType, count: number) {
+  if (!DESTRUCTIVE.has(action)) return Promise.resolve(true);
+  const label = ACTIONS.find((a) => a.value === action)?.label ?? action;
+  return useConfirmDialog.getState().confirm({
+    title: `${label} for ${count} report${count === 1 ? "" : "s"}?`,
+    message: "This cannot be undone.",
+    confirmLabel: label,
+    tone: "danger",
+  });
+}
+
 /** @brief Moderation queue (admin). @return table element */
 export function ModerationQueue() {
   const { data, isLoading, isError } = useReports();
   const act = useReportAction();
+  const push = useToasts((s) => s.push);
   const [open, setOpen] = React.useState<string | null>(null);
   const [sel, setSel] = React.useState<Set<string>>(new Set());
   const [notes, setNotes] = React.useState<Record<string, string>>({});
@@ -41,11 +63,28 @@ export function ModerationQueue() {
       return n;
     });
 
+  const fail = () =>
+    push({ variant: "danger", message: "Moderation action failed." });
+
   const applyBatch = async (action: ReportActionType) => {
-    await Promise.all(
-      [...sel].map((id) => act.mutateAsync({ id, action, note: notes[id] })),
-    );
-    setSel(new Set());
+    if (!(await confirmAction(action, sel.size))) return;
+    try {
+      await Promise.all(
+        [...sel].map((id) => act.mutateAsync({ id, action, note: notes[id] })),
+      );
+      setSel(new Set());
+    } catch {
+      fail();
+    }
+  };
+
+  const applyRow = async (id: string, action: ReportActionType) => {
+    if (!(await confirmAction(action, 1))) return;
+    try {
+      await act.mutateAsync({ id, action, note: notes[id] });
+    } catch {
+      fail();
+    }
   };
 
   return (
@@ -133,11 +172,7 @@ export function ModerationQueue() {
                         label={`Action for ${r.id}`}
                         placeholder="Choose…"
                         onValueChange={(v) =>
-                          act.mutateAsync({
-                            id: r.id,
-                            action: v as ReportActionType,
-                            note: notes[r.id],
-                          })
+                          void applyRow(r.id, v as ReportActionType)
                         }
                       >
                         {ACTIONS.map((a) => (

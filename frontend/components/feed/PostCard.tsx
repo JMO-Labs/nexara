@@ -104,7 +104,11 @@ export function PostCard({
         </div>
       ) : null}
       {post.media.length > 0 ? (
-        <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
+        <PostMedia
+          media={post.media}
+          canReport={!isAuthor}
+          onClick={() => onOpen?.(post.id)}
+        />
       ) : null}
       <ReactionRow
         reactions={post.reactions}

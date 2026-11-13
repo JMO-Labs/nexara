@@ -57,3 +57,17 @@ describe("MessageItem bubbles", () => {
     expect(container.querySelector(".bg-surface")).not.toBeNull();
   });
 });
+
+describe("MessageItem report", () => {
+  it("shows Report for another user's message", () => {
+    render(<MessageItem message={base} />);
+    expect(screen.getByRole("button", { name: /report/i })).toBeInTheDocument();
+  });
+
+  it("hides Report for own and optimistic messages", () => {
+    const { rerender } = render(<MessageItem message={base} isSelf />);
+    expect(screen.queryByRole("button", { name: /report/i })).toBeNull();
+    rerender(<MessageItem message={{ ...base, id: "optimistic-1" }} />);
+    expect(screen.queryByRole("button", { name: /report/i })).toBeNull();
+  });
+});

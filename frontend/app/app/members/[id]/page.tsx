@@ -7,6 +7,8 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/ui";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
+import { BlockButton } from "@/components/common/BlockButton";
+import { useSession } from "@/stores/session";
 
 const TABS = [{ id: "galleries", label: "Galleries" }];
 
@@ -15,12 +17,19 @@ export default function MemberProfilePage() {
   const searchParams = useSearchParams();
   const userId = params.id as string;
   const currentTab = searchParams.get("tab") || "galleries";
+  const viewerId = useSession((s) => s.user?.id);
+  const isSelf = viewerId === userId;
 
   return (
     <div className="mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
-      <div>
-        <h1 className="text-3xl font-black tracking-tight">Member profile</h1>
-        <p className="text-sm text-ink/70">User ID: {userId}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight">Member profile</h1>
+          <p className="text-sm text-ink/70">User ID: {userId}</p>
+        </div>
+        {viewerId && !isSelf ? (
+          <BlockButton userId={userId} displayName="this member" />
+        ) : null}
       </div>
       <Tabs value={currentTab}>
         <div className="overflow-x-auto">
