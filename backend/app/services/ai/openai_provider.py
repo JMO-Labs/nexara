@@ -83,6 +83,13 @@ class OpenAIProvider(AIProvider):
         rin, _ = PRICING[EMBED_MODEL]
         return data["data"][0]["embedding"], cost_cents(tokens, 0, rin, 0.0), tokens
 
+    async def ping(self) -> None:
+        """@brief List models (no token cost) to verify the key and reachability."""
+        resp = await self._client.get(
+            f"{_BASE}/models", headers={"Authorization": f"Bearer {self._key}"}
+        )
+        resp.raise_for_status()
+
     async def count_tokens(self, text: str) -> CountResult:
         n = estimate_tokens(text)
         return n, 0.0, n

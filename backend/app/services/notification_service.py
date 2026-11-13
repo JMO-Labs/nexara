@@ -35,6 +35,7 @@ from app.services.notifications.api_helpers import (
 from app.services.notifications.dispatcher import Dispatcher
 from app.services.notifications.prefs import effective_channels
 from app.services.realtime.event_bus import EventBus
+from app.services.realtime.events import user_notification_dismissed
 
 logger = structlog.get_logger(__name__)
 
@@ -72,6 +73,8 @@ PREF_MAP = {
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
+    "data_export_ready": ("notif_system_inapp", "notif_system_email"),
+    "data_export_failed": ("notif_system_inapp", "notif_system_email"),
 }
 
 
@@ -101,6 +104,7 @@ class NotificationService:
         self._settings_repo = settings_repo
         self._community_id = community_id
         self._digest_repo = digest_repo
+        self._event_bus = event_bus
         if dispatcher is None:
             if event_bus is not None:
                 dispatcher = Dispatcher(event_bus)
@@ -292,8 +296,10 @@ class NotificationService:
         return await self._notification_repo.list_active(user_id, limit)
 
     async def dismiss(self, user_id: uuid.UUID, notification_id: uuid.UUID) -> None:
-        """@brief Dismiss one notification owned by the user."""
+        """@brief Dismiss one notification owned by the user; notifies their other tabs."""
         await self._notification_repo.dismiss(user_id, notification_id)
+        if self._event_bus is not None:
+            await self._event_bus.emit(user_notification_dismissed(user_id, [notification_id]))
 
     async def dismiss_all(self, user_id: uuid.UUID) -> int:
         """@brief Dismiss all active notifications; returns count."""

@@ -8,11 +8,15 @@ from app.tasks import notification_tasks as nt
 PAYLOAD = {"title": "T", "body": "B", "url": "/x"}
 
 
-def _run(subs: list, send_side_effect: Exception | None = None) -> tuple[dict, AsyncMock]:
+def _run(
+    subs: list,
+    send_side_effect: Exception | None = None,
+    community_id: object = ...,
+) -> tuple[dict, AsyncMock]:
     uid = uuid4()
     session_cm = MagicMock()
     session = MagicMock()
-    session.scalar = AsyncMock(return_value=uuid4())
+    session.scalar = AsyncMock(return_value=uuid4() if community_id is ... else community_id)
     session.commit = AsyncMock()
     session_cm.__aenter__ = AsyncMock(return_value=session)
     session_cm.__aexit__ = AsyncMock(return_value=False)
@@ -50,3 +54,9 @@ def test_invalid_uuid_skipped() -> None:
 def test_send_error_is_swallowed() -> None:
     result, _ = _run([MagicMock()], RuntimeError("boom"))
     assert result == {"status": "error", "count": 0}
+
+
+def test_skipped_when_user_has_no_community() -> None:
+    result, send = _run([MagicMock()], community_id=None)
+    assert result == {"status": "skipped", "count": 0}
+    send.assert_not_awaited()

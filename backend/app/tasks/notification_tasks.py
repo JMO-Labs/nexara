@@ -8,10 +8,12 @@ Routed to the ``notifications`` queue for high-priority delivery.
 from __future__ import annotations
 
 import asyncio
+import random
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+import apprise
 import structlog
 from celery import Task
 
@@ -19,6 +21,7 @@ from app.core.config import get_settings
 from app.db.session import async_session_factory
 from app.models.notification import Notification
 from app.models.user import User
+from app.repositories.apprise_repo import AppriseRepository
 from app.repositories.branding_repo import BrandingRepository
 from app.repositories.digest_repo import DigestRepository
 from app.repositories.push_repo import PushSubscriptionRepository
@@ -296,6 +299,49 @@ def digest_dispatch() -> int:
     return asyncio.run(_digest_dispatch_async(datetime.now(UTC)))
 
 
+class TransientDeliveryError(Exception):
+    """@brief Timeout/5xx-style failure that should be retried."""
+
+
+async def _apprise_deliver_async(
+    repo: AppriseRepository, url_id: uuid.UUID, title: str, body: str
+) -> str:
+    """
+    @brief Decrypt (via repo), notify through Apprise and record the outcome.
+
+    Apprise's ``notify`` returns only a bool, so ``False`` is treated as a
+    permanent (4xx-style) failure; raised exceptions (timeouts, connection
+    errors) are transient.
+
+    @return ``sent``, ``failed`` or ``skipped``.
+    @raises TransientDeliveryError on timeout/connection errors.
+    """
+    row = await repo.get(url_id)
+    if row is None or not row.enabled:
+        return "skipped"
+    apobj = apprise.Apprise()
+    apobj.add(row.apprise_url)
+    try:
+        ok = await asyncio.to_thread(apobj.notify, body=body, title=title)
+    except Exception as exc:
+        raise TransientDeliveryError(type(exc).__name__) from exc
+    if ok:
+        await repo.record_success(url_id)
+        return "sent"
+    count = await repo.record_failure(url_id)
+    logger.warning("notif.channel.failed", channel="apprise", url_id=str(url_id), failures=count)
+    return "failed"
+
+
+async def _apprise_deliver_run(url_id: uuid.UUID, title: str, body: str) -> str:
+    async with async_session_factory() as session:
+        try:
+            out = await _apprise_deliver_async(AppriseRepository(session), url_id, title, body)
+        finally:
+            await session.commit()
+        return out
+
+
 @celery_app.task(  # type: ignore[untyped-decorator]
     bind=True,
     name="app.tasks.notification_tasks.send_digest_email",
@@ -324,3 +370,43 @@ def send_digest_email(
     except Exception as exc:
         logger.exception("send_digest_email_failed", user_id=user_id, error=str(exc))
         raise self.retry(exc=exc)
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    bind=True,
+    name="app.tasks.notification_tasks.apprise_deliver",
+    max_retries=5,
+    queue="notifications",
+)
+def apprise_deliver(
+    self: Task, url_id: str, notification_id: str, title: str, body: str
+) -> dict[str, str]:
+    """
+    @brief Deliver one notification to one Apprise URL.
+
+    Transient errors retry with exponential backoff and jitter (max 5).
+
+    @param url_id AppriseURL UUID string.
+    @param notification_id Source notification UUID string (for logs).
+    @param title Message title.
+    @param body Message body.
+    @return Dict with ``status``.
+    """
+    try:
+        uid = uuid.UUID(url_id)
+    except ValueError:
+        logger.error("apprise_deliver_invalid_uuid", url_id=url_id)
+        return {"status": "skipped"}
+    try:
+        return {"status": asyncio.run(_apprise_deliver_run(uid, title, body))}
+    except TransientDeliveryError as exc:
+        logger.warning(
+            "notif.channel.failed",
+            channel="apprise",
+            notification_id=notification_id,
+            error=str(exc),
+        )
+        raise self.retry(
+            exc=exc,
+            countdown=random.uniform(0, min(2**self.request.retries * 30, 3600)),  # noqa: S311
+        ) from exc
