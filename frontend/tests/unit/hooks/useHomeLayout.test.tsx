@@ -15,7 +15,13 @@ vi.mock("@/lib/api/settings");
 vi.mock("@/lib/api/home");
 vi.mock("@/lib/auth/session", () => ({ getAccessToken: () => "t" }));
 
-const DEFAULT = ["upcoming-events", "my-groups", "media", "quick-actions"];
+const DEFAULT = [
+  "upcoming-events",
+  "my-groups",
+  "media",
+  "quick-actions",
+  "next-event-countdown",
+];
 
 function wrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -70,6 +76,7 @@ describe("useHomeLayout", () => {
       "upcoming-events",
       "my-groups",
       "quick-actions",
+      "next-event-countdown",
     ]);
     expect(result.current.hidden).toEqual(["my-groups"]);
   });
@@ -83,6 +90,7 @@ describe("useHomeLayout", () => {
         "media",
         "upcoming-events",
         "quick-actions",
+        "next-event-countdown",
       ]),
     );
     act(() => result.current.move(0, 1));
@@ -91,7 +99,13 @@ describe("useHomeLayout", () => {
     await waitFor(() => expect(homeApi.putHomeLayout).toHaveBeenCalled());
     expect(homeApi.putHomeLayout).toHaveBeenCalledTimes(1);
     expect(homeApi.putHomeLayout).toHaveBeenCalledWith({
-      order: ["media", "my-groups", "upcoming-events", "quick-actions"],
+      order: [
+        "media",
+        "my-groups",
+        "upcoming-events",
+        "quick-actions",
+        "next-event-countdown",
+      ],
       hidden: [],
     });
   });
