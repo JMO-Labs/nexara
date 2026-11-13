@@ -4,12 +4,14 @@
  * @brief Active conversation: header (back, title, details toggle), messages,
  *        typing indicator and composer. Optional details side pane.
  */
+import * as React from "react";
 import type { ComponentProps } from "react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Rows2, Rows3 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { MessageList } from "../MessageList";
-import { Composer } from "../Composer";
+import { Composer, type ComposerHandle } from "../Composer";
 import { TypingIndicator } from "../TypingIndicator";
+import { readDensity, writeDensity, type Density } from "./helpers";
 
 export interface ThreadPaneProps {
   title: string;
@@ -35,6 +37,18 @@ export function ThreadPane({
   typingCount,
   composer,
 }: ThreadPaneProps) {
+  const composerRef = React.useRef<ComposerHandle | null>(null);
+  // Persisted so the choice survives the per-channel remount (key={id}).
+  const [density, setDensityState] = React.useState<Density>(readDensity);
+  const setDensity = (d: Density) => {
+    setDensityState(d);
+    writeDensity(d);
+  };
+  const compact = density === "compact";
+  const startConversation = () => {
+    composerRef.current?.focus();
+    list.onStartConversation?.();
+  };
   return (
     <section
       aria-label={title}
@@ -53,10 +67,24 @@ export function ThreadPane({
           {title}
         </h2>
         <IconButton
+          aria-label={
+            compact ? "Use comfortable density" : "Use compact density"
+          }
+          aria-pressed={compact}
+          variant="ghost"
+          onClick={() => setDensity(compact ? "comfortable" : "compact")}
+        >
+          {compact ? (
+            <Rows3 className="size-5" aria-hidden="true" />
+          ) : (
+            <Rows2 className="size-5" aria-hidden="true" />
+          )}
+        </IconButton>
+        <IconButton
           aria-label={detailsOpen ? "Close thread panel" : "Open thread panel"}
           aria-pressed={detailsOpen}
           variant="ghost"
-          className="hidden md:inline-flex"
+          className="hidden lg:inline-flex"
           onClick={onToggleDetails}
         >
           <ChevronRight
@@ -65,22 +93,26 @@ export function ThreadPane({
           />
         </IconButton>
       </header>
-      <MessageList {...list} />
+      <MessageList
+        {...list}
+        density={density}
+        onStartConversation={startConversation}
+      />
       <TypingIndicator count={typingCount} />
-      <Composer {...composer} />
+      <Composer ref={composerRef} {...composer} />
     </section>
   );
 }
 
 /**
- * @brief Placeholder details column (desktop only).
+ * @brief Placeholder details column (lg and up only).
  * @return aside element
  */
 export function DetailsPane() {
   return (
     <aside
       aria-label="Details"
-      className="bg-surface hidden min-h-0 min-w-0 flex-col border-l border-border md:flex"
+      className="bg-surface hidden min-h-0 min-w-0 flex-col border-l border-border lg:flex"
     >
       <h2 className="shrink-0 border-b border-border px-4 py-3 text-sm font-semibold">
         Details
