@@ -46,6 +46,9 @@ async def _post_event_reminders() -> dict[str, int]:
                     "event_id": str(ev.id),
                     "gallery_id": str(gallery.id),
                     "event_title": ev.title,
+                    "gallery_title": gallery.title,
+                    "message": f"Share your photos from {ev.title}",
+                    "link": f"/app/galleries/{gallery.id}",
                 }
                 await notif.notify(
                     user_id=user_id,
@@ -77,7 +80,15 @@ async def _batch_notifications() -> dict[str, int]:
             )
             subscribers = await gallery_repo.list_subscribers(gallery.id)
             for user_id in subscribers:
-                payload = {"gallery_id": str(gallery.id), "new_items": count}
+                payload = {
+                    "gallery_id": str(gallery.id),
+                    "new_items": count,
+                    "gallery_title": gallery.title,
+                    "activity": "new_items",
+                    "actor_name": "",
+                    "message": f"{count} new items in {gallery.title}",
+                    "link": f"/app/galleries/{gallery.id}",
+                }
                 await notif.notify(
                     user_id=user_id,
                     type="gallery_activity",

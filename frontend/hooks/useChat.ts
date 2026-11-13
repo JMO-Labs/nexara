@@ -62,7 +62,7 @@ export function useCreateDm() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (peerId: string) => createOrGetDm(peerId),
-    successKey: "toasts.subgroups.member.added",
+    successKey: "toasts.chat.dmOpened",
     silentSuccess: true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.chat.dms() });
@@ -75,6 +75,7 @@ export function useDeleteDm() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (channelId: string) => deleteDmThread(channelId),
+    successKey: "toasts.chat.dmDeleted",
     onSuccess: (_void, channelId) => {
       qc.removeQueries({ queryKey: qk.chat.messages(channelId) });
       qc.invalidateQueries({ queryKey: qk.chat.dms() });
@@ -87,6 +88,7 @@ export function useEnsureSubgroupChannel() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (subgroupId: string) => ensureSubgroupChannel(subgroupId),
+    silentSuccess: true,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.chat.channels() }),
   });
 }

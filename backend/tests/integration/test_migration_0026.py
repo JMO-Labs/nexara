@@ -97,7 +97,7 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
     command.upgrade(cfg, PREV)
     with engine.begin() as c:  # a second community, so seeding is per community
         c.execute(text("INSERT INTO communities (id, name) VALUES (gen_random_uuid(), 'B')"))
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, REV)
 
     assert _current(engine) == {REV}
     assert _state(engine) == (set(TABLES), set(NOTIF))
@@ -123,6 +123,6 @@ def test_upgrade_downgrade_upgrade_and_seed_dedup(scratch_db) -> None:
     command.downgrade(cfg, PREV)
     assert _state(engine) == (set(), set())
 
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, REV)
     assert _state(engine) == (set(TABLES), set(NOTIF))
     assert _counts(engine) == (communities, tpl, fields)
