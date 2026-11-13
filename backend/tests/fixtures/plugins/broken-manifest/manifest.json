@@ -1,0 +1,10 @@
+{
+  "id": "broken-manifest",
+  "name": "Broken",
+  "version": "1.0",
+  "author": "x",
+  "min_core_version": "0.1.0",
+  "permissions": ["db_read", "teleport"],
+  "hooks": {"after_post_created": "a", "on_after_post_created": "b"},
+  "backend": {"routes": "missing.py"}
+}
