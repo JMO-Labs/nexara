@@ -103,6 +103,14 @@ async def test_claim_invalid_quantity_and_missing_item():
         await svc.claim_signup(uuid.uuid4(), uuid.uuid4(), 1, session)
 
 
+async def test_claim_on_item_without_signups_enabled_raises():
+    svc, item, *_, session, _ = _build(None)
+    with pytest.raises(AppError) as exc:
+        await svc.claim_signup(item.id, uuid.uuid4(), 1, session)
+    assert exc.value.status_code == 409
+    assert exc.value.code == "SIGNUP_NOT_ENABLED"
+
+
 async def test_release_restores_quantity_and_counter():
     svc, item, lst, _, _, list_repo, bus, _, session, _ = _build(3)
     uid = uuid.uuid4()
