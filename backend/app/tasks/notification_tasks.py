@@ -124,7 +124,7 @@ async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[
         return {"status": "sent", "count": len(subs)}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.notification_tasks.send_push_notification",
     max_retries=3,
@@ -153,7 +153,7 @@ def send_push_notification(self: Task, user_id: str, payload: dict[str, Any]) ->
         return {"status": "error", "count": 0}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.notification_tasks.send_email_notification",
     max_retries=3,
@@ -238,7 +238,7 @@ async def _apprise_deliver_run(url_id: uuid.UUID, title: str, body: str) -> str:
         return out
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.notification_tasks.apprise_deliver",
     max_retries=5,
