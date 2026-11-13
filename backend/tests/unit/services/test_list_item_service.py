@@ -187,3 +187,63 @@ async def test_create_with_real_registry_optional_fields_omitted(lst):
     item = await s.create(CID, lst.id, lst.owner_id, {"where": {"lat": 1, "lon": 2}})
     assert item.values == {"where": {"lat": 1.0, "lon": 2.0}}
     assert item.due_at is None and item.lat == 1.0
+
+
+async def test_owner_can_view_private_list(svc, lst):
+    s, items, _, _ = svc
+    lst.visibility = "private"
+    items.list_items_keyset.return_value = ([], None)
+    assert await s.list_items(CID, lst.id, lst.owner_id) == ([], None)
+
+
+async def test_subgroup_visibility(svc, lst):
+    s, items, _, _ = svc
+    sg = uuid.uuid4()
+    lst.visibility, lst.subgroup_id = "subgroup", sg
+    items.list_items_keyset.return_value = ([], None)
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=None)
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[uuid.uuid4()])
+    lst.subgroup_id = None
+    with pytest.raises(AuthorizationError):
+        await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[sg])
+    lst.subgroup_id = sg
+    assert await s.list_items(CID, lst.id, uuid.uuid4(), subgroup_ids=[sg]) == ([], None)
+
+
+async def test_missing_item_not_found(svc):
+    s, items, _, _ = svc
+    items.get_by_id.return_value = None
+    with pytest.raises(NotFoundError):
+        await s.update(CID, uuid.uuid4(), uuid.uuid4(), {})
+
+
+async def test_list_items_bad_cursor_is_validation_error(svc, lst):
+    s, items, _, _ = svc
+    items.list_items_keyset.side_effect = ValueError("bad cursor")
+    with pytest.raises(ValidationError, match="bad cursor"):
+        await s.list_items(CID, lst.id, uuid.uuid4(), cursor="zzz")
+
+
+async def test_create_non_owner_denied(svc, lst):
+    s, items, lists, _ = svc
+    with pytest.raises(AuthorizationError):
+        await s.create(CID, lst.id, uuid.uuid4(), {})
+    items.create.assert_not_awaited()
+    lists.increment_counters.assert_not_awaited()
+
+
+async def test_update_and_delete_non_owner_denied(svc, lst):
+    s, items, lists, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.id, item.list_id, item.values = uuid.uuid4(), lst.id, {}
+    items.get_by_id.return_value = item
+    other = uuid.uuid4()
+    with pytest.raises(AuthorizationError):
+        await s.update(CID, item.id, other, {"where": "y"})
+    with pytest.raises(AuthorizationError):
+        await s.delete(CID, item.id, other)
+    items.update.assert_not_awaited()
+    items.soft_delete.assert_not_awaited()
+    lists.increment_counters.assert_not_awaited()
