@@ -9,7 +9,8 @@ do not need to inherit from it, only provide the same method signatures.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from collections.abc import AsyncIterator
+from typing import IO, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -41,6 +42,31 @@ class StorageBackend(Protocol):
         @return Raw file bytes.
         @raises StorageKeyNotFoundError If the key does not exist.
         @raises StorageError On read failure.
+        """
+        ...
+
+    def get_stream(self, key: str, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
+        """
+        @brief Stream the object in chunks without loading it fully into memory.
+
+        @param key Storage key.
+        @param chunk_size Maximum bytes per chunk.
+        @return Async iterator of byte chunks.
+        @raises StorageKeyNotFoundError If the key does not exist.
+        """
+        ...
+
+    async def put_file(
+        self, key: str, fileobj: IO[bytes], content_type: str, chunk_size: int = 1024 * 1024
+    ) -> None:
+        """
+        @brief Store a binary file object chunk by chunk (no full read into memory).
+
+        @param key Storage key.
+        @param fileobj Readable binary file positioned at the start.
+        @param content_type MIME type of the file.
+        @param chunk_size Read size for the copy.
+        @raises StorageError On write failure.
         """
         ...
 
