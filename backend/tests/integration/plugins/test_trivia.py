@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.dependencies import get_current_user
+from app.core.exceptions import register_exception_handlers
 from app.models.plugin import Plugin
 from app.models.user import User
 from app.plugins.context import PluginContext
@@ -255,6 +256,7 @@ def test_celery_tasks_registered_and_executable():
 async def _client(ctx, user) -> AsyncClient:
     router = _load("router")
     app = FastAPI()
+    register_exception_handlers(app)  # AppError -> envelope (409 etc.)
     app.include_router(router.router, prefix="/api/v1/plugins/example-trivia")
     app.dependency_overrides[router.get_ctx] = lambda: ctx
     app.dependency_overrides[get_current_user] = lambda: user
