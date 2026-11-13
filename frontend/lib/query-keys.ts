@@ -24,6 +24,7 @@ export const qk = {
       ["feed", "infinite", filters ?? {}] as const,
     post: (id: string) => ["feed", "post", id] as const,
     comments: (postId: string) => ["feed", "post", postId, "comments"] as const,
+    activePrompts: () => ["feed", "active-prompts"] as const,
     promptPost: (id: string) => ["feed", "prompt-post", id] as const,
     promptResponses: (promptPostId: string) =>
       ["feed", "prompt-responses", promptPostId] as const,
@@ -81,6 +82,7 @@ export const qk = {
       ["search", q, scope ?? "all"] as const,
   },
   admin: {
+    ai: () => ["admin", "ai"] as const,
     users: (filters?: Record<string, unknown>) =>
       ["admin", "users", filters ?? {}] as const,
     branding: () => ["admin", "branding"] as const,
@@ -100,6 +102,9 @@ export const qk = {
     profile: () => ["settings", "profile"] as const,
     notifications: () => ["settings", "notifications"] as const,
     security: () => ["settings", "security"] as const,
+  },
+  kudos: {
+    wall: () => ["kudos", "wall"] as const,
   },
   home: {
     layout: () => ["home-layout"] as const,

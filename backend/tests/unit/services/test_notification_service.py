@@ -13,21 +13,24 @@ import pytest
 import app.services.notifications.types  # noqa: F401  (registers built-ins)
 from app.core.exceptions import AppError
 from app.models.notification import Notification
+from app.repositories.digest_repo import DigestRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.services.notification_service import NotificationService
 from app.services.notifications.dispatcher import Dispatcher
+from app.services.realtime.event_bus import EventBus
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 USER_ID = uuid.uuid4()
 PAYLOAD = {"message": "Hi", "actor_name": "Bob"}
 
 
-def _build(prefs: dict | None = None):
+def _build(prefs: dict | None = None, cadence: dict | None = None):
     repo = AsyncMock(spec=NotificationRepository)
     settings_repo = AsyncMock(spec=SettingsRepository)
     row = MagicMock()
     row.notification_prefs = prefs or {}
+    row.digest_cadence = cadence or {}
     row.dnd_schedule = None
     row.dnd_until = None
     row.dnd_timezone = "UTC"
@@ -35,7 +38,11 @@ def _build(prefs: dict | None = None):
     dispatcher = AsyncMock(spec=Dispatcher)
     notif = MagicMock(spec=Notification)
     repo.upsert_grouped.return_value = notif
-    svc = NotificationService(repo, settings_repo, COMMUNITY_ID, dispatcher=dispatcher)
+    digest = AsyncMock(spec=DigestRepository)
+    svc = NotificationService(
+        repo, settings_repo, COMMUNITY_ID, dispatcher=dispatcher, digest_repo=digest
+    )
+    svc.digest = digest  # type: ignore[attr-defined]
     return svc, repo, dispatcher, notif
 
 
@@ -114,6 +121,7 @@ class TestWrappers:
         settings_repo = AsyncMock(spec=SettingsRepository)
         row = MagicMock()
         row.notification_prefs = {}
+        row.digest_cadence = {}
         row.dnd_schedule = None
         row.dnd_until = None
         row.dnd_timezone = "UTC"
@@ -124,6 +132,48 @@ class TestWrappers:
             svc = NotificationService(repo, settings_repo, COMMUNITY_ID)
         await svc.notify(USER_ID, "system", PAYLOAD)
         disp.dispatch.assert_awaited_once()
+
+
+class TestDigestQueueing:
+    """@brief Non-instant cadence queues email instead of dispatching it."""
+
+    async def test_hourly_queues_and_disables_email(self):
+        svc, _, dispatcher, notif = _build(cadence={"mention": "hourly"})
+        await svc.notify(USER_ID, "mention", PAYLOAD)
+        svc.digest.enqueue.assert_awaited_once_with(USER_ID, "mention", notif.id)
+        assert dispatcher.dispatch.call_args.args[2]["email"] is False
+
+    async def test_instant_dispatches_email_inline(self):
+        svc, _, dispatcher, _ = _build()
+        await svc.notify(USER_ID, "mention", PAYLOAD)
+        svc.digest.enqueue.assert_not_awaited()
+        assert dispatcher.dispatch.call_args.args[2]["email"] is True
+
+    async def test_off_cadence_not_queued(self):
+        svc, _, _, _ = _build(cadence={"mention": "off"})
+        await svc.notify(USER_ID, "mention", PAYLOAD)
+        svc.digest.enqueue.assert_not_awaited()
+
+    async def test_email_disabled_not_queued(self):
+        svc, _, _, _ = _build(prefs={"mention": {"email": False}}, cadence={"mention": "daily"})
+        await svc.notify(USER_ID, "mention", PAYLOAD)
+        svc.digest.enqueue.assert_not_awaited()
+
+
+class TestDispatcherResolution:
+    """@brief Dispatcher fallback when none is injected."""
+
+    def test_builds_dispatcher_from_event_bus(self):
+        bus = MagicMock(spec=EventBus)
+        with patch("app.services.notification_service.Dispatcher") as ctor:
+            svc = NotificationService(
+                AsyncMock(spec=NotificationRepository),
+                AsyncMock(spec=SettingsRepository),
+                COMMUNITY_ID,
+                event_bus=bus,
+            )
+        ctor.assert_called_once_with(bus)
+        assert svc._dispatcher is ctor.return_value
 
 
 class TestDndGating:

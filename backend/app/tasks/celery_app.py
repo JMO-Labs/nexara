@@ -72,6 +72,14 @@ celery_app.conf.update(
             "task": "app.tasks.maintenance_tasks.reset_ai_daily_budget",
             "schedule": crontab(hour=settings.AI_BUDGET_RESET_HOUR, minute=0),
         },
+        "digest-dispatch-every-5min": {
+            "task": "app.tasks.notification_tasks.digest_dispatch",
+            "schedule": 300.0,
+        },
+        "cleanup-expired-exports": {
+            "task": "app.tasks.maintenance_tasks.cleanup_expired_exports",
+            "schedule": crontab(hour=0, minute=30),
+        },
         "close-expired-polls": {
             "task": "app.tasks.poll_tasks.close_expired_polls",
             "schedule": 60.0,
