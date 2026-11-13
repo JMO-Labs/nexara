@@ -12,28 +12,24 @@ import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { requestMagicLink } from "@/lib/api/auth";
-import { formatApiError } from "@/lib/api/errors";
+import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({ email: z.string().min(3) });
 type FormData = z.infer<typeof Schema>;
 
 export default function MagicLinkPage() {
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
     defaultValues: { email: "" },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    try {
-      await requestMagicLink(data.email);
-      setSent(true);
-    } catch (e) {
-      setError(formatApiError(e, "Could not send link."));
-    }
-  };
+  const send = useMutationWithToast({
+    mutationFn: (data: FormData) => requestMagicLink(data.email),
+    errorKey: "toasts.auth.magicLink.failed",
+    onSuccess: () => setSent(true),
+  });
+  const onSubmit = (data: FormData) => send.mutate(data);
 
   if (sent) {
     return (
@@ -53,14 +49,6 @@ export default function MagicLinkPage() {
       title="Sign in with a magic link"
       subtitle="We'll email you a one-time link — no password needed."
     >
-      {error && (
-        <p
-          role="alert"
-          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -74,7 +62,7 @@ export default function MagicLinkPage() {
           error={formState.errors.email?.message}
           {...register("email")}
         />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
+        <Button type="submit" size="lg" loading={send.isPending}>
           Email me a link
         </Button>
         <Link href="/login" className="underline">

@@ -69,6 +69,7 @@ export function useUpdateSubgroup(slug: string) {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (body: UpdateSubgroupBody) => updateSubgroup(slug, body),
+    successKey: "toasts.subgroups.updated",
     onSuccess: () => invalidateAll(qc, slug),
   });
 }
@@ -77,6 +78,7 @@ export function useDeleteSubgroup() {
   const qc = useQueryClient();
   return useMutationWithToast({
     mutationFn: (slug: string) => deleteSubgroup(slug),
+    successKey: "toasts.subgroups.deleted",
     onSuccess: () => invalidateAll(qc),
   });
 }
@@ -114,6 +116,7 @@ export function useChangeRole(slug: string) {
   return useMutationWithToast({
     mutationFn: (args: { user_id: string; role: string }) =>
       changeMemberRole(slug, args.user_id, args.role),
+    successKey: "toasts.subgroups.member.roleChanged",
     onSuccess: () => invalidateAll(qc, slug),
   });
 }
