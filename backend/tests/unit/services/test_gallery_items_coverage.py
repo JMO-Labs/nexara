@@ -1,173 +1,32 @@
 """
-@file test_gallery_coverage.py
-@brief Branch-coverage tests for gallery_base, gallery_admin and gallery_items.
+@file test_gallery_items_coverage.py
+@brief Branch-coverage tests for gallery_items.
 """
 
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.exceptions import AuthorizationError, NotFoundError
-from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
+from app.models.gallery import GalleryCollaborator
 from app.models.user import User
-from app.repositories.gallery_repo import GalleryRepository
 from app.schemas.gallery import (
     GalleryItemBulkCreate,
     GalleryItemCreate,
     GalleryItemUpdate,
 )
 from app.services.gallery_service import GalleryService
-
-COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-
-
-def _gallery(**kw: object) -> MagicMock:
-    g = MagicMock(spec=Gallery)
-    g.id = uuid.uuid4()
-    g.community_id = COMMUNITY_ID
-    g.owner_id = kw.get("owner_id") or uuid.uuid4()
-    g.title = "G"
-    g.description = None
-    g.cover_media_id = None
-    g.event_id = None
-    g.subgroup_id = kw.get("subgroup_id")
-    g.visibility = kw.get("visibility", "community")
-    g.contribution_policy = kw.get("contribution_policy", "owner_only")
-    g.item_count = kw.get("item_count", 0)
-    g.is_featured = False
-    g.is_default = False
-    g.is_event_gallery = False
-    g.created_at = datetime.now(UTC)
-    g.updated_at = datetime.now(UTC)
-    return g
-
-
-def _item(gallery_id: uuid.UUID, added_by: uuid.UUID | None = None) -> MagicMock:
-    i = MagicMock(spec=GalleryItem)
-    i.id = uuid.uuid4()
-    i.gallery_id = gallery_id
-    i.media_id = uuid.uuid4()
-    i.added_by = added_by or uuid.uuid4()
-    i.caption = None
-    i.position = 0
-    i.created_at = datetime.now(UTC)
-    return i
-
-
-def _fill_item(i: GalleryItem) -> GalleryItem:
-    i.id = uuid.uuid4()
-    i.created_at = datetime.now(UTC)
-    return i
-
-
-def _fill_gallery(g: Gallery) -> Gallery:
-    g.id = uuid.uuid4()
-    g.created_at = datetime.now(UTC)
-    g.updated_at = datetime.now(UTC)
-    g.item_count = 0
-    g.is_featured = False
-    g.is_default = bool(g.is_default)
-    g.is_event_gallery = bool(g.is_event_gallery)
-    return g
-
-
-@pytest.fixture
-def repo() -> AsyncMock:
-    r = AsyncMock(spec=GalleryRepository)
-    r.is_collaborator.return_value = False
-    r.list_collaborators.return_value = []
-    r.add_item.side_effect = _fill_item
-    r.create.side_effect = _fill_gallery
-    return r
-
-
-@pytest.fixture
-def session() -> AsyncMock:
-    return AsyncMock()
-
-
-@pytest.fixture
-def service(repo: AsyncMock, session: AsyncMock) -> GalleryService:
-    return GalleryService(gallery_repo=repo, community_id=COMMUNITY_ID, session=session)
-
-
-class TestBaseVisibility:
-    async def test_subgroup_without_id_is_hidden(self, service: GalleryService) -> None:
-        g = _gallery(visibility="subgroup", subgroup_id=None)
-        assert await service._can_view(g, uuid.uuid4()) is False
-
-    async def test_subgroup_member_can_view(
-        self, service: GalleryService, session: AsyncMock
-    ) -> None:
-        sg = uuid.uuid4()
-        g = _gallery(visibility="subgroup", subgroup_id=sg)
-        session.execute.return_value = MagicMock(
-            scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[sg])))
-        )
-        with patch(
-            "app.repositories.subgroup_repo.expand_with_descendants",
-            new=AsyncMock(return_value=[sg]),
-        ):
-            assert await service._can_view(g, uuid.uuid4()) is True
-
-    async def test_subgroup_non_member_cannot_view(
-        self, service: GalleryService, session: AsyncMock
-    ) -> None:
-        g = _gallery(visibility="subgroup", subgroup_id=uuid.uuid4())
-        session.execute.return_value = MagicMock(
-            scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
-        )
-        with patch(
-            "app.repositories.subgroup_repo.expand_with_descendants",
-            new=AsyncMock(return_value=[]),
-        ):
-            assert await service._can_view(g, uuid.uuid4()) is False
-
-    async def test_private_collaborator_can_view(
-        self, service: GalleryService, repo: AsyncMock
-    ) -> None:
-        repo.is_collaborator.return_value = True
-        g = _gallery(visibility="private")
-        assert await service._can_view(g, uuid.uuid4()) is True
-
-    async def test_unknown_visibility_denied(self, service: GalleryService) -> None:
-        assert await service._can_view(_gallery(visibility="weird"), uuid.uuid4()) is False
-
-
-class TestBaseContribute:
-    async def test_collaborators_policy_allows_collaborator(
-        self, service: GalleryService, repo: AsyncMock
-    ) -> None:
-        repo.is_collaborator.return_value = True
-        g = _gallery(contribution_policy="collaborators")
-        assert await service._can_contribute(g, uuid.uuid4()) is True
-
-    async def test_community_policy_follows_view(self, service: GalleryService) -> None:
-        g = _gallery(contribution_policy="community", visibility="community")
-        assert await service._can_contribute(g, uuid.uuid4()) is True
-
-    async def test_unknown_policy_denied(self, service: GalleryService) -> None:
-        g = _gallery(contribution_policy="weird")
-        assert await service._can_contribute(g, uuid.uuid4()) is False
-
-
-class TestAdminNotFound:
-    async def test_force_visibility_not_found(
-        self, service: GalleryService, repo: AsyncMock
-    ) -> None:
-        repo.get_by_id.return_value = None
-        with pytest.raises(NotFoundError):
-            await service.admin_force_visibility(uuid.uuid4(), "private", uuid.uuid4())
-
-    async def test_delete_not_found(self, service: GalleryService, repo: AsyncMock) -> None:
-        repo.get_by_id.return_value = None
-        with pytest.raises(NotFoundError):
-            await service.admin_delete(uuid.uuid4(), uuid.uuid4())
-
+from tests.unit.services._gallery_fixtures import (  # noqa: F401
+    _gallery,
+    _item,
+    repo,
+    service,
+    session,
+)
 
 class TestEnsureGalleries:
     async def test_default_returns_existing(self, service: GalleryService, repo: AsyncMock) -> None:
