@@ -151,7 +151,6 @@ async def test_test_send_missing_row() -> None:
     assert ok is False
 
 
-
 async def test_get_decrypts_and_detaches() -> None:
     from app.services.notifications.secrets import encrypt_url
 
