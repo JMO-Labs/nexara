@@ -14,7 +14,16 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user
-from tests.unit.api.test_subgroups_update_api import COMMUNITY_ID, _subgroup
+from tests.unit.api.test_subgroups_update_api import COMMUNITY_ID
+from tests.unit.api.test_subgroups_update_api import _subgroup as _base_subgroup
+
+
+def _subgroup(accent: str | None) -> MagicMock:
+    """@brief Subgroup mock with the list-only fields set to real values."""
+    sg = _base_subgroup(accent)
+    sg.parent_id = None
+    sg.my_role = None
+    return sg
 
 
 @pytest.fixture
