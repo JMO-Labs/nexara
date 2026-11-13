@@ -69,4 +69,20 @@ describe("GroupMosaic", () => {
     expect(grid?.className).toMatch(/grid-cols-1/);
     expect(grid?.className).toMatch(/lg:grid-cols-3/);
   });
+
+  it("shows Leave when is_member and Join when not, from the flag", () => {
+    const mk = (slug: string, is_member: boolean) =>
+      ({
+        id: slug,
+        slug,
+        name: slug,
+        join_policy: "open",
+        description: null,
+        is_member,
+        my_role: null,
+      }) as never;
+    render(<GroupMosaic {...base} data={[mk("in", true), mk("out", false)]} />);
+    expect(screen.getAllByRole("button", { name: /^leave$/i })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^join$/i })).toHaveLength(1);
+  });
 });

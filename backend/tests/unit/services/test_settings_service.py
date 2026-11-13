@@ -9,6 +9,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 from app.schemas.settings import NotificationPreferences, ProfileUpdate, UserSettingsUpdate
 from app.services.settings_service import SettingsService
@@ -148,3 +149,91 @@ class TestUpdateNotificationPreferences:
         )
 
         assert result.notif_mention_email is False
+
+
+NOTIF_TYPES = (
+    "mention",
+    "comment",
+    "reaction",
+    "new_post",
+    "system",
+    "invite_accepted",
+    "event_reminder",
+    "event_rsvp",
+    "gallery_activity",
+    "prompt",
+    "prompt_summary",
+    "poll",
+    "dm",
+    "birthday",
+)
+NOTIF_CHANNELS = ("inapp", "email", "push")
+TOGGLE_FIELDS = [f"notif_{t}_{c}" for t in NOTIF_TYPES for c in NOTIF_CHANNELS]
+EXTRA_FIELDS = ["mute_all_email", "mute_all_push", "email_digest_enabled", "email_digest_hour"]
+
+
+class TestNotificationPreferencesSchema:
+    """@brief Schema coverage for every notification preference column."""
+
+    def test_has_all_type_channel_fields(self):
+        """Schema exposes 42 toggles plus mute/digest fields, all optional."""
+        fields = NotificationPreferences.model_fields
+        for name in TOGGLE_FIELDS + EXTRA_FIELDS:
+            assert name in fields, name
+        assert len(fields) == 46
+        assert NotificationPreferences().model_dump(exclude_none=True) == {}
+
+    def test_digest_hour_bounds(self):
+        """email_digest_hour accepts 0-23 and rejects out-of-range values."""
+        assert NotificationPreferences(email_digest_hour=0).email_digest_hour == 0
+        assert NotificationPreferences(email_digest_hour=23).email_digest_hour == 23
+        for bad in (-1, 24):
+            with pytest.raises(ValidationError):
+                NotificationPreferences(email_digest_hour=bad)
+
+
+class TestGetNotificationPreferences:
+    """@brief Tests for SettingsService.get_notification_preferences()."""
+
+    @pytest.mark.asyncio
+    async def test_returns_every_stored_field(self):
+        """All 46 fields are read from the stored settings row."""
+        row = MagicMock()
+        stored: dict[str, object] = {n: i % 2 == 0 for i, n in enumerate(TOGGLE_FIELDS)}
+        stored.update(
+            mute_all_email=True,
+            mute_all_push=True,
+            email_digest_enabled=True,
+            email_digest_hour=20,
+        )
+        for name, value in stored.items():
+            setattr(row, name, value)
+        mock_settings_repo = AsyncMock()
+        mock_settings_repo.get_or_create.return_value = row
+
+        service = SettingsService(mock_settings_repo, AsyncMock(), COMMUNITY_ID)
+        result = await service.get_notification_preferences(USER_ID)
+
+        assert result.model_dump() == stored
+        mock_settings_repo.get_or_create.assert_awaited_once_with(USER_ID, COMMUNITY_ID)
+
+
+class TestUpdateNewNotificationFields:
+    """@brief update_notification_preferences persists push and digest fields."""
+
+    @pytest.mark.asyncio
+    async def test_persists_push_and_digest_hour(self):
+        """notif_dm_push and email_digest_hour are passed to the repo update."""
+        mock_settings_repo = AsyncMock()
+        mock_settings_repo.get_or_create.return_value = _make_settings_row()
+        mock_settings_repo.update.return_value = _make_settings_row()
+
+        service = SettingsService(mock_settings_repo, AsyncMock(), COMMUNITY_ID)
+        payload = NotificationPreferences.model_validate(
+            {"notif_dm_push": False, "email_digest_hour": 20}
+        )
+        await service.update_notification_preferences(USER_ID, payload)
+
+        mock_settings_repo.update.assert_awaited_once_with(
+            USER_ID, {"notif_dm_push": False, "email_digest_hour": 20}
+        )

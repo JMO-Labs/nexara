@@ -1,0 +1,19 @@
+id = "{{cookiecutter.plugin_id}}"
+name = {{ cookiecutter.plugin_name|tojson }}
+version = "0.1.0"
+author = {{ (cookiecutter.author_name ~ " <" ~ cookiecutter.author_email ~ ">")|tojson }}
+description = {{ cookiecutter.description|tojson }}
+min_core_version = "{{cookiecutter.min_core_version}}"
+permissions = {{cookiecutter.backend_permissions}}
+hooks = {}
+{% if cookiecutter.has_backend %}
+[backend]
+routes = "router.py"
+{%- if '"celery_tasks"' in cookiecutter.backend_permissions %}
+tasks = "tasks.py"
+{%- endif %}
+{% endif %}
+{%- if cookiecutter.has_frontend %}
+[frontend]
+slots = {}
+{% endif %}
