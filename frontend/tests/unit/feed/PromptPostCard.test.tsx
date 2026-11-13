@@ -4,6 +4,10 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
+vi.mock("@/hooks/usePosts", () => ({
+  useCreatePost: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 vi.mock("@/hooks/usePromptResponses", () => ({
   usePromptResponses: () => ({
     data: { response_count: 3 },
