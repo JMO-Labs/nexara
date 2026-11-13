@@ -41,6 +41,9 @@ class FakeRedis:
     async def delete(self, key: str) -> None:
         self.data.pop(key, None)
 
+    async def hgetall(self, key: str) -> dict[str, float]:
+        return dict(self.hashes.get(key, {}))
+
     async def hincrbyfloat(self, key: str, field: str, amount: float) -> float:
         self.hashes.setdefault(key, {})
         self.hashes[key][field] = self.hashes[key].get(field, 0.0) + amount
