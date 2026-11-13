@@ -5,12 +5,7 @@
 export type Channel = "inapp" | "email" | "push" | "webhook" | "toast";
 
 export type Category =
-  | "social"
-  | "event"
-  | "gallery"
-  | "prompt"
-  | "system"
-  | "plugin";
+  "social" | "event" | "gallery" | "prompt" | "system" | "plugin";
 
 export type DigestCadence = "instant" | "hourly" | "daily" | "off";
 
