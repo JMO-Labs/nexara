@@ -22,6 +22,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
 
     model = WebhookSubscription
 
+    # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
         self,
         community_id: uuid.UUID,
@@ -104,6 +105,7 @@ class WebhookRepository(BaseRepository[WebhookSubscription]):
         """@brief Toggle the enabled flag; returns the row or None."""
         return await self.update(sub_id, enabled=enabled)
 
+    # create() takes extra domain args, narrower than base
     async def update(  # type: ignore[override]
         self,
         sub_id: uuid.UUID,

@@ -202,6 +202,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @param app The FastAPI application instance.
     """
+    # third-party signature is wider than its stub
     app.add_exception_handler(AppError, _app_error_handler)  # type: ignore[arg-type]
+    # third-party signature is wider than its stub
     app.add_exception_handler(RequestValidationError, _validation_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, _generic_error_handler)

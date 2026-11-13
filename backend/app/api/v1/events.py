@@ -375,7 +375,7 @@ async def update_occurrence(
     result = await service.update_occurrence(
         event_id,
         occurrence_dt,
-        scope,  # type: ignore[arg-type]
+        scope,  # type: ignore[arg-type] # third-party signature is wider than its stub
         payload,
     )
     return await service._build_response(result, user_id=user.id)

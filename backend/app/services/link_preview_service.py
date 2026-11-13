@@ -230,6 +230,7 @@ async def fetch_image(url: str) -> tuple[bytes, str] | None:
     if not is_safe_url(url):
         return None
     try:
+        # third-party signature is wider than its stub
         async with httpx.AsyncClient(**_client_kwargs()) as client:  # type: ignore[arg-type]
             headers = {"User-Agent": "NexaraLinkPreview/1.0"}
             async with client.stream("GET", url, headers=headers) as response:
