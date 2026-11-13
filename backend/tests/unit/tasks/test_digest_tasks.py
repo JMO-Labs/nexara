@@ -134,9 +134,7 @@ async def test_dispatch_off_cadence_drains_and_drops():
     repo.list_users_with_pending = AsyncMock(return_value=[uid])
     repo.list_pending_types = AsyncMock(return_value=["comment"])
     repo.drain = AsyncMock(return_value=[nid])
-    st = MagicMock(
-        digest_cadence={"comment": "off"}, digest_last_sent_at=None, dnd_timezone="UTC"
-    )
+    st = MagicMock(digest_cadence={"comment": "off"}, digest_last_sent_at=None, dnd_timezone="UTC")
     p1, p2, p3 = _dispatch_patches(session, repo, st)
     with p1, p2, p3, patch.object(nt.send_digest_email, "delay") as delay:
         n = await nt._digest_dispatch_async(datetime(2026, 11, 13, 12, tzinfo=UTC))
