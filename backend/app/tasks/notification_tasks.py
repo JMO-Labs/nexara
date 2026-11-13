@@ -264,8 +264,7 @@ async def _send_digest_email_async(
         to_email = user.email
         branding = await BrandingRepository(session).get(user.community_id)
     items = [
-        {"message": n.payload.get("message", ""), "link": n.payload.get("link", "")}
-        for n in notes
+        {"message": n.payload.get("message", ""), "link": n.payload.get("link", "")} for n in notes
     ]
     html, text = EmailTemplateRenderer().render(
         "digest.html",

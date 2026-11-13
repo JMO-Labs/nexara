@@ -43,7 +43,5 @@ class DigestRepository:
 
     async def list_pending_types(self, user_id: uuid.UUID) -> list[str]:
         """@brief Distinct type keys queued for a user."""
-        res = await self._session.execute(
-            select(Q.type_key).where(Q.user_id == user_id).distinct()
-        )
+        res = await self._session.execute(select(Q.type_key).where(Q.user_id == user_id).distinct())
         return list(res.scalars().all())

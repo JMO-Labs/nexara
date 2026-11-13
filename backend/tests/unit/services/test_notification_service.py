@@ -137,8 +137,6 @@ class TestDigestQueueing:
         svc.digest.enqueue.assert_not_awaited()
 
     async def test_email_disabled_not_queued(self):
-        svc, _, _, _ = _build(
-            prefs={"mention": {"email": False}}, cadence={"mention": "daily"}
-        )
+        svc, _, _, _ = _build(prefs={"mention": {"email": False}}, cadence={"mention": "daily"})
         await svc.notify(USER_ID, "mention", PAYLOAD)
         svc.digest.enqueue.assert_not_awaited()

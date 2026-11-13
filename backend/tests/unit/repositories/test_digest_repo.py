@@ -8,8 +8,6 @@ from __future__ import annotations
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from app.models.notification_digest import NotificationDigestQueue
 from app.repositories.digest_repo import DigestRepository
 
