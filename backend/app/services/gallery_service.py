@@ -19,6 +19,7 @@ from app.core.i18n import _
 from app.models.event import Event
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.models.subgroup import SubgroupMember
+from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.gallery_repo import GalleryRepository
 from app.schemas.gallery import (
@@ -445,6 +446,11 @@ class GalleryService:
         rows = await self._repo.list_collaborators(gallery_id)
         return [CollaboratorResponse.model_validate(r) for r in rows]
 
+    async def _actor_name(self, user_id: uuid.UUID) -> str:
+        """@brief Display name of ``user_id`` for notification payloads."""
+        user = await self._session.get(User, user_id)
+        return str(user.display_name) if user is not None else _("Someone")
+
     async def add_collaborator(
         self,
         gallery_id: uuid.UUID,
@@ -478,6 +484,9 @@ class GalleryService:
                     type="gallery_activity",
                     payload={
                         "gallery_id": str(gallery_id),
+                        "actor_name": await self._actor_name(user_id),
+                        "gallery_title": gallery.title,
+                        "activity": "invited",
                         "message": _("You were invited to a gallery"),
                         "link": f"/app/galleries/{gallery_id}",
                     },
