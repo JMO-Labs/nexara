@@ -51,3 +51,38 @@ def test_beat_entries_run_async():
         prompt_tasks, "_generate_summaries_async", AsyncMock(return_value={"finalised": 2})
     ):
         assert prompt_tasks.generate_summaries() == {"finalised": 2}
+
+
+def test_seed_builtin_prompts_missing_file_returns_zero():
+    with patch("pathlib.Path.exists", return_value=False):
+        assert prompt_tasks.seed_builtin_prompts() == {"inserted": 0}
+
+
+def test_seed_builtin_prompts_loads_json_and_runs_async():
+    seed = AsyncMock(return_value={"inserted": 5})
+    with patch.object(prompt_tasks, "_seed_builtin_prompts_async", seed):
+        assert prompt_tasks.seed_builtin_prompts() == {"inserted": 5}
+    data = seed.await_args.args[0]
+    assert isinstance(data, list) and data
+
+
+async def test_seed_async_skips_existing_and_inserts_new():
+    session = AsyncMock()
+    session.add = MagicMock()
+    existing = MagicMock()
+    existing.scalar_one_or_none.return_value = object()
+    missing = MagicMock()
+    missing.scalar_one_or_none.return_value = None
+    session.execute = AsyncMock(side_effect=[existing, missing])
+    entries = [{"id": "a", "title": "A"}, {"id": "b", "title": "B"}]
+    with (
+        patch.object(prompt_tasks, "async_session_factory", _factory(session)),
+        patch.object(prompt_tasks, "_community_id", return_value=uuid.uuid4()),
+        patch("app.models.prompt.Prompt") as prompt_cls,
+    ):
+        result = await prompt_tasks._seed_builtin_prompts_async(entries)
+    assert result == {"inserted": 1}
+    session.add.assert_called_once_with(prompt_cls.return_value)
+    assert prompt_cls.call_args.kwargs["title"] == "B"
+    assert "id" not in prompt_cls.call_args.kwargs
+    session.commit.assert_awaited_once()
