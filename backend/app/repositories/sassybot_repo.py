@@ -77,5 +77,6 @@ class SassybotRepository:
             Comment.post_id == post_id,
             Comment.author_id == bot_id,
             Comment.community_id == community_id,
+            Comment.deleted_at.is_(None),
         )
         return int((await self._session.execute(stmt)).scalar_one())

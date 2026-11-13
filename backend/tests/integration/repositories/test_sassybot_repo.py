@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -123,5 +124,14 @@ async def test_count_bot_comments_ignores_others(session: AsyncSession) -> None:
     p = await _post(session, other)
     for author in (bot, bot, other):
         session.add(Comment(community_id=CID, post_id=p.id, author_id=author.id, content="c"))
+    session.add(
+        Comment(
+            community_id=CID,
+            post_id=p.id,
+            author_id=bot.id,
+            content="gone",
+            deleted_at=datetime.now(UTC),
+        )
+    )
     await session.flush()
     assert await SassybotRepository(session).count_bot_comments(p.id, bot.id, CID) == 2
