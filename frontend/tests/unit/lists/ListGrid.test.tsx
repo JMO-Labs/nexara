@@ -1,21 +1,31 @@
 /**
  * @file tests/unit/lists/ListGrid.test.tsx
- * @brief ListGrid: infinite items, load more, skeleton, empty state.
+ * @brief ListGrid: infinite items, load more, skeleton, empty state and
+ *        row actions (toggle, edit, delete with confirmation).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fieldSchema, item, mut } from "./listFixtures";
 
-const h = vi.hoisted(() => ({ items: vi.fn() }));
+const h = vi.hoisted(() => ({
+  items: vi.fn(),
+  complete: { mutate: vi.fn(), isPending: false },
+  remove: { mutate: vi.fn(), isPending: false },
+  confirm: vi.fn(),
+}));
 vi.mock("@/hooks/useLists", () => ({
   useListItems: h.items,
-  useListItemComplete: () => mut(),
+  useListItemComplete: () => h.complete,
   useListItemCreate: () => mut(),
 }));
 vi.mock("@/hooks/useListActions", () => ({
-  useListItemDelete: () => mut(),
+  useListItemDelete: () => h.remove,
   useListItemUpdate: () => mut(),
+}));
+vi.mock("@/stores/confirmDialog", () => ({
+  useConfirmDialog: (sel: (s: unknown) => unknown) =>
+    sel({ confirm: h.confirm }),
 }));
 
 import { ListGrid } from "@/components/lists/ListGrid";
@@ -29,7 +39,17 @@ const q = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-beforeEach(() => h.items.mockReset());
+beforeEach(() => {
+  h.items.mockReset();
+  h.complete.mutate.mockReset();
+  h.remove.mutate.mockReset();
+  h.confirm.mockReset();
+});
+
+const withItems = () =>
+  h.items.mockReturnValue(
+    q({ data: { pages: [{ items: [item("a", "Tent")] }] } }),
+  );
 
 describe("ListGrid", () => {
   it("renders items across pages and loads more", async () => {
@@ -76,5 +96,45 @@ describe("ListGrid", () => {
     expect(screen.getByText("No items yet, create one")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add item" }));
     expect(await screen.findByRole("dialog")).toHaveTextContent("New item");
+  });
+
+  it("toggling a row completes the item", async () => {
+    withItems();
+    render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Tent" }),
+    );
+    expect(h.complete.mutate).toHaveBeenCalledWith({
+      itemId: "a",
+      completed: true,
+    });
+  });
+
+  it("edit opens the item modal", async () => {
+    withItems();
+    render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
+    await userEvent.click(screen.getByRole("button", { name: "Edit Tent" }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Edit item");
+  });
+
+  it("new item button opens the create modal", async () => {
+    withItems();
+    render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
+    await userEvent.click(screen.getByRole("button", { name: "New item" }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("New item");
+  });
+
+  it("delete confirms before removing", async () => {
+    withItems();
+    h.confirm.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
+    const del = screen.getByRole("button", { name: "Delete Tent" });
+    await userEvent.click(del);
+    expect(h.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Delete item?", tone: "danger" }),
+    );
+    expect(h.remove.mutate).not.toHaveBeenCalled();
+    await userEvent.click(del);
+    await waitFor(() => expect(h.remove.mutate).toHaveBeenCalledWith("a"));
   });
 });

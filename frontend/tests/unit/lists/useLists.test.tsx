@@ -1,6 +1,7 @@
 /**
  * @file tests/unit/lists/useLists.test.tsx
- * @brief Hooks: infinite pagination, queryKeys, invalidation on mutations.
+ * @brief Hooks: infinite pagination, queryKeys, enabled gating,
+ *        complete/uncomplete branches, invalidation on mutations.
  */
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -15,6 +16,7 @@ const api = vi.hoisted(() => ({
   listItems: vi.fn(),
   createItem: vi.fn(),
   completeItem: vi.fn(),
+  uncompleteItem: vi.fn(),
   claimSignup: vi.fn(),
 }));
 const tpl = vi.hoisted(() => ({
@@ -80,6 +82,13 @@ describe("queries", () => {
     expect(result.current.isFetchingNextPage).toBe(false);
   });
 
+  it("useListItems is idle without a list id", () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useListItems(undefined), { wrapper });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(api.listItems).not.toHaveBeenCalled();
+  });
+
   it("useListTemplates fetches", async () => {
     const { wrapper } = setup();
     tpl.getTemplates.mockResolvedValue({ templates: [] });
@@ -134,6 +143,20 @@ describe("mutations invalidate", () => {
     await act(async () => {
       await s.result.current.mutateAsync({ itemId: "i1", quantity: 1 });
     });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["listItems", "l1"] });
+  });
+
+  it("un-completing calls uncompleteItem and invalidates", async () => {
+    const { wrapper, spy } = setup();
+    api.uncompleteItem.mockResolvedValue({});
+    const { result } = renderHook(() => useListItemComplete("l1"), {
+      wrapper,
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ itemId: "i1", completed: false });
+    });
+    expect(api.uncompleteItem).toHaveBeenCalledWith("l1", "i1");
+    expect(api.completeItem).not.toHaveBeenCalled();
     expect(spy).toHaveBeenCalledWith({ queryKey: ["listItems", "l1"] });
   });
 

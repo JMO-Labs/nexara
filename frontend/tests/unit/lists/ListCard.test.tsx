@@ -4,7 +4,7 @@
  *        ListCardGrid renders cards from useLists.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { list, mut } from "./listFixtures";
 
@@ -68,6 +68,36 @@ describe("ListCard", () => {
     expect(await screen.findByRole("dialog")).toHaveTextContent("Edit list");
   });
 
+  it("falls back without color, description, owner or onOpen", () => {
+    render(
+      <ListCard
+        list={{ ...list, color: undefined, description: undefined }}
+        communityId="c1"
+      />,
+    );
+    expect(screen.getByTestId("list-color").getAttribute("style")).toContain(
+      "var(--color-accent)",
+    );
+    expect(screen.queryByText("What to bring")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Camping gear" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closes the delete dialog after a successful delete", async () => {
+    h.del.mutate.mockImplementation(
+      (_id: string, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+    );
+    render(<ListCard list={list} communityId="c1" />);
+    await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(await screen.findByRole("button", { name: "OK" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
   it("opens the list on click", async () => {
     const onOpen = vi.fn();
     render(<ListCard list={list} communityId="c1" onOpen={onOpen} />);
@@ -91,5 +121,18 @@ describe("ListCardGrid", () => {
     h.lists.mockReturnValue({ data: { lists: [] }, isLoading: false });
     rerender(<ListCardGrid communityId="c1" />);
     expect(screen.getByText("No lists yet")).toBeInTheDocument();
+  });
+
+  it("resolves owner names and forwards onOpen", async () => {
+    h.lists.mockReturnValue({ data: { lists: [list] }, isLoading: false });
+    const onOpen = vi.fn();
+    const ownerName = vi.fn().mockReturnValue("Ana");
+    render(
+      <ListCardGrid communityId="c1" onOpen={onOpen} ownerName={ownerName} />,
+    );
+    expect(ownerName).toHaveBeenCalledWith("u1");
+    expect(screen.getByText("by Ana")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Camping gear" }));
+    expect(onOpen).toHaveBeenCalledWith(list);
   });
 });
