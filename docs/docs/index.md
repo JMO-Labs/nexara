@@ -15,6 +15,7 @@ Self-hosted first, container-native, and scaleable to Kubernetes.
 - **Subgroups** -- Scoped feeds, events, and chat channels
 - **Galleries** -- Named albums with bulk upload and access controls
 - **Polls** -- Single, multiple-choice, yes/no, and photo polls with live results
+- **Tradition Prompts** -- Recurring prompts members reply to, with summary posts ([guide](tradition-prompts.md))
 - **Search** -- Full-text search across all content via PostgreSQL FTS
 - **Notifications** -- In-app (SSE), push (Web Push), and email
 - **Admin Panel** -- User management, community settings, audit log, WAF controls
@@ -36,6 +37,7 @@ Self-hosted first, container-native, and scaleable to Kubernetes.
 - [Getting Started](getting-started.md) -- Set up a development environment
 - [Development Guide](development.md) -- Architecture, conventions, testing
 - [Deployment Guide](deployment/deployment-guide.md) -- Docker Compose, Helm, unRAID
+- [Tradition Prompts](tradition-prompts.md) -- Create, schedule, and reply to prompts
 - [API Reference](api/) -- Doxygen-generated Python backend documentation
 - [Backend Coverage](coverage/backend/) -- pytest coverage report
 - [Frontend Coverage](coverage/frontend/) -- Vitest coverage report
