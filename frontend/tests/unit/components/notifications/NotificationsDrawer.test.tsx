@@ -18,6 +18,7 @@ vi.mock("@/lib/api/notifications", () => ({
   callAction: vi.fn(),
   STREAM_PATH: "/s",
 }));
+import { useSSE } from "@/hooks/useSSE";
 vi.mock("@/hooks/useSSE", () => ({ useSSE: vi.fn() }));
 vi.mock("@/components/notifications/NotifRow", () => ({
   NotifRow: (p: {
@@ -84,6 +85,27 @@ describe("NotificationsDrawer", () => {
       await screen.findByText("T:notifications.drawer.title"),
     ).toBeInTheDocument();
     expect(await screen.findAllByTestId("row")).toHaveLength(1);
+  });
+
+  it("subscribes to sync events and invalidates matching keys", () => {
+    const qc = setup([]);
+    const opts = vi.mocked(useSSE).mock.calls.at(-1)![1] as {
+      eventTypes: string[];
+      onMessage: (d: unknown, t: string) => void;
+    };
+    expect(opts.eventTypes).toEqual(
+      expect.arrayContaining([
+        "user_notification_dismissed",
+        "user_preferences_updated",
+      ]),
+    );
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    opts.onMessage({}, "user_notification_dismissed");
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["notifications"] });
+    opts.onMessage({}, "user_preferences_updated");
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["notifications", "preferences"],
+    });
   });
 
   it("Unread filter hides read and dismissed", async () => {

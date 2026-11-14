@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { STREAM_PATH } from "@/lib/api/notifications";
 import { useSSE } from "@/hooks/useSSE";
 import { useSession } from "@/stores/session";
+import { PREFS_KEY } from "@/components/settings/SnoozeControls";
 
 export const SYNC_EVENT_TYPES = [
   "user_notification_dismissed",
@@ -15,7 +16,6 @@ export const SYNC_EVENT_TYPES = [
 
 /**
  * @brief Returns an SSE handler invalidating caches per event type.
- * @param qc query client
  * @return handler (data, type)
  */
 export function useSyncHandler() {
@@ -24,7 +24,7 @@ export function useSyncHandler() {
     if (type === "user_notification_dismissed") {
       void qc.invalidateQueries({ queryKey: ["notifications"] });
     } else if (type === "user_preferences_updated") {
-      void qc.invalidateQueries({ queryKey: ["notifications", "preferences"] });
+      void qc.invalidateQueries({ queryKey: PREFS_KEY });
     }
   };
 }
