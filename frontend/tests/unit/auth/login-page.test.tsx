@@ -118,3 +118,33 @@ describe("LoginPage", () => {
     expect(screen.getByLabelText("Email")).toBeTruthy();
   });
 });
+
+describe("LoginPage validation", () => {
+  it("shows inline email format error on blur and does not submit", async () => {
+    vi.mocked(api.getAuthConfig).mockResolvedValue({
+      oidc_enabled: false,
+      registration_enabled: true,
+      local_auth_enabled: true,
+      oauth_providers: [],
+    });
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText("Email"), "not-an-email");
+    await userEvent.tab();
+    expect(await screen.findByText("Enter a valid email address")).toBeTruthy();
+    expect(api.login).not.toHaveBeenCalled();
+  });
+
+  it("disables inputs and shows a spinner while submitting", async () => {
+    vi.mocked(api.login).mockReturnValue(new Promise(() => {}));
+    render(<LoginPage />);
+    await userEvent.type(screen.getByLabelText("Email"), "a@b.com");
+    await userEvent.type(screen.getByLabelText("Password"), "pw");
+    const btn = screen.getByRole("button", { name: "Sign in" });
+    await userEvent.click(btn);
+    await waitFor(() => expect(btn).toBeDisabled());
+    expect(btn).toHaveAttribute("aria-busy", "true");
+    expect(btn.querySelector("svg")).not.toBeNull();
+    expect(screen.getByLabelText("Email")).toBeDisabled();
+    expect(screen.getByLabelText("Password")).toBeDisabled();
+  });
+});

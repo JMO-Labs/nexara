@@ -55,4 +55,22 @@ describe("PostMedia", () => {
     fireEvent.click(container.querySelectorAll("img")[1]);
     expect(onClick).toHaveBeenCalledWith(1);
   });
+
+  it("shows a Report button per tile only when canReport", () => {
+    const { rerender, queryAllByRole } = renderWithProviders(
+      <PostMedia media={[mk("a"), mk("b")]} />,
+    );
+    expect(queryAllByRole("button", { name: /report/i })).toHaveLength(0);
+    rerender(<PostMedia media={[mk("a"), mk("b")]} canReport />);
+    expect(queryAllByRole("button", { name: /report/i })).toHaveLength(2);
+  });
+
+  it("Report click does not trigger the tile onClick", () => {
+    const onClick = vi.fn();
+    const { getByRole } = renderWithProviders(
+      <PostMedia media={[mk("a")]} canReport onClick={onClick} />,
+    );
+    fireEvent.click(getByRole("button", { name: /report/i }));
+    expect(onClick).not.toHaveBeenCalled();
+  });
 });

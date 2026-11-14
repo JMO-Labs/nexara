@@ -34,10 +34,10 @@ function NavLink({
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold",
+          "flex h-10 items-center gap-3 rounded-2xl border-l-[3px] px-3 text-sm font-semibold",
           active
-            ? "bg-accent text-surface-strong"
-            : "text-nav-muted hover:bg-white/10",
+            ? "border-l-sun bg-accent text-surface-strong"
+            : "border-l-transparent text-nav-muted hover:bg-white/10",
         )}
       >
         <Icon aria-hidden className="size-5 shrink-0" />
@@ -80,6 +80,18 @@ export function SideNav() {
           setOpen(false);
       }}
       onKeyDown={(e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          const links = Array.from(
+            e.currentTarget.querySelectorAll<HTMLElement>("a[href]"),
+          );
+          const i = links.indexOf(document.activeElement as HTMLElement);
+          if (i >= 0) {
+            e.preventDefault();
+            const step = e.key === "ArrowDown" ? 1 : -1;
+            links[(i + step + links.length) % links.length].focus();
+          }
+          return;
+        }
         if (e.key === "Escape") {
           setOpen(false);
           (document.activeElement as HTMLElement | null)?.blur();

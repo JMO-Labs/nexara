@@ -132,7 +132,9 @@ async def upload_part(
     if raw is None:
         raise NotFoundError(_("Upload session not found or expired"))
     sess_data = json.loads(raw)
-    sess_data["parts"][str(part_number)] = hashlib.md5(data).hexdigest()
+    # MD5 is the S3-style part ETag (integrity), not a security control.
+    etag = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    sess_data["parts"][str(part_number)] = etag
     await valkey.setex(
         f"multipart:{upload_id}",
         MULTIPART_SESSION_TTL,
