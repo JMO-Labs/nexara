@@ -4,4 +4,5 @@ nav:
   - architecture.md
   - contributing.md
   - api-reference.md
+  - plugin-notifications.md
   - ...
