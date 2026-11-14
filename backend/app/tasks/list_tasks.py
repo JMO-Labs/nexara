@@ -165,7 +165,7 @@ async def _remind_async() -> dict[str, int]:
     return {"reminded": n}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.list_tasks.sweep_list_expirations",
     queue="maintenance",
 )
@@ -175,7 +175,7 @@ def sweep_list_expirations() -> dict[str, int]:
     return asyncio.run(_sweep_async())
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.list_tasks.dispatch_list_expiry_reminders",
     queue="maintenance",
 )

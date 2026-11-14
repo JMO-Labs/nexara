@@ -196,7 +196,7 @@ celery_app.conf.update(
 )
 
 
-@signals.worker_init.connect  # type: ignore[untyped-decorator]
+@signals.worker_init.connect
 def _on_worker_init(**kwargs: object) -> None:
     """
     @brief Hook executed when a Celery worker starts.
@@ -210,13 +210,13 @@ def _on_worker_init(**kwargs: object) -> None:
     )
 
 
-@signals.task_prerun.connect  # type: ignore[untyped-decorator]
+@signals.task_prerun.connect
 def _on_task_prerun(task_id: str, task: Any, **kwargs: object) -> None:
     """@brief Log each task start for structured logging correlation."""
     logger.info("celery_task_started", task_id=task_id, task_name=task.name)
 
 
-@signals.task_postrun.connect  # type: ignore[untyped-decorator]
+@signals.task_postrun.connect
 def _on_task_postrun(
     task_id: str, task: Any, retval: object, state: object, **kwargs: object
 ) -> None:
@@ -224,7 +224,7 @@ def _on_task_postrun(
     logger.info("celery_task_finished", task_id=task_id, task_name=task.name, state=state)
 
 
-@signals.task_failure.connect  # type: ignore[untyped-decorator]
+@signals.task_failure.connect
 def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -> None:
     """@brief Log task failures for alerting and debugging."""
     logger.error(
@@ -235,7 +235,7 @@ def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -
     )
 
 
-@signals.import_modules.connect(sender=celery_app)  # type: ignore[untyped-decorator]
+@signals.import_modules.connect(sender=celery_app)
 def _load_plugin_tasks(**kwargs: object) -> None:
     """@brief Register plugin Celery tasks and Beat entries when worker/beat start."""
     from app.plugins.task_loader import load_plugin_tasks
