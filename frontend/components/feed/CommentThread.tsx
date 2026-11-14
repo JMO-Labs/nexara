@@ -7,6 +7,7 @@ import * as React from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Avatar, Button, Textarea, Skeleton, Markdown } from "@/components/ui";
 import { useComments, useCreateComment } from "@/hooks/usePosts";
+import { ReportButton } from "@/components/common/ReportButton";
 import type { Comment } from "@/lib/api/posts";
 
 const COLLAPSED_MAX = 280;
@@ -52,6 +53,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
           >
             Reply
           </button>
+          <ReportButton targetType="comment" targetId={comment.id} />
         </div>
         {comment.replies?.map((r) => (
           <CommentNode

@@ -8,6 +8,7 @@
 import { format } from "date-fns";
 import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
+import { ReportButton } from "@/components/common/ReportButton";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/api/chat";
 
@@ -115,6 +116,13 @@ export function MessageItem({
             >
               <CornerUpLeft size={14} aria-hidden />
             </IconButton>
+          )}
+          {!isSelf && !message.id.startsWith("optimistic-") && (
+            <ReportButton
+              targetType="message"
+              targetId={message.id}
+              className="rounded p-1 text-xs outline-none focus-visible:outline-2 focus-visible:outline-accent"
+            />
           )}
           {onSendDm && authorId && !isSelf && (
             <IconButton
