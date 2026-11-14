@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lists
+
+#### Added
+- Lists and list items, scoped by community, served under the `/lists` API prefix
+- List templates: clone a template into a new list
+- Signups on list items: members claim and release items
+- List notifications (in-app, Web Push, email) via `NotificationService`
+- Lists UI pages in the frontend (index, detail, template and signup views)
+- Alembic migration `0026_list_templates` adding list template, list, member, item, signup and completion tables
+
 ### Phase 1.5 -- OAuth2/OIDC Multi-Provider
 
 Replaces single-provider OIDC with a DB-backed, multi-provider OAuth2/OIDC
