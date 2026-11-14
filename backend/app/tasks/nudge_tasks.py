@@ -40,7 +40,7 @@ async def _send_gentle_nudges_async() -> dict[str, int]:
     return {"sent": sent}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.nudge_tasks.send_gentle_nudges",
     queue="maintenance",
 )

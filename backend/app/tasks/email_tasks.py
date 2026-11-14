@@ -24,7 +24,7 @@ def _smtp_configured() -> bool:
     return bool(settings.SMTP_HOST)
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.email_tasks.send_email",
     max_retries=3,
@@ -84,7 +84,7 @@ def send_email(
     return {"status": "sent"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.email_tasks.send_invite_email",
     max_retries=3,
@@ -108,7 +108,7 @@ def send_invite_email(self: Task, invite_id: str) -> dict[str, str]:
     return {"status": "sent"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     bind=True,
     name="app.tasks.email_tasks.send_password_reset_email",
     max_retries=3,
