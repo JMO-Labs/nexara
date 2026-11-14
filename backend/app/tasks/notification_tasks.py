@@ -335,7 +335,7 @@ async def _send_digest_email_async(
     return {"status": "sent" if sent else "skipped"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
     name="app.tasks.notification_tasks.digest_dispatch",
     queue="notifications",
 )
@@ -417,7 +417,7 @@ def send_digest_email(
         raise self.retry(exc=exc)
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
     bind=True,
     name="app.tasks.notification_tasks.webhook_deliver",
     autoretry_for=(httpx.HTTPError, httpx.TimeoutException),
