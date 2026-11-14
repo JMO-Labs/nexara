@@ -1,53 +1,40 @@
 # FAQ
 
-## Community setup
+## What is Nexara?
+A self-hosted community platform for families, clubs and groups, with
+events, sharing and notifications.
 
-**How do I create my community?**
-New accounts get the member role. Administrators are assigned through your
-identity provider: users in the group named by `OIDC_ADMIN_GROUP` receive the
-admin role. Administrators can then manage community settings and invites.
+## Who owns my data?
+You do. Everything is stored in your own PostgreSQL database and storage
+backend; nothing is sent to a third party.
 
-**Can I run more than one community?**
-Data is scoped by community internally, but the standard install is designed
-for a single community per instance. Run a second instance for a separate group.
+## Does Nexara support SSO / OIDC?
+Yes. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET`, or add
+providers in the admin panel. See [SSO / OIDC](../developer/sso-oidc.md).
 
-**How do members join?**
-Administrators create invites that carry a token and a role. Set
-`REQUIRE_INVITE=true` to accept only invited sign-ups, or
-`ENABLE_REGISTRATION=false` to close registration entirely.
+## How do I set up email?
+Fill in the `SMTP_*` variables in `.env` and restart. Without them, no
+email (invites, password resets) is sent.
 
-## Privacy
+## Are push notifications supported?
+Yes. Nexara delivers in-app, Web Push and email notifications. Each user
+chooses channels per notification type in their settings. Web Push needs
+HTTPS.
 
-**Who can see my posts?**
-That depends on the visibility you choose: the whole community, a single
-subgroup, or only you. Private items are never shown to other members, and
-administrators see them only through direct database access.
+## How do I back up my instance?
+Use `pg_dump` and back up your file storage. See
+[Backups](self-hosting.md#backups).
 
-**Does Nexara send data to third parties?**
-No analytics or tracking services are included. Outbound traffic is limited to
-what you configure, such as your SMTP server and browser push services.
+## How do I upgrade?
+Pull new images and run `docker compose up -d`. See
+[Upgrades](self-hosting.md#upgrades).
 
-**Can I block someone?**
-Yes. Blocked users are hidden from your feeds and comments.
+## How do I reset a password?
+Use "Forgot password" on the login page (requires email to be configured).
+Otherwise ask your instance admin for help.
 
-## Permissions
+## Can I restrict who signs up?
+Yes. Set `ENABLE_REGISTRATION=false` or `REQUIRE_INVITE=true`.
 
-**What roles exist?**
-Members and administrators. Administrators manage users, community settings,
-and moderation, and can review the audit log.
-
-**Who can create subgroups?**
-Administrators create subgroups and assign members to them.
-
-## Backups
-
-**What should I back up?**
-The PostgreSQL database and the media volume. See [Self-Hosting](self-hosting.md#backups).
-
-**How do I restore?**
-Restore the database dump, restore the media files to the same volume path,
-and start the stack. Migrations bring the schema up to date on boot.
-
-**Can I move to another server?**
-Yes. Back up, copy both parts, and keep the same `SECRET_KEY` so existing
-sessions and tokens remain valid.
+## Where do I report bugs?
+Open an issue in the project's GitHub repository, JMO-Labs/nexara.
