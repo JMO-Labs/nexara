@@ -18,7 +18,7 @@ vi.mock("framer-motion", async () => {
 vi.mock("@/lib/api/notifications", () => ({
   getUnreadCount: vi.fn().mockResolvedValue({ count: 2 }),
   listActive: vi.fn().mockResolvedValue({ items: [] }),
-  listTypes: vi.fn().mockResolvedValue({ types: [] }),
+  listTypes: vi.fn().mockResolvedValue([]),
   STREAM_PATH: "/s",
 }));
 vi.mock("@/hooks/useSSE", () => ({ useSSE: vi.fn() }));
