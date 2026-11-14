@@ -1,149 +1,121 @@
 "use client";
 /**
  * @file components/settings/NotificationsTab.tsx
- * @brief Notifications settings tab with per-channel toggles.
+ * @brief Notifications settings: snooze, quiet hours, push, matrix, webhooks.
  */
-import { useCallback, useState } from "react";
-import { Card, SettingsRow, Skeleton, Switch } from "@/components/ui";
-import {
-  useNotificationPrefs,
-  useUpdateNotificationPrefs,
-} from "@/hooks/useSettings";
-import type { NotificationPreferences } from "@/lib/api/settings";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { Card, Skeleton } from "@/components/ui";
+import { getPreferences, patchPreferences } from "@/lib/api/notifications";
+import { useNotificationRegistry } from "@/lib/notifications/registry";
+import type {
+  Channel,
+  DigestCadence,
+  PreferencesPayload,
+} from "@/lib/notifications/types";
+import { DnDScheduleEditor } from "./DnDScheduleEditor";
+import { NotificationMatrix } from "./NotificationMatrix";
 import { PushSubscriptionRow } from "./PushSubscriptionRow";
-import { NotificationDigestRow } from "./NotificationDigestRow";
-import { AppriseList, useAppriseUrls } from "./AppriseList";
+import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
+import { WebhookList } from "./WebhookList";
 
-const NOTIF_TYPES = [
-  { key: "mention", label: "Mention" },
-  { key: "comment", label: "Comment" },
-  { key: "reaction", label: "Reaction" },
-  { key: "new_post", label: "New post" },
-  { key: "system", label: "System" },
-  { key: "invite_accepted", label: "Invite accepted" },
-  { key: "event_reminder", label: "Event reminder" },
-  { key: "event_rsvp", label: "Event RSVP" },
-  { key: "gallery_activity", label: "Gallery activity" },
-  { key: "prompt", label: "Prompt" },
-  { key: "prompt_summary", label: "Prompt summary" },
-  { key: "poll", label: "Poll" },
-  { key: "dm", label: "Direct message" },
-  { key: "birthday", label: "Birthday" },
-];
-
-const CHANNELS = [
-  { suffix: "inapp", label: "In-app" },
-  { suffix: "email", label: "Email" },
-  { suffix: "push", label: "Push" },
-] as const;
+const DEBOUNCE_MS = 400;
+const cardCls = "max-w-3xl p-4 md:p-6";
 
 /**
- * @brief Notification preference toggles.
- * @return notifications tab content
+ * @brief Notifications tab.
+ * @return stack of settings cards
  */
 export function NotificationsTab() {
-  const { data: prefs, isLoading } = useNotificationPrefs();
-  const { mutate } = useUpdateNotificationPrefs();
-  const t = useTranslations("settings.apprise");
-  const { data: apprise = [] } = useAppriseUrls();
-  const hasApprise = apprise.some((u) => u.enabled);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
-    null,
-  );
+  const t = useTranslations("settings.notif");
+  const qc = useQueryClient();
+  const { types } = useNotificationRegistry();
+  const { data } = useQuery({ queryKey: PREFS_KEY, queryFn: getPreferences });
+  const [local, setLocal] = useState<PreferencesPayload | null>(null);
+  const pending = useRef<Partial<PreferencesPayload>>({});
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prefs = local ?? data ?? null;
 
-  const handleToggle = useCallback(
-    (key: keyof NotificationPreferences, value: boolean | number) => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      const timer = setTimeout(() => {
-        mutate({ [key]: value } as Partial<NotificationPreferences>);
-      }, 400);
-      setDebounceTimer(timer);
+  useEffect(() => {
+    if (data) setLocal(data);
+  }, [data]);
+  // Flush (not drop) a pending debounced PATCH when the tab unmounts.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      const body = pending.current;
+      pending.current = {};
+      if (Object.keys(body).length) void patchPreferences(body);
     },
-    [debounceTimer, mutate],
+    [],
   );
 
-  const channels = hasApprise
-    ? [...CHANNELS, { suffix: "apprise", label: t("matrix") }]
-    : CHANNELS;
+  /** Apply optimistically and send one merged PATCH after the debounce. */
+  const change = useCallback(
+    (patch: Partial<PreferencesPayload>) => {
+      setLocal((cur) => (cur ? { ...cur, ...patch } : cur));
+      pending.current = { ...pending.current, ...patch };
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(async () => {
+        const body = pending.current;
+        pending.current = {};
+        try {
+          await patchPreferences(body);
+        } finally {
+          qc.invalidateQueries({ queryKey: PREFS_KEY });
+        }
+      }, DEBOUNCE_MS);
+    },
+    [qc],
+  );
 
-  if (isLoading) {
-    return <Skeleton height={200} rounded="lg" />;
-  }
+  if (!prefs) return <Skeleton height={200} rounded="lg" />;
 
-  if (!prefs) {
-    return (
-      <p className="text-sm text-muted">No notification preferences loaded.</p>
-    );
-  }
+  const onChannel = (type: string, ch: Channel, value: boolean) => {
+    const all = pending.current.notification_prefs ?? prefs.notification_prefs;
+    change({
+      notification_prefs: {
+        ...all,
+        [type]: { ...all[type], [ch]: value },
+      },
+    });
+  };
+  const onCadence = (type: string, c: DigestCadence) =>
+    change({
+      digest_cadence: {
+        ...(pending.current.digest_cadence ?? prefs.digest_cadence),
+        [type]: c,
+      },
+    });
 
   return (
     <div className="space-y-6">
-      <PushSubscriptionRow />
-
-      <Card className="max-w-3xl p-4 md:p-6">
-        <h2 className="mb-2 text-lg font-semibold">Notification preferences</h2>
-
-        {NOTIF_TYPES.map(({ key, label }) => (
-          <SettingsRow
-            key={key}
-            label={label}
-            description="Receive notifications via these channels."
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-              {channels.map(({ suffix, label: channel }) => {
-                const k =
-                  `notif_${key}_${suffix}` as keyof NotificationPreferences;
-                return (
-                  <label
-                    key={suffix}
-                    className="flex min-h-11 flex-1 items-center gap-2 text-sm"
-                  >
-                    <Switch
-                      aria-label={`${label} ${channel}`}
-                      checked={Boolean(prefs[k])}
-                      onCheckedChange={(v) => handleToggle(k, v)}
-                    />
-                    {channel}
-                  </label>
-                );
-              })}
-            </div>
-          </SettingsRow>
-        ))}
-
-        <SettingsRow
-          label="Mute all email"
-          description="Disable all email notifications at once."
-        >
-          <Switch
-            aria-label="Mute all email"
-            checked={prefs.mute_all_email}
-            onCheckedChange={(v) => handleToggle("mute_all_email", v)}
-          />
-        </SettingsRow>
-
-        <SettingsRow
-          label="Mute all push"
-          description="Disable all push notifications at once."
-        >
-          <Switch
-            aria-label="Mute all push"
-            checked={prefs.mute_all_push}
-            onCheckedChange={(v) => handleToggle("mute_all_push", v)}
-          />
-        </SettingsRow>
-
-        <NotificationDigestRow
-          enabled={prefs.email_digest_enabled}
-          hour={prefs.email_digest_hour}
-          onChange={handleToggle}
+      <Card className={cardCls}>
+        <h2 className="mb-2 text-lg font-semibold">{t("snooze_title")}</h2>
+        <SnoozeControls until={prefs.dnd_until} />
+      </Card>
+      <Card className={cardCls}>
+        <h2 className="mb-2 text-lg font-semibold">{t("dnd_title")}</h2>
+        <DnDScheduleEditor
+          schedule={prefs.dnd_schedule}
+          timezone={prefs.dnd_timezone}
+          onChange={(s, tz) => change({ dnd_schedule: s, dnd_timezone: tz })}
         />
       </Card>
-
-      <Card className="max-w-3xl p-4 md:p-6">
-        <h2 className="mb-2 text-lg font-semibold">{t("title")}</h2>
-        <AppriseList />
+      <PushSubscriptionRow />
+      <Card className={cardCls}>
+        <h2 className="mb-2 text-lg font-semibold">{t("matrix_title")}</h2>
+        <NotificationMatrix
+          types={types}
+          prefs={prefs}
+          onChannel={onChannel}
+          onCadence={onCadence}
+        />
+      </Card>
+      <Card className={cardCls}>
+        <h2 className="mb-2 text-lg font-semibold">{t("webhooks_title")}</h2>
+        <WebhookList />
       </Card>
     </div>
   );

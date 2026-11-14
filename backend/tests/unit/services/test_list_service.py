@@ -176,6 +176,14 @@ class TestMembers:
         with pytest.raises(AppError):
             await svc.add_member(lst.id, lst.owner_id, uuid.uuid4())
 
+    async def test_list_members_returns_repo_rows(self):
+        svc, repo, members = _svc()
+        lst = _list("community")
+        repo.get_by_id.return_value = lst
+        members.list_members.return_value = ["m"]
+        assert await svc.list_members(lst.id, uuid.uuid4()) == ["m"]
+        members.list_members.assert_awaited_once_with(lst.id)
+
     async def test_remove_missing_not_found(self):
         svc, repo, members = _svc()
         lst = _list("members")

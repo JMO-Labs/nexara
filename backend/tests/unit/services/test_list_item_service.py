@@ -279,3 +279,13 @@ async def test_create_without_notifier_does_not_fail(svc, lst):
     s, _, lists, _ = svc
     await s.create(CID, lst.id, lst.owner_id, {})
     lists.audience_ids.assert_not_called()
+
+
+async def test_ensure_in_list_ok_and_mismatch(svc, lst):
+    s, items, _, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.list_id = lst.id
+    items.get_by_id.return_value = item
+    await s.ensure_in_list(CID, lst.id, uuid.uuid4())
+    with pytest.raises(NotFoundError):
+        await s.ensure_in_list(CID, uuid.uuid4(), uuid.uuid4())

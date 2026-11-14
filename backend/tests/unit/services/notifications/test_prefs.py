@@ -25,7 +25,7 @@ def test_no_overrides_returns_defaults_with_all_channels():
         "email": True,
         "push": False,
         "toast": False,
-        "apprise": True,
+        "apprise": False,
     }
 
 
@@ -65,8 +65,8 @@ def test_does_not_mutate_defaults():
     assert t.default_channels == {"inapp": True, "email": True}
 
 
-def test_apprise_defaults_on_and_is_user_configurable():
+def test_apprise_defaults_off_and_is_user_configurable():
     t = _type()
     assert "apprise" in t.user_configurable
-    assert effective_channels(t, {})["apprise"] is True
-    assert effective_channels(t, {"mention": {"apprise": False}})["apprise"] is False
+    assert effective_channels(t, {})["apprise"] is False
+    assert effective_channels(t, {"mention": {"apprise": True}})["apprise"] is True
