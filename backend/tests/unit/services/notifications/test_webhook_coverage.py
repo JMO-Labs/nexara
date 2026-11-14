@@ -58,7 +58,10 @@ async def test_blocked_for_bad_scheme_or_host(url: str) -> None:
 
 async def test_allowed_host_bypasses_resolution() -> None:
     with patch.object(g, "resolve_host", AsyncMock(side_effect=AssertionError)):
-        assert await g.is_blocked_destination("http://Internal.lan/x", frozenset({"internal.lan"})) is False
+        assert (
+            await g.is_blocked_destination("http://Internal.lan/x", frozenset({"internal.lan"}))
+            is False
+        )
 
 
 async def test_empty_resolution_is_blocked() -> None:
