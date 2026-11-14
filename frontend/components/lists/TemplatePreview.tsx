@@ -4,7 +4,30 @@
  * @brief Live preview of template fields via registry Edit components.
  */
 import { fieldRegistry } from "@/lib/lists/fieldRegistry";
+import { optionsOf } from "@/lib/lists/fieldTypes/base";
 import type { TemplateField } from "@/lib/lists/templateModel";
+
+/**
+ * @brief List configured option labels (closed selects hide them).
+ * @param props field
+ * @return option chips or null
+ */
+function OptionHints({ field }: { field: TemplateField }) {
+  const opts = optionsOf(field.config).filter((o) => o.label || o.value);
+  if (opts.length === 0) return null;
+  return (
+    <ul
+      aria-label={`${field.label} options`}
+      className="flex flex-wrap gap-1 text-xs text-muted-foreground"
+    >
+      {opts.map((o, i) => (
+        <li key={`${o.value}-${i}`} className="rounded border px-1.5 py-0.5">
+          {o.label || o.value}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * @brief Render each field as an (inert) form row.
@@ -27,6 +50,7 @@ export function TemplatePreview({ fields }: { fields: TemplateField[] }) {
                 label={f.label}
               />
             )}
+            <OptionHints field={f} />
           </div>
         );
       })}
