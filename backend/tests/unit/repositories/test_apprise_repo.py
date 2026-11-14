@@ -176,3 +176,30 @@ async def test_record_failure_missing_row_returns_zero() -> None:
     s.get.return_value = None
     assert await AppriseRepository(s).record_failure(uuid4()) == 0
     s.flush.assert_not_awaited()
+
+
+async def test_test_send_invalid_url_reports_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.notifications.secrets import encrypt_url
+
+    s = _session()
+    row = MagicMock(spec=AppriseURL)
+    row.apprise_url = encrypt_url("json://localhost")
+    s.get.return_value = row
+    monkeypatch.setattr("apprise.Apprise.add", lambda self, *a, **k: False)
+    ok, msg = await AppriseRepository(s).test_send(uuid4(), "T", "B")
+    assert (ok, msg) == (False, "Invalid Apprise URL")
+
+
+async def test_set_label_updates_row() -> None:
+    s = _session()
+    row = MagicMock(spec=AppriseURL)
+    s.get.return_value = row
+    assert await AppriseRepository(s).set_label(uuid4(), "new") is True
+    assert row.label == "new"
+    s.flush.assert_awaited()
+
+
+async def test_set_label_missing_returns_false() -> None:
+    s = _session()
+    s.get.return_value = None
+    assert await AppriseRepository(s).set_label(uuid4(), "x") is False

@@ -66,3 +66,32 @@ async def test_test_checks_ownership_then_sends() -> None:
     repo.get.return_value = _row(uid)
     repo.test_send.return_value = (True, "ok")
     assert await svc.test(uid, uuid4()) == (True, "ok")
+
+
+async def test_list_includes_disabled() -> None:
+    svc, repo = _svc()
+    uid = uuid4()
+    repo.list_for_user.return_value = [_row(uid)]
+    assert await svc.list(uid) == repo.list_for_user.return_value
+    repo.list_for_user.assert_awaited_once_with(uid, CID, enabled_only=False)
+
+
+async def test_create_treats_apprise_exception_as_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(self, *a, **k):
+        raise RuntimeError("bad")
+
+    monkeypatch.setattr("apprise.Apprise.add", boom)
+    svc, repo = _svc()
+    with pytest.raises(AppError) as ei:
+        await svc.create(uuid4(), "json://localhost", None)
+    assert ei.value.code == "INVALID_APPRISE_URL"
+    repo.create.assert_not_awaited()
+
+
+async def test_test_sends_for_owned_row() -> None:
+    svc, repo = _svc()
+    uid, rid = uuid4(), uuid4()
+    repo.get.return_value = _row(uid)
+    repo.test_send.return_value = (True, "ok")
+    assert await svc.test(uid, rid) == (True, "ok")
+    repo.test_send.assert_awaited_once_with(rid, "Nexara test", "Test notification from Nexara")
