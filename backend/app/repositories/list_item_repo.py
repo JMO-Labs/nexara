@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import func, literal, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.list import List, ListItem, ListItemCompletion
@@ -49,7 +49,9 @@ class ListItemRepository(BaseRepository[ListItem]):
         stmt = self._base_query().where(ListItem.list_id == list_id)
         decoded = decode_cursor(cursor, cast)
         if decoded is not None:
-            stmt = stmt.where(tuple_(col, ListItem.id) > tuple_(*decoded))
+            stmt = stmt.where(
+                tuple_(col, ListItem.id) > tuple_(literal(decoded[0]), literal(decoded[1]))
+            )
         stmt = stmt.order_by(col.asc(), ListItem.id.asc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None

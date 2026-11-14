@@ -8,8 +8,15 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$PWD; rc=0
 
-(cd backend && { command -v uv >/dev/null || pipx install -q uv; } && uv venv -q .venv --clear && { uv sync -q --frozen --extra dev || uv sync -q --extra dev; } \
-  && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
+(cd backend && { command -v uv >/dev/null || pipx install -q uv; } && uv venv -q .venv --clear && { uv sync -q --frozen --extra dev || uv sync -q --extra dev; }) || rc=1
+
+# Lint/type checks: each failure sets rc=1 but never aborts, so the report shows everything.
+(cd backend && .venv/bin/ruff check .) || rc=1
+(cd backend && .venv/bin/ruff format --check .) || rc=1
+(cd backend && .venv/bin/mypy app/) || rc=1
+(cd frontend && npm ci --no-audit --no-fund && { npx tsc --noEmit; r=$?; npx eslint . --max-warnings=-1 || r=1; npx prettier --check . || r=1; exit $r; }) || rc=1
+
+(cd backend && .venv/bin/pytest tests/unit/ -q --cov=app --cov-report=xml:"$ROOT/coverage.xml" --junitxml="$ROOT/junit-be.xml") || rc=1
 
 # Security (ported from .gitlab/ci/security.yml; fail on findings). gitleaks is not run here.
 # pip-audit ignores (no upstream fix; not exploitable here, see docs/docs/development.md):
@@ -23,7 +30,7 @@ pipx run bandit -r backend/app -ll -q || rc=1
 # Integration (dockerized Postgres + Valkey); appends to coverage.xml. Skips locally without docker.
 bash scripts/wq-ci-integration.sh || rc=1
 
-(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npx eslint . --format stylish && npm run build) || rc=1
+(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npm run build) || rc=1
 
 # Mobile pipeline static checks (pin parity, signing, fastlane).
 bash scripts/test-mobile-ci.sh || rc=1
