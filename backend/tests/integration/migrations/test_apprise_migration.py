@@ -11,7 +11,7 @@ from alembic import command
 from tests.integration.migrations.test_notif_v2_foundation import _seed_user, scratch  # noqa: F401
 
 REV = "c5d6e7f8a9b0"
-PREV = "b2c3d4e5f6a7"
+PREV = "0031_receive_nudges"
 
 
 def _prefs(conn, uid):
