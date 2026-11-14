@@ -146,6 +146,14 @@ class TestRelease:
         await svc.release(item.id, UID)
         lists.increment_counters.assert_awaited_once_with(item.list_id, {"signup_count": -1})
 
+    async def test_release_missing_item(self):
+        svc, lists, items, signups, _ = _svc()
+        items.lock_item_for_update.return_value = None
+        with pytest.raises(NotFoundError):
+            await svc.release(uuid.uuid4(), UID)
+        signups.delete_claim.assert_not_awaited()
+        lists.increment_counters.assert_not_awaited()
+
     async def test_release_without_claim(self):
         svc, lists, items, signups, _ = _svc()
         items.lock_item_for_update.return_value = _item()
