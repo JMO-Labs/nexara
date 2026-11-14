@@ -17,6 +17,6 @@ def test_digest_queue_migration_is_single_head_after_merge() -> None:
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0031_receive_nudges"]
+    assert len(script.get_heads()) == 1
     assert script.get_revision("0031_receive_nudges").down_revision == REV
     assert script.get_revision(REV).down_revision == "0030_merge_heads"

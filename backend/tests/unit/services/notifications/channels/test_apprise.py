@@ -107,7 +107,7 @@ async def test_effective_channels_route_through_dispatcher_to_apprise() -> None:
             d._channels[k] = AsyncMock(send=AsyncMock(return_value=ChannelResult(ok=True)))
     ok = AsyncMock(return_value=ChannelResult(ok=True))
     with patch.object(AppriseChannel, "send", new=ok) as send:
-        await d.dispatch(_notif(), t, dict(effective_channels(t, {})))
+        await d.dispatch(_notif(), t, dict(effective_channels(t, {"new_post": {"apprise": True}})))
     send.assert_awaited_once()
 
 

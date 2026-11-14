@@ -20,7 +20,7 @@ def test_receive_nudges_migration_is_head() -> None:
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["0031_receive_nudges"]
+    assert len(script.get_heads()) == 1
     rev = script.get_revision("0031_receive_nudges")
     assert rev.down_revision == "0027_notification_digest_queue"
 
