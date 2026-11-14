@@ -129,12 +129,23 @@ class Settings(BaseSettings):
     RATE_LIMIT_DEFAULT: str = "600/minute"
     RATE_LIMIT_AUTH: str = "10/minute"
 
+    # --- Webhooks ---
+    WEBHOOK_ALLOWED_HOSTS: str = ""
+    """@brief Comma-separated hosts exempt from the SSRF guard (LAN targets)."""
+
     @property
     def allowed_origins_list(self) -> list[str]:
         """@brief Parse comma-separated ALLOWED_ORIGINS into a list."""
         if not self.ALLOWED_ORIGINS:
             return []
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+
+    @property
+    def webhook_allowed_hosts(self) -> frozenset[str]:
+        """@brief Parse WEBHOOK_ALLOWED_HOSTS into a lower-cased set."""
+        return frozenset(
+            h.strip().lower() for h in self.WEBHOOK_ALLOWED_HOSTS.split(",") if h.strip()
+        )
 
     @property
     def celery_broker_url(self) -> str:
