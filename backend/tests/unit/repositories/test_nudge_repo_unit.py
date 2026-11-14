@@ -51,3 +51,22 @@ async def test_find_gentle_candidates_returns_ids():
     repo, session = _repo(scalars=ids)
     assert await repo.find_gentle_candidates(CID) == ids
     session.execute.assert_awaited_once()
+
+
+async def test_accepts_user_nudges_default_on_when_no_settings_row():
+    repo, session = _repo()
+    session.execute.return_value.scalar_one_or_none.return_value = None
+    assert await repo.accepts_user_nudges(uuid.uuid4(), CID) is True
+
+
+async def test_accepts_user_nudges_true_when_enabled():
+    repo, session = _repo()
+    session.execute.return_value.scalar_one_or_none.return_value = True
+    assert await repo.accepts_user_nudges(uuid.uuid4(), CID) is True
+
+
+async def test_accepts_user_nudges_false_when_opted_out():
+    repo, session = _repo()
+    session.execute.return_value.scalar_one_or_none.return_value = False
+    assert await repo.accepts_user_nudges(uuid.uuid4(), CID) is False
+    session.execute.assert_awaited_once()
