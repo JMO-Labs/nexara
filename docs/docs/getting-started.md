@@ -87,6 +87,14 @@ Setup. Backend tests need a real PostgreSQL instance (no SQLite).
 - **Frontend cannot reach the API** -- make sure the backend is on port `8000`
   and that `ALLOWED_ORIGINS` includes `http://localhost:3000`.
 
+## Running the Full Stack
+
+```bash
+(cd deploy && cp .env.example .env && docker compose up -d)
+```
+
+The app is available through the proxy on `http://localhost:8080`.
+
 ## Next Steps
 
 - [Development Guide](development.md) for architecture and conventions

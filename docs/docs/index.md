@@ -25,9 +25,9 @@ Self-hosted first, container-native, and scaleable to Kubernetes.
 
 | Layer          | Technology                                  |
 | -------------- | ------------------------------------------- |
-| Frontend       | Nuxt 3, Tailwind CSS, Flowbite, Pinia       |
-| Backend        | FastAPI, SQLAlchemy, Celery                  |
-| Database       | PostgreSQL 16+                               |
+| Frontend       | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui (Radix), TanStack Query, zustand |
+| Backend        | FastAPI (async), SQLAlchemy 2.0 async, Celery |
+| Database       | PostgreSQL 16                                |
 | Cache/Pub-Sub  | Valkey (Redis-compatible)                    |
 | Container      | Alpine-based Docker, two containers max      |
 

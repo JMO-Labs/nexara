@@ -26,6 +26,8 @@ cp .env.example .env
 docker compose up -d
 ```
 
+The app is then served through the bundled proxy on `http://localhost:8080`.
+
 ### Environment Variables
 
 | Variable             | Required | Default | Description                      |
@@ -95,4 +97,5 @@ Migrations run on start. Take a backup first.
 
 `GET /healthz` (root path, not `/api/v1/healthz`) returns 200 when the
 database, Valkey and storage are healthy, 503 otherwise. The compose
-healthcheck uses it.
+healthcheck uses it. In development, the Next.js dev server proxies
+`/healthz` to the backend at `http://localhost:8000/healthz`.
