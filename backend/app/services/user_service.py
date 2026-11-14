@@ -21,6 +21,7 @@ from app.core.exceptions import AuthenticationError, ConflictError, NotFoundErro
 from app.core.i18n import _
 from app.core.security import hash_password, verify_password
 from app.models.user import User
+from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 
@@ -46,6 +47,16 @@ class UserService:
         self._settings = settings or get_settings()
         self._user_repo = UserRepository(session)
         self._token_repo = TokenRepository(session)
+        self._moderation_repo = ModerationRepository(session)
+
+    async def list_blocked(self, viewer: User) -> list[User]:
+        """
+        @brief List users the viewer has blocked.
+
+        @param viewer Authenticated user.
+        @return Blocked User rows.
+        """
+        return await self._moderation_repo.list_blocked_users(viewer.id, viewer.community_id)
 
     async def get_user(self, user_id: uuid.UUID) -> User:
         """
@@ -210,5 +221,7 @@ class UserService:
         """
         if user.avatar_url:
             return user.avatar_url
-        email_hash = hashlib.md5(user.email.strip().lower().encode()).hexdigest()  # noqa: S324
+        # MD5 is mandated by the Gravatar URL scheme, not used for security.
+        email_bytes = user.email.strip().lower().encode()
+        email_hash = hashlib.md5(email_bytes, usedforsecurity=False).hexdigest()
         return f"{GRAVATAR_BASE}/{email_hash}?s={size}&d=mp"

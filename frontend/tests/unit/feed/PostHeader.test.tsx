@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PostHeader } from "@/components/feed/PostHeader";
 import type { Post } from "@/lib/api/posts";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 
 const post = {
   id: "p1",
@@ -21,10 +22,22 @@ const post = {
 } as unknown as Post;
 
 describe("PostHeader", () => {
-  it("shows author and no menu for non-owners", () => {
+  it("shows author and a Report-only menu for non-owners", async () => {
+    const user = userEvent.setup();
     render(<PostHeader post={post} isAuthor={false} />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Post options" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Post options" }));
+    expect(
+      await screen.findByRole("menuitem", { name: "Report" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+  });
+
+  it("hides Report for the author", async () => {
+    const user = userEvent.setup();
+    render(<PostHeader post={post} isAuthor onDelete={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Post options" }));
+    expect(screen.queryByRole("menuitem", { name: "Report" })).toBeNull();
   });
 
   it("author menu fires onDelete", async () => {
@@ -34,5 +47,17 @@ describe("PostHeader", () => {
     await user.click(screen.getByRole("button", { name: "Post options" }));
     await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("shows a Post options tooltip on keyboard focus", async () => {
+    render(
+      <TooltipProvider>
+        <PostHeader post={post} isAuthor onDelete={vi.fn()} />
+      </TooltipProvider>,
+    );
+    await userEvent.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Post options",
+    );
   });
 });

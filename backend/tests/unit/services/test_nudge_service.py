@@ -18,6 +18,7 @@ from app.repositories.nudge_repo import NudgeRepository
 from app.repositories.user_repo import UserRepository
 from app.services.notification_service import PREF_MAP
 from app.services.nudge_service import NudgeService
+from tests.unit.services.strict_notify import strict_notify
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 SENDER = uuid.uuid4()
@@ -38,12 +39,13 @@ def _nudge() -> MagicMock:
 def deps():
     repo = AsyncMock(spec=NudgeRepository)
     users = AsyncMock(spec=UserRepository)
-    notify = AsyncMock()
+    notify = strict_notify()
     target = MagicMock(spec=User)
     target.id = TARGET
     users.get_by_id.return_value = target
     repo.is_blocked.return_value = False
     repo.has_recent_user_nudge.return_value = False
+    repo.accepts_user_nudges.return_value = True
     repo.create_nudge.return_value = _nudge()
     return repo, users, notify
 
@@ -124,3 +126,15 @@ async def test_gentle_nudges_none(service, deps):
     deps[0].find_gentle_candidates.return_value = []
     assert await service.send_gentle_nudges(COMMUNITY_ID) == 0
     deps[2].notify.assert_not_awaited()
+
+
+async def test_opted_out_target_rejected(service, deps):
+    """Targets with receive_nudges=False cannot be nudged (nexara#62)."""
+    repo, _, notify = deps
+    repo.accepts_user_nudges.return_value = False
+    with pytest.raises(AppError) as exc:
+        await service.send(MagicMock(spec=User, id=SENDER, display_name="A"), TARGET)
+    assert exc.value.code == "NUDGE_OPTED_OUT"
+    assert exc.value.status_code == 403
+    repo.create_nudge.assert_not_awaited()
+    notify.notify.assert_not_awaited()

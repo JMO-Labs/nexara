@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -174,3 +174,62 @@ class TestGetOptionalUser:
         result = await get_optional_user(token=token, db=db, settings=settings)
         assert result is not None
         assert result.id == user_id
+
+
+class TestGetSuggestionService:
+    """@brief Wiring of get_suggestion_service."""
+
+    @pytest.mark.asyncio
+    async def test_wires_repo_and_provider(self):
+        from app.core.dependencies import get_suggestion_service
+        from app.repositories.suggestion_repo import SuggestionRepository
+
+        svc = await get_suggestion_service(
+            db=AsyncMock(), settings=Settings(SECRET_KEY="x", AI_PROVIDER="")
+        )
+        assert isinstance(svc._repo, SuggestionRepository)
+        assert svc._provider is None  # AI_PROVIDER unset by default
+
+
+class TestGetAdminAIService:
+    """@brief Wiring of get_admin_ai_service (IP resolution, audit binding)."""
+
+    @staticmethod
+    def _request(headers: dict[str, str], host: str | None):
+        req = MagicMock()
+        req.headers = headers
+        req.client = MagicMock(host=host) if host else None
+        return req
+
+    def _build(self, headers: dict[str, str], host: str | None):
+        from app.core.dependencies import get_admin_ai_service
+
+        user = MagicMock()
+        user.id = uuid.uuid4()
+        with patch("app.core.valkey.get_pool", return_value=MagicMock()):
+            svc = get_admin_ai_service(
+                self._request(headers, host),
+                user=user,
+                db=AsyncMock(),
+                settings=Settings(SECRET_KEY="x", AI_PROVIDER=""),
+            )
+        return svc, user
+
+    def test_wires_repos_and_actor_with_forwarded_ip(self):
+        from app.repositories.audit_repo import AuditRepository
+        from app.repositories.community_repo import CommunityRepository
+
+        svc, user = self._build({"x-forwarded-for": "9.9.9.9, 10.0.0.1"}, "10.0.0.1")
+        assert isinstance(svc._communities, CommunityRepository)
+        assert isinstance(svc._audit, AuditRepository)
+        assert svc._actor_id == user.id
+        assert svc._ip == "9.9.9.9"
+        assert svc._provider_factory() is None  # AI_PROVIDER unset
+
+    def test_falls_back_to_client_host(self):
+        svc, _ = self._build({}, "10.0.0.1")
+        assert svc._ip == "10.0.0.1"
+
+    def test_no_ip_when_no_client(self):
+        svc, _ = self._build({}, None)
+        assert svc._ip is None

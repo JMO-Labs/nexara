@@ -27,6 +27,7 @@ class MediaAIRepository(BaseRepository[MediaAIMetadata]):
         )
         return res.scalar_one_or_none()
 
+    # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
         self,
         media_id: uuid.UUID,

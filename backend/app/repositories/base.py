@@ -48,6 +48,11 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         self._session = session
 
     @property
+    def _m(self) -> Any:
+        """@brief Model class typed ``Any`` for optional mixin columns."""
+        return self.model
+
+    @property
     def session(self) -> AsyncSession:
         """@brief Public access to the underlying session (e.g. for plugin hooks)."""
         return self._session
@@ -62,7 +67,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         stmt = select(self.model)
         if hasattr(self.model, "deleted_at"):
-            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
+            stmt = stmt.where(self._m.deleted_at.is_(None))
         return stmt
 
     async def get_by_id(
@@ -77,9 +82,9 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         @param community_id If provided, adds a community_id scope.
         @return The model instance or None.
         """
-        stmt = self._base_query().where(self.model.id == entity_id)  # type: ignore[attr-defined]
+        stmt = self._base_query().where(self._m.id == entity_id)
         if community_id is not None and hasattr(self.model, "community_id"):
-            stmt = stmt.where(self.model.community_id == community_id)  # type: ignore[attr-defined]
+            stmt = stmt.where(self._m.community_id == community_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -102,10 +107,10 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         stmt = self._base_query()
         if community_id is not None and hasattr(self.model, "community_id"):
-            stmt = stmt.where(self.model.community_id == community_id)  # type: ignore[attr-defined]
+            stmt = stmt.where(self._m.community_id == community_id)
 
         if order_by is None and hasattr(self.model, "created_at"):
-            order_col = self.model.created_at  # type: ignore[attr-defined]
+            order_col = self._m.created_at
             stmt = stmt.order_by(order_col.desc())
         elif order_by is not None:
             stmt = stmt.order_by(order_by)
@@ -113,7 +118,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         if cursor:
             try:
                 cursor_id = uuid.UUID(cursor)
-                stmt = stmt.where(self.model.id < cursor_id)  # type: ignore[attr-defined]
+                stmt = stmt.where(self._m.id < cursor_id)
             except ValueError:
                 pass
 
@@ -183,9 +188,9 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         """
         stmt = select(func.count()).select_from(self.model)
         if hasattr(self.model, "deleted_at"):
-            stmt = stmt.where(self.model.deleted_at.is_(None))  # type: ignore[attr-defined]
+            stmt = stmt.where(self._m.deleted_at.is_(None))
         if community_id is not None and hasattr(self.model, "community_id"):
-            stmt = stmt.where(self.model.community_id == community_id)  # type: ignore[attr-defined]
+            stmt = stmt.where(self._m.community_id == community_id)
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
@@ -228,7 +233,14 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
             return stmt
 
         author_col_name = None
-        for candidate in ("user_id", "author_id", "created_by", "uploader_id", "actor_id"):
+        for candidate in (
+            "user_id",
+            "author_id",
+            "created_by",
+            "uploader_id",
+            "actor_id",
+            "added_by",
+        ):
             if hasattr(entity_cls, candidate):
                 author_col_name = candidate
                 break

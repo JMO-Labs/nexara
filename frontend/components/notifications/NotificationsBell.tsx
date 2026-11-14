@@ -1,33 +1,34 @@
 "use client";
 /**
  * @file components/notifications/NotificationsBell.tsx
- * @brief Top-bar bell. Shows unread badge, opens an anchored popover
- *        (no backdrop blur) listing recent notifications. Each row shows
- *        type, summary, timestamp and an Acknowledge button. SSE drives
- *        live count + list updates.
+ * @brief Top-bar bell. Unread badge + anchored popover (no backdrop
+ *        blur) of active notifications via NotifRow. SSE drives updates.
  */
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bell, BellOff, AlertCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
-import { NotificationRow } from "./NotificationRow";
+import { NotifRow } from "./NotifRow";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
   getUnreadCount,
-  listNotifications,
-  markAllRead,
-  markRead,
+  listActive,
   STREAM_PATH,
-  type NotificationListResponse,
 } from "@/lib/api/notifications";
+import { useNotificationRegistry } from "@/lib/notifications/registry";
+import type { NotificationItem } from "@/lib/notifications/types";
 import { useSSE } from "@/hooks/useSSE";
 import { useSession } from "@/stores/session";
 
-const COUNT_KEY = ["notifications", "unread-count"] as const;
-const LIST_KEY = ["notifications", "list"] as const;
+const COUNT_KEY = ["notif", "count"] as const;
+const ACTIVE_KEY = ["notif", "active"] as const;
 
+/**
+ * @brief Top-bar bell: unread badge + popover of active notifications.
+ * @return bell element
+ */
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -42,6 +43,7 @@ export function NotificationsBell() {
 
   const isAuthed = useSession((s) => s.status === "authenticated");
   const qc = useQueryClient();
+  const { byKey } = useNotificationRegistry();
 
   const { data: count } = useQuery({
     queryKey: COUNT_KEY,
@@ -56,45 +58,35 @@ export function NotificationsBell() {
     error,
     refetch,
   } = useQuery({
-    queryKey: LIST_KEY,
-    queryFn: () => listNotifications(),
-    enabled: isAuthed,
+    queryKey: ACTIVE_KEY,
+    queryFn: listActive,
+    enabled: isAuthed && open,
     staleTime: 30_000,
   });
 
-  const markAll = useMutation({
-    mutationFn: markAllRead,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: COUNT_KEY });
-      qc.invalidateQueries({ queryKey: LIST_KEY });
-    },
-  });
-
-  const ackOne = useMutation({
-    mutationFn: (id: string) => markRead(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: COUNT_KEY });
-      qc.invalidateQueries({ queryKey: LIST_KEY });
-    },
-  });
-
-  const dismissOne = (id: string) => {
-    qc.setQueryData<NotificationListResponse>(LIST_KEY, (prev) =>
+  /** Optimistically drop the row (row component already called the API). */
+  const optimisticDismiss = (id: string) => {
+    qc.setQueryData<{ items: NotificationItem[] }>(ACTIVE_KEY, (prev) =>
       prev ? { ...prev, items: prev.items.filter((n) => n.id !== id) } : prev,
     );
-    ackOne.mutate(id);
+    qc.invalidateQueries({ queryKey: COUNT_KEY });
   };
 
   useSSE(STREAM_PATH, {
     enabled: isAuthed,
-    eventTypes: ["notification", "user_notification"],
+    eventTypes: [
+      "notification",
+      "user_notification",
+      "user_notification_dismissed",
+    ],
     onMessage: () => {
+      qc.invalidateQueries({ queryKey: ACTIVE_KEY });
       qc.invalidateQueries({ queryKey: COUNT_KEY });
-      if (open) qc.invalidateQueries({ queryKey: LIST_KEY });
     },
   });
 
   const unread = count?.count ?? 0;
+  const items = list?.items ?? [];
 
   useEffect(() => {
     if (unread > prevCountRef.current && unread > 0) {
@@ -144,6 +136,8 @@ export function NotificationsBell() {
           }
           aria-expanded={open}
           aria-haspopup="dialog"
+          tooltip="Notifications"
+          tooltipSide="bottom"
           onClick={() => setOpen((v) => !v)}
           data-tour="bell"
         >
@@ -180,16 +174,6 @@ export function NotificationsBell() {
             <h2 className="font-display text-base font-semibold">
               Notifications
             </h2>
-            {unread > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => markAll.mutate()}
-                loading={markAll.isPending}
-              >
-                Mark all read
-              </Button>
-            )}
           </div>
           <div className="flex-1 overflow-auto">
             {isLoading && (
@@ -216,7 +200,7 @@ export function NotificationsBell() {
                 </Button>
               </div>
             )}
-            {!isLoading && !error && (list?.items.length ?? 0) === 0 && (
+            {!isLoading && !error && items.length === 0 && (
               <div className="flex flex-col items-center gap-2 p-6 text-center">
                 <BellOff
                   aria-hidden
@@ -225,26 +209,38 @@ export function NotificationsBell() {
                   height={24}
                   className="text-muted"
                 />
-                <p className="text-ink text-sm font-semibold">
-                  No notifications
-                </p>
-                <p className="text-muted text-sm">
-                  You&apos;re all caught up. New activity will show here.
-                </p>
+                <p className="text-muted text-sm">All caught up.</p>
               </div>
             )}
-            {!isLoading &&
-              list?.items.map((n) => (
-                <NotificationRow
+            {items.map((n) => {
+              const type = byKey.get(n.type);
+              return type ? (
+                <NotifRow
                   key={n.id}
                   item={n}
-                  onAck={(id) => ackOne.mutate(id)}
-                  onDismiss={dismissOne}
-                  ackPending={ackOne.isPending && ackOne.variables === n.id}
-                  onNavigate={() => setOpen(false)}
+                  type={type}
+                  onDismissed={optimisticDismiss}
                 />
-              ))}
+              ) : null;
+            })}
           </div>
+          {items.length > 0 && (
+            <div className="border-ink/10 border-t p-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setOpen(false);
+                  window.dispatchEvent(
+                    new CustomEvent("notifications:drawer-open"),
+                  );
+                }}
+              >
+                View all
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

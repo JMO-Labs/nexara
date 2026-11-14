@@ -16,6 +16,7 @@ from typing import Any
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.core.transcode import ALLOWED_VIDEO_TYPES, MAX_VIDEO_SIZE
@@ -131,7 +132,9 @@ async def upload_part(
     if raw is None:
         raise NotFoundError(_("Upload session not found or expired"))
     sess_data = json.loads(raw)
-    sess_data["parts"][str(part_number)] = hashlib.md5(data).hexdigest()
+    # MD5 is the S3-style part ETag (integrity), not a security control.
+    etag = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    sess_data["parts"][str(part_number)] = etag
     await valkey.setex(
         f"multipart:{upload_id}",
         MULTIPART_SESSION_TTL,
@@ -220,5 +223,8 @@ async def complete_multipart_upload(
         transcode_video.delay(str(media.id))
     else:
         generate_thumbnail.delay(str(media.id))
+    await invalidate_search_cache_for_community(
+        community_id, service="media", action="create", user_id=user.id
+    )
 
     return MediaResponse.model_validate(media)

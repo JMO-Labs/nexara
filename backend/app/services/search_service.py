@@ -299,6 +299,7 @@ class SearchService:
 
         coros = [t[1] for t in tasks]
         type_names = [t[0] for t in tasks]
+        # gather over a dynamic coroutine list
         raw_results = await asyncio.gather(*coros)  # type: ignore[call-overload]
 
         results: dict[str, SearchTypeResults] = {}
@@ -309,7 +310,7 @@ class SearchService:
         return SearchResponse(query=query, results=results)
 
     @staticmethod
-    def _format_results(result_type: str, rows: list[tuple[Any, float]]) -> list[SearchResultItem]:
+    def _format_results(result_type: str, rows: list[tuple[Any, ...]]) -> list[SearchResultItem]:
         """
         @brief Convert raw DB rows into SearchResultItem list.
 

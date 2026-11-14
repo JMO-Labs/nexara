@@ -71,7 +71,7 @@ def create_pool(
     @return Configured :class:`redis.asyncio.Redis` client instance.
     """
     url = get_valkey_url(settings, db)
-    return Redis.from_url(  # type: ignore[no-any-return]
+    return Redis.from_url(  # type: ignore[no-any-return] # third-party stub returns Any
         url,
         max_connections=max_connections,
         decode_responses=decode_responses,

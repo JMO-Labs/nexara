@@ -9,8 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-Channel = Literal["inapp", "email", "push", "webhook", "toast"]
-Category = Literal["social", "event", "gallery", "prompt", "system", "plugin"]
+Channel = Literal["inapp", "email", "push", "apprise", "webhook", "toast"]
+Category = Literal["social", "event", "gallery", "prompt", "system", "plugin", "list"]
 
 
 class NotificationPayload(BaseModel):
@@ -41,7 +41,7 @@ class NotificationType:
     category: Category
     payload_schema: type[NotificationPayload]
     default_channels: dict[Channel, bool]
-    user_configurable: tuple[Channel, ...] = ("inapp", "email", "push", "toast")
+    user_configurable: tuple[Channel, ...] = ("inapp", "email", "push", "toast", "apprise")
     group_window_seconds: int | None = None
     toast_on_arrival: bool = False
     bypass_dnd: bool = False

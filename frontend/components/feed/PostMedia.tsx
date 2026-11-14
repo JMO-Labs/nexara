@@ -3,11 +3,14 @@
  * @file components/feed/PostMedia.tsx
  * @brief Media grid for post attachments (1 / 2 / 3+ layouts).
  */
+import { ReportButton } from "@/components/common/ReportButton";
 import type { PostMedia as Media } from "@/lib/api/posts";
 
 export interface PostMediaProps {
   media: Media[];
   onClick?: (index: number) => void;
+  /** Show a per-tile Report action (viewer is not the owner). */
+  canReport?: boolean;
 }
 
 function isImage(m: Media) {
@@ -18,9 +21,10 @@ function isImage(m: Media) {
  * @brief Grid of up to four attachments with a "+N" overlay.
  * @param media attachments
  * @param onClick tile click handler (index)
+ * @param canReport show Report on each tile
  * @return grid element or null
  */
-export function PostMedia({ media, onClick }: PostMediaProps) {
+export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
   if (!media || media.length === 0) return null;
   const visible = media.slice(0, 4);
   const overflow = Math.max(0, media.length - 4);
@@ -53,6 +57,18 @@ export function PostMedia({ media, onClick }: PostMediaProps) {
           {i === 3 && overflow > 0 ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-2xl font-black text-white">
               +{overflow}
+            </div>
+          ) : null}
+          {canReport ? (
+            <div
+              className="absolute right-2 top-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ReportButton
+                targetType="media"
+                targetId={m.id}
+                className="inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
             </div>
           ) : null}
         </div>

@@ -1,8 +1,13 @@
 /**
  * @file tests/e2e/notifications.spec.ts
- * @brief Mention by user B notifies user A: bell badge, unread item, acknowledge.
+ * @brief Notification e2e flows:
+ *        - mention by user B notifies user A: bell badge, unread item, ack.
+ *        - bell: trigger notif -> badge 1 -> click navigates -> gone.
+ *          Requires the backend to run with APP_ENV=test (test-only
+ *          /api/v1/_test/notify endpoint).
  */
 import { test, expect } from "@playwright/test";
+import { login } from "./fixtures/auth";
 import { createSecondUser } from "./fixtures/second-user";
 
 test("mention notifies recipient and can be marked read", async ({
@@ -33,15 +38,44 @@ test("mention notifies recipient and can be marked read", async ({
 
     await bell.click();
     const drawer = a.page.getByRole("dialog", { name: "Notifications" });
-    await expect(drawer.getByRole("img", { name: "Unread" })).toBeVisible();
+    const unreadRows = drawer.locator(
+      '[data-testid="notif-row"][data-unread="true"]',
+    );
+    await expect(unreadRows).toHaveCount(1);
 
     await drawer
       .getByRole("button", { name: "Acknowledge notification" })
       .first()
       .click();
-    await expect(drawer.getByRole("img", { name: "Unread" })).toHaveCount(0);
+    await expect(unreadRows).toHaveCount(0);
   } finally {
     await a.context.close();
     await b.context.close();
   }
+});
+
+test("bell: notification shows, navigates on click, then disappears", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/app");
+
+  const res = await page.request.post("/api/v1/_test/notify", {
+    data: {
+      type: "system",
+      payload: { message: "E2E bell ping", link: "/app/settings" },
+    },
+  });
+  expect(res.ok()).toBeTruthy();
+
+  const bell = page.getByRole("button", { name: /notifications/i }).first();
+  await expect(page.getByTestId("unread-badge")).toHaveText("1");
+  await expect(bell).toHaveAttribute("aria-label", /1 unread/);
+
+  await bell.click();
+  await page.getByText("E2E bell ping").click();
+  await expect(page).toHaveURL(/\/app\/settings/);
+
+  await bell.click();
+  await expect(page.getByText("E2E bell ping")).toHaveCount(0);
 });

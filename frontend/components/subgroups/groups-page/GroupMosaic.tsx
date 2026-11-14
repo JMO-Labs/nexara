@@ -113,7 +113,7 @@ export function GroupMosaic({
               <SubgroupCard
                 subgroup={g}
                 anchor={anchor}
-                isMember={!!g.my_role}
+                isMember={g.is_member}
                 onSelect={onSelect}
                 onJoin={onJoin}
                 onLeave={onLeave}
