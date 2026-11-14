@@ -55,13 +55,11 @@ describe("usePushNotifications", () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (navigator as any).serviceWorker;
   });
 
   it("reports unsupported when serviceWorker/PushManager are missing", async () => {
     vi.stubGlobal("PushManager", undefined);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).PushManager;
     const { result } = renderHookWithProviders(() => usePushNotifications());
     await waitFor(() => expect(result.current.permission).toBe("unsupported"));

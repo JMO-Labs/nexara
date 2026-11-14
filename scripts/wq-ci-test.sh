@@ -23,7 +23,7 @@ pipx run bandit -r backend/app -ll -q || rc=1
 # Integration (dockerized Postgres + Valkey); appends to coverage.xml. Skips locally without docker.
 bash scripts/wq-ci-integration.sh || rc=1
 
-(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npx eslint . && npm run build) || rc=1
+(cd frontend && npm ci --no-audit --no-fund && npx vitest run --reporter=default --reporter=junit --outputFile.junit="$ROOT/junit-fe.xml" && npx tsc --noEmit && npx eslint . --format stylish && npm run build) || rc=1
 
 # Mobile pipeline static checks (pin parity, signing, fastlane).
 bash scripts/test-mobile-ci.sh || rc=1
