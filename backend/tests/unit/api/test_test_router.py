@@ -34,7 +34,6 @@ async def test_mounted_in_test_env_and_notifies(test_app):
 
     settings = get_settings().model_copy(update={"APP_ENV": "test"})
 
-
     with patch("app.main.get_settings", lambda: settings):
         from app.main import create_app
 
