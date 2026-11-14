@@ -57,7 +57,9 @@ describe("queries", () => {
     api.getLists.mockResolvedValue({ lists: [], nextCursor: undefined });
     const { result } = renderHook(() => useLists("c1"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(qc.getQueryData(["lists", "c1", "list", {}])).toBeDefined();
+    expect(
+      qc.getQueryData(["lists", "c1", "list", { limit: 20 }]),
+    ).toBeDefined();
     const off = renderHook(() => useLists(undefined), { wrapper });
     expect(off.result.current.fetchStatus).toBe("idle");
   });
