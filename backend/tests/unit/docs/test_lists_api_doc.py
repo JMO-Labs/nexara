@@ -1,6 +1,6 @@
 """
 @file test_lists_api_doc.py
-@brief Guards docs/docs/developer/lists-api.md against the Lists routers (nexara#240).
+@brief Guards the Lists and List templates API docs against their routers (nexara#240).
 """
 
 import ast
@@ -9,17 +9,19 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[4]
-DOC = ROOT / "docs/docs/developer/lists-api.md"
+DOCS_DIR = ROOT / "docs/docs/developer"
+DOC = DOCS_DIR / "lists-api.md"
+TEMPLATES_DOC = DOCS_DIR / "list-templates-api.md"
 ROUTERS = {
-    "/lists": ROOT / "backend/app/api/v1/lists.py",
-    "/list_templates": ROOT / "backend/app/api/v1/list_templates.py",
+    "/lists": (ROOT / "backend/app/api/v1/lists.py", DOC),
+    "/list_templates": (ROOT / "backend/app/api/v1/list_templates.py", TEMPLATES_DOC),
 }
 
 
-def _routes() -> list[str]:
-    """@brief ``METHOD /api/v1<prefix><path>`` for every @router.<verb>(...) decorator."""
+def _routes() -> list[tuple[str, Path]]:
+    """@brief ``(METHOD /api/v1<prefix><path>, doc)`` for every @router.<verb>(...) decorator."""
     out = []
-    for prefix, path in ROUTERS.items():
+    for prefix, (path, doc) in ROUTERS.items():
         for node in ast.walk(ast.parse(path.read_text())):
             if not isinstance(node, ast.AsyncFunctionDef):
                 continue
@@ -31,7 +33,7 @@ def _routes() -> list[str]:
                     and dec.func.value.id == "router"
                 ):
                     sub = dec.args[0].value  # type: ignore[attr-defined]
-                    out.append(f"{dec.func.attr.upper()} /api/v1{prefix}{sub}")
+                    out.append((f"{dec.func.attr.upper()} /api/v1{prefix}{sub}", doc))
     return out
 
 
@@ -39,9 +41,9 @@ def test_router_parse_finds_routes() -> None:
     assert len(_routes()) >= 20
 
 
-@pytest.mark.parametrize("route", _routes())
-def test_every_route_documented(route: str) -> None:
-    assert f"### `{route}`" in DOC.read_text()
+@pytest.mark.parametrize(("route", "doc"), _routes(), ids=lambda v: v.name if isinstance(v, Path) else v)
+def test_every_route_documented(route: str, doc: Path) -> None:
+    assert f"### `{route}`" in doc.read_text()
 
 
 def test_auth_and_error_envelope_documented() -> None:
@@ -54,10 +56,16 @@ def test_auth_and_error_envelope_documented() -> None:
         assert code in text
 
 
-def test_each_route_has_auth_and_json_example() -> None:
-    sections = DOC.read_text().split("\n### `")[1:]
+@pytest.mark.parametrize("doc", [DOC, TEMPLATES_DOC], ids=lambda p: p.name)
+def test_each_route_has_auth_and_json_example(doc: Path) -> None:
+    sections = doc.read_text().split("\n### `")[1:]
     assert sections
     for sec in sections:
         head = sec.splitlines()[0]
         assert "**Auth:**" in sec, head
         assert "```json" in sec or "204 No Content" in sec, head
+
+
+@pytest.mark.parametrize("doc", [DOC, TEMPLATES_DOC], ids=lambda p: p.name)
+def test_doc_under_500_lines(doc: Path) -> None:
+    assert len(doc.read_text().splitlines()) < 500
