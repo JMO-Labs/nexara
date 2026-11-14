@@ -76,3 +76,33 @@ async def test_owner_mismatch_marks_failed_without_building(deps):
     assert last.args[1] == "failed"
     assert notif.notify.await_args.kwargs["type"] == "data_export_failed"
     assert notif.notify.await_args.kwargs["user_id"] == UID
+
+
+async def test_missing_export_returns_without_work(deps):
+    repo, notif, _, build = deps
+    repo.get_by_id.return_value = None
+    await export_tasks._generate(str(UID), str(EID))
+    repo.update_status.assert_not_awaited()
+    build.assert_not_awaited()
+    notif.notify.assert_not_awaited()
+
+
+def test_notifier_builds_service_for_community():
+    cid = uuid.uuid4()
+    with (
+        patch(f"{MOD}.NotificationService") as svc,
+        patch(f"{MOD}.NotificationRepository") as nrepo,
+        patch(f"{MOD}.SettingsRepository") as srepo,
+    ):
+        session = MagicMock()
+        out = export_tasks._notifier(session, cid)
+    assert out is svc.return_value
+    nrepo.assert_called_once_with(session)
+    srepo.assert_called_once_with(session)
+    assert svc.call_args.kwargs["community_id"] == cid
+
+
+def test_generate_user_export_runs_and_returns_id():
+    with patch(f"{MOD}._generate", new=AsyncMock()) as gen:
+        assert export_tasks.generate_user_export(str(UID), str(EID)) == str(EID)
+    gen.assert_awaited_once_with(str(UID), str(EID))

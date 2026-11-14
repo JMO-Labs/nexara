@@ -343,6 +343,9 @@
     "direct": "Direct"
   },
   "notifications": {
+    "toast": {
+      "open": "Open"
+    },
     "title": "Notifications",
     "pushTitle": "Enable push notifications",
     "pushDescription": "Get notified when someone mentions you or comments on your posts, even when the app is closed.",

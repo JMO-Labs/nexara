@@ -16,13 +16,13 @@ BACKEND = Path(__file__).resolve().parents[3]
 
 
 def test_receive_nudges_migration_is_head() -> None:
-    """@brief New migration chains after 0030_merge_heads (dev head)."""
+    """@brief New migration chains after 0027_notification_digest_queue."""
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
     assert script.get_heads() == ["0031_receive_nudges"]
     rev = script.get_revision("0031_receive_nudges")
-    assert rev.down_revision == "0030_merge_heads"
+    assert rev.down_revision == "0027_notification_digest_queue"
 
 
 def test_user_settings_has_receive_nudges_column() -> None:
