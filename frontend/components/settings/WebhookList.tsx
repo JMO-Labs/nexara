@@ -52,6 +52,8 @@ export function WebhookList() {
       url: form.url,
       type_keys: form.type_keys,
     });
+    // Create API has no enabled field; honour the toggle with a follow-up.
+    if (!form.enabled) await updateWebhook(res.id, { enabled: false });
     await refresh();
     return res;
   };

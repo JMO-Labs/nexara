@@ -146,6 +146,47 @@ describe("NotificationsTab", () => {
     });
   });
 
+  it("debounces a cadence change into one patch", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(
+      await screen.findByRole("combobox", { name: "event_reminder Digest" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "Daily" }));
+    expect(api.patchPreferences).not.toHaveBeenCalled();
+    await waitFor(() => expect(api.patchPreferences).toHaveBeenCalledTimes(1));
+    expect(api.patchPreferences).toHaveBeenCalledWith({
+      digest_cadence: { event_reminder: "daily" },
+    });
+  });
+
+  it("debounces a quiet-hours change into one patch", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(
+      await screen.findByRole("button", { name: "Add window Mon" }),
+    );
+    expect(api.patchPreferences).not.toHaveBeenCalled();
+    await waitFor(() => expect(api.patchPreferences).toHaveBeenCalledTimes(1));
+    expect(api.patchPreferences).toHaveBeenCalledWith({
+      dnd_schedule: { mon: [{ start: "22:00", end: "07:00" }] },
+      dnd_timezone: "UTC",
+    });
+  });
+
+  it("flushes pending changes on unmount", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderTab();
+    await user.click(
+      await screen.findByRole("switch", { name: "mention Email" }),
+    );
+    unmount();
+    expect(api.patchPreferences).toHaveBeenCalledTimes(1);
+    expect(api.patchPreferences).toHaveBeenCalledWith({
+      notification_prefs: { mention: { inapp: true, email: true } },
+    });
+  });
+
   it("snoozes for one hour and clears", async () => {
     const user = userEvent.setup();
     renderTab();
@@ -221,6 +262,29 @@ describe("NotificationsTab", () => {
     expect(
       screen.getByRole("button", { name: "Copy secret" }),
     ).toBeInTheDocument();
+  });
+
+  it("creates a disabled webhook when Enabled is switched off", async () => {
+    api.createWebhook.mockResolvedValue({
+      id: "w2",
+      url: "https://x.io/h",
+      secret: "s3cret-value",
+      type_keys: ["mention"],
+      enabled: true,
+    });
+    api.updateWebhook.mockResolvedValue({ ...HOOK, id: "w2", enabled: false });
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(
+      await screen.findByRole("button", { name: "Add webhook" }),
+    );
+    await user.type(screen.getByLabelText("URL"), "https://x.io/h");
+    await user.click(await screen.findByRole("checkbox", { name: "mention" }));
+    await user.click(screen.getByRole("switch", { name: "Enabled" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(api.updateWebhook).toHaveBeenCalledWith("w2", { enabled: false }),
+    );
   });
 
   it("edits a webhook without showing a secret", async () => {

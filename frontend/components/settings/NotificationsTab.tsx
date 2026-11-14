@@ -40,8 +40,14 @@ export function NotificationsTab() {
   useEffect(() => {
     if (data) setLocal(data);
   }, [data]);
+  // Flush (not drop) a pending debounced PATCH when the tab unmounts.
   useEffect(
-    () => () => void (timer.current && clearTimeout(timer.current)),
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      const body = pending.current;
+      pending.current = {};
+      if (Object.keys(body).length) void patchPreferences(body);
+    },
     [],
   );
 
