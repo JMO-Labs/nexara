@@ -20,6 +20,7 @@ import {
 import { useNotificationRegistry } from "@/lib/notifications/registry";
 import type { NotificationItem } from "@/lib/notifications/types";
 import { useSSE } from "@/hooks/useSSE";
+import { useSyncHandler } from "@/hooks/useNotificationsSync";
 import { useSession } from "@/stores/session";
 
 const COUNT_KEY = ["notif", "count"] as const;
@@ -44,6 +45,7 @@ export function NotificationsBell() {
   const isAuthed = useSession((s) => s.status === "authenticated");
   const qc = useQueryClient();
   const { byKey } = useNotificationRegistry();
+  const syncHandler = useSyncHandler();
 
   const { data: count } = useQuery({
     queryKey: COUNT_KEY,
@@ -78,10 +80,12 @@ export function NotificationsBell() {
       "notification",
       "user_notification",
       "user_notification_dismissed",
+      "user_preferences_updated",
     ],
-    onMessage: () => {
+    onMessage: (data, type) => {
       qc.invalidateQueries({ queryKey: ACTIVE_KEY });
       qc.invalidateQueries({ queryKey: COUNT_KEY });
+      syncHandler(data, type);
     },
   });
 

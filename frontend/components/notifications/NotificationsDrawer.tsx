@@ -12,6 +12,7 @@ import { Drawer } from "@/components/ui/Drawer";
 import { dismissOne, listNotifications } from "@/lib/api/notifications";
 import { useNotificationRegistry } from "@/lib/notifications/registry";
 import type { NotificationItem } from "@/lib/notifications/types";
+import { useNotificationsSync } from "@/hooks/useNotificationsSync";
 import { NotifRow } from "./NotifRow";
 
 type Filter = "all" | "unread";
@@ -26,6 +27,7 @@ export const DRAWER_OPEN_EVENT = "notifications:drawer-open";
 export function NotificationsDrawer() {
   const t = useTranslations();
   const qc = useQueryClient();
+  useNotificationsSync();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
