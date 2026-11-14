@@ -63,7 +63,8 @@ class PasswordService:
 
         import httpx
 
-        sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # noqa: S324
+        # SHA-1 is mandated by the HIBP k-anonymity range API, not used for security.
+        sha1 = hashlib.sha1(password.encode("utf-8"), usedforsecurity=False).hexdigest().upper()
         prefix, suffix = sha1[:5], sha1[5:]
 
         try:

@@ -27,7 +27,7 @@ function Row({ p }: { p: Plugin }) {
       confirmLabel: "Uninstall",
       tone: "danger",
     });
-    if (ok) uninstall.mutate();
+    if (ok) uninstall.mutate(undefined);
   };
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 p-3">

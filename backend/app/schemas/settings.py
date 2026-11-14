@@ -116,6 +116,8 @@ class UserSettingsResponse(BaseModel):
     allow_sassybot: bool = True
     font_size: str = "medium"
     compact_feed: bool = False
+    receive_nudges: bool = True
+    receive_gentle_nudges: bool = True
     home_layout: HomeLayoutSchema | None = None
 
     model_config = {"from_attributes": True}
@@ -136,6 +138,8 @@ class UserSettingsUpdate(BaseModel):
     allow_sassybot: bool | None = None
     font_size: str | None = Field(default=None, pattern=r"^(small|medium|large)$")
     compact_feed: bool | None = None
+    receive_nudges: bool | None = None
+    receive_gentle_nudges: bool | None = None
     home_layout: HomeLayoutSchema | None = None
 
 

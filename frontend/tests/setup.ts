@@ -29,6 +29,14 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   };
 }
 
+// jsdom lacks pointer-capture APIs (Radix Select uses them on open).
+if (typeof Element !== "undefined") {
+  const proto = Element.prototype as unknown as Record<string, unknown>;
+  proto.hasPointerCapture ??= () => false;
+  proto.setPointerCapture ??= () => {};
+  proto.releasePointerCapture ??= () => {};
+}
+
 // jsdom lacks scrollIntoView (Radix Select calls it on open).
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};

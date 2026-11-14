@@ -142,3 +142,27 @@ async def test_sum_claimed() -> None:
     res.scalar_one.return_value = 4
     s.execute = AsyncMock(return_value=res)
     assert await ListSignupRepository(s).sum_claimed(LID) == 4
+
+
+async def test_template_get_by_id_eager_loads_children() -> None:
+    """@brief Async sessions cannot lazy-load; clone needs fields+items loaded."""
+    s = _session([MagicMock()])
+    await ListTemplateRepository(s).get_by_id(LID, CID)
+    stmt = s.execute.call_args_list[-1].args[0]
+    paths = " ".join(str(opt.path) for opt in stmt._with_options)
+    assert "ListTemplate.fields" in paths and "ListTemplate.items" in paths
+    sql = _sql(s)
+    assert "list_template.community_id" in sql and "deleted_at IS NULL" in sql
+
+
+async def test_is_member_and_count_live_and_completed() -> None:
+    s = AsyncMock()
+    res = MagicMock()
+    res.first.return_value = (UID,)
+    res.one.return_value = (3, 1)
+    s.execute = AsyncMock(return_value=res)
+    assert await ListRepository(s).is_member(LID, UID) is True
+    assert "list_member.user_id" in _sql(s)
+    assert await ListItemRepository(s).count_live_and_completed(LID) == (3, 1)
+    sql = _sql(s)
+    assert "list_item.deleted_at IS NULL" in sql and "list_item_completion" in sql

@@ -54,11 +54,11 @@ class EventIcalMixin:
         people: dict[uuid.UUID, dict[str, Any]] | None = None,
     ) -> bytes:
         """@brief Serialize events; people maps event id -> organizer/attendees."""
-        cal = ICalCalendar()  # type: ignore[no-untyped-call]
+        cal = ICalCalendar()  # type: ignore[no-untyped-call] # icalendar is untyped
         cal.add("prodid", "-//Nexara//EN")
         cal.add("version", "2.0")
         for event in events:
-            ical_event = ICalEvent()  # type: ignore[no-untyped-call]
+            ical_event = ICalEvent()  # type: ignore[no-untyped-call] # icalendar is untyped
             ical_event.add("uid", event.ical_uid)
             ical_event.add("summary", event.title)
             if event.description:
@@ -88,7 +88,7 @@ class EventIcalMixin:
 
                 ical_event["rrule"] = vRecur.from_ical(event.recurrence_rule)
             cal.add_component(ical_event)
-        return cal.to_ical()  # type: ignore[no-any-return]
+        return cal.to_ical()  # type: ignore[no-any-return] # third-party stub returns Any
 
     async def export_event_ical(self, event_id: uuid.UUID, user_id: uuid.UUID) -> bytes:
         event = await self._repo.get_by_id(event_id, community_id=self._community_id)
@@ -205,7 +205,7 @@ class EventIcalMixin:
 
         upserted = 0
         for component in cal.walk("VEVENT"):
-            uid = str(component.get("uid"))  # type: ignore[no-untyped-call]
+            uid = str(component.get("uid"))  # type: ignore[no-untyped-call] # icalendar is untyped
             if not uid:
                 continue
             # Namespace imported UIDs per subscription: a feed must never match
@@ -217,10 +217,13 @@ class EventIcalMixin:
             # Skip upsert if event has been locally modified by user
             if existing is not None and existing.locally_modified:
                 continue
-            rrule = component.get("rrule")  # type: ignore[no-untyped-call]
+            rrule = component.get("rrule")  # type: ignore[no-untyped-call] # icalendar is untyped
             data: dict[str, Any] = {
+                # icalendar is untyped
                 "title": str(component.get("summary") or ""),  # type: ignore[no-untyped-call]
+                # icalendar is untyped
                 "description": str(component.get("description") or "") or None,  # type: ignore[no-untyped-call]
+                # icalendar is untyped
                 "location": str(component.get("location") or "") or None,  # type: ignore[no-untyped-call]
                 "starts_at": component.decoded("dtstart"),
                 "ends_at": component.decoded("dtend") or component.decoded("dtstart"),

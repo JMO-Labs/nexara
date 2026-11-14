@@ -10,7 +10,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 Channel = Literal["inapp", "email", "push", "apprise", "webhook", "toast"]
-Category = Literal["social", "event", "gallery", "prompt", "system", "plugin"]
+Category = Literal["social", "event", "gallery", "prompt", "system", "plugin", "list"]
 
 
 class NotificationPayload(BaseModel):

@@ -83,7 +83,7 @@ async def _scrape_link_preview_async(
     }
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.link_preview_tasks.scrape_link_preview",
     queue="default",
 )

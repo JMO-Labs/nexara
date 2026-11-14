@@ -90,4 +90,4 @@ Setup. Backend tests need a real PostgreSQL instance (no SQLite).
 ## Next Steps
 
 - [Development Guide](development.md) for architecture and conventions
-- [Deployment Guide](deployment.md) for production setup
+- [Deployment Guide](deployment/deployment-guide.md) for production setup

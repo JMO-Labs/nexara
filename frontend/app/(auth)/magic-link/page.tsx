@@ -14,13 +14,16 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { requestMagicLink } from "@/lib/api/auth";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
-const Schema = z.object({ email: z.string().min(3) });
+const Schema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
 type FormData = z.infer<typeof Schema>;
 
 export default function MagicLinkPage() {
   const [sent, setSent] = useState(false);
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
+    mode: "onTouched",
     defaultValues: { email: "" },
   });
 
@@ -60,6 +63,7 @@ export default function MagicLinkPage() {
           autoFocus
           autoComplete="email"
           error={formState.errors.email?.message}
+          disabled={send.isPending}
           {...register("email")}
         />
         <Button type="submit" size="lg" loading={send.isPending}>

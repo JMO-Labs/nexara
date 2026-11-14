@@ -208,6 +208,7 @@ class CalendarSubscriptionResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    # pydantic computed_field over property, mypy limitation
     @computed_field  # type: ignore[prop-decorator]
     @property
     def next_sync_at(self) -> datetime | None:

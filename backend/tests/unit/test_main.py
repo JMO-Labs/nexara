@@ -4,6 +4,7 @@
 """
 
 from app.main import app, create_app
+from tests.unit.route_paths import route_paths
 
 
 class TestAppFactory:
@@ -26,11 +27,11 @@ class TestRouteRegistration:
     """@brief Verify expected routes are registered on the app."""
 
     def test_healthz_route_registered(self):
-        paths = [route.path for route in app.routes]
+        paths = route_paths(app)
         assert "/healthz" in paths
 
     def test_metrics_route_registered(self):
-        paths = [route.path for route in app.routes]
+        paths = route_paths(app)
         assert "/metrics" in paths
 
 

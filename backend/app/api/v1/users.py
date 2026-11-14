@@ -118,6 +118,15 @@ async def deactivate_account(
     return MessageResponse(message=_("Account deactivated"))
 
 
+@router.get("/blocked", response_model=list[UserResponse])
+async def list_blocked_users(
+    user: User = Depends(get_current_user),
+    svc: UserService = Depends(_build_service),
+) -> Any:
+    """@brief Return users the current user has blocked (UI reference only)."""
+    return await svc.list_blocked(user)
+
+
 @router.get("/{user_id}/storage", response_model=StorageUsageResponse)
 async def get_user_storage(
     user_id: uuid.UUID,

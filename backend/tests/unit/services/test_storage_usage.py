@@ -62,3 +62,11 @@ class TestGetUsage:
         svc, _, _ = _svc(None)
         with pytest.raises(NotFoundError):
             await svc.get_usage(_user(), uuid.uuid4())
+
+
+class TestFromSession:
+    def test_binds_repositories_to_session(self):
+        session = MagicMock()
+        svc = StorageUsageService.from_session(session)
+        assert isinstance(svc._media_repo, MediaRepository)
+        assert isinstance(svc._user_repo, UserRepository)

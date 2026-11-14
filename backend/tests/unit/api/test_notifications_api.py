@@ -286,3 +286,17 @@ async def test_clear_snooze_route(client: AsyncClient, service: AsyncMock, user:
     r = await client.delete(f"{BASE}/snooze")
     assert r.status_code == 200
     service.clear_snooze.assert_awaited_once_with(user.id)
+
+
+def test_apprise_service_factory_scoped_to_configured_community() -> None:
+    import uuid
+    from unittest.mock import MagicMock
+
+    from app.api.v1.notifications import _apprise_service
+    from app.core.config import Settings
+
+    cid = uuid.uuid4()
+    settings = MagicMock(spec=Settings)
+    settings.COMMUNITY_ID = str(cid)
+    svc = _apprise_service(db=MagicMock(), settings=settings)
+    assert svc._community_id == cid

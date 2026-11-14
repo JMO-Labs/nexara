@@ -14,7 +14,7 @@ import secrets
 import string
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 import bcrypt
@@ -213,7 +213,7 @@ def decode_token(
         raise ValueError(_("Invalid token type"))
     if "sub" not in payload:
         raise ValueError(_("Token missing subject claim"))
-    return cast(dict[str, Any], payload)
+    return payload
 
 
 # ── Opaque refresh tokens ────────────────────────────────────────────────

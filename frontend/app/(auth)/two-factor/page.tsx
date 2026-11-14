@@ -35,6 +35,7 @@ export default function TwoFactorPage() {
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
+    mode: "onTouched",
     defaultValues: { code: "" },
   });
 
@@ -86,6 +87,7 @@ export default function TwoFactorPage() {
           autoComplete="one-time-code"
           inputMode="numeric"
           error={formState.errors.code?.message}
+          disabled={formState.isSubmitting}
           {...register("code")}
         />
         <Button type="submit" size="lg" loading={formState.isSubmitting}>

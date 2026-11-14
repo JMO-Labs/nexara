@@ -170,7 +170,9 @@ class PostService(CommentsMixin, ReactionsMixin):
             content=content,
             subgroup_id=subgroup_id,
         )
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="post", action="create", user_id=user.id
+        )
         self._enqueue_sassybot(post.id, content)
 
         if enriched and self._event_bus:
@@ -201,7 +203,9 @@ class PostService(CommentsMixin, ReactionsMixin):
             raise AuthorizationError(_("You can only edit your own posts"))
 
         await self._post_repo.update_content(post, content)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="post", action="update", user_id=user.id
+        )
         enriched = await self._post_repo.get_post_detail(
             post_id,
             self._community_id,
@@ -226,6 +230,8 @@ class PostService(CommentsMixin, ReactionsMixin):
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="post", action="delete", user_id=user.id
+        )
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("post", post_id)

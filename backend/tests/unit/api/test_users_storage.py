@@ -66,3 +66,10 @@ async def test_storage_unauthenticated(test_app):
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         resp = await client.get(f"/api/v1/users/{uuid.uuid4()}/storage")
     assert resp.status_code == 401
+
+
+def test_build_storage_service_returns_service():
+    from app.api.v1.users import _build_storage_service
+    from app.services.storage.usage_service import StorageUsageService
+
+    assert isinstance(_build_storage_service(MagicMock()), StorageUsageService)

@@ -14,6 +14,7 @@ import {
   useUpdateNotificationPrefs,
 } from "@/hooks/useSettings";
 import * as settingsApi from "@/lib/api/settings";
+import type { NotificationPreferences } from "@/lib/api/settings";
 import { useToasts } from "@/stores/toasts";
 import { qk } from "@/lib/query-keys";
 
@@ -105,7 +106,9 @@ describe("Settings hooks", () => {
         notif_invite_accepted_email: false,
         mute_all_email: false,
       };
-      vi.mocked(settingsApi.getNotificationPrefs).mockResolvedValue(mockPrefs);
+      vi.mocked(settingsApi.getNotificationPrefs).mockResolvedValue(
+        mockPrefs as unknown as NotificationPreferences,
+      );
 
       const { result } = renderHook(() => useNotificationPrefs(), {
         wrapper: createWrapper(),

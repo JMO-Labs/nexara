@@ -1,0 +1,3 @@
+# @file mobile/fastlane/Appfile
+package_name("dev.jmolabs.nexara_mobile")
+app_identifier("dev.jmolabs.nexaraMobile")

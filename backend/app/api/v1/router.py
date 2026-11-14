@@ -30,6 +30,8 @@ from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.link_previews import router as link_previews_router
+from app.api.v1.list_templates import router as list_templates_router
+from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
 from app.api.v1.moderation import router as moderation_router
 from app.api.v1.notifications import router as notifications_router
@@ -76,6 +78,8 @@ api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
 api_v1_router.include_router(link_previews_router)
+api_v1_router.include_router(lists_router)
+api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)

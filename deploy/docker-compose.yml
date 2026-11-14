@@ -24,7 +24,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/docker/nexara.Dockerfile
-    image: ghcr.io/com-nexara/nexara:latest
+    image: ghcr.io/jmo-labs/nexara:latest
     restart: unless-stopped
     depends_on:
       nexara-db:
