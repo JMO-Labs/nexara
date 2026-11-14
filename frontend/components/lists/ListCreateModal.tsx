@@ -22,7 +22,7 @@ import { ColorInput, LIST_COLORS, NativeSelect } from "./listFormFields";
 const Schema = z
   .object({
     mode: z.enum(["custom", "template"]),
-    templateId: z.string().optional(),
+    templateId: z.string().nullish(),
     title: z.string().trim().min(1, "Title is required").max(200),
     description: z.string().max(2000).optional(),
     visibility: z.enum(["community", "members", "private"]),
