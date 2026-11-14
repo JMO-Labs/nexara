@@ -21,6 +21,7 @@ import {
   extraValid,
 } from "./BrandingExtraFields";
 import { BrandingPreview } from "./BrandingPreview";
+import { CSSEditor } from "./CSSEditor";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
 import { ThemeGallery } from "./ThemeGallery";
@@ -148,5 +149,24 @@ export function BrandingTab() {
   if (error || !data)
     return <AdminNotice tone="error">Failed to load branding.</AdminNotice>;
   // Remount on server change (e.g. preset applied) so local state resets.
-  return <BrandingForm key={JSON.stringify(data)} initial={data} />;
+  // Custom CSS is excluded so saving CSS keeps unsaved form edits.
+  const formKey = JSON.stringify({
+    ...data,
+    custom_css: undefined,
+    custom_css_enabled: undefined,
+  });
+  return (
+    <div className="flex flex-col gap-10">
+      <BrandingForm key={formKey} initial={data} />
+      <section
+        aria-labelledby="custom-css-heading"
+        className="flex flex-col gap-4"
+      >
+        <h2 id="custom-css-heading" className="text-lg font-semibold">
+          Custom CSS
+        </h2>
+        <CSSEditor initial={data.custom_css ?? ""} />
+      </section>
+    </div>
+  );
 }

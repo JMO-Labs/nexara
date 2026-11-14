@@ -31,6 +31,7 @@ class NotificationRepository(BaseRepository[Notification]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 
+    # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
         self,
         user_id: uuid.UUID,

@@ -76,7 +76,9 @@ describe("BrandingTab", () => {
     await userEvent.click(
       screen.getByRole("switch", { name: "Show feature list on landing page" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save branding/i }),
+    );
     await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
     expect(vi.mocked(api.updateBranding).mock.calls[0][0]).toMatchObject({
       email_logo_media_id: id,
@@ -95,7 +97,9 @@ describe("BrandingTab", () => {
       await screen.findByLabelText("Email logo media ID"),
       "nope",
     );
-    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /save branding/i }),
+    ).toBeDisabled();
   });
 
   it("saves name when the stored accent is legacy low-contrast, without resending it", async () => {
@@ -110,7 +114,7 @@ describe("BrandingTab", () => {
     const name = await screen.findByLabelText("Community name");
     await userEvent.clear(name);
     await userEvent.type(name, "Soto crew");
-    const save = screen.getByRole("button", { name: /save/i });
+    const save = screen.getByRole("button", { name: /save branding/i });
     expect(save).toBeEnabled();
     await userEvent.click(save);
     await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());

@@ -22,6 +22,8 @@ export interface Branding {
   font_family_mono?: string;
   logo_light_url: string | null;
   logo_dark_url: string | null;
+  custom_css?: string | null;
+  custom_css_enabled?: boolean;
   email_logo_media_id?: string | null;
   email_footer_text?: string | null;
   email_sender_name?: string | null;
@@ -43,6 +45,8 @@ export interface BrandingUpdate {
   color_text_dark?: string;
   font_family?: string;
   font_family_mono?: string;
+  custom_css?: string;
+  custom_css_enabled?: boolean;
   email_logo_media_id?: string;
   email_footer_text?: string;
   email_sender_name?: string;

@@ -3,7 +3,9 @@
  * @brief HomeFeed items animate layout and respect reduced motion.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 
 let reduced = false;
 vi.mock("framer-motion", async () => {
@@ -35,8 +37,18 @@ vi.mock("@/components/feed/PostCard", () => ({
   PostCard: () => <div>post</div>,
 }));
 vi.mock("@/components/feed/ActivityLine", () => ({ ActivityLine: () => null }));
+vi.mock("@/components/feed/KudosComposer", () => ({
+  KudosComposer: () => null,
+}));
 
 import { HomeFeed } from "@/components/home/HomeFeed";
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 beforeEach(() => {
   reduced = false;

@@ -55,7 +55,7 @@ async def _fire_prompts_async() -> dict[str, int]:
     return {"fired": fired}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.prompt_tasks.fire_prompts",
     queue="maintenance",
 )
@@ -87,7 +87,7 @@ async def _generate_summaries_async() -> dict[str, int]:
     return {"finalised": finalised}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.prompt_tasks.generate_summaries",
     queue="maintenance",
 )
@@ -131,7 +131,7 @@ async def _seed_builtin_prompts_async(prompts: list[dict[str, Any]]) -> dict[str
     return {"inserted": inserted}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.prompt_tasks.seed_builtin_prompts",
     queue="maintenance",
 )

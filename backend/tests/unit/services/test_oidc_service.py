@@ -234,3 +234,25 @@ class TestHandleCallback:
 
             with pytest.raises(AuthenticationError, match="missing subject"):
                 await svc.handle_callback("code", "verifier")
+
+
+class TestVerifyIdToken:
+    """@brief Tests for OIDCService._verify_id_token (unverified decode)."""
+
+    async def test_returns_claims_for_valid_jwt(self) -> None:
+        """@brief A well-formed JWT yields its claims."""
+        from jose import jwt as jose_jwt
+
+        token = jose_jwt.encode({"sub": "abc", "email": "a@b.c"}, "k", algorithm="HS256")
+        svc = _make_service()
+        claims = await svc._verify_id_token(token)
+        assert claims["sub"] == "abc"
+        assert claims["email"] == "a@b.c"
+
+    async def test_malformed_token_raises_authentication_error(self) -> None:
+        """@brief A malformed token raises AuthenticationError."""
+        from app.core.exceptions import AuthenticationError
+
+        svc = _make_service()
+        with pytest.raises(AuthenticationError, match="Invalid OIDC id_token"):
+            await svc._verify_id_token("not-a-jwt")

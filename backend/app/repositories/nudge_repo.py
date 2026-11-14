@@ -69,6 +69,18 @@ class NudgeRepository(BaseRepository[Nudge]):
         )
         return bool((await self._session.execute(stmt)).scalar())
 
+    async def accepts_user_nudges(self, target_id: uuid.UUID, community_id: uuid.UUID) -> bool:
+        """
+        @brief Whether the target allows user-initiated nudges.
+        @return False only if a settings row exists with receive_nudges off (default on).
+        """
+        stmt = select(UserSettings.receive_nudges).where(
+            UserSettings.user_id == target_id,
+            UserSettings.community_id == community_id,
+        )
+        value = (await self._session.execute(stmt)).scalar_one_or_none()
+        return value is not False
+
     async def find_gentle_candidates(self, community_id: uuid.UUID) -> list[uuid.UUID]:
         """
         @brief Opted-in users inactive > 14 days with no gentle nudge in the last 7 days.

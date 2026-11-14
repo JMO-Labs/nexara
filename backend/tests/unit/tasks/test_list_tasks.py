@@ -161,3 +161,36 @@ async def test_reminders_select_next_day_window_not_reminded_today(monkeypatch):
     assert f"list.expires_at >= <{NOW!r}>" in sql
     assert f"list.expires_at <= <{NOW + timedelta(days=1)!r}>" in sql
     assert f"(list.notified_at IS NULL OR list.notified_at < <{today!r}>)" in sql
+
+
+def test_notifier_factory_builds_service_for_community():
+    session = MagicMock()
+    cid = uuid.uuid4()
+    svc = list_tasks._notifier_factory(session)(cid)
+    assert isinstance(svc, list_tasks.NotificationService)
+    assert svc is not list_tasks._notifier_factory(session)(cid)
+
+
+def _fake_session_factory(session):
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=cm)
+
+
+@pytest.mark.parametrize(
+    ("fn", "target", "key"),
+    [
+        ("_sweep_async", "sweep_expired_lists", "expired"),
+        ("_remind_async", "send_expiry_reminders", "reminded"),
+    ],
+)
+async def test_async_entries_open_session_and_return_count(monkeypatch, fn, target, key):
+    session = MagicMock()
+    factory = _fake_session_factory(session)
+    inner = AsyncMock(return_value=4)
+    monkeypatch.setattr(list_tasks, "async_session_factory", factory)
+    monkeypatch.setattr(list_tasks, target, inner)
+    assert await getattr(list_tasks, fn)() == {key: 4}
+    inner.assert_awaited_once()
+    assert inner.await_args.args[0] is session

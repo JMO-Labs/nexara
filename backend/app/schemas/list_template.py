@@ -5,7 +5,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,9 +46,34 @@ class ListTemplateCreate(BaseModel):
     """@brief Request body for creating a template."""
 
     name: str = Field(min_length=1)
+    description: str | None = None
     category: str | None = None
+    icon: str | None = None
+    color: str | None = None
+    is_shared: bool = False
     fields: list[ListTemplateFieldIn] = Field(default_factory=list)
     items: list[ListTemplateItemIn] = Field(default_factory=list)
+
+
+class ListTemplateUpdate(BaseModel):
+    """@brief Partial template update; ``fields``/``items`` replace when given."""
+
+    name: str | None = Field(default=None, min_length=1)
+    description: str | None = None
+    category: str | None = None
+    icon: str | None = None
+    color: str | None = None
+    is_shared: bool | None = None
+    fields: list[ListTemplateFieldIn] | None = None
+    items: list[ListTemplateItemIn] | None = None
+
+
+class ListTemplateClone(BaseModel):
+    """@brief Options for instantiating a template as a list."""
+
+    title: str | None = Field(default=None, min_length=1)
+    visibility: Literal["community", "subgroup", "private"] = "private"
+    include_items: bool = True
 
 
 class ListTemplateOut(BaseModel):
@@ -66,3 +91,11 @@ class ListTemplateOut(BaseModel):
     updated_at: datetime
     fields: list[ListTemplateFieldOut] = Field(default_factory=list)
     items: list[ListTemplateItemOut] = Field(default_factory=list)
+
+
+class ListTemplatePage(BaseModel):
+    """@brief Page of templates."""
+
+    templates: list[ListTemplateOut]
+    cursor: str | None = None
+    has_more: bool = False

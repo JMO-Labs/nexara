@@ -38,7 +38,7 @@ def _notifier(session: AsyncSession, community_id: uuid.UUID) -> NotificationSer
     )
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.export_tasks.generate_user_export",
     queue="default",
     time_limit=3600,

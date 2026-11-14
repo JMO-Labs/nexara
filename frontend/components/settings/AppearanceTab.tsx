@@ -3,7 +3,7 @@
  * @file components/settings/AppearanceTab.tsx
  * @brief Appearance settings tab: theme (radio group) and language.
  */
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Card, SettingsRow, Select, Option, Switch } from "@/components/ui";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
@@ -31,6 +31,9 @@ const FONT_SIZES = [
   { value: "large", label: "Large", cls: "text-base" },
 ] as const;
 
+/** @brief No-op subscribe for the static mounted snapshot. */
+const noopSubscribe = () => () => {};
+
 /**
  * @brief Theme, font size, compact feed and language preferences.
  * @return appearance tab content
@@ -41,13 +44,12 @@ export function AppearanceTab() {
   const { mutate, isPending } = useUpdateSettings();
   const density = useUI((s) => s.density);
   const setDensity = useUI((s) => s.setDensity);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // next-themes SSR-safe mount detection — setState in effect is intentional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  // SSR-safe mount detection for next-themes: false on server, true on client.
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
 
   if (!mounted || !settings) {
     return (

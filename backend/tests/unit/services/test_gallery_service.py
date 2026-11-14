@@ -586,6 +586,17 @@ class TestAdminModeration:
             await service.admin_feature(uuid.uuid4(), featured=True, admin_id=uuid.uuid4())
 
 
+class TestListItemsBlockFilter:
+    @pytest.mark.asyncio
+    async def test_passes_viewer_id_to_repo(self, service: GalleryService, repo: AsyncMock) -> None:
+        viewer = uuid.uuid4()
+        gallery = _make_gallery(owner_id=viewer)
+        repo.get_by_id.return_value = gallery
+        repo.list_items.return_value = ([], None)
+        await service.list_items(gallery.id, viewer)
+        assert repo.list_items.await_args.kwargs["viewer_id"] == viewer
+
+
 class TestActorName:
     """@brief _actor_name resolves display names for notification payloads."""
 

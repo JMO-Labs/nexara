@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, renderHook, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-let tab: string | null = "plugins";
+const tab: string | null = "plugins";
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({ get: () => tab }),
 }));

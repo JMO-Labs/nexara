@@ -35,7 +35,7 @@ export function OAuthButtons({
         <Button key={p.slug} asChild variant="outline" className="w-full">
           <a href={oauthLoginUrl(p.slug, API_BASE)}>
             {p.icon_url && (
-              // eslint-disable-next-line @next/next/no-img-element
+              // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
               <img src={p.icon_url} alt="" className="size-5" />
             )}
             {p.display_name}

@@ -107,7 +107,7 @@ async def test_effective_channels_route_through_dispatcher_to_apprise() -> None:
             d._channels[k] = AsyncMock(send=AsyncMock(return_value=ChannelResult(ok=True)))
     ok = AsyncMock(return_value=ChannelResult(ok=True))
     with patch.object(AppriseChannel, "send", new=ok) as send:
-        await d.dispatch(_notif(), t, dict(effective_channels(t, {})))
+        await d.dispatch(_notif(), t, dict(effective_channels(t, {"new_post": {"apprise": True}})))
     send.assert_awaited_once()
 
 
@@ -172,7 +172,7 @@ def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
 
     assert apprise_deliver.max_retries == 5
 
-    class _Retry(Exception):
+    class _RetryError(Exception):
         pass
 
     apprise_deliver.push_request(retries=retries)
@@ -182,8 +182,8 @@ def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
                 f"{TASKS}._apprise_deliver_run",
                 new=AsyncMock(side_effect=TransientDeliveryError("timeout")),
             ),
-            patch.object(apprise_deliver, "retry", side_effect=_Retry()) as retry,
-            pytest.raises(_Retry),
+            patch.object(apprise_deliver, "retry", side_effect=_RetryError()) as retry,
+            pytest.raises(_RetryError),
         ):
             apprise_deliver.run(str(uuid4()), str(uuid4()), "T", "B")
     finally:
@@ -191,3 +191,65 @@ def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
     retry.assert_called_once()
     countdown = retry.call_args.kwargs["countdown"]
     assert 0 <= countdown <= 2**retries * 30
+
+
+async def test_default_repo_yields_repository_on_session() -> None:
+    from app.services.notifications.channels.apprise import _default_repo
+
+    session = MagicMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+    with patch(f"{CH}.async_session_factory", return_value=cm):
+        async with _default_repo() as repo:
+            assert isinstance(repo, AppriseRepository)
+    cm.__aexit__.assert_awaited_once()
+
+
+async def test_deliver_run_commits_and_returns_status() -> None:
+    from app.tasks.notification_tasks import _apprise_deliver_run
+
+    session = AsyncMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+    with (
+        patch(f"{TASKS}.async_session_factory", return_value=cm),
+        patch(f"{TASKS}._apprise_deliver_async", new=AsyncMock(return_value="sent")),
+    ):
+        assert await _apprise_deliver_run(uuid4(), "T", "B") == "sent"
+    session.commit.assert_awaited_once()
+
+
+async def test_deliver_run_commits_even_on_error() -> None:
+    from app.tasks.notification_tasks import TransientDeliveryError, _apprise_deliver_run
+
+    session = AsyncMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+    with (
+        patch(f"{TASKS}.async_session_factory", return_value=cm),
+        patch(
+            f"{TASKS}._apprise_deliver_async",
+            new=AsyncMock(side_effect=TransientDeliveryError("x")),
+        ),
+        pytest.raises(TransientDeliveryError),
+    ):
+        await _apprise_deliver_run(uuid4(), "T", "B")
+    session.commit.assert_awaited_once()
+
+
+def test_task_invalid_uuid_is_skipped() -> None:
+    from app.tasks.notification_tasks import apprise_deliver
+
+    out = apprise_deliver.run("not-a-uuid", str(uuid4()), "T", "B")
+    assert out == {"status": "skipped"}
+
+
+def test_task_success_returns_status() -> None:
+    from app.tasks.notification_tasks import apprise_deliver
+
+    with patch(f"{TASKS}._apprise_deliver_run", new=AsyncMock(return_value="sent")):
+        out = apprise_deliver.run(str(uuid4()), str(uuid4()), "T", "B")
+    assert out == {"status": "sent"}

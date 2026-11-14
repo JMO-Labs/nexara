@@ -115,6 +115,12 @@ def build_prefs_update(
                         f"Channel '{ch}' is not configurable for {key}",
                         f"notification_prefs.{key}.{ch}",
                     )
+            for ch, value in channels.items():
+                if not isinstance(value, bool):
+                    raise pref_invalid(
+                        f"Value for '{ch}' must be a boolean",
+                        f"notification_prefs.{key}.{ch}",
+                    )
             merged[key] = {**merged.get(key, {}), **channels}
         data["notification_prefs"] = merged
     if "dnd_schedule" in fields:

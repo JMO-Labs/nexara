@@ -101,7 +101,7 @@ class NotificationPreferencesUpdate(BaseModel):
     Values are validated against the registry in the service layer.
     """
 
-    notification_prefs: dict[str, dict[str, bool]] | None = None
+    notification_prefs: dict[str, dict[str, Any]] | None = None
     dnd_schedule: dict[str, Any] | None = None
     dnd_timezone: str | None = None
     digest_cadence: dict[str, str] | None = None

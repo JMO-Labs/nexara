@@ -9,6 +9,9 @@ import userEvent from "@testing-library/user-event";
 vi.mock("@/components/notifications/NotificationsBell", () => ({
   NotificationsBell: () => <button aria-label="Notifications" />,
 }));
+vi.mock("@/components/notifications/NotificationsDrawer", () => ({
+  NotificationsDrawer: () => null,
+}));
 vi.mock("@/components/layout/AvatarMenu", () => ({
   AvatarMenu: () => <button aria-label="Account menu" />,
 }));

@@ -1,8 +1,9 @@
-# Deployment Guide
+# Docker Compose
 
-Nexara is designed for self-hosted deployment with minimal infrastructure.
+This page covers the Compose stack in `deploy/docker-compose.yml`. See the
+[deployment guide](deployment-guide.md) for other platforms. Nexara is designed for self-hosted deployment with minimal infrastructure.
 
-## Docker Compose (Recommended)
+## Containers
 
 The primary deployment method uses two containers:
 
@@ -47,21 +48,6 @@ Nexara does **not** bundle a reverse proxy. Use your existing:
 
 Point your proxy to `http://{host_ip}:{HTTP_PORT}` and enable SSL.
 
-## Kubernetes (Helm)
-
-For Kubernetes deployments, use the Helm chart in `deploy/helm/nexara/`:
-
-```bash
-helm install nexara deploy/helm/nexara/ \
-  --set secretKey="$(openssl rand -hex 32)" \
-  --set postgresql.password="$(openssl rand -hex 16)"
-```
-
-## unRAID
-
-Nexara provides Community Applications templates for one-click installation
-on unRAID. See the unRAID template XMLs in `deploy/unraid/`.
-
 ## Volumes to Back Up
 
 | Volume          | Contents                          | Priority     |
@@ -69,14 +55,44 @@ on unRAID. See the unRAID template XMLs in `deploy/unraid/`.
 | `postgres_data` | All community data                | **Critical** |
 | `media`         | Uploaded photos and videos        | **Critical** |
 
-## Health Check
+## Backup and restore
 
-The health endpoint is mounted at the **root** path, not under `/api/v1`:
+Back up both volumes. Dump the database with `pg_dump` instead of copying
+live files.
 
+```bash
+cd deploy
+# Database
+docker compose exec -T nexara-db pg_dump -U nexara -Fc nexara > nexara-db.dump
+# Media (volume name is prefixed by the project name, "nexara")
+docker run --rm -v nexara_media:/data -v "$PWD":/backup alpine \
+  tar czf /backup/nexara-media.tgz -C /data .
 ```
-GET /healthz
+
+Restore into a fresh stack:
+
+```bash
+docker compose up -d nexara-db
+docker compose exec -T nexara-db pg_restore -U nexara -d nexara --clean --if-exists < nexara-db.dump
+docker run --rm -v nexara_media:/data -v "$PWD":/backup alpine \
+  tar xzf /backup/nexara-media.tgz -C /data
+docker compose up -d
 ```
 
-- **Path:** `/healthz` (not `/api/v1/healthz`)
-- **Response:** HTTP 200 when all components (DB, Valkey, storage) are healthy, HTTP 503 otherwise
-- In development, the Nuxt dev proxy forwards `/healthz` to the backend at `http://localhost:8000/healthz`
+Keep `.env` (especially `SECRET_KEY` and `APPRISE_ENCRYPTION_KEY`) with your
+backups; without them sessions and stored Apprise URLs cannot be recovered.
+Test a restore before you need it.
+
+## Upgrading
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Migrations run on start. Take a backup first.
+
+## Health check
+
+`GET /healthz` (root path, not `/api/v1/healthz`) returns 200 when the
+database, Valkey and storage are healthy, 503 otherwise. The compose
+healthcheck uses it.

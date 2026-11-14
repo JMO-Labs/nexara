@@ -1,4 +1,10 @@
-title: Deployment Platforms
+title: Deployment
 nav:
+  - deployment-guide.md
+  - docker-compose.md
+  - kubernetes.md
   - unraid.md
+  - monitoring.md
+  - security.md
+  - troubleshooting.md
   - ...

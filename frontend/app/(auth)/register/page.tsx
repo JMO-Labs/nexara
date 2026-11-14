@@ -21,7 +21,7 @@ const Schema = z.object({
     .min(3)
     .max(30)
     .regex(/^[a-zA-Z0-9_-]+$/, "Letters, numbers, _ or - only"),
-  email: z.string().min(3),
+  email: z.string().email("Enter a valid email address"),
   password: z.string().min(12, "At least 12 characters"),
 });
 type FormData = z.infer<typeof Schema>;
@@ -33,6 +33,7 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, formState } = useForm<FormData>({
     resolver: zodResolver(Schema),
+    mode: "onTouched",
     defaultValues: { display_name: "", username: "", email: "", password: "" },
   });
 
@@ -65,12 +66,14 @@ export default function RegisterPage() {
           label="Display name"
           autoFocus
           error={formState.errors.display_name?.message}
+          disabled={signUp.isPending}
           {...register("display_name")}
         />
         <Input
           label="Username"
           autoComplete="username"
           error={formState.errors.username?.message}
+          disabled={signUp.isPending}
           {...register("username")}
         />
         <Input
@@ -78,6 +81,7 @@ export default function RegisterPage() {
           type="email"
           autoComplete="email"
           error={formState.errors.email?.message}
+          disabled={signUp.isPending}
           {...register("email")}
         />
         <Input
@@ -86,6 +90,7 @@ export default function RegisterPage() {
           autoComplete="new-password"
           hint="At least 12 characters."
           error={formState.errors.password?.message}
+          disabled={signUp.isPending}
           {...register("password")}
         />
         <Button type="submit" size="lg" loading={signUp.isPending}>

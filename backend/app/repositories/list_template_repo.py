@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import and_, or_, select, tuple_
+from sqlalchemy import and_, literal, or_, select, tuple_
+from sqlalchemy.orm import selectinload
 
 from app.models.list_template import ListTemplate
 from app.models.moderation import UserBlock
@@ -19,6 +20,27 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
     """@brief Async repo for ListTemplate CRUD."""
 
     model = ListTemplate
+
+    async def get_by_id(
+        self,
+        entity_id: uuid.UUID,
+        community_id: uuid.UUID | None = None,
+    ) -> ListTemplate | None:
+        """
+        @brief Fetch a template with its fields and items eagerly loaded.
+
+        Async sessions cannot lazy-load relationships, and cloning/updating
+        reads both collections.
+
+        @param entity_id Template primary key.
+        @param community_id Optional tenant scope.
+        @return The template or None.
+        """
+        stmt = self._base_query().where(ListTemplate.id == entity_id)
+        if community_id is not None:
+            stmt = stmt.where(ListTemplate.community_id == community_id)
+        stmt = stmt.options(selectinload(ListTemplate.fields), selectinload(ListTemplate.items))
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def list_for_community(
         self,
@@ -59,7 +81,10 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
         )
         decoded = decode_cursor(cursor, parse_dt)
         if decoded is not None:
-            stmt = stmt.where(tuple_(ListTemplate.created_at, ListTemplate.id) < tuple_(*decoded))
+            stmt = stmt.where(
+                tuple_(ListTemplate.created_at, ListTemplate.id)
+                < tuple_(literal(decoded[0]), literal(decoded[1]))
+            )
         stmt = stmt.order_by(ListTemplate.created_at.desc(), ListTemplate.id.desc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None

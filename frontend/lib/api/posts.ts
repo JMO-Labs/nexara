@@ -80,6 +80,13 @@ export interface Post {
   subgroup_id: string | null;
   subgroup_name: string | null;
   subgroup_slug: string | null;
+  /** Set when the post is a kudos. */
+  recipient_id?: string | null;
+  recipient?: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
   is_bookmarked?: boolean;
   is_prompt_post?: boolean;
   is_prompt_summary?: boolean;

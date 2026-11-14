@@ -22,10 +22,22 @@ const post = {
 } as unknown as Post;
 
 describe("PostHeader", () => {
-  it("shows author and no menu for non-owners", () => {
+  it("shows author and a Report-only menu for non-owners", async () => {
+    const user = userEvent.setup();
     render(<PostHeader post={post} isAuthor={false} />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Post options" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Post options" }));
+    expect(
+      await screen.findByRole("menuitem", { name: "Report" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+  });
+
+  it("hides Report for the author", async () => {
+    const user = userEvent.setup();
+    render(<PostHeader post={post} isAuthor onDelete={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Post options" }));
+    expect(screen.queryByRole("menuitem", { name: "Report" })).toBeNull();
   });
 
   it("author menu fires onDelete", async () => {
