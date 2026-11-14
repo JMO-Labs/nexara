@@ -12,6 +12,8 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (k: string) =>
     (en.settings.notif as Record<string, string>)[k] ?? k,
 }));
+const sse = vi.hoisted(() => ({ useSSE: vi.fn() }));
+vi.mock("@/hooks/useSSE", () => sse);
 vi.mock("@/components/settings/PushSubscriptionRow", () => ({
   PushSubscriptionRow: () => <div>push-row</div>,
 }));
@@ -80,11 +82,12 @@ const HOOK = {
 
 function renderTab() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <NotificationsTab />
     </QueryClientProvider>,
   );
+  return Object.assign(view, { qc });
 }
 
 Element.prototype.hasPointerCapture ??= () => false;
@@ -100,6 +103,18 @@ describe("NotificationsTab", () => {
     api.listWebhooks.mockResolvedValue([HOOK]);
     api.snooze.mockResolvedValue({ message: "ok" });
     api.clearSnooze.mockResolvedValue({ message: "ok" });
+  });
+
+  it("syncs prefs across tabs via SSE invalidation", async () => {
+    const { qc } = renderTab();
+    await screen.findByRole("switch", { name: "mention In-app" });
+    const opts = sse.useSSE.mock.calls.at(-1)![1];
+    expect(opts.eventTypes).toEqual(["user_preferences_updated"]);
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    opts.onMessage({}, "user_preferences_updated");
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["notifications", "preferences"],
+    });
   });
 
   it("renders only user_configurable channels grouped by category", async () => {

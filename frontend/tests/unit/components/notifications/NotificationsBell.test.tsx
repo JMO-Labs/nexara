@@ -127,4 +127,18 @@ describe("NotificationsBell", () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: ["notif", "active"] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["notif", "count"] });
   });
+
+  it("SSE events invalidate the ['notifications'] caches", async () => {
+    setup();
+    await screen.findByTestId("unread-badge");
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    expect(sse.opts?.eventTypes).toContain("user_preferences_updated");
+    const on = sse.opts?.onMessage as (d: unknown, t: string) => void;
+    on({}, "user_notification_dismissed");
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["notifications"] });
+    on({}, "user_preferences_updated");
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["notifications", "preferences"],
+    });
+  });
 });

@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Card, Skeleton } from "@/components/ui";
 import { getPreferences, patchPreferences } from "@/lib/api/notifications";
+import { useNotificationsSync } from "@/hooks/useNotificationsSync";
 import { useNotificationRegistry } from "@/lib/notifications/registry";
 import type {
   Channel,
@@ -30,6 +31,7 @@ const cardCls = "max-w-3xl p-4 md:p-6";
 export function NotificationsTab() {
   const t = useTranslations("settings.notif");
   const qc = useQueryClient();
+  useNotificationsSync(["user_preferences_updated"]);
   const { types } = useNotificationRegistry();
   const { data } = useQuery({ queryKey: PREFS_KEY, queryFn: getPreferences });
   const [local, setLocal] = useState<PreferencesPayload | null>(null);
