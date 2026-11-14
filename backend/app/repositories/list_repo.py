@@ -72,7 +72,9 @@ class ListRepository(BaseRepository[List]):
         stmt = self._block_filter(stmt, viewer_id)
         decoded = decode_cursor(cursor, parse_dt)
         if decoded is not None:
-            stmt = stmt.where(tuple_(List.created_at, List.id) < tuple_(decoded[0], decoded[1]))
+            stmt = stmt.where(
+                tuple_(List.created_at, List.id) < tuple_(literal(decoded[0]), literal(decoded[1]))
+            )
         stmt = stmt.order_by(List.created_at.desc(), List.id.desc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None

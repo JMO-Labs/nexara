@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import and_, or_, select, tuple_
+from sqlalchemy import and_, literal, or_, select, tuple_
 from sqlalchemy.orm import selectinload
 
 from app.models.list_template import ListTemplate
@@ -82,7 +82,8 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
         decoded = decode_cursor(cursor, parse_dt)
         if decoded is not None:
             stmt = stmt.where(
-                tuple_(ListTemplate.created_at, ListTemplate.id) < tuple_(decoded[0], decoded[1])
+                tuple_(ListTemplate.created_at, ListTemplate.id)
+                < tuple_(literal(decoded[0]), literal(decoded[1]))
             )
         stmt = stmt.order_by(ListTemplate.created_at.desc(), ListTemplate.id.desc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())

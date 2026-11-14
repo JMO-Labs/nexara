@@ -164,7 +164,7 @@ class NotificationService:
             actor_id=actor_id,
             group_window_seconds=type_.group_window_seconds,
         )
-        channels: dict[str, bool] = dict(eff)
+        channels: dict[str, bool] = {str(k): v for k, v in eff.items()}
         cadence = (settings.digest_cadence or {}).get(type, "instant")
         if cadence not in ("instant", "off") and channels.get("email"):
             # Email is deferred to the digest; other channels still fire now.
