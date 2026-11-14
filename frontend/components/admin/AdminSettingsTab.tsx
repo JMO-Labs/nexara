@@ -41,12 +41,16 @@ export function AdminSettingsTab() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate({
-      enable_registration: enableReg,
-      require_invite: requireInvite,
-      storage_quota_default: storageQuota,
-      waf_enabled: wafEnabled,
-    });
+    updateMutation.mutate(
+      {
+        enable_registration: enableReg,
+        require_invite: requireInvite,
+        storage_quota_default: storageQuota,
+        waf_enabled: wafEnabled,
+      },
+      // Drop the draft once saved so later server data is not masked.
+      { onSuccess: () => setDraft({}) },
+    );
     setIsDirty(false);
   };
 

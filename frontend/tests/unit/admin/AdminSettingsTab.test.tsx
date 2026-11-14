@@ -3,7 +3,7 @@
  * @brief Form shows server values, tracks edits, resets and submits.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import * as admin from "@/hooks/useAdmin";
 import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab";
 
@@ -46,10 +46,10 @@ describe("AdminSettingsTab", () => {
     fireEvent.change(quota(), { target: { value: "2000" } });
     expect(save()).toBeEnabled();
     fireEvent.click(save());
-    expect(mutate).toHaveBeenCalledWith({
-      ...server,
-      storage_quota_default: 2000,
-    });
+    expect(mutate).toHaveBeenCalledWith(
+      { ...server, storage_quota_default: 2000 },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
   });
 
   it("reset restores server values", () => {
@@ -69,5 +69,20 @@ describe("AdminSettingsTab", () => {
     } as any);
     rerender(<AdminSettingsTab />);
     expect(quota().value).toBe("3000");
+  });
+
+  it("clears the draft after save so new server data shows", () => {
+    const { rerender } = render(<AdminSettingsTab />);
+    fireEvent.change(quota(), { target: { value: "2000" } });
+    fireEvent.click(save());
+    const opts = mutate.mock.calls[0][1];
+    act(() => opts.onSuccess());
+    vi.mocked(admin.useAdminSettings).mockReturnValue({
+      data: { ...server, storage_quota_default: 4000 },
+      isLoading: false,
+      error: null,
+    } as any);
+    rerender(<AdminSettingsTab />);
+    expect(quota().value).toBe("4000");
   });
 });
