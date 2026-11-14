@@ -1,11 +1,10 @@
 """apprise per-type prefs: backfill apprise=false.
 
 No new columns: notification_prefs JSONB already exists. Every type entry
-gets ``apprise: false`` (opt-in). Merges heads
-``0027_notification_digest_queue`` and ``0031_receive_nudges``.
+gets ``apprise: false`` (opt-in).
 
 Revision ID: c5d6e7f8a9b0
-Revises: 0027_notification_digest_queue, 0031_receive_nudges
+Revises: 0031_receive_nudges
 Create Date: 2026-11-13
 """
 
@@ -14,10 +13,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "c5d6e7f8a9b0"
-down_revision: str | Sequence[str] | None = (
-    "0027_notification_digest_queue",
-    "0031_receive_nudges",
-)
+down_revision: str | Sequence[str] | None = "0031_receive_nudges"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
