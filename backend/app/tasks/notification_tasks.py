@@ -283,8 +283,8 @@ async def _digest_dispatch_async(now: datetime) -> int:
                 st.digest_last_sent_at = now
         await session.commit()
     # Only enqueue emails once the drain is durably committed.
-    for uid, type_key, ids in to_send:
-        send_digest_email.delay(uid, type_key, ids)
+    for uid, type_key, id_strs in to_send:
+        send_digest_email.delay(uid, type_key, id_strs)
     return len(to_send)
 
 
@@ -335,7 +335,7 @@ async def _send_digest_email_async(
     return {"status": "sent" if sent else "skipped"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
+@celery_app.task(
     name="app.tasks.notification_tasks.digest_dispatch",
     queue="notifications",
 )
@@ -417,7 +417,7 @@ def send_digest_email(
         raise self.retry(exc=exc)
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
+@celery_app.task(
     bind=True,
     name="app.tasks.notification_tasks.webhook_deliver",
     autoretry_for=(httpx.HTTPError, httpx.TimeoutException),
@@ -448,7 +448,7 @@ def webhook_deliver(self: Task, webhook_id: str, notification_id: str) -> dict[s
     return asyncio.run(_webhook_deliver_async(webhook_id, notification_id, final))
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
+@celery_app.task(
     bind=True,
     name="app.tasks.notification_tasks.apprise_deliver",
     max_retries=5,

@@ -50,7 +50,7 @@ class GalleryPollSearchMixin:
 
         @return Tuple of (items with rank, next_cursor, total).
         """
-        from app.repositories.search_repo import _fts_expressions
+        from app.repositories.search_fts import _fts_expressions
 
         if not query or not query.strip():
             return [], None, 0
@@ -95,7 +95,7 @@ class GalleryPollSearchMixin:
 
         @return Tuple of ((poll, post, rank) items, next_cursor, total).
         """
-        from app.repositories.search_repo import _fts_expressions
+        from app.repositories.search_fts import _fts_expressions
 
         if not query or not query.strip():
             return [], None, 0

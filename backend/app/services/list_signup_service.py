@@ -50,7 +50,7 @@ class ListSignupService:
         self._notify = notification_service
 
     async def _locked_item(self, item_id: uuid.UUID, session: AsyncSession) -> ListItem:
-        item = await self._items.lock_item_for_update(item_id, session)
+        item: ListItem | None = await self._items.lock_item_for_update(item_id, session)
         if item is None:
             raise NotFoundError("List item not found")
         return item
@@ -100,7 +100,7 @@ class ListSignupService:
             raise AppError("ALREADY_CLAIMED", "Already signed up for this item", 409)
         if remaining <= 0 or quantity > remaining:
             raise AppError("NO_SLOTS", "Not enough open slots", 409, {"remaining": remaining})
-        claim = await self._signups.create_claim(item_id, user_id, quantity, note)
+        claim: ListItemSignup = await self._signups.create_claim(item_id, user_id, quantity, note)
         item.signup_quantity_needed = remaining - quantity
         await session.flush()
         lst = await self._lists.get_by_id(item.list_id)

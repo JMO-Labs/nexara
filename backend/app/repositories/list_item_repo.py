@@ -49,7 +49,7 @@ class ListItemRepository(BaseRepository[ListItem]):
         stmt = self._base_query().where(ListItem.list_id == list_id)
         decoded = decode_cursor(cursor, cast)
         if decoded is not None:
-            stmt = stmt.where(tuple_(col, ListItem.id) > tuple_(*decoded))
+            stmt = stmt.where(tuple_(col, ListItem.id) > tuple_(decoded[0], decoded[1]))
         stmt = stmt.order_by(col.asc(), ListItem.id.asc())
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None

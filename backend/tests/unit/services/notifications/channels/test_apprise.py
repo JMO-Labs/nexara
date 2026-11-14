@@ -172,7 +172,7 @@ def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
 
     assert apprise_deliver.max_retries == 5
 
-    class _Retry(Exception):
+    class _RetryError(Exception):
         pass
 
     apprise_deliver.push_request(retries=retries)
@@ -182,8 +182,8 @@ def test_task_retries_transient_with_jittered_backoff(retries: int) -> None:
                 f"{TASKS}._apprise_deliver_run",
                 new=AsyncMock(side_effect=TransientDeliveryError("timeout")),
             ),
-            patch.object(apprise_deliver, "retry", side_effect=_Retry()) as retry,
-            pytest.raises(_Retry),
+            patch.object(apprise_deliver, "retry", side_effect=_RetryError()) as retry,
+            pytest.raises(_RetryError),
         ):
             apprise_deliver.run(str(uuid4()), str(uuid4()), "T", "B")
     finally:
