@@ -25,6 +25,9 @@ variables:
   NODE_VERSION: "25"
   NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.cache/npm"
 
+  # ── Flutter (mirror of mobile/.flutter-version; scripts/test-mobile-ci.sh enforces) ──
+  FLUTTER_VERSION: "3.35.0"
+
   # ── PostgreSQL test service ──────────────────────────────────────
   POSTGRES_DB: "nexara_test"
   POSTGRES_USER: "nexara"

@@ -14,9 +14,11 @@ class ListCompletedPayload(NotificationPayload):
     """@brief Payload for list_completed notifications."""
 
     list_id: str
-    list_title: str
     item_id: str
-    completion_mode: str
+    item_title: str
+    completer_id: str
+    list_title: str | None = None
+    completion_mode: str | None = None
 
 
 LISTCOMPLETED_TYPE = NotificationType(

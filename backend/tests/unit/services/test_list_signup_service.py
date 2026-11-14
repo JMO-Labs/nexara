@@ -12,6 +12,7 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.repositories.list_signup_repo import ListSignupRepository
 from app.services.list_signup_service import ListSignupService
+from app.services.notification_service import NotificationService
 
 
 def _build(needed=1, claims=None):
@@ -56,7 +57,7 @@ def _build(needed=1, claims=None):
     session = AsyncMock()
     # release the fake row lock on "commit"
     session.flush.side_effect = lambda: None
-    bus, notif = AsyncMock(), AsyncMock()
+    bus, notif = AsyncMock(), AsyncMock(spec=NotificationService)
     svc = ListSignupService(item_repo, signup_repo, list_repo, MagicMock(), bus, notif)
     svc._release_lock = lambda: lock.release() if lock.locked() else None
     return svc, item, lst, item_repo, signup_repo, list_repo, bus, notif, session, store
@@ -156,3 +157,22 @@ async def test_race_two_concurrent_claims_one_wins():
     assert len(ok) == 1 and len(bad) == 1
     assert len(store) == 1
     assert item.signup_quantity_needed == 0
+
+
+async def test_claim_notifies_owner_with_list_signup_context():
+    svc, item, lst, *_, notif, session, _ = _build(3)
+    item.values = {"title": "Bring chairs"}
+    uid = uuid.uuid4()
+    session.get.return_value = MagicMock(display_name="Ada")
+    await svc.claim_signup(item.id, uid, 2, session)
+    args, kwargs = notif.notify.await_args
+    assert args[0] == lst.owner_id
+    assert args[1] == "list_signup"
+    ctx = args[2]
+    assert ctx["list_id"] == str(lst.id)
+    assert ctx["item_id"] == str(item.id)
+    assert ctx["item_title"] == "Bring chairs"
+    assert ctx["claimer_id"] == str(uid)
+    assert ctx["claimer_name"] == "Ada"
+    assert ctx["quantity"] == 2
+    assert kwargs["actor_id"] == uid

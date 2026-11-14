@@ -108,3 +108,21 @@ class SettingsRepository:
             )
         )
         return int((await self._session.execute(stmt)).scalar_one())
+
+    async def get_many(
+        self, user_ids: list[uuid.UUID] | set[uuid.UUID], community_id: uuid.UUID
+    ) -> list[UserSettings]:
+        """
+        @brief Batch-fetch settings rows for users in a community.
+
+        @param user_ids Users to fetch.
+        @param community_id Tenant scope.
+        @return Existing rows (users without a row are absent).
+        """
+        if not user_ids:
+            return []
+        stmt = select(UserSettings).where(
+            UserSettings.user_id.in_(user_ids),
+            UserSettings.community_id == community_id,
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
