@@ -23,6 +23,7 @@ class AppriseRepository(BaseRepository[AppriseURL]):
 
     model = AppriseURL
 
+    # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
         self, community_id: uuid.UUID, user_id: uuid.UUID, url: str, label: str | None = None
     ) -> AppriseURL:

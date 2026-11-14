@@ -10,6 +10,7 @@ import ipaddress
 import re
 import socket
 import uuid
+from typing import TypedDict
 from urllib.parse import urlparse
 
 import httpx
@@ -195,7 +196,14 @@ async def scrape_og_metadata(url: str) -> dict[str, str | None]:
         return result
 
 
-def _client_kwargs() -> dict[str, object]:
+class _ClientKwargs(TypedDict):
+    """@brief Typed httpx.AsyncClient options."""
+
+    timeout: float
+    follow_redirects: bool
+
+
+def _client_kwargs() -> _ClientKwargs:
     """@brief httpx client options for image fetches (no redirects: SSRF)."""
     return {"timeout": HTTP_TIMEOUT, "follow_redirects": False}
 
@@ -230,7 +238,7 @@ async def fetch_image(url: str) -> tuple[bytes, str] | None:
     if not is_safe_url(url):
         return None
     try:
-        async with httpx.AsyncClient(**_client_kwargs()) as client:  # type: ignore[arg-type]
+        async with httpx.AsyncClient(**_client_kwargs()) as client:
             headers = {"User-Agent": "NexaraLinkPreview/1.0"}
             async with client.stream("GET", url, headers=headers) as response:
                 response.raise_for_status()

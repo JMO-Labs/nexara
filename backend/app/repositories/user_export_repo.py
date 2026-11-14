@@ -19,6 +19,7 @@ class UserExportRepository(BaseRepository[UserExport]):
 
     model = UserExport
 
+    # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
         self, user_id: uuid.UUID, community_id: uuid.UUID
     ) -> UserExport:
