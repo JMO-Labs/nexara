@@ -122,6 +122,14 @@ describe("listApi", () => {
     await listApi.removeMember("l1", "u");
     expect(m.apiDelete).toHaveBeenCalledWith("/api/v1/lists/l1/members/u");
   });
+  it("getMembers camelizes rows", async () => {
+    m.apiGet.mockResolvedValue([
+      { list_id: "l1", user_id: "u", share_personal: false },
+    ]);
+    const rows = await listApi.getMembers("l1");
+    expect(m.apiGet).toHaveBeenLastCalledWith("/api/v1/lists/l1/members");
+    expect(rows[0].userId).toBe("u");
+  });
 });
 
 describe("templateApi", () => {

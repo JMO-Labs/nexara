@@ -125,6 +125,10 @@ export const listApi = {
   releaseSignup(listId: string, itemId: string): Promise<void> {
     return apiDelete(`${BASE}/${seg(listId)}/items/${seg(itemId)}/signups`);
   },
+  async getMembers(listId: string): Promise<ListMember[]> {
+    const r = await apiGet<unknown[]>(`${BASE}/${seg(listId)}/members`);
+    return r.map((m) => one<ListMember>(m));
+  },
   async addMember(
     listId: string,
     data: ListMemberAddInput,

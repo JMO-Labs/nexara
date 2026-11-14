@@ -112,6 +112,7 @@ export const qk = {
     items: (listId: string, params?: Record<string, unknown>) =>
       ["listItems", listId, params ?? {}] as const,
     itemsAll: (listId: string) => ["listItems", listId] as const,
+    members: (listId: string) => ["listMembers", listId] as const,
     templates: () => ["listTemplates"] as const,
   },
   kudos: {
