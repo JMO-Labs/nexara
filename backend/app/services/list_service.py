@@ -190,6 +190,11 @@ class ListService:
             raise AppError("VALIDATION_ERROR", _("List does not use explicit members"), 422)
         return lst
 
+    async def list_members(self, list_id: uuid.UUID, user_id: uuid.UUID) -> list[Any]:
+        """@brief Members of a list the viewer can see (404 when hidden)."""
+        lst = await self._load_viewable(list_id, user_id)
+        return await self._members.list_members(lst.id)
+
     async def add_member(
         self,
         list_id: uuid.UUID,
