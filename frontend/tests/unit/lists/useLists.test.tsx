@@ -101,11 +101,12 @@ describe("mutations invalidate", () => {
   ] as const)("list %s", async (_n, hook, fn, args) => {
     const { wrapper, spy } = setup();
     fn.mockResolvedValue({});
-    const { result } = renderHook(hook, { wrapper });
+    type AnyMutation = { mutateAsync: (a: unknown) => Promise<unknown> };
+    const { result } = renderHook(hook as unknown as () => AnyMutation, {
+      wrapper,
+    });
     await act(async () => {
-      await (result.current.mutateAsync as (a: unknown) => Promise<unknown>)(
-        args[0],
-      );
+      await result.current.mutateAsync(args[0]);
     });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["lists", "c1"] });
   });
