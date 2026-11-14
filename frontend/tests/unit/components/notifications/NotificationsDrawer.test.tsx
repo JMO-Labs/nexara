@@ -16,7 +16,9 @@ vi.mock("@/lib/api/notifications", () => ({
   listNotifications: vi.fn(),
   dismissOne: vi.fn(),
   callAction: vi.fn(),
+  STREAM_PATH: "/s",
 }));
+vi.mock("@/hooks/useSSE", () => ({ useSSE: vi.fn() }));
 vi.mock("@/components/notifications/NotifRow", () => ({
   NotifRow: (p: {
     item: { id: string };
