@@ -25,8 +25,15 @@ from app.core.dependencies import get_webhook_service as _webhook_service
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.apprise_repo import AppriseRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.schemas.apprise import (
+    AppriseTestResponse,
+    AppriseURLCreate,
+    AppriseURLResponse,
+    AppriseURLUpdate,
+)
 from app.schemas.common import MessageResponse
 from app.schemas.notification import (
     NotificationList,
@@ -41,6 +48,7 @@ from app.schemas.webhook import (
     WebhookListItem,
     WebhookUpdateRequest,
 )
+from app.services.apprise_service import AppriseService
 from app.services.notification_service import NotificationService
 from app.services.notifications import Category, to_json_schema
 from app.services.notifications.dnd import resolve_snooze
@@ -279,6 +287,68 @@ async def delete_webhook(
     """@brief Delete one of the user's webhooks."""
     await service.delete(user.id, webhook_id)
     return MessageResponse(message=_("Webhook deleted"))
+
+
+def _apprise_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AppriseService:
+    """@brief Build AppriseService for the configured community."""
+    return AppriseService(AppriseRepository(db), uuid.UUID(settings.COMMUNITY_ID))
+
+
+@router.get("/apprise", response_model=list[AppriseURLResponse])
+async def list_apprise(
+    user: User = Depends(get_current_user),
+    service: AppriseService = Depends(_apprise_service),
+) -> list[AppriseURLResponse]:
+    """@brief List the user's Apprise URLs (URL itself never returned)."""
+    return [AppriseURLResponse.model_validate(r) for r in await service.list(user.id)]
+
+
+@router.post("/apprise", response_model=AppriseURLResponse, status_code=status.HTTP_201_CREATED)
+async def create_apprise(
+    body: AppriseURLCreate,
+    user: User = Depends(get_current_user),
+    service: AppriseService = Depends(_apprise_service),
+) -> AppriseURLResponse:
+    """@brief Add an Apprise URL; 400 INVALID_APPRISE_URL if it does not parse."""
+    row = await service.create(user.id, body.apprise_url, body.label)
+    return AppriseURLResponse.model_validate(row)
+
+
+@router.patch("/apprise/{url_id}", response_model=AppriseURLResponse)
+async def update_apprise(
+    url_id: uuid.UUID,
+    body: AppriseURLUpdate,
+    user: User = Depends(get_current_user),
+    service: AppriseService = Depends(_apprise_service),
+) -> AppriseURLResponse:
+    """@brief Update label/enabled of an owned Apprise URL."""
+    row = await service.update(user.id, url_id, body.label, body.enabled)
+    return AppriseURLResponse.model_validate(row)
+
+
+@router.delete("/apprise/{url_id}", response_model=MessageResponse)
+async def delete_apprise(
+    url_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: AppriseService = Depends(_apprise_service),
+) -> MessageResponse:
+    """@brief Delete an owned Apprise URL."""
+    await service.delete(user.id, url_id)
+    return MessageResponse(message=_("Apprise URL deleted"))
+
+
+@router.post("/apprise/{url_id}/test", response_model=AppriseTestResponse)
+async def test_apprise(
+    url_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: AppriseService = Depends(_apprise_service),
+) -> AppriseTestResponse:
+    """@brief Send a test notification through an owned Apprise URL."""
+    ok, message = await service.test(user.id, url_id)
+    return AppriseTestResponse(status="sent" if ok else "failed", message=message)
 
 
 @router.delete("/{notification_id}", response_model=MessageResponse)

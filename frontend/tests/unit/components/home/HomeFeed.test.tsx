@@ -2,7 +2,9 @@
  * @file tests/unit/components/home/HomeFeed.test.tsx
  * @brief HomeFeed rendering, new-items pill, infinite scroll sentinel.
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/i18n/en-US.json";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import type { FeedItem } from "@/lib/api/home";
 
@@ -20,6 +22,9 @@ vi.mock("@/components/feed/PostComposer", () => ({
 vi.mock("@/components/feed/PostCard", () => ({
   PostCard: ({ post }: { post: { id: string } }) => <div>post {post.id}</div>,
 }));
+vi.mock("@/components/feed/KudosComposer", () => ({
+  KudosComposer: () => <div role="dialog" aria-label="Send Kudos" />,
+}));
 vi.mock("@/components/feed/ActivityLine", () => ({
   ActivityLine: ({ item }: { item: { id: string } }) => (
     <div>activity {item.id}</div>
@@ -27,6 +32,13 @@ vi.mock("@/components/feed/ActivityLine", () => ({
 }));
 
 import { HomeFeed } from "@/components/home/HomeFeed";
+
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
 
 const post = (id: string) =>
   ({ kind: "post", id, created_at: "t", post: { id } }) as unknown as FeedItem;
@@ -180,5 +192,16 @@ describe("HomeFeed", () => {
   it("uses shared radius token, not arbitrary values", () => {
     const { container } = render(<HomeFeed />);
     expect(container.innerHTML).not.toContain("rounded-[");
+  });
+});
+
+describe("HomeFeed kudos action", () => {
+  it("opens the Send Kudos dialog from the feed button", () => {
+    render(<HomeFeed />);
+    expect(screen.queryByRole("dialog", { name: "Send Kudos" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Send Kudos" }));
+    expect(
+      screen.getByRole("dialog", { name: "Send Kudos" }),
+    ).toBeInTheDocument();
   });
 });

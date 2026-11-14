@@ -20,6 +20,7 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
+from app.repositories.moderation_repo import ModerationRepository
 from app.schemas.chat import (
     ChannelResponse,
     DirectMessageThreadResponse,
@@ -46,6 +47,7 @@ def _build_service(
         channel_repo=ChatChannelRepository(db),
         message_repo=ChatMessageRepository(db),
         community_id=community_id,
+        moderation_repo=ModerationRepository(db),
     )
 
 
