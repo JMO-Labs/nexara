@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import IO, cast
 
-import aiofiles  # type: ignore[import-untyped]
+import aiofiles  # type: ignore[import-untyped] # aiofiles ships no stubs
 import structlog
 
 from app.services.storage.base import StorageError, StorageKeyNotFoundError

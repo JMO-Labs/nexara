@@ -46,7 +46,7 @@ class MediaResponse(BaseModel):
             return None
         if isinstance(v, Decimal):
             return float(v)
-        return v  # type: ignore[return-value]
+        return v  # type: ignore[return-value] # validator returns narrowed runtime type
 
     model_config = {"from_attributes": True}
 

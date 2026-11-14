@@ -63,6 +63,7 @@ async def write_flag(
         .where(CommunityBranding.community_id == community_id)
         .values(sso_only=enabled, updated_by=actor_id, updated_at=func.now())
     )
+    # Result.rowcount exists on CursorResult only
     if res.rowcount == 0:  # type: ignore[attr-defined]
         session.add(CommunityBranding(community_id=community_id, sso_only=enabled))
     await session.flush()

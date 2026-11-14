@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcn/dropdown-menu";
 import type { Post } from "@/lib/api/posts";
+import { ReportDialog } from "@/components/moderation/ReportDialog";
 
 export interface PostHeaderProps {
   post: Post;
@@ -39,7 +40,7 @@ export function PostHeader({
   onEdit,
   onDelete,
 }: PostHeaderProps) {
-  const showMenu = isAuthor || isAdmin;
+  const [reportOpen, setReportOpen] = React.useState(false);
   const time = React.useMemo(() => {
     try {
       return formatDistanceToNowStrict(new Date(post.created_at), {
@@ -65,30 +66,39 @@ export function PostHeader({
           {post.updated_at !== post.created_at ? " · edited" : ""}
         </p>
       </div>
-      {showMenu ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <IconButton
-              aria-label="Post options"
-              tooltip="Post options"
-              variant="ghost"
-              size="sm"
-            >
-              <MoreHorizontal className="size-5" aria-hidden="true" />
-            </IconButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {isAuthor && onEdit ? (
-              <DropdownMenuItem onSelect={onEdit}>Edit</DropdownMenuItem>
-            ) : null}
-            {onDelete ? (
-              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-                Delete
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconButton
+            aria-label="Post options"
+            tooltip="Post options"
+            variant="ghost"
+            size="sm"
+          >
+            <MoreHorizontal className="size-5" aria-hidden="true" />
+          </IconButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {isAuthor && onEdit ? (
+            <DropdownMenuItem onSelect={onEdit}>Edit</DropdownMenuItem>
+          ) : null}
+          {onDelete ? (
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              Delete
+            </DropdownMenuItem>
+          ) : null}
+          {!isAuthor ? (
+            <DropdownMenuItem onSelect={() => setReportOpen(true)}>
+              Report
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="post"
+        targetId={post.id}
+      />
     </div>
   );
 }

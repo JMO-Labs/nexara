@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SideNav } from "@/components/layout/SideNav";
 import { useSession } from "@/stores/session";
 import type { CurrentUser } from "@/lib/api/users";
@@ -73,5 +74,23 @@ describe("SideNav", () => {
     expect(nav).toHaveAttribute("data-expanded", "true");
     fireEvent.keyDown(nav, { key: "Escape" });
     expect(nav).toHaveAttribute("data-expanded", "false");
+  });
+
+  it("marks the active link with a 3px left border", () => {
+    render(<SideNav />);
+    const active = screen.getByRole("link", { current: "page" });
+    expect(active.className).toContain("border-l-[3px]");
+  });
+
+  it("moves focus with ArrowDown/ArrowUp, wrapping", async () => {
+    render(<SideNav />);
+    const links = screen.getAllByRole("link");
+    links[0].focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(links[1]).toHaveFocus();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(links[0]).toHaveFocus();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(links[links.length - 1]).toHaveFocus();
   });
 });

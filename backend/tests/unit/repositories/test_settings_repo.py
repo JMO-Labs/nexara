@@ -59,3 +59,20 @@ class TestGetOrCreate:
 
         assert result is existing
         session.add.assert_not_called()
+
+
+class TestCountSassybotOptOuts:
+    """@brief Tests for SettingsRepository.count_sassybot_opt_outs()."""
+
+    @pytest.mark.asyncio
+    async def test_returns_count_scoped_to_community(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar_one.return_value = 4
+        session.execute.return_value = result
+
+        count = await SettingsRepository(session).count_sassybot_opt_outs(COMMUNITY_ID)
+
+        assert count == 4
+        stmt = session.execute.await_args.args[0]
+        assert "allow_sassybot IS false" in str(stmt)

@@ -105,3 +105,37 @@ class ListMemberOut(BaseModel):
     role: str
     share_personal: bool
     added_at: datetime
+
+
+class ListItemUpdate(BaseModel):
+    """@brief Request body for updating an item's values."""
+
+    values: dict[str, Any] = Field(default_factory=dict)
+
+
+class ListMemberAdd(BaseModel):
+    """@brief Request body for adding a list member."""
+
+    user_id: uuid.UUID
+    role: Literal["viewer", "editor"] = "viewer"
+
+
+class Pagination(BaseModel):
+    """@brief Keyset pagination metadata with an opaque cursor."""
+
+    cursor: str | None = None
+    has_more: bool = False
+
+
+class ListPage(BaseModel):
+    """@brief Page of lists."""
+
+    lists: list[ListOut]
+    pagination: Pagination
+
+
+class ListItemPage(BaseModel):
+    """@brief Page of list items."""
+
+    items: list[ListItemOut]
+    pagination: Pagination

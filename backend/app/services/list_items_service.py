@@ -81,6 +81,19 @@ class ListItemService:
             raise NotFoundError("Item not found")
         return item, await self._get_list(community_id, item.list_id)
 
+    async def ensure_in_list(
+        self, community_id: uuid.UUID, list_id: uuid.UUID, item_id: uuid.UUID
+    ) -> None:
+        """
+        @brief Raise NotFoundError unless the item belongs to the given list.
+        @param community_id Tenant scope.
+        @param list_id Expected parent list.
+        @param item_id Item to check.
+        """
+        item, _lst = await self._get_item(community_id, item_id)
+        if item.list_id != list_id:
+            raise NotFoundError("Item not found")
+
     async def list_items(
         self,
         community_id: uuid.UUID,

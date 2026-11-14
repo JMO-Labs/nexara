@@ -192,6 +192,21 @@ class TestAccess:
         assert isinstance(bus.emit.await_args.args[0].target, CommunityTarget)
 
 
+async def test_no_checkbox_field_defaults_to_shared() -> None:
+    """A schema without checkbox fields falls back to shared mode (nexara#385)."""
+    svc, item, lists, *_ = _setup("shared")
+    lists.get_by_id.return_value.field_schema = [{"key": "t", "type": "text"}]
+    assert svc._get_completion_mode(lists.get_by_id.return_value.field_schema, None) == "shared"
+    assert await svc.complete_item(item.id, USER) is item
+
+
+async def test_uncomplete_shared_when_not_completed_is_noop() -> None:
+    svc, item, lists, _comps, bus, _notif = _setup("shared", completed=False)
+    assert await svc.uncomplete_item(item.id, USER) is item
+    lists.increment_counters.assert_not_awaited()
+    bus.emit.assert_not_called()
+
+
 async def test_complete_notifies_owner_with_context():
     svc, item, _, _, _, notif = _setup("shared")
     item.values = {"title": "Milk"}

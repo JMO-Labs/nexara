@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import { AvatarMenu } from "./AvatarMenu";
 import { useUI } from "@/stores/ui";
 import { useBrandingStore } from "@/stores/branding";
@@ -21,6 +22,7 @@ export function TopBar() {
   const { name, logoUrl } = useBrandingStore();
   return (
     <header className="bg-bg sticky top-0 z-20 flex items-center gap-2 px-4 py-2 md:px-8">
+      <NotificationsDrawer />
       <Link
         href="/app"
         aria-label={`${name} home`}
