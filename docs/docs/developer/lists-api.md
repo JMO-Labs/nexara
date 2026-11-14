@@ -198,6 +198,20 @@ Soft-delete a list. Owner only.
 
 **Errors:** `403 AUTHORIZATION_ERROR`, `404 NOT_FOUND`.
 
+### `POST /api/v1/lists/{list_id}/archive`
+
+Archive a list (sets `status` to `archived`). No request body.
+
+**Auth:** Bearer token (owner or community admin).
+
+**Response `200`:** the updated list object.
+
+```json
+{ "id": "3f1c2a9e-7b4d-4c1a-9e2f-0a1b2c3d4e5f", "title": "Camping gear", "status": "archived" }
+```
+
+**Errors:** `403 AUTHORIZATION_ERROR`, `404 NOT_FOUND`.
+
 ## Items
 
 ### `GET /api/v1/lists/{list_id}/items`

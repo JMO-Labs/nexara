@@ -107,7 +107,6 @@ export interface ListUpdateInput {
   description?: string | null;
   color?: string | null;
   expiresAt?: string | null;
-  status?: string;
 }
 export interface ListItemCreateInput {
   position: number;

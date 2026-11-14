@@ -69,9 +69,9 @@ export const listApi = {
   deleteList(id: string): Promise<void> {
     return apiDelete(`${BASE}/${seg(id)}`);
   },
-  /** Archive via status update. */
-  archiveList(id: string): Promise<List> {
-    return listApi.updateList(id, { status: "archived" });
+  /** Archive via POST /lists/{id}/archive. */
+  async archiveList(id: string): Promise<List> {
+    return one(await apiPost(`${BASE}/${seg(id)}/archive`));
   },
   async listItems(listId: string, p?: PageParams): Promise<ListItemPage> {
     const r = await apiGet<{ items: unknown[]; pagination?: Pagination }>(

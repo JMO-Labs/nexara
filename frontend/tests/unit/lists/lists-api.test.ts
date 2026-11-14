@@ -56,6 +56,7 @@ describe("listApi", () => {
   });
   it("updateList uses PUT; delete/archive", async () => {
     m.apiPut.mockResolvedValue(rawList);
+    m.apiPost.mockResolvedValue(rawList);
     await listApi.updateList("l1", { expiresAt: "x" });
     expect(m.apiPut).toHaveBeenCalledWith("/api/v1/lists/l1", {
       expires_at: "x",
@@ -63,9 +64,7 @@ describe("listApi", () => {
     await listApi.deleteList("l1");
     expect(m.apiDelete).toHaveBeenCalledWith("/api/v1/lists/l1");
     await listApi.archiveList("l1");
-    expect(m.apiPut).toHaveBeenLastCalledWith("/api/v1/lists/l1", {
-      status: "archived",
-    });
+    expect(m.apiPost).toHaveBeenLastCalledWith("/api/v1/lists/l1/archive");
   });
   it("listItems returns nextCursor and items camelCased", async () => {
     m.apiGet.mockResolvedValue({

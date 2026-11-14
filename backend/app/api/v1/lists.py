@@ -115,6 +115,16 @@ async def update_list(
     return ListOut.model_validate(await service.update(list_id, user.id, data, _is_admin(user)))
 
 
+@router.post("/{list_id}/archive", response_model=ListOut)
+async def archive_list(
+    list_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: ListService = Depends(get_list_service),
+) -> ListOut:
+    """@brief Archive a list (status='archived'; owner/admin)."""
+    return ListOut.model_validate(await service.archive(list_id, user.id, _is_admin(user)))
+
+
 @router.delete("/{list_id}", status_code=204)
 async def delete_list(
     list_id: uuid.UUID,
