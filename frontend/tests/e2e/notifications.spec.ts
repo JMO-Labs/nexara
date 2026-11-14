@@ -38,16 +38,15 @@ test("mention notifies recipient and can be marked read", async ({
 
     await bell.click();
     const drawer = a.page.getByRole("dialog", { name: "Notifications" });
-    const unreadRows = drawer.locator(
-      '[data-testid="notif-row"][data-unread="true"]',
-    );
-    await expect(unreadRows).toHaveCount(1);
+    // Ack button renders only on unread rows (see NotifRow.test.tsx).
+    const ack = drawer.getByRole("button", {
+      name: "Acknowledge notification",
+    });
+    await expect(ack).toHaveCount(1);
 
-    await drawer
-      .getByRole("button", { name: "Acknowledge notification" })
-      .first()
-      .click();
-    await expect(unreadRows).toHaveCount(0);
+    await ack.first().click();
+    await expect(ack).toHaveCount(0);
+    await expect(bell).toHaveCount(0);
   } finally {
     await a.context.close();
     await b.context.close();
