@@ -129,6 +129,15 @@ async def test_update_list_passes_admin_flag(client, mocks, user) -> None:
     mocks["list"].update.assert_awaited_once_with(LID, user.id, {"title": "x"}, True)
 
 
+async def test_archive_list_calls_service(client, mocks, user) -> None:
+    user.role = "admin"
+    mocks["list"].archive.return_value = _list(status="archived")
+    r = await client.post(f"/api/v1/lists/{LID}/archive")
+    assert r.status_code == 200
+    assert r.json()["status"] == "archived"
+    mocks["list"].archive.assert_awaited_once_with(LID, user.id, True)
+
+
 async def test_delete_list_204(client, mocks) -> None:
     r = await client.delete(f"/api/v1/lists/{LID}")
     assert r.status_code == 204

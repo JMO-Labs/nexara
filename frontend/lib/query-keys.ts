@@ -103,6 +103,17 @@ export const qk = {
     notifications: () => ["settings", "notifications"] as const,
     security: () => ["settings", "security"] as const,
   },
+  lists: {
+    all: (communityId: string) => ["lists", communityId] as const,
+    list: (communityId: string, filters?: Record<string, unknown>) =>
+      ["lists", communityId, "list", filters ?? {}] as const,
+    detail: (communityId: string, id: string) =>
+      ["lists", communityId, "detail", id] as const,
+    items: (listId: string, params?: Record<string, unknown>) =>
+      ["listItems", listId, params ?? {}] as const,
+    itemsAll: (listId: string) => ["listItems", listId] as const,
+    templates: () => ["listTemplates"] as const,
+  },
   kudos: {
     wall: () => ["kudos", "wall"] as const,
   },
