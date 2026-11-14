@@ -63,4 +63,18 @@ describe("CommentThread", () => {
     expect(refetch).toHaveBeenCalled();
     isError = false;
   });
+
+  it("offers Report on each comment", () => {
+    items = [
+      {
+        id: "c9",
+        content: "x",
+        created_at: new Date().toISOString(),
+        author: { id: "u2", display_name: "Bob", avatar_url: null },
+        replies: [],
+      },
+    ];
+    render(<CommentThread postId="p1" />);
+    expect(screen.getByRole("button", { name: "Report" })).toBeInTheDocument();
+  });
 });

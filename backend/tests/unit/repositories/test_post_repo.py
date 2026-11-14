@@ -513,3 +513,83 @@ class TestReactionRepository:
         assert count == 0
         session.delete.assert_awaited_once_with(existing)
         session.add.assert_not_called()
+
+
+class TestPostRepositoryListResponses:
+    """@brief Tests for PostRepository.list_responses()."""
+
+    @pytest.mark.asyncio
+    async def test_filters_scope_and_applies_block_filter(self):
+        """list_responses scopes by community, prompt id, soft-delete, and blocks."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        repo = PostRepository(session)
+
+        items, next_cursor = await repo.list_responses(COMMUNITY_ID, POST_ID, viewer_id=VIEWER_ID)
+
+        assert items == [] and next_cursor is None
+        sql = str(session.execute.await_args.args[0].compile()).lower()
+        assert "reply_to_prompt_id" in sql
+        assert "community_id" in sql
+        assert "deleted_at is null" in sql
+        assert "order by posts.created_at desc" in sql
+        assert "user_blocks" in sql or "block" in sql
+
+    @staticmethod
+    def _rows(n: int) -> list[MagicMock]:
+        """@brief Build n mock posts with descending created_at."""
+        rows = []
+        for i in range(n):
+            row = MagicMock(spec=Post)
+            row.id = uuid.uuid4()
+            row.created_at = datetime(2026, 1, 10 - i, tzinfo=UTC)
+            rows.append(row)
+        return rows
+
+    @pytest.mark.asyncio
+    async def test_valid_cursor_adds_created_at_filter(self):
+        """A valid ISO cursor restricts to older posts."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        repo = PostRepository(session)
+
+        await repo.list_responses(COMMUNITY_ID, POST_ID, cursor="2026-01-05T00:00:00+00:00")
+
+        sql = str(session.execute.await_args.args[0].compile()).lower()
+        assert "posts.created_at <" in sql
+
+    @pytest.mark.asyncio
+    async def test_invalid_cursor_is_ignored(self):
+        """A malformed cursor is skipped rather than raising."""
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        session.execute = AsyncMock(return_value=mock_result)
+        repo = PostRepository(session)
+
+        items, nxt = await repo.list_responses(COMMUNITY_ID, POST_ID, cursor="not-a-date")
+
+        assert items == [] and nxt is None
+        sql = str(session.execute.await_args.args[0].compile()).lower()
+        assert "posts.created_at <" not in sql
+
+    @pytest.mark.asyncio
+    async def test_extra_row_yields_next_cursor_and_enriched_items(self):
+        """limit+1 rows trim to limit, set next_cursor, and return enriched dicts."""
+        session = _make_session()
+        rows = self._rows(3)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = rows
+        session.execute = AsyncMock(return_value=mock_result)
+        repo = PostRepository(session)
+        repo._enrich_posts = AsyncMock(return_value={r.id: {"id": str(r.id)} for r in rows})
+
+        items, nxt = await repo.list_responses(COMMUNITY_ID, POST_ID, limit=2)
+
+        assert [i["id"] for i in items] == [str(rows[0].id), str(rows[1].id)]
+        assert nxt == rows[1].created_at.isoformat()
+        repo._enrich_posts.assert_awaited_once_with([rows[0].id, rows[1].id], None)

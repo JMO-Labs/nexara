@@ -40,7 +40,7 @@ def test_helm_lint_passes() -> None:
 def test_chart_metadata() -> None:
     meta = yaml.safe_load((CHART / "Chart.yaml").read_text())
     assert meta["name"] == "nexara"
-    assert meta["apiVersion"] == "v1"
+    assert meta["apiVersion"] == "v2"
     assert meta["version"] == "1.0.0" and meta["appVersion"] == "1.0.0"
     assert meta["maintainers"]
 
@@ -49,7 +49,6 @@ def test_default_values() -> None:
     v = yaml.safe_load((CHART / "values.yaml").read_text())
     assert v["api"]["replicas"] == 3
     assert v["worker"]["replicas"] == 2
-    assert v["beat"]["replicas"] == 1
     assert v["valkey"]["enabled"] is True
     assert v["postgresql"]["enabled"] is True
     assert v["ingress"]["enabled"] is False
@@ -83,13 +82,18 @@ def test_ingress_and_external_services() -> None:
 
 def test_external_db_requires_password_or_secret() -> None:
     args = ["template", "nexara", str(CHART), "--set", "postgresql.enabled=false"]
+    args += ["--set", "postgresql.external.host=db.example.com"]
     res = subprocess.run(["helm", *args], capture_output=True, text=True)
     assert res.returncode != 0
     assert "postgresql.external.password or postgresql.external.existingSecret" in res.stderr
 
 
 def test_external_db_existing_secret_renders_without_password() -> None:
-    docs = _render("postgresql.enabled=false", "postgresql.external.existingSecret=mydb")
+    docs = _render(
+        "postgresql.enabled=false",
+        "postgresql.external.host=db.example.com",
+        "postgresql.external.existingSecret=mydb",
+    )
     assert not any(d["kind"] == "Secret" and d["metadata"]["name"].endswith("-db") for d in docs)
 
 
@@ -181,6 +185,16 @@ def test_postgres_is_statefulset_with_headless_service() -> None:
     assert headless["spec"]["clusterIP"] == "None"
     assert sts["spec"]["serviceName"] == headless["metadata"]["name"]
     assert sts["spec"]["replicas"] == 1
+
+
+def test_apprise_key_rendered_when_supplied_and_optional_otherwise() -> None:
+    import base64
+
+    docs = _render("secrets.appriseEncryptionKey=fernetkey")
+    assert base64.b64decode(_secret_data(docs, "-app")["apprise-encryption-key"]) == b"fernetkey"
+    assert "apprise-encryption-key" not in _secret_data(_render(), "-app")
+    text = (CHART / "templates" / "_helpers.tpl").read_text()
+    assert "APPRISE_ENCRYPTION_KEY" in text and "optional: true" in text
 
 
 def test_nginx_proxies_livez_to_api() -> None:

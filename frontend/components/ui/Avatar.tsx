@@ -50,7 +50,7 @@ export function Avatar({ src, name, size = "md", className }: AvatarProps) {
       )}
     >
       {src && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
+        // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
         <img
           src={src}
           alt={name ?? ""}

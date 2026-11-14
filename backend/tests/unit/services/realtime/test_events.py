@@ -91,6 +91,28 @@ class TestUserNotification:
         assert event.payload["payload"] == {"msg": "hi"}
         assert event.payload["created_at"] == "2026-01-01T00:00:00"
 
+    def test_expanded_payload_fields(self):
+        uid, nid, aid = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        event = user_notification(
+            uid,
+            nid,
+            "mention",
+            {"msg": "hi"},
+            "2026-01-01T00:00:00",
+            updated_at="2026-01-01T00:05:00",
+            count=3,
+            actor_ids=[aid],
+        )
+        assert event.payload["updated_at"] == "2026-01-01T00:05:00"
+        assert event.payload["count"] == 3
+        assert event.payload["actor_ids"] == [str(aid)]
+
+    def test_defaults_updated_at_to_created_at(self):
+        event = user_notification(uuid.uuid4(), uuid.uuid4(), "x", {}, "2026-01-01T00:00:00")
+        assert event.payload["updated_at"] == "2026-01-01T00:00:00"
+        assert event.payload["count"] == 1
+        assert event.payload["actor_ids"] == []
+
 
 class TestTypingIndicator:
     """@brief Tests for the typing_indicator builder."""

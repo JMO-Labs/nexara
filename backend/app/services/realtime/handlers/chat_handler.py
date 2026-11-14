@@ -31,6 +31,7 @@ from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.db.session import async_session_factory
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
+from app.repositories.moderation_repo import ModerationRepository
 from app.services.chat_service import ChatService, channel_pubsub_name
 from app.services.realtime.protocol import OutboundType, build_outbound
 
@@ -106,6 +107,7 @@ async def _handle_message(
                 message_repo=ChatMessageRepository(session),
                 community_id=community_id,
                 rate_limiter=_maybe_rate_limiter(),
+                moderation_repo=ModerationRepository(session),
             )
             await service.send_message(user, channel_id, content)
             await session.commit()

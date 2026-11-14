@@ -69,6 +69,7 @@ class List(Base):
         UUID(as_uuid=True), ForeignKey("media.id", ondelete="SET NULL")
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="active")
     field_schema: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")

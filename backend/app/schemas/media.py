@@ -46,7 +46,7 @@ class MediaResponse(BaseModel):
             return None
         if isinstance(v, Decimal):
             return float(v)
-        return v  # type: ignore[return-value]
+        return v  # type: ignore[return-value] # validator returns narrowed runtime type
 
     model_config = {"from_attributes": True}
 
@@ -77,3 +77,20 @@ class MultipartCompleteResponse(BaseModel):
     """@brief Response after completing multipart upload."""
 
     media_id: UUID
+
+
+class StorageByType(BaseModel):
+    """@brief Per-category storage usage in bytes."""
+
+    photos: int = 0
+    videos: int = 0
+    documents: int = 0
+    other: int = 0
+
+
+class StorageUsageResponse(BaseModel):
+    """@brief Response for GET /api/v1/users/{user_id}/storage."""
+
+    used_bytes: int
+    quota_bytes: int
+    by_type: StorageByType

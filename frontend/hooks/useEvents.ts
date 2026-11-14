@@ -18,6 +18,7 @@ import {
   unclaimContribution,
   type CreateEventBody,
   type EventItem,
+  type EventListResponse,
   type ListEventsParams,
 } from "@/lib/api/events";
 
@@ -105,23 +106,28 @@ export function useRsvp(eventId: string) {
     silentSuccess: true,
     onMutate: async (status) => {
       await qc.cancelQueries({ queryKey: qk.events.all() });
-      const prevEvent = qc.getQueryData<EventItem>(qk.events.detail(eventId));
+      const prev = qc.getQueriesData<unknown>({ queryKey: qk.events.all() });
+      const user_rsvp = status ? { status } : null;
       qc.setQueryData<EventItem | undefined>(
         qk.events.detail(eventId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            user_rsvp: status ? { status } : null,
-          };
-        },
+        (old) => (old ? { ...old, user_rsvp } : old),
       );
-      return { prevEvent };
+      qc.setQueriesData<EventListResponse | undefined>(
+        { queryKey: ["events", "list"] },
+        (old) =>
+          old && Array.isArray(old.items)
+            ? {
+                ...old,
+                items: old.items.map((i) =>
+                  i.id === eventId ? { ...i, user_rsvp } : i,
+                ),
+              }
+            : old,
+      );
+      return { prev };
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prevEvent) {
-        qc.setQueryData(qk.events.detail(eventId), ctx.prevEvent);
-      }
+      ctx?.prev.forEach(([key, data]) => qc.setQueryData(key, data));
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.events.detail(eventId) });

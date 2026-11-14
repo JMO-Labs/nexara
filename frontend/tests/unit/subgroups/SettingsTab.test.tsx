@@ -31,6 +31,7 @@ const mockSubgroup: SubgroupDetail = {
   updated_at: "2026-04-25T00:00:00Z",
   member_count: 12,
   my_role: "owner",
+  is_member: true,
   chat_channel_id: null,
   pinned_post_id: null,
 };

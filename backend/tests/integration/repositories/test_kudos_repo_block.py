@@ -51,7 +51,7 @@ async def _user(session: AsyncSession, name: str) -> User:
 async def test_blocked_author_kudos_hidden(session: AsyncSession) -> None:
     repo = KudosRepository(session)
     viewer, blocked, friend, rcpt = [await _user(session, n) for n in "vbfr"]
-    session.add(UserBlock(blocker_id=viewer.id, blocked_id=blocked.id))
+    session.add(UserBlock(blocker_id=viewer.id, blocked_id=blocked.id, community_id=COMMUNITY_ID))
     await session.flush()
     await repo.create_kudos(blocked.id, rcpt.id, "bad", COMMUNITY_ID)
     await repo.create_kudos(friend.id, rcpt.id, "good", COMMUNITY_ID)
@@ -64,7 +64,7 @@ async def test_blocked_author_kudos_hidden(session: AsyncSession) -> None:
 async def test_author_who_blocked_viewer_hidden(session: AsyncSession) -> None:
     repo = KudosRepository(session)
     viewer, author, rcpt = [await _user(session, n) for n in "var"]
-    session.add(UserBlock(blocker_id=author.id, blocked_id=viewer.id))
+    session.add(UserBlock(blocker_id=author.id, blocked_id=viewer.id, community_id=COMMUNITY_ID))
     await session.flush()
     await repo.create_kudos(author.id, rcpt.id, "hi", COMMUNITY_ID)
 

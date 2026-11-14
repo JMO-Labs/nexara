@@ -38,9 +38,6 @@ export default function SubgroupsPage() {
     return list.filter((g) => {
       if (filter === "open" && g.join_policy !== "open") return false;
       if (filter === "private" && !g.is_private) return false;
-      // TODO: Add is_member flag to Subgroup type when available,
-      // then filter: if (g.is_private && !is_member) return false;
-      // For now, trust backend filtering for private group visibility.
       if (!q) return true;
       return (
         g.name.toLowerCase().includes(q) ||

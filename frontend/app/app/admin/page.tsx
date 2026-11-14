@@ -23,6 +23,9 @@ export default function AdminPage() {
         <Link href="/app/admin/retention" className="text-sm underline">
           Data retention policies
         </Link>
+        <Link href="/app/admin/plugins" className="ml-4 text-sm underline">
+          Plugins
+        </Link>
       </div>
       <AdminTabs />
     </div>

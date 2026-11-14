@@ -52,6 +52,7 @@ def _make_service(session=None, settings=None) -> UserService:
     svc = UserService(s, settings or _make_settings())
     svc._user_repo = AsyncMock()
     svc._token_repo = AsyncMock()
+    svc._moderation_repo = AsyncMock()
     return svc
 
 
@@ -238,3 +239,21 @@ class TestGetAvatarUrl:
         user = _make_user(avatar_url=None)
         url = UserService.get_avatar_url(user, size=200)
         assert "s=200" in url
+
+
+class TestListBlocked:
+    """@brief Blocked-users listing tests."""
+
+    async def test_returns_users_blocked_by_viewer(self) -> None:
+        """list_blocked delegates to the moderation repo scoped to the viewer."""
+        svc = _make_service()
+        viewer = _make_user()
+        blocked = [_make_user()]
+        svc._moderation_repo.list_blocked_users.return_value = blocked
+
+        result = await svc.list_blocked(viewer)
+
+        assert result == blocked
+        svc._moderation_repo.list_blocked_users.assert_awaited_once_with(
+            viewer.id, viewer.community_id
+        )

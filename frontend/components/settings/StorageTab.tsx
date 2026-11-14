@@ -3,6 +3,7 @@
  * @file components/settings/StorageTab.tsx
  * @brief Storage quota usage with per-media-type breakdown.
  */
+import Link from "next/link";
 import {
   AlertTriangle,
   AlertCircle,
@@ -109,7 +110,12 @@ export function StorageTab() {
               />
             </div>
             <p className="mt-1 text-sm">{shown}% used</p>
-            {/* TODO: link to "Manage media" page and bulk delete UI (future). */}
+            <Link
+              href="/app/media"
+              className="mt-3 inline-block text-sm font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2"
+            >
+              Manage media
+            </Link>
           </div>
           <table className="md:flex-1 text-sm">
             <caption className="sr-only">Storage used by media type</caption>

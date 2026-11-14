@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: v2
 name: nexara
 description: Self-hosted community platform
 type: application

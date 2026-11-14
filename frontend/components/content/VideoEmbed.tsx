@@ -88,7 +88,7 @@ export function VideoEmbed({ preview, thumbnail }: VideoEmbedProps) {
       ) : (
         <>
           {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
             <img
               src={thumb}
               alt={label}

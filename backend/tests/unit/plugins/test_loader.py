@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from app.plugins.loader import load_plugins
 from app.plugins.registry import PluginRegistry
+from tests.unit.route_paths import route_paths
 
 CID = uuid.uuid4()
 
@@ -57,7 +58,7 @@ def _reset() -> None:
 
 
 def paths(app: FastAPI) -> set[str]:
-    return {getattr(r, "path", "") for r in app.routes}
+    return route_paths(app)
 
 
 async def test_valid_plugin_loaded(tmp_path, caplog):
@@ -129,6 +130,22 @@ async def test_routes_path_escape_rejected(tmp_path):
 async def test_missing_dir_is_noop(tmp_path):
     await load_plugins(FastAPI(), session_with([]), CID, plugins_dir=tmp_path / "nope")
     assert PluginRegistry.list() == []
+
+
+async def test_manifest_id_directory_mismatch_skipped(tmp_path, caplog):
+    make_plugin(tmp_path, "alpha")
+    (tmp_path / "alpha").rename(tmp_path / "other")
+    with caplog.at_level(logging.ERROR):
+        await load_plugins(FastAPI(), session_with(["alpha", "other"]), CID, plugins_dir=tmp_path)
+    assert PluginRegistry.list() == []
+    assert any("failed to load" in r.getMessage() for r in caplog.records)
+
+
+async def test_unimportable_spec_skipped(tmp_path, monkeypatch):
+    make_plugin(tmp_path, "alpha")
+    monkeypatch.setattr("importlib.util.spec_from_file_location", lambda *a, **k: None)
+    await load_plugins(FastAPI(), session_with(["alpha"]), CID, plugins_dir=tmp_path)
+    assert PluginRegistry.get("alpha") is None
 
 
 async def test_package_plugin_relative_import_and_register_hooks(tmp_path):

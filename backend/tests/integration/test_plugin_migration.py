@@ -49,6 +49,7 @@ def scratch_db(monkeypatch):
 
 
 PLUGIN_TABLES = {"plugins", "plugin_data"}
+PLUGIN_PREV = "0020_add_recipient_to_posts"  # down_revision of 0022_plugin_models
 
 
 def _tables(name: str) -> set[str]:
@@ -67,7 +68,8 @@ def test_upgrade_head_then_downgrade_base(scratch_db):
     command.upgrade(cfg, "head")
     assert PLUGIN_TABLES <= _tables(scratch_db)
 
-    command.downgrade(cfg, "-1")  # reverts only the plugin migration
+    # Revert to just below 0022_plugin_models (later revisions depend on it).
+    command.downgrade(cfg, PLUGIN_PREV)
     remaining = _tables(scratch_db)
     assert not PLUGIN_TABLES & remaining
     assert "media_ai_metadata" in remaining

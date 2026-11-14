@@ -198,3 +198,10 @@ export const listPromptResponses = (
     `/api/v1/prompts/posts/${seg(promptPostId)}/responses?${qs}`,
   );
 };
+
+/**
+ * @brief List currently active prompt posts for the home feed.
+ * @return Array of PromptPost
+ */
+export const getActivePrompts = () =>
+  apiGet<PromptPost[]>("/api/v1/prompts/active");

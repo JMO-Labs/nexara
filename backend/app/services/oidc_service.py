@@ -195,7 +195,7 @@ class OIDCService:
             claims = jose_jwt.get_unverified_claims(id_token)
         except Exception as exc:
             raise AuthenticationError(message=_("Invalid OIDC id_token")) from exc
-        return cast("dict[str, Any]", claims)
+        return claims
 
     def _callback_uri(self) -> str:
         """@brief Build the OIDC callback URI."""

@@ -12,7 +12,6 @@ import { useSession } from "@/stores/session";
 const complete = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/api/users", () => ({ completeOnboarding: () => complete() }));
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 vi.mock("next/dynamic", () => ({
   default: () =>
     function FakeJoyride(p: any) {

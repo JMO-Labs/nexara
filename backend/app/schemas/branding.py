@@ -94,9 +94,9 @@ class BrandingUpdate(BaseModel):
     font_family: str | None = None
     font_family_mono: str | None = None
     email_logo_media_id: UUID | None = None
-    email_footer_text: str | None = None
-    email_sender_name: str | None = None
-    landing_cta_text: str | None = None
+    email_footer_text: str | None = Field(default=None, max_length=300)
+    email_sender_name: str | None = Field(default=None, max_length=100)
+    landing_cta_text: str | None = Field(default=None, max_length=200)
     landing_show_feature_list: bool | None = None
     pwa_icon_192_media_id: UUID | None = None
     pwa_icon_512_media_id: UUID | None = None
@@ -147,3 +147,23 @@ class PwaManifest(BaseModel):
     display: str
     start_url: str
     icons: list[dict[str, Any]]
+
+
+class PresetTheme(BaseModel):
+    """@brief A named preset colour theme (all branding colours)."""
+
+    name: str
+    description: str
+    primary: str
+    primary_dark: str
+    accent: str
+    surface_light: str
+    surface_dark: str
+    text_light: str
+    text_dark: str
+
+
+class PresetThemeList(BaseModel):
+    """@brief Response for GET /branding/presets."""
+
+    themes: list[PresetTheme]

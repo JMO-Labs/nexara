@@ -85,4 +85,4 @@ sufficient contrast are required for every change.
 ## Deployment
 
 Containers are built in CI and run behind a reverse proxy. See
-[Deployment](../deployment.md) for topologies and the Helm chart.
+[Deployment](../deployment/deployment-guide.md) for topologies and the Helm chart.

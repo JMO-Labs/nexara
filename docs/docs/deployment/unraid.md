@@ -44,3 +44,9 @@ when they sign in. See the [FAQ](../user/faq.md) and
 | `could not translate host name "nexara-postgres"` | Both containers must be on the same custom network (not the default `bridge`). |
 | Password authentication failed | The password in *Database URL* must match the database template. Changing it later requires removing the postgres data folder. |
 | Uploads disappear after update | Make sure *Media Storage* maps to a folder under `/mnt/user/appdata`. |
+
+## See also
+
+- [Deployment guide](deployment-guide.md) for the platform comparison.
+- [Security](security.md): put a TLS reverse proxy in front of the WebUI port.
+- [Troubleshooting](troubleshooting.md) for database, upload and Celery issues.

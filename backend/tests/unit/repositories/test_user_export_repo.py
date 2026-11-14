@@ -70,3 +70,34 @@ async def test_update_status_missing_raises() -> None:
     repo, _ = _repo(None)
     with pytest.raises(LookupError):
         await repo.update_status(uuid.uuid4(), "failed")
+
+
+async def test_commit_commits_session() -> None:
+    repo, session = _repo()
+    await repo.commit()
+    session.commit.assert_awaited_once()
+
+
+async def test_mark_downloaded_stamps_and_flushes() -> None:
+    row = UserExport(user_id=UID, community_id=CID, status="ready")
+    repo, session = _repo()
+    await repo.mark_downloaded(row)
+    assert row.downloaded_at is not None
+    session.flush.assert_awaited_once()
+
+
+async def test_list_expired_filters_on_ready_at_and_file_key() -> None:
+    rows = [UserExport(user_id=UID, community_id=CID, status="ready")]
+    repo, session = _repo()
+    session.execute.return_value = MagicMock(scalars=lambda: MagicMock(all=lambda: rows))
+    assert await repo.list_expired(datetime.now(UTC)) == rows
+    sql = str(session.execute.await_args.args[0])
+    assert "ready_at <" in sql and "file_key IS NOT NULL" in sql
+
+
+async def test_delete_row_deletes_and_flushes() -> None:
+    row = UserExport(user_id=UID, community_id=CID, status="ready")
+    repo, session = _repo()
+    await repo.delete_row(row)
+    session.delete.assert_awaited_once_with(row)
+    session.flush.assert_awaited_once()

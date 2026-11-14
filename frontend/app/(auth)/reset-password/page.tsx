@@ -15,7 +15,9 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { requestPasswordReset, confirmPasswordReset } from "@/lib/api/auth";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
-const RequestSchema = z.object({ email: z.string().min(3) });
+const RequestSchema = z.object({
+  email: z.string().email("Enter a valid email address"),
+});
 const ConfirmSchema = z.object({
   new_password: z.string().min(12, "At least 12 characters"),
 });
@@ -26,6 +28,7 @@ function RequestForm() {
   const [sent, setSent] = useState(false);
   const { register, handleSubmit, formState } = useForm<RequestData>({
     resolver: zodResolver(RequestSchema),
+    mode: "onTouched",
     defaultValues: { email: "" },
   });
 
@@ -66,6 +69,7 @@ function RequestForm() {
           autoFocus
           autoComplete="email"
           error={formState.errors.email?.message}
+          disabled={request.isPending}
           {...register("email")}
         />
         <Button type="submit" size="lg" loading={request.isPending}>
@@ -84,6 +88,7 @@ function ConfirmForm({ token }: { token: string }) {
   const [done, setDone] = useState(false);
   const { register, handleSubmit, formState } = useForm<ConfirmData>({
     resolver: zodResolver(ConfirmSchema),
+    mode: "onTouched",
     defaultValues: { new_password: "" },
   });
 
@@ -121,6 +126,7 @@ function ConfirmForm({ token }: { token: string }) {
           autoComplete="new-password"
           hint="At least 12 characters."
           error={formState.errors.new_password?.message}
+          disabled={confirm.isPending}
           {...register("new_password")}
         />
         <Button type="submit" size="lg" loading={confirm.isPending}>

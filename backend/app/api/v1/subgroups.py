@@ -87,6 +87,7 @@ async def _detail_response(
         updated_at=subgroup.updated_at,
         member_count=member_count,
         my_role=membership.role if membership else None,
+        is_member=membership is not None,
         chat_channel_id=channel.id if channel else None,
         pinned_post_id=pinned_post_id,
     )
@@ -98,12 +99,12 @@ async def list_subgroups(
     service: SubgroupService = Depends(_build_service),
 ) -> list[SubgroupResponse]:
     """@brief List subgroups visible to the current user."""
-    subgroups = await service.list_subgroups(user)
-    roles = await service._member_repo.list_my_roles(user.id)  # noqa: SLF001
+    rows = await service.list_subgroups_with_membership(user)
     out: list[SubgroupResponse] = []
-    for s in subgroups:
+    for s, role in rows:
         resp = SubgroupResponse.model_validate(s)
-        resp.my_role = roles.get(s.id)
+        resp.my_role = role
+        resp.is_member = role is not None
         out.append(resp)
     return out
 

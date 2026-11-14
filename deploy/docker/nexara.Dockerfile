@@ -66,6 +66,7 @@ COPY --from=frontend-builder --chown=nexara:nexara /build/public /app/frontend/p
 COPY backend/app/ ./app/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
+COPY backend/data/ ./data/
 COPY backend/pyproject.toml ./
 
 # Configuration files

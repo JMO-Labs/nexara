@@ -10,17 +10,26 @@ used by all content queries in Phase 1.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.media import Media
 from app.models.moderation import ContentReport, UserBlock
 from app.models.post import Post
+from app.models.user import User
 from app.repositories.base import BaseRepository
+from app.repositories.moderation_content import (
+    ModerationContentMixin,
+    decode_report_cursor,
+    encode_report_cursor,
+)
+
+__all__ = ["ModerationRepository", "decode_report_cursor", "encode_report_cursor"]
 
 
-class ModerationRepository(BaseRepository[UserBlock]):
+class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
     """
     @brief Async repository for user blocks and content reports.
 
@@ -94,6 +103,40 @@ class ModerationRepository(BaseRepository[UserBlock]):
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
+    async def is_blocked_either(self, user_a: uuid.UUID, user_b: uuid.UUID) -> bool:
+        """
+        @brief Check whether either user has blocked the other.
+
+        @param user_a First user UUID.
+        @param user_b Second user UUID.
+        @return True if a block exists in either direction.
+        """
+        stmt = select(UserBlock.id).where(
+            or_(
+                and_(UserBlock.blocker_id == user_a, UserBlock.blocked_id == user_b),
+                and_(UserBlock.blocker_id == user_b, UserBlock.blocked_id == user_a),
+            )
+        )
+        result = await self._session.execute(stmt.limit(1))
+        return result.scalar_one_or_none() is not None
+
+    async def list_blocked_users(self, user_id: uuid.UUID, community_id: uuid.UUID) -> list[User]:
+        """
+        @brief Return users the given user has blocked, newest block first.
+
+        @param user_id Blocker UUID.
+        @param community_id Community scope.
+        @return List of blocked User rows.
+        """
+        stmt = (
+            select(User)
+            .join(UserBlock, UserBlock.blocked_id == User.id)
+            .where(UserBlock.blocker_id == user_id, UserBlock.community_id == community_id)
+            .order_by(UserBlock.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_blocked_user_ids(self, user_id: uuid.UUID) -> set[uuid.UUID]:
         """
         @brief Return the set of user IDs blocked by the given user.
@@ -137,10 +180,74 @@ class ModerationRepository(BaseRepository[UserBlock]):
             status="pending",
             community_id=community_id,
         )
-        self._session.add(report)
+        # Savepoint keeps the outer transaction usable if UNIQUE is violated.
+        async with self._session.begin_nested():
+            self._session.add(report)
+            await self._session.flush()
+        await self._session.refresh(report)
+        return report
+
+    async def get_report(
+        self, report_id: uuid.UUID, community_id: uuid.UUID
+    ) -> ContentReport | None:
+        """
+        @brief Fetch a report by id within a community.
+
+        @param report_id Report UUID.
+        @param community_id Community scope.
+        @return The report or None.
+        """
+        stmt = select(ContentReport).where(
+            ContentReport.id == report_id,
+            ContentReport.community_id == community_id,
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def mark_reviewed(
+        self,
+        report: ContentReport,
+        *,
+        status: str,
+        action_taken: str,
+        admin_notes: str | None,
+        reviewed_by: uuid.UUID,
+    ) -> ContentReport:
+        """
+        @brief Record an admin decision on a report.
+
+        @param report The report to update.
+        @param status New status (reviewed or dismissed).
+        @param action_taken Admin action key.
+        @param admin_notes Optional admin note.
+        @param reviewed_by Admin user UUID.
+        @return The updated report.
+        """
+        report.status = status
+        report.action_taken = action_taken
+        report.admin_notes = admin_notes
+        report.reviewed_by = reviewed_by
+        report.reviewed_at = datetime.now(UTC)
         await self._session.flush()
         await self._session.refresh(report)
         return report
+
+    async def list_blocks(self, blocker_id: uuid.UUID, community_id: uuid.UUID) -> list[UserBlock]:
+        """
+        @brief List blocks created by a user, newest first.
+
+        @param blocker_id Blocking user UUID.
+        @param community_id Community scope.
+        @return List of UserBlock rows.
+        """
+        stmt = (
+            select(UserBlock)
+            .where(
+                UserBlock.blocker_id == blocker_id,
+                UserBlock.community_id == community_id,
+            )
+            .order_by(UserBlock.created_at.desc())
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
 
     async def list_reports(
         self,
@@ -159,18 +266,23 @@ class ModerationRepository(BaseRepository[UserBlock]):
         @param cursor Opaque cursor for pagination.
         @return Tuple of (reports, next_cursor).
         """
-        stmt = select(ContentReport).order_by(ContentReport.created_at.desc())
+        stmt = select(ContentReport).order_by(
+            ContentReport.created_at.desc(), ContentReport.id.desc()
+        )
 
         if status_filter:
             stmt = stmt.where(ContentReport.status == status_filter)
         if community_id:
             stmt = stmt.where(ContentReport.community_id == community_id)
-        if cursor:
-            try:
-                cursor_id = uuid.UUID(cursor)
-                stmt = stmt.where(ContentReport.id < cursor_id)
-            except ValueError:
-                pass
+        position = decode_report_cursor(cursor) if cursor else None
+        if position is not None:
+            ts, last_id = position
+            stmt = stmt.where(
+                or_(
+                    ContentReport.created_at < ts,
+                    and_(ContentReport.created_at == ts, ContentReport.id < last_id),
+                )
+            )
 
         stmt = stmt.limit(limit + 1)
         result = await self._session.execute(stmt)
@@ -179,7 +291,7 @@ class ModerationRepository(BaseRepository[UserBlock]):
         next_cursor: str | None = None
         if len(rows) > limit:
             rows = rows[:limit]
-            next_cursor = str(rows[-1].id)
+            next_cursor = encode_report_cursor(rows[-1].created_at, rows[-1].id)
 
         return rows, next_cursor
 

@@ -102,13 +102,14 @@ async def test_provider(
 
     result = OIDCTestResult(discovery_ok=True, issuer=doc.get("issuer"))
     try:
+        callback_url = f"{settings.APP_BASE_URL.rstrip('/')}/api/v1/oauth/test/callback"
         async with httpx.AsyncClient(timeout=settings.OIDC_HTTP_TIMEOUT) as client:
             resp = await client.post(
                 doc["token_endpoint"],
                 data={
                     "grant_type": "authorization_code",
                     "code": "nexara-sandbox-test",
-                    "redirect_uri": f"{settings.APP_BASE_URL.rstrip('/')}/api/v1/oauth/test/callback",
+                    "redirect_uri": callback_url,
                     "client_id": provider.client_id,
                 },
             )

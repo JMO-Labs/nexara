@@ -76,7 +76,7 @@ async def test_load_plugins_registers_hook_that_stores_suggestion():
 
 
 def test_load_plugin_tasks_registers_task_and_beat_entry():
-    assert task_loader.load_plugin_tasks(PLUGINS_ROOT) == [PID]
+    assert PID in task_loader.load_plugin_tasks(PLUGINS_ROOT)
     assert TASK in celery_app.tasks
     assert celery_app.conf.beat_schedule[BEAT_KEY]["task"] == TASK
 

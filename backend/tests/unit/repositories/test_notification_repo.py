@@ -1,6 +1,7 @@
 """
 @file test_notification_repo.py
-@brief Unit tests for NotificationRepository list_active/dismiss/dismiss_all/upsert_grouped (nexara#309).
+@brief Unit tests for NotificationRepository list_active, dismiss, dismiss_all and
+upsert_grouped (nexara#309).
 """
 
 from __future__ import annotations

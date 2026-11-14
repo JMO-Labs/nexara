@@ -108,9 +108,21 @@ class PromptRepository(BaseRepository[Prompt]):
         )
         await self._session.flush()
 
-    async def get_prompt_post(self, pp_id: uuid.UUID) -> PromptPost | None:
-        """@brief Fetch a prompt-post tracker by id."""
+    async def get_by_ids(self, ids: list[uuid.UUID], community_id: uuid.UUID) -> list[Prompt]:
+        """@brief Fetch prompts by id list, scoped to a community."""
+        if not ids:
+            return []
+        stmt = select(Prompt).where(Prompt.id.in_(ids), Prompt.community_id == community_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_prompt_post(
+        self, pp_id: uuid.UUID, community_id: uuid.UUID | None = None
+    ) -> PromptPost | None:
+        """@brief Fetch a prompt-post tracker by id (optionally community-scoped)."""
         stmt = select(PromptPost).where(PromptPost.id == pp_id)
+        if community_id is not None:
+            stmt = stmt.where(PromptPost.community_id == community_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 

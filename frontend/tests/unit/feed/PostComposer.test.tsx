@@ -63,6 +63,16 @@ describe("PostComposer", () => {
     expect(trigger).toBeInTheDocument();
   });
 
+  it("mounts the rich-text editor and accepts typed text", async () => {
+    const user = userEvent.setup();
+    wrap(<PostComposer />);
+    await user.click(screen.getByText(/Share something with your community/i));
+    const editor = await screen.findByRole("textbox");
+    await user.click(editor);
+    await user.keyboard("hello tiptap");
+    expect(editor).toHaveTextContent("hello tiptap");
+  });
+
   describe("reply-to-prompt banner", () => {
     it("shows banner when replyToPromptId and replyToPromptTitle are set", async () => {
       const user = userEvent.setup();

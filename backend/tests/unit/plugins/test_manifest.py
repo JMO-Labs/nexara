@@ -3,8 +3,10 @@
 import json
 
 import pytest
+from packaging.version import InvalidVersion
 from pydantic import ValidationError
 
+from app.plugins import manifest as manifest_mod
 from app.plugins.manifest import (
     PluginManifest,
     PluginPermission,
@@ -39,6 +41,14 @@ class TestManifest:
     def test_bad_semver(self, field, bad):
         with pytest.raises(ValidationError):
             PluginManifest.model_validate({**VALID, field: bad})
+
+    def test_invalid_version_from_packaging_is_wrapped(self, monkeypatch):
+        def boom(_value):
+            raise InvalidVersion("boom")
+
+        monkeypatch.setattr(manifest_mod, "Version", boom)
+        with pytest.raises(ValidationError, match="boom"):
+            PluginManifest.model_validate(VALID)
 
     def test_unknown_permission(self):
         with pytest.raises(ValidationError):

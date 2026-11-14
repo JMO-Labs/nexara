@@ -9,7 +9,8 @@ Uses ``aioboto3`` for fully async operations.
 
 from __future__ import annotations
 
-from typing import Any, cast
+from collections.abc import AsyncIterator
+from typing import IO, Any, cast
 
 import aioboto3
 import structlog
@@ -80,6 +81,31 @@ class S3StorageBackend:
             if exc.response["Error"]["Code"] == "NoSuchKey":
                 raise StorageKeyNotFoundError(key) from exc
             raise StorageError(f"S3 get failed for {key}: {exc}") from exc
+
+    async def get_stream(self, key: str, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
+        """@brief Stream an object from S3 in chunks."""
+        try:
+            async with self._session.client(**self._client_kwargs()) as s3:
+                response = await s3.get_object(Bucket=self._bucket, Key=key)
+                async for chunk in response["Body"].iter_chunks(chunk_size):
+                    yield cast(bytes, chunk)
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] == "NoSuchKey":
+                raise StorageKeyNotFoundError(key) from exc
+            raise StorageError(f"S3 get_stream failed for {key}: {exc}") from exc
+
+    async def put_file(
+        self, key: str, fileobj: IO[bytes], content_type: str, chunk_size: int = 1024 * 1024
+    ) -> None:
+        """@brief Upload a file object via managed multipart upload."""
+        try:
+            async with self._session.client(**self._client_kwargs()) as s3:
+                await s3.upload_fileobj(
+                    fileobj, self._bucket, key, ExtraArgs={"ContentType": content_type}
+                )
+            logger.debug("s3_put_file", key=key, bucket=self._bucket)
+        except ClientError as exc:
+            raise StorageError(f"S3 put_file failed for {key}: {exc}") from exc
 
     async def delete(self, key: str) -> None:
         """@brief Delete an object from S3. No-op if the key does not exist."""

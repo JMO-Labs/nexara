@@ -308,3 +308,74 @@ class TestOIDCGroupMapping:
 
         with pytest.raises(AuthenticationError, match="authorized group"):
             svc._map_groups_to_role(["unrelated-group"])
+
+
+class TestRegisterInvites:
+    """@brief Invite branches of registration (registration.py)."""
+
+    @staticmethod
+    def _svc(require_invite: bool):
+        s = _make_settings()
+        s.REQUIRE_INVITE = require_invite
+        svc = _make_service(settings=s)
+        svc._user_repo.email_exists.return_value = False
+        svc._user_repo.username_exists.return_value = False
+        svc._user_repo.create.return_value = _make_user()
+        svc._password_svc = AsyncMock()
+        svc._password_svc.check_hibp.return_value = False
+        return svc
+
+    @staticmethod
+    def _kwargs(**extra):
+        return {
+            "email": "n@example.com",
+            "username": "newuser",
+            "password": "strong-password123",
+            "display_name": "New User",
+            **extra,
+        }
+
+    @pytest.mark.asyncio
+    async def test_require_invite_without_token_rejected(self):
+        from app.core.exceptions import AuthorizationError
+
+        svc = self._svc(True)
+        with pytest.raises(AuthorizationError, match="invite token"):
+            await svc.register(**self._kwargs())
+
+    @pytest.mark.asyncio
+    async def test_require_invite_with_token_uses_invite_role(self):
+        svc = self._svc(True)
+        invite = MagicMock(role="admin", id=uuid.uuid4(), created_by=uuid.uuid4())
+        with patch(
+            "app.services.auth.registration._validate_invite_impl",
+            AsyncMock(return_value=invite),
+        ) as val:
+            await svc.register(**self._kwargs(invite_token="tok"))
+        val.assert_awaited_once()
+        assert svc._user_repo.create.call_args.args[0].role == "admin"
+        svc._invite_repo.mark_used.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_optional_invite_marks_used_and_notifies_creator(self):
+        svc = self._svc(False)
+        svc._notification_service = AsyncMock()
+        invite = MagicMock(role="member", id=uuid.uuid4(), created_by=uuid.uuid4())
+        with patch(
+            "app.services.auth.registration._validate_invite_impl",
+            AsyncMock(return_value=invite),
+        ):
+            await svc.register(**self._kwargs(invite_token="tok"))
+        svc._invite_repo.mark_used.assert_awaited_once()
+        kw = svc._notification_service.notify.call_args.kwargs
+        assert kw["user_id"] == invite.created_by
+        assert kw["type"] == "invite_accepted"
+
+    @pytest.mark.asyncio
+    async def test_breached_password_rejected(self):
+        from app.core.exceptions import ConflictError
+
+        svc = self._svc(False)
+        svc._password_svc.check_hibp.return_value = True
+        with pytest.raises(ConflictError, match="data breach"):
+            await svc.register(**self._kwargs())

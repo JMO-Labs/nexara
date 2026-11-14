@@ -97,6 +97,10 @@ SEARCH_KEY_PATTERN: str = "search:*:*"
 async def invalidate_search_cache_for_community(
     community_id: uuid.UUID,
     client: Redis | None = None,
+    *,
+    service: str = "unknown",
+    action: str = "unknown",
+    user_id: uuid.UUID | None = None,
 ) -> int:
     """
     @brief Delete all cached search results (SCAN-based, non-blocking).
@@ -109,6 +113,9 @@ async def invalidate_search_cache_for_community(
 
     @param community_id Community whose content changed.
     @param client Optional Redis client (defaults to the cache pool).
+    @param service Calling service name (metric label), e.g. ``post``.
+    @param action Mutation kind (metric label), e.g. ``create``.
+    @param user_id Acting user, included in the debug log.
     @return Number of deleted keys.
     """
     from app.core.metrics import search_cache_invalidations_total
@@ -120,17 +127,21 @@ async def invalidate_search_cache_for_community(
 
             client = get_pool(get_settings(), DB_CACHE)
         deleted = 0
-        cursor: int | str = 0
+        cursor = 0
         while True:
-            cursor, keys = await client.scan(cursor=cursor, match=SEARCH_KEY_PATTERN, count=100)
+            next_cursor, keys = await client.scan(
+                cursor=cursor, match=SEARCH_KEY_PATTERN, count=100
+            )
+            cursor = int(next_cursor)
             if keys:
                 await client.delete(*keys)
                 deleted += len(keys)
-            if int(cursor) == 0:
+            if cursor == 0:
                 break
     except Exception:
         logger.warning("search_cache_invalidate_failed", exc_info=True)
         return 0
-    search_cache_invalidations_total.labels(community_id=str(community_id)).inc()
+    search_cache_invalidations_total.labels(service=service, action=action).inc()
+    logger.debug(f"Invalidated search cache after {action} by user {user_id}")
     logger.info("search_cache_invalidated", deleted=deleted, community_id=str(community_id))
     return deleted

@@ -195,3 +195,19 @@ class TestPreview:
         subs, _ = _repos()
         out = await preview_group_mapping(subs, CID, CM, None)
         assert not any(e["matched"] for e in out)
+
+    async def test_invalid_subgroup_uuid_reports_not_existing(self):
+        """A malformed subgroup_id is reported as missing, not raised."""
+        subs, _ = _repos()
+        cm = {"group_mapping": {"bad": {"subgroup_id": "not-a-uuid", "role": "member"}}}
+        out = await preview_group_mapping(subs, CID, cm, ["bad"])
+        assert out == [
+            {
+                "group": "bad",
+                "subgroup_id": "not-a-uuid",
+                "role": "member",
+                "subgroup_exists": False,
+                "matched": True,
+            }
+        ]
+        subs.get_by_id.assert_not_called()

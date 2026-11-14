@@ -28,7 +28,7 @@ export default function RecipeBoxWidget(_props: PluginComponentProps) {
       {r && (
         <div className="mt-1 flex items-center gap-2">
           {r.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
             <img
               src={r.image_url}
               alt=""
