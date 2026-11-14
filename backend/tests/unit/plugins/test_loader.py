@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from app.plugins.loader import load_plugins
 from app.plugins.registry import PluginRegistry
+from tests.unit.route_paths import route_paths
 
 CID = uuid.uuid4()
 
@@ -57,7 +58,7 @@ def _reset() -> None:
 
 
 def paths(app: FastAPI) -> set[str]:
-    return {getattr(r, "path", "") for r in app.routes}
+    return route_paths(app)
 
 
 async def test_valid_plugin_loaded(tmp_path, caplog):

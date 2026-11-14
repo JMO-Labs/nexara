@@ -131,5 +131,24 @@ GitLab CI/CD is primary and is mirrored on GitHub.
 | pages    | MkDocs + Doxygen + reports             |
 | release  | Release on version tags                |
 
+### Security checks in `scripts/wq-ci-test.sh`
+
+The GitHub test script also runs, and fails on any finding:
+
+- `pip-audit` on the frozen backend dependencies (`uv export --frozen --no-hashes`).
+  Fix by upgrading the package in `uv.lock`.
+- `bandit -r backend/app -ll -q` (medium severity and above). Fix the finding, or
+  add `# nosec <id>` with a comment explaining why it is a false positive.
+- `npm audit --omit=dev --audit-level=high` in `frontend`.
+
+Accepted pip-audit advisories (no upstream fix, passed via `--ignore-vuln`):
+
+| ID              | Package     | Why it does not apply                                         |
+|-----------------|-------------|---------------------------------------------------------------|
+| PYSEC-2026-1325 | ecdsa       | Minerva timing on signing; we sign RS256 via `cryptography`.  |
+| PYSEC-2026-4298 | python-jose | HMAC key confusion; decode pins `algorithms=[JWT_ALGORITHM]`. |
+
+Gitleaks stays GitLab-only.
+
 The documentation site is published to GitHub Pages at
 <https://jmo-labs.github.io/nexara>.
