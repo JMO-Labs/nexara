@@ -310,7 +310,55 @@
     "linkedAccountsPlaceholder": "Connected SSO providers will appear here when the API is available.",
     "storage": "Storage",
     "storageUsed": "{used} of {quota} used",
-    "storageWarning": "You are using over 80% of your storage quota."
+    "storageWarning": "You are using over 80% of your storage quota.",
+    "notif": {
+      "snooze_title": "Snooze",
+      "snooze_1h": "1 hour",
+      "snooze_morning": "Until morning",
+      "snooze_tomorrow": "Until tomorrow",
+      "snooze_custom": "Custom date",
+      "snooze_apply": "Snooze until",
+      "snooze_clear": "Clear",
+      "snoozed_until": "Snoozed until",
+      "dnd_title": "Quiet hours",
+      "timezone": "Timezone",
+      "add_window": "Add window",
+      "remove_window": "Remove window",
+      "start": "Start",
+      "end": "End",
+      "day_mon": "Mon",
+      "day_tue": "Tue",
+      "day_wed": "Wed",
+      "day_thu": "Thu",
+      "day_fri": "Fri",
+      "day_sat": "Sat",
+      "day_sun": "Sun",
+      "matrix_title": "Notification types",
+      "ch_inapp": "In-app",
+      "ch_email": "Email",
+      "ch_push": "Push",
+      "ch_toast": "Toast",
+      "ch_webhook": "Webhook",
+      "digest": "Digest",
+      "cad_instant": "Instant",
+      "cad_hourly": "Hourly",
+      "cad_daily": "Daily",
+      "cad_off": "Off",
+      "webhooks_title": "Webhooks",
+      "webhook_add": "Add webhook",
+      "webhook_edit": "Edit",
+      "webhook_delete": "Delete",
+      "webhook_enabled": "Enabled",
+      "webhook_empty": "No webhooks yet.",
+      "webhook_url": "URL",
+      "webhook_types": "Notification types",
+      "webhook_save": "Save",
+      "webhook_cancel": "Cancel",
+      "webhook_secret": "Signing secret. It is shown only once.",
+      "webhook_copy": "Copy secret",
+      "webhook_done": "Done",
+      "webhook_error": "Could not save webhook"
+    }
   },
   "chat": {
     "title": "Chat",
@@ -773,7 +821,9 @@
       "settings": {
         "saved": "Admin settings saved"
       },
-      "retention": { "updated": "Retention policy saved" }
+      "retention": {
+        "updated": "Retention policy saved"
+      }
     },
     "auth": {
       "login": {
