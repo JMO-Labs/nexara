@@ -3,33 +3,41 @@
  * @file components/admin/AdminSettingsTab.tsx
  * @brief Global admin settings form.
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAdminSettings, useUpdateAdminSettings } from "@/hooks/useAdmin";
 import { Button, Card, Input, SettingsRow, Switch } from "@/components/ui";
+import type { AdminSettingsResponse } from "@/lib/api/admin";
 import { AdminLoading, AdminNotice } from "./AdminState";
 
+const DEFAULTS: AdminSettingsResponse = {
+  enable_registration: true,
+  require_invite: false,
+  storage_quota_default: 5000000000,
+  waf_enabled: true,
+};
+
 export function AdminSettingsTab() {
-  const [enableReg, setEnableReg] = useState(true);
-  const [requireInvite, setRequireInvite] = useState(false);
-  const [storageQuota, setStorageQuota] = useState(5000000000);
-  const [wafEnabled, setWafEnabled] = useState(true);
+  // Local edits layered over server values (derived, no sync effect).
+  const [draft, setDraft] = useState<Partial<AdminSettingsResponse>>({});
   const [isDirty, setIsDirty] = useState(false);
 
   const { data: settings, isLoading, error } = useAdminSettings();
   const updateMutation = useUpdateAdminSettings();
 
-  useEffect(() => {
-    // Sync form state from fetched server settings on load.
-    if (settings) {
-      /* eslint-disable react-hooks/set-state-in-effect */
-      setEnableReg(settings.enable_registration);
-      setRequireInvite(settings.require_invite);
-      setStorageQuota(settings.storage_quota_default);
-      setWafEnabled(settings.waf_enabled);
-      setIsDirty(false);
-      /* eslint-enable react-hooks/set-state-in-effect */
-    }
-  }, [settings]);
+  const form: AdminSettingsResponse = {
+    ...DEFAULTS,
+    ...settings,
+    ...draft,
+  };
+  const enableReg = form.enable_registration;
+  const requireInvite = form.require_invite;
+  const storageQuota = form.storage_quota_default;
+  const wafEnabled = form.waf_enabled;
+
+  const edit = (patch: Partial<AdminSettingsResponse>) => {
+    setDraft((d) => ({ ...d, ...patch }));
+    setIsDirty(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +48,6 @@ export function AdminSettingsTab() {
       waf_enabled: wafEnabled,
     });
     setIsDirty(false);
-  };
-
-  const handleChange = () => {
-    setIsDirty(true);
   };
 
   if (isLoading) {
@@ -73,8 +77,7 @@ export function AdminSettingsTab() {
                 checked={enableReg}
                 aria-label="Enable registration"
                 onCheckedChange={(v) => {
-                  setEnableReg(v);
-                  handleChange();
+                  edit({ enable_registration: v });
                 }}
               />
             </SettingsRow>
@@ -86,8 +89,7 @@ export function AdminSettingsTab() {
                 checked={requireInvite}
                 aria-label="Require invite"
                 onCheckedChange={(v) => {
-                  setRequireInvite(v);
-                  handleChange();
+                  edit({ require_invite: v });
                 }}
               />
             </SettingsRow>
@@ -105,8 +107,7 @@ export function AdminSettingsTab() {
               type="number"
               value={storageQuota}
               onChange={(e) => {
-                setStorageQuota(Number(e.target.value));
-                handleChange();
+                edit({ storage_quota_default: Number(e.target.value) });
               }}
               min={0}
               aria-label="Default storage quota in bytes"
@@ -125,8 +126,7 @@ export function AdminSettingsTab() {
               checked={wafEnabled}
               aria-label="Enable WAF"
               onCheckedChange={(v) => {
-                setWafEnabled(v);
-                handleChange();
+                edit({ waf_enabled: v });
               }}
             />
           </SettingsRow>
@@ -138,13 +138,8 @@ export function AdminSettingsTab() {
             variant="ghost"
             type="button"
             onClick={() => {
-              if (settings) {
-                setEnableReg(settings.enable_registration);
-                setRequireInvite(settings.require_invite);
-                setStorageQuota(settings.storage_quota_default);
-                setWafEnabled(settings.waf_enabled);
-                setIsDirty(false);
-              }
+              setDraft({});
+              setIsDirty(false);
             }}
           >
             Reset

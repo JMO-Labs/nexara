@@ -29,7 +29,7 @@ export function TopBar() {
         className="bg-sun text-surface-strong focus-visible:outline-accent grid size-9 place-items-center rounded-xl font-black focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden"
       >
         {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
           <img
             src={logoUrl}
             alt=""

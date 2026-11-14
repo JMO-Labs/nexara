@@ -16,7 +16,7 @@ import * as usersApi from "@/lib/api/users";
 const Joyride = dynamic(
   () => import("react-joyride").then((mod) => mod.Joyride),
   { ssr: false },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- next/dynamic loses react-joyride v3 prop types
 ) as any;
 
 /** @brief v3 options: explicit buttons, responsive width capped at 380px. */
@@ -76,8 +76,7 @@ export function OnboardingTour() {
 
   const steps = user.is_admin ? adminTour : memberTour;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleTourCallback = (data: any) => {
+  const handleTourCallback = (data?: { status?: string; action?: string }) => {
     const status: string = data?.status ?? "";
     const action: string = data?.action ?? "";
     if (TERMINAL.has(status) || action === "close" || action === "reset") {
