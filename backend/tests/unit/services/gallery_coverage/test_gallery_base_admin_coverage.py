@@ -12,11 +12,8 @@ import pytest
 
 from app.core.exceptions import NotFoundError
 from app.services.gallery_service import GalleryService
-from tests.unit.services._gallery_fixtures import (  # noqa: F401
+from tests.unit.services.gallery_coverage.conftest import (
     _gallery,
-    repo,
-    service,
-    session,
 )
 
 

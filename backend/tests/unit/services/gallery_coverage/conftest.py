@@ -1,5 +1,5 @@
 """
-@file _gallery_fixtures.py
+@file conftest.py
 @brief Shared helpers and fixtures for gallery coverage tests.
 """
 
