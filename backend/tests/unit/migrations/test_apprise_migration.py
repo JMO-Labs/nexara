@@ -23,9 +23,11 @@ def test_apprise_migration_follows_user_exports_on_single_head() -> None:
 
 
 def test_apprise_prefs_migration_follows_dev_head() -> None:
-    """@brief c5d6e7f8a9b0 chains after 0031_receive_nudges and is the sole head."""
+    """@brief c5d6e7f8a9b0 chains after 0031_receive_nudges, ancestor of sole head."""
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == ["c5d6e7f8a9b0"]
+    heads = script.get_heads()
+    assert len(heads) == 1
+    assert "c5d6e7f8a9b0" in {r.revision for r in script.iterate_revisions(heads[0], "base")}
     assert script.get_revision("c5d6e7f8a9b0").down_revision == "0031_receive_nudges"

@@ -1,10 +1,9 @@
 """list.expiring and list.member email notifications default on
 
-Also merges the two dev heads (apprise_urls, list_notified_at).
 Only server_default changes: existing rows keep their current values.
 
 Revision ID: 0030_list_notif_email_defaults
-Revises: b7c1d2e3f4a5, e5f6a7b8c9d0 (merge revision)
+Revises: c5d6e7f8a9b0
 """
 
 import sqlalchemy as sa
@@ -12,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0030_list_notif_email_defaults"
-down_revision = ("b7c1d2e3f4a5", "e5f6a7b8c9d0")
+down_revision = "c5d6e7f8a9b0"
 branch_labels = None
 depends_on = None
 
