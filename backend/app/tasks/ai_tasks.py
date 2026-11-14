@@ -45,7 +45,7 @@ async def _ocr_async(media_id: uuid.UUID, community_id: uuid.UUID) -> str:
     return status
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.ai_tasks.ocr_process_image",
     soft_time_limit=3500,
     time_limit=3600,
@@ -90,7 +90,7 @@ async def _sassybot_async(post_id: uuid.UUID, community_id: uuid.UUID, force: bo
     return created
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.ai_tasks.sassybot_comment_task",
     soft_time_limit=120,
     time_limit=180,

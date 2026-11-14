@@ -20,6 +20,7 @@ from app.repositories.chat_repo import (
     ChatChannelRepository,
     ChatMessageRepository,
 )
+from app.repositories.moderation_repo import ModerationRepository
 from app.services.chat_service import (
     CHAT_RATE_LIMIT_PER_MINUTE,
     ChatService,
@@ -430,3 +431,60 @@ class TestActivityRecording:
         svc = self._svc(channel_repo, message_repo, broadcaster, link_preview_enqueue)
         await svc.send_message(_make_user(), CHANNEL_ID, "hi")
         assert rec.await_count == expected
+
+
+class TestDMBlockEnforcement:
+    """@brief Bidirectional block checks for DMs."""
+
+    @pytest.fixture
+    def mod_repo(self) -> AsyncMock:
+        """@brief Mock ModerationRepository."""
+        return AsyncMock(spec=ModerationRepository)
+
+    @pytest.fixture
+    def blocked_service(self, channel_repo, message_repo, broadcaster, mod_repo) -> ChatService:
+        """@brief ChatService wired with a moderation repo."""
+        return ChatService(
+            channel_repo=channel_repo,
+            message_repo=message_repo,
+            community_id=COMMUNITY_ID,
+            broadcaster=broadcaster,
+            link_preview_enqueue=MagicMock(),
+            moderation_repo=mod_repo,
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_dm_rejected_when_blocked(
+        self, blocked_service, channel_repo, mod_repo
+    ) -> None:
+        """create_or_get_dm raises when either side blocked the other."""
+        mod_repo.is_blocked_either.return_value = True
+        user = _make_user()
+        with pytest.raises(AuthorizationError):
+            await blocked_service.create_or_get_dm(user, OTHER_USER_ID)
+        mod_repo.is_blocked_either.assert_awaited_once_with(user.id, OTHER_USER_ID)
+        channel_repo.get_or_create_dm.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_send_dm_rejected_when_blocked(
+        self, blocked_service, channel_repo, message_repo, mod_repo
+    ) -> None:
+        """send_message to a DM raises when the peer and sender block each other."""
+        channel_repo.get_for_user.return_value = _make_channel(channel_type="direct")
+        channel_repo.get_dm_peer_id.return_value = OTHER_USER_ID
+        mod_repo.is_blocked_either.return_value = True
+        with pytest.raises(AuthorizationError):
+            await blocked_service.send_message(_make_user(), CHANNEL_ID, "hi")
+        message_repo.create_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_send_dm_allowed_when_not_blocked(
+        self, blocked_service, channel_repo, message_repo, mod_repo
+    ) -> None:
+        """send_message proceeds when no block exists."""
+        channel_repo.get_for_user.return_value = _make_channel(channel_type="direct")
+        channel_repo.get_dm_peer_id.return_value = OTHER_USER_ID
+        mod_repo.is_blocked_either.return_value = False
+        message_repo.create_message.return_value = _make_message()
+        await blocked_service.send_message(_make_user(), CHANNEL_ID, "hi")
+        message_repo.create_message.assert_awaited_once()

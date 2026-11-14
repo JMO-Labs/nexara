@@ -309,7 +309,7 @@ class SearchService:
         return SearchResponse(query=query, results=results)
 
     @staticmethod
-    def _format_results(result_type: str, rows: list[tuple[Any, float]]) -> list[SearchResultItem]:
+    def _format_results(result_type: str, rows: list[tuple[Any, ...]]) -> list[SearchResultItem]:
         """
         @brief Convert raw DB rows into SearchResultItem list.
 

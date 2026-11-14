@@ -17,8 +17,11 @@ export const useBranding = () =>
     staleTime: 5 * 60 * 1000,
   });
 
-/** @brief Update branding; refreshes the cache and toasts on success. */
-export const useUpdateBranding = () => {
+/**
+ * @brief Update branding; refreshes the cache and toasts on success.
+ * @param successMessage toast text shown after a successful save
+ */
+export const useUpdateBranding = (successMessage = "Branding saved") => {
   const qc = useQueryClient();
   const push = useToasts((s) => s.push);
   return useMutationWithToast({
@@ -27,7 +30,7 @@ export const useUpdateBranding = () => {
     silentSuccess: true,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.admin.branding() });
-      push({ variant: "success", message: "Branding saved" });
+      push({ variant: "success", message: successMessage });
     },
   });
 };

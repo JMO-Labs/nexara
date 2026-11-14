@@ -19,6 +19,7 @@ import { BookmarkButton } from "./BookmarkButton";
 import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
 import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
+import { KudosCard } from "./KudosCard";
 import { PromptBadges } from "./PromptBadges";
 import type { Post } from "@/lib/api/posts";
 
@@ -52,6 +53,17 @@ export function PostCard({
   const reactMut = useTogglePostReaction(post.id);
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
+
+  if (post.recipient_id && post.recipient) {
+    return (
+      <KudosCard
+        recipient={post.recipient}
+        message={post.content}
+        authorName={post.author.display_name}
+        createdAt={post.created_at}
+      />
+    );
+  }
 
   const headline = post.content.split("\n")[0].trim().slice(0, 80);
   const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);

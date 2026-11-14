@@ -235,3 +235,24 @@ class TestS3Streaming:
             with pytest.raises(StorageKeyNotFoundError):
                 async for _ in backend.get_stream("k"):
                     pass
+
+    async def test_get_stream_other_client_error_wrapped(self, backend):
+        mock_s3 = AsyncMock()
+        mock_s3.get_object.side_effect = _make_client_error("AccessDenied")
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_s3
+        with patch.object(backend._session, "client", return_value=mock_ctx):
+            with pytest.raises(StorageError):
+                async for _ in backend.get_stream("k"):
+                    pass
+
+    async def test_put_file_client_error_wrapped(self, backend):
+        import io
+
+        mock_s3 = AsyncMock()
+        mock_s3.upload_fileobj.side_effect = _make_client_error("AccessDenied")
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_s3
+        with patch.object(backend._session, "client", return_value=mock_ctx):
+            with pytest.raises(StorageError):
+                await backend.put_file("k", io.BytesIO(b"x"), "application/zip")
