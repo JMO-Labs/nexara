@@ -343,6 +343,9 @@
     "direct": "Direct"
   },
   "notifications": {
+    "toast": {
+      "open": "Open"
+    },
     "title": "Notifications",
     "pushTitle": "Enable push notifications",
     "pushDescription": "Get notified when someone mentions you or comments on your posts, even when the app is closed.",
@@ -667,7 +670,29 @@
   "members": {
     "empty": "No members yet."
   },
+  "kudos": {
+    "title": "Send Kudos",
+    "recipient": "Recipient",
+    "recipientPlaceholder": "Search members",
+    "message": "Message (optional)",
+    "group": "Group (optional)",
+    "noGroup": "No group",
+    "send": "Send",
+    "cancel": "Cancel",
+    "sendButton": "Send Kudos",
+    "wallTitle": "Kudos Wall",
+    "sort": "Sort",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "filterGroup": "Group",
+    "allGroups": "All groups",
+    "loadMore": "Load more",
+    "emptyTitle": "No kudos yet",
+    "emptyDesc": "Be the first to cheer someone on.",
+    "error": "Failed to load kudos"
+  },
   "toasts": {
+    "kudos": { "sent": "Kudos sent" },
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",
