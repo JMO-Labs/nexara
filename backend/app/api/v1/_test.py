@@ -19,6 +19,7 @@ from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.services.notification_service import NotificationService
+from app.services.realtime.event_bus import event_bus
 
 router = APIRouter(prefix="/_test", tags=["test-only"])
 
@@ -45,6 +46,7 @@ def get_notification_service(
         notification_repo=NotificationRepository(db),
         settings_repo=SettingsRepository(db),
         community_id=uuid.UUID(settings.COMMUNITY_ID),
+        event_bus=event_bus,
         dispatcher=get_dispatcher(),
     )
 

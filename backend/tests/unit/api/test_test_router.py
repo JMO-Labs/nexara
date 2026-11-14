@@ -34,7 +34,28 @@ async def test_mounted_in_test_env_and_notifies(test_app):
 
     settings = get_settings().model_copy(update={"APP_ENV": "test"})
 
-    with patch("app.main.get_settings", lambda: settings):
+    from contextlib import asynccontextmanager
+
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+
+    memory_limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["1000/minute"],
+        storage_uri="memory://",
+        strategy="fixed-window",
+    )
+
+    @asynccontextmanager
+    async def noop_lifespan(_app):
+        yield
+
+    with (
+        patch("app.core.rate_limit.limiter", memory_limiter),
+        patch("app.main.limiter", memory_limiter),
+        patch("app.main.lifespan", noop_lifespan),
+        patch("app.main.get_settings", lambda: settings),
+    ):
         from app.main import create_app
 
         app = create_app()
@@ -51,3 +72,12 @@ async def test_mounted_in_test_env_and_notifies(test_app):
     svc.notify.assert_awaited_once()
     assert svc.notify.await_args.args[0] == user.id
     assert svc.notify.await_args.args[1] == "system"
+    assert svc.notify.await_args.args[2] == {"message": "hi", "link": "/app"}
+
+
+def test_service_gets_event_bus():
+    from app.api.v1 import _test as mod
+    from app.services.realtime.event_bus import event_bus
+
+    svc = mod.get_notification_service(MagicMock(), get_settings())
+    assert svc._event_bus is event_bus

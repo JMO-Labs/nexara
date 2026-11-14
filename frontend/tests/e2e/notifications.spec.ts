@@ -22,7 +22,8 @@ test("bell: notification shows, navigates on click, then disappears", async ({
   expect(res.ok()).toBeTruthy();
 
   const bell = page.getByRole("button", { name: /notifications/i }).first();
-  await expect(bell).toContainText("1");
+  await expect(page.getByTestId("unread-badge")).toHaveText("1");
+  await expect(bell).toHaveAttribute("aria-label", /1 unread/);
 
   await bell.click();
   await page.getByText("E2E bell ping").click();
