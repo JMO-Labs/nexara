@@ -6,6 +6,9 @@ helm install nexara deploy/helm/nexara -n nexara --create-namespace \
 helm lint deploy/helm/nexara
 ```
 
+For a full operator guide see the
+[Kubernetes deployment runbook](../../../docs/docs/deploy/kubernetes.md).
+
 The single `ghcr.io/jmo-labs/nexara` image runs the API (default entrypoint,
 port 8080), the Celery worker and Celery beat (command overrides).
 
