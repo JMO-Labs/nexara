@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 import structlog
 from fastapi import APIRouter, Depends, Query
@@ -115,6 +116,22 @@ async def list_events(
     e = end or now + timedelta(days=90)
     return await service.list_events(
         user.id, s, e, cursor=cursor, limit=limit, subgroup_id=subgroup_id
+    )
+
+
+@router.get("/feed.ics")
+async def export_feed_ical(
+    start: datetime | None = Query(None, description="Range start (UTC)"),
+    end: datetime | None = Query(None, description="Range end (UTC)"),
+    user: User = Depends(get_current_user),
+    service: EventService = Depends(_build_service),
+) -> Response:
+    """@brief Export the user's full event feed as .ics."""
+    body = await service.export_feed_ical(user.id, start=start, end=end)
+    return Response(
+        content=body,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
     )
 
 
@@ -229,22 +246,6 @@ async def export_event_ical(
     )
 
 
-@router.get("/feed.ics")
-async def export_feed_ical(
-    start: datetime | None = Query(None, description="Range start (UTC)"),
-    end: datetime | None = Query(None, description="Range end (UTC)"),
-    user: User = Depends(get_current_user),
-    service: EventService = Depends(_build_service),
-) -> Response:
-    """@brief Export the user's full event feed as .ics."""
-    body = await service.export_feed_ical(user.id, start=start, end=end)
-    return Response(
-        content=body,
-        media_type="text/calendar",
-        headers={"Content-Disposition": 'attachment; filename="nexara-events.ics"'},
-    )
-
-
 # ── Event galleries ──────────────────────────────────────────────
 
 
@@ -347,7 +348,7 @@ async def delete_subscription(
 async def update_occurrence(
     event_id: uuid.UUID,
     iso_start: str,
-    scope: str = Query("this", regex="^(this|this_and_following|all)$"),
+    scope: Literal["this", "this_and_following", "all"] = Query("this"),
     data: EventUpdate | None = None,
     user: User = Depends(get_current_user),
     service: EventService = Depends(_build_service),
@@ -375,7 +376,7 @@ async def update_occurrence(
     result = await service.update_occurrence(
         event_id,
         occurrence_dt,
-        scope,  # type: ignore[arg-type]
+        scope,
         payload,
     )
     return await service._build_response(result, user_id=user.id)

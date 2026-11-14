@@ -6,7 +6,7 @@ helm install nexara deploy/helm/nexara -n nexara --create-namespace \
 helm lint deploy/helm/nexara
 ```
 
-The single `ghcr.io/com-nexara/nexara` image runs the API (default entrypoint,
+The single `ghcr.io/jmo-labs/nexara` image runs the API (default entrypoint,
 port 8080), the Celery worker and Celery beat (command overrides).
 
 ## Values

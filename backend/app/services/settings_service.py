@@ -172,18 +172,6 @@ class SettingsService:
         @return NotificationPreferences with current toggle values.
         """
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
-        return NotificationPreferences(
-            notif_mention_inapp=settings.notif_mention_inapp,
-            notif_mention_email=settings.notif_mention_email,
-            notif_comment_inapp=settings.notif_comment_inapp,
-            notif_comment_email=settings.notif_comment_email,
-            notif_reaction_inapp=settings.notif_reaction_inapp,
-            notif_reaction_email=settings.notif_reaction_email,
-            notif_new_post_inapp=settings.notif_new_post_inapp,
-            notif_new_post_email=settings.notif_new_post_email,
-            notif_system_inapp=settings.notif_system_inapp,
-            notif_system_email=settings.notif_system_email,
-            notif_invite_accepted_inapp=settings.notif_invite_accepted_inapp,
-            notif_invite_accepted_email=settings.notif_invite_accepted_email,
-            mute_all_email=settings.mute_all_email,
+        return NotificationPreferences.model_validate(
+            {name: getattr(settings, name) for name in NotificationPreferences.model_fields}
         )

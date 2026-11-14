@@ -3,10 +3,11 @@
  * @file components/settings/AppearanceTab.tsx
  * @brief Appearance settings tab: theme (radio group) and language.
  */
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Card, SettingsRow, Select, Option, Switch } from "@/components/ui";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { UserSettings } from "@/lib/api/settings";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
@@ -19,11 +20,19 @@ const THEMES = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+const DENSITIES = [
+  { value: "comfortable", label: "Comfortable" },
+  { value: "compact", label: "Compact" },
+] as const;
+
 const FONT_SIZES = [
   { value: "small", label: "Small", cls: "text-xs" },
   { value: "medium", label: "Medium", cls: "text-sm" },
   { value: "large", label: "Large", cls: "text-base" },
 ] as const;
+
+/** @brief No-op subscribe for the static mounted snapshot. */
+const noopSubscribe = () => () => {};
 
 /**
  * @brief Theme, font size, compact feed and language preferences.
@@ -33,13 +42,14 @@ export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
   const { data: settings } = useUserSettings();
   const { mutate, isPending } = useUpdateSettings();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // next-themes SSR-safe mount detection — setState in effect is intentional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  const density = useUI((s) => s.density);
+  const setDensity = useUI((s) => s.setDensity);
+  // SSR-safe mount detection for next-themes: false on server, true on client.
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
 
   if (!mounted || !settings) {
     return (
@@ -131,6 +141,28 @@ export function AppearanceTab() {
           <p>Text sizing and spacing update as you change settings.</p>
           <p className="text-muted">Posted just now</p>
         </div>
+      </SettingsRow>
+
+      <SettingsRow
+        label="Density"
+        description="Comfortable keeps today's spacing; Compact fits more on screen."
+      >
+        <RadioGroup
+          aria-label="Density"
+          value={density}
+          onValueChange={(v) => setDensity(v as "comfortable" | "compact")}
+        >
+          {DENSITIES.map(({ value, label }) => (
+            <label
+              key={value}
+              htmlFor={`density-${value}`}
+              className="flex min-h-11 items-center gap-3 text-sm"
+            >
+              <RadioGroupItem id={`density-${value}`} value={value} />
+              {label}
+            </label>
+          ))}
+        </RadioGroup>
       </SettingsRow>
 
       <SettingsRow

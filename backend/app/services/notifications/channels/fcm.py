@@ -15,7 +15,7 @@ from app.services.notifications.channels.base import ChannelResult
 logger = structlog.get_logger(__name__)
 
 
-class FCMTokenInvalid(Exception):
+class FCMTokenInvalidError(Exception):
     """@brief Raised by an FCM client when a token is unregistered/invalid."""
 
 
@@ -23,7 +23,7 @@ class FCMClient(Protocol):
     """@brief Injectable FCM transport."""
 
     async def send(self, token: str, title: str, body: str, data: dict[str, str]) -> None:
-        """@brief Send one message; raise FCMTokenInvalid for dead tokens."""
+        """@brief Send one message; raise FCMTokenInvalidError for dead tokens."""
         ...
 
 
@@ -64,7 +64,7 @@ class FCMChannel:
             for dev in devices:
                 try:
                     await self._client.send(dev.token, title, body, data)
-                except FCMTokenInvalid:
+                except FCMTokenInvalidError:
                     await self._repo.soft_delete(dev)
             return ChannelResult(ok=True)
         except Exception as exc:

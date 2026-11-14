@@ -86,3 +86,23 @@ class TestPolls:
         prov = _provider("")
         prov.complete.side_effect = AIError("x")
         assert await SuggestionService(_repo(), prov).generate_poll_suggestions(CID, "t") is None
+
+
+def test_lines_strips_numbering():
+    from app.services.ai.suggestion_service import _lines
+
+    assert _lines("1. one\n2) two\n- three\n\n") == ["one", "two", "three"]
+
+
+class TestReviewPassthrough:
+    async def test_list_approve_reject_delegate(self):
+        repo = AsyncMock(spec=SuggestionRepository)
+        svc = SuggestionService(repo, None)
+        uid = uuid.uuid4()
+        sid = uuid.uuid4()
+        await svc.list_pending(CID, "poll", 5, 1)
+        repo.list_pending.assert_awaited_once_with(CID, "poll", 5, 1)
+        await svc.approve(sid, uid, CID)
+        repo.approve.assert_awaited_once_with(sid, uid, CID)
+        await svc.reject(sid, CID)
+        repo.reject.assert_awaited_once_with(sid, CID)

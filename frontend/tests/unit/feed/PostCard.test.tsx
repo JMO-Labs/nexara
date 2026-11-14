@@ -37,6 +37,19 @@ vi.mock("@/hooks/usePosts", () => ({
 vi.mock("@/components/feed/CommentThread", () => ({
   CommentThread: () => null,
 }));
+vi.mock("@/components/feed/BookmarkButton", () => ({
+  BookmarkButton: ({
+    postId,
+    isBookmarked,
+  }: {
+    postId: string;
+    isBookmarked: boolean;
+  }) => (
+    <span data-testid="bookmark-btn" data-post={postId}>
+      {String(isBookmarked)}
+    </span>
+  ),
+}));
 
 /** @brief Build a minimal post with optional overrides. */
 function makePost(over: Partial<Post> = {}): Post {
@@ -135,6 +148,15 @@ const video = {
   provider_id: "abc123",
 };
 
+describe("PostCard bookmark", () => {
+  it("renders BookmarkButton with post id and state", () => {
+    render(<PostCard post={{ ...base, is_bookmarked: true }} />);
+    const btn = screen.getByTestId("bookmark-btn");
+    expect(btn).toHaveAttribute("data-post", "p1");
+    expect(btn).toHaveTextContent("true");
+  });
+});
+
 describe("PostCard link previews", () => {
   it("renders no wrapper without previews", () => {
     const { container } = render(<PostCard post={base} />);
@@ -180,5 +202,30 @@ describe("PostCard link previews", () => {
     const bad = { ...video, provider_id: "../x" };
     render(<PostCard post={{ ...base, link_previews: [bad] }} />);
     expect(screen.getByTestId("link-preview-title")).toBeInTheDocument();
+  });
+});
+
+describe("PostCard kudos", () => {
+  it("renders a KudosCard when post has a recipient", () => {
+    const kudos = {
+      ...base,
+      content: "Thanks for the help!",
+      recipient_id: "u2",
+      recipient: { id: "u2", display_name: "Ana Lima", avatar_url: null },
+    } as unknown as Post;
+    render(<PostCard post={kudos} />);
+    const card = screen.getByRole("article");
+    expect(card.className).toMatch(/bg-purple-100/);
+    expect(screen.getByText("Ana Lima")).toHaveClass("font-bold");
+    expect(screen.getByTestId("kudos-message")).toHaveTextContent(
+      "Thanks for the help!",
+    );
+    expect(card).toHaveTextContent("Alice");
+  });
+
+  it("renders the normal card without a recipient", () => {
+    render(<PostCard post={base} />);
+    expect(screen.queryByTestId("kudos-trophy")).toBeNull();
+    expect(screen.getByRole("article").className).not.toMatch(/bg-purple-100/);
   });
 });

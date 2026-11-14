@@ -24,6 +24,7 @@ export const qk = {
       ["feed", "infinite", filters ?? {}] as const,
     post: (id: string) => ["feed", "post", id] as const,
     comments: (postId: string) => ["feed", "post", postId, "comments"] as const,
+    activePrompts: () => ["feed", "active-prompts"] as const,
     promptPost: (id: string) => ["feed", "prompt-post", id] as const,
     promptResponses: (promptPostId: string) =>
       ["feed", "prompt-responses", promptPostId] as const,
@@ -81,6 +82,7 @@ export const qk = {
       ["search", q, scope ?? "all"] as const,
   },
   admin: {
+    ai: () => ["admin", "ai"] as const,
     users: (filters?: Record<string, unknown>) =>
       ["admin", "users", filters ?? {}] as const,
     branding: () => ["admin", "branding"] as const,
@@ -92,11 +94,29 @@ export const qk = {
     interestsAnalytics: () => ["admin", "interests-analytics"] as const,
     prompts: () => ["admin", "prompts"] as const,
     retention: () => ["admin", "retention"] as const,
+    plugins: () => ["admin", "plugins"] as const,
+    plugin: (id: string) => ["admin", "plugins", id] as const,
+    pluginKeys: (id: string) => ["admin", "plugins", id, "keys"] as const,
   },
   settings: {
     profile: () => ["settings", "profile"] as const,
     notifications: () => ["settings", "notifications"] as const,
     security: () => ["settings", "security"] as const,
+  },
+  lists: {
+    all: (communityId: string) => ["lists", communityId] as const,
+    list: (communityId: string, filters?: Record<string, unknown>) =>
+      ["lists", communityId, "list", filters ?? {}] as const,
+    detail: (communityId: string, id: string) =>
+      ["lists", communityId, "detail", id] as const,
+    items: (listId: string, params?: Record<string, unknown>) =>
+      ["listItems", listId, params ?? {}] as const,
+    itemsAll: (listId: string) => ["listItems", listId] as const,
+    members: (listId: string) => ["listMembers", listId] as const,
+    templates: () => ["listTemplates"] as const,
+  },
+  kudos: {
+    wall: () => ["kudos", "wall"] as const,
   },
   home: {
     layout: () => ["home-layout"] as const,

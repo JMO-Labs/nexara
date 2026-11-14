@@ -45,15 +45,7 @@ describe("GalleryUpload", () => {
       created_at: "2026-04-27T00:00:00Z",
     });
 
-    vi.mocked(galleryApi.addItem).mockResolvedValue({
-      id: "item-1",
-      gallery_id: "g1",
-      media_id: "media-1",
-      added_by: "u1",
-      caption: null,
-      position: 0,
-      created_at: "2026-04-27T00:00:00Z",
-    });
+    vi.mocked(galleryApi.bulkAddItems).mockResolvedValue([]);
 
     wrap(<GalleryUpload galleryId="g1" />);
     const dropzone = screen.getByTestId("upload-dropzone");
@@ -94,15 +86,7 @@ describe("GalleryUpload", () => {
       };
     });
 
-    vi.mocked(galleryApi.addItem).mockResolvedValue({
-      id: "item-1",
-      gallery_id: "g1",
-      media_id: "media-ok",
-      added_by: "u1",
-      caption: null,
-      position: 0,
-      created_at: "2026-04-27T00:00:00Z",
-    });
+    vi.mocked(galleryApi.bulkAddItems).mockResolvedValue([]);
 
     wrap(<GalleryUpload galleryId="g1" />);
     const dropzone = screen.getByTestId("upload-dropzone");

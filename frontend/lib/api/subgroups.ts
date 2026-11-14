@@ -20,6 +20,8 @@ export interface Subgroup {
   created_at: string;
   updated_at: string;
   my_role: "owner" | "moderator" | "member" | null;
+  /** True when the viewer is a member (server-computed). */
+  is_member: boolean;
 }
 
 export interface SubgroupDetail extends Subgroup {

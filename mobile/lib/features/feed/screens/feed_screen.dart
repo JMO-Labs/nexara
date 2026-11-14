@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/offline/connectivity_service.dart';
 import '../providers/feed_provider.dart';
 import 'post_composer_screen.dart';
 import 'post_detail_screen.dart';
@@ -34,6 +35,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(feedProvider);
+    final queued =
+        ref.watch(offlineQueueProvider).pending.where((a) => a.type == 'post').toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Feed')),
       floatingActionButton: FloatingActionButton(
@@ -49,8 +52,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             : ListView.builder(
                 controller: _scroll,
                 physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: s.items.length + 1,
+                itemCount: queued.length + s.items.length + 1,
                 itemBuilder: (ctx, i) {
+                  if (i < queued.length) {
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: ListTile(
+                        title: Text(queued[i].payload['content'].toString(),
+                            maxLines: 3, overflow: TextOverflow.ellipsis),
+                        trailing: const PendingBadge(),
+                      ),
+                    );
+                  }
+                  i -= queued.length;
                   if (i == s.items.length) {
                     if (s.error != null) return ListTile(title: Text(s.error!));
                     return s.loading

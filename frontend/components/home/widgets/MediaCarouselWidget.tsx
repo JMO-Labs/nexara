@@ -45,7 +45,7 @@ export function MediaCarouselWidget() {
             aria-label={item.source_title ?? "Media item"}
             className="block h-40 overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
             <img
               src={`${API_BASE}/api/v1/media/${item.media.id}/${item.media.thumbnail_key ? "thumbnail" : "file"}`}
               alt={item.media.alt_text ?? item.source_title ?? ""}

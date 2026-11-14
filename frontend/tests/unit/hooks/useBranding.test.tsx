@@ -60,6 +60,19 @@ describe("useUpdateBranding", () => {
     ]);
   });
 
+  it("uses a custom success message when given", async () => {
+    vi.mocked(brandingApi.updateBranding).mockResolvedValue({} as never);
+    const { result } = renderHookWithProviders(() =>
+      useUpdateBranding("Custom CSS saved"),
+    );
+    await act(async () => {
+      await result.current.mutateAsync({ custom_css: "a{}" } as never);
+    });
+    expect(useToasts.getState().items).toEqual([
+      expect.objectContaining({ message: "Custom CSS saved" }),
+    ]);
+  });
+
   it("does not invalidate on failure", async () => {
     vi.mocked(brandingApi.updateBranding).mockRejectedValue(new Error("x"));
     const { result, queryClient } = renderHookWithProviders(() =>

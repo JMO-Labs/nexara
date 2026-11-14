@@ -8,6 +8,7 @@ import asyncio
 import structlog
 
 from app.models.notification import Notification
+from app.services.notifications.channels.apprise import AppriseChannel
 from app.services.notifications.channels.base import Channel, ChannelResult
 from app.services.notifications.channels.email import EmailChannel
 from app.services.notifications.channels.inapp import InAppChannel
@@ -31,6 +32,7 @@ class Dispatcher:
         self.register_channel(InAppChannel(event_bus))
         self.register_channel(EmailChannel())
         self.register_channel(PushChannel())
+        self.register_channel(AppriseChannel())
         if fcm is not None:
             self.register_channel(fcm)
 

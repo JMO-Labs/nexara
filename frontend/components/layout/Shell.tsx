@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useSessionBootstrap } from "@/hooks/useSession";
+import { useUI } from "@/stores/ui";
 import { useModals } from "@/stores/modals";
 import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
@@ -30,6 +31,7 @@ export function Shell({ children }: { children: ReactNode }) {
   useSessionBootstrap();
   const router = useRouter();
   const status = useSession((s) => s.status);
+  const density = useUI((s) => s.density);
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="bg-bg text-ink min-h-dvh">
+      <div className="bg-bg text-ink min-h-dvh" data-density={density}>
         <a
           href="#main"
           className="bg-surface-strong text-accent focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"

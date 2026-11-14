@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
     from app.repositories.webhook_repo import WebhookRepository
+    from app.services.ai.admin_ai_service import AdminAIService
     from app.services.ai.suggestion_service import SuggestionService
     from app.services.notifications.dispatcher import Dispatcher
     from app.services.webhook_service import WebhookService
@@ -279,6 +280,48 @@ async def get_suggestion_service(
     from app.services.ai.suggestion_service import SuggestionService
 
     return SuggestionService(SuggestionRepository(db), get_ai_provider(settings))
+
+
+def get_admin_ai_service(
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AdminAIService:
+    """
+    @brief Provide an AdminAIService (admin only) with audit logging bound to the caller.
+
+    @param request Incoming request (client IP for the audit trail).
+    @param user Authenticated admin.
+    @param db Async database session.
+    @param settings Application settings.
+    @return AdminAIService instance.
+    """
+    from app.core.valkey import DB_CACHE, get_pool
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.community_repo import CommunityRepository
+    from app.repositories.settings_repo import SettingsRepository
+    from app.services.ai.admin_ai_service import AdminAIService
+    from app.services.ai.budget_service import BudgetService
+    from app.services.ai.provider import get_ai_provider
+
+    forwarded = request.headers.get("x-forwarded-for")
+    ip = forwarded.split(",")[0].strip() if forwarded else None
+    if ip is None and request.client:
+        ip = request.client.host
+    redis = get_pool(settings, DB_CACHE)
+    budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
+    return AdminAIService(
+        CommunityRepository(db),
+        SettingsRepository(db),
+        uuid.UUID(settings.COMMUNITY_ID),
+        settings,
+        budget,
+        lambda: get_ai_provider(settings),
+        audit_repo=AuditRepository(db),
+        actor_id=user.id,
+        ip_address=ip,
+    )
 
 
 async def get_plugin_from_api_key(

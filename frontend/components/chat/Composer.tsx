@@ -114,6 +114,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
               size="sm"
               variant="ghost"
               aria-label="Cancel reply"
+              tooltip="Cancel reply"
               onClick={onCancelReply}
             >
               <X size={14} aria-hidden />
@@ -140,6 +141,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
           <div className="flex gap-0.5">
             <IconButton
               aria-label="Add emoji"
+              tooltip="Add emoji"
               variant="ghost"
               size="sm"
               disabled={disabled}
@@ -149,6 +151,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
             </IconButton>
             <IconButton
               aria-label="Attach media"
+              tooltip="Attach media"
               variant="ghost"
               size="sm"
               disabled={disabled || !onAttachMedia}
@@ -158,6 +161,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
             </IconButton>
             <IconButton
               aria-label="Create poll"
+              tooltip="Create poll"
               variant="ghost"
               size="sm"
               disabled={disabled || !onCreatePoll}
@@ -181,6 +185,8 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
 
           <IconButton
             aria-label="Send message"
+            tooltip="Send message"
+            shortcut="Enter"
             onClick={submit}
             disabled={disabled || !value.trim()}
           >

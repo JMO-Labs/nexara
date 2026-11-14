@@ -63,7 +63,7 @@ def test_type_is_frozen_with_defaults():
     t = _make()
     with pytest.raises(dataclasses.FrozenInstanceError):
         t.key = "x"  # type: ignore[misc]
-    assert t.user_configurable == ("inapp", "email", "push", "toast")
+    assert t.user_configurable == ("inapp", "email", "push", "toast", "apprise")
     assert t.group_window_seconds is None
     assert t.toast_on_arrival is False
     assert t.bypass_dnd is False

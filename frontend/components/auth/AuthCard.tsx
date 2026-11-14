@@ -22,7 +22,10 @@ export function AuthCard({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      data-auth-card-root
+      className="mx-auto flex w-full max-w-[400px] flex-col gap-4"
+    >
       <p className="text-center text-3xl font-black">Nexara</p>
       <Card className="flex flex-col gap-6 p-6">
         <div>

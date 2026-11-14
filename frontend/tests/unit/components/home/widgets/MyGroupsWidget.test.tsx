@@ -51,6 +51,7 @@ const fakeGroups: Subgroup[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     my_role: "member",
+    is_member: true,
   },
 ];
 

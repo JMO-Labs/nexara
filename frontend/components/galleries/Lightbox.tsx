@@ -106,6 +106,8 @@ export function Lightbox({
         <IconButton
           variant="ghost"
           aria-label="Close"
+          tooltip="Close"
+          shortcut="Esc"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
@@ -121,13 +123,15 @@ export function Lightbox({
         <IconButton
           variant="ghost"
           aria-label="Previous"
+          tooltip="Previous"
+          shortcut="←"
           onClick={prev}
           disabled={index === 0}
           className="absolute left-2 z-10 bg-black/40 md:left-4"
         >
           <ChevronLeft className="size-7 text-white" aria-hidden="true" />
         </IconButton>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
         <img
           src={src}
           alt={label}
@@ -138,6 +142,8 @@ export function Lightbox({
         <IconButton
           variant="ghost"
           aria-label="Next"
+          tooltip="Next"
+          shortcut="→"
           onClick={next}
           disabled={index >= items.length - 1}
           className="absolute right-2 z-10 bg-black/40 md:right-4"

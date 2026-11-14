@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/offline/connectivity_service.dart';
 import '../../../core/providers.dart';
 import '../models/post_model.dart';
 
@@ -122,6 +123,11 @@ final commentsProvider = FutureProvider.family<List<PostComment>, String>((ref, 
 /// @brief Mutation: create a post, then refresh the feed.
 final createPostProvider = Provider<Future<void> Function(String)>((ref) {
   return (content) async {
+    final online = ref.read(onlineProvider).value ?? true;
+    if (!online) {
+      await ref.read(offlineQueueProvider).enqueue('post', {'content': content});
+      return;
+    }
     await ref.read(feedRepositoryProvider).create(content);
     await ref.read(feedProvider.notifier).refresh();
   };

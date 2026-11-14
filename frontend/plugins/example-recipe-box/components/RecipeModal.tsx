@@ -125,7 +125,7 @@ export default function RecipeModal({
             {items.map((r) => (
               <li key={r.id} className="rounded-xl border p-3">
                 {r.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
                   <img
                     src={r.image_url}
                     alt=""

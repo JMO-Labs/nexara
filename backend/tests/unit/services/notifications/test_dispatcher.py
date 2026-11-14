@@ -35,7 +35,7 @@ _T.key = "mention"
 
 
 def test_registers_builtin_channels() -> None:
-    assert set(_d()._channels) == {"inapp", "email", "push"}
+    assert set(_d()._channels) == {"inapp", "email", "push", "apprise"}
 
 
 async def test_fanout_only_enabled_channels() -> None:

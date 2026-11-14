@@ -48,10 +48,11 @@ celery_app.conf.update(
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
+        "app.tasks.list_tasks.*": {"queue": "maintenance"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
-    imports=("app.tasks.plugin_tasks",),
+    imports=("app.tasks.plugin_tasks", "app.tasks.list_tasks"),
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
     worker_prefetch_multiplier=1,
@@ -70,6 +71,14 @@ celery_app.conf.update(
         "ai-budget-reset": {
             "task": "app.tasks.maintenance_tasks.reset_ai_daily_budget",
             "schedule": crontab(hour=settings.AI_BUDGET_RESET_HOUR, minute=0),
+        },
+        "digest-dispatch-every-5min": {
+            "task": "app.tasks.notification_tasks.digest_dispatch",
+            "schedule": 300.0,
+        },
+        "cleanup-expired-exports": {
+            "task": "app.tasks.maintenance_tasks.cleanup_expired_exports",
+            "schedule": crontab(hour=0, minute=30),
         },
         "close-expired-polls": {
             "task": "app.tasks.poll_tasks.close_expired_polls",
@@ -171,6 +180,14 @@ celery_app.conf.update(
             "task": "plugins.example_trivia.reset_streaks",
             "schedule": crontab(day_of_week="sun", hour="0", minute="5"),
         },
+        "sweep-list-expirations": {
+            "task": "app.tasks.list_tasks.sweep_list_expirations",
+            "schedule": crontab(hour=2, minute=0),
+        },
+        "dispatch-list-expiry-reminders": {
+            "task": "app.tasks.list_tasks.dispatch_list_expiry_reminders",
+            "schedule": crontab(hour=8, minute=0),
+        },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",
             "schedule": crontab(hour="1", minute="0"),
@@ -179,7 +196,7 @@ celery_app.conf.update(
 )
 
 
-@signals.worker_init.connect  # type: ignore[untyped-decorator]
+@signals.worker_init.connect
 def _on_worker_init(**kwargs: object) -> None:
     """
     @brief Hook executed when a Celery worker starts.
@@ -193,13 +210,13 @@ def _on_worker_init(**kwargs: object) -> None:
     )
 
 
-@signals.task_prerun.connect  # type: ignore[untyped-decorator]
+@signals.task_prerun.connect
 def _on_task_prerun(task_id: str, task: Any, **kwargs: object) -> None:
     """@brief Log each task start for structured logging correlation."""
     logger.info("celery_task_started", task_id=task_id, task_name=task.name)
 
 
-@signals.task_postrun.connect  # type: ignore[untyped-decorator]
+@signals.task_postrun.connect
 def _on_task_postrun(
     task_id: str, task: Any, retval: object, state: object, **kwargs: object
 ) -> None:
@@ -207,7 +224,7 @@ def _on_task_postrun(
     logger.info("celery_task_finished", task_id=task_id, task_name=task.name, state=state)
 
 
-@signals.task_failure.connect  # type: ignore[untyped-decorator]
+@signals.task_failure.connect
 def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -> None:
     """@brief Log task failures for alerting and debugging."""
     logger.error(
@@ -218,7 +235,7 @@ def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -
     )
 
 
-@signals.import_modules.connect(sender=celery_app)  # type: ignore[untyped-decorator]
+@signals.import_modules.connect(sender=celery_app)
 def _load_plugin_tasks(**kwargs: object) -> None:
     """@brief Register plugin Celery tasks and Beat entries when worker/beat start."""
     from app.plugins.task_loader import load_plugin_tasks

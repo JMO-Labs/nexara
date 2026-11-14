@@ -8,10 +8,10 @@ import { act, waitFor } from "@testing-library/react";
 import { renderHookWithProviders } from "../../utils/renderWithProviders";
 import { useGalleryUpload } from "@/hooks/useGalleryUpload";
 import { uploadFile } from "@/lib/api/media";
-import { addItem } from "@/lib/api/galleries";
+import { bulkAddItems } from "@/lib/api/galleries";
 
 vi.mock("@/lib/api/media", () => ({ uploadFile: vi.fn() }));
-vi.mock("@/lib/api/galleries", () => ({ addItem: vi.fn() }));
+vi.mock("@/lib/api/galleries", () => ({ bulkAddItems: vi.fn() }));
 
 const file = (name: string) => new File(["x"], name, { type: "image/jpeg" });
 
@@ -25,9 +25,9 @@ describe("useGalleryUpload", () => {
     expect(result.current.jobs).toEqual([]);
   });
 
-  it("uploads, adds to gallery and marks job done", async () => {
+  it("uploads, bulk-adds to gallery and marks job done", async () => {
     vi.mocked(uploadFile).mockResolvedValue({ id: "m1" } as never);
-    vi.mocked(addItem).mockResolvedValue(undefined as never);
+    vi.mocked(bulkAddItems).mockResolvedValue(undefined as never);
     const { result, queryClient } = renderHookWithProviders(() =>
       useGalleryUpload("g1"),
     );
@@ -38,7 +38,7 @@ describe("useGalleryUpload", () => {
     });
 
     expect(uploadFile).toHaveBeenCalledTimes(1);
-    expect(addItem).toHaveBeenCalledWith("g1", "m1");
+    expect(bulkAddItems).toHaveBeenCalledWith("g1", ["m1"]);
     expect(result.current.jobs).toHaveLength(1);
     expect(result.current.jobs[0]).toMatchObject({
       status: "done",
@@ -53,7 +53,7 @@ describe("useGalleryUpload", () => {
     vi.mocked(uploadFile).mockImplementation(
       () => new Promise((r) => (resolveUpload = r as never)),
     );
-    vi.mocked(addItem).mockResolvedValue(undefined as never);
+    vi.mocked(bulkAddItems).mockResolvedValue(undefined as never);
     const { result } = renderHookWithProviders(() => useGalleryUpload("g1"));
 
     let pending!: Promise<void>;
@@ -79,16 +79,16 @@ describe("useGalleryUpload", () => {
       await result.current.enqueue([file("a.jpg")]);
     });
 
-    expect(addItem).not.toHaveBeenCalled();
+    expect(bulkAddItems).not.toHaveBeenCalled();
     expect(result.current.jobs[0]).toMatchObject({
       status: "error",
       error: "boom",
     });
   });
 
-  it("marks job as error when addItem fails", async () => {
+  it("marks job as error when the bulk add fails", async () => {
     vi.mocked(uploadFile).mockResolvedValue({ id: "m1" } as never);
-    vi.mocked(addItem).mockRejectedValue(new Error("add failed"));
+    vi.mocked(bulkAddItems).mockRejectedValue(new Error("add failed"));
     const { result } = renderHookWithProviders(() => useGalleryUpload("g1"));
 
     await act(async () => {
@@ -104,7 +104,7 @@ describe("useGalleryUpload", () => {
   it("retry re-uploads a failed job successfully", async () => {
     vi.mocked(uploadFile).mockRejectedValueOnce(new Error("boom"));
     vi.mocked(uploadFile).mockResolvedValueOnce({ id: "m2" } as never);
-    vi.mocked(addItem).mockResolvedValue(undefined as never);
+    vi.mocked(bulkAddItems).mockResolvedValue(undefined as never);
     const { result } = renderHookWithProviders(() => useGalleryUpload("g1"));
 
     await act(async () => {
@@ -120,6 +120,6 @@ describe("useGalleryUpload", () => {
       status: "done",
       error: null,
     });
-    expect(addItem).toHaveBeenCalledWith("g1", "m2");
+    expect(bulkAddItems).toHaveBeenCalledWith("g1", ["m2"]);
   });
 });

@@ -49,6 +49,9 @@ logger = structlog.get_logger(__name__)
 MAX_IMAGE_SIZE = 20 * 1024 * 1024
 """@brief Maximum upload size in bytes (20 MB)."""
 
+MAX_POST_MEDIA = 10
+"""@brief Maximum number of media items attachable to one post."""
+
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 """@brief MIME types accepted for image uploads."""
 
@@ -184,7 +187,9 @@ class MediaService:
             )
 
         generate_thumbnail.delay(str(media.id))
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="media", action="create", user_id=user.id
+        )
         enqueue_ocr(media.id, self._community_id, media.content_type)
 
         return MediaResponse.model_validate(media)
@@ -275,7 +280,9 @@ class MediaService:
             await self._storage.delete(media.thumbnail_key)
         await decrement_storage_used(self._session(), user.id, media.size_bytes)
         await self._repo.delete_media(media_id)
-        await invalidate_search_cache_for_community(self._community_id)
+        await invalidate_search_cache_for_community(
+            self._community_id, service="media", action="delete", user_id=user.id
+        )
         if self._activity_repo is not None:
             await self._activity_repo.invalidate("media", media_id)
 
@@ -295,10 +302,10 @@ class MediaService:
         """
         from app.core.exceptions import AuthorizationError
 
-        if len(media_ids) > 10:
+        if len(media_ids) > MAX_POST_MEDIA:
             raise AppError(
                 code="TOO_MANY_MEDIA",
-                message=_("Maximum 10 media items per post."),
+                message=_("Maximum %(max)d media items per post.") % {"max": MAX_POST_MEDIA},
                 status_code=400,
             )
 

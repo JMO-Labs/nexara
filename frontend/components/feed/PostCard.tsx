@@ -15,9 +15,11 @@ import { PostBody } from "./PostBody";
 import { PostMedia } from "./PostMedia";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
+import { BookmarkButton } from "./BookmarkButton";
 import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
 import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
+import { KudosCard } from "./KudosCard";
 import { PromptBadges } from "./PromptBadges";
 import type { Post } from "@/lib/api/posts";
 
@@ -51,6 +53,17 @@ export function PostCard({
   const reactMut = useTogglePostReaction(post.id);
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
+
+  if (post.recipient_id && post.recipient) {
+    return (
+      <KudosCard
+        recipient={post.recipient}
+        message={post.content}
+        authorName={post.author.display_name}
+        createdAt={post.created_at}
+      />
+    );
+  }
 
   const headline = post.content.split("\n")[0].trim().slice(0, 80);
   const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);
@@ -103,13 +116,23 @@ export function PostCard({
         </div>
       ) : null}
       {post.media.length > 0 ? (
-        <PostMedia media={post.media} onClick={() => onOpen?.(post.id)} />
+        <PostMedia
+          media={post.media}
+          canReport={!isAuthor}
+          onClick={() => onOpen?.(post.id)}
+        />
       ) : null}
       <ReactionRow
         reactions={post.reactions}
         commentCount={post.comment_count}
         onReact={(e) => reactMut.mutate(e)}
         onCommentClick={() => setCommentsOpen((v) => !v)}
+        extra={
+          <BookmarkButton
+            postId={post.id}
+            isBookmarked={post.is_bookmarked ?? false}
+          />
+        }
       />
       {commentsOpen ? (
         <CommentThread

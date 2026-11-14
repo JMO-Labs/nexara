@@ -20,6 +20,23 @@ if (typeof window !== "undefined" && !window.matchMedia) {
   }));
 }
 
+// jsdom lacks ResizeObserver (Radix popper, used by tooltips).
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// jsdom lacks pointer-capture APIs (Radix Select uses them on open).
+if (typeof Element !== "undefined") {
+  const proto = Element.prototype as unknown as Record<string, unknown>;
+  proto.hasPointerCapture ??= () => false;
+  proto.setPointerCapture ??= () => {};
+  proto.releasePointerCapture ??= () => {};
+}
+
 // jsdom lacks scrollIntoView (Radix Select calls it on open).
 if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};

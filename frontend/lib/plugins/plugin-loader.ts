@@ -48,7 +48,7 @@ export class PluginRegistry {
   registerSlotComponent(
     slotName: string,
     pluginId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- plugins declare arbitrary slot props
     component: ComponentType<any>,
   ): void {
     const list = this.slots.get(slotName) ?? [];

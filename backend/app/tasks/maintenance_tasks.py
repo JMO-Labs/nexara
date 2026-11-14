@@ -8,6 +8,10 @@ Routed to the ``maintenance`` queue with low concurrency.
 
 from __future__ import annotations
 
+import asyncio
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
 import structlog
 
 from app.tasks.celery_app import celery_app
@@ -15,7 +19,7 @@ from app.tasks.celery_app import celery_app
 logger = structlog.get_logger(__name__)
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.refresh_prometheus_gauges",
     queue="maintenance",
 )
@@ -33,7 +37,7 @@ def refresh_prometheus_gauges() -> dict[str, str]:
     return {"status": "refreshed"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.recalculate_storage_quotas",
     queue="maintenance",
 )
@@ -49,7 +53,7 @@ def recalculate_storage_quotas() -> dict[str, str]:
     return {"status": "recalculated"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.cleanup_expired_tokens",
     queue="maintenance",
 )
@@ -65,7 +69,7 @@ def cleanup_expired_tokens() -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.database_backup",
     queue="maintenance",
     time_limit=1800,
@@ -83,7 +87,7 @@ def database_backup() -> dict[str, str]:
     return {"status": "completed"}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.prune_activity_events",
     queue="maintenance",
 )
@@ -103,7 +107,7 @@ def prune_activity_events(days: int = 30) -> dict[str, int]:
     return {"deleted_count": 0}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.maintenance_tasks.reset_ai_daily_budget",
     queue="maintenance",
 )
@@ -131,3 +135,49 @@ def reset_ai_daily_budget() -> dict[str, str]:
 
     asyncio.run(_run())
     return {"status": "reset"}
+
+
+EXPORT_RETENTION = timedelta(hours=48)
+
+
+async def _cleanup_expired_exports_async(repo: Any, storage: Any) -> int:
+    """@brief Delete stored files and rows for exports ready over 48h ago."""
+    cutoff = datetime.now(UTC) - EXPORT_RETENTION
+    deleted = 0
+    for row in await repo.list_expired(cutoff):
+        try:
+            await storage.delete(row.file_key)
+            await repo.delete_row(row)
+            deleted += 1
+        except Exception as exc:
+            logger.warning("export_cleanup_failed", export_id=str(row.id), error=str(exc))
+    await repo.commit()
+    return deleted
+
+
+@celery_app.task(
+    name="app.tasks.maintenance_tasks.cleanup_expired_exports",
+    queue="maintenance",
+    time_limit=300,
+)
+def cleanup_expired_exports() -> dict[str, int]:
+    """
+    @brief Delete export archives older than 48 hours. Runs daily at 00:30 UTC.
+    @return Dict with ``deleted_count``.
+    """
+    from app.core.config import get_settings
+    from app.core.metrics import export_cleanup_total
+    from app.db.session import async_session_factory
+    from app.repositories.user_export_repo import UserExportRepository
+    from app.services.storage.factory import get_storage_backend
+
+    async def _run() -> int:
+        async with async_session_factory() as session:
+            return await _cleanup_expired_exports_async(
+                UserExportRepository(session), get_storage_backend(get_settings())
+            )
+
+    count = asyncio.run(_run())
+    export_cleanup_total.inc(count)
+    logger.info("cleanup_expired_exports", deleted_count=count)
+    return {"deleted_count": count}

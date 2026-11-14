@@ -7,7 +7,7 @@ import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 import { GalleryGrid } from "@/components/galleries/GalleryGrid";
 import * as api from "@/lib/api/galleries";
-import type { Gallery } from "@/lib/api/galleries";
+import type { Gallery, GalleryListResponse } from "@/lib/api/galleries";
 
 vi.mock("@/lib/api/galleries");
 const push = vi.fn();
@@ -33,13 +33,19 @@ const mk = (id: string, title: string): Gallery => ({
   updated_at: "2026-04-25T00:00:00Z",
 });
 
+const page = (items: Gallery[]): GalleryListResponse => ({
+  items,
+  next_cursor: null,
+  has_more: false,
+});
+
 describe("GalleryGrid", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders a card per gallery and forwards selection", async () => {
-    vi.mocked(api.listGalleries).mockResolvedValue({
-      items: [mk("g1", "Trip"), mk("g2", "Party")],
-    } as Awaited<ReturnType<typeof api.listGalleries>>);
+    vi.mocked(api.listGalleries).mockResolvedValue(
+      page([mk("g1", "Trip"), mk("g2", "Party")]),
+    );
     const onSelect = vi.fn();
     renderWithProviders(<GalleryGrid onSelect={onSelect} />);
     expect(await screen.findByText("Trip")).toBeInTheDocument();
@@ -49,11 +55,7 @@ describe("GalleryGrid", () => {
   });
 
   it("renders the empty state and navigates to media", async () => {
-    vi.mocked(api.listGalleries).mockResolvedValue({
-      items: [],
-      next_cursor: null,
-      has_more: false,
-    } as Awaited<ReturnType<typeof api.listGalleries>>);
+    vi.mocked(api.listGalleries).mockResolvedValue(page([]));
     renderWithProviders(<GalleryGrid onSelect={() => {}} />);
     expect(await screen.findByText("No galleries yet")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Browse media" }));
@@ -61,11 +63,7 @@ describe("GalleryGrid", () => {
   });
 
   it("uses onCreate for the empty-state action when provided", async () => {
-    vi.mocked(api.listGalleries).mockResolvedValue({
-      items: [],
-      next_cursor: null,
-      has_more: false,
-    } as Awaited<ReturnType<typeof api.listGalleries>>);
+    vi.mocked(api.listGalleries).mockResolvedValue(page([]));
     const onCreate = vi.fn();
     renderWithProviders(
       <GalleryGrid onSelect={() => {}} onCreate={onCreate} />,

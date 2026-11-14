@@ -39,12 +39,48 @@ class ReportCreate(BaseModel):
         description="Content type being reported",
     )
     target_id: UUID = Field(description="UUID of the reported content")
-    reason: str = Field(..., min_length=1, max_length=200)
+    reason: str = Field(
+        ...,
+        pattern=r"^(spam|harassment|inappropriate|misinformation|other)$",
+        description="Report reason",
+    )
     description: str | None = Field(
         default=None,
         max_length=2000,
         description="Optional additional details from the reporter",
     )
+
+
+class ReportAction(BaseModel):
+    """@brief Admin decision on a report."""
+
+    action: str = Field(
+        ...,
+        pattern=r"^(dismiss|warn_user|hide_content|delete_content|ban_user)$",
+    )
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class ReportActionResponse(BaseModel):
+    """@brief Result of an admin action."""
+
+    id: UUID
+    status: str
+    action_taken: str | None = None
+    reviewed_by: UUID | None = None
+    reviewed_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ReportCreated(BaseModel):
+    """@brief Minimal response after submitting a report."""
+
+    id: UUID
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class ReportResponse(BaseModel):
@@ -57,6 +93,10 @@ class ReportResponse(BaseModel):
     reason: str
     description: str | None = None
     status: str
+    reviewed_by: UUID | None = None
+    reviewed_at: datetime | None = None
+    action_taken: str | None = None
+    admin_notes: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

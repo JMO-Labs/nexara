@@ -31,7 +31,7 @@ async def _close_expired_polls_async() -> dict[str, int]:
         return {"closed_count": count}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.poll_tasks.close_expired_polls",
     queue="maintenance",
 )

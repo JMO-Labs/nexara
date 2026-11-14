@@ -1,0 +1,92 @@
+{
+  "themes": [
+    {
+      "name": "Ocean",
+      "description": "Cool blues",
+      "primary": "#0284c7",
+      "primary_dark": "#0369a1",
+      "accent": "#06b6d4",
+      "surface_light": "#f0f9ff",
+      "surface_dark": "#0c2d47",
+      "text_light": "#0c2341",
+      "text_dark": "#f5f9fc"
+    },
+    {
+      "name": "Forest",
+      "description": "Deep greens",
+      "primary": "#15803d",
+      "primary_dark": "#166534",
+      "accent": "#86efac",
+      "surface_light": "#f0fdf4",
+      "surface_dark": "#0f2a1a",
+      "text_light": "#0f2a1a",
+      "text_dark": "#f2fbf5"
+    },
+    {
+      "name": "Sunset",
+      "description": "Warm oranges",
+      "primary": "#c2410c",
+      "primary_dark": "#9a3412",
+      "accent": "#fdba74",
+      "surface_light": "#fff7ed",
+      "surface_dark": "#3a1a0c",
+      "text_light": "#3a1a0c",
+      "text_dark": "#fff7ed"
+    },
+    {
+      "name": "Midnight",
+      "description": "Deep indigo night",
+      "primary": "#4338ca",
+      "primary_dark": "#3730a3",
+      "accent": "#a5b4fc",
+      "surface_light": "#eef2ff",
+      "surface_dark": "#14163a",
+      "text_light": "#1e1b4b",
+      "text_dark": "#eef2ff"
+    },
+    {
+      "name": "Rose",
+      "description": "Soft pinks",
+      "primary": "#be185d",
+      "primary_dark": "#9d174d",
+      "accent": "#f9a8d4",
+      "surface_light": "#fff1f2",
+      "surface_dark": "#3b0f24",
+      "text_light": "#4c0519",
+      "text_dark": "#fff1f2"
+    },
+    {
+      "name": "Lavender",
+      "description": "Gentle purples",
+      "primary": "#7e22ce",
+      "primary_dark": "#6b21a8",
+      "accent": "#d8b4fe",
+      "surface_light": "#faf5ff",
+      "surface_dark": "#2e1a47",
+      "text_light": "#2e1065",
+      "text_dark": "#faf5ff"
+    },
+    {
+      "name": "Coral",
+      "description": "Lively coral",
+      "primary": "#c53030",
+      "primary_dark": "#9b2c2c",
+      "accent": "#fca5a5",
+      "surface_light": "#fff5f5",
+      "surface_dark": "#3d1414",
+      "text_light": "#3d1414",
+      "text_dark": "#fff5f5"
+    },
+    {
+      "name": "Slate",
+      "description": "Neutral greys",
+      "primary": "#475569",
+      "primary_dark": "#334155",
+      "accent": "#cbd5e1",
+      "surface_light": "#f8fafc",
+      "surface_dark": "#1e293b",
+      "text_light": "#0f172a",
+      "text_dark": "#f1f5f9"
+    }
+  ]
+}

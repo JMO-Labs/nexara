@@ -31,6 +31,7 @@ class EventType(StrEnum):
     FEED_UPDATE = "feed_update"
     FEED_PING = "feed_ping"
     NOTIFICATION = "notification"
+    USER_NOTIFICATION_DISMISSED = "user_notification_dismissed"
     TYPING = "typing"
     PRESENCE = "presence"
 
@@ -42,6 +43,7 @@ class FeedEvent(StrEnum):
     COMMENT_CREATED = "comment_created"
     REACTION_TOGGLED = "reaction_toggled"
     POLL_VOTED = "poll_voted"
+    LIST_EXPIRED = "list_expired"
 
 
 # ── Routing targets ──────────────────────────────────────────────────────
@@ -207,6 +209,26 @@ def user_notification(
     )
 
 
+def user_notification_dismissed(
+    user_id: UUID,
+    notification_ids: Sequence[UUID],
+) -> RealtimeEvent:
+    """
+    @brief Build an event telling a user's other tabs notifications were dismissed.
+
+    @param user_id User who dismissed (sole recipient).
+    @param notification_ids Dismissed notification UUIDs.
+    """
+    return RealtimeEvent(
+        type=EventType.USER_NOTIFICATION_DISMISSED,
+        target=UserTarget(user_id=user_id),
+        payload={
+            "user_id": str(user_id),
+            "notification_ids": [str(n) for n in notification_ids],
+        },
+    )
+
+
 def poll_voted(
     target: EventTarget,
     post_id: UUID | None,
@@ -247,4 +269,19 @@ def typing_indicator(
         type=EventType.TYPING,
         target=CommunityTarget(community_id=community_id),
         payload={"user_id": str(user_id)},
+    )
+
+
+def list_expired(target: EventTarget, list_id: UUID, title: str) -> RealtimeEvent:
+    """
+    @brief Build a feed_update event for a list that has expired.
+
+    @param target Routing target (see :mod:`audience`).
+    @param list_id ID of the expired list.
+    @param title List title.
+    """
+    return RealtimeEvent(
+        type=EventType.FEED_UPDATE,
+        target=target,
+        payload={"event": FeedEvent.LIST_EXPIRED, "list_id": str(list_id), "title": title},
     )

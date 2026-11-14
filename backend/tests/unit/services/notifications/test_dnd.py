@@ -74,6 +74,9 @@ class TestInDnd:
     def test_naive_now_treated_as_utc(self):
         assert in_dnd(NIGHT, None, "UTC", datetime(2026, 1, 5, 23)) is True
 
+    def test_non_dict_window_ignored(self):
+        assert in_dnd({"mon": ["22:00-07:00"]}, None, "UTC", _utc(2026, 1, 5, 23)) is False
+
     def test_malformed_schedule_ignored(self):
         assert in_dnd({"mon": [{"start": "bad"}]}, None, "UTC", _utc(2026, 1, 5, 23)) is False
 
@@ -120,6 +123,9 @@ class TestResolveSnooze:
     def test_iso8601(self):
         got = resolve_snooze("2026-01-05T18:00:00+00:00", "UTC", self.NOW)
         assert got == _utc(2026, 1, 5, 18)
+
+    def test_iso_naive_treated_as_utc(self):
+        assert resolve_snooze("2026-01-05T18:00:00", "UTC", self.NOW) == _utc(2026, 1, 5, 18)
 
     def test_iso_past_rejected(self):
         with pytest.raises(AppError) as e:

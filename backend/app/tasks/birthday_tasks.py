@@ -46,7 +46,7 @@ async def _send_birthday_reminders_async() -> dict[str, int]:
     return {"sent": total}
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(
     name="app.tasks.birthday_tasks.send_birthday_reminders",
     queue="notifications",
 )

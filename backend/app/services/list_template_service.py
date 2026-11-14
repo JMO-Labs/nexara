@@ -15,7 +15,7 @@ from app.models.list_template import ListTemplate, ListTemplateField, ListTempla
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_repo import ListRepository
 from app.repositories.list_template_repo import ListTemplateRepository
-from app.services.list_field_registry import FieldTypeNotFound, ListFieldRegistry
+from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
 
 _UPDATABLE = ("name", "description", "category", "icon", "color", "cover_media_id", "is_shared")
 
@@ -47,7 +47,7 @@ class ListTemplateService:
         for f in fields:
             try:
                 config = self._registry.validate_config(f["type_key"], f.get("config") or {})
-            except FieldTypeNotFound as exc:
+            except FieldTypeNotFoundError as exc:
                 raise ValidationError(
                     _("Unknown field type"), {"field": f.get("key"), "type_key": str(exc)}
                 ) from exc

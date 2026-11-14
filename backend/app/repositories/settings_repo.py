@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_settings import UserSettings
@@ -91,3 +91,38 @@ class SettingsRepository:
         await self._session.flush()
         await self._session.refresh(settings)
         return settings
+
+    async def count_sassybot_opt_outs(self, community_id: uuid.UUID) -> int:
+        """
+        @brief Number of members in a community who disabled Sassybot.
+
+        @param community_id Community scope.
+        @return Count of settings rows with ``allow_sassybot`` false.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(UserSettings)
+            .where(
+                UserSettings.community_id == community_id,
+                UserSettings.allow_sassybot.is_(False),
+            )
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
+    async def get_many(
+        self, user_ids: list[uuid.UUID] | set[uuid.UUID], community_id: uuid.UUID
+    ) -> list[UserSettings]:
+        """
+        @brief Batch-fetch settings rows for users in a community.
+
+        @param user_ids Users to fetch.
+        @param community_id Tenant scope.
+        @return Existing rows (users without a row are absent).
+        """
+        if not user_ids:
+            return []
+        stmt = select(UserSettings).where(
+            UserSettings.user_id.in_(user_ids),
+            UserSettings.community_id == community_id,
+        )
+        return list((await self._session.execute(stmt)).scalars().all())

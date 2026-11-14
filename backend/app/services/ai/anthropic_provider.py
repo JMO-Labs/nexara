@@ -19,6 +19,7 @@ from app.services.ai.provider import (
 )
 
 _URL = "https://api.anthropic.com/v1/messages"
+_MODELS_URL = "https://api.anthropic.com/v1/models"
 TEXT_MODEL = "claude-3-haiku-20240307"
 VISION_MODEL = "claude-3-sonnet-20240229"
 #: model -> (USD/1M input, USD/1M output)
@@ -81,6 +82,14 @@ class AnthropicProvider(AIProvider):
 
     async def embed(self, text: str) -> EmbedResult:
         raise NotImplementedError("Anthropic does not offer embeddings")
+
+    async def ping(self) -> None:
+        """@brief List models (no token cost) to verify the key and reachability."""
+        resp = await self._client.get(
+            _MODELS_URL,
+            headers={"x-api-key": self._key, "anthropic-version": "2023-06-01"},
+        )
+        resp.raise_for_status()
 
     async def count_tokens(self, text: str) -> CountResult:
         n = estimate_tokens(text)

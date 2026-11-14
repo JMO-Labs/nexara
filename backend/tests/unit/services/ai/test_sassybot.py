@@ -129,3 +129,17 @@ def test_wants_sassybot_mention() -> None:
     assert wants_sassybot("@Sassybot!")
     assert not wants_sassybot("email a@sassybots.com")
     assert not wants_sassybot("nothing")
+
+
+async def test_generate_comment_none_when_post_missing() -> None:
+    svc, repo, provider, post = _make()
+    repo.get_post_and_author.return_value = None
+    assert await svc.generate_comment(post.id, CID) is None
+    provider.complete.assert_not_called()
+
+
+async def test_should_trigger_false_when_post_missing() -> None:
+    svc, repo, _, post = _make()
+    repo.get_community_id_for_post.return_value = None
+    assert await svc.should_trigger(post.id) is False
+    repo.get_community.assert_not_called()

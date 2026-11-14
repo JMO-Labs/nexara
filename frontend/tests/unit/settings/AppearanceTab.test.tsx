@@ -7,6 +7,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppearanceTab } from "@/components/settings/AppearanceTab";
+import { useUI } from "@/stores/ui";
 import * as settingsHooks from "@/hooks/useSettings";
 
 vi.mock("@/hooks/useSettings");
@@ -117,5 +118,18 @@ describe("AppearanceTab", () => {
 
     const labels = screen.getAllByText(/language/i);
     expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it("binds a Comfortable/Compact control to the UI store", async () => {
+    useUI.setState({ density: "comfortable" });
+    render(<AppearanceTab />, { wrapper: createWrapper() });
+
+    const group = screen.getByRole("radiogroup", { name: "Density" });
+    expect(group).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Comfortable" })).toBeChecked();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("radio", { name: "Compact" }));
+    await waitFor(() => expect(useUI.getState().density).toBe("compact"));
   });
 });
