@@ -31,6 +31,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   notif_invite_accepted_inapp: boolean;
   notif_invite_accepted_email: boolean;
   mute_all_email: boolean;
+  receive_nudges?: boolean;
+  receive_gentle_nudges?: boolean;
 }
 
 export type NotificationType =
@@ -70,6 +72,8 @@ export interface NotificationPreferences extends NotificationChannelFlags {
 export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   theme?: "system" | "light" | "dark";
   locale?: string;
+  receive_nudges?: boolean;
+  receive_gentle_nudges?: boolean;
 }
 
 export interface ProfileUpdate {

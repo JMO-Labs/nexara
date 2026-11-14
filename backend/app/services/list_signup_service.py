@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, NotFoundError
 from app.models.list import ListItem, ListItemSignup
+from app.models.user import User
+from app.services.notifications.types.list_payloads import item_title
 from app.services.realtime.events import EventType, RealtimeEvent, UserTarget
 
 
@@ -105,10 +107,21 @@ class ListSignupService:
         await self._lists.increment_counters(item.list_id, {"signup_count": 1})
         await self._emit(user_id, "claimed", item, quantity)
         if lst is not None and lst.owner_id != user_id:
+            claimer = await session.get(User, user_id)
+            name = claimer.display_name if claimer is not None else ""
             await self._notify.notify(
                 lst.owner_id,
-                "system",
-                {"message": "Someone signed up on your list", "target_id": str(item_id)},
+                "list_signup",
+                {
+                    "message": f"{name or 'Someone'} signed up on {lst.title}",
+                    "target_id": str(item_id),
+                    "list_id": str(lst.id),
+                    "item_id": str(item.id),
+                    "item_title": item_title(item.values),
+                    "claimer_id": str(user_id),
+                    "claimer_name": name,
+                    "quantity": quantity,
+                },
                 actor_id=user_id,
             )
         return claim

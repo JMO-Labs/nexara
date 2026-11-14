@@ -21,7 +21,7 @@ community. If you want to change the code instead, see the
 
 If you only want a quick local install, the [Getting Started](../getting-started.md)
 page walks through a minimal setup. For production topologies, see
-[Deployment](../deployment.md).
+[Deployment](../deployment/deployment-guide.md).
 
 !!! tip
     Most questions from new administrators are answered in the FAQ. Check it

@@ -144,15 +144,22 @@ class GalleryRepository(BaseRepository[Gallery]):
     # ── Items ─────────────────────────────────────────────────────────
 
     async def list_items(
-        self, gallery_id: uuid.UUID, *, limit: int = 100, cursor: str | None = None
+        self,
+        gallery_id: uuid.UUID,
+        *,
+        limit: int = 100,
+        cursor: str | None = None,
+        viewer_id: uuid.UUID | None = None,
     ) -> tuple[list[GalleryItem], str | None]:
-        """@brief List items in a gallery ordered by position."""
+        """@brief List items in a gallery ordered by position, hiding blocked authors."""
         stmt = (
             select(GalleryItem)
             .where(GalleryItem.gallery_id == gallery_id)
             .order_by(GalleryItem.position.asc(), GalleryItem.created_at.asc())
             .limit(limit + 1)
         )
+        if viewer_id is not None:
+            stmt = self.apply_block_filter(stmt, viewer_id)
         if cursor:
             try:
                 stmt = stmt.where(GalleryItem.id > uuid.UUID(cursor))

@@ -115,6 +115,25 @@ class PromptPostResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PromptSummary(BaseModel):
+    """@brief Member-safe prompt details embedded in a prompt post."""
+
+    id: UUID
+    title: str
+    body: str
+    prompt_type: str
+    interest_category_slug: str | None
+    interest_capture_hint: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class PromptPostDetail(PromptPostResponse):
+    """@brief Prompt post plus its prompt details (member view)."""
+
+    prompt: PromptSummary
+
+
 class PromptList(BaseModel):
     """@brief Paginated prompt list."""
 
