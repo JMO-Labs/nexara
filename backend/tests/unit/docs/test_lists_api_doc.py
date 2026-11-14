@@ -41,7 +41,9 @@ def test_router_parse_finds_routes() -> None:
     assert len(_routes()) >= 20
 
 
-@pytest.mark.parametrize(("route", "doc"), _routes(), ids=lambda v: v.name if isinstance(v, Path) else v)
+@pytest.mark.parametrize(
+    ("route", "doc"), _routes(), ids=lambda v: v.name if isinstance(v, Path) else v
+)
 def test_every_route_documented(route: str, doc: Path) -> None:
     assert f"### `{route}`" in doc.read_text()
 
