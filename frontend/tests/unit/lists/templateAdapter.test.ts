@@ -15,7 +15,14 @@ const api: ApiTemplate = {
   items: [],
   fields: [
     { key: "b", label: "B", typeKey: "bool", position: 1 },
-    { id: "f1", key: "a", label: "A", typeKey: "text", position: 0, config: { max: 3 } },
+    {
+      id: "f1",
+      key: "a",
+      label: "A",
+      typeKey: "text",
+      position: 0,
+      config: { max: 3 },
+    },
   ],
 };
 
@@ -38,12 +45,21 @@ describe("templateAdapter", () => {
     const input = toInput({
       name: "X",
       fields: [
-        { id: "z", key: "k", label: "K", type_key: "text", config: {}, position: 4 },
+        {
+          id: "z",
+          key: "k",
+          label: "K",
+          type_key: "text",
+          config: {},
+          position: 4,
+        },
       ],
     });
     expect(input).toEqual({
       name: "X",
-      fields: [{ key: "k", label: "K", typeKey: "text", config: {}, position: 0 }],
+      fields: [
+        { key: "k", label: "K", typeKey: "text", config: {}, position: 0 },
+      ],
     });
   });
 });

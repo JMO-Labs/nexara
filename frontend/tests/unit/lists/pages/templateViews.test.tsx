@@ -106,7 +106,10 @@ describe("template page views", () => {
     h.useListTemplates.mockReturnValue({ isLoading: true });
     const { rerender } = render(<TemplatesView />);
     expect(screen.getByTestId("list-page-loading")).toBeInTheDocument();
-    h.useListTemplates.mockReturnValue({ isLoading: false, error: new Error() });
+    h.useListTemplates.mockReturnValue({
+      isLoading: false,
+      error: new Error(),
+    });
     rerender(<TemplatesView />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
     h.useListTemplates.mockReturnValue({

@@ -50,12 +50,20 @@ vi.mock("@/components/lists/ListCreateModal", () => ({
     p.open ? <button onClick={p.onClose}>close create</button> : null,
 }));
 vi.mock("@/components/lists/ListEditModal", () => ({
-  ListEditModal: (p: { open: boolean; onClose: () => void; list: { title: string } }) =>
-    p.open ? <button onClick={p.onClose}>close edit {p.list.title}</button> : null,
+  ListEditModal: (p: {
+    open: boolean;
+    onClose: () => void;
+    list: { title: string };
+  }) =>
+    p.open ? (
+      <button onClick={p.onClose}>close edit {p.list.title}</button>
+    ) : null,
 }));
 vi.mock("@/components/lists/ListDetailPanel", () => ({
   ListDetailPanel: (p: { list: { id: string }; communityId: string }) => (
-    <p>panel {p.list.id} {p.communityId}</p>
+    <p>
+      panel {p.list.id} {p.communityId}
+    </p>
   ),
 }));
 const q = vi.hoisted(() => ({
@@ -76,7 +84,9 @@ describe("list page views", () => {
   it("browse view shows filters, grid, breadcrumbs and links", async () => {
     render(<ListsBrowseView />);
     expect(screen.getByRole("heading", { name: "Lists" })).toBeVisible();
-    expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeVisible();
+    expect(
+      screen.getByRole("navigation", { name: "Breadcrumb" }),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: /New list/ })).toHaveAttribute(
       "href",
       "/app/lists/new",
@@ -116,7 +126,9 @@ describe("list page views", () => {
       "href",
       "/app/lists/l1/edit",
     );
-    expect(screen.getByText("Camping gear")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Camping gear" }),
+    ).toBeInTheDocument();
   });
 
   it("edit view shows the edit modal and returns to detail", async () => {

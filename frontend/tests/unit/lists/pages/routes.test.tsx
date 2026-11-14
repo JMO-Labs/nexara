@@ -2,17 +2,25 @@
  * @file tests/unit/lists/pages/routes.test.tsx
  * @brief App Router modules under app/app/lists: metadata, error, loading.
  */
+import type { ReactElement } from "react";
+import type { Metadata } from "next";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/components/lists/pages/ListsBrowseView", () => ({ ListsBrowseView: () => <p>browse</p> }));
-vi.mock("@/components/lists/pages/ListNewView", () => ({ ListNewView: () => <p>new</p> }));
+vi.mock("@/components/lists/pages/ListsBrowseView", () => ({
+  ListsBrowseView: () => <p>browse</p>,
+}));
+vi.mock("@/components/lists/pages/ListNewView", () => ({
+  ListNewView: () => <p>new</p>,
+}));
 vi.mock("@/components/lists/pages/ListDetailView", () => ({
   ListDetailView: ({ id }: { id: string }) => <p>detail {id}</p>,
   ListEditView: ({ id }: { id: string }) => <p>edit {id}</p>,
 }));
-vi.mock("@/components/lists/pages/TemplatesView", () => ({ TemplatesView: () => <p>templates</p> }));
+vi.mock("@/components/lists/pages/TemplatesView", () => ({
+  TemplatesView: () => <p>templates</p>,
+}));
 vi.mock("@/components/lists/pages/TemplateDesignerView", () => ({
   TemplateNewView: () => <p>tpl new</p>,
   TemplateEditView: ({ id }: { id: string }) => <p>tpl edit {id}</p>,
@@ -30,14 +38,29 @@ import Loading from "@/app/app/lists/loading";
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
-const routes = [
+interface RouteCase {
+  mod: {
+    generateMetadata: () => Promise<Metadata>;
+    default: (args: never) => unknown;
+  };
+  args: unknown;
+  text: string;
+  title: string;
+}
+
+const routes: RouteCase[] = [
   { mod: browse, args: {}, text: "browse", title: "Lists" },
   { mod: create, args: {}, text: "new", title: "New list" },
   { mod: detail, args: params("l1"), text: "detail l1", title: "List" },
   { mod: edit, args: params("l1"), text: "edit l1", title: "Edit list" },
   { mod: gallery, args: {}, text: "templates", title: "List templates" },
   { mod: tplNew, args: {}, text: "tpl new", title: "New template" },
-  { mod: tplEdit, args: params("t1"), text: "tpl edit t1", title: "Edit template" },
+  {
+    mod: tplEdit,
+    args: params("t1"),
+    text: "tpl edit t1",
+    title: "Edit template",
+  },
 ];
 
 describe("lists routes", () => {
@@ -47,7 +70,7 @@ describe("lists routes", () => {
     expect(md.description).toBeTruthy();
     expect(md.openGraph).toMatchObject({ title: r.title });
     const el = await r.mod.default(r.args as never);
-    render(el);
+    render(el as ReactElement);
     expect(screen.getByText(r.text)).toBeInTheDocument();
   });
 

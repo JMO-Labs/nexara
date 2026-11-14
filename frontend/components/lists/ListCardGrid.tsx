@@ -15,7 +15,21 @@ export interface ListCardGridProps {
   onOpen?: (list: List) => void;
   /** Resolve an owner id to a display name. */
   ownerName?: (ownerId: string) => string | undefined;
+  /** Only show lists with this visibility; all when omitted. */
+  visibility?: string;
+  /** Sort order; default most recently updated first. */
+  sortBy?: ListSort;
 }
+
+export type ListSort = "updated" | "created" | "title";
+
+const byDesc = (k: "updatedAt" | "createdAt") => (a: List, b: List) =>
+  b[k].localeCompare(a[k]);
+const SORTERS: Record<ListSort, (a: List, b: List) => number> = {
+  updated: byDesc("updatedAt"),
+  created: byDesc("createdAt"),
+  title: (a, b) => a.title.localeCompare(b.title),
+};
 
 const GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
@@ -28,6 +42,8 @@ export function ListCardGrid({
   communityId,
   onOpen,
   ownerName,
+  visibility,
+  sortBy = "updated",
 }: ListCardGridProps) {
   const { data, isLoading } = useLists(communityId);
   if (isLoading) {
@@ -39,7 +55,9 @@ export function ListCardGrid({
       </div>
     );
   }
-  const lists = data?.lists ?? [];
+  const lists = (data?.lists ?? [])
+    .filter((l) => !visibility || l.visibility === visibility)
+    .sort(SORTERS[sortBy]);
   if (lists.length === 0) {
     return <EmptyState icon={ListChecks} title="No lists yet" compact />;
   }
