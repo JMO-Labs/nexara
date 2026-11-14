@@ -131,6 +131,16 @@ GitLab CI/CD is primary and is mirrored on GitHub.
 | pages    | MkDocs + Doxygen + reports             |
 | release  | Release on version tags                |
 
+### Lint and type checks in `scripts/wq-ci-test.sh`
+
+Run before the tests; every check runs even if another fails, and any failure
+makes the script exit non-zero:
+
+- Backend: `ruff check .`, `ruff format --check .`, `mypy app/`.
+- Frontend: `tsc --noEmit`, `eslint . --max-warnings=-1` (errors only), `prettier --check .`.
+
+Formatting failures are auto-fixed by the fix command in `wq-ci.yml`.
+
 ### Security checks in `scripts/wq-ci-test.sh`
 
 The GitHub test script also runs, and fails on any finding:
