@@ -107,14 +107,18 @@ async def test_get_list_not_found_envelope(client, mocks) -> None:
     mocks["list"].get_by_id.side_effect = NotFoundError("List not found")
     r = await client.get(f"/api/v1/lists/{LID}")
     assert r.status_code == 404
-    assert set(r.json()["error"]) >= {"code", "message"}
+    err = r.json()["error"]
+    assert err["code"] == "NOT_FOUND"
+    assert err["message"] == "List not found"
 
 
 async def test_update_list_forbidden_403(client, mocks) -> None:
     mocks["list"].update.side_effect = AuthorizationError("no")
     r = await client.put(f"/api/v1/lists/{LID}", json={"title": "x"})
     assert r.status_code == 403
-    assert "code" in r.json()["error"]
+    err = r.json()["error"]
+    assert err["code"] == "AUTHORIZATION_ERROR"
+    assert err["message"] == "no"
 
 
 async def test_update_list_passes_admin_flag(client, mocks, user) -> None:
@@ -200,3 +204,51 @@ async def test_template_crud_and_clone(client, mocks) -> None:
     assert (await client.delete(f"/api/v1/list_templates/{tid}")).status_code == 204
     r = await client.post(f"/api/v1/list_templates/{tid}/clone", json={})
     assert r.status_code == 201
+
+
+async def test_members_get_lists_members(client, mocks, user) -> None:
+    mid = uuid.uuid4()
+    member = MagicMock(list_id=LID, user_id=mid, role="viewer", share_personal=False, added_at=NOW)
+    mocks["list"].list_members.return_value = [member]
+    r = await client.get(f"/api/v1/lists/{LID}/members")
+    assert r.status_code == 200
+    assert r.json()[0]["user_id"] == str(mid)
+    mocks["list"].list_members.assert_awaited_once_with(LID, user.id)
+
+
+async def test_members_get_hidden_list_404(client, mocks) -> None:
+    mocks["list"].list_members.side_effect = NotFoundError("List not found")
+    r = await client.get(f"/api/v1/lists/{LID}/members")
+    assert r.status_code == 404
+
+
+async def test_signups_hidden_list_404(client, mocks) -> None:
+    mocks["list"].get_by_id.side_effect = NotFoundError("List not found")
+    r = await client.get(f"/api/v1/lists/{LID}/items/{IID}/signups")
+    assert r.status_code == 404
+    r = await client.post(f"/api/v1/lists/{LID}/items/{IID}/signups", json={"quantity": 1})
+    assert r.status_code == 404
+    r = await client.delete(f"/api/v1/lists/{LID}/items/{IID}/signups")
+    assert r.status_code == 404
+    mocks["signup"].get_signups_for_item.assert_not_awaited()
+    mocks["signup"].claim_signup.assert_not_awaited()
+    mocks["signup"].release_signup.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("method", "suffix", "body", "svc", "fn"),
+    [
+        ("put", "", {"values": {}}, "item", "update"),
+        ("delete", "", None, "item", "delete"),
+        ("post", "/complete", None, "comp", "complete_item"),
+        ("post", "/uncomplete", None, "comp", "uncomplete_item"),
+        ("get", "/signups", None, "signup", "get_signups_for_item"),
+    ],
+)
+async def test_item_routes_reject_list_mismatch(
+    client, mocks, method, suffix, body, svc, fn
+) -> None:
+    mocks["item"].ensure_in_list.side_effect = NotFoundError("Item not found")
+    r = await client.request(method, f"/api/v1/lists/{LID}/items/{IID}{suffix}", json=body)
+    assert r.status_code == 404
+    getattr(mocks[svc], fn).assert_not_awaited()

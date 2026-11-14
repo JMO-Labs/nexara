@@ -53,6 +53,20 @@ def _page(next_cursor: str | None) -> Pagination:
     return Pagination(cursor=next_cursor, has_more=next_cursor is not None)
 
 
+async def _guard_item(
+    list_id: uuid.UUID,
+    item_id: uuid.UUID,
+    user: User,
+    community_id: uuid.UUID,
+    items: ListItemService,
+    lists: ListService | None = None,
+) -> None:
+    """@brief 404 unless the item is in ``list_id`` (and the list is visible when ``lists``)."""
+    if lists is not None:
+        await lists.get_by_id(list_id, user.id)
+    await items.ensure_in_list(community_id, list_id, item_id)
+
+
 # ── Lists ─────────────────────────────────────────────────────────
 
 
@@ -153,6 +167,7 @@ async def update_item(
     service: ListItemService = Depends(get_list_item_service),
 ) -> ListItemOut:
     """@brief Update an item's values (owner only)."""
+    await service.ensure_in_list(community_id, list_id, item_id)
     item = await service.update(community_id, item_id, user.id, body.values)
     return ListItemOut.model_validate(item)
 
@@ -166,6 +181,7 @@ async def delete_item(
     service: ListItemService = Depends(get_list_item_service),
 ) -> Response:
     """@brief Soft-delete an item (owner only)."""
+    await service.ensure_in_list(community_id, list_id, item_id)
     await service.delete(community_id, item_id, user.id)
     return Response(status_code=204)
 
@@ -177,8 +193,11 @@ async def complete_item(
     field_key: str | None = None,
     user: User = Depends(get_current_user),
     service: ListCompletionService = Depends(get_list_completion_service),
+    community_id: uuid.UUID = Depends(get_community_id),
+    items: ListItemService = Depends(get_list_item_service),
 ) -> ListItemOut:
     """@brief Mark an item complete."""
+    await _guard_item(list_id, item_id, user, community_id, items)
     return ListItemOut.model_validate(await service.complete_item(item_id, user.id, field_key))
 
 
@@ -189,12 +208,26 @@ async def uncomplete_item(
     field_key: str | None = None,
     user: User = Depends(get_current_user),
     service: ListCompletionService = Depends(get_list_completion_service),
+    community_id: uuid.UUID = Depends(get_community_id),
+    items: ListItemService = Depends(get_list_item_service),
 ) -> ListItemOut:
     """@brief Reverse a completion."""
+    await _guard_item(list_id, item_id, user, community_id, items)
     return ListItemOut.model_validate(await service.uncomplete_item(item_id, user.id, field_key))
 
 
 # ── Members ───────────────────────────────────────────────────────
+
+
+@router.get("/{list_id}/members", response_model=list[ListMemberOut])
+async def list_members(
+    list_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: ListService = Depends(get_list_service),
+) -> list[ListMemberOut]:
+    """@brief Members of a visible list (404 when missing or hidden)."""
+    rows = await service.list_members(list_id, user.id)
+    return [ListMemberOut.model_validate(m) for m in rows]
 
 
 @router.post("/{list_id}/members", response_model=ListMemberOut, status_code=201)
@@ -230,8 +263,12 @@ async def list_signups(
     item_id: uuid.UUID,
     user: User = Depends(get_current_user),
     service: ListSignupService = Depends(get_list_signup_service),
+    community_id: uuid.UUID = Depends(get_community_id),
+    items: ListItemService = Depends(get_list_item_service),
+    lists: ListService = Depends(get_list_service),
 ) -> list[SignupOut]:
     """@brief Claims on an item."""
+    await _guard_item(list_id, item_id, user, community_id, items, lists)
     return [SignupOut.model_validate(c) for c in await service.get_signups_for_item(item_id)]
 
 
@@ -243,8 +280,12 @@ async def claim_signup(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: ListSignupService = Depends(get_list_signup_service),
+    community_id: uuid.UUID = Depends(get_community_id),
+    items: ListItemService = Depends(get_list_item_service),
+    lists: ListService = Depends(get_list_service),
 ) -> SignupOut:
     """@brief Claim slots on an item."""
+    await _guard_item(list_id, item_id, user, community_id, items, lists)
     claim = await service.claim_signup(item_id, user.id, body.quantity, db, body.note)
     return SignupOut.model_validate(claim)
 
@@ -256,7 +297,11 @@ async def release_signup(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: ListSignupService = Depends(get_list_signup_service),
+    community_id: uuid.UUID = Depends(get_community_id),
+    items: ListItemService = Depends(get_list_item_service),
+    lists: ListService = Depends(get_list_service),
 ) -> Response:
     """@brief Release the caller's claim on an item."""
+    await _guard_item(list_id, item_id, user, community_id, items, lists)
     await service.release_signup(item_id, user.id, db)
     return Response(status_code=204)
