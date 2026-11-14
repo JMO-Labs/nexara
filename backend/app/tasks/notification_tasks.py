@@ -448,7 +448,7 @@ def webhook_deliver(self: Task, webhook_id: str, notification_id: str) -> dict[s
     return asyncio.run(_webhook_deliver_async(webhook_id, notification_id, final))
 
 
-@celery_app.task(  # type: ignore[untyped-decorator]
+@celery_app.task(  # type: ignore[untyped-decorator]  # celery lacks typing
     bind=True,
     name="app.tasks.notification_tasks.apprise_deliver",
     max_retries=5,
