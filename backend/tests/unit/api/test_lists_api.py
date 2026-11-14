@@ -252,3 +252,11 @@ async def test_item_routes_reject_list_mismatch(
     r = await client.request(method, f"/api/v1/lists/{LID}/items/{IID}{suffix}", json=body)
     assert r.status_code == 404
     getattr(mocks[svc], fn).assert_not_awaited()
+
+
+async def test_get_signups_returns_claims(client, mocks) -> None:
+    mocks["signup"].get_signups_for_item.return_value = []
+    r = await client.get(f"/api/v1/lists/{LID}/items/{IID}/signups")
+    assert r.status_code == 200
+    assert r.json() == []
+    mocks["signup"].get_signups_for_item.assert_awaited_once_with(IID)
