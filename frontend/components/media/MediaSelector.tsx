@@ -75,7 +75,7 @@ function Gallery({ onPick }: { onPick: (m: MediaItem) => void }) {
               onClick={() => onPick(m)}
               className="aspect-square min-h-11 w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-accent"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
               <img
                 src={mediaThumbUrl(m.id)}
                 alt=""
@@ -143,7 +143,7 @@ function UrlTab({ onSubmit }: { onSubmit: (url: string) => void }) {
           {broken ? (
             <ImageIcon aria-label="Preview unavailable" />
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
             <img
               src={value.trim()}
               alt="Preview"

@@ -131,7 +131,7 @@ export function Lightbox({
         >
           <ChevronLeft className="size-7 text-white" aria-hidden="true" />
         </IconButton>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
         <img
           src={src}
           alt={label}

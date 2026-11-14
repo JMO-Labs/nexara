@@ -7,7 +7,7 @@
  *        if an existing subscription is present we POST it again so the
  *        backend can refresh user-agent / created_at.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
 import {
@@ -47,15 +47,19 @@ function getPermission(): PushPermission {
   return Notification.permission as PushPermission;
 }
 
+/** @brief No-op subscribe: permission changes are tracked via local state. */
+const noopSubscribe = () => () => {};
+
 export function usePushNotifications() {
   const qc = useQueryClient();
-  const [permission, setPermission] = useState<PushPermission>("default");
-
-  useEffect(() => {
-    // One-shot browser-capability sync; SSR can't read Notification.permission.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPermission(getPermission());
-  }, []);
+  // Browser permission read as an external store; SSR snapshot is "default".
+  const browserPermission = useSyncExternalStore(
+    noopSubscribe,
+    getPermission,
+    () => "default" as PushPermission,
+  );
+  const [requested, setPermission] = useState<PushPermission | null>(null);
+  const permission = requested ?? browserPermission;
 
   const supported = permission !== "unsupported";
 

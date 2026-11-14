@@ -44,7 +44,7 @@ export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
           } ${visible.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}
         >
           {isImage(m) ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
             <img
               src={m.thumbnail_url ?? m.url}
               alt=""
