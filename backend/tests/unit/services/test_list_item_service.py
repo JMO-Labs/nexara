@@ -247,3 +247,35 @@ async def test_update_and_delete_non_owner_denied(svc, lst):
     items.update.assert_not_awaited()
     items.soft_delete.assert_not_awaited()
     lists.increment_counters.assert_not_awaited()
+
+
+async def test_create_notifies_audience_except_adder(lst):
+    from app.services.notification_service import NotificationService
+
+    items = AsyncMock(spec=ListItemRepository)
+    lists = AsyncMock(spec=ListRepository)
+    lists.get_by_id.return_value = lst
+    member = uuid.uuid4()
+    lists.audience_ids.return_value = {member, lst.owner_id}
+    items.create.side_effect = lambda e: setattr(e, "id", uuid.uuid4()) or e
+    reg = MagicMock(spec=ListFieldRegistry)
+    reg.validate_value.side_effect = lambda k, v, c: v
+    reg.project_columns.return_value = {}
+    notif = AsyncMock(spec=NotificationService)
+    svc = ListItemService(items, lists, reg, notification_service=notif)
+    item = await svc.create(CID, lst.id, lst.owner_id, {"due": "Buy milk"})
+    notif.notify.assert_awaited_once()
+    args, kwargs = notif.notify.await_args
+    assert args[0] == member
+    assert args[1] == "list_item"
+    assert {"list_id", "item_id", "item_title", "adder_id"} <= set(args[2])
+    assert args[2]["item_id"] == str(item.id)
+    assert args[2]["item_title"] == "Buy milk"
+    assert args[2]["adder_id"] == str(lst.owner_id)
+    assert kwargs["actor_id"] == lst.owner_id
+
+
+async def test_create_without_notifier_does_not_fail(svc, lst):
+    s, _, lists, _ = svc
+    await s.create(CID, lst.id, lst.owner_id, {})
+    lists.audience_ids.assert_not_called()
