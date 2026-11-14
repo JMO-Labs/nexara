@@ -251,6 +251,10 @@ def _register_routers(app: FastAPI) -> None:
     """
     app.include_router(health_router, tags=["health"])
     app.include_router(api_v1_router)
+    if get_settings().APP_ENV == "test":
+        from app.api.v1._test import router as test_router
+
+        app.include_router(test_router, prefix="/api/v1")
     app.include_router(ws_api_router)
     app.include_router(metrics_router)
 

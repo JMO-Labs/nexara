@@ -109,7 +109,7 @@ export function SideNav() {
           className="grid size-10 shrink-0 place-items-center rounded-2xl bg-sun font-black text-surface-strong"
         >
           {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
             <img
               src={logoUrl}
               alt=""

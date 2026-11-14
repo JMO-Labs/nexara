@@ -47,10 +47,12 @@ export function AddModal({
       }
     : EMPTY;
   const [form, setForm] = React.useState(start);
-  React.useEffect(() => {
+  // Reset on (re)open: adjust state during render instead of in an effect.
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) setForm(start);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   const handleSubmit = () => {
     if (!form.title || !form.sourceUrl) return;

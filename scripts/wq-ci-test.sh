@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ##
 # @file scripts/wq-ci-test.sh
-# @brief wq-ci test entrypoint: backend unit + integration + pip-audit + bandit + npm audit + frontend vitest + mobile flutter test.
+# @brief wq-ci test entrypoint: backend unit + integration + pip-audit + bandit + npm audit + frontend vitest/tsc/eslint + mobile flutter test.
 #        Writes coverage.xml (backend Cobertura) and junit.xml (merged) to repo root.
 ##
 set -uo pipefail

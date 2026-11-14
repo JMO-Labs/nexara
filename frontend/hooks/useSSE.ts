@@ -69,7 +69,7 @@ export function useSSE(path: string, opts: SSEOptions = {}): void {
         }
       };
       es.onmessage = (ev) => dispatch(ev, "message");
-      for (const t of eventTypes ?? []) {
+      for (const t of eventTypesKey ? eventTypesKey.split(",") : []) {
         es.addEventListener(t, (ev) => dispatch(ev as MessageEvent, t));
       }
 
@@ -94,7 +94,6 @@ export function useSSE(path: string, opts: SSEOptions = {}): void {
       if (retryTimer) clearTimeout(retryTimer);
       es?.close();
     };
-    // eventTypes captured via eventTypesKey; ref pattern keeps callbacks fresh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eventTypes tracked via eventTypesKey; refs keep callbacks fresh.
   }, [path, enabled, eventTypesKey]);
 }

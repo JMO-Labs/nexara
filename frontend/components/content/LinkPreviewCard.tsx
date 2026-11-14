@@ -50,7 +50,7 @@ export function LinkPreviewCard({ preview, onClick }: LinkPreviewCardProps) {
     >
       <div className="aspect-video w-full bg-black/5">
         {showImg ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
           <img
             src={`${API_BASE}/api/v1/link-previews/${encodeURIComponent(preview.id)}/image`}
             alt={preview.og_title || "Link preview"}
