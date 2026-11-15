@@ -1,0 +1,41 @@
+name: security-scan
+on:
+  pull_request:
+  push: {branches: [dev, main]}
+  workflow_run: {workflows: [build], types: [completed]}
+permissions: {contents: read, security-events: write, packages: read}
+jobs:
+  gitleaks:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: gitleaks (CLI; the action needs a paid org license)
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" detect --source . --redact --verbose
+  trivy:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - id: tag
+        run: echo "sha=sha-$(echo '${{ github.event.workflow_run.head_sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/jmo-labs/nexara:${{ steps.tag.outputs.sha }}
+          severity: CRITICAL,HIGH
+          format: sarif
+          output: trivy.sarif
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-nexara
+          sha: ${{ github.event.workflow_run.head_sha }}
+          ref: refs/heads/${{ github.event.workflow_run.head_branch }}
