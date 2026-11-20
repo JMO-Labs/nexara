@@ -32,7 +32,7 @@ const FILTERS: { value: FilterMode; label: string }[] = [
 
 /**
  * @brief Groups index page body.
- * @param props embedded hides the PageHeader and shows "New group" above the Toolbar
+ * @param props embedded hides the PageHeader and puts "New group" at the end of the Toolbar
  * @return page content
  */
 export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
@@ -74,11 +74,6 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
           }
         />
       )}
-      {embedded && (
-        <div className="mb-4 flex justify-end">
-          <Button onClick={() => setCreateOpen(true)}>New group</Button>
-        </div>
-      )}
       <Toolbar>
         <div className="min-w-[160px] flex-1">
           <SearchField
@@ -105,6 +100,11 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
         >
           Mine
         </button>
+        {embedded && (
+          <Button className="ml-auto" onClick={() => setCreateOpen(true)}>
+            New group
+          </Button>
+        )}
       </Toolbar>
       <GroupMosaic
         data={filtered}

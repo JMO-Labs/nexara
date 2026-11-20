@@ -87,6 +87,13 @@ describe("EventPage", () => {
     expect(container.firstElementChild!.className).not.toContain("max-w-5xl");
   });
 
+  it("caps the details column so it does not stretch across the frame", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    const details = screen.getByTestId("body").closest(".max-w-3xl");
+    expect(details).not.toBeNull();
+  });
+
   it("puts the details before the countdown on phones", () => {
     useEventDetail.mockReturnValue({ data: ev(future) });
     render(<EventPage id="e1" />);

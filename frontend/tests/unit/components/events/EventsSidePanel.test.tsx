@@ -94,4 +94,13 @@ describe("EventsSidePanel", () => {
     setup({ upcoming: [] });
     expect(screen.getByText("Nothing coming up")).toBeInTheDocument();
   });
+
+  it("Up next scrolls with a fade mask so no row is cut flat", () => {
+    setup();
+    const list = screen
+      .getByRole("button", { name: /Concert/ })
+      .closest(".max-h-72")!;
+    expect(list.className).toContain("mask-image");
+    expect(list.className).toContain("pb-");
+  });
 });

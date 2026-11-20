@@ -4,6 +4,7 @@
  * @brief Profile header panel: avatar, names, bio, shared groups, actions.
  */
 import * as React from "react";
+import { format, parseISO } from "date-fns";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -65,7 +66,7 @@ export function MemberHeader({
             src={profile.avatar_url ?? undefined}
             name={profile.display_name}
             size="lg"
-            className="size-20 text-2xl md:size-24"
+            className="size-16 text-xl md:size-20"
           />
           {connection?.online && (
             <i
@@ -76,6 +77,9 @@ export function MemberHeader({
         </span>
         <div className="min-w-0 flex-1">
           {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+          <p className="text-xs text-muted">
+            {`Joined ${format(parseISO(profile.created_at), "MMM yyyy")}`}
+          </p>
           {profile.bio && (
             <p className="mt-2 text-sm whitespace-pre-line text-ink">
               {profile.bio}

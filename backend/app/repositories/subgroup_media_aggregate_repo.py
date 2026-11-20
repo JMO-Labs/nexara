@@ -126,6 +126,7 @@ class SubgroupMediaAggregateMixin:
                     Post.community_id == community_id,
                     _subgroup_pred(Post.subgroup_id),
                     Post.deleted_at.is_(None),
+                    or_(Post.visibility != "private", Post.author_id == viewer_id),
                 )
             )
             # Apply block filter by excluding blocked users' posts
@@ -158,6 +159,7 @@ class SubgroupMediaAggregateMixin:
                     Gallery.community_id == community_id,
                     _subgroup_pred(Gallery.subgroup_id),
                     Gallery.event_id.is_(None),  # event-linked galleries handled by event_q
+                    or_(Gallery.visibility != "private", Gallery.owner_id == viewer_id),
                 )
             )
             queries.append(gallery_q)
@@ -189,6 +191,7 @@ class SubgroupMediaAggregateMixin:
                     Event.community_id == community_id,
                     _subgroup_pred(Event.subgroup_id),
                     Gallery.event_id.isnot(None),
+                    or_(Event.visibility != "private", Event.author_id == viewer_id),
                 )
             )
             queries.append(event_q)
@@ -222,8 +225,28 @@ class SubgroupMediaAggregateMixin:
         if not queries:
             return [], None
 
+        # Page each source BEFORE merging: every branch applies the keyset and
+        # returns at most limit+1 rows, so the merge sorts <= 4*(limit+1) rows
+        # instead of every visible media row.
+        def _paged(q: Any) -> Any:
+            inner = q.subquery()
+            stmt = select(inner)
+            if cursor_ts and cursor_id:
+                stmt = stmt.where(
+                    or_(
+                        inner.c.created_at < cursor_ts,
+                        and_(inner.c.created_at == cursor_ts, inner.c.id < cursor_id),
+                    )
+                )
+            return stmt.order_by(inner.c.created_at.desc(), inner.c.id.desc()).limit(limit + 1)
+
+        branches = [_paged(q) for q in queries]
         # Union all (function form supports >2 queries; method form only chains pairs)
-        union_stmt = queries[0] if len(queries) == 1 else union_all(*queries)
+        union_stmt = (
+            branches[0]
+            if len(branches) == 1
+            else union_all(*[b.subquery().select() for b in branches])
+        )
         subq = union_stmt.subquery()
 
         # Apply keyset pagination

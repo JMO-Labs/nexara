@@ -34,8 +34,8 @@ export function Drawer({
         aria-describedby={undefined}
         className={cn(
           side === "right"
-            ? "glass inset-y-3 right-3 h-auto max-h-[calc(100dvh-1.5rem)] rounded-[32px] border-0 bg-[var(--nx-glass)] text-ink"
-            : "bg-[var(--nx-glass-solid)] text-ink border-[var(--nx-glass-edge)]",
+            ? "glass z-[1100] inset-y-3 right-3 h-auto max-h-[calc(100dvh-1.5rem)] rounded-[32px] border-0 bg-[var(--nx-glass)] text-ink"
+            : "z-[1100] bg-[var(--nx-glass-solid)] text-ink border-[var(--nx-glass-edge)]",
           side === "bottom" &&
             "max-h-[85dvh] overflow-y-auto rounded-t-[28px] pb-[env(safe-area-inset-bottom)]",
         )}

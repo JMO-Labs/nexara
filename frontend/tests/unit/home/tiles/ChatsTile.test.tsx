@@ -206,6 +206,12 @@ describe("ChatsTile", () => {
     expect(screen.getAllByText("Ruth: Green beans?").length).toBeGreaterThan(0);
   });
 
+  it("footer offers Start a chat as an ink pill when threads exist", () => {
+    renderWithProviders(<ChatsTile open onToggle={() => {}} />);
+    const start = screen.getByRole("link", { name: "Start a chat" });
+    expect(start).toHaveClass("bg-surface-strong", "text-bg", "rounded-full");
+  });
+
   it("links to all chats", () => {
     renderWithProviders(<ChatsTile open onToggle={() => {}} />);
     for (const l of screen.getAllByRole("link", { name: "See all chats" }))

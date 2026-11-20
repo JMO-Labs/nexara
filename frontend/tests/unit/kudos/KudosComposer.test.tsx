@@ -97,10 +97,12 @@ describe("KudosComposer", () => {
 });
 
 describe("KudosComposer styling", () => {
-  it("uses glass-item fields and a glass dropdown, no hard borders", async () => {
+  it("uses ink-tint input fields and a glass dropdown, no hard borders", async () => {
     wrap(<KudosComposer open onClose={vi.fn()} />);
     const input = screen.getByRole("combobox");
-    expect(input.className).toContain("glass-item");
+    expect(input.className).toContain(
+      "bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)]",
+    );
     expect(input.className).not.toContain("border-current/30");
     await userEvent.type(input, "an");
     const list = await screen.findByRole("listbox");

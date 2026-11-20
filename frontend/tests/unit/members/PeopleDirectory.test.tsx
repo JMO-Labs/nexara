@@ -67,6 +67,20 @@ describe("PeopleDirectory", () => {
     expect(screen.queryByText("u1")).toBeNull();
   });
 
+  it("phone layout: single-column list and full-width search (no overflow)", () => {
+    state = ready([person({ online: true })]);
+    renderWithProviders(<PeopleDirectory />);
+    const cardList = screen
+      .getByText("Tomás Reyes")
+      .closest("li")!.parentElement!;
+    expect(cardList).toHaveClass("grid-cols-1");
+    expect(cardList.querySelector("li")).toHaveClass("min-w-0");
+    const search = screen
+      .getByRole("searchbox")
+      .closest(".glass-item")!.parentElement!;
+    expect(search).toHaveClass("w-full");
+  });
+
   it("embedded hides the page header but keeps the toolbar", () => {
     renderWithProviders(<PeopleDirectory embedded />);
     expect(

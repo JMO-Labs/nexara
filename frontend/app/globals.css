@@ -11,6 +11,8 @@
   --nx-surface: #f5f6f9;
   --nx-surface-strong: #10141a;
   --nx-ink: #10141a;
+  --nx-scrim: rgba(16, 20, 26, 0.55);
+  --nx-on-scrim: #ffffff;
   --nx-accent: #3b5e9e;
   --nx-sun: #e9c27a;
   --nx-leaf: #45a29c;
@@ -55,6 +57,8 @@
   --nx-surface: #1a202a;
   --nx-surface-strong: #e9ecf2;
   --nx-ink: #e9ecf2;
+  --nx-scrim: rgba(16, 20, 26, 0.55);
+  --nx-on-scrim: #ffffff;
   --nx-accent: #a9c1ee;
   --nx-sun: #e4bc72;
   --nx-leaf: #5bb8b1;

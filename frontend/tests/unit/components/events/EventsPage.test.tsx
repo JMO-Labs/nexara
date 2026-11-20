@@ -7,9 +7,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EventsPage } from "@/components/events/events-page/EventsPage";
 
+const st = vi.hoisted(() => ({ view: "month" as string }));
 vi.mock("@/components/events/events-page/useEventsPageState", () => ({
   useEventsPageState: () => ({
-    view: "month",
+    view: st.view,
     setView: vi.fn(),
     month: new Date(2026, 4, 1),
     setMonth: vi.fn(),
@@ -75,5 +76,14 @@ describe("EventsPage", () => {
     render(<EventsPage />);
     const pane = screen.getByText("view-pane").closest(".glass");
     expect(pane).not.toBeNull();
+  });
+
+  it("list view: panel hugs content (no forced min-height, items aligned to start)", () => {
+    st.view = "list";
+    render(<EventsPage />);
+    const pane = screen.getByText("view-pane").closest(".glass")!;
+    expect(pane.className).not.toContain("min-h-[640px]");
+    expect(pane.parentElement).toHaveClass("lg:items-start");
+    st.view = "month";
   });
 });

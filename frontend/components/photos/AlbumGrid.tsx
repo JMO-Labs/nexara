@@ -110,7 +110,7 @@ export function AlbumGrid({
                 if (mobile && !open) setActive(g.id);
                 else onSelect(g.id);
               }}
-              className={cn(CARD, open ? "h-72" : "h-28")}
+              className={cn(CARD, open ? "h-72" : "h-36")}
             >
               {g.cover_media_id ? (
                 <span className="absolute inset-0 block">
@@ -123,14 +123,14 @@ export function AlbumGrid({
               ) : (
                 <span
                   data-testid="album-placeholder"
-                  className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)]"
+                  className="absolute inset-0 flex items-start justify-start bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)] p-3"
                 >
                   <span className="glass-item flex size-14 items-center justify-center rounded-full">
                     <Images className="size-6" aria-hidden="true" />
                   </span>
                 </span>
               )}
-              <span className="glass-item absolute inset-x-3 bottom-3 flex flex-col gap-0.5 rounded-[20px] px-3 py-2">
+              <span className="absolute inset-x-3 bottom-3 flex flex-col gap-0.5 rounded-[20px] bg-[var(--nx-scrim)] px-3 py-2 text-[var(--nx-on-scrim)] backdrop-blur-md">
                 <span
                   className={cn(
                     "font-semibold",
@@ -139,7 +139,7 @@ export function AlbumGrid({
                 >
                   {g.title}
                 </span>
-                <span className="text-xs text-muted">{count}</span>
+                <span className="text-xs opacity-80">{count}</span>
                 {open && (
                   <span className="mt-1 inline-flex w-fit rounded-full bg-surface-strong px-3 py-1 text-sm font-semibold text-bg">
                     Open album

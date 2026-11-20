@@ -76,14 +76,13 @@ export function EventsPage() {
         onToday={goToday}
       />
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-[18px]">
-        <Panel
-          as="div"
-          className={cn(
-            "min-w-0 p-3 md:p-5",
-            s.view === "list" && "lg:min-h-[640px]",
-          )}
-        >
+      <div
+        className={cn(
+          "grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-[18px]",
+          s.view === "list" ? "lg:items-start" : "items-stretch",
+        )}
+      >
+        <Panel as="div" className={cn("min-w-0 p-3 md:p-5")}>
           <EventsViewPane
             view={s.view}
             events={s.filtered}

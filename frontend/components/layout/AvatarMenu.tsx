@@ -74,7 +74,7 @@ export function AvatarMenu() {
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => setKeyboardShortcutsOpen(true)}>
-          Keyboard shortcuts
+          Help & shortcuts
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onLogout}>

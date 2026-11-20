@@ -89,6 +89,29 @@ describe("RetentionPolicyRow", () => {
     });
   });
 
+  it("every row shares one fixed column grid with a delete-files slot", () => {
+    render(
+      <ul>
+        <RetentionPolicyRow policy={pol()} onSave={vi.fn()} saving={false} />
+        <RetentionPolicyRow
+          policy={pol({ policy_key: "post_age" })}
+          onSave={vi.fn()}
+          saving={false}
+        />
+      </ul>,
+    );
+    const rows = screen.getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    for (const r of rows) {
+      expect(r).toHaveClass(
+        "md:grid",
+        "md:grid-cols-[minmax(0,1fr)_7rem_8.5rem_9.5rem_5.5rem]",
+      );
+      expect(r.querySelector('[data-slot="delete-files"]')).not.toBeNull();
+      expect(r.querySelector('[data-slot="save"]')).not.toBeNull();
+    }
+  });
+
   it("hides Save while the row is clean", () => {
     render(
       <RetentionPolicyRow policy={pol()} onSave={vi.fn()} saving={false} />,

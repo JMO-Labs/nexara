@@ -115,4 +115,31 @@ describe("AlbumGrid", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
   });
+
+  it("caption uses a guaranteed-contrast scrim token, not glass", () => {
+    render(<AlbumGrid items={[g("1")]} onSelect={() => {}} />);
+    const cap = screen.getByText("Album 1").parentElement!;
+    expect(cap).toHaveClass("bg-[var(--nx-scrim)]");
+    expect(cap).toHaveClass("text-[var(--nx-on-scrim)]");
+    expect(cap).not.toHaveClass("glass-item");
+  });
+
+  it("phone closed cards are taller (h-36)", () => {
+    mobile.value = true;
+    render(<AlbumGrid items={[g("1")]} onSelect={() => {}} />);
+    expect(screen.getByRole("button", { name: "Album 1" })).toHaveClass("h-36");
+  });
+
+  it("no-cover glyph sits top-left so it never overlaps the caption", () => {
+    render(
+      <AlbumGrid
+        items={[{ ...g("1"), cover_media_id: null }]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("album-placeholder")).toHaveClass(
+      "items-start",
+      "justify-start",
+    );
+  });
 });

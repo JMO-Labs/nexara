@@ -33,22 +33,13 @@ function AdminNav({ activeId }: { activeId: string }) {
         ?.setAttribute("data-tour", TOUR[it.id]);
     }
   });
-  // Phone shows one horizontal row; bring the active pill into view.
-  useLayoutEffect(() => {
-    ref.current
-      ?.querySelector<HTMLElement>('[aria-current="page"]')
-      ?.scrollIntoView?.({ inline: "center", block: "nearest" });
-  }, [activeId]);
   return (
     <div
       ref={ref}
-      className="flex flex-col gap-3 max-md:flex-row max-md:gap-2 max-md:overflow-x-auto max-md:pb-1 max-md:[mask-image:linear-gradient(to_right,black_88%,transparent)] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+      className="flex flex-col gap-3 max-md:flex-row max-md:flex-wrap max-md:gap-2"
     >
       {ADMIN_GROUPS.map((g) => (
-        <div
-          key={g.label}
-          className="flex flex-col gap-1 max-md:shrink-0 max-md:[&>nav]:flex-nowrap"
-        >
+        <div key={g.label} className="flex flex-col gap-1 max-md:shrink-0">
           <p
             aria-hidden="true"
             className="mt-1 px-3 text-[13px] font-medium text-muted max-md:hidden"

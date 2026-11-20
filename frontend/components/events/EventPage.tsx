@@ -55,7 +55,7 @@ export function EventPage({ id }: { id: string }) {
         </Panel>
       ) : (
         <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_280px]">
-          <Panel as="div" className="md:p-7">
+          <Panel as="div" className="w-full max-w-3xl md:p-7">
             <EventDetailBody
               event={event}
               className="overflow-visible p-0 md:p-0"

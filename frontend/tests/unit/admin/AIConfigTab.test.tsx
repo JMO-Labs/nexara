@@ -88,6 +88,14 @@ describe("AIConfigTab", () => {
     expect(screen.getByText(/3 users have opted out/)).toBeInTheDocument();
   });
 
+  it("renders Save in a normal footer row, not overlaying content", () => {
+    setup();
+    render(<AIConfigTab />);
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save.parentElement).not.toHaveClass("sticky");
+    expect(save.parentElement).toHaveClass("justify-end");
+  });
+
   it("saves changed settings", () => {
     setup();
     render(<AIConfigTab />);

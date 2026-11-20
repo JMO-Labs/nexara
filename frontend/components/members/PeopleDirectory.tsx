@@ -43,13 +43,15 @@ export function PeopleDirectory({ embedded = false }: { embedded?: boolean }) {
         />
       )}
       <Toolbar>
-        <SearchField
-          value={q}
-          onChange={setQ}
-          placeholder="Search people"
-          label="Search people"
-          debounceMs={250}
-        />
+        <div className="flex w-full min-w-0 md:flex-1">
+          <SearchField
+            value={q}
+            onChange={setQ}
+            placeholder="Search people"
+            label="Search people"
+            debounceMs={250}
+          />
+        </div>
         <Segmented
           label="Filter people"
           options={OPTIONS}
@@ -84,9 +86,9 @@ export function PeopleDirectory({ embedded = false }: { embedded?: boolean }) {
           />
         ) : (
           <>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {people.map((p) => (
-                <li key={p.user_id} className="flex [&>article]:w-full">
+                <li key={p.user_id} className="flex min-w-0 [&>article]:w-full">
                   <PersonCard person={p} />
                 </li>
               ))}

@@ -56,7 +56,7 @@ describe("GroupsPage", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
   });
 
-  it("embedded hides the header and keeps New group out of the toolbar", () => {
+  it("embedded hides the header and puts New group in the toolbar row", () => {
     render(<GroupsPage embedded />);
     expect(
       screen.queryByRole("heading", { level: 1, name: "Groups" }),
@@ -66,7 +66,7 @@ describe("GroupsPage", () => {
     const toolbar = screen
       .getByRole("searchbox", { name: "Search groups" })
       .closest(".flex-wrap");
-    expect(toolbar).not.toContainElement(buttons[0]);
+    expect(toolbar).toContainElement(buttons[0]);
   });
 
   it("Private filter keeps only private groups", async () => {

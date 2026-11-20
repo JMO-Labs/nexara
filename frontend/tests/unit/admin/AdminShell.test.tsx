@@ -64,14 +64,16 @@ describe("AdminShell", () => {
       expect(screen.getByRole("navigation", { name: g })).toBeTruthy();
   });
 
-  it("scrolls the active link into view on phone", () => {
+  it("wraps the phone nav instead of scrolling it horizontally", () => {
     nav.tab = "audit-log";
     const spy = vi.fn();
     Element.prototype.scrollIntoView = spy;
     render(<AdminShell>body</AdminShell>);
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ inline: "center", block: "nearest" }),
-    );
+    expect(spy).not.toHaveBeenCalled();
+    const wrapper = screen.getByRole("navigation", { name: "Community" })
+      .parentElement!.parentElement!;
+    expect(wrapper).toHaveClass("max-md:flex-wrap");
+    expect(wrapper.className).not.toContain("overflow-x-auto");
   });
 
   it("has one h1 and a section h2 for the active item", () => {

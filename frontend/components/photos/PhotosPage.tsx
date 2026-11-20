@@ -127,8 +127,8 @@ export function PhotosPage() {
           </>
         }
       />
-      <Toolbar>
-        <div className="order-2 w-full md:order-1 md:w-auto [&>*]:w-full md:[&>*]:w-auto">
+      <Toolbar className="max-md:rounded-none max-md:border-0 max-md:bg-transparent max-md:p-0 max-md:shadow-none">
+        <div className="order-2 min-w-0 flex-1 md:order-1 md:w-auto md:flex-none [&>*]:w-full md:[&>*]:w-auto">
           <Segmented
             label="View"
             options={VIEWS}
@@ -146,7 +146,7 @@ export function PhotosPage() {
           />
         </div>
         {view === "albums" && (
-          <div className="glass-item relative order-3 inline-flex items-center rounded-full md:ml-auto">
+          <div className="glass-item relative order-3 inline-flex shrink-0 items-center rounded-full md:ml-auto">
             <select
               aria-label="Sort albums"
               value={sort}

@@ -21,7 +21,6 @@ import { AppBackdrop } from "./AppBackdrop";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
-import { HelpButton } from "@/components/help/HelpButton";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
@@ -130,7 +129,6 @@ export function Shell({ children }: { children: ReactNode }) {
           <>
             <ModalRoot />
             <KeyboardShortcutsModal />
-            <HelpButton />
             <WelcomeModal />
             <OnboardingTour />
             <div className="hidden md:block">

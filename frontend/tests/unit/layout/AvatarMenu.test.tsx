@@ -17,6 +17,7 @@ vi.mock("@/lib/auth/session", () => ({ setAccessToken: vi.fn() }));
 
 import { useSession } from "@/stores/session";
 import { AvatarMenu } from "@/components/layout/AvatarMenu";
+import { useModals } from "@/stores/modals";
 
 function setRole(role: string) {
   useSession.setState({
@@ -55,5 +56,15 @@ describe("AvatarMenu", () => {
     await open();
     await userEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
     expect(logout).toHaveBeenCalled();
+  });
+
+  it("Help & shortcuts opens the keyboard shortcuts modal", async () => {
+    setRole("member");
+    useModals.setState({ keyboardShortcutsOpen: false });
+    await open();
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "Help & shortcuts" }),
+    );
+    expect(useModals.getState().keyboardShortcutsOpen).toBe(true);
   });
 });

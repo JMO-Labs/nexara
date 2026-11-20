@@ -38,4 +38,18 @@ describe("Select", () => {
     expect(trigger).toHaveClass("rounded-full");
     expect(trigger).not.toHaveClass("rounded-md");
   });
+
+  it("trigger matches the input pill (no square shadcn box)", () => {
+    render(
+      <Select label="Visibility">
+        <Option value="a">A</Option>
+      </Select>,
+    );
+    const trigger = screen.getByRole("combobox", { name: "Visibility" });
+    expect(trigger).toHaveClass("rounded-full");
+    expect(trigger).not.toHaveClass("rounded-md");
+    expect(trigger).not.toHaveClass("border-input");
+    expect(trigger).not.toHaveClass("shadow-xs");
+    expect(trigger).toHaveClass("data-[size=default]:h-11");
+  });
 });

@@ -32,7 +32,7 @@ export function PersonCard({ person }: { person: DirectoryPerson }) {
   };
 
   return (
-    <article className="glass flex flex-col gap-3 rounded-[28px] p-4">
+    <article className="glass flex min-w-0 flex-col gap-3 rounded-[28px] p-4">
       <div className="flex items-center gap-3">
         <span
           style={{ "--rc": ring } as React.CSSProperties}

@@ -106,6 +106,15 @@ describe("PhotosPage", () => {
     expect(screen.getByRole("combobox", { name: "Sort albums" })).toBeVisible();
   });
 
+  it("phone toolbar drops the giant wrapper pill; sort does not wrap alone", () => {
+    render(<PhotosPage />);
+    const sort = screen.getByRole("combobox", { name: "Sort albums" });
+    const sortPill = sort.parentElement!;
+    expect(sortPill).toHaveClass("shrink-0");
+    const toolbar = sortPill.parentElement!;
+    expect(toolbar).toHaveClass("max-md:rounded-none", "max-md:bg-transparent");
+  });
+
   it("?view=all shows photos and hides sort", () => {
     nav.qs = "view=all";
     render(<PhotosPage />);

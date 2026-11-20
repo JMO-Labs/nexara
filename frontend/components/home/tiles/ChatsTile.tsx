@@ -90,12 +90,22 @@ export function ChatsTile({ open, onToggle }: TileSlotProps) {
           ))}
         </ul>
       )}
-      <Link
-        href="/app/chat"
-        className="mt-2 text-center text-sm text-[var(--nx-muted)] hover:underline md:hidden"
-      >
-        See all chats
-      </Link>
+      {all.length > 0 && (
+        <div className="mt-auto flex flex-wrap items-center justify-end gap-2 pt-2">
+          <Link
+            href="/app/chat"
+            className="inline-flex min-h-11 items-center rounded-full px-3 text-sm text-[var(--nx-muted)] hover:underline"
+          >
+            See all chats
+          </Link>
+          <Link
+            href="/app/chat"
+            className="inline-flex min-h-11 items-center rounded-full bg-surface-strong px-4 text-sm font-medium text-bg"
+          >
+            Start a chat
+          </Link>
+        </div>
+      )}
     </HomeTile>
   );
 }

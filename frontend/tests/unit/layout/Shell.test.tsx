@@ -33,7 +33,6 @@ vi.mock("@/components/layout/ModalRoot", () => stub("ModalRoot"));
 vi.mock("@/components/help/KeyboardShortcutsModal", () =>
   stub("KeyboardShortcutsModal"),
 );
-vi.mock("@/components/help/HelpButton", () => stub("HelpButton"));
 vi.mock("@/components/onboarding/OnboardingTour", () => stub("OnboardingTour"));
 vi.mock("@/components/onboarding/WelcomeModal", () => stub("WelcomeModal"));
 vi.mock("@/components/ui/ConfirmDialog", () => stub("ConfirmDialog"));
@@ -137,5 +136,12 @@ describe("Shell", () => {
       "compact",
     );
     useUI.setState({ density: "comfortable" });
+  });
+
+  it("does not render a floating Help button (help lives in the avatar menu)", () => {
+    setup();
+    expect(
+      screen.queryByRole("button", { name: "Help menu" }),
+    ).not.toBeInTheDocument();
   });
 });

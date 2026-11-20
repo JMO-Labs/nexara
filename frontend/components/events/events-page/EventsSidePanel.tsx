@@ -40,7 +40,7 @@ export function EventsSidePanel(p: EventsSidePanelProps) {
         {p.upcoming.length === 0 ? (
           <p className="text-sm text-muted">Nothing coming up</p>
         ) : (
-          <div className="max-h-72 overflow-y-auto">
+          <div className="max-h-72 overflow-y-auto pb-6 [mask-image:linear-gradient(to_bottom,black_calc(100%_-_1.5rem),transparent)]">
             <EventRail
               events={p.upcoming}
               selectedDay={null}

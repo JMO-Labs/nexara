@@ -21,8 +21,8 @@ export interface RetentionPolicyRowProps {
 }
 
 /**
- * @brief One policy row: label on top (phone) or left (md+), controls beside it.
- *        Save appears only when the row is dirty.
+ * @brief One policy row: stacked on phone; on md+ a fixed-column grid so
+ *        every row aligns. Save appears only when the row is dirty.
  * @param props policy, onSave, saving
  * @return list item
  */
@@ -49,7 +49,7 @@ export function RetentionPolicyRow({
   const hint = parsed === null && !error ? "Keep forever" : null;
 
   return (
-    <li className="glass-item flex flex-col gap-3 rounded-[20px] p-3 md:flex-row md:items-center md:justify-between">
+    <li className="glass-item flex flex-col gap-3 rounded-[20px] p-3 md:grid md:grid-cols-[minmax(0,1fr)_7rem_8.5rem_9.5rem_5.5rem] md:items-center md:gap-3">
       <div className="min-w-0">
         <p className="font-medium">{label}</p>
         {meta?.dangerous && (
@@ -64,48 +64,48 @@ export function RetentionPolicyRow({
             Permanently deletes content older than the set age. Off by default.
           </p>
         )}
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-col gap-1">
-          <input
-            type="number"
-            inputMode="numeric"
-            min={meta?.min}
-            value={days}
-            placeholder={meta?.allowForever ? "Forever" : undefined}
-            aria-label={`${label} retention days`}
-            aria-invalid={error ? true : undefined}
-            onChange={(e) => setDays(e.target.value)}
-            className="glass-item h-10 w-24 rounded-full px-2 text-center text-ink"
-          />
-          {hint && <span className="text-xs text-muted">{hint}</span>}
-          {error && <span className="text-xs text-danger">{error}</span>}
-        </div>
-        <span className="flex items-center gap-2 text-sm">
-          <Switch
-            checked={enabled}
-            aria-label={`${label} enabled`}
-            onCheckedChange={setEnabled}
-          />
-          Enabled
-        </span>
-        {meta?.media && (
-          <span className="flex flex-col gap-1">
-            <span className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={delMedia}
-                aria-label={`${label} delete media files`}
-                onCheckedChange={setDelMedia}
-              />
-              Delete files
-            </span>
-            {delMedia && (
-              <span className="text-[13px] text-danger">
-                Files are removed from storage and cannot be recovered.
-              </span>
-            )}
-          </span>
+        {meta?.media && delMedia && (
+          <p className="mt-1 text-[13px] text-danger">
+            Files are removed from storage and cannot be recovered.
+          </p>
         )}
+      </div>
+      <div className="flex flex-col gap-1">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={meta?.min}
+          value={days}
+          placeholder={meta?.allowForever ? "Forever" : undefined}
+          aria-label={`${label} retention days`}
+          aria-invalid={error ? true : undefined}
+          onChange={(e) => setDays(e.target.value)}
+          className="glass-item h-10 w-full rounded-full px-2 text-center text-ink"
+        />
+        {hint && <span className="text-xs text-muted">{hint}</span>}
+        {error && <span className="text-xs text-danger">{error}</span>}
+      </div>
+      <span className="flex items-center gap-2 text-sm">
+        <Switch
+          checked={enabled}
+          aria-label={`${label} enabled`}
+          onCheckedChange={setEnabled}
+        />
+        Enabled
+      </span>
+      <div data-slot="delete-files" className="flex items-center gap-2 text-sm">
+        {meta?.media && (
+          <>
+            <Switch
+              checked={delMedia}
+              aria-label={`${label} delete media files`}
+              onCheckedChange={setDelMedia}
+            />
+            Delete files
+          </>
+        )}
+      </div>
+      <div data-slot="save">
         {dirty && (
           <Button
             type="button"

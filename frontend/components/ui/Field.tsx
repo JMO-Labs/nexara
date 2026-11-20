@@ -59,4 +59,4 @@ export function Field({
 }
 
 export const controlClass =
-  "glass-item w-full rounded-[20px] px-4 text-base text-ink placeholder:text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:ring-1 aria-invalid:ring-[var(--nx-red)] disabled:opacity-50";
+  "w-full rounded-[20px] border border-[color-mix(in_srgb,var(--nx-ink)_14%,transparent)] bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)] px-4 text-base text-ink placeholder:text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:ring-1 aria-invalid:ring-[var(--nx-red)] disabled:opacity-50";

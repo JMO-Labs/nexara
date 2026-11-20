@@ -62,11 +62,11 @@ describe("AlbumGrid brand", () => {
     expect(pill.className).not.toContain("text-black");
   });
 
-  it("closed phone cards are 112px tall (h-28), not h-24", () => {
+  it("closed phone cards are 144px tall (h-36), not h-28", () => {
     render(<AlbumGrid items={[g("1")]} onSelect={() => {}} />);
     const card = screen.getByRole("button", { name: /Album 1/ });
-    expect(card.className).toContain("h-28");
-    expect(card.className).not.toContain("h-24");
+    expect(card.className).toContain("h-36");
+    expect(card.className).not.toContain("h-28");
   });
 
   it("albums without a cover get a soft placeholder tile", () => {

@@ -120,6 +120,13 @@ describe("template page views", () => {
     expect(screen.getByText("No templates yet")).toBeInTheDocument();
   });
 
+  it("new view caps the designer panel at 960px so actions align to it", () => {
+    h.useListTemplateCreate.mockReturnValue(mutation());
+    render(<TemplateNewView />);
+    const panel = screen.getByText("designer empty").closest(".glass");
+    expect(panel).toHaveClass("max-w-[960px]");
+  });
+
   it("new view creates a template and returns to the gallery", async () => {
     const create = mutation();
     h.useListTemplateCreate.mockReturnValue(create);

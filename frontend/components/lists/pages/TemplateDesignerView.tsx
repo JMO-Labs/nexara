@@ -35,7 +35,7 @@ export function TemplateNewView() {
         crumbs={[LISTS_CRUMB, TEMPLATES_CRUMB, { label: "New" }]}
         title="New template"
       />
-      <Panel>
+      <Panel className="max-w-[960px]">
         <TemplateDesigner
           initial={EMPTY}
           saving={create.isPending}
@@ -66,7 +66,7 @@ export function TemplateEditView({ id }: { id: string }) {
         crumbs={[LISTS_CRUMB, TEMPLATES_CRUMB, { label: data.name }]}
         title="Edit template"
       />
-      <Panel>
+      <Panel className="max-w-[960px]">
         <TemplateDesigner
           key={data.id}
           initial={fromApi(data)}

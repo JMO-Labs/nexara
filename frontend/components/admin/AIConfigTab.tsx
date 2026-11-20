@@ -146,7 +146,7 @@ function SassybotSection() {
       <p className="text-sm text-muted">
         Sassybot generates witty comments. Users can opt out in settings.
       </p>
-      <div className="sticky bottom-3 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
           {update.isPending ? "Saving..." : "Save"}
         </Button>
