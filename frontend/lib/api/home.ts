@@ -132,6 +132,7 @@ export const getHomeMedia = (
         limit?: number;
         scope?: "all" | "community" | "subgroup" | "personal";
         subgroupId?: string;
+        cursor?: string | null;
       } = 24,
 ): Promise<HomeMediaResponse> => {
   const params = typeof opts === "number" ? { limit: opts } : opts;
@@ -141,6 +142,7 @@ export const getHomeMedia = (
   qs.set("limit", String(limit));
   qs.set("scope", scope);
   if (params.subgroupId) qs.set("subgroup_id", params.subgroupId);
+  if ("cursor" in params && params.cursor) qs.set("cursor", params.cursor);
   return apiGet<HomeMediaResponse>(`${HOME}/media?${qs.toString()}`);
 };
 

@@ -27,7 +27,7 @@ vi.mock("@/hooks/useGalleries", () => ({
   useGalleryListInfinite: (p: unknown) => hooks.list(p),
 }));
 vi.mock("@/hooks/useHomeMedia", () => ({
-  useHomeMedia: (p: unknown) => hooks.media(p),
+  useHomeMediaInfinite: (p: unknown) => hooks.media(p),
 }));
 vi.mock("@/components/photos/AlbumGrid", () => ({
   AlbumGrid: ({ items }: { items?: { title: string }[] }) => (
@@ -88,7 +88,9 @@ beforeEach(() => {
   });
   hooks.media.mockReturnValue({
     data: {
-      items: [mediaItem("m1", "Beach day"), mediaItem("m2", "Birthday")],
+      pages: [
+        { items: [mediaItem("m1", "Beach day"), mediaItem("m2", "Birthday")] },
+      ],
     },
     isLoading: false,
     error: null,
@@ -110,7 +112,7 @@ describe("PhotosPage", () => {
     expect(screen.queryByTestId("albums")).toBeNull();
     expect(screen.getByRole("radio", { name: "All photos" })).toBeChecked();
     expect(screen.queryByRole("combobox", { name: "Sort albums" })).toBeNull();
-    expect(hooks.media).toHaveBeenCalledWith({ limit: 60 });
+    expect(hooks.media).toHaveBeenCalledWith(60);
     expect(screen.getAllByRole("button", { name: /Open photo/ })).toHaveLength(
       2,
     );
@@ -196,12 +198,32 @@ describe("PhotosPage", () => {
     expect(nav.push).toHaveBeenCalledWith("/app/photos?view=all");
   });
 
+  it("All photos pages with Load more", async () => {
+    nav.qs = "view=all";
+    const fetchNextPage = vi.fn();
+    hooks.media.mockReturnValue({
+      data: { pages: [{ items: [mediaItem("m1", "Beach day")] }] },
+      isLoading: false,
+      error: null,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage,
+    });
+    render(<PhotosPage />);
+    screen.getByRole("button", { name: "Load more" }).click();
+    expect(fetchNextPage).toHaveBeenCalled();
+  });
+
   it("renders upload-sourced items with a fallback title", () => {
     nav.qs = "view=all";
     hooks.media.mockReturnValue({
       data: {
-        items: [
-          { ...mediaItem("u1", ""), source: "upload", source_title: null },
+        pages: [
+          {
+            items: [
+              { ...mediaItem("u1", ""), source: "upload", source_title: null },
+            ],
+          },
         ],
       },
       isLoading: false,

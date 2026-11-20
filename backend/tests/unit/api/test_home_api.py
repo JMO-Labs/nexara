@@ -141,6 +141,22 @@ async def test_media_authenticated_happy_path(test_app):
 
 
 @pytest.mark.asyncio
+async def test_media_passes_cursor_to_service(test_app):
+    """GET /home/media?cursor=... forwards the cursor (All photos paging)."""
+    mock_svc = AsyncMock()
+    mock_svc.list_media.return_value = ([], None)
+    _setup_auth_and_service(test_app, mock_svc)
+    try:
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/v1/home/media?limit=5&cursor=abc")
+        assert resp.status_code == 200
+        assert mock_svc.list_media.await_args.kwargs["cursor"] == "abc"
+    finally:
+        _clear_overrides(test_app)
+
+
+@pytest.mark.asyncio
 async def test_media_empty_response(test_app):
     """GET /home/media returns 200 with empty items when no media exists."""
     mock_svc = AsyncMock()

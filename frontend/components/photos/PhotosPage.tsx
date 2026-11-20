@@ -22,7 +22,7 @@ import { GalleryDrawer } from "@/components/galleries/galleries-page/GalleryDraw
 import { LightboxConnected } from "@/components/galleries/galleries-page/LightboxConnected";
 import { UploadZone } from "@/components/media/UploadZone";
 import { useGalleryListInfinite } from "@/hooks/useGalleries";
-import { useHomeMedia } from "@/hooks/useHomeMedia";
+import { useHomeMediaInfinite } from "@/hooks/useHomeMedia";
 import { photoTitle } from "@/lib/photoTitle";
 import type { GalleryItem } from "@/lib/api/galleries";
 import { AlbumGrid } from "./AlbumGrid";
@@ -76,7 +76,7 @@ export function PhotosPage() {
   const setItemIndex = (i: number) => update((p) => p.set("item", String(i)));
 
   const albums = useGalleryListInfinite({ q: search || undefined, sort });
-  const media = useHomeMedia({ limit: 60 });
+  const media = useHomeMediaInfinite(60);
   const albumItems = React.useMemo(
     () => albums.data?.pages.flatMap((p) => p.items),
     [albums.data],
@@ -84,12 +84,14 @@ export function PhotosPage() {
   const needle = search.trim().toLowerCase();
   const photos = React.useMemo(
     () =>
-      media.data?.items.filter(
-        (m) =>
-          !needle ||
-          (m.source_title ?? "").toLowerCase().includes(needle) ||
-          m.media.filename?.toLowerCase().includes(needle),
-      ),
+      media.data?.pages
+        .flatMap((p) => p.items)
+        .filter(
+          (m) =>
+            !needle ||
+            (m.source_title ?? "").toLowerCase().includes(needle) ||
+            m.media.filename?.toLowerCase().includes(needle),
+        ),
     [media.data, needle],
   );
   const lightboxItems: GalleryItem[] = (photos ?? []).map((m, i) => ({
@@ -202,13 +204,26 @@ export function PhotosPage() {
             )}
           </>
         ) : (
-          <AllPhotos
-            items={photos}
-            isLoading={media.isLoading}
-            error={media.error}
-            filtered={!!needle}
-            onOpen={setLightbox}
-          />
+          <>
+            <AllPhotos
+              items={photos}
+              isLoading={media.isLoading}
+              error={media.error}
+              filtered={!!needle}
+              onOpen={setLightbox}
+            />
+            {media.hasNextPage && (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  variant="secondary"
+                  onClick={() => media.fetchNextPage()}
+                  disabled={media.isFetchingNextPage}
+                >
+                  {media.isFetchingNextPage ? "Loading…" : "Load more"}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

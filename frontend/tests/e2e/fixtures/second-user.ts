@@ -80,6 +80,16 @@ export async function createSecondUser(
     .getByRole("button", { name: /create account|sign up|register/i })
     .click();
   await expect(page).toHaveURL(/\/app/);
+  // Mark onboarding done server-side so the welcome dialog cannot pop up
+  // late (under load) over whatever the test does next.
+  const auth = await request.post("/api/v1/auth/login", {
+    data: { email, password },
+  });
+  const { access_token } = await auth.json();
+  await request.patch("/api/v1/users/me/onboarding", {
+    headers: { Authorization: `Bearer ${access_token}` },
+    data: {},
+  });
   await dismissWelcome(page);
   return { username, email, password, context, page };
 }

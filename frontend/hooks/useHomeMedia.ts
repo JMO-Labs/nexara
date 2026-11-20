@@ -4,7 +4,11 @@
  */
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { qk } from "@/lib/query-keys";
 import { getHomeMedia, type HomeMediaResponse } from "@/lib/api/home";
 
@@ -33,6 +37,21 @@ export function useHomeMedia(
   return useQuery({
     queryKey: [...qk.home.media(limit), scope, subgroupId ?? null],
     queryFn: () => getHomeMedia({ limit, scope, subgroupId }),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * @brief Cursor-paged media for the Photos "All photos" view.
+ * @param limit page size
+ * @return infinite query; pages[].items, fetchNextPage, hasNextPage
+ */
+export function useHomeMediaInfinite(limit = 60) {
+  return useInfiniteQuery({
+    queryKey: [...qk.home.media(limit), "infinite"],
+    queryFn: ({ pageParam }) => getHomeMedia({ limit, cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
     staleTime: 5 * 60_000,
   });
 }

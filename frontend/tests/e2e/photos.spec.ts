@@ -33,7 +33,13 @@ test("uploaded photo appears in All photos", async ({ page }) => {
   await page.goto("/app/photos?view=all");
   const grid = page.getByRole("list", { name: "All photos" });
   await expect(grid).toBeVisible();
-  const before = await grid.getByRole("listitem").count();
+  // First tile is the newest photo; capture it to detect the new upload
+  // (the list is paged, so counting items stops working past one page).
+  const firstBefore = await grid
+    .getByRole("listitem")
+    .first()
+    .innerHTML()
+    .catch(() => "");
 
   await page.getByRole("button", { name: "Upload photos" }).click();
   const chooser = page.waitForEvent("filechooser");
@@ -41,7 +47,9 @@ test("uploaded photo appears in All photos", async ({ page }) => {
   await (await chooser).setFiles(FIXTURE);
   await expect(page.getByText("Done")).toBeVisible({ timeout: 30_000 });
 
-  await expect(grid.getByRole("listitem")).toHaveCount(before + 1, {
-    timeout: 10_000,
-  });
+  await expect
+    .poll(() => grid.getByRole("listitem").first().innerHTML(), {
+      timeout: 10_000,
+    })
+    .not.toBe(firstBefore);
 });

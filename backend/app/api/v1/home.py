@@ -75,12 +75,13 @@ async def list_home_media(
     source: str = Query("all"),
     scope: str = Query("all", pattern="^(all|community|subgroup)$"),
     subgroup_id: uuid.UUID | None = Query(None),
+    cursor: str | None = Query(None, max_length=200),
 ) -> MediaAggregateListResponse:
     """
     @brief Return aggregated media across user's visible subgroups.
 
-    Suitable for the home-page media carousel widget.
-    Pagination not yet implemented — Phase 2 will add cursor support across multiple subgroups.
+    Used by the Home photos tile and the Photos "All photos" view; pass the
+    returned next_cursor back as ``cursor`` for the next page.
     """
     items, next_cursor = await service.list_media(
         user=user,
@@ -88,6 +89,7 @@ async def list_home_media(
         source=source,
         scope=scope,
         subgroup_id=subgroup_id,
+        cursor=cursor,
     )
     return MediaAggregateListResponse(
         items=[MediaItemResponse(**item) for item in items],
