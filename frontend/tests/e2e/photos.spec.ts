@@ -28,10 +28,7 @@ test("view switch toggles Albums and All photos", async ({ page }) => {
 });
 
 // App bug: "Upload photos" posts to /media/upload, which creates an orphan
-// media row that is not in any album, while All photos (GET /home/media)
-// only aggregates album items. Remove test.fail() once uploads land there.
 test("uploaded photo appears in All photos", async ({ page }) => {
-  test.fail(true, "standalone upload never reaches home/media aggregate");
   await login(page);
   await page.goto("/app/photos?view=all");
   const grid = page.getByRole("list", { name: "All photos" });

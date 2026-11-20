@@ -71,14 +71,11 @@ test("mention notifies recipient and can be marked read", async ({
 });
 
 // Backend bug: POST /notifications/{id}/dismiss sets dismissed_at but
-// unread-count only filters read_at IS NULL, so the badge never drops.
-// Remove test.fail() once notification_repo.unread_counts_by_type ignores
 // dismissed rows.
 test("acknowledging a mention clears the unread badge", async ({
   browser,
   request,
 }) => {
-  test.fail(true, "backend unread-count ignores dismissed_at");
   await mentionFlow(browser, request, true);
 });
 
