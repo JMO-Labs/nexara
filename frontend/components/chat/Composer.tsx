@@ -102,9 +102,9 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
     };
 
     return (
-      <div className="shrink-0 border-t border-border bg-bg">
+      <div className="shrink-0 px-2.5 pb-2.5">
         {replyTo && (
-          <div className="flex items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
+          <div className="flex items-center gap-2 mb-1.5 rounded-[18px] bg-[var(--nx-bubble)] px-3 py-1.5">
             <CornerUpLeft size={14} aria-hidden />
             <p className="min-w-0 flex-1 truncate text-xs">
               <strong>Replying to {replyTo.authorName}:</strong>{" "}
@@ -122,7 +122,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
           </div>
         )}
         {emojiOpen && (
-          <div className="flex gap-1 border-b border-border px-3 py-2">
+          <div className="mb-1.5 flex gap-1 px-3 py-1">
             {QUICK_EMOJI.map((e) => (
               <IconButton
                 key={e}
@@ -137,7 +137,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
           </div>
         )}
 
-        <div className="flex items-end gap-2 p-3">
+        <div className="flex items-end gap-2 rounded-[26px] bg-[var(--nx-glass-solid)] py-1.5 pl-2 pr-1.5">
           <div className="flex gap-0.5">
             <IconButton
               aria-label="Add emoji"
@@ -180,7 +180,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
             disabled={disabled}
             aria-label="Message"
             placeholder={placeholder ?? "Write a message…"}
-            className="max-h-36 min-h-9 flex-1 resize-none rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+            className="max-h-36 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-[13.5px] outline-none placeholder:text-muted disabled:opacity-50"
           />
 
           <IconButton

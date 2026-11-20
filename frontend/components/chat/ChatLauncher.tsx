@@ -28,7 +28,7 @@ function Row({ id, name, label, src, unread, onSelect }: RowProps) {
       type="button"
       onClick={() => onSelect(id)}
       aria-label={label}
-      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm outline-none hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="flex w-full items-center gap-2 rounded-[18px] px-3 py-2 text-left text-sm outline-none hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       <Avatar size="sm" name={name} src={src} />
       <span className="min-w-0 flex-1 truncate">{name}</span>
@@ -36,7 +36,7 @@ function Row({ id, name, label, src, unread, onSelect }: RowProps) {
         <span
           role="img"
           aria-label={`${unread} unread`}
-          className="size-2 shrink-0 rounded-full bg-accent"
+          className="size-2 shrink-0 rounded-full bg-[var(--nx-blue)]"
         />
       )}
     </button>

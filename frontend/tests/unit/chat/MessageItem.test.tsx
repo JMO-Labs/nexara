@@ -47,14 +47,16 @@ describe("MessageItem", () => {
 });
 
 describe("MessageItem bubbles", () => {
-  it("own bubble uses strong surface, others plain surface", () => {
+  it("own bubble uses strong surface, others nx-bubble", () => {
     const { rerender, container } = render(
       <MessageItem message={base} isSelf />,
     );
     expect(container.querySelector(".bg-surface-strong")).not.toBeNull();
     rerender(<MessageItem message={base} />);
     expect(container.querySelector(".bg-surface-strong")).toBeNull();
-    expect(container.querySelector(".bg-surface")).not.toBeNull();
+    expect(
+      container.querySelector(".bg-\\[var\\(--nx-bubble\\)\\]"),
+    ).not.toBeNull();
   });
 });
 

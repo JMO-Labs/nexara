@@ -23,6 +23,7 @@ import {
   sendChatMessage,
   sendChatTyping,
 } from "@/hooks/useChat";
+import { groupColor } from "@/lib/groupColor";
 import { chatWs } from "@/lib/realtime/chat-ws";
 import { NewDmModal } from "./NewDmModal";
 import { SidebarPane } from "./chat-layout/SidebarPane";
@@ -222,6 +223,15 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
     }
   };
 
+  const activeChannel = channels.find((c) => c.id === activeId);
+  const activeDm = dms.find((d) => d.channel_id === activeId);
+  const threadColor = activeChannel
+    ? groupColor(activeChannel.subgroup_id, null)
+    : "var(--nx-muted)";
+  const threadSubtitle = activeDm
+    ? `@${activeDm.peer.username}`
+    : activeChannel?.channel_type;
+
   const showDetails = threadPaneOpen && Boolean(activeId);
 
   return (
@@ -244,6 +254,8 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         <ThreadPane
           key={activeId}
           title={resolveTitle(channels, dms, activeId)}
+          color={threadColor}
+          subtitle={threadSubtitle}
           onBack={back}
           detailsOpen={threadPaneOpen}
           onToggleDetails={() => setThreadPaneOpen((o) => !o)}
@@ -276,7 +288,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           }}
         />
       ) : (
-        <div className="hidden items-center justify-center md:flex">
+        <div className="glass hidden items-center justify-center rounded-[32px] md:flex">
           <EmptyState
             title="Select a conversation"
             description="Choose a channel or direct message from the list to start chatting."

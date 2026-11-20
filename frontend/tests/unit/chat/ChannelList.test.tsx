@@ -110,4 +110,76 @@ describe("ChannelList", () => {
     expect(onDeleteDm).toHaveBeenCalledWith("d1");
     expect(onSelect).not.toHaveBeenCalled();
   });
+
+  it("filters by query across channels and DMs", () => {
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId={null}
+        unread={{}}
+        onSelect={() => {}}
+        query="ale"
+      />,
+    );
+    expect(screen.getByText("Alex")).toBeInTheDocument();
+    expect(screen.queryByText(/# general/)).toBeNull();
+  });
+
+  it("shows only groups or only direct per segment", () => {
+    const { rerender } = wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId={null}
+        unread={{}}
+        onSelect={() => {}}
+        segment="groups"
+      />,
+    );
+    expect(screen.getByText(/# general/)).toBeInTheDocument();
+    expect(screen.queryByText("Alex")).toBeNull();
+    rerender(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId={null}
+        unread={{}}
+        onSelect={() => {}}
+        segment="direct"
+      />,
+    );
+    expect(screen.queryByText(/# general/)).toBeNull();
+    expect(screen.getByText("Alex")).toBeInTheDocument();
+  });
+
+  it("shows an empty state when nothing matches", () => {
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId={null}
+        unread={{}}
+        onSelect={() => {}}
+        query="zzz"
+      />,
+    );
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+  });
+
+  it("renders selected rows with the ink ring, not bg-accent", () => {
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={dms}
+        activeId="d1"
+        unread={{}}
+        onSelect={() => {}}
+      />,
+    );
+    const cls = screen.getByText("Alex").closest("button")!.className;
+    expect(cls).toMatch(/glass-item/);
+    expect(cls).toMatch(/ring-ink/);
+    expect(cls).not.toMatch(/bg-accent/);
+  });
 });
