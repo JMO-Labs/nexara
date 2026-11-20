@@ -46,7 +46,6 @@ describe("PageTransition", () => {
         <p>b</p>
       </PageTransition>,
     );
-    // mode="wait": new node mounts only after the exit animation completes.
     await waitFor(() =>
       expect(
         container.querySelector('[data-pathname="/app/chat"]'),
