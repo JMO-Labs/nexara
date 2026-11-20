@@ -141,7 +141,7 @@ export function EventsTab({ subgroup }: EventsTabProps) {
           </div>
         </div>
 
-        <div className="flex h-auto flex-col overflow-hidden rounded-2xl bg-surface lg:sticky lg:top-4 lg:h-[calc(100vh-200px)]">
+        <div className="flex h-auto flex-col overflow-hidden glass rounded-[32px] lg:sticky lg:top-4 lg:h-[calc(100vh-200px)]">
           <div className="flex items-center justify-between border-b border-current/15 px-4 py-2.5 text-sm font-semibold text-muted">
             <span>{selectedDay ? "This day" : "This month"}</span>
             {selectedDay && (

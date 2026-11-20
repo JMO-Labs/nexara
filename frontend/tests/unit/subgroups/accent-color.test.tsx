@@ -9,6 +9,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { CoverBand } from "@/components/subgroups/hub/CoverBand";
 import { SettingsTab } from "@/components/subgroups/hub/SettingsTab";
+import { GROUP_PALETTE } from "@/lib/groupColor";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 
 vi.mock("@/lib/api/media");
@@ -36,6 +37,15 @@ const base: SubgroupDetail = {
   pinned_post_id: null,
 };
 
+function rgbToHex(rgb: string): string {
+  const m = rgb.match(/\d+/g);
+  if (!m) return rgb.toLowerCase();
+  return `#${m
+    .slice(0, 3)
+    .map((n) => Number(n).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
 function wrap(ui: React.ReactNode) {
   return render(
     <NextIntlClientProvider locale="en" messages={{}}>
@@ -54,10 +64,12 @@ describe("subgroup accent color", () => {
     });
   });
 
-  it("CoverBand falls back to community accent var when null", () => {
+  it("CoverBand falls back to groupColor palette when null", () => {
     const { container } = wrap(<CoverBand subgroup={base} />);
     const bar = container.querySelector("[data-accent-bar]") as HTMLElement;
-    expect(bar.getAttribute("style")).toContain("var(--nx-accent");
+    expect(GROUP_PALETTE.map((c) => c.toLowerCase())).toContain(
+      bar.style.backgroundColor ? rgbToHex(bar.style.backgroundColor) : "",
+    );
   });
 
   it("editor warns when accent fails AA", () => {

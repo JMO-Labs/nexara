@@ -11,6 +11,7 @@ import { useUpdateSubgroup } from "@/hooks/useSubgroups";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { useToasts } from "@/stores/toasts";
 import { accentPassesAA } from "@/lib/api/branding";
+import { groupColor } from "@/lib/groupColor";
 import type { SubgroupDetail, UpdateSubgroupBody } from "@/lib/api/subgroups";
 
 export interface SettingsTabProps {
@@ -133,7 +134,9 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
         <input
           type="color"
           aria-label="Accent color picker"
-          value={accentPassesAA(accent) ? accent : "#c6b4f5"}
+          value={
+            accentPassesAA(accent) ? accent : groupColor(subgroup.id, null)
+          }
           onChange={(e) => setAccent(e.target.value)}
           className="size-11 shrink-0 cursor-pointer rounded-xl"
         />

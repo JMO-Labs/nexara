@@ -1,17 +1,17 @@
 "use client";
 /**
  * @file components/subgroups/SubgroupCard.tsx
- * @brief Group tile. Per-slug deterministic gradient gives each group a
- *        stable color identity unless a cover image exists. Click selects,
- *        secondary button joins/leaves.
+ * @brief Glass group card: 16:9 cover image or colour wash from groupColor,
+ *        name, 2-line description, optional avatar stack and Join / Open actions.
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button } from "@/components/ui";
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import type { Subgroup } from "@/lib/api/subgroups";
-import { gradientFor, monogram } from "@/lib/groupVisuals";
-import { cn } from "@/lib/utils";
+import { groupColor } from "@/lib/groupColor";
+import { monogram } from "@/lib/groupVisuals";
 
 export interface SubgroupCardProps {
   subgroup: Subgroup;
@@ -21,15 +21,12 @@ export interface SubgroupCardProps {
   onJoin?: (slug: string) => void;
   onLeave?: (slug: string) => void;
   busy?: boolean;
-  /** Anchor tile = taller hero variant (used in the mosaic). */
-  anchor?: boolean;
+  /** Optional member avatar stack rendered above the actions. */
+  avatars?: React.ReactNode;
 }
 
-const LIGHT_BTN = "min-h-11 bg-white text-black/85 hover:bg-white/90";
-const GLASS_BTN = "min-h-11 bg-white/15 text-white hover:bg-white/25";
-
 /**
- * @brief Group tile card.
+ * @brief Group card.
  * @param props subgroup data, membership state and callbacks
  * @return card element
  */
@@ -41,167 +38,114 @@ export function SubgroupCard({
   onJoin,
   onLeave,
   busy,
-  anchor,
+  avatars,
 }: SubgroupCardProps) {
   const router = useRouter();
-  const { background, monogramBg } = React.useMemo(
-    () => gradientFor(subgroup.slug),
-    [subgroup.slug],
-  );
+  const color = groupColor(subgroup.id, subgroup.accent_color);
   const handleClick = () => onSelect(subgroup.slug);
-  const stop = (fn?: (slug: string) => void) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    fn?.(subgroup.slug);
-  };
 
-  let cta: React.ReactNode;
-  if (isMember) {
-    cta = (
-      <Button
-        variant="ghost"
-        size="sm"
-        loading={busy}
-        onClick={stop(onLeave)}
-        className={GLASS_BTN}
-      >
-        Leave
-      </Button>
-    );
-  } else if (subgroup.join_policy === "invite_only") {
-    cta = (
-      <Button
-        size="sm"
-        disabled
-        className={cn(GLASS_BTN, "disabled:opacity-50")}
-      >
-        Invite required
-      </Button>
-    );
-  } else {
-    cta = (
-      <Button
-        variant="ghost"
-        size="sm"
-        loading={busy}
-        onClick={stop(onJoin)}
-        className={LIGHT_BTN}
-      >
-        {subgroup.join_policy === "admin_approval" ? "Request to join" : "Join"}
-      </Button>
-    );
+  let cta: React.ReactNode = null;
+  if (!isMember) {
+    cta =
+      subgroup.join_policy === "invite_only" ? (
+        <Button size="sm" variant="glass" disabled>
+          Invite required
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          loading={busy}
+          onClick={() => onJoin?.(subgroup.slug)}
+        >
+          {subgroup.join_policy === "admin_approval"
+            ? "Request to join"
+            : "Join"}
+        </Button>
+      );
   }
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleClick();
-        }
-      }}
-      style={{ background }}
-      className={cn(
-        "group/card relative h-full cursor-pointer overflow-hidden rounded-[1.25rem] text-white/90 shadow-lg outline-none transition-[transform,box-shadow] motion-safe:duration-500 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        anchor
-          ? "min-h-[320px] md:min-h-[420px]"
-          : "min-h-[220px] md:min-h-[260px]",
-      )}
-    >
-      {subgroup.cover_media_id && (
-        <>
-          <MediaThumb
-            mediaId={subgroup.cover_media_id}
-            alt={subgroup.name}
-            zoomOnHover
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-black/65"
-          />
-        </>
-      )}
+    <article className="glass flex h-full flex-col overflow-hidden rounded-[32px]">
       <div
-        aria-hidden
-        style={{ background: monogramBg }}
-        className={cn(
-          "absolute grid place-items-center rounded-full font-display text-black/80",
-          anchor
-            ? "top-6 left-6 size-16 text-[22px]"
-            : "top-[18px] left-[18px] size-12 text-[17px]",
-        )}
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+        className="flex flex-1 cursor-pointer flex-col outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
       >
-        {monogram(subgroup.name)}
-      </div>
-
-      {subgroup.is_private && (
         <div
-          className={cn(
-            "absolute",
-            anchor ? "top-7 right-6" : "top-5 right-[18px]",
-          )}
+          className="relative aspect-video w-full overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, color-mix(in srgb, ${color} 55%, transparent), color-mix(in srgb, ${color} 18%, transparent))`,
+          }}
         >
-          <Badge className="bg-white/20 text-white uppercase tracking-widest">
-            Private
-          </Badge>
+          {subgroup.cover_media_id ? (
+            <MediaThumb mediaId={subgroup.cover_media_id} alt="" zoomOnHover />
+          ) : (
+            <span
+              aria-hidden
+              className="absolute inset-0 grid place-items-center text-4xl font-bold text-ink/60"
+            >
+              {monogram(subgroup.name)}
+            </span>
+          )}
+          {subgroup.is_private && (
+            <span className="glass-item absolute top-3 right-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-ink">
+              <Lock className="size-3" aria-hidden="true" />
+              Private
+            </span>
+          )}
         </div>
-      )}
-
-      <div
-        className={cn(
-          "absolute inset-x-0 bottom-0 bg-gradient-to-b from-transparent via-black/45 to-black/70",
-          anchor ? "p-6 md:p-8" : "p-4 md:p-5",
-        )}
-      >
-        <p className="mb-1.5 text-xs uppercase tracking-widest text-white/70">
-          {subgroup.join_policy.replace("_", " ")}
-          {typeof memberCount === "number" && (
-            <>
-              <span className="mx-1.5 opacity-40">·</span>
-              {memberCount} {memberCount === 1 ? "member" : "members"}
-            </>
-          )}
-        </p>
-        <h3
-          className={cn(
-            "font-semibold leading-tight tracking-tight text-white",
-            anchor
-              ? "text-[34px] md:text-[52px]"
-              : "text-[22px] md:text-[28px]",
-            subgroup.description && "mb-2",
-          )}
-        >
-          {subgroup.name}
-        </h3>
-        {subgroup.description && (
-          <p
-            className={cn(
-              "text-sm text-white/80",
-              anchor ? "line-clamp-3 max-w-[78%]" : "line-clamp-2",
+        <div className="flex flex-1 flex-col gap-1 p-4">
+          <h3 className="truncate text-lg font-semibold tracking-tight text-ink">
+            {subgroup.name}
+          </h3>
+          <p className="text-xs text-muted">
+            {subgroup.join_policy.replace("_", " ")}
+            {typeof memberCount === "number" && (
+              <>
+                {" · "}
+                {memberCount} {memberCount === 1 ? "member" : "members"}
+              </>
             )}
-          >
-            {subgroup.description}
           </p>
-        )}
-        <div className="mt-4 flex gap-2">
+          {subgroup.description && (
+            <p className="line-clamp-2 text-sm text-muted">
+              {subgroup.description}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 px-4 pb-4">
+        <div className="min-w-0">{avatars}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {isMember && (
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={busy}
+              onClick={() => onLeave?.(subgroup.slug)}
+            >
+              Leave
+            </Button>
+          )}
           {cta}
           <Button
-            variant="ghost"
             size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/app/subgroups/${subgroup.slug}`);
-            }}
-            className="min-h-11 text-white/80 hover:bg-white/10 hover:text-white"
+            variant="glass"
+            onClick={() => router.push(`/app/subgroups/${subgroup.slug}`)}
           >
             Open →
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 

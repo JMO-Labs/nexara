@@ -96,7 +96,7 @@ describe("GroupHub", () => {
     expect(screen.getByText(/12 members.*public/i)).toBeInTheDocument();
   });
 
-  it("renders vertical tab nav when member", () => {
+  it("renders tab nav when member", () => {
     vi.spyOn(useSubgroupsModule, "useSubgroupDetail").mockReturnValue({
       data: mockSubgroupDetail,
       isLoading: false,
@@ -110,14 +110,12 @@ describe("GroupHub", () => {
 
     wrap(<GroupHub slug="hiking" />);
 
-    // Members nav button(s) visible (desktop list + mobile strip both rendered in jsdom)
+    // Members nav link visible
     expect(
-      screen.getAllByRole("button", { name: /members/i }).length,
+      screen.getAllByRole("link", { name: /members/i }).length,
     ).toBeGreaterThan(0);
     // Settings hidden for member role
-    expect(screen.queryAllByRole("button", { name: /settings/i }).length).toBe(
-      0,
-    );
+    expect(screen.queryAllByRole("link", { name: /settings/i }).length).toBe(0);
   });
 
   it("shows Settings tab for owner", () => {
@@ -140,7 +138,7 @@ describe("GroupHub", () => {
     wrap(<GroupHub slug="hiking" />);
 
     expect(
-      screen.getAllByRole("button", { name: /settings/i }).length,
+      screen.getAllByRole("link", { name: /settings/i }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -152,8 +150,8 @@ describe("GroupHub", () => {
 
     wrap(<GroupHub slug="hiking" />);
     const nav = screen.getByRole("navigation", { name: /group sections/i });
-    expect(nav.querySelector("ul")?.className).toMatch(/overflow-x-auto/);
-    expect(screen.getByRole("button", { name: /overview/i })).toHaveAttribute(
+    expect(nav.className).toMatch(/overflow-x-auto/);
+    expect(screen.getByRole("link", { name: /overview/i })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -173,8 +171,6 @@ describe("GroupHub", () => {
 
     wrap(<GroupHub slug="hiking" />);
     expect(screen.getByText(/invite required/i)).toBeInTheDocument();
-    expect(screen.queryAllByRole("button", { name: /members/i }).length).toBe(
-      0,
-    );
+    expect(screen.queryAllByRole("link", { name: /members/i }).length).toBe(0);
   });
 });

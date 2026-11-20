@@ -6,6 +6,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { CoverBand } from "./CoverBand";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 
@@ -25,17 +26,16 @@ export function MemberOnlyGate({ subgroup }: MemberOnlyGateProps) {
       : "Invite required";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <CoverBand subgroup={subgroup} />
-      <div className="flex flex-col gap-4 px-4 md:px-0">
-        <h2 className="text-2xl font-black tracking-tight">{subgroup.name}</h2>
+      <Panel className="flex flex-col gap-4">
         {subgroup.description && (
           <p className="text-muted">{subgroup.description}</p>
         )}
         <Button disabled size="lg" className="mt-2">
           {ctaText}
         </Button>
-      </div>
+      </Panel>
     </div>
   );
 }
