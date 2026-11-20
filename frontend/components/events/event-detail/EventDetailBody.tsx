@@ -7,6 +7,7 @@
 import dynamic from "next/dynamic";
 import { CalendarDays, MapPin, ExternalLink } from "lucide-react";
 import { Markdown } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { RsvpInline } from "../RsvpInline";
 import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
@@ -23,12 +24,24 @@ const EventMiniMap = dynamic(
 /**
  * @brief Body content for an event.
  * @param event the event to show
+ * @param className overrides (page view drops drawer padding/scroll)
  * @return scroll container
  */
-export function EventDetailBody({ event }: { event: EventItem }) {
+export function EventDetailBody({
+  event,
+  className,
+}: {
+  event: EventItem;
+  className?: string;
+}) {
   const hasCoords = event.latitude != null && event.longitude != null;
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 md:px-6">
+    <div
+      className={cn(
+        "min-h-0 flex-1 overflow-y-auto px-4 pb-4 md:px-6",
+        className,
+      )}
+    >
       <div className="mb-3 flex flex-col gap-2 text-sm md:flex-row md:gap-8">
         <div className="flex items-center gap-2">
           <CalendarDays className="size-4" aria-hidden="true" />

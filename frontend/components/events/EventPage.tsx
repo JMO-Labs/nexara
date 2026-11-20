@@ -2,7 +2,7 @@
 /**
  * @file components/events/EventPage.tsx
  * @brief Standalone full-page event view (shareable): PageHeader with back
- *        link and a glass Panel reusing EventDetailBody.
+ *        link, details Panel (EventDetailBody) and a "Starts in" aside.
  */
 import { Skeleton } from "@/components/ui";
 import { PageHeader } from "@/components/ui/page/PageHeader";
@@ -24,7 +24,7 @@ export function EventPage({ id }: { id: string }) {
   const notFound = error instanceof ApiError && error.status === 404;
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader title={event?.title ?? "Event"} back={BACK} />
       {isLoading ? (
         <Panel as="div" className="flex flex-col gap-3">
@@ -45,12 +45,22 @@ export function EventPage({ id }: { id: string }) {
           </p>
         </Panel>
       ) : (
-        <Panel as="div">
+        <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_280px]">
+          <Panel as="div" className="md:p-7">
+            <EventDetailBody
+              event={event}
+              className="overflow-visible p-0 md:p-0"
+            />
+          </Panel>
           {new Date(event.starts_at).getTime() > Date.now() && (
-            <EventCountdown event={event} />
+            <Panel
+              title="Starts in"
+              className="md:order-last max-md:order-first"
+            >
+              <EventCountdown event={event} />
+            </Panel>
           )}
-          <EventDetailBody event={event} />
-        </Panel>
+        </div>
       )}
     </div>
   );
