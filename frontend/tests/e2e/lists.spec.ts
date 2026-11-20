@@ -61,7 +61,7 @@ test("user creates a list, adds two items and completes one", async ({
       r.request().method() === "POST" &&
       r.status() === 201,
   );
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Create", exact: true }).click();
   const listId = ((await (await created).json()) as { id: string }).id;
   listIds.push(listId);
 
