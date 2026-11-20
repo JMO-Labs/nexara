@@ -174,3 +174,16 @@ async def test_naive_cursor_is_normalized_before_reaching_repos():
     naive = (T0 - timedelta(minutes=1)).replace(tzinfo=None).isoformat()
     res = await svc.list(_viewer(), naive, 2)
     assert all(i.created_at < T0 for i in res.items)
+
+
+async def test_post_rows_with_string_timestamps_are_accepted():
+    """@brief PostRepository returns serialized dicts (created_at as ISO str)."""
+    posts = [_post(i * 2) for i in range(2)]
+    for p in posts:
+        p["created_at"] = p["created_at"].isoformat()
+
+    svc, _ = _service([], [], [])
+    svc._posts.list_feed = AsyncMock(return_value=(posts, None))
+    res = await svc.list(_viewer(), None, 5)
+    assert [i.kind for i in res.items] == ["post", "post"]
+    assert all(i.created_at.tzinfo is not None for i in res.items)

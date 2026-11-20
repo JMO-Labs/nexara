@@ -83,8 +83,14 @@ class HomeFeedService:
         return HomeFeedResponse(items=page, next_cursor=next_cursor)
 
 
-def _aware(dt: datetime) -> datetime:
-    """@brief Treat naive timestamps (some activity rows) as UTC so sorting and cursors agree."""
+def _aware(value: datetime | str) -> datetime:
+    """
+    @brief Coerce a timestamp to an aware UTC datetime.
+
+    Post rows arrive serialized (ISO strings) and some activity rows are naive;
+    mixing them broke sorting and produced naive cursors (500 on page 2).
+    """
+    dt = datetime.fromisoformat(value) if isinstance(value, str) else value
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
