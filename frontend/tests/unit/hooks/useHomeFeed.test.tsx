@@ -70,6 +70,27 @@ describe("useHomeFeed", () => {
     expect(result.current.freshIds.has("activity:c")).toBe(true);
   });
 
+  it("buffers when a custom scroll container is scrolled, even if window is at top", async () => {
+    vi.mocked(api.getHomeFeed).mockResolvedValueOnce({
+      items: [item("a")],
+      next_cursor: null,
+    });
+    let tileTop = 0;
+    const { result } = renderHook(
+      () => useHomeFeed({ getScrollTop: () => tileTop }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    tileTop = 500;
+    vi.mocked(api.getHomeFeed).mockResolvedValueOnce({
+      items: [item("b"), item("a")],
+      next_cursor: null,
+    });
+    await act(async () => emit({}, "feed_ping"));
+    await waitFor(() => expect(result.current.pending).toHaveLength(1));
+    expect(result.current.items.map((i) => i.id)).toEqual(["a"]);
+  });
+
   it("inserts immediately at top", async () => {
     vi.mocked(api.getHomeFeed).mockResolvedValueOnce({
       items: [item("a")],

@@ -7,19 +7,30 @@ import * as React from "react";
 export interface NewItemsPillProps {
   count: number;
   onClick: () => void;
+  /** Position inside the nearest positioned ancestor instead of the viewport. */
+  inline?: boolean;
 }
 
 /**
  * @brief Pill button announcing buffered feed items.
  * @param count number of pending items
  * @param onClick reveal handler
+ * @param inline anchor inside the parent (embedded feed tile)
  * @return pill or null when count is 0
  */
-export function NewItemsPill({ count, onClick }: NewItemsPillProps) {
+export function NewItemsPill({
+  count,
+  onClick,
+  inline = false,
+}: NewItemsPillProps) {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-16 z-30 flex justify-center"
+      className={
+        inline
+          ? "pointer-events-none absolute inset-x-0 top-2 z-10 flex justify-center"
+          : "pointer-events-none fixed inset-x-0 top-16 z-30 flex justify-center"
+      }
     >
       {count > 0 && (
         <button

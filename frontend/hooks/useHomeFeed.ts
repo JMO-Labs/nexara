@@ -27,7 +27,13 @@ const key = (i: FeedItem) => `${i.kind}:${i.id}`;
  * @brief Home feed state and realtime handling.
  * @return items, paging, pending buffer, reveal(), freshIds (just revealed)
  */
-export function useHomeFeed() {
+/** @brief Options for {@link useHomeFeed}. */
+export interface UseHomeFeedOptions {
+  /** Scroll offset used for the "at top" check; defaults to window.scrollY. */
+  getScrollTop?: () => number;
+}
+
+export function useHomeFeed({ getScrollTop }: UseHomeFeedOptions = {}) {
   const qc = useQueryClient();
   const q = useInfiniteQuery({
     queryKey: qk.home.feed(),
@@ -93,10 +99,11 @@ export function useHomeFeed() {
       pendingRef.current.forEach((i) => known.add(key(i)));
       const fresh = head.items.filter((i) => !known.has(key(i)));
       if (fresh.length === 0) return;
-      if (window.scrollY < AT_TOP_PX) prepend(fresh);
+      if ((getScrollTop ? getScrollTop() : window.scrollY) < AT_TOP_PX)
+        prepend(fresh);
       else setPending((p) => [...fresh, ...p]);
     },
-    [q.data, prepend],
+    [q.data, prepend, getScrollTop],
   );
 
   useSSE(STREAM_PATH, {
