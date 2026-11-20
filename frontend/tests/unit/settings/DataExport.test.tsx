@@ -49,13 +49,13 @@ describe("DataExportSection", () => {
   it("renders title, explanation and enabled button", async () => {
     render(<DataExportSection />, { wrapper });
     expect(
-      screen.getByText("Download My Data", { selector: "h2" }),
+      screen.getByText("Download your data", { selector: "h2" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Downloads expire after 48 hours/),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Download My Data" }),
+      await screen.findByRole("button", { name: "Download your data" }),
     ).toBeEnabled();
   });
 
@@ -66,12 +66,12 @@ describe("DataExportSection", () => {
     );
     render(<DataExportSection />, { wrapper });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Download My Data" }),
+      await screen.findByRole("button", { name: "Download your data" }),
     );
     expect(api.requestExport).toHaveBeenCalled();
     expect(await screen.findByText(/Generating your data/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Download My Data" }),
+      screen.getByRole("button", { name: "Download your data" }),
     ).toBeDisabled();
   });
 
@@ -95,7 +95,7 @@ describe("DataExportSection", () => {
     expect(await screen.findByText(/export link expired/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Download" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Download My Data" }),
+      screen.getByRole("button", { name: "Download your data" }),
     ).toBeEnabled();
   });
 
@@ -116,7 +116,7 @@ describe("DataExportSection", () => {
     );
     render(<DataExportSection />, { wrapper });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Download My Data" }),
+      await screen.findByRole("button", { name: "Download your data" }),
     );
     expect(await screen.findByText(/one export per day/)).toBeInTheDocument();
   });
@@ -125,7 +125,7 @@ describe("DataExportSection", () => {
     vi.mocked(api.requestExport).mockRejectedValue(new Error("boom"));
     render(<DataExportSection />, { wrapper });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Download My Data" }),
+      await screen.findByRole("button", { name: "Download your data" }),
     );
     expect(
       await screen.findByText(/Failed to request export/),

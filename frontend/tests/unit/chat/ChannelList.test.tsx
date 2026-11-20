@@ -167,7 +167,7 @@ describe("ChannelList", () => {
     expect(screen.getByText("No matches")).toBeInTheDocument();
   });
 
-  it("renders selected rows with the ink ring, not bg-accent", () => {
+  it("renders selected rows with a soft ink tint, not bg-accent or a ring", () => {
     wrap(
       <ChannelList
         channels={channels}
@@ -179,7 +179,8 @@ describe("ChannelList", () => {
     );
     const cls = screen.getByText("Alex").closest("button")!.className;
     expect(cls).toMatch(/glass-item/);
-    expect(cls).toMatch(/ring-ink/);
+    expect(cls).not.toMatch(/ring-ink/);
+    expect(cls).toMatch(/color-mix/);
     expect(cls).not.toMatch(/bg-accent/);
   });
 });

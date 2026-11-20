@@ -58,8 +58,8 @@ function Row({ field, selected, error, onSelect, onDelete }: RowProps) {
       style={style}
       data-testid={`field-row-${field.id}`}
       className={cn(
-        "flex items-center gap-2 rounded-xl border p-2 bg-bg",
-        selected && "border-accent ring-2 ring-accent",
+        "glass-item flex items-center gap-2 rounded-[20px] px-2 py-2",
+        selected && "ring-2 ring-ink",
         s.isDragging && "z-10 opacity-80 shadow-lg",
       )}
     >
@@ -175,7 +175,7 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full max-w-[960px] flex-col gap-6">
       <Input
         label="Template name"
         value={name}
@@ -207,7 +207,11 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
               </ul>
             </SortableContext>
           </DndContext>
-          <Button variant="outline" onClick={() => setAdding(true)}>
+          <Button
+            variant="secondary"
+            className="self-start"
+            onClick={() => setAdding(true)}
+          >
             <Plus className="size-4" /> Add field
           </Button>
         </div>
@@ -221,11 +225,17 @@ export function TemplateDesigner({ initial, onSave, saving }: Props) {
       </div>
       <section aria-label="Preview">
         <h3 className="mb-2 font-semibold">Preview</h3>
-        <TemplatePreview fields={fields} />
+        {fields.length === 0 ? (
+          <p className="text-sm text-muted">Add a field to see a preview.</p>
+        ) : (
+          <TemplatePreview fields={fields} />
+        )}
       </section>
-      <Button onClick={save} loading={saving}>
-        Save
-      </Button>
+      <div className="flex justify-end">
+        <Button onClick={save} loading={saving}>
+          Save
+        </Button>
+      </div>
       <Modal
         open={adding}
         onClose={() => setAdding(false)}

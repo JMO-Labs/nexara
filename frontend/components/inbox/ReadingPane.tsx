@@ -24,14 +24,17 @@ import type { InboxEntry } from "./useInboxItems";
  * @brief Reading pane for the selected entry.
  * @param entry selected entry or null
  * @param onBack phone/tablet back to the list
+ * @param emptyText hint shown when nothing is selected
  * @return pane content
  */
 export function ReadingPane({
   entry,
   onBack,
+  emptyText = "Select an item to read it here.",
 }: {
   entry: InboxEntry | null;
   onBack: () => void;
+  emptyText?: string;
 }) {
   if (!entry)
     return (
@@ -39,7 +42,7 @@ export function ReadingPane({
         <span className="glass-item grid size-14 place-items-center rounded-full">
           <MailOpen className="size-6 text-muted" aria-hidden="true" />
         </span>
-        <p className="text-sm text-muted">Select an item to read it here.</p>
+        <p className="text-sm text-muted">{emptyText}</p>
       </div>
     );
   return (
@@ -60,10 +63,17 @@ export function ReadingPane({
         {entry.kind === "list" && (
           <WithList id={entry.list.id}>
             {(list, communityId) => (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-2xl font-medium tracking-tight">
-                    {list.title}
+                  <h2 className="flex min-w-0 items-center gap-2.5 text-2xl font-medium tracking-tight">
+                    <span
+                      aria-hidden="true"
+                      className="size-3 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: list.color ?? "var(--color-accent)",
+                      }}
+                    />
+                    <span className="truncate">{list.title}</span>
                   </h2>
                   <Button asChild variant="secondary" size="sm">
                     <Link href={`/app/lists/${list.id}`}>
@@ -72,7 +82,14 @@ export function ReadingPane({
                     </Link>
                   </Button>
                 </div>
-                <ListDetailPanel list={list} communityId={communityId} />
+                {list.description && (
+                  <p className="-mt-2 text-sm text-muted">{list.description}</p>
+                )}
+                <ListDetailPanel
+                  list={list}
+                  communityId={communityId}
+                  embedded
+                />
               </div>
             )}
           </WithList>

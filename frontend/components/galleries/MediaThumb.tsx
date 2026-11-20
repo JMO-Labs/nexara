@@ -12,12 +12,15 @@ export interface MediaThumbProps {
   alt?: string;
   /** When true, image scales on hover via the `.nx-thumb` class. */
   zoomOnHover?: boolean;
+  /** CSS object-position for cropping, e.g. "50% 30%". */
+  objectPosition?: string;
 }
 
 export function MediaThumb({
   mediaId,
   alt = "",
   zoomOnHover = false,
+  objectPosition,
 }: MediaThumbProps) {
   const [src, setSrc] = React.useState<string | null>(
     mediaId ? `${API_BASE}/api/v1/media/${mediaId}/thumbnail` : null,
@@ -49,6 +52,7 @@ export function MediaThumb({
         width: "100%",
         height: "100%",
         objectFit: "cover",
+        objectPosition,
         display: "block",
         transition: zoomOnHover
           ? "transform 800ms cubic-bezier(0.22,1,0.36,1)"

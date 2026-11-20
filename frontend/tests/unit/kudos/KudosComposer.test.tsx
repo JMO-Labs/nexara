@@ -95,3 +95,16 @@ describe("KudosComposer", () => {
     expect(createKudos).not.toHaveBeenCalled();
   });
 });
+
+describe("KudosComposer styling", () => {
+  it("uses glass-item fields and a glass dropdown, no hard borders", async () => {
+    wrap(<KudosComposer open onClose={vi.fn()} />);
+    const input = screen.getByRole("combobox");
+    expect(input.className).toContain("glass-item");
+    expect(input.className).not.toContain("border-current/30");
+    await userEvent.type(input, "an");
+    const list = await screen.findByRole("listbox");
+    expect(list.className).toContain("glass");
+    expect(list.className).not.toContain("border-current/20");
+  });
+});

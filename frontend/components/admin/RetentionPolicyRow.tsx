@@ -1,11 +1,11 @@
 "use client";
 /**
  * @file components/admin/RetentionPolicyRow.tsx
- * @brief Editable table row for one retention policy.
+ * @brief Editable glass row for one retention policy.
  */
 import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
-import { stackTable } from "./AdminState";
 import {
   POLICY_META,
   policyLabel,
@@ -21,9 +21,10 @@ export interface RetentionPolicyRowProps {
 }
 
 /**
- * @brief One policy row with days input, toggles and a save button.
+ * @brief One policy row: label on top (phone) or left (md+), controls beside it.
+ *        Save appears only when the row is dirty.
  * @param props policy, onSave, saving
- * @return table row
+ * @return list item
  */
 export function RetentionPolicyRow({
   policy,
@@ -48,20 +49,24 @@ export function RetentionPolicyRow({
   const hint = parsed === null && !error ? "Keep forever" : null;
 
   return (
-    <tr className={stackTable.row}>
-      <td className={stackTable.cell} data-label="Policy">
-        <div>
-          <div className="font-semibold">{label}</div>
-          {meta?.dangerous && (
-            <p role="alert" className="mt-1 text-xs font-semibold text-danger">
-              Opt-in and destructive: when enabled this will permanently delete
-              content older than the set age. Disabled by default.
-            </p>
-          )}
-        </div>
-      </td>
-      <td className={stackTable.cell} data-label="Retention days">
-        <div>
+    <li className="glass-item flex flex-col gap-3 rounded-[20px] p-3 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0">
+        <p className="font-medium">{label}</p>
+        {meta?.dangerous && (
+          <p
+            role="alert"
+            className="mt-1 flex items-start gap-1.5 text-[13px] text-danger"
+          >
+            <TriangleAlert
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            Permanently deletes content older than the set age. Off by default.
+          </p>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-1">
           <input
             type="number"
             inputMode="numeric"
@@ -71,53 +76,54 @@ export function RetentionPolicyRow({
             aria-label={`${label} retention days`}
             aria-invalid={error ? true : undefined}
             onChange={(e) => setDays(e.target.value)}
-            className="h-10 w-28 rounded-xl border border-ink/20 bg-surface px-2"
+            className="glass-item h-10 w-24 rounded-full px-2 text-center text-ink"
           />
-          {hint && <div className="text-xs text-muted">{hint}</div>}
-          {error && <div className="text-xs text-danger">{error}</div>}
+          {hint && <span className="text-xs text-muted">{hint}</span>}
+          {error && <span className="text-xs text-danger">{error}</span>}
         </div>
-      </td>
-      <td className={stackTable.cell} data-label="Enabled">
-        <Switch
-          checked={enabled}
-          aria-label={`${label} enabled`}
-          onCheckedChange={setEnabled}
-        />
-      </td>
-      <td className={stackTable.cell} data-label="Delete media files">
-        {meta?.media ? (
-          <div>
-            <Switch
-              checked={delMedia}
-              aria-label={`${label} delete media files`}
-              onCheckedChange={setDelMedia}
-            />
+        <span className="flex items-center gap-2 text-sm">
+          <Switch
+            checked={enabled}
+            aria-label={`${label} enabled`}
+            onCheckedChange={setEnabled}
+          />
+          Enabled
+        </span>
+        {meta?.media && (
+          <span className="flex flex-col gap-1">
+            <span className="flex items-center gap-2 text-sm">
+              <Switch
+                checked={delMedia}
+                aria-label={`${label} delete media files`}
+                onCheckedChange={setDelMedia}
+              />
+              Delete files
+            </span>
             {delMedia && (
-              <div className="text-xs text-danger">
+              <span className="text-[13px] text-danger">
                 Files are removed from storage and cannot be recovered.
-              </div>
+              </span>
             )}
-          </div>
-        ) : (
-          <span className="text-xs text-muted">n/a</span>
+          </span>
         )}
-      </td>
-      <td className={stackTable.cell} data-label="Actions">
-        <Button
-          type="button"
-          aria-label={`Save ${label}`}
-          disabled={!dirty || !!error || saving}
-          onClick={() =>
-            onSave(key, {
-              enabled,
-              retention_days: parsed,
-              delete_media_files: meta?.media ? delMedia : false,
-            })
-          }
-        >
-          Save
-        </Button>
-      </td>
-    </tr>
+        {dirty && (
+          <Button
+            type="button"
+            size="sm"
+            aria-label={`Save ${label}`}
+            disabled={!!error || saving}
+            onClick={() =>
+              onSave(key, {
+                enabled,
+                retention_days: parsed,
+                delete_media_files: meta?.media ? delMedia : false,
+              })
+            }
+          >
+            Save
+          </Button>
+        )}
+      </div>
+    </li>
   );
 }

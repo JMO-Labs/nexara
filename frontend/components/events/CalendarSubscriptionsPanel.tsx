@@ -7,6 +7,7 @@ import * as React from "react";
 import { CalendarDays, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, EmptyState } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import {
   useCalendarSubscriptions,
   useAddSubscription,
@@ -45,15 +46,13 @@ export function CalendarSubscriptionsPanel() {
   const addLabel = t("components.calendar.subscriptions.add");
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h3 className="text-lg font-semibold">
-          {t("components.calendar.subscriptions.title")}
-        </h3>
-        <p className="text-sm text-muted">
-          {t("components.calendar.subscriptions.description")}
-        </p>
-      </div>
+    <Panel
+      title={t("components.calendar.subscriptions.title")}
+      className="flex flex-col gap-4"
+    >
+      <p className="-mt-1 text-sm text-muted">
+        {t("components.calendar.subscriptions.description")}
+      </p>
 
       {empty ? (
         <EmptyState
@@ -96,6 +95,6 @@ export function CalendarSubscriptionsPanel() {
         onSubmit={handleAdd}
         isLoading={addMutation.isPending}
       />
-    </div>
+    </Panel>
   );
 }

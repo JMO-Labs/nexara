@@ -4,6 +4,8 @@
  * @brief "All photos" view: uniform square grid of recent media from every
  *        visible album, group and post.
  */
+import { Fragment } from "react";
+import { format, isSameWeek, parseISO } from "date-fns";
 import { Images } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
@@ -20,7 +22,37 @@ export interface AllPhotosProps {
 }
 
 const GRID =
-  "grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3 lg:grid-cols-5 xl:grid-cols-6";
+  "grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+
+/**
+ * @brief Friendly group heading for a photo's date.
+ * @param iso created_at timestamp
+ * @return "This week" or the month and year, e.g. "March 2026"
+ */
+function groupLabel(iso: string): string {
+  const d = parseISO(iso);
+  return isSameWeek(d, new Date(), { weekStartsOn: 0 })
+    ? "This week"
+    : format(d, "MMMM yyyy");
+}
+
+/**
+ * @brief Split items into consecutive date groups, keeping global indexes.
+ * @param items photos in display order
+ * @return groups with label and [item, index] pairs
+ */
+function groupItems(
+  items: HomeMediaItem[],
+): { label: string; entries: [HomeMediaItem, number][] }[] {
+  const groups: { label: string; entries: [HomeMediaItem, number][] }[] = [];
+  items.forEach((it, i) => {
+    const label = groupLabel(it.media.created_at);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.entries.push([it, i]);
+    else groups.push({ label, entries: [[it, i]] });
+  });
+  return groups;
+}
 
 /**
  * @brief All-photos grid with loading, error and empty states.
@@ -46,7 +78,7 @@ export function AllPhotos({
     return (
       <div className={GRID} data-testid="photos-skeleton" aria-busy="true">
         {Array.from({ length: 12 }, (_, i) => (
-          <div key={i} className="glass-item aspect-square rounded-2xl" />
+          <div key={i} className="glass-item aspect-square rounded-[22px]" />
         ))}
       </div>
     );
@@ -66,25 +98,37 @@ export function AllPhotos({
   }
   return (
     <ul className={GRID} aria-label="All photos">
-      {items.map((it, i) => {
-        const title = photoTitle(it);
-        return (
-          <li key={`${it.source}-${it.source_id}-${it.media_id}`}>
-            <button
-              type="button"
-              aria-label={`Open photo${title ? `: ${title}` : ""}`}
-              onClick={() => onOpen(i)}
-              className="bg-bg relative block aspect-square w-full overflow-hidden rounded-2xl outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <MediaThumb
-                mediaId={it.media_id}
-                alt={it.media.alt_text || title || "Photo"}
-                zoomOnHover
-              />
-            </button>
+      {groupItems(items).map((group) => (
+        <Fragment key={group.label}>
+          <li className="col-span-full pt-2 first:pt-0">
+            <h2 className="text-sm font-medium text-muted">{group.label}</h2>
           </li>
-        );
-      })}
+          {group.entries.map(([it, i]) => {
+            const title = photoTitle(it);
+            return (
+              <li key={`${it.source}-${it.source_id}-${it.media_id}`}>
+                <button
+                  type="button"
+                  aria-label={`Open photo${title ? `: ${title}` : ""}`}
+                  onClick={() => onOpen(i)}
+                  className="group bg-bg relative block aspect-square w-full overflow-hidden rounded-[22px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <MediaThumb
+                    mediaId={it.media_id}
+                    alt={it.media.alt_text || title || "Photo"}
+                    zoomOnHover
+                  />
+                  {title && (
+                    <span className="glass-item pointer-events-none absolute inset-x-2 bottom-2 hidden rounded-[18px] px-3 py-1.5 text-left text-xs font-medium text-ink group-hover:block group-focus-visible:block">
+                      {title}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </Fragment>
+      ))}
     </ul>
   );
 }

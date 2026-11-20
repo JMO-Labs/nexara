@@ -71,7 +71,7 @@ export function ReportDialog({
       description="Tell moderators what is wrong with this content."
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="glass" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={submit} disabled={!reason} loading={busy}>

@@ -54,7 +54,7 @@ describe("EventsSidePanel", () => {
   it("titles the day panel with the selected day and can clear it", async () => {
     const p = setup();
     expect(
-      screen.getByRole("heading", { name: "Friday, Jan 10", level: 2 }),
+      screen.getByRole("heading", { name: "Fri, Jan 10", level: 2 }),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(p.onClearDay).toHaveBeenCalled();
@@ -66,6 +66,28 @@ describe("EventsSidePanel", () => {
       screen.getByRole("heading", { name: "This month", level: 2 }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+
+  it("Clear is a glass pill", () => {
+    setup();
+    expect(screen.getByRole("button", { name: "Clear" }).className).toContain(
+      "glass-btn",
+    );
+  });
+
+  it("hides the selected-day panel in list view", () => {
+    setup({ showDayPanel: false });
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Fri, Jan 10", level: 2 }),
+    ).toBeNull();
+  });
+
+  it("empty day offers a New event pill wired to onCreate", async () => {
+    const onCreate = vi.fn();
+    setup({ railEvents: [], onCreate });
+    await userEvent.click(screen.getByRole("button", { name: "New event" }));
+    expect(onCreate).toHaveBeenCalled();
   });
 
   it("shows an empty line when nothing is upcoming", () => {

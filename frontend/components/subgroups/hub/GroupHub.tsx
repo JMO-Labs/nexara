@@ -90,7 +90,7 @@ export function GroupHub({ slug }: GroupHubProps) {
   return (
     <div
       className={cn(
-        "grid w-full grid-cols-1 gap-[18px] motion-safe:transition-[grid-template-columns]",
+        "grid w-full grid-cols-1 gap-[18px] pb-28 md:pb-0 motion-safe:transition-[grid-template-columns]",
         chatOpen && "md:grid-cols-[minmax(0,1fr)_400px]",
       )}
     >

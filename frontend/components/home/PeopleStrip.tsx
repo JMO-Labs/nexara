@@ -70,7 +70,11 @@ export function PeopleStrip() {
               }
               onClick={() => router.push(`/app/members/${p.user_id}`)}
               style={{ "--rc": ring } as React.CSSProperties}
-              className="relative block rounded-full shadow-[0_0_0_2px_var(--nx-glass-solid),0_0_0_4px_var(--rc)]"
+              className={`relative block rounded-full ${
+                p.online || p.birthday_in_days != null
+                  ? "shadow-[0_0_0_2px_var(--nx-glass-solid),0_0_0_4px_color-mix(in_srgb,var(--rc)_40%,transparent)]"
+                  : "shadow-[0_0_0_2px_var(--nx-glass-solid)]"
+              }`}
             >
               <Avatar
                 src={p.avatar_url ?? undefined}

@@ -59,7 +59,7 @@ export function SearchField({
         onChange={handle}
         placeholder={placeholder}
         aria-label={label}
-        className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+        className="min-w-0 flex-1 appearance-none border-0 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
       />
     </div>
   );

@@ -1,8 +1,11 @@
 "use client";
 /**
  * @file components/lists/ListDetailPanel.tsx
- * @brief One list in detail: Items, Members and Settings tabs.
+ * @brief One list in detail: Items, Members and Settings tabs. The title is
+ *        rendered by the host (page header or reading pane), so this body
+ *        only shows tabs. `embedded` drops the glass Panel wrapper.
  */
+import { format } from "date-fns";
 import { Panel } from "@/components/ui/page";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +19,12 @@ import { ListMemberManageModal } from "./ListMemberManageModal";
 export interface ListDetailPanelProps {
   list: List;
   communityId: string;
+  /** Render without the glass Panel wrapper (inside a reading pane). */
+  embedded?: boolean;
 }
+
+/** @brief "community" -> "Community". */
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * @brief Members tab body.
@@ -28,16 +36,19 @@ function MembersTab({ listId }: { listId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex flex-col gap-1 text-sm">
+      <ul className="flex flex-col gap-2 text-sm">
         {data?.map((m) => (
-          <li key={m.userId} className="flex gap-2">
+          <li
+            key={m.userId}
+            className="glass-item flex gap-2 rounded-[20px] px-4 py-2.5"
+          >
             <span className="truncate">{m.userId}</span>
-            <span className="opacity-70">{m.role}</span>
+            <span className="text-muted">{cap(m.role)}</span>
           </li>
         ))}
       </ul>
       <Button
-        variant="outline"
+        variant="secondary"
         className="self-start"
         onClick={() => setOpen(true)}
       >
@@ -62,25 +73,30 @@ function MembersTab({ listId }: { listId: string }) {
 function SettingsTab({ list, communityId }: ListDetailPanelProps) {
   const [open, setOpen] = useState(false);
   const rows: [string, string][] = [
-    ["Visibility", list.visibility],
-    ["Status", list.status],
+    ["Visibility", cap(list.visibility)],
+    ["Status", cap(list.status)],
     [
       "Expires",
-      list.expiresAt ? new Date(list.expiresAt).toLocaleDateString() : "Never",
+      list.expiresAt
+        ? format(new Date(list.expiresAt), "EEE, MMM d, yyyy")
+        : "Never",
     ],
   ];
   return (
     <div className="flex flex-col gap-3">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+      <dl className="flex flex-col gap-2 text-sm">
         {rows.map(([k, v]) => (
-          <div key={k} className="contents">
-            <dt className="font-semibold">{k}</dt>
-            <dd>{v}</dd>
+          <div
+            key={k}
+            className="glass-item flex justify-between gap-4 rounded-[20px] px-4 py-2.5"
+          >
+            <dt className="text-muted">{k}</dt>
+            <dd className="font-medium">{v}</dd>
           </div>
         ))}
       </dl>
       <Button
-        variant="outline"
+        variant="secondary"
         className="self-start"
         onClick={() => setOpen(true)}
       >
@@ -103,25 +119,13 @@ function SettingsTab({ list, communityId }: ListDetailPanelProps) {
  * @param props see ListDetailPanelProps
  * @return section
  */
-export function ListDetailPanel({ list, communityId }: ListDetailPanelProps) {
-  return (
-    <Panel
-      className="flex flex-col gap-3"
-      aria-labelledby={`list-${list.id}-title`}
-    >
-      <header className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="size-3 rounded-full"
-          style={{ backgroundColor: list.color ?? "var(--color-accent)" }}
-        />
-        <h2 id={`list-${list.id}-title`} className="text-lg font-semibold">
-          {list.title}
-        </h2>
-      </header>
-      {list.description && (
-        <p className="text-sm opacity-80">{list.description}</p>
-      )}
+export function ListDetailPanel({
+  list,
+  communityId,
+  embedded,
+}: ListDetailPanelProps) {
+  const body = (
+    <>
       <Tabs defaultValue="items">
         <TabList aria-label="List sections">
           <Tab value="items">Items</Tab>
@@ -138,6 +142,8 @@ export function ListDetailPanel({ list, communityId }: ListDetailPanelProps) {
           <SettingsTab list={list} communityId={communityId} />
         </TabPanel>
       </Tabs>
-    </Panel>
+    </>
   );
+  if (embedded) return <div className="flex flex-col gap-4">{body}</div>;
+  return <Panel className="flex flex-col gap-4">{body}</Panel>;
 }

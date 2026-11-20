@@ -42,10 +42,7 @@ export function PluginApiKeys({ pluginId }: { pluginId: string }) {
   return (
     <div className="flex flex-col gap-3">
       {fresh && (
-        <div
-          role="status"
-          className="rounded-xl border border-ink/20 p-3 text-sm"
-        >
+        <div role="status" className="glass-item rounded-[20px] p-3 text-sm">
           Copy this key now; it will not be shown again.
           <code className="mt-1 block break-all">{fresh}</code>
         </div>
@@ -54,7 +51,7 @@ export function PluginApiKeys({ pluginId }: { pluginId: string }) {
         {(data ?? []).map((k) => (
           <li
             key={k.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink/10 p-2"
+            className="glass-item flex flex-wrap items-center justify-between gap-2 rounded-[20px] p-2"
           >
             <div className="min-w-0">
               <code className="break-all text-xs">{k.masked_key}</code>
@@ -66,7 +63,8 @@ export function PluginApiKeys({ pluginId }: { pluginId: string }) {
             {!k.revoked_at && (
               <Button
                 size="sm"
-                variant="destructive"
+                variant="glass"
+                className="text-danger"
                 aria-label={`Revoke key ending ${k.masked_key.slice(-4)}`}
                 onClick={() => onRevoke(k.id)}
               >

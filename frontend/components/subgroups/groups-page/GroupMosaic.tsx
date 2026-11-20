@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/subgroups/groups-page/GroupMosaic.tsx
- * @brief Responsive grid (1/2/3/4 cols) of glass group cards with
+ * @brief Auto-fill grid (min 260px columns) of glass group cards with
  *        error / loading / empty states.
  */
 import * as React from "react";
@@ -26,8 +26,9 @@ export interface GroupMosaicProps {
   isFiltered?: boolean;
 }
 
+/** Auto-fill columns (min 260px) so a few cards do not leave a large empty area. */
 const GRID =
-  "grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-[18px] lg:grid-cols-3 xl:grid-cols-4";
+  "grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-3 md:gap-[18px]";
 
 /**
  * @brief Group card grid.

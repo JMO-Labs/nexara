@@ -7,6 +7,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { list } from "./listFixtures";
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.scrollIntoView ??= () => {};
+
 const h = vi.hoisted(() => ({
   create: { mutate: vi.fn(), isPending: false },
   update: { mutate: vi.fn(), isPending: false },
@@ -35,9 +38,9 @@ describe("ListCreateModal", () => {
     expect(await screen.findByText("Title is required")).toBeInTheDocument();
     expect(h.create.mutate).not.toHaveBeenCalled();
     await userEvent.type(screen.getByLabelText("Title"), "Groceries");
-    await userEvent.selectOptions(
-      screen.getByLabelText("Visibility"),
-      "private",
+    await userEvent.click(screen.getByLabelText("Visibility"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Private" }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(h.create.mutate).toHaveBeenCalledWith(

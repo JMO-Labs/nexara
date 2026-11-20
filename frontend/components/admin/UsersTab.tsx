@@ -7,22 +7,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUI } from "@/stores/ui";
-import { Check, Loader2, Trash2, X } from "lucide-react";
+import { Check, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   useAdminUsersInfinite,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
 } from "@/hooks/useAdmin";
-import {
-  Badge,
-  Button,
-  IconButton,
-  Input,
-  Modal,
-  Option,
-  Select,
-} from "@/components/ui";
+import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
+import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
+import { AdminNotice } from "./AdminState";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -41,6 +35,13 @@ const ROLE_LABEL: Record<string, string> = {
   member: "Member",
   viewer: "Viewer",
 };
+
+/**
+ * @brief Capitalise the first letter of a status code.
+ * @param s raw status, e.g. "active"
+ * @return sentence-case label, e.g. "Active"
+ */
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * @brief Users admin tab.
@@ -113,15 +114,14 @@ export function UsersTab() {
 
   if (error) {
     return (
-      <div
-        role="alert"
-        className="flex items-center justify-between gap-3 rounded-2xl border-l-4 border-danger bg-surface p-3"
-      >
-        <p>Failed to load users</p>
-        <Button variant="ghost" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </div>
+      <AdminNotice tone="error">
+        <div className="flex items-center justify-between gap-3">
+          <p>Failed to load users</p>
+          <Button variant="glass" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      </AdminNotice>
     );
   }
 
@@ -144,39 +144,34 @@ export function UsersTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex-1">
-          <Input
-            type="search"
-            aria-label="Search users"
-            placeholder="Search by name or email..."
+      <Toolbar className="mb-0">
+        <div className="min-w-0 flex-1">
+          <SearchField
+            label="Search users"
+            placeholder="Search by name or email"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
           />
         </div>
-        <div className="sm:w-40">
-          <Select
-            label="Density"
-            value={density}
-            onValueChange={(v) => setDensity(v as "comfortable" | "compact")}
-          >
-            <Option value="comfortable">Comfortable</Option>
-            <Option value="compact">Compact</Option>
-          </Select>
-        </div>
-      </div>
+        <Segmented
+          label="Density"
+          options={[
+            { value: "comfortable", label: "Comfortable" },
+            { value: "compact", label: "Compact" },
+          ]}
+          value={density}
+          onChange={(v) => setDensity(v as "comfortable" | "compact")}
+        />
+      </Toolbar>
 
       {usersPage.items.length === 0 ? (
-        <div role="status" className="rounded-2xl bg-surface p-3">
-          No users found
+        <div role="status">
+          <EmptyState compact icon={Users} title="No users found" />
         </div>
       ) : (
         <div
           ref={scrollRef}
-          className={cn(
-            "rounded-2xl bg-surface p-2",
-            virtual && "max-h-[70vh] overflow-y-auto",
-          )}
+          className={cn(virtual && "max-h-[70vh] overflow-y-auto")}
         >
           <Table>
             <TableHeader className="max-md:sr-only">
@@ -214,12 +209,18 @@ export function UsersTab() {
                       {ROLE_LABEL[user.role] ?? user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className={cell}>{user.status}</TableCell>
+                  <TableCell className={cell}>
+                    <Badge
+                      tone={user.status === "active" ? "accent" : "neutral"}
+                    >
+                      {capitalise(user.status)}
+                    </Badge>
+                  </TableCell>
                   <TableCell className={`${cell} max-md:col-span-2`}>
                     <div className="flex gap-1">
                       {user.status === "active" ? (
                         <IconButton
-                          variant="ghost"
+                          variant="glass"
                           aria-label="Suspend user"
                           tooltip="Suspend user"
                           onClick={() => suspendMutation.mutate(user.id)}
@@ -228,7 +229,7 @@ export function UsersTab() {
                         </IconButton>
                       ) : (
                         <IconButton
-                          variant="ghost"
+                          variant="glass"
                           aria-label="Restore user"
                           tooltip="Restore user"
                           onClick={() => restoreMutation.mutate(user.id)}
@@ -237,7 +238,7 @@ export function UsersTab() {
                         </IconButton>
                       )}
                       <IconButton
-                        variant="ghost"
+                        variant="glass"
                         aria-label="Delete user"
                         tooltip="Delete user"
                         onClick={() => setDeletingUserId(user.id)}

@@ -34,6 +34,9 @@ const UID = "123e4567-e89b-42d3-a456-426614174000";
 
 beforeEach(() => Object.values(h).forEach((m) => m.mutate.mockReset()));
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.scrollIntoView ??= () => {};
+
 describe("ListItemEditModal", () => {
   it("requires required fields, then creates", async () => {
     render(
@@ -90,7 +93,10 @@ describe("ListMemberManageModal", () => {
     ).toBeInTheDocument();
     await userEvent.clear(screen.getByLabelText("User ID"));
     await userEvent.type(screen.getByLabelText("User ID"), UID);
-    await userEvent.selectOptions(screen.getByLabelText("Role"), "editor");
+    await userEvent.click(screen.getByLabelText("Role"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Editor" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(h.add.mutate).toHaveBeenCalledWith(
       { userId: UID, role: "editor" },

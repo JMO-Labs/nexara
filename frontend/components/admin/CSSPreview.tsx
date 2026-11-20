@@ -13,11 +13,12 @@ const SAMPLE = `<main>
 <button type="button" class="btn">Secondary</button></div>
 </main>`;
 
+// Neutral system colours (no hex): the preview frame is not themed by app tokens.
 const BASE_CSS =
-  "body{font-family:system-ui,sans-serif;margin:16px;color:#111827;background:#fff}" +
-  ".card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px}" +
-  ".btn{padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;margin-right:8px}" +
-  ".btn-primary{background:#14301e;color:#fff;border-color:#14301e}";
+  "body{font-family:system-ui,sans-serif;margin:16px;color:CanvasText;background:Canvas}" +
+  ".card{border:1px solid color-mix(in srgb,CanvasText 15%,transparent);border-radius:12px;padding:12px;margin-top:12px}" +
+  ".btn{padding:6px 12px;border-radius:8px;border:1px solid color-mix(in srgb,CanvasText 25%,transparent);margin-right:8px}" +
+  ".btn-primary{background:CanvasText;color:Canvas;border-color:CanvasText}";
 
 /** @brief CSP so admin CSS (`@import`, `url()`) cannot make network requests. */
 const PREVIEW_CSP =
@@ -48,7 +49,7 @@ export function CSSPreview({ css }: { css: string }) {
         aria-labelledby="css-preview-label"
         sandbox=""
         srcDoc={buildPreviewDoc(css)}
-        className="min-h-64 w-full flex-1 rounded-md border bg-white"
+        className="glass-item min-h-64 w-full flex-1 rounded-[22px]"
       />
     </div>
   );

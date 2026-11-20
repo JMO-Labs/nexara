@@ -7,6 +7,7 @@
 
 "use client";
 
+import { usePathname } from "next/navigation";
 import { CircleHelp } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,12 +24,14 @@ import { useModals } from "@/stores/modals";
  */
 export function HelpButton() {
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
+  const pathname = usePathname();
+  if (pathname?.startsWith("/app/chat")) return null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Help menu"
-        className="bg-surface-strong text-bg focus-visible:outline-accent fixed right-5 bottom-5 z-[1000] hidden md:flex size-12 items-center justify-center rounded-full shadow-md transition-transform outline-none hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none motion-reduce:hover:scale-100"
+        className="glass-btn text-ink focus-visible:outline-accent fixed right-5 bottom-5 z-[1000] hidden md:flex size-11 items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <CircleHelp size={24} aria-hidden="true" />
       </DropdownMenuTrigger>

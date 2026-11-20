@@ -192,7 +192,7 @@ export const MessageList = React.forwardRef<
       ref={parentRef}
       onScroll={onScroll}
       data-density={density}
-      className="relative min-h-0 flex-1 overflow-y-auto"
+      className="relative min-h-0 flex-1 overflow-y-auto py-4 [mask-image:linear-gradient(to_bottom,transparent,black_16px)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_16px)]"
     >
       {isFetchingMore && (
         <p className="py-2 text-center text-xs text-muted">
@@ -200,7 +200,7 @@ export const MessageList = React.forwardRef<
         </p>
       )}
       <div
-        className="relative w-full"
+        className="relative mx-auto w-full max-w-[860px]"
         style={{ height: virtualizer.getTotalSize() }}
       >
         {virtualizer.getVirtualItems().map((vi) => {

@@ -51,7 +51,10 @@ export default function RegisterPage() {
       subtitle={
         <>
           Already a member?{" "}
-          <Link href="/login" className="underline">
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+          >
             Sign in
           </Link>
         </>

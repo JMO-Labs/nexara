@@ -20,7 +20,7 @@ export function MemberStack({ slug }: { slug: string }) {
       {data.map((m) => (
         <Avatar
           key={m.user_id}
-          size="sm"
+          size="md"
           src={m.avatar_url ?? undefined}
           name={m.display_name ?? m.username ?? undefined}
         />

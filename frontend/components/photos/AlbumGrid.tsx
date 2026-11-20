@@ -24,7 +24,7 @@ export interface AlbumGridProps {
 
 const ROW = "flex flex-col gap-3 md:flex-row md:flex-wrap md:items-stretch";
 const CARD =
-  "glass-item relative block w-full overflow-hidden rounded-[28px] text-left text-white outline-none transition-[flex-basis,height] duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:h-[380px]";
+  "glass-item relative block w-full overflow-hidden rounded-[28px] text-left text-ink outline-none transition-[flex-basis,height] duration-300 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:h-[380px]";
 
 /**
  * @brief Album card list with loading, error and empty states.
@@ -63,7 +63,7 @@ export function AlbumGrid({
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="glass-item h-24 rounded-[28px] md:h-[380px] md:flex-1"
+            className="glass-item h-28 rounded-[28px] md:h-[380px] md:flex-1"
           />
         ))}
       </div>
@@ -110,30 +110,40 @@ export function AlbumGrid({
                 if (mobile && !open) setActive(g.id);
                 else onSelect(g.id);
               }}
-              className={cn(CARD, open ? "h-72" : "h-24")}
+              className={cn(CARD, open ? "h-72" : "h-28")}
             >
-              <span className="bg-bg absolute inset-0 block">
-                <MediaThumb
-                  mediaId={g.cover_media_id}
-                  alt={`${g.title} cover`}
-                />
-              </span>
-              <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
+              {g.cover_media_id ? (
+                <span className="absolute inset-0 block">
+                  <MediaThumb
+                    mediaId={g.cover_media_id}
+                    alt={`${g.title} cover`}
+                    objectPosition="50% 30%"
+                  />
+                </span>
+              ) : (
+                <span
+                  data-testid="album-placeholder"
+                  className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)]"
+                >
+                  <span className="glass-item flex size-14 items-center justify-center rounded-full">
+                    <Images className="size-6" aria-hidden="true" />
+                  </span>
+                </span>
+              )}
+              <span className="glass-item absolute inset-x-3 bottom-3 flex flex-col gap-0.5 rounded-[20px] px-3 py-2">
                 <span
                   className={cn(
                     "font-semibold",
-                    open ? "text-xl" : "truncate text-sm",
+                    open ? "text-lg" : "truncate text-sm",
                   )}
                 >
                   {g.title}
                 </span>
+                <span className="text-xs text-muted">{count}</span>
                 {open && (
-                  <>
-                    <span className="text-sm text-white/85">{count}</span>
-                    <span className="mt-1 inline-flex w-fit rounded-full bg-white px-3 py-1 text-sm font-semibold text-black">
-                      Open album
-                    </span>
-                  </>
+                  <span className="mt-1 inline-flex w-fit rounded-full bg-surface-strong px-3 py-1 text-sm font-semibold text-bg">
+                    Open album
+                  </span>
                 )}
               </span>
             </button>

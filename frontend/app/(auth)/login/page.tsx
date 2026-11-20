@@ -76,7 +76,10 @@ export default function LoginPage() {
       subtitle={
         <>
           New here?{" "}
-          <Link href="/register" className="underline">
+          <Link
+            href="/register"
+            className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+          >
             Create an account
           </Link>
         </>
@@ -109,10 +112,16 @@ export default function LoginPage() {
             Sign in
           </Button>
           <div className="flex justify-between text-sm">
-            <Link href="/magic-link" className="underline">
+            <Link
+              href="/magic-link"
+              className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+            >
               Email a magic link
             </Link>
-            <Link href="/reset-password" className="underline">
+            <Link
+              href="/reset-password"
+              className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+            >
               Forgot password?
             </Link>
           </div>

@@ -64,8 +64,8 @@ export function InlineThread({ thread }: { thread: HomeChatThread }) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <ul className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-3.5 pb-2.5 pt-1">
+    <div className="flex flex-col">
+      <ul className="flex flex-col justify-end gap-2.5 overflow-hidden px-3.5 pb-2.5 pt-1">
         <AnimatePresence initial={false}>
           {messages.map((m) => {
             const mine = selfId !== null && m.author?.id === selfId;

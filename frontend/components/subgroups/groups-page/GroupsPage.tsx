@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/subgroups/groups-page/GroupsPage.tsx
- * @brief Groups index: PageHeader, Toolbar (search, All/Open/Private, Everyone/Mine)
+ * @brief Groups index: PageHeader, Toolbar (search, All/Open/Private, Mine toggle)
  *        and a glass card grid.
  */
 import * as React from "react";
@@ -13,6 +13,7 @@ import {
   SearchField,
   Segmented,
 } from "@/components/ui/page";
+import { cn } from "@/lib/utils";
 import { GroupMosaic } from "@/components/subgroups/groups-page/GroupMosaic";
 import { CreateSubgroupModal } from "@/components/subgroups/CreateSubgroupModal";
 import {
@@ -22,21 +23,16 @@ import {
 } from "@/hooks/useSubgroups";
 
 type FilterMode = "all" | "open" | "private";
-type Scope = "everyone" | "mine";
 
 const FILTERS: { value: FilterMode; label: string }[] = [
   { value: "all", label: "All" },
   { value: "open", label: "Open" },
   { value: "private", label: "Private" },
 ];
-const SCOPES: { value: Scope; label: string }[] = [
-  { value: "everyone", label: "Everyone" },
-  { value: "mine", label: "Mine" },
-];
 
 /**
  * @brief Groups index page body.
- * @param props embedded hides the PageHeader and moves "New group" into the Toolbar
+ * @param props embedded hides the PageHeader and shows "New group" above the Toolbar
  * @return page content
  */
 export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
@@ -44,7 +40,7 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
   const [createOpen, setCreateOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterMode>("all");
-  const [scope, setScope] = React.useState<Scope>("everyone");
+  const [mineOnly, setMineOnly] = React.useState(false);
 
   const { data, isLoading, error, refetch } = useSubgroupList();
   const join = useJoinSubgroup();
@@ -53,7 +49,7 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     return (data ?? []).filter((g) => {
-      if (scope === "mine" && !g.is_member) return false;
+      if (mineOnly && !g.is_member) return false;
       if (filter === "open" && g.join_policy !== "open") return false;
       if (filter === "private" && !g.is_private) return false;
       if (!q) return true;
@@ -63,7 +59,7 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
         (g.description ?? "").toLowerCase().includes(q)
       );
     });
-  }, [data, query, filter, scope]);
+  }, [data, query, filter, mineOnly]);
 
   const total = data?.length ?? 0;
 
@@ -78,28 +74,37 @@ export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
           }
         />
       )}
+      {embedded && (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={() => setCreateOpen(true)}>New group</Button>
+        </div>
+      )}
       <Toolbar>
-        <SearchField
-          value={query}
-          onChange={setQuery}
-          placeholder="Search groups…"
-          label="Search groups"
-        />
+        <div className="min-w-[160px] flex-1">
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Search groups…"
+            label="Search groups"
+          />
+        </div>
         <Segmented
           label="Filter groups"
           options={FILTERS}
           value={filter}
           onChange={setFilter}
         />
-        <Segmented
-          label="Group scope"
-          options={SCOPES}
-          value={scope}
-          onChange={setScope}
-        />
-        {embedded && (
-          <Button onClick={() => setCreateOpen(true)}>New group</Button>
-        )}
+        <button
+          type="button"
+          aria-pressed={mineOnly}
+          onClick={() => setMineOnly((v) => !v)}
+          className={cn(
+            "glass-item min-h-9 rounded-full px-3.5 text-sm text-ink",
+            mineOnly && "bg-surface-strong text-bg",
+          )}
+        >
+          Mine
+        </button>
       </Toolbar>
       <GroupMosaic
         data={filtered}

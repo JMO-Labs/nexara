@@ -24,7 +24,7 @@ export interface Crumb {
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-1 text-sm text-muted">
+      <ol className="flex flex-wrap items-center gap-1 text-sm text-ink/70">
         {items.map((c, i) => (
           <li key={`${c.label}-${i}`} className="flex items-center gap-1">
             {i > 0 && <ChevronRight aria-hidden className="size-3.5" />}
@@ -44,33 +44,29 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
 
 /**
  * @brief Page header: breadcrumb line above the shared PageHeader.
- * @param props crumbs, title, actions; hideTitle keeps the h1 for screen
- *        readers only (when the body already shows the title visually)
+ * @param props crumbs, title, description, actions
  * @return header
  */
 export function PageHeader({
   crumbs,
   title,
+  description,
   actions,
-  hideTitle,
 }: {
   crumbs: Crumb[];
   title: string;
+  description?: string;
   actions?: ReactNode;
-  hideTitle?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2">
       {/* A lone root crumb just repeats the title. */}
       {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
-      {hideTitle ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="sr-only">{title}</h1>
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-        </div>
-      ) : (
-        <SharedPageHeader title={title} actions={actions} />
-      )}
+      <SharedPageHeader
+        title={title}
+        description={description}
+        actions={actions}
+      />
     </div>
   );
 }
@@ -121,7 +117,7 @@ export function ErrorCard({
       </div>
       <p className="text-sm text-muted">{message}</p>
       {onRetry && (
-        <Button variant="outline" onClick={onRetry}>
+        <Button variant="secondary" onClick={onRetry}>
           Try again
         </Button>
       )}

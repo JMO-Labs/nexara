@@ -16,7 +16,6 @@ import {
 import { NudgeButton } from "@/components/engagement/NudgeButton";
 import { BlockButton } from "@/components/common/BlockButton";
 import { GroupChips } from "@/components/members/GroupChips";
-import { statusOf } from "@/components/members/personStatus";
 import { useCreateDm } from "@/hooks/useChat";
 import type { DirectoryPerson, UserProfile } from "@/lib/api/users";
 import { groupColor } from "@/lib/groupColor";
@@ -46,11 +45,6 @@ export function MemberHeader({
     (g) => g.id === connection?.primary_group_id,
   )?.accent_color;
   const ring = groupColor(connection?.primary_group_id ?? null, accent);
-  const status = connection
-    ? statusOf(connection)
-    : profile.last_seen_at
-      ? statusOf({ online: false, last_seen_at: profile.last_seen_at })
-      : "";
   const subtitle = [profile.title, profile.pronouns, profile.location]
     .filter(Boolean)
     .join(" · ");
@@ -65,7 +59,7 @@ export function MemberHeader({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <span
           style={{ "--rc": ring } as React.CSSProperties}
-          className="relative block shrink-0 self-start rounded-full shadow-[0_0_0_3px_var(--nx-glass-solid),0_0_0_6px_var(--rc)]"
+          className="relative block shrink-0 self-start rounded-full ring-2 ring-[var(--rc)]"
         >
           <Avatar
             src={profile.avatar_url ?? undefined}
@@ -81,14 +75,7 @@ export function MemberHeader({
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight text-ink">
-            {profile.display_name}
-          </h2>
-          <p className="text-sm text-muted">
-            @{profile.username}
-            {status ? ` · ${status}` : ""}
-          </p>
-          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
           {profile.bio && (
             <p className="mt-2 text-sm whitespace-pre-line text-ink">
               {profile.bio}
@@ -99,12 +86,12 @@ export function MemberHeader({
           </div>
         </div>
         {!isSelf && (
-          <div className="flex flex-wrap items-center gap-2 sm:self-start">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:self-start">
             <button
               type="button"
               onClick={message}
               disabled={dm.isPending}
-              className="min-h-11 rounded-full bg-surface-strong px-5 py-2 text-sm text-bg disabled:opacity-60"
+              className="min-h-11 rounded-full bg-surface-strong px-5 py-2 text-sm font-medium text-bg disabled:opacity-60"
             >
               Message
             </button>

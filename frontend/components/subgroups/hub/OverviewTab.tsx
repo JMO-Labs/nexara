@@ -4,7 +4,9 @@
  * @brief Overview tab: pinned post, upcoming events, recent posts.
  */
 import * as React from "react";
+import { CalendarDays, Newspaper, Pin } from "lucide-react";
 import { EmptyState } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { EventCard } from "@/components/events/EventCard";
 import { PostCard } from "@/components/feed/PostCard";
 import { useUpcomingEvents } from "@/hooks/useEvents";
@@ -26,24 +28,32 @@ export function OverviewTab({ subgroup }: OverviewTabProps) {
   const recentPosts = feedPages.flatMap((p) => p.items);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Pinned post Block */}
+    <div className="flex flex-col gap-4 md:gap-[18px]">
       {subgroup.pinned_post_id && pinnedPost.data ? (
-        <div className="flex flex-col gap-2">
-          <h3 className="text-base font-semibold">Pinned post</h3>
+        <Panel
+          as="section"
+          aria-label="Pinned post"
+          title="Pinned post"
+          icon={Pin}
+        >
           <PostCard post={pinnedPost.data} truncateBody />
-        </div>
+        </Panel>
       ) : null}
 
-      {/* Upcoming events Rail */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-base font-semibold">Upcoming events</h3>
+      <Panel
+        as="section"
+        aria-label="Upcoming events"
+        title="Upcoming events"
+        icon={CalendarDays}
+      >
         {upcomingEventsQuery.isLoading ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : upcomingEvents.length === 0 ? (
           <EmptyState
+            compact
+            icon={CalendarDays}
             title="No upcoming events"
-            description="Check back soon!"
+            description="Check back soon."
           />
         ) : (
           <div className="flex flex-col gap-4">
@@ -52,15 +62,20 @@ export function OverviewTab({ subgroup }: OverviewTabProps) {
             ))}
           </div>
         )}
-      </div>
+      </Panel>
 
-      {/* Recent posts Preview */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-base font-semibold">Recent posts</h3>
+      <Panel
+        as="section"
+        aria-label="Recent posts"
+        title="Recent posts"
+        icon={Newspaper}
+      >
         {feedQuery.isLoading ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : recentPosts.length === 0 ? (
           <EmptyState
+            compact
+            icon={Newspaper}
             title="Quiet here"
             description="Be the first to share something with your community."
           />
@@ -71,7 +86,7 @@ export function OverviewTab({ subgroup }: OverviewTabProps) {
             ))}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

@@ -26,13 +26,13 @@ describe("toneForEvent", () => {
 describe("chipStyle", () => {
   const tone = toneForEvent(makeEvent({ color: "#112233" }));
 
-  it("uses a 22% group-colour fill, ink text and group-colour bar", () => {
+  it("uses a 22% group-colour fill and ink text, with no border rail", () => {
     const s = chipStyle(tone, false);
     expect(s.backgroundColor).toBe(
       "color-mix(in srgb, #112233 22%, transparent)",
     );
     expect(s.color).toBe("var(--nx-ink)");
-    expect(s.borderColor).toBe("#112233");
+    expect(s.borderColor).toBeUndefined();
   });
 
   it("emphasised chips get a stronger fill but keep ink text", () => {

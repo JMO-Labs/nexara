@@ -5,7 +5,9 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui";
+import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { getStorage, getStorageUsers } from "@/lib/api/adminStorage";
 import { formatBytes } from "@/lib/formatBytes";
 import { AdminLoading, AdminNotice } from "./AdminState";
@@ -31,9 +33,18 @@ function Th({
       <button
         type="button"
         onClick={() => onSort(k)}
-        className="min-h-11 font-semibold"
+        className="inline-flex min-h-11 items-center gap-1 font-medium text-muted hover:text-ink"
       >
         {label}
+        {sort === "ascending" && (
+          <ChevronUp className="size-4" aria-hidden="true" />
+        )}
+        {sort === "descending" && (
+          <ChevronDown className="size-4" aria-hidden="true" />
+        )}
+        {sort === "none" && (
+          <ChevronsUpDown className="size-4 opacity-50" aria-hidden="true" />
+        )}
       </button>
     </th>
   );
@@ -86,24 +97,21 @@ export function StorageView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="flex flex-col gap-1 p-4">
+      <div className="glass-item flex flex-col gap-1 rounded-[22px] p-4">
         <span className="text-sm text-muted">Total storage used</span>
-        <span className="text-3xl font-black">
+        <span className="text-[32px] font-medium tracking-tight">
           {formatBytes(current.total_bytes)}
         </span>
-      </Card>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="p-4">
-          <h2 className="mb-2 text-lg font-semibold">Last 30 days</h2>
-          <StorageChart data={snapshots} />
-        </Card>
-        <Card className="p-4">
-          <h2 className="mb-2 text-lg font-semibold">By category</h2>
-          <StorageBreakdown categories={current.by_category} />
-        </Card>
       </div>
-      <Card className="overflow-x-auto p-4">
-        <h2 className="mb-2 text-lg font-semibold">Per-user storage</h2>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel as="div" title="Last 30 days">
+          <StorageChart data={snapshots} />
+        </Panel>
+        <Panel as="div" title="By category">
+          <StorageBreakdown categories={current.by_category} />
+        </Panel>
+      </div>
+      <Panel as="div" title="Per-user storage" className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr>
@@ -127,9 +135,9 @@ export function StorageView() {
               />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-ink/5">
             {rows.map((u) => (
-              <tr key={u.user_id} className="border-t border-ink/10">
+              <tr key={u.user_id}>
                 <td className="p-2">{u.display_name}</td>
                 <td className="p-2">{formatBytes(u.used_bytes)}</td>
                 <td className="p-2">{u.percent_of_total.toFixed(1)}%</td>
@@ -139,28 +147,28 @@ export function StorageView() {
         </table>
         {pages > 1 && (
           <nav aria-label="Pagination" className="mt-3 flex items-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant="glass"
+              size="sm"
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="min-h-11 px-3"
             >
               Previous
-            </button>
+            </Button>
             <span>
               Page {page} of {pages}
             </span>
-            <button
-              type="button"
+            <Button
+              variant="glass"
+              size="sm"
               disabled={page >= pages}
               onClick={() => setPage(page + 1)}
-              className="min-h-11 px-3"
             >
               Next
-            </button>
+            </Button>
           </nav>
         )}
-      </Card>
+      </Panel>
     </div>
   );
 }

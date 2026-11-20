@@ -7,7 +7,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
+import { ChevronDown, Upload } from "lucide-react";
 import { Button } from "@/components/ui";
 import {
   PageHeader,
@@ -126,26 +126,42 @@ export function PhotosPage() {
         }
       />
       <Toolbar>
-        <SearchField
-          value={search}
-          onChange={setSearch}
-          placeholder={view === "albums" ? "Search albums" : "Search photos"}
-          label={view === "albums" ? "Search albums" : "Search photos"}
-          debounceMs={250}
-        />
-        <Segmented
-          label="View"
-          options={VIEWS}
-          value={view}
-          onChange={setView}
-        />
-        {view === "albums" && (
+        <div className="order-2 w-full md:order-1 md:w-auto [&>*]:w-full md:[&>*]:w-auto">
           <Segmented
-            label="Sort albums"
-            options={SORTS}
-            value={sort}
-            onChange={setSort}
+            label="View"
+            options={VIEWS}
+            value={view}
+            onChange={setView}
           />
+        </div>
+        <div className="order-1 flex w-full min-w-0 md:order-2 md:w-auto md:flex-1">
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            placeholder={view === "albums" ? "Search albums" : "Search photos"}
+            label={view === "albums" ? "Search albums" : "Search photos"}
+            debounceMs={250}
+          />
+        </div>
+        {view === "albums" && (
+          <div className="glass-item relative order-3 inline-flex items-center rounded-full md:ml-auto">
+            <select
+              aria-label="Sort albums"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              className="h-8 cursor-pointer appearance-none rounded-full bg-transparent pr-8 pl-3.5 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {SORTS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {`Sort: ${o.label}`}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-3 size-4 text-muted"
+              aria-hidden="true"
+            />
+          </div>
         )}
       </Toolbar>
 

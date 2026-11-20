@@ -62,7 +62,12 @@ vi.mock("@/components/galleries/Lightbox", () => ({
 
 const mediaItem = (id: string, title: string) => ({
   media_id: id,
-  media: { id, alt_text: null, thumbnail_key: null },
+  media: {
+    id,
+    alt_text: null,
+    thumbnail_key: null,
+    created_at: new Date().toISOString(),
+  },
   source: "gallery",
   source_id: "g1",
   source_title: title,
@@ -96,9 +101,7 @@ describe("PhotosPage", () => {
     expect(screen.getByRole("heading", { name: "Photos" })).toBeInTheDocument();
     expect(screen.getByTestId("albums")).toHaveTextContent("Summer");
     expect(screen.getByRole("radio", { name: "Albums" })).toBeChecked();
-    expect(
-      screen.getByRole("radiogroup", { name: "Sort albums" }),
-    ).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Sort albums" })).toBeVisible();
   });
 
   it("?view=all shows photos and hides sort", () => {
@@ -106,9 +109,7 @@ describe("PhotosPage", () => {
     render(<PhotosPage />);
     expect(screen.queryByTestId("albums")).toBeNull();
     expect(screen.getByRole("radio", { name: "All photos" })).toBeChecked();
-    expect(
-      screen.queryByRole("radiogroup", { name: "Sort albums" }),
-    ).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Sort albums" })).toBeNull();
     expect(hooks.media).toHaveBeenCalledWith({ limit: 60 });
     expect(screen.getAllByRole("button", { name: /Open photo/ })).toHaveLength(
       2,
@@ -142,7 +143,10 @@ describe("PhotosPage", () => {
 
   it("sort change reaches the albums query", async () => {
     render(<PhotosPage />);
-    await userEvent.click(screen.getByRole("radio", { name: "Popular" }));
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Sort albums" }),
+      "popular",
+    );
     expect(hooks.list).toHaveBeenLastCalledWith({
       q: undefined,
       sort: "popular",

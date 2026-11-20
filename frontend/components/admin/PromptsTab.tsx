@@ -5,7 +5,7 @@
  *        List on the left (stacked on phone), edit form on the right.
  */
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, MessageSquareQuote, Plus } from "lucide-react";
 import {
   usePrompts,
   useCreatePrompt,
@@ -17,6 +17,7 @@ import type { PromptCreate, PromptUpdate } from "@/lib/api/prompts";
 import { PromptList } from "./prompts-tab/PromptList";
 import { PromptEditor } from "./prompts-tab/PromptEditor";
 import { NewPromptModal } from "./prompts-tab/NewPromptModal";
+import { AdminNotice } from "./AdminState";
 
 /**
  * @brief Prompts admin tab.
@@ -46,14 +47,7 @@ export function PromptsTab() {
   }
 
   if (error) {
-    return (
-      <div
-        role="alert"
-        className="rounded-2xl border-l-4 border-danger bg-surface p-3"
-      >
-        Failed to load prompts
-      </div>
-    );
+    return <AdminNotice tone="error">Failed to load prompts</AdminNotice>;
   }
 
   const handleCreate = (form: PromptCreate) => {
@@ -74,7 +68,10 @@ export function PromptsTab() {
     return (
       <>
         <EmptyState
+          compact
+          icon={MessageSquareQuote}
           title="No prompts yet"
+          description="Add a prompt to start conversations in the community feed."
           action={
             <Button onClick={() => setIsCreating(true)}>
               <Plus className="size-4" aria-hidden="true" />

@@ -34,12 +34,7 @@ vi.mock("@/hooks/useAdmin", () => ({
 describe("MetricsTab", () => {
   it("groups stats into titled glass panels", () => {
     render(<MetricsTab />);
-    for (const name of [
-      "Key performance indicators",
-      "Community",
-      "System",
-      "Security (WAF)",
-    ])
+    for (const name of ["Overview", "Community", "System"])
       expect(screen.getByRole("heading", { name })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "System" }).closest("section")
@@ -47,10 +42,22 @@ describe("MetricsTab", () => {
     ).toMatch(/glass/);
   });
 
+  it("merges WAF blocks into the System panel and formats uptime", () => {
+    render(<MetricsTab />);
+    const system = screen
+      .getByRole("heading", { name: "System" })
+      .closest("section") as HTMLElement;
+    expect(
+      within(system).getByText("Blocked requests today"),
+    ).toBeInTheDocument();
+    expect(within(system).getByText("1d 1h")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /WAF/ })).toBeNull();
+  });
+
   it("renders KPI tiles as glass-item with tabular numbers", () => {
     render(<MetricsTab />);
     const kpi = screen
-      .getByRole("heading", { name: "Key performance indicators" })
+      .getByRole("heading", { name: "Overview" })
       .closest("section") as HTMLElement;
     const tiles = within(kpi).getAllByTestId("metric-card");
     expect(tiles).toHaveLength(4);

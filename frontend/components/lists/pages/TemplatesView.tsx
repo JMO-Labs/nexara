@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { LayoutTemplate, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Panel } from "@/components/ui/page";
 import { useCommunityId } from "@/hooks/useCommunityId";
 import { useListTemplateClone, useListTemplates } from "@/hooks/useLists";
 import { fromApi } from "@/lib/lists/templateAdapter";
@@ -28,26 +29,43 @@ export function TemplatesView() {
   if (isLoading) body = <PageSkeleton />;
   else if (error) body = <ErrorCard message="We couldn't load templates." />;
   else if (templates.length === 0)
-    body = <EmptyState icon={LayoutTemplate} title="No templates yet" />;
+    body = (
+      <Panel>
+        <EmptyState
+          icon={LayoutTemplate}
+          compact
+          title="No templates yet"
+          description="Design a template to reuse the same list layout."
+          action={
+            <Button asChild>
+              <Link href="/app/lists/templates/new">New template</Link>
+            </Button>
+          }
+        />
+      </Panel>
+    );
   else
     body = (
-      <TemplateGallery
-        templates={templates}
-        onEdit={(t) => router.push(`/app/lists/templates/${t.id}`)}
-        onClone={(t) =>
-          clone.mutate(
-            { id: t.id },
-            { onSuccess: (l) => router.push(`/app/lists/${l.id}`) },
-          )
-        }
-      />
+      <Panel>
+        <TemplateGallery
+          templates={templates}
+          onEdit={(t) => router.push(`/app/lists/templates/${t.id}`)}
+          onClone={(t) =>
+            clone.mutate(
+              { id: t.id },
+              { onSuccess: (l) => router.push(`/app/lists/${l.id}`) },
+            )
+          }
+        />
+      </Panel>
     );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageHeader
         crumbs={[LISTS_CRUMB, { label: "Templates" }]}
         title="Templates"
+        description="Start a list from a ready-made layout."
         actions={
           <Button asChild>
             <Link href="/app/lists/templates/new">

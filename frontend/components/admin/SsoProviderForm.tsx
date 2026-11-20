@@ -113,7 +113,7 @@ export function SsoProviderForm({
           <Button
             type="button"
             size="sm"
-            variant="outline"
+            variant="glass"
             onClick={test}
             loading={testing}
           >

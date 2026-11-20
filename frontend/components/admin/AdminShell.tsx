@@ -33,13 +33,25 @@ function AdminNav({ activeId }: { activeId: string }) {
         ?.setAttribute("data-tour", TOUR[it.id]);
     }
   });
+  // Phone shows one horizontal row; bring the active pill into view.
+  useLayoutEffect(() => {
+    ref.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView?.({ inline: "center", block: "nearest" });
+  }, [activeId]);
   return (
-    <div ref={ref} className="flex flex-col gap-3">
+    <div
+      ref={ref}
+      className="flex flex-col gap-3 max-md:flex-row max-md:gap-2 max-md:overflow-x-auto max-md:pb-1 max-md:[mask-image:linear-gradient(to_right,black_88%,transparent)] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+    >
       {ADMIN_GROUPS.map((g) => (
-        <div key={g.label} className="flex flex-col gap-1">
+        <div
+          key={g.label}
+          className="flex flex-col gap-1 max-md:shrink-0 max-md:[&>nav]:flex-nowrap"
+        >
           <p
             aria-hidden="true"
-            className="px-3 text-xs font-semibold text-muted"
+            className="mt-1 px-3 text-[13px] font-medium text-muted max-md:hidden"
           >
             {g.label}
           </p>
@@ -62,15 +74,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const current = ADMIN_ITEMS.find((i) => i.id === activeId);
   return (
     <AdminGate>
-      <PageHeader
-        title="Admin"
-        description="Manage community, users, settings, and integrations."
-      />
+      <PageHeader title="Admin" />
       <TwoPane aside={<AdminNav activeId={activeId} />} asideWidth={240}>
         {current && (
           <div className="mb-3 px-1">
-            <h2 className="text-lg font-semibold text-ink">{current.label}</h2>
-            <p className="text-sm text-muted">{current.description}</p>
+            <h2 className="text-lg font-medium text-ink">{current.label}</h2>
+            <p className="text-[15px] text-muted">{current.description}</p>
           </div>
         )}
         {children}

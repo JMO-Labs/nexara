@@ -6,8 +6,7 @@
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { SettingsRow, Select, Option, Switch } from "@/components/ui";
-import { Panel } from "@/components/ui/page";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
+import { Panel, Segmented } from "@/components/ui/page";
 import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { UserSettings } from "@/lib/api/settings";
@@ -15,6 +14,8 @@ import { PatternPicker } from "./PatternPicker";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
 type FontSize = UserSettings["font_size"];
+type Theme = (typeof THEMES)[number]["value"];
+type Density = (typeof DENSITIES)[number]["value"];
 
 const THEMES = [
   { value: "system", label: "System" },
@@ -75,43 +76,21 @@ export function AppearanceTab() {
         label="Theme"
         description="Choose light, dark, or follow your device."
       >
-        <RadioGroup
-          aria-label="Theme"
-          value={theme || "system"}
-          onValueChange={onTheme}
-          disabled={isPending}
-        >
-          {THEMES.map(({ value, label }) => (
-            <label
-              key={value}
-              htmlFor={`theme-${value}`}
-              className="flex min-h-11 items-center gap-3 text-sm"
-            >
-              <RadioGroupItem id={`theme-${value}`} value={value} />
-              {label}
-            </label>
-          ))}
-        </RadioGroup>
+        <Segmented<Theme>
+          label="Theme"
+          value={(theme || "system") as Theme}
+          onChange={onTheme}
+          options={THEMES.map(({ value, label }) => ({ value, label }))}
+        />
       </SettingsRow>
 
       <SettingsRow label="Font size" description="Text size in the app.">
-        <RadioGroup
-          aria-label="Font size"
+        <Segmented<FontSize>
+          label="Font size"
           value={settings.font_size}
-          onValueChange={(v) => mutate({ font_size: v as FontSize })}
-          disabled={isPending}
-        >
-          {FONT_SIZES.map(({ value, label }) => (
-            <label
-              key={value}
-              htmlFor={`font-${value}`}
-              className="flex min-h-11 items-center gap-3 text-sm"
-            >
-              <RadioGroupItem id={`font-${value}`} value={value} />
-              {label}
-            </label>
-          ))}
-        </RadioGroup>
+          onChange={(v) => mutate({ font_size: v })}
+          options={FONT_SIZES.map(({ value, label }) => ({ value, label }))}
+        />
       </SettingsRow>
 
       <SettingsRow
@@ -157,7 +136,7 @@ export function AppearanceTab() {
           data-font-size={settings.font_size}
           aria-live="polite"
           className={cn(
-            "rounded-xl border border-ink/10 bg-surface p-3",
+            "glass-item rounded-[20px] p-3",
             sizeClass,
             settings.compact_feed ? "space-y-1" : "space-y-3",
           )}
@@ -172,22 +151,12 @@ export function AppearanceTab() {
         label="Density"
         description="Comfortable keeps today's spacing; Compact fits more on screen."
       >
-        <RadioGroup
-          aria-label="Density"
-          value={density}
-          onValueChange={(v) => setDensity(v as "comfortable" | "compact")}
-        >
-          {DENSITIES.map(({ value, label }) => (
-            <label
-              key={value}
-              htmlFor={`density-${value}`}
-              className="flex min-h-11 items-center gap-3 text-sm"
-            >
-              <RadioGroupItem id={`density-${value}`} value={value} />
-              {label}
-            </label>
-          ))}
-        </RadioGroup>
+        <Segmented<Density>
+          label="Density"
+          value={density as Density}
+          onChange={(v) => setDensity(v)}
+          options={DENSITIES.map(({ value, label }) => ({ value, label }))}
+        />
       </SettingsRow>
 
       <SettingsRow

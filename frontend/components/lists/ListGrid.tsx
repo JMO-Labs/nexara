@@ -77,7 +77,8 @@ export function ListGrid({ listId, fieldSchema }: ListGridProps) {
         <EmptyState
           compact
           icon={ListPlus}
-          title="No items yet, create one"
+          title="No items yet"
+          description="Add the first item to get started."
           action={
             <Button onClick={() => setEditing({ item: null })}>Add item</Button>
           }
@@ -112,15 +113,16 @@ export function ListGrid({ listId, fieldSchema }: ListGridProps) {
           />
         ))}
       </ul>
-      <Button
-        variant="outline"
-        className="self-center"
-        disabled={!hasNextPage}
-        loading={isFetchingNextPage}
-        onClick={() => void fetchNextPage()}
-      >
-        Load more
-      </Button>
+      {hasNextPage && (
+        <Button
+          variant="secondary"
+          className="self-center"
+          loading={isFetchingNextPage}
+          onClick={() => void fetchNextPage()}
+        >
+          Load more
+        </Button>
+      )}
       {modal}
     </section>
   );

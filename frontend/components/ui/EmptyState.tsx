@@ -46,14 +46,14 @@ export function EmptyState({
         ))}
       <h3
         className={cn(
-          "font-black tracking-tight",
+          "font-medium tracking-tight",
           compact ? "text-lg" : "text-2xl",
         )}
       >
         {title}
       </h3>
       {description && (
-        <p className="max-w-md text-sm opacity-80">{description}</p>
+        <p className="max-w-md text-sm text-muted">{description}</p>
       )}
       {action && <div className="mt-1">{action}</div>}
     </div>

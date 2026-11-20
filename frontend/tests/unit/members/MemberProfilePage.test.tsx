@@ -77,6 +77,20 @@ describe("MemberProfilePage", () => {
     expect(screen.queryByText(/u2/)).toBeNull();
   });
 
+  it("uses the display name as the page h1, not a generic Profile title", () => {
+    asUser("u1");
+    renderWithProviders(<MemberProfilePage />);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Tomás Reyes" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 1, name: "Profile" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Tomás Reyes" }),
+    ).toBeNull();
+  });
+
   it("back link returns to the Community page", () => {
     asUser("u1");
     renderWithProviders(<MemberProfilePage />);

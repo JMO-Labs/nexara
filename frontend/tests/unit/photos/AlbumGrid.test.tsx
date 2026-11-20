@@ -2,7 +2,7 @@
  * @file tests/unit/photos/AlbumGrid.test.tsx
  * @brief AlbumGrid: expand-on-hover/focus cards, states, phone accordion.
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { AlbumGrid } from "@/components/photos/AlbumGrid";
@@ -42,7 +42,11 @@ describe("AlbumGrid", () => {
     expect(screen.queryByText("Open album")).toBeNull();
     await userEvent.hover(screen.getByRole("button", { name: /Album 1/ }));
     expect(screen.getByText("Open album")).toBeInTheDocument();
-    expect(screen.getByText("3 photos")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("button", { name: /Album 1/ })).getByText(
+        "3 photos",
+      ),
+    ).toBeInTheDocument();
     await userEvent.unhover(screen.getByRole("button", { name: /Album 1/ }));
     expect(screen.queryByText("Open album")).toBeNull();
   });

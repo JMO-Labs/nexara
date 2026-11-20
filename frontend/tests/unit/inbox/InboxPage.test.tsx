@@ -104,6 +104,6 @@ describe("InboxPage", () => {
     nav.qs = "view=unread";
     data.items = [];
     render(ui());
-    expect(screen.getByText("You're all caught up.")).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up")).toBeInTheDocument();
   });
 });

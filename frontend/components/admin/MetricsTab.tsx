@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/admin/MetricsTab.tsx
- * @brief Admin metrics display with community, system, and WAF stats.
+ * @brief Admin metrics display with community, system and WAF stats.
  */
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -21,7 +21,14 @@ function formatBytes(bytes: number): string {
   return `${size.toFixed(1)} ${units[unitIdx]}`;
 }
 
+/**
+ * @brief Human uptime: "<1 min", "N min" under an hour, else "Nd Nh".
+ * @param seconds uptime in seconds
+ * @return formatted uptime
+ */
 function formatSeconds(seconds: number): string {
+  if (seconds < 60) return "<1 min";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`;
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   return `${days}d ${hours}h`;
@@ -37,7 +44,9 @@ function KpiTile({ label, value }: { label: string; value: string | number }) {
       {...(reduced ? {} : { variants: listItem })}
     >
       <span className="text-sm text-muted">{label}</span>
-      <span className="text-2xl font-black tabular-nums">{value}</span>
+      <span className="text-[28px] font-medium tracking-tight tabular-nums">
+        {value}
+      </span>
     </motion.div>
   );
 }
@@ -48,7 +57,7 @@ function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
     <motion.div
       data-testid="metric-card"
-      className="flex items-center justify-between gap-3 border-b border-ink/10 py-2.5 last:border-b-0"
+      className="flex items-center justify-between gap-3 py-2.5"
       {...(reduced ? {} : { variants: listItem })}
     >
       <dt className="text-sm text-muted">{label}</dt>
@@ -98,7 +107,7 @@ export function MetricsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Panel title="Key performance indicators">
+      <Panel title="Overview">
         <Stagger className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <KpiTile label="Total users" value={metrics.community.users_total} />
           <KpiTile
@@ -135,6 +144,19 @@ export function MetricsTab() {
           <Stagger as="dl">
             <StatRow label="Version" value={metrics.system.version} />
             <StatRow
+              label="Blocked requests today"
+              value={metrics.waf.blocks_today}
+            />
+            {Object.entries(metrics.waf.blocks_by_reason).map(
+              ([reason, count]) => (
+                <StatRow
+                  key={reason}
+                  label={`${reason} blocks`}
+                  value={count}
+                />
+              ),
+            )}
+            <StatRow
               label="Uptime"
               value={formatSeconds(metrics.system.uptime_seconds)}
             />
@@ -159,17 +181,6 @@ export function MetricsTab() {
           </Stagger>
         </Panel>
       </div>
-
-      <Panel title="Security (WAF)">
-        <Stagger as="dl">
-          <StatRow label="Blocks today" value={metrics.waf.blocks_today} />
-          {Object.entries(metrics.waf.blocks_by_reason).map(
-            ([reason, count]) => (
-              <StatRow key={reason} label={`${reason} blocks`} value={count} />
-            ),
-          )}
-        </Stagger>
-      </Panel>
     </div>
   );
 }

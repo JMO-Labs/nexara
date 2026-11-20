@@ -8,7 +8,7 @@ import { Button, Badge } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-const alertCls = "rounded-2xl bg-surface p-3 text-sm border-l-4";
+const alertCls = "glass-item rounded-[20px] p-3 text-sm";
 
 /**
  * @brief Push subscription controls.
@@ -28,7 +28,7 @@ export function PushSubscriptionRow() {
 
   if (!supported) {
     return (
-      <div role="status" className={`${alertCls} border-muted`}>
+      <div role="status" className={alertCls}>
         Web Push is not supported in this browser.
       </div>
     );
@@ -41,7 +41,6 @@ export function PushSubscriptionRow() {
         <Badge tone={isSubscribed ? "leaf" : "neutral"}>
           {isSubscribed ? "Active" : "Inactive"}
         </Badge>
-        <Badge>permission: {permission}</Badge>
       </div>
       <p className="text-sm text-muted">
         Receive notifications on this device even when Nexara is closed.
@@ -57,7 +56,7 @@ export function PushSubscriptionRow() {
           </Button>
         ) : (
           <Button
-            variant="outline"
+            variant="secondary"
             loading={isUnsubscribing}
             onClick={() => unsubscribe().catch(() => {})}
           >
@@ -66,12 +65,12 @@ export function PushSubscriptionRow() {
         )}
       </div>
       {permission === "denied" && (
-        <div role="alert" className={`${alertCls} border-sun`}>
+        <div role="alert" className={alertCls}>
           Notifications are blocked. Enable them in your browser site settings.
         </div>
       )}
       {error && (
-        <div role="alert" className={`${alertCls} border-destructive`}>
+        <div role="alert" className={alertCls}>
           {error.message}
         </div>
       )}

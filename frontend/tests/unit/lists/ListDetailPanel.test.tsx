@@ -28,9 +28,17 @@ vi.mock("@/hooks/useListActions", () => ({
 import { ListDetailPanel } from "@/components/lists/ListDetailPanel";
 
 describe("ListDetailPanel", () => {
+  it("renders without a Panel title when embedded", () => {
+    const { container } = render(
+      <ListDetailPanel list={list} communityId="c1" embedded />,
+    );
+    expect(container.querySelector("section")).toBeNull();
+    expect(screen.getByText("grid l1")).toBeInTheDocument();
+  });
+
   it("switches between items, members and settings", async () => {
     render(<ListDetailPanel list={list} communityId="c1" />);
-    expect(screen.getByRole("heading", { name: "Camping gear" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Camping gear" })).toBeNull();
     expect(screen.getByText("grid l1")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Members" }));
     expect(await screen.findByText("u9")).toBeInTheDocument();
@@ -39,7 +47,7 @@ describe("ListDetailPanel", () => {
     );
     expect(screen.getByText("member modal")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("tab", { name: "Settings" }));
-    expect(await screen.findByText("community")).toBeInTheDocument();
+    expect(await screen.findByText("Community")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Edit list" }));
     expect(screen.getByText("edit modal")).toBeInTheDocument();
   });

@@ -8,6 +8,7 @@ import { render, screen } from "@testing-library/react";
 const nav = vi.hoisted(() => ({ tab: null as string | null }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({ get: () => nav.tab }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 const stub = vi.hoisted(() => (name: string) => () => <p>{`body:${name}`}</p>);
 vi.mock("@/components/events/CalendarSubscriptionsPanel", () => ({

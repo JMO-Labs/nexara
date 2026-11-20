@@ -49,7 +49,7 @@ export function PluginInstallDialog({
         description="Copy this API key now. It will not be shown again."
         footer={<Button onClick={close}>Done</Button>}
       >
-        <code className="block break-all rounded-xl bg-surface p-3 text-sm">
+        <code className="glass-item block break-all rounded-[20px] p-3 text-sm">
           {apiKey}
         </code>
       </Modal>
@@ -67,7 +67,7 @@ export function PluginInstallDialog({
         size="lg"
         footer={
           <>
-            <Button variant="outline" onClick={close}>
+            <Button variant="glass" onClick={close}>
               Cancel
             </Button>
             <Button
@@ -105,7 +105,7 @@ export function PluginInstallDialog({
       description="Step 1 of 2: choose a plugin"
       footer={
         <>
-          <Button variant="outline" onClick={close}>
+          <Button variant="glass" onClick={close}>
             Cancel
           </Button>
           <Button

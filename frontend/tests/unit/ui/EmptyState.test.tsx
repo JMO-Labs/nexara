@@ -23,3 +23,16 @@ describe("EmptyState", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("EmptyState brand styling", () => {
+  it("uses a medium-weight title and muted description", () => {
+    render(<EmptyState title="Quiet here" description="No posts yet." />);
+    expect(screen.getByRole("heading", { name: "Quiet here" })).toHaveClass(
+      "font-medium",
+    );
+    expect(screen.getByRole("heading", { name: "Quiet here" })).not.toHaveClass(
+      "font-black",
+    );
+    expect(screen.getByText("No posts yet.")).toHaveClass("text-muted");
+  });
+});

@@ -59,7 +59,7 @@ export function ThemeGallery({ current }: { current?: Partial<Branding> }) {
                 aria-pressed={active}
                 disabled={apply.isPending}
                 onClick={() => apply.mutate(t.name)}
-                className={`flex w-full flex-col gap-2 rounded-lg border p-3 text-left focus-visible:outline focus-visible:outline-2 disabled:opacity-60 ${active ? "border-2 border-current" : ""}`}
+                className={`glass-item flex w-full flex-col gap-2 rounded-[20px] p-3 text-left text-ink focus-visible:outline focus-visible:outline-2 disabled:opacity-60 ${active ? "ring-2 ring-ink" : ""}`}
               >
                 <span className="flex gap-1" aria-hidden="true">
                   {SWATCHES.map((s) => (

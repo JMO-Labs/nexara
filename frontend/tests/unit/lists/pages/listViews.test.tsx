@@ -48,19 +48,15 @@ vi.mock("@/components/lists/ListCardGrid", () => ({
     </button>
   ),
 }));
-vi.mock("@/components/lists/ListCreateModal", () => ({
-  ListCreateModal: (p: { open: boolean; onClose: () => void }) =>
-    p.open ? <button onClick={p.onClose}>close create</button> : null,
+vi.mock("@/components/lists/ListCreateForm", () => ({
+  ListCreateForm: (p: { onCancel: () => void }) => (
+    <button onClick={p.onCancel}>close create</button>
+  ),
 }));
-vi.mock("@/components/lists/ListEditModal", () => ({
-  ListEditModal: (p: {
-    open: boolean;
-    onClose: () => void;
-    list: { title: string };
-  }) =>
-    p.open ? (
-      <button onClick={p.onClose}>close edit {p.list.title}</button>
-    ) : null,
+vi.mock("@/components/lists/ListEditForm", () => ({
+  ListEditForm: (p: { onCancel: () => void; list: { title: string } }) => (
+    <button onClick={p.onCancel}>close edit {p.list.title}</button>
+  ),
 }));
 vi.mock("@/components/lists/ListDetailPanel", () => ({
   ListDetailPanel: (p: { list: { id: string }; communityId: string }) => (
@@ -115,7 +111,7 @@ describe("list page views", () => {
     expect(screen.getByRole("link", { name: /Templates/ })).toBeVisible();
   });
 
-  it("new view opens the create modal and returns on close", async () => {
+  it("new view renders the create form inline and returns on cancel", async () => {
     render(<ListNewView />);
     await userEvent.click(screen.getByText("close create"));
     expect(push).toHaveBeenCalledWith("/app/inbox?view=lists");
@@ -141,7 +137,7 @@ describe("list page views", () => {
     ).toBeInTheDocument();
   });
 
-  it("edit view shows the edit modal and returns to detail", async () => {
+  it("edit view renders the edit form inline and returns to detail", async () => {
     q.useList.mockReturnValue({ isLoading: false, data: list });
     render(<ListEditView id="l1" />);
     await userEvent.click(screen.getByText("close edit Camping gear"));

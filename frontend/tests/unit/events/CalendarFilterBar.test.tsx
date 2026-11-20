@@ -48,7 +48,10 @@ describe("CalendarFilterBar", () => {
     expect(
       screen.getByRole("radiogroup", { name: "Calendar view" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Calendars")).toBeInTheDocument();
+    expect(screen.queryByText("Calendars")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^Calendars, / }),
+    ).toBeInTheDocument();
   });
 
   it("does not own the create action (page header does)", () => {
@@ -60,6 +63,16 @@ describe("CalendarFilterBar", () => {
     const p = setup();
     await userEvent.click(screen.getByRole("radio", { name: "Week" }));
     expect(p.onViewChange).toHaveBeenCalledWith("week");
+  });
+
+  it("month chevrons are glass circle buttons", () => {
+    setup();
+    expect(screen.getByLabelText("Previous month").className).toContain(
+      "glass-btn",
+    );
+    expect(screen.getByLabelText("Next month").className).toContain(
+      "glass-btn",
+    );
   });
 
   it("navigates months and jumps to today", async () => {

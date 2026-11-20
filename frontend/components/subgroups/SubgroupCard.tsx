@@ -6,12 +6,11 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Globe, Lock, Users } from "lucide-react";
 import { Button } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import type { Subgroup } from "@/lib/api/subgroups";
 import { groupColor } from "@/lib/groupColor";
-import { monogram } from "@/lib/groupVisuals";
 
 export interface SubgroupCardProps {
   subgroup: Subgroup;
@@ -24,6 +23,13 @@ export interface SubgroupCardProps {
   /** Optional member avatar stack rendered above the actions. */
   avatars?: React.ReactNode;
 }
+
+/** @brief Sentence-case policy labels shown on the card. */
+const POLICY_LABEL: Record<Subgroup["join_policy"], string> = {
+  open: "Open",
+  admin_approval: "Approval required",
+  invite_only: "Invite only",
+};
 
 /**
  * @brief Group card.
@@ -82,7 +88,7 @@ export function SubgroupCard({
         <div
           className="relative aspect-video w-full overflow-hidden"
           style={{
-            background: `linear-gradient(135deg, color-mix(in srgb, ${color} 55%, transparent), color-mix(in srgb, ${color} 18%, transparent))`,
+            background: `color-mix(in srgb, ${color} 25%, transparent)`,
           }}
         >
           {subgroup.cover_media_id ? (
@@ -90,9 +96,11 @@ export function SubgroupCard({
           ) : (
             <span
               aria-hidden
-              className="absolute inset-0 grid place-items-center text-4xl font-bold text-ink/60"
+              className="absolute inset-0 grid place-items-center"
             >
-              {monogram(subgroup.name)}
+              <span className="glass-item grid size-14 place-items-center rounded-full text-ink">
+                <Users className="size-6" />
+              </span>
             </span>
           )}
           {subgroup.is_private && (
@@ -106,13 +114,17 @@ export function SubgroupCard({
           <h3 className="truncate text-lg font-semibold tracking-tight text-ink">
             {subgroup.name}
           </h3>
-          <p className="text-xs text-muted">
-            {subgroup.join_policy.replace("_", " ")}
+          <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span className="glass-item inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-ink">
+              {subgroup.join_policy === "open" && (
+                <Globe className="size-3" aria-hidden="true" />
+              )}
+              {POLICY_LABEL[subgroup.join_policy]}
+            </span>
             {typeof memberCount === "number" && (
-              <>
-                {" · "}
+              <span>
                 {memberCount} {memberCount === 1 ? "member" : "members"}
-              </>
+              </span>
             )}
           </p>
           {subgroup.description && (
@@ -128,7 +140,7 @@ export function SubgroupCard({
           {isMember && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="glass"
               loading={busy}
               onClick={() => onLeave?.(subgroup.slug)}
             >
@@ -138,10 +150,10 @@ export function SubgroupCard({
           {cta}
           <Button
             size="sm"
-            variant="glass"
+            aria-label={`Open ${subgroup.name}`}
             onClick={() => router.push(`/app/subgroups/${subgroup.slug}`)}
           >
-            Open →
+            Open
           </Button>
         </div>
       </div>

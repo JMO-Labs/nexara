@@ -86,4 +86,19 @@ describe("PostCard polish", () => {
     expect(cls).toContain("transition-colors");
     expect(cls).toContain("hover:bg-");
   });
+  it("uses a 22px card radius and an inline, muted source chip", () => {
+    const community = {
+      ...fakePost,
+      subgroup_id: null,
+      subgroup_name: null,
+      subgroup_slug: null,
+    };
+    const { container } = wrap(<PostCard post={community} />);
+    const cls = (container.firstElementChild as HTMLElement).className;
+    expect(cls).toContain("rounded-[22px]");
+    expect(cls).not.toContain("rounded-[24px]");
+    const chip = screen.getByText("Community");
+    expect(chip).toHaveClass("glass-item", "rounded-full", "text-muted");
+    expect(chip.className).not.toMatch(/\bborder(-|\s|$)/);
+  });
 });

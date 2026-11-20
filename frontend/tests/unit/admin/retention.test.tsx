@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "@/lib/api/retention";
 import {
   POLICY_META,
+  policyLabel,
   validateDays,
   type RetentionPolicy,
 } from "@/lib/retention-policies";
@@ -88,6 +89,15 @@ describe("RetentionPolicyRow", () => {
     });
   });
 
+  it("hides Save while the row is clean", () => {
+    render(
+      <RetentionPolicyRow policy={pol()} onSave={vi.fn()} saving={false} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /save chat messages/i }),
+    ).toBeNull();
+  });
+
   it("shows keep forever for null days", () => {
     render(
       <RetentionPolicyRow
@@ -119,6 +129,14 @@ describe("RetentionPolicyRow", () => {
   });
 });
 
+describe("policy labels", () => {
+  it("use sentence case", () => {
+    expect(policyLabel("chat_messages")).toBe("Chat messages");
+    expect(policyLabel("soft_deleted_posts")).toBe("Soft-deleted posts");
+    expect(policyLabel("ai_usage_logs")).toBe("AI usage logs");
+  });
+});
+
 describe("RetentionTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,7 +165,7 @@ describe("RetentionTab", () => {
     vi.mocked(api.updateRetentionPolicy).mockResolvedValue(pol());
     wrap();
     await screen.findByText("Notifications");
-    expect(screen.getAllByRole("row")).toHaveLength(13);
+    expect(screen.getAllByRole("listitem")).toHaveLength(12);
     await userEvent.click(
       screen.getByRole("switch", { name: /Notifications enabled/i }),
     );

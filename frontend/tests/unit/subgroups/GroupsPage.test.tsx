@@ -56,17 +56,17 @@ describe("GroupsPage", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
   });
 
-  it("embedded hides the header and puts New group in the toolbar", () => {
+  it("embedded hides the header and keeps New group out of the toolbar", () => {
     render(<GroupsPage embedded />);
     expect(
       screen.queryByRole("heading", { level: 1, name: "Groups" }),
     ).toBeNull();
     const buttons = screen.getAllByRole("button", { name: "New group" });
     expect(buttons).toHaveLength(1);
-    const toolbar = buttons[0].closest(".flex-wrap");
-    expect(toolbar).toContainElement(
-      screen.getByRole("searchbox", { name: "Search groups" }),
-    );
+    const toolbar = screen
+      .getByRole("searchbox", { name: "Search groups" })
+      .closest(".flex-wrap");
+    expect(toolbar).not.toContainElement(buttons[0]);
   });
 
   it("Private filter keeps only private groups", async () => {
@@ -84,9 +84,12 @@ describe("GroupsPage", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(2);
   });
 
-  it("Mine keeps only groups the viewer belongs to", async () => {
+  it("Mine toggle keeps only groups the viewer belongs to", async () => {
     render(<GroupsPage />);
-    await userEvent.click(screen.getByRole("radio", { name: "Mine" }));
+    const mine = screen.getByRole("button", { name: "Mine" });
+    expect(mine).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(mine);
+    expect(mine).toHaveAttribute("aria-pressed", "true");
     const names = screen
       .getAllByRole("heading", { level: 3 })
       .map((h) => h.textContent);

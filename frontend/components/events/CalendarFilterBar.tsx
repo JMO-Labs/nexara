@@ -1,12 +1,13 @@
 "use client";
 /**
  * @file components/events/CalendarFilterBar.tsx
- * @brief Glass toolbar above the calendar: prev / Today / next + month
- *        label, view switcher and calendar filter (popover on desktop,
- *        bottom drawer on phone).
+ * @brief Glass toolbar above the calendar: prev / Today / next + period
+ *        title, view switcher and calendar filter (popover on desktop,
+ *        bottom drawer on phone). Prev/next/Today step by month unless the
+ *        page supplies onStep / onToday (week and day views).
  */
 import * as React from "react";
-import { addMonths, format, subMonths } from "date-fns";
+import { addMonths, format } from "date-fns";
 import { ChevronDown, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import {
   Button,
@@ -37,6 +38,14 @@ export interface CalendarFilterBarProps {
   calendars: Calendar[];
   view: CalendarView;
   onViewChange: (v: CalendarView) => void;
+  /** Toolbar title; defaults to the month and year. */
+  title?: string;
+  /** Period name used in the prev/next labels. */
+  unit?: "month" | "week" | "day";
+  /** Step prev (-1) / next (+1); defaults to stepping the month. */
+  onStep?: (dir: -1 | 1) => void;
+  /** Jump to today; defaults to the current month. */
+  onToday?: () => void;
 }
 
 /**
@@ -52,6 +61,10 @@ export function CalendarFilterBar({
   calendars,
   view,
   onViewChange,
+  title,
+  unit = "month",
+  onStep,
+  onToday,
 }: CalendarFilterBarProps) {
   const groups = React.useMemo(() => buildGroups(calendars), [calendars]);
   const allOptions = React.useMemo(
@@ -70,50 +83,62 @@ export function CalendarFilterBar({
     />
   );
 
+  const summary = summarize(selected.length, allOptions.length);
+
   return (
     <Toolbar>
       <div className="flex items-center gap-1">
         <IconButton
-          variant="ghost"
+          variant="glass"
           size="sm"
-          aria-label="Previous month"
-          onClick={() => onMonthChange(subMonths(month, 1))}
+          aria-label={`Previous ${unit}`}
+          onClick={() =>
+            onStep ? onStep(-1) : onMonthChange(addMonths(month, -1))
+          }
         >
           <ChevronLeft className="size-4" />
         </IconButton>
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => onMonthChange(new Date())}
+          onClick={() => (onToday ? onToday() : onMonthChange(new Date()))}
         >
           Today
         </Button>
         <IconButton
-          variant="ghost"
+          variant="glass"
           size="sm"
-          aria-label="Next month"
-          onClick={() => onMonthChange(addMonths(month, 1))}
+          aria-label={`Next ${unit}`}
+          onClick={() =>
+            onStep ? onStep(1) : onMonthChange(addMonths(month, 1))
+          }
         >
           <ChevronRight className="size-4" />
         </IconButton>
       </div>
-      <h2 className="px-2 text-base font-semibold text-ink">
-        {format(month, "MMMM yyyy")}
+      <h2 className="min-w-0 truncate px-2 text-base font-semibold text-ink">
+        {title ?? format(month, "MMMM yyyy")}
       </h2>
 
-      <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-        <CalendarViewSwitcher value={view} onChange={onViewChange} />
-        <span className="text-sm font-semibold text-muted">Calendars</span>
+      <div className="order-last flex w-full items-center gap-2 md:order-none md:ml-auto md:w-auto">
+        <div className="w-full overflow-x-auto md:w-auto [&>*]:w-full md:[&>*]:w-auto">
+          <CalendarViewSwitcher value={view} onChange={onViewChange} />
+        </div>
         <div className="hidden md:block">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="secondary" size="sm" className="gap-2">
+              <Button
+                variant="glass"
+                size="sm"
+                className="gap-2"
+                aria-label={`Calendars, ${summary}`}
+              >
                 <span className="flex gap-1">
                   {swatches.map((o) => (
                     <Swatch key={o.id} color={o.color} />
                   ))}
                 </span>
-                {summarize(selected.length, allOptions.length)}
+                {summary}
                 <ChevronDown className="size-3.5" aria-hidden />
               </Button>
             </PopoverTrigger>
@@ -125,25 +150,24 @@ export function CalendarFilterBar({
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:hidden">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="min-h-11 gap-2"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <Filter className="size-4" aria-hidden />
-            Filters
-          </Button>
-          <Drawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            title="Filters"
-            side="bottom"
-          >
-            {picker}
-          </Drawer>
-        </div>
+      </div>
+      <div className="ml-auto md:hidden">
+        <IconButton
+          variant="glass"
+          size="md"
+          aria-label="Filters"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <Filter className="size-4" aria-hidden />
+        </IconButton>
+        <Drawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          title="Filters"
+          side="bottom"
+        >
+          {picker}
+        </Drawer>
       </div>
     </Toolbar>
   );

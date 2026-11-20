@@ -67,14 +67,15 @@ export function ThreadRow({
         aria-current={selected ? "true" : undefined}
         className={cn(
           "flex w-full items-center gap-3 rounded-[22px] p-3 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-          selected && "ring-2 ring-ink",
+          selected &&
+            "bg-[color-mix(in_srgb,var(--nx-ink)_8%,var(--nx-item))] shadow-[inset_0_0_0_1px_var(--nx-glass-hi)]",
           className,
         )}
       >
         {avatar ?? (
           <span
             aria-hidden
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px]"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full"
             style={{
               background: `color-mix(in srgb, ${color} 30%, transparent)`,
             }}

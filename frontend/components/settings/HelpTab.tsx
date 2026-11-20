@@ -4,25 +4,29 @@
  * @brief Settings Help section: opens the keyboard shortcuts modal.
  */
 import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
+import { SettingsRow } from "@/components/ui/SettingsRow";
 import { useModals } from "@/stores/modals";
 
 /**
  * @brief Help settings body.
- * @return heading, one-line intro and shortcuts button
+ * @return panel with a keyboard shortcuts row
  */
 export function HelpTab() {
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-semibold text-ink">Help</h2>
-      <p className="text-muted text-sm">
-        Browse the keyboard shortcuts available across Nexara.
-      </p>
-      <div>
-        <Button onClick={() => setKeyboardShortcutsOpen(true)}>
+    <Panel title="Help">
+      <SettingsRow
+        label="Keyboard shortcuts"
+        description="Browse the keyboard shortcuts available across Nexara."
+      >
+        <Button
+          variant="secondary"
+          onClick={() => setKeyboardShortcutsOpen(true)}
+        >
           Keyboard shortcuts
         </Button>
-      </div>
-    </div>
+      </SettingsRow>
+    </Panel>
   );
 }

@@ -37,7 +37,7 @@ export function Field({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={cid} className="text-sm font-semibold">
+        <label htmlFor={cid} className="text-sm font-medium">
           {label}
         </label>
       )}
@@ -49,7 +49,7 @@ export function Field({
       {msg && (
         <p
           id={msgId}
-          className={error ? "text-sm text-destructive" : "text-sm opacity-70"}
+          className={error ? "text-sm text-destructive" : "text-sm text-muted"}
         >
           {msg}
         </p>

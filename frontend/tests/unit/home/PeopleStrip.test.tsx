@@ -82,6 +82,19 @@ describe("PeopleStrip", () => {
     expect(btn.style.getPropertyValue("--rc")).toBe("#112233");
   });
 
+  it("only colour-rings online or birthday people; others get a soft ring", () => {
+    items = [person()];
+    const { unmount } = renderWithProviders(<PeopleStrip />);
+    const quiet = screen.getByRole("button", { name: /Tomás Reyes/ });
+    expect(quiet.className).not.toContain("var(--rc)");
+    expect(quiet.className).toContain("var(--nx-glass-solid)");
+    unmount();
+    items = [person({ online: true })];
+    renderWithProviders(<PeopleStrip />);
+    const live = screen.getByRole("button", { name: /Tomás Reyes/ });
+    expect(live.className).toContain("var(--rc)");
+  });
+
   it("card shows shared info and Message opens the DM", async () => {
     items = [person()];
     mutateAsync.mockResolvedValue({ id: "ch9" });

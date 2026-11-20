@@ -6,14 +6,16 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
-import { IconButton } from "@/components/ui";
+import { Button, IconButton } from "@/components/ui";
+import { Option, Select } from "@/components/ui/Select";
 
 export type DndWindow = { start: string; end: string };
 export type DndSchedule = Record<string, DndWindow[]>;
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const DEFAULT_WINDOW: DndWindow = { start: "22:00", end: "07:00" };
-const timeCls = "h-10 rounded-lg border border-current/30 bg-transparent px-2";
+const timeCls =
+  "glass-item h-10 rounded-full border-0 px-3 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 export interface DnDScheduleEditorProps {
   schedule: DndSchedule | null;
@@ -53,21 +55,20 @@ export function DnDScheduleEditor({
 
   return (
     <div className="space-y-3">
-      <label className="flex flex-col gap-1 text-sm sm:max-w-xs">
-        {t("timezone")}
-        <select
-          aria-label={t("timezone")}
-          className={timeCls}
+      <div className="flex flex-col gap-1.5 text-sm sm:max-w-xs">
+        <span className="font-semibold">{t("timezone")}</span>
+        <Select
+          label={t("timezone")}
           value={timezone}
-          onChange={(e) => onChange(schedule, e.target.value)}
+          onValueChange={(v) => onChange(schedule, v)}
         >
           {zones.map((z) => (
-            <option key={z} value={z}>
+            <Option key={z} value={z}>
               {z}
-            </option>
+            </Option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </div>
       {DAYS.map((day) => {
         const label = t(`day_${day}`);
         const windows = schedule?.[day] ?? [];
@@ -81,7 +82,7 @@ export function DnDScheduleEditor({
             key={day}
             role="group"
             aria-label={label}
-            className="flex flex-wrap items-center gap-2"
+            className="glass-item flex flex-wrap items-center gap-2 rounded-[20px] px-4 py-2.5"
           >
             <span className="w-12 text-sm font-medium">{label}</span>
             {windows.map((w, i) => (
@@ -102,6 +103,8 @@ export function DnDScheduleEditor({
                   onChange={(e) => edit(i, { end: e.target.value })}
                 />
                 <IconButton
+                  size="sm"
+                  variant="glass"
                   aria-label={`${t("remove_window")} ${label}`}
                   onClick={() =>
                     setDay(
@@ -114,12 +117,15 @@ export function DnDScheduleEditor({
                 </IconButton>
               </div>
             ))}
-            <IconButton
-              aria-label={`${t("add_window")} ${label}`}
+            <Button
+              size="sm"
+              variant="secondary"
+              aria-label={`Add hours for ${label}`}
               onClick={() => setDay(day, [...windows, DEFAULT_WINDOW])}
             >
-              <Plus className="size-4" />
-            </IconButton>
+              <Plus className="size-4" aria-hidden="true" />
+              Add hours
+            </Button>
           </div>
         );
       })}

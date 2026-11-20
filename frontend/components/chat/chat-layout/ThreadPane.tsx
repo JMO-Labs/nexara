@@ -6,7 +6,7 @@
  */
 import * as React from "react";
 import type { ComponentProps } from "react";
-import { ArrowLeft, ChevronRight, Rows2, Rows3 } from "lucide-react";
+import { ArrowLeft, PanelRight, Rows2, Rows3 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { MessageList } from "../MessageList";
 import { Composer, type ComposerHandle } from "../Composer";
@@ -60,7 +60,7 @@ export function ThreadPane({
       aria-label={title}
       className="glass flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[32px]"
     >
-      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--nx-glass-edge)] px-2 py-2 md:px-4">
+      <header className="flex shrink-0 items-center gap-2 px-2 py-2 md:px-4">
         <IconButton
           aria-label="Back to channels"
           variant="ghost"
@@ -88,7 +88,9 @@ export function ThreadPane({
             compact ? "Use comfortable density" : "Use compact density"
           }
           aria-pressed={compact}
-          variant="ghost"
+          variant="glass"
+          size="md"
+          className="rounded-full"
           onClick={() => setDensity(compact ? "comfortable" : "compact")}
         >
           {compact ? (
@@ -100,14 +102,13 @@ export function ThreadPane({
         <IconButton
           aria-label={detailsOpen ? "Close thread panel" : "Open thread panel"}
           aria-pressed={detailsOpen}
-          variant="ghost"
-          className="hidden lg:inline-flex"
+          variant="glass"
+          size="md"
+          className="hidden rounded-full lg:inline-flex"
+          tooltip={detailsOpen ? "Close thread panel" : "Open thread panel"}
           onClick={onToggleDetails}
         >
-          <ChevronRight
-            className={`size-5 ${detailsOpen ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
+          <PanelRight className="size-5" aria-hidden="true" />
         </IconButton>
       </header>
       <MessageList

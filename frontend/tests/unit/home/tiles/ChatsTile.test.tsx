@@ -211,4 +211,14 @@ describe("ChatsTile", () => {
     for (const l of screen.getAllByRole("link", { name: "See all chats" }))
       expect(l).toHaveAttribute("href", "/app/chat");
   });
+
+  it("caps the thread list height and does not stretch the inline thread", () => {
+    renderWithProviders(<ChatsTile open onToggle={() => {}} />);
+    const list = row("Family").closest("ul") as HTMLElement;
+    expect(list.className).toContain("max-h-[360px]");
+    expect(list.className).not.toContain("flex-1");
+    const inline = screen.getByRole("textbox", { name: /reply to family/i });
+    const root = inline.closest("form")!.parentElement as HTMLElement;
+    expect(root.className).not.toContain("flex-1");
+  });
 });

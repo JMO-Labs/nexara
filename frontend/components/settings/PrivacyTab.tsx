@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/settings/PrivacyTab.tsx
- * @brief Privacy settings tab: visibility, presence, birthday, plugins. Explicit Save.
+ * @brief Privacy settings tab: visibility, presence, birthday, plugins.
+ *        Two panels; explicit Save in the page footer (not over the help FAB).
  */
 import { useState } from "react";
 import { Button, Option, Select, SettingsRow, Switch } from "@/components/ui";
@@ -51,7 +52,7 @@ export function PrivacyTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Panel title="Profile visibility">
+      <Panel title="Profile and presence">
         <SettingsRow
           label="Profile visible to"
           description="Who can open your profile."
@@ -65,14 +66,11 @@ export function PrivacyTab() {
             <Option value="admin_only">Admins only</Option>
           </Select>
         </SettingsRow>
-      </Panel>
-
-      <Panel title="Status and presence">
         {toggle("show_online_status", "Show online status")}
         {toggle("show_last_seen", "Show last seen")}
       </Panel>
 
-      <Panel title="Birthday">
+      <Panel title="Birthday and plugins">
         <SettingsRow label="Show birthday to">
           <Select
             label="Show birthday to"
@@ -85,20 +83,23 @@ export function PrivacyTab() {
           </Select>
         </SettingsRow>
         {toggle("show_birthday_year", "Show birthday year")}
-      </Panel>
-
-      <Panel title="Plugin preferences">
         {toggle(
           "allow_sassybot",
           "Allow Sassybot",
           "Let Sassybot interact with you.",
         )}
-        <div className="mt-4 flex justify-end">
-          <Button onClick={onSave} disabled={!dirty || isPending}>
-            Save
-          </Button>
-        </div>
       </Panel>
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {dirty && (
+          <p role="status" className="text-sm text-muted">
+            Unsaved changes
+          </p>
+        )}
+        <Button onClick={onSave} disabled={!dirty || isPending}>
+          Save
+        </Button>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
  * @file components/admin/AdminState.tsx
  * @brief Shared loading / notice states and responsive table classes for admin tabs.
  */
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Info, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 /** @brief Table classes that collapse rows into stacked cards on phone. */
 export const stackTable = {
   head: "max-md:sr-only",
-  row: "max-md:mb-2 max-md:flex max-md:flex-col max-md:rounded-xl max-md:border max-md:border-ink/10 max-md:p-2",
+  row: "max-md:mb-2 max-md:flex max-md:flex-col max-md:glass-item max-md:rounded-[20px] max-md:p-2",
   cell: "max-md:flex max-md:min-h-11 max-md:items-center max-md:justify-between max-md:gap-3 max-md:before:text-xs max-md:before:font-semibold max-md:before:text-muted max-md:before:content-[attr(data-label)]",
 };
 
@@ -36,7 +36,7 @@ export function AdminLoading() {
 }
 
 /**
- * @brief Inline message box.
+ * @brief Inline message box: glass row with a tone glyph (no left rail).
  * @param tone error or info
  * @param children message
  * @return alert element
@@ -48,15 +48,20 @@ export function AdminNotice({
   tone?: "error" | "info";
   children: React.ReactNode;
 }) {
+  const Icon = tone === "error" ? AlertCircle : Info;
   return (
     <div
       role="alert"
-      className={cn(
-        "rounded-2xl border-l-4 bg-surface p-3 text-sm",
-        tone === "error" ? "border-danger text-danger" : "border-accent",
-      )}
+      className="glass-item flex items-start gap-2 rounded-[22px] p-3 text-sm text-ink"
     >
-      {children}
+      <Icon
+        aria-hidden="true"
+        className={cn(
+          "mt-0.5 size-4 shrink-0",
+          tone === "error" ? "text-danger" : "text-accent",
+        )}
+      />
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

@@ -4,6 +4,7 @@
  * @brief Snooze presets, custom date and clear button.
  */
 import { useState } from "react";
+import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
@@ -41,19 +42,19 @@ export function SnoozeControls({ until }: { until: string | null }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" variant="outline" onClick={() => set.mutate("1h")}>
+      <Button size="sm" variant="secondary" onClick={() => set.mutate("1h")}>
         {t("snooze_1h")}
       </Button>
       <Button
         size="sm"
-        variant="outline"
+        variant="secondary"
         onClick={() => set.mutate("until_morning")}
       >
         {t("snooze_morning")}
       </Button>
       <Button
         size="sm"
-        variant="outline"
+        variant="secondary"
         onClick={() => set.mutate(tomorrowIso())}
       >
         {t("snooze_tomorrow")}
@@ -61,13 +62,13 @@ export function SnoozeControls({ until }: { until: string | null }) {
       <input
         type="datetime-local"
         aria-label={t("snooze_custom")}
-        className="h-8 rounded-lg border border-current/30 bg-transparent px-2 text-sm"
+        className="glass-item h-9 rounded-full border-0 px-3 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         value={custom}
         onChange={(e) => setCustom(e.target.value)}
       />
       <Button
         size="sm"
-        variant="outline"
+        variant="primary"
         disabled={!custom}
         onClick={() => set.mutate(new Date(custom).toISOString())}
       >
@@ -76,7 +77,7 @@ export function SnoozeControls({ until }: { until: string | null }) {
       {active && (
         <>
           <span className="text-sm text-muted">
-            {t("snoozed_until")} {new Date(until).toLocaleString()}
+            {t("snoozed_until")} {format(new Date(until), "EEE, MMM d 'at' p")}
           </span>
           <Button size="sm" variant="ghost" onClick={() => clear.mutate()}>
             {t("snooze_clear")}

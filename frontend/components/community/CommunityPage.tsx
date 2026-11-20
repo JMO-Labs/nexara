@@ -36,15 +36,17 @@ export function CommunityPage() {
       <PageHeader
         title="Community"
         description="The people and groups you're connected to."
+        actions={
+          <div className="w-full md:w-auto">
+            <Segmented
+              label="Community view"
+              options={VIEWS}
+              value={view}
+              onChange={setView}
+            />
+          </div>
+        }
       />
-      <div className="mb-4">
-        <Segmented
-          label="Community view"
-          options={VIEWS}
-          value={view}
-          onChange={setView}
-        />
-      </div>
       {view === "groups" ? (
         <GroupsPage embedded />
       ) : (

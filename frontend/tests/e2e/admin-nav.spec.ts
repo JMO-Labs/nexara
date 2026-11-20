@@ -20,7 +20,7 @@ const PAGES: {
     url: /\/app\/admin\/moderation/,
     heading: "Moderation",
     // Queue loaded: empty state or at least one report row.
-    ready: /No pending reports/,
+    ready: /All clear/,
   },
   { link: "Storage", url: /\/app\/admin\/storage/, heading: "Storage" },
 ];

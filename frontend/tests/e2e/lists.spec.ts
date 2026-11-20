@@ -51,15 +51,17 @@ test("user creates a list, adds two items and completes one", async ({
   await page.goto("/app/inbox?view=lists");
   await page.getByRole("link", { name: "New list" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "New list" });
-  await dialog.getByLabel("Title").fill(title);
+  await expect(
+    page.getByRole("heading", { name: "New list", level: 1 }),
+  ).toBeVisible();
+  await page.getByLabel("Title").fill(title);
   const created = page.waitForResponse(
     (r) =>
       r.url().endsWith(LISTS) &&
       r.request().method() === "POST" &&
       r.status() === 201,
   );
-  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await page.getByRole("button", { name: "Create", exact: true }).click();
   const listId = ((await (await created).json()) as { id: string }).id;
   listIds.push(listId);
 

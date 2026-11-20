@@ -2,16 +2,17 @@
 /**
  * @file components/events/EventRail.tsx
  * @brief Right-side rail for /app/events. Renders the visible events sorted
- *        ascending and grouped by day, with a colored bar per subgroup.
+ *        ascending and grouped by day, with a colour dot per subgroup.
  *        Selecting a row syncs with the calendar + detail panel.
  */
 import * as React from "react";
 import { format, isSameDay, parseISO, startOfDay } from "date-fns";
+import { CalendarDays } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent } from "./eventColors";
-import { HAIRLINE } from "./toneStyle";
+import { formatTime } from "./formatTime";
 
 export interface EventRailProps {
   events: EventItem[];
@@ -19,6 +20,8 @@ export interface EventRailProps {
   selectedEventId: string | null;
   subgroupNames: Map<string, string>;
   onSelectEvent: (ev: EventItem) => void;
+  /** Optional action (e.g. "New event") shown in the empty state. */
+  emptyAction?: React.ReactNode;
 }
 
 function dayKey(iso: string): string {
@@ -36,6 +39,7 @@ export function EventRail({
   selectedEventId,
   subgroupNames,
   onSelectEvent,
+  emptyAction,
 }: EventRailProps) {
   const sorted = React.useMemo(
     () =>
@@ -80,6 +84,8 @@ export function EventRail({
       <div className="p-4">
         <EmptyState
           compact
+          icon={CalendarDays}
+          action={emptyAction}
           title={
             selectedDay
               ? `No events on ${format(selectedDay, "MMM d")}`
@@ -98,24 +104,24 @@ export function EventRail({
   return (
     <div
       ref={containerRef}
-      className="h-full overflow-y-auto px-3 py-2 [scrollbar-gutter:stable]"
+      className="h-full overflow-y-auto px-2 py-1 [scrollbar-gutter:stable]"
     >
       {groups.map(([key, day, items]) => {
         const isSelectedDay =
           selectedDay && isSameDay(startOfDay(day), startOfDay(selectedDay));
         return (
-          <section key={key} data-day={key} className="mb-4 scroll-mt-2">
+          <section
+            key={key}
+            data-day={key}
+            className="mb-3 scroll-mt-2 last:mb-0"
+          >
             <h3
               className={cn(
-                "sticky top-0 z-[1] mb-2 flex items-baseline gap-2 border-b bg-[var(--nx-glass-solid)] py-1 text-base font-semibold tabular-nums text-ink",
-                HAIRLINE,
-                isSelectedDay && "underline decoration-2 underline-offset-4",
+                "sticky top-0 z-[1] mb-1.5 px-1 py-1 text-sm font-medium",
+                isSelectedDay ? "text-ink" : "text-muted",
               )}
             >
-              {format(day, "d")}
-              <span className="text-muted text-sm font-normal">
-                {format(day, "EEE, MMM")}
-              </span>
+              {format(day, "EEE, MMM d")}
             </h3>
             <ul className="flex flex-col gap-1">
               {items.map((ev) => {
@@ -127,24 +133,21 @@ export function EventRail({
                       type="button"
                       onClick={() => onSelectEvent(ev)}
                       aria-pressed={selected}
-                      className="grid min-h-11 w-full grid-cols-[3px_1fr] gap-3 rounded-[22px] px-3 py-2 text-left transition-colors outline-none hover:bg-[var(--tone-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                      style={
-                        {
-                          "--tone-soft": tone.soft,
-                          backgroundColor: selected ? tone.soft : undefined,
-                        } as React.CSSProperties
-                      }
+                      className={cn(
+                        "glass-item flex min-h-11 w-full items-start gap-3 rounded-[22px] px-3 py-2 text-left transition-colors outline-none hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                        selected && "ring-2 ring-ink",
+                      )}
                     >
                       <span
-                        aria-hidden
-                        className="rounded-sm"
+                        aria-hidden="true"
+                        className="mt-1.5 size-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: tone.solid }}
                       />
                       <span className="min-w-0">
                         <span className="text-muted block text-xs tabular-nums">
                           {ev.is_all_day
                             ? "All day"
-                            : `${format(parseISO(ev.starts_at), "h:mm a")} to ${format(parseISO(ev.ends_at), "h:mm a")}`}
+                            : `${formatTime(parseISO(ev.starts_at))} to ${formatTime(parseISO(ev.ends_at))}`}
                           {ev.location ? `, ${ev.location}` : ""}
                         </span>
                         <span className="text-ink line-clamp-2 text-sm font-semibold">

@@ -17,7 +17,7 @@ import {
   Plus,
   type LucideIcon,
 } from "lucide-react";
-import { Button, Skeleton } from "@/components/ui";
+import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PageHeader, Segmented } from "@/components/ui/page";
 import { useNotificationsSync } from "@/hooks/useNotificationsSync";
 import { markAllRead, markRead } from "@/lib/api/notifications";
@@ -32,11 +32,23 @@ const FOLDERS: { value: Folder; label: string; Icon: LucideIcon }[] = [
   { value: "saved", label: "Saved", Icon: Bookmark },
   { value: "lists", label: "Lists", Icon: List },
 ];
-const EMPTY: Record<Folder, string> = {
-  notifications: "No notifications yet.",
-  unread: "You're all caught up.",
-  saved: "Bookmark a post to keep it here.",
-  lists: "No lists yet.",
+const EMPTY: Record<Folder, { title: string; description: string }> = {
+  notifications: {
+    title: "No notifications yet",
+    description: "Replies, mentions and updates will show up here.",
+  },
+  unread: {
+    title: "You're all caught up",
+    description: "New notifications will appear here.",
+  },
+  saved: {
+    title: "Nothing saved yet",
+    description: "Bookmark a post to keep it here.",
+  },
+  lists: {
+    title: "No lists yet",
+    description: "Create a list to share groceries, potlucks and more.",
+  },
 };
 const RULE = "border-[color-mix(in_srgb,var(--nx-ink)_8%,transparent)]";
 
@@ -158,7 +170,7 @@ export function InboxPage() {
               )}
             {folder === "lists" && (
               <div className="flex gap-1">
-                <Button asChild size="sm" variant="ghost">
+                <Button asChild size="sm" variant="secondary">
                   <Link href="/app/lists/templates">Templates</Link>
                 </Button>
                 <Button asChild size="sm">
@@ -180,9 +192,21 @@ export function InboxPage() {
                 />
               ))
             ) : items.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-muted">
-                {EMPTY[folder]}
-              </p>
+              <EmptyState
+                compact
+                icon={current.Icon}
+                title={EMPTY[folder].title}
+                description={EMPTY[folder].description}
+                action={
+                  folder === "lists" && (
+                    <Button asChild size="sm">
+                      <Link href="/app/lists/new">
+                        <Plus className="size-4" aria-hidden="true" /> New list
+                      </Link>
+                    </Button>
+                  )
+                }
+              />
             ) : (
               items.map((e) => (
                 <InboxRow
@@ -213,7 +237,15 @@ export function InboxPage() {
             !selected && "max-lg:hidden",
           )}
         >
-          <ReadingPane entry={selected} onBack={() => go(folder)} />
+          <ReadingPane
+            entry={selected}
+            onBack={() => go(folder)}
+            emptyText={
+              folder === "lists" && items.length === 0
+                ? "Create your first list to see it here."
+                : undefined
+            }
+          />
         </section>
       </div>
     </div>

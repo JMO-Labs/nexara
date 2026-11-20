@@ -4,20 +4,22 @@
  * @brief Admin invite creation and management.
  */
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { MailPlus, Trash2 } from "lucide-react";
 import {
   useInvites,
   useCreateInvite,
   useRevokeInvite,
 } from "@/hooks/useInvites";
 import {
+  Badge,
   Button,
-  Card,
+  EmptyState,
   IconButton,
   Input,
   Option,
   Select,
 } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import {
   Table,
   TableBody,
@@ -28,6 +30,17 @@ import {
 } from "@/components/ui/shadcn/table";
 import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
 
+/**
+ * @brief Capitalise the first letter of a code, e.g. "member" -> "Member".
+ * @param s raw value
+ * @return sentence-case label
+ */
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * @brief Invite creation form beside the invite list.
+ * @return tab content
+ */
 export function InvitesTab() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("member");
@@ -52,9 +65,8 @@ export function InvitesTab() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-12">
-      <Card className="p-4 md:col-span-5">
-        <h3 className="mb-3 text-lg font-semibold">Create invite</h3>
+    <div className="grid gap-4 md:grid-cols-[360px_1fr]">
+      <Panel as="div" title="Create invite" className="md:self-start">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <Input
             type="email"
@@ -73,12 +85,11 @@ export function InvitesTab() {
             Send invite
           </Button>
         </form>
-      </Card>
+      </Panel>
 
-      <div className="md:col-span-7">
+      <div>
         {invites && invites.length > 0 ? (
-          <Card className="p-4">
-            <h3 className="mb-3 text-lg font-semibold">Pending invites</h3>
+          <Panel as="div" title="Invites">
             <Table>
               <TableHeader className={stackTable.head}>
                 <TableRow>
@@ -97,15 +108,17 @@ export function InvitesTab() {
                       {invite.email}
                     </TableCell>
                     <TableCell data-label="Role" className={stackTable.cell}>
-                      {invite.role}
+                      <Badge>{capitalise(invite.role)}</Badge>
                     </TableCell>
                     <TableCell data-label="Status" className={stackTable.cell}>
-                      {invite.used_at ? "Used" : "Pending"}
+                      <Badge tone={invite.used_at ? "neutral" : "accent"}>
+                        {invite.used_at ? "Used" : "Pending"}
+                      </Badge>
                     </TableCell>
                     <TableCell className={stackTable.cell}>
                       <IconButton
                         size="sm"
-                        variant="ghost"
+                        variant="glass"
                         className="text-danger"
                         onClick={() => revokeMutation.mutate(invite.id)}
                         disabled={revokeMutation.isPending}
@@ -118,9 +131,16 @@ export function InvitesTab() {
                 ))}
               </TableBody>
             </Table>
-          </Card>
+          </Panel>
         ) : (
-          <AdminNotice>No pending invites</AdminNotice>
+          <Panel as="div" title="Invites">
+            <EmptyState
+              compact
+              icon={MailPlus}
+              title="No invites yet"
+              description="Send an invite to bring someone into the community."
+            />
+          </Panel>
         )}
       </div>
     </div>

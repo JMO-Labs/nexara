@@ -55,21 +55,21 @@ function wrap(ui: React.ReactNode) {
 }
 
 describe("subgroup accent color", () => {
-  it("CoverBand uses subgroup accent when set", () => {
+  it("CoverBand tints its background with the subgroup accent when set", () => {
     const { container } = wrap(
       <CoverBand subgroup={{ ...base, accent_color: "#C6B4F5" }} />,
     );
-    expect(container.querySelector("[data-accent-bar]")).toHaveStyle({
-      backgroundColor: "#C6B4F5",
-    });
+    const band = container.firstElementChild as HTMLElement;
+    expect(band.style.background).toContain("rgb(198, 180, 245)");
+    expect(band.style.background).toContain("25%");
   });
 
   it("CoverBand falls back to groupColor palette when null", () => {
     const { container } = wrap(<CoverBand subgroup={base} />);
-    const bar = container.querySelector("[data-accent-bar]") as HTMLElement;
-    expect(GROUP_PALETTE.map((c) => c.toLowerCase())).toContain(
-      bar.style.backgroundColor ? rgbToHex(bar.style.backgroundColor) : "",
-    );
+    const band = container.firstElementChild as HTMLElement;
+    const palette = GROUP_PALETTE.map((c) => c.toLowerCase());
+    const rgb = band.style.background.match(/rgb\([^)]*\)/)?.[0] ?? "";
+    expect(palette).toContain(rgbToHex(rgb).toLowerCase());
   });
 
   it("editor warns when accent fails AA", () => {

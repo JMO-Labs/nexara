@@ -24,6 +24,9 @@ vi.mock("@/hooks/useGalleries", () => {
 vi.mock("@/hooks/useEvents", () => ({
   useEventDetail: () => ({ data: undefined }),
 }));
+vi.mock("@/hooks/useMembers", () => ({
+  useMemberProfile: () => ({ data: { display_name: "Owner Name" } }),
+}));
 vi.mock("@/components/galleries/GalleryUpload", () => ({
   GalleryUpload: () => null,
 }));

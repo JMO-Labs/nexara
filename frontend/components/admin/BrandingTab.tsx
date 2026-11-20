@@ -4,7 +4,9 @@
  * @brief Admin branding editor: name, tagline, 7-color palette, fonts, live preview.
  */
 import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Button, Input } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { useBranding, useUpdateBranding } from "@/hooks/useBranding";
 import { accentPassesAA, type Branding } from "@/lib/api/branding";
 import { formatApiError } from "@/lib/api/errors";
@@ -88,8 +90,11 @@ function BrandingForm({ initial }: { initial: Branding }) {
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6">
-      <div className="flex max-w-md flex-col gap-4">
+    <form
+      onSubmit={submit}
+      className="grid gap-6 md:grid-cols-2 md:items-start"
+    >
+      <div className="flex flex-col gap-4">
         <Input
           label="Community name"
           value={name}
@@ -130,18 +135,27 @@ function BrandingForm({ initial }: { initial: Branding }) {
         />
         <BrandingExtraFields value={extra} onChange={setExtra} />
       </div>
-      <ThemeGallery current={initial} />
-      {warnings.map((w) => (
-        <p key={w.id} role="status" className="text-sm text-amber-700">
-          {w.label}: {w.ratio.toFixed(2)}:1 is below {w.min}:1 (warning only).
-        </p>
-      ))}
-      <BrandingPreview colors={colors} font={font} mono={mono} />
-      {serverError && <AdminNotice tone="error">{serverError}</AdminNotice>}
-      <div>
-        <Button type="submit" disabled={!canSave}>
-          Save branding
-        </Button>
+      <div className="flex flex-col gap-4 md:sticky md:top-4 md:self-start">
+        <BrandingPreview colors={colors} font={font} mono={mono} />
+        {warnings.map((w) => (
+          <p
+            key={w.id}
+            role="status"
+            className="glass-item flex items-start gap-2 rounded-[20px] p-3 text-sm text-[var(--nx-red)]"
+          >
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            {w.label}: {w.ratio.toFixed(2)}:1 is below {w.min}:1 (warning only).
+          </p>
+        ))}
+        {serverError && <AdminNotice tone="error">{serverError}</AdminNotice>}
+        <div>
+          <Button type="submit" disabled={!canSave}>
+            Save branding
+          </Button>
+        </div>
       </div>
     </form>
   );
@@ -166,6 +180,9 @@ export function BrandingTab() {
   return (
     <div className="flex flex-col gap-10">
       <BrandingForm key={formKey} initial={data} />
+      <Panel as="div" title="Themes">
+        <ThemeGallery current={data} />
+      </Panel>
       <section
         aria-labelledby="custom-css-heading"
         className="flex flex-col gap-4"

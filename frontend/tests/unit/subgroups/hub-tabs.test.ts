@@ -10,14 +10,13 @@ describe("GROUP_TABS", () => {
     const tabIds = [
       "overview",
       "events",
-      "galleries",
-      "media",
+      "photos",
       "posts",
       "lists",
       "members",
       "settings",
     ];
-    expect(GROUP_TABS).toHaveLength(8);
+    expect(GROUP_TABS).toHaveLength(7);
 
     GROUP_TABS.forEach((tab) => {
       expect(tabIds).toContain(tab.id);
@@ -26,25 +25,13 @@ describe("GROUP_TABS", () => {
     });
   });
 
-  it("has icons assigned to all tabs", () => {
-    const expectedIcons = {
-      overview: "HomeIcon",
-      events: "CalendarDaysIcon",
-      galleries: "PhotoIcon",
-      media: "FilmIcon",
-      posts: "NewspaperIcon",
-      lists: "ListIcon",
-      members: "UsersIcon",
-      settings: "Cog6ToothIcon",
-    };
-
-    Object.entries(expectedIcons).forEach(([tabId, expectedIconName]) => {
-      const tab = GROUP_TABS.find((t) => t.id === tabId);
-      expect(tab).toBeDefined();
-      expect(tab?.Icon).toBeDefined();
-      // Verify Icon is callable (React component)
-      expect(typeof tab?.Icon).not.toBe("undefined");
-    });
+  it("merges Galleries and Media into a single Photos tab", () => {
+    const ids = GROUP_TABS.map((t) => t.id);
+    expect(ids).not.toContain("galleries");
+    expect(ids).not.toContain("media");
+    const photos = GROUP_TABS.find((t) => t.id === "photos");
+    expect(photos?.label).toBe("Photos");
+    expect(photos?.Component).toBeDefined();
   });
 
   it("places lists right after posts", () => {

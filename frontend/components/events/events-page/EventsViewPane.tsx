@@ -4,7 +4,6 @@
  * @brief Renders the active calendar view (month / week / day / list) plus
  *        loading (staggered skeleton), error (Retry) and empty (CTA) states.
  */
-import { addDays } from "date-fns";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { MonthCalendarLarge } from "@/components/events/MonthCalendarLarge";
 import { WeekView } from "@/components/events/WeekView";
@@ -12,7 +11,6 @@ import { DayView } from "@/components/events/DayView";
 import { ListView } from "@/components/events/ListView";
 import type { CalendarView } from "@/components/events/CalendarViewSwitcher";
 import type { EventItem } from "@/lib/api/events";
-import { PeriodNav } from "./PeriodNav";
 
 export interface EventsViewPaneProps {
   view: CalendarView;
@@ -94,7 +92,7 @@ export function EventsViewPane(p: EventsViewPaneProps) {
 }
 
 /**
- * @brief Active view with its period navigation.
+ * @brief Active calendar view. Period navigation lives in the page toolbar.
  * @param props see EventsViewPaneProps
  * @return view element
  */
@@ -117,39 +115,24 @@ function ActiveView(p: EventsViewPaneProps) {
   }
   if (p.view === "week") {
     return (
-      <div className="flex h-full flex-col gap-2">
-        <PeriodNav
-          unit="week"
-          label={`Week of ${p.weekStart.toLocaleDateString()}`}
-          onPrev={() => p.onWeekStartChange(addDays(p.weekStart, -7))}
-          onNext={() => p.onWeekStartChange(addDays(p.weekStart, 7))}
-        />
-        <div className="min-h-0 flex-1">
-          <WeekView {...common} weekStart={p.weekStart} />
-        </div>
+      <div className="h-full">
+        <WeekView {...common} weekStart={p.weekStart} />
       </div>
     );
   }
   if (p.view === "day") {
-    return (
-      <div className="flex h-full flex-col gap-2">
-        <PeriodNav
-          unit="day"
-          label={
-            p.selectedDay ? p.selectedDay.toLocaleDateString() : "Select a day"
-          }
-          onPrev={() =>
-            p.onSelectedDayChange((prev) => (prev ? addDays(prev, -1) : null))
-          }
-          onNext={() =>
-            p.onSelectedDayChange((prev) => (prev ? addDays(prev, 1) : null))
-          }
+    if (!p.selectedDay) {
+      return (
+        <EmptyState
+          compact
+          title="Select a day"
+          description="Pick a day in the month view."
         />
-        {p.selectedDay && (
-          <div className="min-h-0 flex-1">
-            <DayView {...common} day={p.selectedDay} />
-          </div>
-        )}
+      );
+    }
+    return (
+      <div className="h-full">
+        <DayView {...common} day={p.selectedDay} />
       </div>
     );
   }

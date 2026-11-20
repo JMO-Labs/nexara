@@ -77,7 +77,7 @@ export function ChatsTile({ open, onToggle }: TileSlotProps) {
           Nothing from {groupName} yet
         </p>
       ) : (
-        <ul className="m-0 flex min-h-0 flex-1 flex-col gap-1.5 p-0">
+        <ul className="m-0 flex max-h-[360px] flex-col gap-1.5 overflow-y-auto p-0">
           {threads.map((t) => (
             <ChatThreadRow
               key={t.channel_id}

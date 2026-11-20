@@ -90,3 +90,17 @@ describe("gridClass (pane collapse)", () => {
     expect(aside.className).not.toContain("md:flex");
   });
 });
+
+describe("ThreadPane brand styling", () => {
+  it("has no hard header divider and glass header buttons", () => {
+    render(<ThreadPane {...props} />);
+    const header = screen
+      .getByRole("heading", { name: "General" })
+      .closest("header") as HTMLElement;
+    expect(header.className).not.toContain("border-b");
+    const density = screen.getByRole("button", { name: /compact density/i });
+    expect(density).toHaveClass("glass-btn", "rounded-full");
+    const details = screen.getByRole("button", { name: /open thread panel/i });
+    expect(details).toHaveClass("glass-btn", "rounded-full");
+  });
+});

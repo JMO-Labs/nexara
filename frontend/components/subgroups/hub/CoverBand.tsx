@@ -6,6 +6,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { groupColor } from "@/lib/groupColor";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
@@ -27,23 +28,20 @@ export function CoverBand({ subgroup, right }: CoverBandProps) {
 
   return (
     <div
-      className="relative mb-4 h-[180px] w-full overflow-hidden rounded-[32px] md:mb-[18px] md:h-[220px]"
+      className={cn(
+        "relative mb-4 w-full overflow-hidden rounded-[32px] md:mb-[18px]",
+        hasCover ? "h-[180px] md:h-[220px]" : "h-[140px] md:h-[160px]",
+      )}
       style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 60%, transparent), color-mix(in srgb, ${accent} 20%, transparent))`,
+        background: `color-mix(in srgb, ${accent} 25%, transparent)`,
       }}
     >
       {hasCover && (
         <MediaThumb mediaId={subgroup.cover_media_id} alt={subgroup.name} />
       )}
-      <div
-        aria-hidden
-        data-accent-bar
-        className="absolute inset-x-0 top-0 z-10 h-1.5"
-        style={{ backgroundColor: accent }}
-      />
       <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 md:inset-x-4 md:bottom-4">
         <div className="glass min-w-0 rounded-[24px] px-4 py-2.5">
-          <h1 className="truncate text-xl font-bold tracking-tight text-ink md:text-2xl">
+          <h1 className="truncate text-2xl font-medium tracking-tight text-ink md:text-3xl">
             {subgroup.name}
           </h1>
           <p className="text-sm text-muted">

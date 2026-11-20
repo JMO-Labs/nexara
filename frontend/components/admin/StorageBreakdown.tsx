@@ -3,6 +3,7 @@
  * @brief Stacked bar + legend of storage by category with byte counts and %.
  */
 import { formatBytes } from "@/lib/formatBytes";
+import { GROUP_PALETTE } from "@/lib/groupColor";
 
 const LABELS: Record<string, string> = {
   images: "Images",
@@ -11,8 +12,8 @@ const LABELS: Record<string, string> = {
   other: "Other media",
   db: "Database",
 };
-// Distinct fills; each legend row also carries text so color is not the only cue.
-const FILLS = ["#6d4fd6", "#1f8a70", "#c27a12", "#8a8f98", "#c2410c"];
+// Brand series; each legend row also carries text so color is not the only cue.
+const fill = (i: number) => GROUP_PALETTE[i % GROUP_PALETTE.length];
 
 /**
  * @brief Category breakdown chart.
@@ -25,45 +26,34 @@ export function StorageBreakdown({
 }) {
   const entries = Object.entries(categories);
   const total = entries.reduce((s, [, v]) => s + v, 0);
-  let offset = 0;
+  const pct = (v: number) => (total > 0 ? (v / total) * 100 : 0);
   return (
     <div className="flex flex-col gap-3">
-      <svg
-        viewBox="0 0 100 10"
+      <div
         role="img"
         aria-label="Category breakdown"
-        className="h-6 w-full"
-        preserveAspectRatio="none"
+        className="flex h-3 w-full overflow-hidden rounded-full bg-ink/10"
       >
-        {total > 0 &&
-          entries.map(([k, v], i) => {
-            const w = (v / total) * 100;
-            const rect = (
-              <rect
-                key={k}
-                x={offset}
-                y={0}
-                width={w}
-                height={10}
-                fill={FILLS[i % FILLS.length]}
-              />
-            );
-            offset += w;
-            return rect;
-          })}
-      </svg>
+        {entries.map(([k, v], i) => (
+          <span
+            key={k}
+            className="h-full"
+            style={{ width: `${pct(v)}%`, background: fill(i) }}
+          />
+        ))}
+      </div>
       <ul className="flex flex-col gap-1 text-sm">
         {entries.map(([k, v], i) => (
           <li key={k} className="flex items-center gap-2">
             <span
               aria-hidden
-              className="size-3 rounded-sm"
-              style={{ background: FILLS[i % FILLS.length] }}
+              className="size-3 rounded-full"
+              style={{ background: fill(i) }}
             />
             <span className="flex-1">{LABELS[k] ?? k}</span>
             <span>{formatBytes(v)}</span>
             <span className="w-14 text-right text-muted">
-              {total > 0 ? ((v / total) * 100).toFixed(1) : "0.0"}%
+              {pct(v).toFixed(1)}%
             </span>
           </li>
         ))}

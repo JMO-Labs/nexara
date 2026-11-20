@@ -64,6 +64,25 @@ describe("AdminShell", () => {
       expect(screen.getByRole("navigation", { name: g })).toBeTruthy();
   });
 
+  it("scrolls the active link into view on phone", () => {
+    nav.tab = "audit-log";
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    render(<AdminShell>body</AdminShell>);
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({ inline: "center", block: "nearest" }),
+    );
+  });
+
+  it("has one h1 and a section h2 for the active item", () => {
+    nav.tab = "users";
+    render(<AdminShell>body</AdminShell>);
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Users" }),
+    ).toBeInTheDocument();
+  });
+
   it("links all 10 tabs plus the 4 route items", () => {
     render(<AdminShell>body</AdminShell>);
     const hrefs = (n: string) =>

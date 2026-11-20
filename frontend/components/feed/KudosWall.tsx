@@ -8,15 +8,16 @@
 import * as React from "react";
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState } from "@/components/ui";
+import { Button, EmptyState, Option, Select } from "@/components/ui";
 import { PageHeader, Segmented, Toolbar } from "@/components/ui/page";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useKudosWall } from "@/hooks/useKudos";
 import { KudosCard } from "./KudosCard";
 import { KudosComposer } from "./KudosComposer";
 
+const ALL_GROUPS = "__all__";
 const selectCls =
-  "glass-btn h-9 rounded-full px-3 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "h-9 w-auto min-w-40 rounded-full border-0 bg-[var(--nx-item)] px-4 text-sm text-ink shadow-none";
 
 export interface KudosWallProps {
   /** Home feed tile: no page header, compact toolbar, single column. */
@@ -46,6 +47,7 @@ export function KudosWall({ embedded = false }: KudosWallProps = {}) {
     );
   }, [wall.data, group, sort]);
 
+  const isEmpty = !wall.isLoading && !wall.isError && items.length === 0;
   const sendButton = (
     <Button className="rounded-full" onClick={() => setComposing(true)}>
       {t("sendButton")}
@@ -68,29 +70,31 @@ export function KudosWall({ embedded = false }: KudosWallProps = {}) {
             ]}
           />
         )}
-        <select
-          aria-label={t("filterGroup")}
+        <Select
+          label={t("filterGroup")}
           className={selectCls}
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
+          value={group || ALL_GROUPS}
+          onValueChange={(v) => setGroup(v === ALL_GROUPS ? "" : v)}
         >
-          <option value="">{t("allGroups")}</option>
+          <Option value={ALL_GROUPS}>{t("allGroups")}</Option>
           {groups.map((g) => (
-            <option key={g.id} value={g.id}>
+            <Option key={g.id} value={g.id}>
               {g.name}
-            </option>
+            </Option>
           ))}
-        </select>
-        {embedded && sendButton}
+        </Select>
+        {embedded && !isEmpty && sendButton}
       </Toolbar>
 
       {wall.isError ? (
         <p role="alert">{t("error")}</p>
-      ) : !wall.isLoading && items.length === 0 ? (
+      ) : isEmpty ? (
         <EmptyState
+          compact={embedded}
           icon={Trophy}
           title={t("emptyTitle")}
           description={t("emptyDesc")}
+          action={embedded ? sendButton : undefined}
         />
       ) : (
         <div

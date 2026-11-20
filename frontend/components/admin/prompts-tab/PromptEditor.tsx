@@ -135,7 +135,12 @@ export function PromptEditor({ prompt, deleting, onChange, onDelete }: Props) {
         )}
       </dl>
       <div>
-        <Button variant="destructive" onClick={onDelete} loading={deleting}>
+        <Button
+          variant="glass"
+          className="text-danger"
+          onClick={onDelete}
+          loading={deleting}
+        >
           Delete
         </Button>
       </div>

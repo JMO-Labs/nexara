@@ -157,6 +157,16 @@ describe("GroupHub", () => {
     );
   });
 
+  it("reserves bottom space on phone so content clears the tab bar", () => {
+    vi.spyOn(useSubgroupsModule, "useSubgroupDetail").mockReturnValue({
+      data: mockSubgroupDetail,
+      isLoading: false,
+    } as any);
+
+    const { container } = wrap(<GroupHub slug="hiking" />);
+    expect(container.firstElementChild?.className).toMatch(/\bpb-28\b/);
+  });
+
   it("shows MemberOnlyGate when user is not member of invite_only group", () => {
     vi.spyOn(useSubgroupsModule, "useSubgroupDetail").mockReturnValue({
       data: mockInviteOnlySubgroup,

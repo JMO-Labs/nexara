@@ -4,6 +4,7 @@
  * @brief "Download My Data" section: request, progress, download, expiry.
  */
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import {
@@ -14,7 +15,7 @@ import {
 import { ApiError } from "@/lib/api/errors";
 import type { DataExport } from "@/lib/api/dataExport";
 
-const LABEL = "Download My Data";
+const LABEL = "Download your data";
 
 /** @brief Whole hours until iso (min 0), re-evaluated every minute. */
 function useHoursLeft(iso: string | null | undefined): number | null {
@@ -43,9 +44,9 @@ function History({ items }: { items: DataExport[] }) {
       <ul className="mt-1 text-sm text-muted">
         {items.map((x) => (
           <li key={x.id}>
-            {new Date(x.created_at).toLocaleDateString()} - {x.status}
+            {format(new Date(x.created_at), "MMM d, yyyy")} - {x.status}
             {x.downloaded_at &&
-              ` - Downloaded on ${new Date(x.downloaded_at).toLocaleDateString()}`}
+              ` - Downloaded on ${format(new Date(x.downloaded_at), "MMM d, yyyy")}`}
           </li>
         ))}
       </ul>
@@ -95,7 +96,7 @@ export function DataExportSection() {
             </a>
           </Button>
         ) : (
-          <Button onClick={start} disabled={busy}>
+          <Button variant="secondary" onClick={start} disabled={busy}>
             {status === "failed" ? "Retry" : LABEL}
           </Button>
         )}

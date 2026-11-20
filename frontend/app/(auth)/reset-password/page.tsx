@@ -46,7 +46,10 @@ function RequestForm() {
         title="Check your inbox"
         subtitle="If an account exists, we've sent a password-reset link."
       >
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </AuthCard>
@@ -75,7 +78,10 @@ function RequestForm() {
         <Button type="submit" size="lg" loading={request.isPending}>
           Email reset link
         </Button>
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </form>

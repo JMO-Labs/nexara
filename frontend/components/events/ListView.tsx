@@ -1,15 +1,15 @@
 "use client";
 /**
  * @file components/events/ListView.tsx
- * @brief List view grouped by month (sticky headers) then date. Event rows
- *        with color bar.
+ * @brief List view grouped by month (sticky muted headings) then date. Each
+ *        event is a glass ListRow with a group colour dot and friendly time.
  */
 import * as React from "react";
 import { format, parseISO, startOfDay, isSameDay } from "date-fns";
+import { ListRow } from "@/components/ui/page";
 import type { EventItem } from "@/lib/api/events";
-import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
-import { HAIRLINE } from "./toneStyle";
+import { formatTime } from "./formatTime";
 
 export interface ListViewProps {
   events: EventItem[];
@@ -18,6 +18,22 @@ export interface ListViewProps {
   onSelectEvent: (ev: EventItem) => void;
 }
 
+/**
+ * @brief Friendly "when" line for a row, e.g. "Sat, Nov 21 at 9 am".
+ * @param ev event to describe
+ * @return display string
+ */
+function whenLabel(ev: EventItem): string {
+  const start = parseISO(ev.starts_at);
+  const day = format(start, "EEE, MMM d");
+  return ev.is_all_day ? `${day} · All day` : `${day} at ${formatTime(start)}`;
+}
+
+/**
+ * @brief Month-grouped event list.
+ * @param props see ListViewProps
+ * @return list element
+ */
 export function ListView({
   events,
   selectedEventId,
@@ -68,13 +84,8 @@ export function ListView({
   return (
     <div className="flex max-h-full w-full flex-col overflow-y-auto">
       {months.map(([label, days]) => (
-        <section key={label} aria-label={label}>
-          <h2
-            className={cn(
-              "sticky top-0 z-10 mb-2 border-b bg-[var(--nx-glass-solid)] px-3 py-2 text-sm font-bold text-ink",
-              HAIRLINE,
-            )}
-          >
+        <section key={label} aria-label={label} className="mb-2 last:mb-0">
+          <h2 className="sticky top-0 z-10 mb-1 px-1 py-2 text-sm font-medium text-muted">
             {label}
           </h2>
           {days.map(([dateKey, dayEvents]) => {
@@ -82,44 +93,43 @@ export function ListView({
             const isToday = isSameDay(date, new Date());
 
             return (
-              <section key={dateKey} className="mb-4">
+              <section key={dateKey} className="mb-3 last:mb-0">
                 <h3
-                  className={cn(
-                    "mb-1.5 px-3 text-sm font-semibold",
-                    isToday ? "text-ink" : "text-muted",
-                  )}
+                  className={`mb-1.5 px-1 text-sm font-medium ${isToday ? "text-ink" : "text-muted"}`}
                 >
-                  {format(date, "EEEE, MMMM d")}
+                  {format(date, "EEE, MMM d")}
                 </h3>
-                <ul className="flex flex-col gap-1">
+                <ul className="flex flex-col gap-2">
                   {dayEvents.map((ev) => {
-                    const isSelected = selectedEventId === ev.id;
                     const tone = toneForEvent(ev, subgroupNames);
-                    const startTime = format(parseISO(ev.starts_at), "h:mm a");
-                    const endTime = format(parseISO(ev.ends_at), "h:mm a");
-
+                    const going = ev.rsvp_counts?.attending ?? 0;
                     return (
                       <li key={ev.id}>
-                        <button
-                          type="button"
+                        <ListRow
                           onClick={() => onSelectEvent(ev)}
-                          style={{ borderLeftColor: tone.solid }}
-                          className={cn(
-                            "flex min-h-11 w-full flex-col justify-center rounded-md border-l-[3px] px-3 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
-                            isSelected
-                              ? "bg-[color-mix(in_srgb,var(--nx-ink)_8%,transparent)]"
-                              : "bg-transparent",
-                          )}
+                          selected={selectedEventId === ev.id}
+                          className="py-2.5"
                         >
-                          <span className="w-full truncate text-sm font-semibold">
-                            {ev.title}
+                          <span
+                            aria-hidden="true"
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: tone.solid }}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">
+                              {ev.title}
+                            </span>
+                            <span className="block truncate text-xs text-muted">
+                              {whenLabel(ev)}
+                              {ev.location ? ` · ${ev.location}` : ""}
+                            </span>
                           </span>
-                          <span className="text-sm text-muted">
-                            {ev.is_all_day
-                              ? "All day"
-                              : `${startTime} – ${endTime}`}
-                          </span>
-                        </button>
+                          {going > 0 && (
+                            <span className="shrink-0 text-xs font-semibold text-muted">
+                              {going} going
+                            </span>
+                          )}
+                        </ListRow>
                       </li>
                     );
                   })}

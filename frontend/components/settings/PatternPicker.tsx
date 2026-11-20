@@ -58,7 +58,7 @@ export function PatternPicker({
     <div
       role="radiogroup"
       aria-label={label}
-      className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+      className="grid grid-cols-2 gap-2 md:grid-cols-3"
     >
       {options.map(({ v, text }, i) => {
         const checked = v === value;
@@ -76,14 +76,11 @@ export function PatternPicker({
             }
             onClick={() => onChange(v)}
             onKeyDown={(e) => onKey(e, i)}
-            className={cn(
-              "flex min-h-11 flex-col gap-1 rounded-xl border p-2 text-left text-sm",
-              checked ? "border-accent ring-2 ring-accent" : "border-ink/10",
-            )}
+            className="glass-item flex min-h-11 flex-col gap-2 rounded-[20px] p-2 text-left text-sm"
           >
             <span
               aria-hidden="true"
-              className="relative block h-12 w-full overflow-hidden rounded-lg bg-gradient-to-br from-accent/30 to-surface"
+              className="relative block h-12 w-full overflow-hidden rounded-[14px] bg-[color-mix(in_srgb,var(--nx-ink)_10%,transparent)]"
             >
               {url && (
                 <span
@@ -92,7 +89,14 @@ export function PatternPicker({
                 />
               )}
             </span>
-            <span>{text}</span>
+            <span
+              className={cn(
+                "self-start rounded-full px-2.5 py-0.5",
+                checked && "bg-surface-strong text-bg",
+              )}
+            >
+              {text}
+            </span>
           </button>
         );
       })}

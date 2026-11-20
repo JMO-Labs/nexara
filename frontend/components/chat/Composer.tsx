@@ -189,6 +189,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
             shortcut="Enter"
             onClick={submit}
             disabled={disabled || !value.trim()}
+            className="bg-surface-strong text-bg disabled:opacity-40"
           >
             <Send size={18} aria-hidden />
           </IconButton>

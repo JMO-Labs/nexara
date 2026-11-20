@@ -81,7 +81,7 @@ export function InboxRow({
           <span
             className={cn(
               "shrink-0 text-xs",
-              selected ? "opacity-70" : "text-muted",
+              selected ? "text-bg/70" : "text-muted",
             )}
           >
             {ago}
@@ -91,7 +91,7 @@ export function InboxRow({
           <span
             className={cn(
               "min-w-0 flex-1 truncate text-xs",
-              selected ? "opacity-80" : "text-muted",
+              selected ? "text-bg/80" : "text-muted",
             )}
           >
             {entry.snippet}

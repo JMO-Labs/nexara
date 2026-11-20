@@ -11,6 +11,7 @@ import { useEventDetail } from "@/hooks/useEvents";
 import { ApiError } from "@/lib/api/errors";
 import { EventCountdown } from "./EventCountdown";
 import { EventDetailBody } from "./event-detail/EventDetailBody";
+import { formatRange } from "./event-detail/formatRange";
 
 const BACK = { href: "/app/events", label: "Back to events" };
 
@@ -24,8 +25,16 @@ export function EventPage({ id }: { id: string }) {
   const notFound = error instanceof ApiError && error.status === 404;
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <PageHeader title={event?.title ?? "Event"} back={BACK} />
+    <div className="w-full">
+      <PageHeader
+        title={event?.title ?? "Event"}
+        description={
+          event
+            ? formatRange(event.starts_at, event.ends_at, event.is_all_day)
+            : undefined
+        }
+        back={BACK}
+      />
       {isLoading ? (
         <Panel as="div" className="flex flex-col gap-3">
           <Skeleton height={32} width="60%" />
@@ -53,10 +62,7 @@ export function EventPage({ id }: { id: string }) {
             />
           </Panel>
           {new Date(event.starts_at).getTime() > Date.now() && (
-            <Panel
-              title="Starts in"
-              className="md:order-last max-md:order-first"
-            >
+            <Panel title="Starts in" className="md:order-last">
               <EventCountdown event={event} />
             </Panel>
           )}

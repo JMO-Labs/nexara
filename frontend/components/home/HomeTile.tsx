@@ -143,8 +143,10 @@ export function HomeTile({
           <span
             aria-label={`${count} ${hot ? "need you" : "new"}`}
             className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-medium text-white",
-              hot ? "bg-[var(--nx-red)]" : "bg-[var(--nx-blue)]",
+              "rounded-full px-2 py-0.5 text-xs font-medium",
+              hot
+                ? "bg-[var(--nx-red)] text-white"
+                : "bg-surface-strong text-bg",
             )}
           >
             {count}

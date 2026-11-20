@@ -53,7 +53,10 @@ describe("HomeTile", () => {
     );
     const body = screen.getByText("tile body").parentElement!;
     expect(body.className).not.toMatch(/(^|\s)hidden(\s|$)/);
-    expect(screen.getByLabelText("2 new").className).toContain("--nx-blue");
+    expect(screen.getByLabelText("2 new").className).toContain(
+      "bg-surface-strong",
+    );
+    expect(screen.getByLabelText("2 new").className).not.toContain("--nx-blue");
   });
 
   it("calls onToggle with id", () => {

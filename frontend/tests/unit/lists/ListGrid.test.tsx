@@ -71,16 +71,26 @@ describe("ListGrid", () => {
     expect(r.fetchNextPage).toHaveBeenCalled();
   });
 
-  it("disables load more without next page and while fetching", () => {
+  it("hides load more when there is no next page", () => {
+    h.items.mockReturnValue(
+      q({ data: { pages: [{ items: [item("a", "Tent")] }] } }),
+    );
+    render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
+    expect(
+      screen.queryByRole("button", { name: /Load more/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows load more as busy while fetching the next page", () => {
     h.items.mockReturnValue(
       q({
         data: { pages: [{ items: [item("a", "Tent")] }] },
+        hasNextPage: true,
         isFetchingNextPage: true,
       }),
     );
     render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
     const btn = screen.getByRole("button", { name: /Load more/ });
-    expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute("aria-busy", "true");
   });
 
@@ -93,7 +103,7 @@ describe("ListGrid", () => {
   it("empty state opens the item create modal", async () => {
     h.items.mockReturnValue(q({ data: { pages: [{ items: [] }] } }));
     render(<ListGrid listId="l1" fieldSchema={fieldSchema} />);
-    expect(screen.getByText("No items yet, create one")).toBeInTheDocument();
+    expect(screen.getByText("No items yet")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add item" }));
     expect(await screen.findByRole("dialog")).toHaveTextContent("New item");
   });

@@ -1,44 +1,32 @@
 "use client";
 /**
  * @file components/admin/RetentionTab.tsx
- * @brief Retention policy table for the admin panel.
+ * @brief Retention policy list for the admin panel, one glass row per policy.
  */
 import { useRetentionPolicies, useUpdateRetention } from "@/hooks/useRetention";
-import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
+import { Panel } from "@/components/ui/page";
+import { AdminLoading, AdminNotice } from "./AdminState";
 import { RetentionPolicyRow } from "./RetentionPolicyRow";
 
-const HEADS = ["Policy", "Retention days", "Enabled", "Delete media files", ""];
-
 /**
- * @brief Fetches and lists all retention policies.
- * @return table, loading, or error state
+ * @brief Fetches and lists all retention policies inside one Panel.
+ * @return panel with list, loading, or error state
  */
 export function RetentionTab() {
   const { data, isLoading, error } = useRetentionPolicies();
   const update = useUpdateRetention();
 
-  if (isLoading) return <AdminLoading />;
-  if (error) {
-    return (
+  let body;
+  if (isLoading) body = <AdminLoading />;
+  else if (error)
+    body = (
       <AdminNotice tone="error">Failed to load retention policies</AdminNotice>
     );
-  }
-  if (!data || data.length === 0) {
-    return <AdminNotice>No retention policies configured</AdminNotice>;
-  }
-
-  return (
-    <table className="w-full text-left text-sm">
-      <thead className={stackTable.head}>
-        <tr>
-          {HEADS.map((h, i) => (
-            <th key={i} scope="col" className="p-2">
-              {h || <span className="sr-only">Actions</span>}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
+  else if (!data || data.length === 0)
+    body = <AdminNotice>No retention policies configured</AdminNotice>;
+  else
+    body = (
+      <ul className="flex flex-col gap-2">
         {data.map((p) => (
           <RetentionPolicyRow
             key={`${p.policy_key}:${p.updated_at}`}
@@ -47,7 +35,8 @@ export function RetentionTab() {
             onSave={(key, body) => update.mutate({ key, body })}
           />
         ))}
-      </tbody>
-    </table>
-  );
+      </ul>
+    );
+
+  return <Panel title="Retention policies">{body}</Panel>;
 }

@@ -83,7 +83,8 @@ describe("KudosWall", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     await userEvent.click(screen.getByRole("radio", { name: "Oldest" }));
     expect((await names())[0]).toMatch(/Cy/);
-    await userEvent.selectOptions(screen.getByLabelText("Group"), "g1");
+    await userEvent.click(screen.getByRole("combobox", { name: "Group" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Chess" }));
     expect(await screen.findAllByRole("article")).toHaveLength(1);
   });
 
@@ -115,5 +116,18 @@ describe("KudosWall", () => {
     wrap();
     const article = await screen.findByRole("article");
     expect((article.parentElement as HTMLElement).className).toContain("grid");
+  });
+
+  it("uses a styled group select (no native select) and an empty-state action", async () => {
+    listKudos.mockResolvedValue({ kudos: [], pagination: { has_more: false } });
+    const { container } = wrap(true);
+    await screen.findByText("No kudos yet");
+    expect(container.querySelector("select")).toBeNull();
+    expect(screen.getByRole("combobox", { name: "Group" })).toHaveClass(
+      "rounded-full",
+    );
+    expect(screen.getAllByRole("button", { name: "Send Kudos" })).toHaveLength(
+      1,
+    );
   });
 });

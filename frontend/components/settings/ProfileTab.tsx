@@ -77,7 +77,7 @@ export function ProfileTab() {
         >
           <Input
             type="text"
-            label="Display name"
+            aria-label="Display name"
             error={err.display_name?.message}
             {...register("display_name")}
           />
@@ -85,7 +85,7 @@ export function ProfileTab() {
 
         <SettingsRow label="Bio" description="Tell us about yourself.">
           <Textarea
-            label="Bio"
+            aria-label="Bio"
             rows={3}
             placeholder="What's your story?"
             error={err.bio?.message}
@@ -96,7 +96,7 @@ export function ProfileTab() {
         <SettingsRow label="Location" description="Your location (optional).">
           <Input
             type="text"
-            label="Location"
+            aria-label="Location"
             placeholder="City, State"
             error={err.location?.message}
             {...register("location")}
@@ -106,7 +106,7 @@ export function ProfileTab() {
         <SettingsRow label="Website" description="Link to your website.">
           <Input
             type="url"
-            label="Website"
+            aria-label="Website"
             placeholder="https://example.com"
             error={err.website_url?.message}
             {...register("website_url")}
@@ -116,7 +116,7 @@ export function ProfileTab() {
         <SettingsRow label="Title" description="Your professional title.">
           <Input
             type="text"
-            label="Title"
+            aria-label="Title"
             placeholder="e.g., Designer"
             error={err.title?.message}
             {...register("title")}
@@ -129,7 +129,7 @@ export function ProfileTab() {
         >
           <Input
             type="text"
-            label="Pronouns (optional)"
+            aria-label="Pronouns (optional)"
             placeholder="e.g., she/her, they/them"
             maxLength={50}
             error={err.pronouns?.message}

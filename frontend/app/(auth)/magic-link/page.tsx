@@ -40,7 +40,10 @@ export default function MagicLinkPage() {
         title="Check your inbox"
         subtitle="If an account exists for that email, a sign-in link is on its way. The link expires in 15 minutes."
       >
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </AuthCard>
@@ -69,7 +72,10 @@ export default function MagicLinkPage() {
         <Button type="submit" size="lg" loading={send.isPending}>
           Email me a link
         </Button>
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </form>
