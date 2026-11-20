@@ -20,7 +20,10 @@ export function TabList({
 }: React.ComponentProps<typeof T.List>) {
   return (
     <T.List
-      className={cn("inline-flex gap-1 rounded-full bg-bg p-1", className)}
+      className={cn(
+        "glass inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1",
+        className,
+      )}
       {...p}
     />
   );
@@ -37,7 +40,7 @@ export function Tab({
   return (
     <T.Trigger
       className={cn(
-        "rounded-full px-4 py-1.5 text-sm font-semibold text-ink/70 transition-colors data-[state=active]:bg-accent data-[state=active]:text-surface-strong disabled:opacity-50",
+        "rounded-full px-4 py-1.5 text-sm font-semibold text-ink/70 transition-colors data-[state=active]:bg-surface-strong data-[state=active]:text-bg disabled:opacity-50",
         className,
       )}
       {...p}

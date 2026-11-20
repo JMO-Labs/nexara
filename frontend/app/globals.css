@@ -38,7 +38,7 @@
   --popover: var(--nx-surface);
   --popover-foreground: var(--nx-ink);
   --primary: var(--nx-surface-strong);
-  --primary-foreground: var(--nx-accent);
+  --primary-foreground: var(--nx-bg);
   --secondary: var(--nx-accent);
   --secondary-foreground: var(--nx-surface-strong);
   --muted-foreground: var(--nx-muted);

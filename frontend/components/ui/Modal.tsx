@@ -48,9 +48,9 @@ export function Modal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         className={cn(
-          "bg-surface text-ink max-h-[90dvh] overflow-y-auto",
-          "top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-[1.25rem]",
-          "md:top-1/2 md:bottom-auto md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[1.25rem]",
+          "bg-[var(--nx-glass-solid)] text-ink border-[var(--nx-glass-edge)] max-h-[90dvh] overflow-y-auto",
+          "top-auto bottom-0 left-0 max-w-full translate-x-0 translate-y-0 rounded-b-none rounded-t-[28px]",
+          "md:top-1/2 md:bottom-auto md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[28px]",
           SIZE[size],
         )}
       >

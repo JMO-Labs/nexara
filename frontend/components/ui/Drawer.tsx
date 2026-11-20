@@ -33,9 +33,9 @@ export function Drawer({
         side={side}
         aria-describedby={undefined}
         className={cn(
-          "bg-surface text-ink",
+          "bg-[var(--nx-glass-solid)] text-ink border-[var(--nx-glass-edge)]",
           side === "bottom" &&
-            "max-h-[85dvh] overflow-y-auto rounded-t-[1.25rem] pb-[env(safe-area-inset-bottom)]",
+            "max-h-[85dvh] overflow-y-auto rounded-t-[28px] pb-[env(safe-area-inset-bottom)]",
         )}
       >
         <SheetHeader>
