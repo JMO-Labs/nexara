@@ -29,6 +29,7 @@ vi.mock("@/lib/api/branding", async (orig) => ({
 }));
 
 const base = {
+  home_pattern: "contour" as const,
   community_name: "Garden",
   tagline: null,
   color_primary: "#14301e",

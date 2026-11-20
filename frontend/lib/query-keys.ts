@@ -124,5 +124,8 @@ export const qk = {
     feed: () => ["home-feed"] as const,
     media: (limit?: number) => ["home-media", limit ?? 24] as const,
     activity: (limit?: number) => ["home-activity", limit ?? 30] as const,
+    chats: () => ["home-chats"] as const,
+    people: () => ["home-people"] as const,
+    needs: () => ["home-needs"] as const,
   },
 } as const;

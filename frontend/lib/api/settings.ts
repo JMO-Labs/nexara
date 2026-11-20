@@ -3,6 +3,7 @@
  * @brief User settings endpoints: profile, notifications, appearance, email.
  */
 import { apiGet, apiPut } from "./client";
+import type { HomePattern } from "@/lib/patterns";
 
 export interface PrivacyAppearanceSettings {
   profile_visible_to: "community" | "admin_only";
@@ -72,6 +73,8 @@ export interface NotificationPreferences extends NotificationChannelFlags {
 export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   theme?: "system" | "light" | "dark";
   locale?: string;
+  home_pattern?: HomePattern | null;
+  reduce_transparency?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }

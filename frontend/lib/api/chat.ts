@@ -68,3 +68,7 @@ export const listDmThreads = () => apiGet<DmThread[]>("/api/v1/chat/dm");
 
 export const deleteDmThread = (channelId: string) =>
   apiDelete<void>(`/api/v1/chat/dm/${seg(channelId)}`);
+
+/** @brief Mark a channel as read for the viewer (204). */
+export const markChannelRead = (channelId: string): Promise<void> =>
+  apiPost<void>(`/api/v1/chat/channels/${seg(channelId)}/read`, {});

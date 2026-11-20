@@ -4,11 +4,13 @@
  */
 import { apiGet, apiPost, apiPut, seg } from "./client";
 import { contrastRatio } from "@/lib/contrast";
+import type { HomePattern } from "@/lib/patterns";
 import { palette } from "@/theme/palette";
 
 const BASE = "/api/v1/branding/";
 
 export interface Branding {
+  home_pattern: HomePattern;
   community_name: string;
   tagline: string | null;
   color_accent: string;

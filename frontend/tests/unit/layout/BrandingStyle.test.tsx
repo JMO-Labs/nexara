@@ -15,6 +15,7 @@ vi.mock("@/lib/api/branding", async (orig) => ({
 }));
 
 const full: Branding = {
+  home_pattern: "contour",
   community_name: "Garden",
   tagline: null,
   color_accent: "#C6B4F5",
