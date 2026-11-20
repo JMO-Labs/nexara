@@ -104,7 +104,7 @@ describe("KudosWall", () => {
       screen.getByRole("button", { name: "Send Kudos" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Group")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Oldest" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Oldest" })).toBeNull();
   });
 
   it("non-embedded keeps the multi-column grid", async () => {

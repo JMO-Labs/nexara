@@ -56,15 +56,18 @@ export function KudosWall({ embedded = false }: KudosWallProps = {}) {
     <>
       {!embedded && <PageHeader title={t("wallTitle")} actions={sendButton} />}
       <Toolbar>
-        <Segmented
-          label={t("sort")}
-          value={sort}
-          onChange={setSort}
-          options={[
-            { value: "newest", label: t("newest") },
-            { value: "oldest", label: t("oldest") },
-          ]}
-        />
+        {/* Tile is narrow: embedded keeps newest-first, no sort control. */}
+        {!embedded && (
+          <Segmented
+            label={t("sort")}
+            value={sort}
+            onChange={setSort}
+            options={[
+              { value: "newest", label: t("newest") },
+              { value: "oldest", label: t("oldest") },
+            ]}
+          />
+        )}
         <select
           aria-label={t("filterGroup")}
           className={selectCls}

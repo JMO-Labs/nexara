@@ -4,7 +4,7 @@
  * @brief Inbox page: Notifications | Saved | Lists tabs bound to ?view=.
  */
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Toolbar, Segmented } from "@/components/ui/page";
+import { PageHeader, Segmented } from "@/components/ui/page";
 import { ListsBrowseView } from "@/components/lists/pages/ListsBrowseView";
 import { NotificationsView } from "./NotificationsView";
 import { SavedView } from "./SavedView";
@@ -40,14 +40,14 @@ export function InboxPage() {
         title="Inbox"
         description="Notifications, saved posts and your lists."
       />
-      <Toolbar>
+      <div>
         <Segmented
           label="Inbox view"
           value={view}
           onChange={setView}
           options={VIEWS}
         />
-      </Toolbar>
+      </div>
       {view === "notifications" && <NotificationsView />}
       {view === "saved" && <SavedView />}
       {view === "lists" && <ListsBrowseView embedded />}
