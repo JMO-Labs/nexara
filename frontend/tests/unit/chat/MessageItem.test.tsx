@@ -61,6 +61,13 @@ describe("MessageItem bubbles", () => {
 });
 
 describe("MessageItem report", () => {
+  it("own bubble text inherits ink-on-strong colour (not text-ink)", () => {
+    const { container } = render(<MessageItem message={base} isSelf />);
+    const md = container.querySelector(".nx-md")!;
+    expect(md.className).toContain("text-inherit");
+    expect(md.className).not.toMatch(/(^| )text-ink( |$)/);
+  });
+
   it("shows Report for another user's message", () => {
     render(<MessageItem message={base} />);
     expect(screen.getByRole("button", { name: /report/i })).toBeInTheDocument();

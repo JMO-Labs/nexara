@@ -26,14 +26,14 @@ const item = (i: number) => ({
 const ui = () => <PhotosTile open onToggle={() => {}} />;
 
 describe("PhotosTile", () => {
-  it("renders at most 7 object-cover imgs and titles from first source", () => {
+  it("renders at most 6 (fills 3 rows) object-cover imgs and titles from first source", () => {
     data = {
       items: Array.from({ length: 9 }, (_, i) => item(i)),
       next_cursor: "x",
     };
     const { container } = renderWithProviders(ui());
     const imgs = container.querySelectorAll("img");
-    expect(imgs).toHaveLength(7);
+    expect(imgs).toHaveLength(6);
     imgs.forEach((i) => expect(i.className).toContain("object-cover"));
     expect(imgs[0]).toHaveAttribute("alt", "Cake");
     expect(imgs[0]).toHaveAttribute("src", "/api/v1/media/m0/thumbnail");

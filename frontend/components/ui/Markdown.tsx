@@ -17,6 +17,8 @@ export interface MarkdownProps {
   clampLines?: number;
   /** Override font size. Default inherits parent. */
   size?: "sm" | "md";
+  /** Extra classes; later ones win (e.g. `text-inherit` on ink bubbles). */
+  className?: string;
 }
 
 const schema = {
@@ -49,6 +51,7 @@ export function Markdown({
   truncate,
   clampLines = 6,
   size = "md",
+  className,
 }: MarkdownProps) {
   if (!content?.trim()) return null;
   return (
@@ -65,6 +68,7 @@ export function Markdown({
         "[&_hr]:my-3 [&_hr]:border-ink/20 [&_img]:max-w-full [&_img]:rounded-lg",
         truncate &&
           "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical]",
+        className,
       )}
       style={truncate ? { WebkitLineClamp: clampLines } : undefined}
     >

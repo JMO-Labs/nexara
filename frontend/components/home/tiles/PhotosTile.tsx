@@ -18,8 +18,9 @@ import { cn } from "@/lib/utils";
  */
 export function PhotosTile({ open, onToggle }: TileSlotProps) {
   const { data } = useHomeMedia({ limit: 7 });
-  const items = (data?.items ?? []).slice(0, 7);
-  const more = !!data?.next_cursor;
+  // 2x2 hero + 5 thumbs fill exactly three rows of a 3-col grid.
+  const items = (data?.items ?? []).slice(0, 6);
+  const more = (data?.items?.length ?? 0) > 6 || !!data?.next_cursor;
   const title = (items[0] && photoTitle(items[0])) ?? "Recent photos";
   return (
     <HomeTile
@@ -59,7 +60,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
                 loading="lazy"
                 className="h-full w-full object-cover"
               />
-              {i === 6 && more ? (
+              {i === 5 && more ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-lg font-medium text-white">
                   +
                 </span>

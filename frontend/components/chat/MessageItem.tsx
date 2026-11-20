@@ -101,7 +101,11 @@ export function MessageItem({
           {deleted ? (
             message.content
           ) : (
-            <Markdown content={message.content} size="sm" />
+            <Markdown
+              content={message.content}
+              size="sm"
+              className={isSelf ? "text-inherit [&_a]:text-inherit" : undefined}
+            />
           )}
         </div>
       </div>
