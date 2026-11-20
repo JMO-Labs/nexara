@@ -91,7 +91,13 @@ function contour(): string {
       }
     }
   }
-  return `<svg ${NS} width="${T}" height="${T}"><path d="${d}" fill="none" stroke="#000" stroke-width="1" stroke-linecap="round"/></svg>`;
+  // Scattered dots, seeded LCG so the tile is identical every load.
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  let dots = "";
+  for (let q = 0; q < 80; q++)
+    dots += `<circle cx="${f(rnd() * T)}" cy="${f(rnd() * T)}" r="${f(1.6 + rnd() * 1.2)}"/>`;
+  return `<svg ${NS} width="${T}" height="${T}"><path d="${d}" fill="none" stroke="#000" stroke-width="1" stroke-linecap="round"/>${dots}</svg>`;
 }
 
 const SVGS: Record<Exclude<HomePattern, "none">, () => string> = {
