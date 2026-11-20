@@ -58,7 +58,7 @@ export default function AppHome() {
       </motion.div>
       <motion.div
         {...sectionProps}
-        className="flex flex-col gap-2.5 md:grid md:h-[800px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[1fr_auto] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos']"
+        className="flex flex-col gap-2.5 md:grid md:h-[800px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos']"
       >
         <UpNextTile open={open === "next"} onToggle={toggle} />
         <ChatsTile open={open === "chat"} onToggle={toggle} />
