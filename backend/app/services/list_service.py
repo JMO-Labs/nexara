@@ -122,7 +122,7 @@ class ListService:
         schema = list(field_schema or [])
         for field in schema:
             try:
-                self._registry.validate_config(field["type"], field.get("config", {}))
+                self._registry.validate_config(field["type_key"], field.get("config", {}))
             except (KeyError, ValueError) as exc:
                 raise AppError("VALIDATION_ERROR", _("Invalid field schema"), 422) from exc
         lst = List(

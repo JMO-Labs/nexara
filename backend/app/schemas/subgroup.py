@@ -169,7 +169,7 @@ class MediaItemResponse(BaseModel):
 
     @param media_id UUID of the media file.
     @param media Embedded media metadata (from MediaResponse schema).
-    @param source Source type: 'post', 'gallery', or 'event'.
+    @param source Source type: 'post', 'gallery', 'event', or 'upload'.
     @param source_id UUID of the source (post, gallery, or event).
     @param source_title Human-readable title of the source.
     @param created_at ISO timestamp when the media was added.
@@ -178,7 +178,7 @@ class MediaItemResponse(BaseModel):
     media_id: str
     media: dict[str, object]
     source: str
-    source_id: str
+    source_id: str | None = None  # None for standalone uploads (source="upload")
     source_title: str | None = None
     created_at: datetime
 

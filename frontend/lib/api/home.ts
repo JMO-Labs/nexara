@@ -36,7 +36,7 @@ export interface HomeMediaItem {
     created_at: string;
   };
   source: string;
-  source_id: string;
+  source_id: string | null;
   source_title: string | null;
   created_at: string;
 }

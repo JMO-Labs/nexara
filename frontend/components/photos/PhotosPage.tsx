@@ -94,7 +94,7 @@ export function PhotosPage() {
   );
   const lightboxItems: GalleryItem[] = (photos ?? []).map((m, i) => ({
     id: m.media_id,
-    gallery_id: m.source_id,
+    gallery_id: m.source_id ?? "",
     media_id: m.media_id,
     added_by: "",
     caption: photoTitle(m),

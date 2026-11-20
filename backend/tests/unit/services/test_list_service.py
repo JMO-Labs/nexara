@@ -248,9 +248,28 @@ class TestUncoveredBranches:
         svc._registry.validate_config.side_effect = err
         with pytest.raises(AppError):
             await svc.create(
-                uuid.uuid4(), title="T", visibility="community", field_schema=[{"type": "text"}]
+                uuid.uuid4(),
+                title="T",
+                visibility="community",
+                field_schema=[{"key": "t", "type_key": "text"}],
             )
         repo.create.assert_not_awaited()
+
+    async def test_create_validates_by_type_key(self):
+        """@brief field_schema rows use type_key (same as items/templates/frontend)."""
+        svc, repo, _ = _svc()
+        await svc.create(
+            uuid.uuid4(),
+            title="T",
+            visibility="community",
+            field_schema=[
+                {"key": "slots", "type_key": "signup", "config": {"default_quantity_needed": 3}}
+            ],
+        )
+        svc._registry.validate_config.assert_called_once_with(
+            "signup", {"default_quantity_needed": 3}
+        )
+        repo.create.assert_awaited()
 
     async def test_create_field_missing_type(self):
         svc, _, _ = _svc()
