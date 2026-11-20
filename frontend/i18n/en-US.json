@@ -740,7 +740,9 @@
     "error": "Failed to load kudos"
   },
   "toasts": {
-    "kudos": { "sent": "Kudos sent" },
+    "kudos": {
+      "sent": "Kudos sent"
+    },
     "posts": {
       "created": "Post published",
       "deleted": "Post removed",
@@ -988,6 +990,68 @@
       "deleted": "List deleted",
       "archived": "List archived",
       "error": "Something went wrong. Please try again."
+    }
+  },
+  "notif": {
+    "birthday_reminder": {
+      "label": "Birthday coming up"
+    },
+    "comment": {
+      "label": "New comment"
+    },
+    "event_reminder": {
+      "label": "Event reminder"
+    },
+    "event_rsvp": {
+      "label": "New RSVP"
+    },
+    "gallery_activity": {
+      "label": "New photos"
+    },
+    "gallery_reminder": {
+      "label": "Add your photos"
+    },
+    "gentle_nudge": {
+      "label": "Someone's thinking of you"
+    },
+    "invite_accepted": {
+      "label": "Invite accepted"
+    },
+    "kudos_received": {
+      "label": "You got kudos"
+    },
+    "list_completed": {
+      "label": "List completed"
+    },
+    "list_item": {
+      "label": "List updated"
+    },
+    "list_member": {
+      "label": "Added to a list"
+    },
+    "list_signup": {
+      "label": "New sign-up"
+    },
+    "mention": {
+      "label": "You were mentioned"
+    },
+    "new_post": {
+      "label": "New post"
+    },
+    "nudge_received": {
+      "label": "You got a nudge"
+    },
+    "prompt": {
+      "label": "New prompt"
+    },
+    "prompt_summary": {
+      "label": "Prompt summary"
+    },
+    "reaction": {
+      "label": "New reaction"
+    },
+    "system": {
+      "label": "Announcement"
     }
   }
 }

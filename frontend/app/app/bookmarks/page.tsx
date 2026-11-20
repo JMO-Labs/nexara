@@ -23,7 +23,7 @@ export default function BookmarksPage() {
   const items = q.data?.pages.flatMap((p) => p.bookmarks) ?? [];
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <PageHeader title="Saved" description="Posts you bookmarked for later." />
       {q.isError ? (
         <p role="alert">

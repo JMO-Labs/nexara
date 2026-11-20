@@ -81,12 +81,10 @@ import {
 beforeEach(() => vi.clearAllMocks());
 
 describe("list page views", () => {
-  it("browse view shows filters, grid, breadcrumbs and links", async () => {
+  it("browse view shows filters, grid and links (no redundant root crumb)", async () => {
     render(<ListsBrowseView />);
     expect(screen.getByRole("heading", { name: "Lists" })).toBeVisible();
-    expect(
-      screen.getByRole("navigation", { name: "Breadcrumb" }),
-    ).toBeVisible();
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
     expect(screen.getByRole("link", { name: /New list/ })).toHaveAttribute(
       "href",
       "/app/lists/new",

@@ -61,7 +61,8 @@ export function PageHeader({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Breadcrumbs items={crumbs} />
+      {/* A lone root crumb just repeats the title. */}
+      {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
       {hideTitle ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="sr-only">{title}</h1>

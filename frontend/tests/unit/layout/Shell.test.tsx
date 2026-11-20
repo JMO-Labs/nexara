@@ -58,6 +58,19 @@ function setup() {
 }
 
 describe("Shell", () => {
+  it("does not mount page content or the top bar until the session is ready", () => {
+    // Mounting during boot fired every page query without a token (401 burst on reload).
+    useSession.setState({ user: null, status: "loading" });
+    render(
+      <Shell>
+        <p>content</p>
+      </Shell>,
+    );
+    expect(screen.queryByText("content")).toBeNull();
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+  });
+
   it("has no side rail, only the tab bar and backdrop", () => {
     setup();
     expect(

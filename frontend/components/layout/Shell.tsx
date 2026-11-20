@@ -76,6 +76,19 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const isBooting = status === "idle" || status === "loading";
 
+  // Mount nothing that fetches until the session (and its token) is restored;
+  // otherwise every page query fires unauthenticated on a hard reload.
+  if (isBooting)
+    return (
+      <div className="text-ink flex min-h-dvh items-center justify-center">
+        <AppBackdrop />
+        <Loader2
+          aria-label="Loading"
+          className="size-6 motion-safe:animate-spin"
+        />
+      </div>
+    );
+
   return (
     <TooltipProvider>
       <div

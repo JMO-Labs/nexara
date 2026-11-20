@@ -4,6 +4,7 @@
  */
 "use client";
 
+import { useSession } from "@/stores/session";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/query-keys";
 import {
@@ -25,10 +26,12 @@ import { useMutationWithToast } from "./useMutationWithToast";
  * @return Query result with UserSettings data.
  */
 export function useUserSettings() {
+  const authed = useSession((s) => s.status === "authenticated");
   return useQuery({
     queryKey: qk.settings.profile(),
     queryFn: getSettings,
     staleTime: 60_000,
+    enabled: authed,
   });
 }
 
