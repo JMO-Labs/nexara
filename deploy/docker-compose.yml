@@ -60,6 +60,7 @@ services:
       REQUIRE_INVITE: "${REQUIRE_INVITE:-false}"
       TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
     volumes:
+      - app_data:/data
       - media:/data/media
     networks:
       - nexara-net
@@ -106,6 +107,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  app_data:
     driver: local
   media:
     driver: local
