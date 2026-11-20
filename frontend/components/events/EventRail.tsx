@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent } from "./eventColors";
+import { HAIRLINE } from "./toneStyle";
 
 export interface EventRailProps {
   events: EventItem[];
@@ -106,8 +107,9 @@ export function EventRail({
           <section key={key} data-day={key} className="mb-4 scroll-mt-2">
             <h3
               className={cn(
-                "bg-surface sticky top-0 z-[1] mb-2 flex items-baseline gap-2 border-b border-ink/10 py-1 text-base font-semibold tabular-nums",
-                isSelectedDay ? "text-accent" : "text-ink",
+                "sticky top-0 z-[1] mb-2 flex items-baseline gap-2 border-b bg-[var(--nx-glass-solid)] py-1 text-base font-semibold tabular-nums text-ink",
+                HAIRLINE,
+                isSelectedDay && "underline decoration-2 underline-offset-4",
               )}
             >
               {format(day, "d")}
@@ -125,7 +127,7 @@ export function EventRail({
                       type="button"
                       onClick={() => onSelectEvent(ev)}
                       aria-pressed={selected}
-                      className="grid min-h-11 w-full grid-cols-[4px_1fr] gap-3 rounded-xl px-2 py-2 text-left transition-colors outline-none hover:bg-[var(--tone-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      className="grid min-h-11 w-full grid-cols-[3px_1fr] gap-3 rounded-[22px] px-3 py-2 text-left transition-colors outline-none hover:bg-[var(--tone-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                       style={
                         {
                           "--tone-soft": tone.soft,
@@ -148,10 +150,7 @@ export function EventRail({
                         <span className="text-ink line-clamp-2 text-sm font-semibold">
                           {ev.title}
                         </span>
-                        <span
-                          className="mt-0.5 block text-xs font-semibold"
-                          style={{ color: tone.onSoft }}
-                        >
+                        <span className="mt-0.5 block text-xs font-semibold text-muted">
                           {tone.label}
                         </span>
                       </span>

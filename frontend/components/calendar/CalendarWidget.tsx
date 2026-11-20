@@ -96,7 +96,7 @@ export function CalendarWidget({
               className={cn(
                 "relative min-h-11 rounded-lg text-xs font-semibold outline-none hover:bg-ink/10 focus-visible:outline-2 focus-visible:outline-accent",
                 !isSameMonth(d, month) && "opacity-60",
-                expanded && "bg-accent text-bg",
+                expanded && "bg-surface-strong text-bg",
               )}
             >
               {format(d, "d")}
@@ -111,7 +111,7 @@ export function CalendarWidget({
         })}
       </div>
       {open && (
-        <div id={panelId} className="mt-3 rounded-2xl bg-surface p-3">
+        <div id={panelId} className="glass-item mt-3 rounded-[22px] p-3">
           <p className="mb-1 text-sm font-semibold">
             {format(open, "EEEE, MMM d")}
           </p>

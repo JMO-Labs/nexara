@@ -17,7 +17,7 @@ import {
 import type { EventItem } from "@/lib/api/events";
 import { assignTimeLanes, type TimeLane } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
-import { chipStyle } from "./toneStyle";
+import { chipStyle, HAIRLINE, TODAY_PILL } from "./toneStyle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
@@ -96,9 +96,7 @@ export function WeekView({
                 <p
                   className={cn(
                     "mx-auto mt-0.5 flex size-7 items-center justify-center rounded-full text-sm",
-                    today
-                      ? "bg-accent font-black text-bg"
-                      : "font-semibold text-ink",
+                    today ? TODAY_PILL : "font-semibold text-ink",
                   )}
                   aria-current={today ? "date" : undefined}
                 >
@@ -110,10 +108,15 @@ export function WeekView({
         </div>
 
         {/* Scrollable timeline */}
-        <div className="relative flex flex-1 overflow-y-auto overflow-x-hidden rounded-2xl bg-surface">
+        <div
+          className={cn(
+            "relative flex flex-1 overflow-y-auto overflow-x-hidden rounded-2xl border",
+            HAIRLINE,
+          )}
+        >
           {/* Hour label gutter */}
           <div
-            className="shrink-0 border-r border-ink/15"
+            className={cn("shrink-0 border-r", HAIRLINE)}
             style={{ width: HOUR_LABEL_WIDTH }}
           >
             {Array.from({ length: 24 }).map((_, hour) => (
@@ -121,7 +124,7 @@ export function WeekView({
                 key={hour}
                 className={cn(
                   "flex items-start justify-end pr-2 pt-0.5 text-[11px] font-semibold text-muted",
-                  hour < 23 && "border-b border-ink/15",
+                  hour < 23 && cn("border-b", HAIRLINE),
                 )}
                 style={{ height: HOUR_HEIGHT }}
               >
@@ -141,9 +144,9 @@ export function WeekView({
                   <div
                     key={`${hour}-${dayIdx}`}
                     className={cn(
-                      "hover:bg-bg motion-safe:transition-colors",
-                      dayIdx < 6 && "border-r border-ink/15",
-                      hour < 23 && "border-b border-ink/15",
+                      "hover:bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)] motion-safe:transition-colors",
+                      dayIdx < 6 && cn("border-r", HAIRLINE),
+                      hour < 23 && cn("border-b", HAIRLINE),
                     )}
                     style={{ height: HOUR_HEIGHT }}
                   />
@@ -171,14 +174,13 @@ export function WeekView({
                         onSelectEvent(seg.event);
                       }
                     }}
-                    className="absolute z-10 box-border cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                    className="absolute z-10 box-border cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-md border-l-[3px] px-1 py-0.5 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                     style={{
                       left: `${dayLeftPct + seg.lane * laneWidthPct}%`,
                       width: `calc(${laneWidthPct}% - 2px)`,
                       top: seg.topOffset,
                       height: seg.height,
                       ...chipStyle(seg.tone, isSelected),
-                      ...(isSelected ? {} : { borderColor: "transparent" }),
                     }}
                   >
                     {seg.event.title}

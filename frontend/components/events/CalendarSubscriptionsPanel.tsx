@@ -66,7 +66,7 @@ export function CalendarSubscriptionsPanel() {
         />
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl bg-surface">
+          <div className="glass-item overflow-hidden rounded-[22px]">
             {subscriptions.map((sub) => (
               <SubscriptionRow
                 key={sub.id}

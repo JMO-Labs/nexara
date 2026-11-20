@@ -1,11 +1,11 @@
 /**
  * @file components/events/eventColors.ts
- * @brief Deterministic color assignment for events. Community events take the
- *        brand accent; subgroup events hash to a fixed editorial palette so the
- *        same group always renders the same hue across calendar bars, rail
- *        dots, and the detail panel.
+ * @brief Color assignment for events. Colours come from lib/groupColor so a
+ *        group renders the same hue on the calendar, rail dots and detail
+ *        panel; an explicit event colour overrides. Text is always ink.
  */
 import type { EventItem } from "@/lib/api/events";
+import { groupColor } from "@/lib/groupColor";
 
 export interface EventTone {
   /** Solid bar / dot / accent color. */
@@ -20,102 +20,52 @@ export interface EventTone {
   label: string;
 }
 
-const PALETTE: Omit<EventTone, "label">[] = [
-  {
-    solid: "#1f6feb",
-    soft: "rgba(31,111,235,0.14)",
-    onSolid: "#fff",
-    onSoft: "#1f6feb",
-  }, // azure
-  {
-    solid: "#c2410c",
-    soft: "rgba(194,65,12,0.14)",
-    onSolid: "#fff",
-    onSoft: "#9a3412",
-  }, // burnt orange
-  {
-    solid: "#15803d",
-    soft: "rgba(21,128,61,0.14)",
-    onSolid: "#fff",
-    onSoft: "#166534",
-  }, // pine
-  {
-    solid: "#7c3aed",
-    soft: "rgba(124,58,237,0.14)",
-    onSolid: "#fff",
-    onSoft: "#6d28d9",
-  }, // violet
-  {
-    solid: "#be185d",
-    soft: "rgba(190,24,93,0.14)",
-    onSolid: "#fff",
-    onSoft: "#9d174d",
-  }, // magenta
-  {
-    solid: "#0d9488",
-    soft: "rgba(13,148,136,0.14)",
-    onSolid: "#fff",
-    onSoft: "#0f766e",
-  }, // teal
-  {
-    solid: "#a16207",
-    soft: "rgba(161,98,7,0.14)",
-    onSolid: "#fff",
-    onSoft: "#854d0e",
-  }, // amber
-];
+const INK = "var(--nx-ink)";
 
-const COMMUNITY: Omit<EventTone, "label"> = {
-  solid: "var(--nx-accent, #0b7285)",
-  soft: "rgba(11,114,133,0.12)",
-  onSolid: "#fff",
-  onSoft: "var(--nx-accent, #0b7285)",
-};
-
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-export function toneFromHex(hex: string, label = "Custom"): EventTone {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  // Perceived luminance for foreground choice on the solid swatch.
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+/**
+ * @brief Build a tone from a single group/event colour.
+ * @param color CSS colour (hex or var())
+ * @param label short label
+ * @return tone with a 22% soft fill and ink foregrounds
+ */
+function toneFromColor(color: string, label: string): EventTone {
   return {
-    solid: hex,
-    soft: `rgba(${r},${g},${b},0.16)`,
-    onSolid: lum > 0.6 ? "#0f172a" : "#fff",
-    onSoft: hex,
+    solid: color,
+    soft: `color-mix(in srgb, ${color} 22%, transparent)`,
+    onSolid: INK,
+    onSoft: INK,
     label,
   };
 }
 
+/**
+ * @brief Tone from an explicit hex colour.
+ * @param hex #rrggbb
+ * @param label tone label
+ * @return tone
+ */
+export function toneFromHex(hex: string, label = "Custom"): EventTone {
+  return toneFromColor(hex, label);
+}
+
+/**
+ * @brief Tone for an event: explicit colour, else groupColor.
+ * @param ev event fields used for colour resolution
+ * @param subgroupNames subgroup id to name lookup for the label
+ * @return tone
+ */
 export function toneForEvent(
   ev: Pick<EventItem, "visibility" | "subgroup_id" | "color">,
   subgroupNames?: Map<string, string>,
 ): EventTone {
+  const isGroup = ev.visibility === "subgroup" && !!ev.subgroup_id;
+  const label = isGroup
+    ? (subgroupNames?.get(ev.subgroup_id as string) ?? "Subgroup")
+    : "Community";
   if (ev.color && /^#[0-9A-Fa-f]{6}$/.test(ev.color)) {
-    const baseLabel =
-      ev.visibility === "subgroup" && ev.subgroup_id
-        ? (subgroupNames?.get(ev.subgroup_id) ?? "Subgroup")
-        : "Community";
-    return toneFromHex(ev.color, baseLabel);
+    return toneFromColor(ev.color, label);
   }
-  if (ev.visibility !== "subgroup" || !ev.subgroup_id) {
-    return { ...COMMUNITY, label: "Community" };
-  }
-  const idx = hashStr(ev.subgroup_id) % PALETTE.length;
-  return {
-    ...PALETTE[idx],
-    label: subgroupNames?.get(ev.subgroup_id) ?? "Subgroup",
-  };
+  return toneFromColor(groupColor(isGroup ? ev.subgroup_id : null), label);
 }
 
 export const EVENT_COLOR_PRESETS: { value: string; name: string }[] = [
@@ -132,7 +82,5 @@ export const EVENT_COLOR_PRESETS: { value: string; name: string }[] = [
 ];
 
 export function toneForSubgroupId(id: string | null): EventTone {
-  if (!id) return { ...COMMUNITY, label: "Community" };
-  const idx = hashStr(id) % PALETTE.length;
-  return { ...PALETTE[idx], label: "Subgroup" };
+  return toneFromColor(groupColor(id), id ? "Subgroup" : "Community");
 }

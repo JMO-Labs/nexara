@@ -24,7 +24,7 @@ import type { EventItem } from "@/lib/api/events";
 import { assignLanes } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
-import { chipStyle } from "./toneStyle";
+import { chipStyle, HAIRLINE, TODAY_PILL } from "./toneStyle";
 
 const LANE_HEIGHT = 22;
 const HEADER_OFFSET = 34;
@@ -133,7 +133,7 @@ export function MonthCalendarLarge({
         ref={gridRef}
         role="grid"
         aria-label={format(month, "MMMM yyyy")}
-        className="overflow-hidden rounded-2xl bg-surface"
+        className={cn("overflow-hidden rounded-2xl border", HAIRLINE)}
       >
         {weeks.map((week, wi) => {
           const segs = weekSegments[wi];
@@ -152,7 +152,7 @@ export function MonthCalendarLarge({
               role="row"
               className={cn(
                 "relative grid grid-cols-7 sm:min-h-[104px]",
-                wi > 0 && "border-t border-ink/15",
+                wi > 0 && cn("border-t", HAIRLINE),
               )}
             >
               {week.map((day, di) => {
@@ -174,19 +174,19 @@ export function MonthCalendarLarge({
                     className={cn(
                       "relative min-h-14 cursor-pointer px-1 pt-1 sm:px-2 sm:pt-1.5",
                       "outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
-                      di > 0 && "border-l border-ink/15",
-                      selected || !inMonth ? "bg-bg" : "bg-transparent",
+                      di > 0 && cn("border-l", HAIRLINE),
+                      selected
+                        ? "bg-[color-mix(in_srgb,var(--nx-ink)_8%,transparent)]"
+                        : "bg-transparent",
                       !inMonth && "opacity-60",
-                      "hover:bg-bg motion-safe:transition-colors",
+                      "hover:bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)] motion-safe:transition-colors",
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <span
                         className={cn(
                           "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm tabular-nums",
-                          today
-                            ? "bg-accent font-black text-bg"
-                            : "font-semibold text-ink",
+                          today ? TODAY_PILL : "font-semibold text-ink",
                         )}
                       >
                         {format(day, "d")}
@@ -204,10 +204,8 @@ export function MonthCalendarLarge({
                           aria-hidden="true"
                           className="size-1.5 rounded-full"
                           style={{
-                            backgroundColor: chipStyle(
-                              toneForEvent(ev, subgroupNames),
-                              true,
-                            ).backgroundColor,
+                            backgroundColor: toneForEvent(ev, subgroupNames)
+                              .solid,
                           }}
                         />
                       ))}
@@ -248,7 +246,7 @@ export function MonthCalendarLarge({
                             onSelectEvent(s.event);
                           }
                         }}
-                        className="pointer-events-auto mx-0.5 cursor-pointer truncate rounded border-l-[3px] px-1.5 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                        className="pointer-events-auto mx-0.5 cursor-pointer truncate rounded-md border-l-[3px] px-1.5 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                         style={{
                           gridColumn: `${s.col + 1} / span ${s.span}`,
                           gridRow: 1,
@@ -287,15 +285,12 @@ export function MonthCalendarLarge({
                     <button
                       type="button"
                       onClick={() => onSelectEvent(ev)}
-                      className="flex min-h-11 w-full items-center gap-3 rounded-2xl bg-surface px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      className="glass-item flex min-h-11 w-full items-center gap-3 rounded-[22px] px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
                       <span
                         aria-hidden="true"
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: chipStyle(tone, true)
-                            .backgroundColor,
-                        }}
+                        style={{ backgroundColor: tone.solid }}
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">

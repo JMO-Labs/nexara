@@ -9,6 +9,7 @@ import { format, parseISO, startOfDay, isSameDay } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
 import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
+import { HAIRLINE } from "./toneStyle";
 
 export interface ListViewProps {
   events: EventItem[];
@@ -68,7 +69,12 @@ export function ListView({
     <div className="flex max-h-full w-full flex-col overflow-y-auto">
       {months.map(([label, days]) => (
         <section key={label} aria-label={label}>
-          <h2 className="bg-bg border-ink/10 text-ink sticky top-0 z-10 mb-2 border-b px-3 py-2 text-sm font-bold">
+          <h2
+            className={cn(
+              "sticky top-0 z-10 mb-2 border-b bg-[var(--nx-glass-solid)] px-3 py-2 text-sm font-bold text-ink",
+              HAIRLINE,
+            )}
+          >
             {label}
           </h2>
           {days.map(([dateKey, dayEvents]) => {
@@ -80,7 +86,7 @@ export function ListView({
                 <h3
                   className={cn(
                     "mb-1.5 px-3 text-sm font-semibold",
-                    isToday ? "text-accent" : "text-muted",
+                    isToday ? "text-ink" : "text-muted",
                   )}
                 >
                   {format(date, "EEEE, MMMM d")}
@@ -99,8 +105,10 @@ export function ListView({
                           onClick={() => onSelectEvent(ev)}
                           style={{ borderLeftColor: tone.solid }}
                           className={cn(
-                            "flex min-h-11 w-full flex-col justify-center border-l-4 px-3 py-2 text-left transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
-                            isSelected ? "bg-surface" : "bg-transparent",
+                            "flex min-h-11 w-full flex-col justify-center rounded-md border-l-[3px] px-3 py-2 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                            isSelected
+                              ? "bg-[color-mix(in_srgb,var(--nx-ink)_8%,transparent)]"
+                              : "bg-transparent",
                           )}
                         >
                           <span className="w-full truncate text-sm font-semibold">

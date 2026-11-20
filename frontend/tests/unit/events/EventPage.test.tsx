@@ -45,6 +45,15 @@ describe("EventPage", () => {
     ).toBe("/app/events");
   });
 
+  it("uses PageHeader (h1 title) and a glass Panel", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    expect(
+      screen.getByRole("heading", { name: "Picnic", level: 1 }),
+    ).toBeTruthy();
+    expect(screen.getByTestId("body").closest(".glass")).not.toBeNull();
+  });
+
   it("omits countdown for past events", () => {
     useEventDetail.mockReturnValue({ data: ev(past) });
     render(<EventPage id="e1" />);

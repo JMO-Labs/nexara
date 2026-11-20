@@ -1,9 +1,9 @@
 "use client";
 /**
  * @file components/events/CalendarFilterBar.tsx
- * @brief Toolbar above the events calendar: month title + nav, "Today",
- *        calendar filter (popover on desktop, bottom drawer on phone) and
- *        a "New event" action.
+ * @brief Glass toolbar above the calendar: prev / Today / next + month
+ *        label, view switcher and calendar filter (popover on desktop,
+ *        bottom drawer on phone).
  */
 import * as React from "react";
 import { addMonths, format, subMonths } from "date-fns";
@@ -16,7 +16,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui";
+import { Toolbar } from "@/components/ui/page";
 import type { Calendar } from "@/lib/api/calendars";
+import {
+  CalendarViewSwitcher,
+  type CalendarView,
+} from "./CalendarViewSwitcher";
 import { CalendarPicker, Swatch } from "./calendar-filter-bar/CalendarPicker";
 import { buildGroups, summarize } from "./calendar-filter-bar/groups";
 import type { CalendarSourceId } from "./calendar-filter-bar/groups";
@@ -30,11 +35,12 @@ export interface CalendarFilterBarProps {
   selected: CalendarSourceId[];
   onSelectedChange: (ids: CalendarSourceId[]) => void;
   calendars: Calendar[];
-  onCreate: () => void;
+  view: CalendarView;
+  onViewChange: (v: CalendarView) => void;
 }
 
 /**
- * @brief Events toolbar with month nav and calendar filter.
+ * @brief Calendar toolbar.
  * @param props see CalendarFilterBarProps
  * @return toolbar element
  */
@@ -44,7 +50,8 @@ export function CalendarFilterBar({
   selected,
   onSelectedChange,
   calendars,
-  onCreate,
+  view,
+  onViewChange,
 }: CalendarFilterBarProps) {
   const groups = React.useMemo(() => buildGroups(calendars), [calendars]);
   const allOptions = React.useMemo(
@@ -64,52 +71,43 @@ export function CalendarFilterBar({
   );
 
   return (
-    <div className="mb-4 flex flex-col gap-3 md:mb-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-muted text-sm">
-            Calendar, {format(month, "yyyy")}
-          </p>
-          <h2 className="text-ink text-4xl leading-none font-black tracking-tight md:text-5xl">
-            {format(month, "MMMM")}
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <IconButton
-            variant="outline"
-            size="sm"
-            aria-label="Previous month"
-            onClick={() => onMonthChange(subMonths(month, 1))}
-          >
-            <ChevronLeft className="size-4" />
-          </IconButton>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onMonthChange(new Date())}
-          >
-            Today
-          </Button>
-          <IconButton
-            variant="outline"
-            size="sm"
-            aria-label="Next month"
-            onClick={() => onMonthChange(addMonths(month, 1))}
-          >
-            <ChevronRight className="size-4" />
-          </IconButton>
-          <Button onClick={onCreate} className="ml-2">
-            New event
-          </Button>
-        </div>
+    <Toolbar>
+      <div className="flex items-center gap-1">
+        <IconButton
+          variant="ghost"
+          size="sm"
+          aria-label="Previous month"
+          onClick={() => onMonthChange(subMonths(month, 1))}
+        >
+          <ChevronLeft className="size-4" />
+        </IconButton>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onMonthChange(new Date())}
+        >
+          Today
+        </Button>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          aria-label="Next month"
+          onClick={() => onMonthChange(addMonths(month, 1))}
+        >
+          <ChevronRight className="size-4" />
+        </IconButton>
       </div>
+      <h2 className="px-2 text-base font-semibold text-ink">
+        {format(month, "MMMM yyyy")}
+      </h2>
 
-      <div className="flex items-center gap-3">
-        <span className="text-muted text-sm font-semibold">Calendars</span>
+      <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+        <CalendarViewSwitcher value={view} onChange={onViewChange} />
+        <span className="text-sm font-semibold text-muted">Calendars</span>
         <div className="hidden md:block">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="secondary" size="sm" className="gap-2">
                 <span className="flex gap-1">
                   {swatches.map((o) => (
                     <Swatch key={o.id} color={o.color} />
@@ -120,7 +118,7 @@ export function CalendarFilterBar({
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              align="start"
+              align="end"
               className="max-h-[420px] w-72 overflow-y-auto p-2"
             >
               {picker}
@@ -129,7 +127,7 @@ export function CalendarFilterBar({
         </div>
         <div className="md:hidden">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="min-h-11 gap-2"
             onClick={() => setDrawerOpen(true)}
@@ -147,7 +145,7 @@ export function CalendarFilterBar({
           </Drawer>
         </div>
       </div>
-    </div>
+    </Toolbar>
   );
 }
 

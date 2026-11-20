@@ -130,16 +130,15 @@ export function useEventsPageState() {
     [filtered, selectedEventId],
   );
 
-  const nextEvent = React.useMemo(() => {
+  const upcoming = React.useMemo(() => {
     const now = new Date();
-    return (
-      filtered
-        .filter((e) => parseISO(e.starts_at) > now)
-        .sort(
-          (a, b) =>
-            parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
-        )[0] ?? null
-    );
+    return filtered
+      .filter((e) => parseISO(e.starts_at) > now)
+      .sort(
+        (a, b) =>
+          parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime(),
+      )
+      .slice(0, 8);
   }, [filtered]);
 
   // Clear selections that fell out of range; deferred to avoid cascading renders.
@@ -186,7 +185,7 @@ export function useEventsPageState() {
     subgroupNames,
     railEvents,
     selectedEvent,
-    nextEvent,
+    upcoming,
     onSelectDay,
     onSelectEvent,
   };

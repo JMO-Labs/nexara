@@ -1,13 +1,10 @@
 "use client";
 /**
  * @file components/events/CalendarViewSwitcher.tsx
- * @brief Segmented control for switching between month/week/day/list views.
+ * @brief Month/Week/Day/List segmented control (ink active pill).
  */
 import * as React from "react";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/shadcn/toggle-group";
+import { Segmented } from "@/components/ui/page";
 
 export type CalendarView = "month" | "week" | "day" | "list";
 
@@ -18,33 +15,29 @@ export interface CalendarViewSwitcherProps {
 
 export const VIEWS = ["month", "week", "day", "list"] as const;
 
+const OPTIONS = [
+  { value: "month", label: "Month" },
+  { value: "week", label: "Week" },
+  { value: "day", label: "Day" },
+  { value: "list", label: "List" },
+] as const satisfies readonly { value: CalendarView; label: string }[];
+
 /**
- * @brief View switcher built on toggle-group (single select, never empty).
+ * @brief View switcher built on the Segmented primitive.
  * @param props current value and change handler
- * @return switcher element
+ * @return radiogroup element
  */
 export function CalendarViewSwitcher({
   value,
   onChange,
 }: CalendarViewSwitcherProps) {
   return (
-    <ToggleGroup
-      type="single"
+    <Segmented<CalendarView>
+      options={[...OPTIONS]}
       value={value}
-      onValueChange={(v) => v && onChange(v as CalendarView)}
-      aria-label="Calendar view"
-      className="mb-4 max-w-full"
-    >
-      {VIEWS.map((view) => (
-        <ToggleGroupItem
-          key={view}
-          value={view}
-          className="min-h-11 px-4 capitalize"
-        >
-          {view}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+      onChange={onChange}
+      label="Calendar view"
+    />
   );
 }
 

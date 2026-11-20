@@ -46,7 +46,7 @@ export function RsvpInline({
             className={cn(
               "inline-flex min-h-8 items-center rounded-full border px-3 text-sm font-semibold transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50",
               active
-                ? "border-accent bg-accent text-bg"
+                ? "border-transparent bg-surface-strong text-bg"
                 : "border-ink/30 bg-transparent text-ink hover:bg-bg",
             )}
           >

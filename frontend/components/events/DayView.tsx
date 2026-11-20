@@ -10,7 +10,7 @@ import type { EventItem } from "@/lib/api/events";
 import { assignTimeLanes } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
-import { chipStyle } from "./toneStyle";
+import { chipStyle, HAIRLINE } from "./toneStyle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
@@ -72,7 +72,7 @@ export function DayView({
     <div className="flex h-full w-full flex-col">
       {/* Day header */}
       <div
-        className="mb-2 border-b border-ink/15 py-3 text-center"
+        className={cn("mb-2 border-b py-3 text-center", HAIRLINE)}
         aria-current={isToday ? "date" : undefined}
       >
         <h2 className="text-xl font-black">{format(day, "EEEE")}</h2>
@@ -96,13 +96,8 @@ export function DayView({
                   key={ev.id}
                   type="button"
                   onClick={() => onSelectEvent(ev)}
-                  className="min-h-8 cursor-pointer rounded border px-2 py-1 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  style={{
-                    ...chipStyle(tone, selectedEventId === ev.id),
-                    ...(selectedEventId === ev.id
-                      ? {}
-                      : { borderColor: "transparent" }),
-                  }}
+                  className="min-h-8 cursor-pointer rounded-md border-l-[3px] px-2 py-1 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  style={chipStyle(tone, selectedEventId === ev.id)}
                 >
                   {ev.title}
                 </button>
@@ -113,10 +108,15 @@ export function DayView({
       )}
 
       {/* Timeline grid */}
-      <div className="relative flex min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-2xl bg-surface">
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-2xl border",
+          HAIRLINE,
+        )}
+      >
         {/* Hour labels */}
         <div
-          className="shrink-0 border-r border-ink/15 pt-0.5"
+          className={cn("shrink-0 border-r pt-0.5", HAIRLINE)}
           style={{ width: HOUR_LABEL_WIDTH }}
         >
           {Array.from({ length: 24 }).map((_, hour) => (
@@ -124,7 +124,7 @@ export function DayView({
               key={hour}
               className={cn(
                 "flex items-start justify-end pr-2 text-[11px] font-semibold text-muted",
-                hour < 23 && "border-b border-ink/15",
+                hour < 23 && cn("border-b", HAIRLINE),
               )}
               style={{ height: HOUR_HEIGHT }}
             >
@@ -143,7 +143,7 @@ export function DayView({
               key={hour}
               className={cn(
                 "absolute inset-x-0",
-                hour < 23 && "border-b border-ink/15",
+                hour < 23 && cn("border-b", HAIRLINE),
               )}
               style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
             />
@@ -156,7 +156,7 @@ export function DayView({
               style={{ top: nowOffset }}
               aria-hidden="true"
             >
-              <span className="absolute -left-1 -top-[5px] size-2 rounded-full bg-ink ring-2 ring-surface" />
+              <span className="absolute -left-1 -top-[5px] size-2 rounded-full bg-ink ring-2 ring-[var(--nx-glass-solid)]" />
             </div>
           )}
 
@@ -177,14 +177,13 @@ export function DayView({
                     onSelectEvent(seg.event);
                   }
                 }}
-                className="absolute z-10 box-border cursor-pointer overflow-hidden rounded border px-1.5 py-1 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                className="absolute z-10 box-border cursor-pointer overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                 style={{
                   top: seg.topOffset,
                   left: `${seg.lane * laneWidthPct}%`,
                   width: `calc(${laneWidthPct}% - 4px)`,
                   height: seg.height,
                   ...chipStyle(seg.tone, isSelected),
-                  ...(isSelected ? {} : { borderColor: "transparent" }),
                 }}
               >
                 <p className="truncate font-black">{seg.event.title}</p>

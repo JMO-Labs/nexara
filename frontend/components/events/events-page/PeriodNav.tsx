@@ -22,7 +22,7 @@ export function PeriodNav({ label, unit, onPrev, onNext }: PeriodNavProps) {
   return (
     <div className="flex items-center gap-2">
       <IconButton
-        variant="outline"
+        variant="secondary"
         size="sm"
         aria-label={`Previous ${unit}`}
         onClick={onPrev}
@@ -31,7 +31,7 @@ export function PeriodNav({ label, unit, onPrev, onNext }: PeriodNavProps) {
       </IconButton>
       <div className="text-ink flex-1 text-center font-semibold">{label}</div>
       <IconButton
-        variant="outline"
+        variant="secondary"
         size="sm"
         aria-label={`Next ${unit}`}
         onClick={onNext}
