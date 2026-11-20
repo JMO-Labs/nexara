@@ -36,7 +36,7 @@ function NavLink({
         className={cn(
           "flex h-10 items-center gap-3 rounded-2xl border-l-[3px] px-3 text-sm font-semibold",
           active
-            ? "border-l-sun bg-accent text-surface-strong"
+            ? "border-l-sun bg-accent text-bg"
             : "border-l-transparent text-nav-muted hover:bg-white/10",
         )}
       >

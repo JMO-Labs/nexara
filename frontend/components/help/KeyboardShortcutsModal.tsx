@@ -67,7 +67,7 @@ export function KeyboardShortcutsModal() {
                   className="flex items-center justify-between gap-4"
                 >
                   <span className="text-sm">{shortcut.action}</span>
-                  <kbd className="bg-surface-strong text-accent rounded px-2 py-1 font-mono text-xs whitespace-nowrap">
+                  <kbd className="bg-surface-strong text-bg rounded px-2 py-1 font-mono text-xs whitespace-nowrap">
                     {shortcut.keys}
                   </kbd>
                 </li>

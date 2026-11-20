@@ -25,7 +25,7 @@ export function NewItemsPill({ count, onClick }: NewItemsPillProps) {
         <button
           type="button"
           onClick={onClick}
-          className="pointer-events-auto rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-surface-strong shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="pointer-events-auto rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-bg shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {count} new
         </button>

@@ -44,9 +44,7 @@ export function PromptList({
             key={p.id}
             className={cn(
               "flex items-start gap-3 rounded-2xl p-3",
-              selectedId === p.id
-                ? "bg-surface-strong text-accent"
-                : "bg-surface",
+              selectedId === p.id ? "bg-surface-strong text-bg" : "bg-surface",
             )}
           >
             <Switch

@@ -157,7 +157,7 @@ export function GroupHub({ slug }: GroupHubProps) {
                             "flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                             navCollapsed && "md:justify-center md:px-0",
                             isActive
-                              ? "bg-accent font-semibold text-surface-strong"
+                              ? "bg-accent font-semibold text-bg"
                               : "hover:bg-surface",
                           )}
                         >

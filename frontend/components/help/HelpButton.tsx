@@ -28,7 +28,7 @@ export function HelpButton() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Help menu"
-        className="bg-surface-strong text-accent focus-visible:outline-accent fixed right-5 bottom-5 z-[1000] flex size-12 items-center justify-center rounded-full shadow-md transition-transform outline-none hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none motion-reduce:hover:scale-100"
+        className="bg-surface-strong text-bg focus-visible:outline-accent fixed right-5 bottom-5 z-[1000] flex size-12 items-center justify-center rounded-full shadow-md transition-transform outline-none hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none motion-reduce:hover:scale-100"
       >
         <CircleHelp size={24} aria-hidden="true" />
       </DropdownMenuTrigger>

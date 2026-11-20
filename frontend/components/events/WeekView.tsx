@@ -97,7 +97,7 @@ export function WeekView({
                   className={cn(
                     "mx-auto mt-0.5 flex size-7 items-center justify-center rounded-full text-sm",
                     today
-                      ? "bg-accent font-black text-surface-strong"
+                      ? "bg-accent font-black text-bg"
                       : "font-semibold text-ink",
                   )}
                   aria-current={today ? "date" : undefined}

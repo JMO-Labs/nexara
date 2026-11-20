@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const tones = {
   neutral: "bg-bg text-ink",
-  accent: "bg-accent text-surface-strong",
+  accent: "bg-accent text-bg",
   sun: "bg-sun text-surface-strong",
   leaf: "bg-leaf text-surface-strong",
 } as const;

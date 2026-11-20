@@ -17,7 +17,7 @@ export const BRANDING_VARS = [
 
 export type BrandingVar = (typeof BRANDING_VARS)[number];
 
-const SANS_FALLBACK = "var(--font-hanken), system-ui, sans-serif";
+const SANS_FALLBACK = "var(--font-outfit), system-ui, sans-serif";
 const MONO_FALLBACK = "ui-monospace, monospace";
 
 const hex = (v: unknown): string | null => (isHex(v) ? v : null);

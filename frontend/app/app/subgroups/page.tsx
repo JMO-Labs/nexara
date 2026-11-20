@@ -76,7 +76,7 @@ export default function SubgroupsPage() {
                 aria-pressed={filter === m}
                 onClick={() => setFilter(m)}
                 className={`min-h-11 rounded-full px-4 text-xs uppercase tracking-widest outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                  filter === m ? "bg-accent text-surface-strong" : "bg-surface"
+                  filter === m ? "bg-accent text-bg" : "bg-surface"
                 }`}
               >
                 {m}

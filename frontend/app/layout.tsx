@@ -4,7 +4,7 @@
  *        class on <html> before paint (no scheme flash).
  */
 import type { Metadata, Viewport } from "next";
-import { hanken } from "@/theme/font";
+import { outfit } from "@/theme/font";
 import ServiceWorkerRegistrar from "@/components/layout/ServiceWorkerRegistrar";
 import Providers from "./providers";
 import "./globals.css";
@@ -20,8 +20,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#E9F1E4" },
-    { media: "(prefers-color-scheme: dark)", color: "#0E1F15" },
+    { media: "(prefers-color-scheme: light)", color: "#E4E4E4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D1117" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={hanken.variable}>
+    <html lang="en" suppressHydrationWarning className={outfit.variable}>
       <body>
         <Providers>{children}</Providers>
         <ServiceWorkerRegistrar />

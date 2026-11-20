@@ -251,7 +251,7 @@ export function MonthCalendar({
                         className={cn(
                           "inline-flex size-6 items-center justify-center rounded-full text-xs",
                           today
-                            ? "bg-accent font-black text-surface-strong"
+                            ? "bg-accent font-black text-bg"
                             : "font-semibold text-ink",
                         )}
                       >

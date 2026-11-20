@@ -15,9 +15,10 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-surface-strong text-accent hover:opacity-90",
-        secondary: "bg-accent text-surface-strong hover:opacity-90",
+        primary: "bg-surface-strong text-bg hover:opacity-90",
+        secondary: "bg-accent text-bg hover:opacity-90",
         ghost: "bg-transparent hover:bg-surface",
+        glass: "glass-btn text-ink",
         outline: "border border-current bg-transparent hover:bg-surface",
         destructive:
           "bg-destructive text-destructive-foreground hover:opacity-90",

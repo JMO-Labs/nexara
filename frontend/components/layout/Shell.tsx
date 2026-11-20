@@ -77,7 +77,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="bg-bg text-ink min-h-dvh" data-density={density}>
         <a
           href="#main"
-          className="bg-surface-strong text-accent focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
+          className="bg-surface-strong text-bg focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
         >
           Skip to content
         </a>

@@ -185,7 +185,7 @@ export function MonthCalendarLarge({
                         className={cn(
                           "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm tabular-nums",
                           today
-                            ? "bg-accent font-black text-surface-strong"
+                            ? "bg-accent font-black text-bg"
                             : "font-semibold text-ink",
                         )}
                       >

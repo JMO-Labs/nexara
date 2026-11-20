@@ -114,7 +114,7 @@ export function NotificationRow({
         title={label}
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-full",
-          unread ? "bg-accent text-surface-strong" : "bg-surface text-muted",
+          unread ? "bg-accent text-bg" : "bg-surface text-muted",
         )}
       >
         <Icon aria-hidden width={18} height={18} />

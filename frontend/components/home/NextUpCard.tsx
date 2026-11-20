@@ -42,7 +42,7 @@ export function NextUpCard() {
       <Link href="/app/events" className="flex items-center gap-4">
         <div
           aria-hidden="true"
-          className="bg-accent text-surface-strong rounded-2xl px-3 py-2 text-center"
+          className="bg-accent text-bg rounded-2xl px-3 py-2 text-center"
         >
           <div className="font-black text-2xl leading-none">
             {format(d, "d")}

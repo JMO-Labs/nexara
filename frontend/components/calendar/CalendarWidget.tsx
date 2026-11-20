@@ -96,7 +96,7 @@ export function CalendarWidget({
               className={cn(
                 "relative min-h-11 rounded-lg text-xs font-semibold outline-none hover:bg-ink/10 focus-visible:outline-2 focus-visible:outline-accent",
                 !isSameMonth(d, month) && "opacity-60",
-                expanded && "bg-accent text-surface-strong",
+                expanded && "bg-accent text-bg",
               )}
             >
               {format(d, "d")}
