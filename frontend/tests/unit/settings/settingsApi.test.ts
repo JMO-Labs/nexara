@@ -35,7 +35,7 @@ describe("Settings API", () => {
 
       const result = await settingsApi.getSettings();
 
-      expect(client.apiGet).toHaveBeenCalledWith("/api/v1/settings");
+      expect(client.apiGet).toHaveBeenCalledWith("/api/v1/settings/");
       expect(result).toEqual(mockData);
     });
   });
@@ -48,7 +48,7 @@ describe("Settings API", () => {
 
       const result = await settingsApi.updateSettings(body);
 
-      expect(client.apiPut).toHaveBeenCalledWith("/api/v1/settings", body);
+      expect(client.apiPut).toHaveBeenCalledWith("/api/v1/settings/", body);
       expect(result).toEqual(mockResp);
     });
   });

@@ -100,7 +100,7 @@ const SETTINGS = "/api/v1/settings";
  * @brief Get current user's settings.
  * @return UserSettings object with theme, locale, and notification preferences.
  */
-export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}`);
+export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}/`);
 
 /**
  * @brief Update settings (theme, locale).
@@ -108,7 +108,7 @@ export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}`);
  * @return Updated UserSettings.
  */
 export const updateSettings = (body: Partial<UserSettingsUpdate>) =>
-  apiPut<UserSettings>(`${SETTINGS}`, body);
+  apiPut<UserSettings>(`${SETTINGS}/`, body);
 
 /**
  * @brief Get notification preferences.

@@ -14,7 +14,8 @@ const WS_URL_OVERRIDE =
   process.env.NEXT_PUBLIC_WS_URL ?? process.env.NEXT_PUBLIC_WS_BASE_URL ?? "";
 const DEV_BACKEND_PORT = process.env.NEXT_PUBLIC_DEV_BACKEND_PORT ?? "8000";
 
-function deriveWsUrl(): string {
+/** @brief WebSocket endpoint: override, API base, or same-origin (dev uses the FastAPI port). */
+export function deriveWsUrl(): string {
   if (WS_URL_OVERRIDE) {
     return WS_URL_OVERRIDE.replace(/\/$/, "") + "/ws/";
   }
@@ -26,14 +27,16 @@ function deriveWsUrl(): string {
   }
 
   // Same-origin fallback. Next.js rewrites do NOT proxy WebSocket upgrades
-  // in dev — when running on localhost, target the FastAPI port directly.
+  // in `next dev` — only there, on localhost, target the FastAPI port directly.
+  // Production builds (incl. the container on localhost:8080) go via nginx.
   const { protocol, hostname, host } = window.location;
   const wsProto = protocol === "https:" ? "wss:" : "ws:";
   const isLocal =
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
     hostname === "0.0.0.0";
-  const target = isLocal ? `${hostname}:${DEV_BACKEND_PORT}` : host;
+  const isDev = process.env.NODE_ENV === "development";
+  const target = isDev && isLocal ? `${hostname}:${DEV_BACKEND_PORT}` : host;
   return `${wsProto}//${target}/ws/`;
 }
 
