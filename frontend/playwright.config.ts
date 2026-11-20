@@ -21,6 +21,10 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Use a system Chrome when browsers aren't downloaded (PW_CHROME=/usr/bin/google-chrome).
+    ...(process.env.PW_CHROME
+      ? { launchOptions: { executablePath: process.env.PW_CHROME } }
+      : {}),
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
