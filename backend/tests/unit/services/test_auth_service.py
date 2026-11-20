@@ -379,3 +379,29 @@ class TestRegisterInvites:
         svc._password_svc.check_hibp.return_value = True
         with pytest.raises(ConflictError, match="data breach"):
             await svc.register(**self._kwargs())
+
+    @pytest.mark.asyncio
+    async def test_first_user_becomes_admin(self):
+        svc = self._svc(False)
+        svc._user_repo.count_admins.return_value = 0
+        await svc.register(**self._kwargs())
+        assert svc._user_repo.create.call_args.args[0].role == "admin"
+
+    @pytest.mark.asyncio
+    async def test_later_user_is_member(self):
+        svc = self._svc(False)
+        svc._user_repo.count_admins.return_value = 1
+        await svc.register(**self._kwargs())
+        assert svc._user_repo.create.call_args.args[0].role == "member"
+
+    @pytest.mark.asyncio
+    async def test_invite_role_still_applies_when_admin_exists(self):
+        svc = self._svc(False)
+        svc._user_repo.count_admins.return_value = 1
+        invite = MagicMock(role="moderator", id=uuid.uuid4(), created_by=uuid.uuid4())
+        with patch(
+            "app.services.auth.registration._validate_invite_impl",
+            AsyncMock(return_value=invite),
+        ):
+            await svc.register(**self._kwargs(invite_token="tok"))
+        assert svc._user_repo.create.call_args.args[0].role == "moderator"

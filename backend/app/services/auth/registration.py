@@ -61,6 +61,10 @@ async def register_user(
     else:
         invite = None
 
+    # Fresh install: with no admin yet, the first registrant becomes admin.
+    if await svc._user_repo.count_admins(cid) == 0:
+        role = "admin"
+
     if await svc._password_svc.check_hibp(password):
         raise ConflictError(
             message=_("This password has appeared in a data breach"),

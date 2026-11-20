@@ -120,6 +120,28 @@ class UserRepository(BaseRepository[User]):
         user = await self.find_by_username(username)
         return user is not None
 
+    async def count_admins(self, community_id: uuid.UUID) -> int:
+        """
+        @brief Count active, non-deleted admin users in a community.
+
+        @param community_id Community scope.
+        @return Number of users with role "admin".
+        """
+        from sqlalchemy import func as sa_func
+
+        stmt = (
+            select(sa_func.count())
+            .select_from(User)
+            .where(
+                User.community_id == community_id,
+                User.role == "admin",
+                User.is_active.is_(True),
+                User.deleted_at.is_(None),
+            )
+        )
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one())
+
     async def list_by_community(
         self,
         community_id: uuid.UUID,
