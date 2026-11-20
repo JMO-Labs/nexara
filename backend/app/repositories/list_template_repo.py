@@ -86,6 +86,8 @@ class ListTemplateRepository(BaseRepository[ListTemplate]):
                 < tuple_(literal(decoded[0]), literal(decoded[1]))
             )
         stmt = stmt.order_by(ListTemplate.created_at.desc(), ListTemplate.id.desc())
+        # Eager-load what ListTemplateOut serializes; lazy loads raise MissingGreenlet in async.
+        stmt = stmt.options(selectinload(ListTemplate.fields), selectinload(ListTemplate.items))
         rows = list((await self._session.execute(stmt.limit(limit + 1))).scalars().all())
         nxt = None
         if len(rows) > limit:
