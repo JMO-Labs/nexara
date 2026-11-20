@@ -47,15 +47,12 @@ async function mentionFlow(
     }).toPass({ timeout: 20_000 });
 
     await bell.click();
-    const drawer = a.page.getByRole("dialog", { name: "Notifications" });
-    // Ack button renders only on unread rows (see NotifRow.test.tsx).
-    const ack = drawer.getByRole("button", {
-      name: "Acknowledge notification",
-    });
-    await expect(ack).toHaveCount(1);
-
-    await ack.first().click();
-    await expect(ack).toHaveCount(0);
+    const popover = a.page.getByRole("dialog", { name: "Notifications" });
+    // Unread rows carry data-unread; opening one marks it read in the Inbox.
+    const unreadRow = popover.locator('[data-testid="inbox-row"][data-unread]');
+    await expect(unreadRow).toHaveCount(1);
+    await unreadRow.first().click();
+    await expect(a.page).toHaveURL(/\/app\/inbox\?item=/);
     if (checkBadgeCleared) await expect(bell).toHaveCount(0);
   } finally {
     await a.context.close();

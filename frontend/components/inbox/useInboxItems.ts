@@ -62,6 +62,33 @@ const CATEGORY_ICON: Record<Category, LucideIcon> = {
 };
 
 /**
+ * @brief Notification -> inbox entry (shared with the bell popover).
+ * @param n notification
+ * @param type registry descriptor
+ * @param t translator
+ * @return entry
+ */
+export function notifEntry(
+  n: NotificationItem,
+  type: NotificationTypeDescriptor,
+  t: (k: string) => string,
+): InboxEntry {
+  const r = renderNotif(type, n.payload ?? {}, t);
+  return {
+    kind: "notif",
+    id: n.id,
+    title: r.title,
+    snippet: r.body,
+    time: n.created_at,
+    unread: !n.read_at && !n.dismissed_at,
+    Icon: CATEGORY_ICON[type.category] ?? Bell,
+    notif: n,
+    type,
+    link: r.link,
+  };
+}
+
+/**
  * @brief Rows for a folder plus the unread notification count.
  * @param folder active folder
  * @return entries, loading flag, unread count
@@ -94,24 +121,9 @@ export function useInboxItems(folder: Folder) {
     isLoading = notifs.isLoading;
     items = allNotifs
       .filter((n) => folder === "notifications" || isUnread(n))
-      .flatMap((n): InboxEntry[] => {
+      .flatMap((n) => {
         const type = byKey.get(n.type);
-        if (!type) return [];
-        const r = renderNotif(type, n.payload ?? {}, (k) => t(k));
-        return [
-          {
-            kind: "notif",
-            id: n.id,
-            title: r.title,
-            snippet: r.body,
-            time: n.created_at,
-            unread: isUnread(n),
-            Icon: CATEGORY_ICON[type.category] ?? Bell,
-            notif: n,
-            type,
-            link: r.link,
-          },
-        ];
+        return type ? [notifEntry(n, type, (k) => t(k))] : [];
       });
   } else if (folder === "saved") {
     isLoading = saved.isLoading;

@@ -22,6 +22,8 @@ vi.mock("@/lib/api/notifications", () => ({
   STREAM_PATH: "/s",
 }));
 vi.mock("@/hooks/useSSE", () => ({ useSSE: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 
 import { MessageList } from "@/components/chat/MessageList";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";

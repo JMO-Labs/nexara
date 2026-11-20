@@ -11,7 +11,6 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Avatar } from "@/components/ui/Avatar";
 import { BrandLockup } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
-import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import { AvatarMenu } from "./AvatarMenu";
 import { TopNav } from "./TopNav";
 import { CreateMenu } from "./CreateMenu";
@@ -31,7 +30,6 @@ export function TopBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2 px-4 py-2 md:px-8">
-      <NotificationsDrawer />
       <Link
         href="/app"
         aria-label={`${name} home`}
@@ -42,11 +40,12 @@ export function TopBar() {
       <div className="hidden flex-1 justify-center md:flex">
         <TopNav />
       </div>
-      <div className="ml-auto flex items-center gap-1 md:ml-0">
+      <div className="ml-auto flex items-center gap-2 md:ml-0">
         <CreateMenu className="hidden md:inline-flex" />
         <CreateMenu compact className="md:hidden" />
         <IconButton
           variant="ghost"
+          className="glass-btn size-10 md:size-11"
           aria-label="Search"
           tooltip="Search"
           tooltipSide="bottom"

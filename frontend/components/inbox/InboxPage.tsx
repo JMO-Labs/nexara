@@ -5,6 +5,7 @@
  *        one glass frame. ?view= picks the folder, ?item= the open entry.
  *        Below lg the pane replaces the list; on phone folders are pills.
  */
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import { markAllRead, markRead } from "@/lib/api/notifications";
 import { cn } from "@/lib/utils";
 import { InboxRow } from "./InboxRow";
 import { ReadingPane } from "./ReadingPane";
-import { useInboxItems, type Folder } from "./useInboxItems";
+import { useInboxItems, type Folder, type InboxEntry } from "./useInboxItems";
 
 const FOLDERS: { value: Folder; label: string; Icon: LucideIcon }[] = [
   { value: "notifications", label: "Notifications", Icon: Bell },
@@ -54,7 +55,12 @@ export function InboxPage() {
     : "notifications";
   const itemId = params.get("item");
   const { items, isLoading, unreadCount, saved } = useInboxItems(folder);
-  const selected = items.find((i) => i.id === itemId) ?? null;
+  // Keep the opened entry even after it leaves the folder (e.g. Unread
+  // drops it once marked read).
+  const [opened, setOpened] = useState<InboxEntry | null>(null);
+  const selected =
+    items.find((i) => i.id === itemId) ??
+    (opened?.id === itemId ? opened : null);
   const markAll = useMutation({
     mutationFn: markAllRead,
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["notifications"] }),
@@ -68,6 +74,7 @@ export function InboxPage() {
   };
   const open = (id: string) => {
     const e = items.find((i) => i.id === id);
+    setOpened(e ?? null);
     if (e?.kind === "notif" && e.unread)
       void markRead(id).then(() =>
         qc.invalidateQueries({ queryKey: ["notifications"] }),
