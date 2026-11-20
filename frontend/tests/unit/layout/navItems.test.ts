@@ -30,6 +30,7 @@ describe("navItems", () => {
       "Calendar",
       "Photos",
       "Community",
+      "Inbox",
     ]);
   });
   it("Community is the top item and matches legacy routes", () => {
@@ -37,16 +38,12 @@ describe("navItems", () => {
     expect(community.href).toBe("/app/community");
     expect(community.match).toEqual(["/app/members", "/app/subgroups"]);
   });
-  it("phone extra nav is Community only", () => {
-    expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual(["Community"]);
+  it("phone extra nav is Community and Inbox", () => {
+    expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual(["Community", "Inbox"]);
   });
-  it("more nav is Inbox, Settings, Admin", () => {
-    expect(MORE_NAV.map((i) => i.label)).toEqual([
-      "Inbox",
-      "Settings",
-      "Admin",
-    ]);
-    expect(find(MORE_NAV, "Inbox")).toMatchObject({
+  it("more nav is Settings, Admin; Inbox is top nav", () => {
+    expect(MORE_NAV.map((i) => i.label)).toEqual(["Settings", "Admin"]);
+    expect(find(TOP_NAV, "Inbox")).toMatchObject({
       href: "/app/inbox",
       match: ["/app/notifications", "/app/bookmarks", "/app/lists"],
     });
@@ -69,7 +66,7 @@ describe("navItems", () => {
     expect(isItemActive("/app/events", community)).toBe(false);
   });
   it("isItemActive honours Inbox match prefixes", () => {
-    const inbox = find(MORE_NAV, "Inbox");
+    const inbox = find(TOP_NAV, "Inbox");
     expect(isItemActive("/app/bookmarks", inbox)).toBe(true);
     expect(isItemActive("/app/lists/x", inbox)).toBe(true);
     expect(isItemActive("/app/settings", inbox)).toBe(false);

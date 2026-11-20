@@ -73,7 +73,7 @@ export const TAB_NAV: NavItem[] = [
   { label: "Photos", href: "/app/photos", Icon: Images },
 ];
 
-/** @brief Desktop top pill nav; overflow lives under a More dropdown. */
+/** @brief Desktop top pill nav. Settings/Admin live in the avatar menu. */
 export const TOP_NAV: NavItem[] = [
   ...TAB_NAV,
   {
@@ -82,6 +82,12 @@ export const TOP_NAV: NavItem[] = [
     Icon: Users,
     match: ["/app/members", "/app/subgroups"],
   },
+  {
+    label: "Inbox",
+    href: "/app/inbox",
+    Icon: Inbox,
+    match: ["/app/notifications", "/app/bookmarks", "/app/lists"],
+  },
 ];
 
 /** @brief Top-nav items that the phone tab bar has no room for (shown first in the More sheet). */
@@ -89,13 +95,8 @@ export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
   (t) => !TAB_NAV.some((x) => x.href === t.href),
 );
 
+/** @brief Phone More sheet extras (desktop uses the avatar menu). */
 export const MORE_NAV: NavItem[] = [
-  {
-    label: "Inbox",
-    href: "/app/inbox",
-    Icon: Inbox,
-    match: ["/app/notifications", "/app/bookmarks", "/app/lists"],
-  },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },
 ];

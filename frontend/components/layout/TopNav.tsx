@@ -5,24 +5,10 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/stores/session";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcn/dropdown-menu";
-import {
-  MORE_NAV,
-  TOP_NAV,
-  isAdmin,
-  isItemActive,
-  visibleNav,
-} from "./navItems";
+import { TOP_NAV, isItemActive } from "./navItems";
 
 const LINK =
   "relative inline-flex items-center rounded-full px-5 py-2.5 text-sm focus-visible:outline-accent focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -35,9 +21,7 @@ export function TopNav() {
   const pathname = usePathname();
   const reduced = useReducedMotion();
   const dir = useScrollDirection(80);
-  const admin = useSession((s) => isAdmin(s.user));
   const compact = dir === "down" && !reduced;
-  const more = visibleNav(MORE_NAV, admin);
   return (
     <motion.nav
       layout={!reduced}
@@ -69,27 +53,6 @@ export function TopNav() {
           </Link>
         );
       })}
-      {!compact && (
-        <DropdownMenu>
-          <DropdownMenuTrigger className={cn(LINK, "text-ink gap-1")}>
-            More
-            <ChevronDown aria-hidden className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="glass min-w-48 rounded-3xl bg-[var(--nx-glass-solid)]"
-          >
-            {more.map(({ label, href, Icon }) => (
-              <DropdownMenuItem key={label} asChild>
-                <Link href={href}>
-                  <Icon aria-hidden className="size-4" />
-                  {label}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
     </motion.nav>
   );
 }

@@ -382,7 +382,7 @@ describe("GlobalCommandPalette", () => {
     });
   });
 
-  it("Subgroups jump item opens the Community groups view", async () => {
+  it("Groups jump item opens the Community groups view", async () => {
     (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { items: [], next_cursor: null, has_more: false },
       isLoading: false,
@@ -399,9 +399,9 @@ describe("GlobalCommandPalette", () => {
     const user = userEvent.setup();
 
     await waitFor(() => {
-      expect(screen.getByText("Subgroups")).toBeInTheDocument();
+      expect(screen.getByText("Groups")).toBeInTheDocument();
     });
-    await user.click(screen.getByText("Subgroups").closest('[role="option"]')!);
+    await user.click(screen.getByText("Groups").closest('[role="option"]')!);
 
     expect(mockPush).toHaveBeenCalledWith("/app/community?view=groups");
   });

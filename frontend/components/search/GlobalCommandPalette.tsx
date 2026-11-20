@@ -1,7 +1,7 @@
 /**
  * @file components/search/GlobalCommandPalette.tsx
  * @brief Command palette with live search integration. Debounces query input,
- *        fetches results, renders with 7 static nav actions, navigates on select.
+ *        fetches results, renders static jump-to nav actions, navigates on select.
  */
 "use client";
 
@@ -29,56 +29,15 @@ interface CommandItem {
   onSelect: () => void;
 }
 
-const NAV_ACTIONS: CommandItem[] = [
-  {
-    id: "nav-home",
-    label: "Home",
-    hint: "/app",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-feed",
-    label: "Feed",
-    hint: "/app",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-chat",
-    label: "Chat",
-    hint: "/app/chat",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-events",
-    label: "Events",
-    hint: "/app/events",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-subgroups",
-    label: "Subgroups",
-    hint: "/app/community?view=groups",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-galleries",
-    label: "Galleries",
-    hint: "/app/photos",
-    group: "Jump to",
-    onSelect: () => {},
-  },
-  {
-    id: "nav-settings",
-    label: "Settings",
-    hint: "/app/settings",
-    group: "Jump to",
-    onSelect: () => {},
-  },
+const NAV_ACTIONS: { label: string; href: string }[] = [
+  { label: "Home", href: "/app" },
+  { label: "Chat", href: "/app/chat" },
+  { label: "Calendar", href: "/app/events" },
+  { label: "Photos", href: "/app/photos" },
+  { label: "Community", href: "/app/community" },
+  { label: "Groups", href: "/app/community?view=groups" },
+  { label: "Inbox", href: "/app/inbox" },
+  { label: "Settings", href: "/app/settings" },
 ];
 
 /** Palette contents; mounted only while open so query state resets on close. */
@@ -142,18 +101,12 @@ function PaletteBody() {
       });
     }
 
-    // Add navigation items
-    const navItems = NAV_ACTIONS.map((nav) => ({
-      ...nav,
+    const navItems: CommandItem[] = NAV_ACTIONS.map(({ label, href }) => ({
+      id: `nav:${href}`,
+      label,
+      hint: href,
+      group: "Jump to",
       onSelect: () => {
-        let href = "/app";
-        if (nav.id === "nav-feed") href = "/app";
-        else if (nav.id === "nav-chat") href = "/app/chat";
-        else if (nav.id === "nav-events") href = "/app/events";
-        else if (nav.id === "nav-subgroups")
-          href = "/app/community?view=groups";
-        else if (nav.id === "nav-galleries") href = "/app/photos";
-        else if (nav.id === "nav-settings") href = "/app/settings";
         router.push(href);
         setOpen(false);
       },
@@ -173,22 +126,30 @@ function PaletteBody() {
   }
 
   return (
-    <Command shouldFilter={false}>
+    <Command
+      shouldFilter={false}
+      className="rounded-none bg-transparent text-ink"
+    >
       <CommandInput
         aria-label="Command palette"
-        placeholder="Search Nexara — try a name, post, or event…"
+        placeholder="Search people, posts and events"
         value={query}
         onValueChange={setQuery}
       />
-      <CommandList aria-live="polite">
+      <CommandList aria-live="polite" className="max-h-[360px] p-1.5">
         <CommandEmpty>No matches</CommandEmpty>
         {[...groups].map(([group, list]) => (
           <CommandGroup key={group} heading={group}>
             {list.map((it) => (
-              <CmdItem key={it.id} value={it.id} onSelect={it.onSelect}>
+              <CmdItem
+                key={it.id}
+                value={it.id}
+                onSelect={it.onSelect}
+                className="group rounded-full px-3.5 py-2 data-[selected=true]:bg-surface-strong data-[selected=true]:text-bg"
+              >
                 <span>{it.label}</span>
                 {it.hint && (
-                  <span className="ml-auto truncate text-xs text-muted">
+                  <span className="ml-auto truncate text-xs text-muted group-data-[selected=true]:text-bg/70">
                     {it.hint}
                   </span>
                 )}
@@ -218,7 +179,12 @@ export function GlobalCommandPalette() {
   }, [setOpen]);
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen} title="Command palette">
+    <CommandDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Command palette"
+      className="glass rounded-[28px] border-0 bg-[var(--nx-glass-solid)] sm:max-w-xl"
+    >
       <PaletteBody />
     </CommandDialog>
   );
