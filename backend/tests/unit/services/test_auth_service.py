@@ -64,6 +64,7 @@ def _make_service(session=None, settings=None):
     s = session or AsyncMock()
     svc = AuthService(s, settings or _make_settings())
     svc._user_repo = AsyncMock()
+    svc._user_repo.is_first_user.return_value = False
     svc._token_repo = AsyncMock()
     svc._invite_repo = AsyncMock()
     svc._settings_repo = AsyncMock()
@@ -383,21 +384,21 @@ class TestRegisterInvites:
     @pytest.mark.asyncio
     async def test_first_user_becomes_admin(self):
         svc = self._svc(False)
-        svc._user_repo.count_admins.return_value = 0
+        svc._user_repo.is_first_user.return_value = True
         await svc.register(**self._kwargs())
         assert svc._user_repo.create.call_args.args[0].role == "admin"
 
     @pytest.mark.asyncio
     async def test_later_user_is_member(self):
         svc = self._svc(False)
-        svc._user_repo.count_admins.return_value = 1
+        svc._user_repo.is_first_user.return_value = False
         await svc.register(**self._kwargs())
         assert svc._user_repo.create.call_args.args[0].role == "member"
 
     @pytest.mark.asyncio
     async def test_invite_role_still_applies_when_admin_exists(self):
         svc = self._svc(False)
-        svc._user_repo.count_admins.return_value = 1
+        svc._user_repo.is_first_user.return_value = False
         invite = MagicMock(role="moderator", id=uuid.uuid4(), created_by=uuid.uuid4())
         with patch(
             "app.services.auth.registration._validate_invite_impl",
