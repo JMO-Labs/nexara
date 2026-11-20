@@ -3,13 +3,13 @@
  * @file components/settings/ProfileTab.tsx
  * @brief Profile settings tab: display name, bio, location, website, title.
  */
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
-import { useUpdateProfile } from "@/hooks/useSettings";
+import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 
 const Schema = z.object({
   display_name: z.string().optional(),
@@ -21,28 +21,51 @@ const Schema = z.object({
 });
 type FormData = z.infer<typeof Schema>;
 
+const FIELDS = [
+  "display_name",
+  "bio",
+  "location",
+  "website_url",
+  "title",
+  "pronouns",
+] as const;
+
+/** @brief Map a profile to form values (null -> empty string). */
+function toFormData(
+  p: Partial<Record<(typeof FIELDS)[number], string | null>>,
+) {
+  const out: FormData = {};
+  FIELDS.forEach((k) => {
+    out[k] = p[k] ?? "";
+  });
+  return out;
+}
+
 /**
  * @brief Profile edit form.
  * @return profile tab content
  */
 export function ProfileTab() {
-  const [initialValues] = useState<FormData>({});
+  const { data: profile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
-  const { register, handleSubmit, formState, watch } = useForm<FormData>({
-    resolver: zodResolver(Schema),
-    defaultValues: initialValues,
-  });
+  const { register, handleSubmit, formState, watch, reset } = useForm<FormData>(
+    { resolver: zodResolver(Schema), defaultValues: {} },
+  );
   const err = formState.errors;
   const pronounsLen = (watch("pronouns") ?? "").length;
 
+  useEffect(() => {
+    if (profile) reset(toFormData(profile));
+  }, [profile, reset]);
+
   const onSubmit = (data: FormData) => {
-    const filtered: Record<string, unknown> = {};
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        filtered[key] = value;
-      }
+    const base = profile ? toFormData(profile) : ({} as FormData);
+    const changed: Record<string, string> = {};
+    (Object.keys(data) as (keyof FormData)[]).forEach((key) => {
+      const next = data[key] ?? "";
+      if (next !== (base[key] ?? "")) changed[key] = next;
     });
-    mutate(filtered);
+    if (Object.keys(changed).length > 0) mutate(changed);
   };
 
   return (

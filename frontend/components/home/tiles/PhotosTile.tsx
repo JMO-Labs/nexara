@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Image as ImageIcon } from "lucide-react";
 import { HomeTile, type TileSlotProps } from "@/components/home/HomeTile";
 import { useHomeMedia } from "@/hooks/useHomeMedia";
+import { photoTitle } from "@/lib/photoTitle";
 import { mediaThumbUrl } from "@/lib/mediaUrl";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
   const { data } = useHomeMedia({ limit: 7 });
   const items = (data?.items ?? []).slice(0, 7);
   const more = !!data?.next_cursor;
-  const title = items[0]?.source_title ?? "Recent photos";
+  const title = (items[0] && photoTitle(items[0])) ?? "Recent photos";
   return (
     <HomeTile
       id="photos"

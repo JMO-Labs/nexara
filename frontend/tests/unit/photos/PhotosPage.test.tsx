@@ -9,10 +9,9 @@ import type { ReactElement } from "react";
 import { vi } from "vitest";
 import { PhotosPage } from "@/components/photos/PhotosPage";
 
+let qc = new QueryClient();
 const render = (ui: ReactElement) =>
-  rtlRender(
-    <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
-  );
+  rtlRender(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 
 const nav = vi.hoisted(() => ({ qs: "", push: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -39,7 +38,11 @@ vi.mock("@/components/galleries/MediaThumb", () => ({
   MediaThumb: ({ alt }: { alt?: string }) => <span>{alt}</span>,
 }));
 vi.mock("@/components/media/UploadZone", () => ({
-  UploadZone: () => <div data-testid="upload-zone" />,
+  UploadZone: ({ onComplete }: { onComplete?: (m: unknown) => void }) => (
+    <div data-testid="upload-zone">
+      <button onClick={() => onComplete?.({ id: "new" })}>finish-upload</button>
+    </div>
+  ),
 }));
 vi.mock("@/components/galleries/GalleryCreateModal", () => ({
   GalleryCreateModal: ({ open }: { open: boolean }) =>
@@ -66,6 +69,7 @@ const mediaItem = (id: string, title: string) => ({
 });
 
 beforeEach(() => {
+  qc = new QueryClient();
   nav.qs = "";
   nav.push.mockClear();
   hooks.list.mockReturnValue({
@@ -173,5 +177,35 @@ describe("PhotosPage", () => {
       screen.getAllByRole("button", { name: /Open photo/ })[0],
     );
     expect(screen.getByTestId("lightbox")).toBeInTheDocument();
+  });
+
+  it("upload completion invalidates home media and shows All photos", async () => {
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    render(<PhotosPage />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Upload photos" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "finish-upload" }),
+    );
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["home-media"] });
+    expect(nav.push).toHaveBeenCalledWith("/app/photos?view=all");
+  });
+
+  it("renders upload-sourced items with a fallback title", () => {
+    nav.qs = "view=all";
+    hooks.media.mockReturnValue({
+      data: {
+        items: [
+          { ...mediaItem("u1", ""), source: "upload", source_title: null },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<PhotosPage />);
+    expect(
+      screen.getByRole("button", { name: "Open photo: Your uploads" }),
+    ).toBeInTheDocument();
   });
 });

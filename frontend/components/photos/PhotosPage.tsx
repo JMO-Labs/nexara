@@ -23,10 +23,13 @@ import { LightboxConnected } from "@/components/galleries/galleries-page/Lightbo
 import { UploadZone } from "@/components/media/UploadZone";
 import { useGalleryListInfinite } from "@/hooks/useGalleries";
 import { useHomeMedia } from "@/hooks/useHomeMedia";
-import { qk } from "@/lib/query-keys";
+import { photoTitle } from "@/lib/photoTitle";
 import type { GalleryItem } from "@/lib/api/galleries";
 import { AlbumGrid } from "./AlbumGrid";
 import { AllPhotos } from "./AllPhotos";
+
+/** Prefix of every useHomeMedia query key (any limit/scope). */
+const HOME_MEDIA_KEY = ["home-media"] as const;
 
 type View = "albums" | "all";
 type Sort = "recent" | "popular" | "oldest";
@@ -94,7 +97,7 @@ export function PhotosPage() {
     gallery_id: m.source_id,
     media_id: m.media_id,
     added_by: "",
-    caption: m.source_title,
+    caption: photoTitle(m),
     position: i,
     created_at: m.media.created_at,
   }));
@@ -149,9 +152,10 @@ export function PhotosPage() {
       {uploadOpen && (
         <Panel title="Upload photos" className="mt-4">
           <UploadZone
-            onComplete={() =>
-              qc.invalidateQueries({ queryKey: qk.home.media(60) })
-            }
+            onComplete={() => {
+              qc.invalidateQueries({ queryKey: HOME_MEDIA_KEY });
+              if (view !== "all") setView("all");
+            }}
           />
         </Panel>
       )}

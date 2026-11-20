@@ -7,6 +7,7 @@
 import { Images } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
+import { photoTitle } from "@/lib/photoTitle";
 import type { HomeMediaItem } from "@/lib/api/home";
 
 export interface AllPhotosProps {
@@ -65,22 +66,25 @@ export function AllPhotos({
   }
   return (
     <ul className={GRID} aria-label="All photos">
-      {items.map((it, i) => (
-        <li key={`${it.source}-${it.source_id}-${it.media_id}`}>
-          <button
-            type="button"
-            aria-label={`Open photo${it.source_title ? `: ${it.source_title}` : ""}`}
-            onClick={() => onOpen(i)}
-            className="bg-bg relative block aspect-square w-full overflow-hidden rounded-2xl outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <MediaThumb
-              mediaId={it.media_id}
-              alt={it.media.alt_text || it.source_title || "Photo"}
-              zoomOnHover
-            />
-          </button>
-        </li>
-      ))}
+      {items.map((it, i) => {
+        const title = photoTitle(it);
+        return (
+          <li key={`${it.source}-${it.source_id}-${it.media_id}`}>
+            <button
+              type="button"
+              aria-label={`Open photo${title ? `: ${title}` : ""}`}
+              onClick={() => onOpen(i)}
+              className="bg-bg relative block aspect-square w-full overflow-hidden rounded-2xl outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <MediaThumb
+                mediaId={it.media_id}
+                alt={it.media.alt_text || title || "Photo"}
+                zoomOnHover
+              />
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

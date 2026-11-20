@@ -53,4 +53,15 @@ describe("PhotosTile", () => {
       "/app/photos",
     );
   });
+
+  it("titles upload-sourced items 'Your uploads'", () => {
+    data = {
+      items: [{ ...item(1), source: "upload", source_title: null }],
+      next_cursor: null,
+    };
+    renderWithProviders(ui());
+    expect(
+      screen.getByRole("heading", { name: "Your uploads" }),
+    ).toBeInTheDocument();
+  });
 });

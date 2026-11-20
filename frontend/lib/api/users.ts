@@ -17,6 +17,11 @@ export interface CurrentUser {
   two_factor_enabled?: boolean;
   tour_completed_at: string | null;
   community_id?: string;
+  bio?: string | null;
+  title?: string | null;
+  pronouns?: string | null;
+  location?: string | null;
+  website_url?: string | null;
 }
 
 export interface UserSummary {
