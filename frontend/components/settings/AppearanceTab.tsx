@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
 import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { UserSettings } from "@/lib/api/settings";
+import { PatternPicker } from "./PatternPicker";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
 type FontSize = UserSettings["font_size"];
@@ -122,6 +123,31 @@ export function AppearanceTab() {
           aria-label="Compact feed"
           checked={settings.compact_feed}
           onCheckedChange={(v) => mutate({ compact_feed: v })}
+          disabled={isPending}
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Background pattern"
+        description="Pattern behind your home page."
+      >
+        <PatternPicker
+          label="Background pattern"
+          value={settings.home_pattern ?? null}
+          onChange={(v) => mutate({ home_pattern: v })}
+          allowDefault
+          disabled={isPending}
+        />
+      </SettingsRow>
+
+      <SettingsRow
+        label="Reduce transparency"
+        description="Makes panels solid. Easier to read on busy backgrounds."
+      >
+        <Switch
+          aria-label="Reduce transparency"
+          checked={settings.reduce_transparency ?? false}
+          onCheckedChange={(v) => mutate({ reduce_transparency: v })}
           disabled={isPending}
         />
       </SettingsRow>

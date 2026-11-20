@@ -24,6 +24,7 @@ import { BrandingPreview } from "./BrandingPreview";
 import { CSSEditor } from "./CSSEditor";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
+import { PatternPicker } from "@/components/settings/PatternPicker";
 import { ThemeGallery } from "./ThemeGallery";
 import { AdminLoading, AdminNotice } from "./AdminState";
 
@@ -44,6 +45,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
   );
   const extraInit = extraInitial(initial);
   const [extra, setExtra] = useState(extraInit);
+  const [pattern, setPattern] = useState(initial.home_pattern);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const changed = COLOR_FIELDS.filter(
@@ -71,6 +73,7 @@ function BrandingForm({ initial }: { initial: Branding }) {
       {
         community_name: name.trim(),
         tagline,
+        ...(pattern !== initial.home_pattern ? { home_pattern: pattern } : {}),
         ...extraChanges(extra, extraInit),
         ...Object.fromEntries(changed.map((k) => [k, colors[k]])),
         ...(font !== (initial.font_family ?? "Inter")
@@ -119,6 +122,11 @@ function BrandingForm({ initial }: { initial: Branding }) {
           kind="mono"
           value={mono}
           onChange={setMono}
+        />
+        <PatternPicker
+          label="Default home pattern"
+          value={pattern}
+          onChange={(v) => v && setPattern(v)}
         />
         <BrandingExtraFields value={extra} onChange={setExtra} />
       </div>

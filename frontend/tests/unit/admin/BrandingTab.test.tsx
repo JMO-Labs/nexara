@@ -92,6 +92,30 @@ describe("BrandingTab", () => {
     });
   });
 
+  it("saves the default home pattern", async () => {
+    vi.mocked(api.updateBranding).mockResolvedValue({ branding: base });
+    wrap(<BrandingTab />);
+    const group = await screen.findByRole("radiogroup", {
+      name: "Default home pattern",
+    });
+    expect(group).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: "Community default" }),
+    ).toBeNull();
+    expect(screen.getByRole("radio", { name: "Contour" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("radio", { name: "Dots" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save branding/i }),
+    );
+    await waitFor(() => expect(api.updateBranding).toHaveBeenCalled());
+    expect(vi.mocked(api.updateBranding).mock.calls[0][0]).toMatchObject({
+      home_pattern: "dots",
+    });
+  });
+
   it("disables save on an invalid media ID", async () => {
     wrap(<BrandingTab />);
     await userEvent.type(

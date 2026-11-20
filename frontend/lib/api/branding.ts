@@ -36,6 +36,7 @@ export interface Branding {
 }
 
 export interface BrandingUpdate {
+  home_pattern?: HomePattern;
   community_name?: string;
   tagline?: string;
   color_accent?: string;

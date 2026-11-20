@@ -34,6 +34,8 @@ const mockSettings = {
   notif_invite_accepted_inapp: true,
   notif_invite_accepted_email: false,
   mute_all_email: false,
+  home_pattern: null,
+  reduce_transparency: false,
 };
 
 const createWrapper = () => {
@@ -131,5 +133,54 @@ describe("AppearanceTab", () => {
       .setup()
       .click(screen.getByRole("radio", { name: "Compact" }));
     await waitFor(() => expect(useUI.getState().density).toBe("compact"));
+  });
+
+  it("saves background pattern choices, including community default", async () => {
+    const mutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateSettings).mockReturnValue({
+      mutate,
+      isPending: false,
+    } as any);
+    render(<AppearanceTab />, { wrapper: createWrapper() });
+    const user = userEvent.setup();
+    expect(
+      screen.getByRole("radio", { name: "Community default" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("radio", { name: "Waves" }));
+    expect(mutate).toHaveBeenCalledWith({ home_pattern: "waves" });
+  });
+
+  it("sends null for community default", async () => {
+    const mutate = vi.fn();
+    vi.mocked(settingsHooks.useUserSettings).mockReturnValue({
+      data: { ...mockSettings, home_pattern: "dots" },
+    } as any);
+    vi.mocked(settingsHooks.useUpdateSettings).mockReturnValue({
+      mutate,
+      isPending: false,
+    } as any);
+    render(<AppearanceTab />, { wrapper: createWrapper() });
+    await userEvent
+      .setup()
+      .click(screen.getByRole("radio", { name: "Community default" }));
+    expect(mutate).toHaveBeenCalledWith({ home_pattern: null });
+  });
+
+  it("toggles reduce transparency", async () => {
+    const mutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateSettings).mockReturnValue({
+      mutate,
+      isPending: false,
+    } as any);
+    render(<AppearanceTab />, { wrapper: createWrapper() });
+    expect(
+      screen.getByText(
+        "Makes panels solid. Easier to read on busy backgrounds.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("switch", { name: "Reduce transparency" }));
+    expect(mutate).toHaveBeenCalledWith({ reduce_transparency: true });
   });
 });

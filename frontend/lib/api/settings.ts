@@ -32,6 +32,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   notif_invite_accepted_inapp: boolean;
   notif_invite_accepted_email: boolean;
   mute_all_email: boolean;
+  home_pattern?: HomePattern | null;
+  reduce_transparency?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }
