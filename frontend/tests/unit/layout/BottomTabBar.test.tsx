@@ -64,10 +64,9 @@ describe("BottomTabBar", () => {
   it("MoreSheet lists overflow items, no Admin for non-admin", () => {
     render(<MoreSheet open onClose={() => {}} />);
     const dlg = screen.getByRole("dialog", { name: "More" });
-    for (const n of ["People", "Saved", "Notifications", "Settings"])
+    for (const n of ["Community", "Inbox", "Settings"])
       expect(dlg).toContainElement(screen.getByRole("link", { name: n }));
-    expect(dlg).toContainElement(screen.getByRole("button", { name: "Help" }));
-    expect(screen.queryByRole("link", { name: "Help" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Help" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
   });
 

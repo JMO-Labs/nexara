@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatRealtime } from "@/hooks/useChat";
-import { TAB_NAV, isNavActive, type NavItem } from "./navItems";
+import { TAB_NAV, isItemActive, type NavItem } from "./navItems";
 import { CreateMenu } from "./CreateMenu";
 
 /** Bottom padding Shell applies so content clears the bar. */
@@ -31,8 +31,9 @@ export function BottomTabBar() {
   const { unread } = useChatRealtime();
   const total = Object.values(unread).reduce((a, b) => a + b, 0);
 
-  const item = ({ label, href = "/app", Icon }: NavItem) => {
-    const active = isNavActive(pathname, href);
+  const item = (nav: NavItem) => {
+    const { label, href, Icon } = nav;
+    const active = isItemActive(pathname, nav);
     return (
       <Link
         key={href}

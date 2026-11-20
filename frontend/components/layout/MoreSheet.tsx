@@ -7,7 +7,6 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { Drawer } from "@/components/ui/Drawer";
 import { useSession } from "@/stores/session";
-import { useModals } from "@/stores/modals";
 import { useSignOut } from "@/hooks/useSignOut";
 import { MORE_NAV, PHONE_EXTRA_NAV, isAdmin, visibleNav } from "./navItems";
 
@@ -27,7 +26,6 @@ export function MoreSheet({
   onClose: () => void;
 }) {
   const admin = useSession((s) => isAdmin(s.user));
-  const setHelpOpen = useModals((s) => s.setKeyboardShortcutsOpen);
   const signOut = useSignOut();
   const onLogout = async () => {
     onClose();
@@ -38,26 +36,12 @@ export function MoreSheet({
     <Drawer open={open} onClose={onClose} title="More" side="bottom">
       <ul className="m-0 list-none p-0">
         {[...PHONE_EXTRA_NAV, ...visibleNav(MORE_NAV, admin)].map(
-          ({ label, href, action, Icon }) => (
+          ({ label, href, Icon }) => (
             <li key={label}>
-              {action === "help" || !href ? (
-                <button
-                  type="button"
-                  className={ROW}
-                  onClick={() => {
-                    onClose();
-                    setHelpOpen(true);
-                  }}
-                >
-                  <Icon aria-hidden className="size-5" />
-                  <span>{label}</span>
-                </button>
-              ) : (
-                <Link href={href} onClick={onClose} className={ROW}>
-                  <Icon aria-hidden className="size-5" />
-                  <span>{label}</span>
-                </Link>
-              )}
+              <Link href={href} onClick={onClose} className={ROW}>
+                <Icon aria-hidden className="size-5" />
+                <span>{label}</span>
+              </Link>
             </li>
           ),
         )}

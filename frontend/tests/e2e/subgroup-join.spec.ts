@@ -38,7 +38,7 @@ test("user joins an open subgroup and leaves it again", async ({ page }) => {
   await api.post(`/api/v1/subgroups/${slug}/leave`);
 
   await login(page);
-  await page.goto("/app/subgroups");
+  await page.goto("/app/community?view=groups");
   await page.getByRole("searchbox", { name: "Search groups" }).fill(name);
 
   const card = page

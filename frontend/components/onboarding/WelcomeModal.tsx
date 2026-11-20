@@ -32,7 +32,7 @@ const ACTIONS: ActionLink[] = [
   {
     icon: Users,
     label: "Find friends",
-    href: "/app/members",
+    href: "/app/community",
     description: "Connect with community members",
   },
   {

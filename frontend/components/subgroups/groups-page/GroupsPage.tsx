@@ -36,9 +36,10 @@ const SCOPES: { value: Scope; label: string }[] = [
 
 /**
  * @brief Groups index page body.
+ * @param props embedded hides the PageHeader and moves "New group" into the Toolbar
  * @return page content
  */
-export function GroupsPage() {
+export function GroupsPage({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -68,11 +69,15 @@ export function GroupsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Groups"
-        description={`${total} ${total === 1 ? "circle" : "circles"} in the community`}
-        actions={<Button onClick={() => setCreateOpen(true)}>New group</Button>}
-      />
+      {!embedded && (
+        <PageHeader
+          title="Groups"
+          description={`${total} ${total === 1 ? "circle" : "circles"} in the community`}
+          actions={
+            <Button onClick={() => setCreateOpen(true)}>New group</Button>
+          }
+        />
+      )}
       <Toolbar>
         <SearchField
           value={query}
@@ -92,6 +97,9 @@ export function GroupsPage() {
           value={scope}
           onChange={setScope}
         />
+        {embedded && (
+          <Button onClick={() => setCreateOpen(true)}>New group</Button>
+        )}
       </Toolbar>
       <GroupMosaic
         data={filtered}

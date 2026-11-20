@@ -9,7 +9,10 @@ import userEvent from "@testing-library/user-event";
 import { list } from "../listFixtures";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
     sel({ user: { community_id: "c1" } }),
@@ -102,10 +105,20 @@ describe("list page views", () => {
     expect(push).toHaveBeenCalledWith("/app/lists/l9");
   });
 
+  it("embedded browse view drops its header and keeps the buttons", () => {
+    render(<ListsBrowseView embedded />);
+    expect(screen.queryByRole("heading", { name: "Lists" })).toBeNull();
+    expect(screen.getByRole("link", { name: /New list/ })).toHaveAttribute(
+      "href",
+      "/app/lists/new",
+    );
+    expect(screen.getByRole("link", { name: /Templates/ })).toBeVisible();
+  });
+
   it("new view opens the create modal and returns on close", async () => {
     render(<ListNewView />);
     await userEvent.click(screen.getByText("close create"));
-    expect(push).toHaveBeenCalledWith("/app/lists");
+    expect(push).toHaveBeenCalledWith("/app/inbox?view=lists");
   });
 
   it("detail view renders loading, error and panel states", () => {

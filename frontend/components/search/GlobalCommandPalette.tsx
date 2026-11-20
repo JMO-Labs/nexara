@@ -61,7 +61,7 @@ const NAV_ACTIONS: CommandItem[] = [
   {
     id: "nav-subgroups",
     label: "Subgroups",
-    hint: "/app/subgroups",
+    hint: "/app/community?view=groups",
     group: "Jump to",
     onSelect: () => {},
   },
@@ -102,7 +102,7 @@ function PaletteBody() {
       if (item.type === "posts") {
         href = `/app/post/${item.id}`;
       } else if (item.type === "users") {
-        href = `/app/members?user=${item.id}`;
+        href = `/app/members/${item.id}`;
       } else if (item.type === "events") {
         href = `/app/events?event=${item.id}`;
       } else if (item.type === "polls") {
@@ -150,7 +150,8 @@ function PaletteBody() {
         if (nav.id === "nav-feed") href = "/app";
         else if (nav.id === "nav-chat") href = "/app/chat";
         else if (nav.id === "nav-events") href = "/app/events";
-        else if (nav.id === "nav-subgroups") href = "/app/subgroups";
+        else if (nav.id === "nav-subgroups")
+          href = "/app/community?view=groups";
         else if (nav.id === "nav-galleries") href = "/app/photos";
         else if (nav.id === "nav-settings") href = "/app/settings";
         router.push(href);

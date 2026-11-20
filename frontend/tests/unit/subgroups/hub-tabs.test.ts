@@ -13,10 +13,11 @@ describe("GROUP_TABS", () => {
       "galleries",
       "media",
       "posts",
+      "lists",
       "members",
       "settings",
     ];
-    expect(GROUP_TABS).toHaveLength(7);
+    expect(GROUP_TABS).toHaveLength(8);
 
     GROUP_TABS.forEach((tab) => {
       expect(tabIds).toContain(tab.id);
@@ -32,6 +33,7 @@ describe("GROUP_TABS", () => {
       galleries: "PhotoIcon",
       media: "FilmIcon",
       posts: "NewspaperIcon",
+      lists: "ListIcon",
       members: "UsersIcon",
       settings: "Cog6ToothIcon",
     };
@@ -43,6 +45,11 @@ describe("GROUP_TABS", () => {
       // Verify Icon is callable (React component)
       expect(typeof tab?.Icon).not.toBe("undefined");
     });
+  });
+
+  it("places lists right after posts", () => {
+    const ids = GROUP_TABS.map((t) => t.id);
+    expect(ids[ids.indexOf("posts") + 1]).toBe("lists");
   });
 
   it("settings tab has visible() predicate for role check", () => {

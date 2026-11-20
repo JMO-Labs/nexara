@@ -77,6 +77,15 @@ describe("MemberProfilePage", () => {
     expect(screen.queryByText(/u2/)).toBeNull();
   });
 
+  it("back link returns to the Community page", () => {
+    asUser("u1");
+    renderWithProviders(<MemberProfilePage />);
+    expect(screen.getByRole("link", { name: "Community" })).toHaveAttribute(
+      "href",
+      "/app/community",
+    );
+  });
+
   it("opens a DM from the Message button", async () => {
     asUser("u1");
     mutateAsync.mockResolvedValue({ id: "c9" });

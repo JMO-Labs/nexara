@@ -30,7 +30,7 @@ export function MemberProfile({ userId }: { userId: string }) {
   const viewerId = useSession((s) => s.user?.id);
   const profile = useMemberProfile(userId);
   const connection = useMemberConnection(userId, profile.data?.username);
-  const back = { href: "/app/members", label: "People" };
+  const back = { href: "/app/community", label: "Community" };
 
   if (profile.isLoading) {
     return (

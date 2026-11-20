@@ -46,17 +46,17 @@ test("bottom tab bar navigates between sections", async ({ page }) => {
   }
 });
 
-test("More sheet contains Groups and navigates to it", async ({ page }) => {
+test("More sheet contains Community and navigates to it", async ({ page }) => {
   await login(page);
   const sheet = page.getByRole("dialog", { name: "More" });
   await expect(async () => {
     await page.getByRole("button", { name: "More" }).tap();
     await expect(sheet).toBeVisible({ timeout: 1_500 });
   }).toPass({ timeout: 15_000 });
-  for (const name of ["Groups", "People", "Settings"]) {
+  for (const name of ["Community", "Inbox", "Settings"]) {
     await expect(sheet.getByRole("link", { name })).toBeVisible();
   }
-  await sheet.getByRole("link", { name: "Groups" }).tap();
-  await expect(page).toHaveURL(/\/app\/subgroups/);
+  await sheet.getByRole("link", { name: "Community" }).tap();
+  await expect(page).toHaveURL(/\/app\/community/);
   await expect(sheet).toBeHidden();
 });

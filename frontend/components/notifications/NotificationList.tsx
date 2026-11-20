@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/notifications/NotificationList.tsx
- * @brief Notification history list shared by the drawer and /app/notifications.
+ * @brief Notification history list shared by the drawer and /app/inbox.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";

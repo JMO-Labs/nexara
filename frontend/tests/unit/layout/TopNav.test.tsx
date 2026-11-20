@@ -5,8 +5,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const state = vi.hoisted(() => ({ dir: "up", reduced: false }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/app/events" }));
+const state = vi.hoisted(() => ({
+  dir: "up",
+  reduced: false,
+  path: "/app/events",
+}));
+vi.mock("next/navigation", () => ({ usePathname: () => state.path }));
 vi.mock("@/hooks/useScrollDirection", () => ({
   useScrollDirection: () => state.dir,
 }));
@@ -21,6 +25,16 @@ describe("TopNav", () => {
   beforeEach(() => {
     state.dir = "up";
     state.reduced = false;
+    state.path = "/app/events";
+  });
+
+  it("keeps Community active on legacy member routes", () => {
+    state.path = "/app/members/u1";
+    render(<TopNav />);
+    expect(screen.getByRole("link", { name: "Community" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("marks the current route", () => {

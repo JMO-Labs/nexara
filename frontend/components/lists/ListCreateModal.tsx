@@ -38,6 +38,8 @@ export interface ListCreateModalProps {
   open: boolean;
   onClose: () => void;
   communityId: string;
+  /** Create the list inside this group (visibility "subgroup"). */
+  subgroupId?: string | null;
 }
 
 /**
@@ -49,6 +51,7 @@ export function ListCreateModal({
   open,
   onClose,
   communityId,
+  subgroupId,
 }: ListCreateModalProps) {
   const formId = useId();
   const create = useListCreate(communityId);
@@ -81,7 +84,10 @@ export function ListCreateModal({
       {
         title: d.title,
         description: d.description || null,
-        visibility: d.visibility,
+        // ponytail: template clones stay ungrouped; clone API has no subgroup_id.
+        ...(subgroupId
+          ? { visibility: "subgroup" as const, subgroupId }
+          : { visibility: d.visibility }),
         color: d.color,
       },
       done,

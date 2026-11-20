@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Film,
   Newspaper,
+  List,
   Users,
   Settings,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import { EventsTab } from "./EventsTab";
 import { GalleriesTab } from "./GalleriesTab";
 import { MediaTab } from "./MediaTab";
 import { PostsTab } from "./PostsTab";
+import { ListsTab } from "./ListsTab";
 import { MembersTab } from "./MembersTab";
 import { SettingsTab } from "./SettingsTab";
 
@@ -47,6 +49,7 @@ export const GROUP_TABS: GroupTab[] = [
   },
   { id: "media", label: "Media", Icon: Film, Component: MediaTab },
   { id: "posts", label: "Posts", Icon: Newspaper, Component: PostsTab },
+  { id: "lists", label: "Lists", Icon: List, Component: ListsTab },
   { id: "members", label: "Members", Icon: Users, Component: MembersTab },
   {
     id: "settings",

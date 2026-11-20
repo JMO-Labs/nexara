@@ -219,7 +219,7 @@ describe("GlobalCommandPalette", () => {
     const item = screen.getByText("John Doe").closest('[role="option"]');
     await user.click(item!);
 
-    expect(mockPush).toHaveBeenCalledWith("/app/members?user=u1");
+    expect(mockPush).toHaveBeenCalledWith("/app/members/u1");
   });
 
   it("navigates to event when event result selected", async () => {
@@ -380,6 +380,30 @@ describe("GlobalCommandPalette", () => {
     await waitFor(() => {
       expect(useUI.getState().commandPaletteOpen).toBe(false);
     });
+  });
+
+  it("Subgroups jump item opens the Community groups view", async () => {
+    (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: { items: [], next_cursor: null, has_more: false },
+      isLoading: false,
+    });
+
+    render(
+      <QueryClientProvider client={qc}>
+        <GlobalCommandPalette />
+      </QueryClientProvider>,
+    );
+
+    act(() => useUI.getState().setCommandPaletteOpen(true));
+    await screen.findByRole("combobox");
+    const user = userEvent.setup();
+
+    await waitFor(() => {
+      expect(screen.getByText("Subgroups")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Subgroups").closest('[role="option"]')!);
+
+    expect(mockPush).toHaveBeenCalledWith("/app/community?view=groups");
   });
 
   it("navigates when navigation item is clicked", async () => {

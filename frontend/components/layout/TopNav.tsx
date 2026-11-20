@@ -9,7 +9,6 @@ import { ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
-import { useModals } from "@/stores/modals";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import {
   DropdownMenu,
@@ -21,7 +20,7 @@ import {
   MORE_NAV,
   TOP_NAV,
   isAdmin,
-  isNavActive,
+  isItemActive,
   visibleNav,
 } from "./navItems";
 
@@ -38,7 +37,6 @@ export function TopNav() {
   const dir = useScrollDirection(80);
   const admin = useSession((s) => isAdmin(s.user));
   const compact = dir === "down" && !reduced;
-  const setHelpOpen = useModals((s) => s.setKeyboardShortcutsOpen);
   const more = visibleNav(MORE_NAV, admin);
   return (
     <motion.nav
@@ -48,8 +46,9 @@ export function TopNav() {
       data-compact={compact ? "true" : undefined}
       className="glass flex items-center gap-0.5 rounded-full p-1"
     >
-      {TOP_NAV.map(({ label, href = "/app" }) => {
-        const active = isNavActive(pathname, href);
+      {TOP_NAV.map((item) => {
+        const { label, href } = item;
+        const active = isItemActive(pathname, item);
         if (compact && !active) return null;
         return (
           <Link
@@ -80,24 +79,14 @@ export function TopNav() {
             align="end"
             className="glass min-w-48 rounded-3xl bg-[var(--nx-glass-solid)]"
           >
-            {more.map(({ label, href, action, Icon }) =>
-              action === "help" || !href ? (
-                <DropdownMenuItem
-                  key={label}
-                  onSelect={() => setHelpOpen(true)}
-                >
+            {more.map(({ label, href, Icon }) => (
+              <DropdownMenuItem key={label} asChild>
+                <Link href={href}>
                   <Icon aria-hidden className="size-4" />
                   {label}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem key={label} asChild>
-                  <Link href={href}>
-                    <Icon aria-hidden className="size-4" />
-                    {label}
-                  </Link>
-                </DropdownMenuItem>
-              ),
-            )}
+                </Link>
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

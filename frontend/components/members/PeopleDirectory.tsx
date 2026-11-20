@@ -25,9 +25,10 @@ const OPTIONS: { value: DirectoryFilter; label: string }[] = [
 
 /**
  * @brief Directory page body.
+ * @param props embedded hides the PageHeader (used inside Community)
  * @return header, toolbar and results grid
  */
-export function PeopleDirectory() {
+export function PeopleDirectory({ embedded = false }: { embedded?: boolean }) {
   const [q, setQ] = React.useState("");
   const [filter, setFilter] = React.useState<DirectoryFilter>("all");
   const query = useDirectory(q.trim(), filter);
@@ -35,10 +36,12 @@ export function PeopleDirectory() {
 
   return (
     <>
-      <PageHeader
-        title="People"
-        description="Everyone in your community, and the groups you share."
-      />
+      {!embedded && (
+        <PageHeader
+          title="People"
+          description="Everyone in your community, and the groups you share."
+        />
+      )}
       <Toolbar>
         <SearchField
           value={q}

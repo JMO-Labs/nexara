@@ -19,6 +19,8 @@ export interface ListCardGridProps {
   visibility?: string;
   /** Sort order; default most recently updated first. */
   sortBy?: ListSort;
+  /** Only show lists belonging to this group; all when omitted. */
+  subgroupId?: string;
 }
 
 export type ListSort = "updated" | "created" | "title";
@@ -44,6 +46,7 @@ export function ListCardGrid({
   ownerName,
   visibility,
   sortBy = "updated",
+  subgroupId,
 }: ListCardGridProps) {
   const { data, isLoading } = useLists(communityId);
   if (isLoading) {
@@ -57,6 +60,7 @@ export function ListCardGrid({
   }
   const lists = (data?.lists ?? [])
     .filter((l) => !visibility || l.visibility === visibility)
+    .filter((l) => !subgroupId || l.subgroupId === subgroupId)
     .sort(SORTERS[sortBy]);
   if (lists.length === 0) {
     return <EmptyState icon={ListChecks} title="No lists yet" compact />;

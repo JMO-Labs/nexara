@@ -1,58 +1,27 @@
-"use client";
 /**
  * @file app/app/notifications/page.tsx
- * @brief Notifications page: All/Unread filter, mark all read, shared list.
+ * @brief Legacy notifications route; redirects to /app/inbox keeping the query.
  */
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/Button";
-import { Panel, PageHeader, Segmented, Toolbar } from "@/components/ui/page";
-import {
-  NotificationList,
-  type NotificationFilter,
-} from "@/components/notifications/NotificationList";
-import { useNotificationsSync } from "@/hooks/useNotificationsSync";
-import { markAllRead } from "@/lib/api/notifications";
+import { redirect } from "next/navigation";
 
-/** @brief Notifications route. */
-export default function NotificationsPage() {
-  const t = useTranslations("notifications");
-  const qc = useQueryClient();
-  useNotificationsSync();
-  const [filter, setFilter] = useState<NotificationFilter>("all");
-  const markAll = useMutation({
-    mutationFn: markAllRead,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["notifications"] }),
-  });
-  return (
-    <>
-      <PageHeader
-        title={t("title")}
-        actions={
-          <Button
-            variant="secondary"
-            loading={markAll.isPending}
-            onClick={() => markAll.mutate()}
-          >
-            {t("markAllRead")}
-          </Button>
-        }
-      />
-      <Toolbar>
-        <Segmented
-          label={t("title")}
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: t("filter.all") },
-            { value: "unread", label: t("filter.unread") },
-          ]}
-        />
-      </Toolbar>
-      <Panel>
-        <NotificationList filter={filter} />
-      </Panel>
-    </>
-  );
+type SearchParams = Record<string, string | string[] | undefined>;
+
+/**
+ * @brief Redirect to the Inbox, preserving the query string.
+ * @param props searchParams promise
+ * @return never
+ */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (Array.isArray(v)) v.forEach((x) => qs.append(k, x));
+    else if (v !== undefined) qs.append(k, v);
+  }
+  const s = qs.toString();
+  redirect(s ? `/app/inbox?${s}` : "/app/inbox");
 }

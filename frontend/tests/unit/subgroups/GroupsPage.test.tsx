@@ -56,6 +56,19 @@ describe("GroupsPage", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
   });
 
+  it("embedded hides the header and puts New group in the toolbar", () => {
+    render(<GroupsPage embedded />);
+    expect(
+      screen.queryByRole("heading", { level: 1, name: "Groups" }),
+    ).toBeNull();
+    const buttons = screen.getAllByRole("button", { name: "New group" });
+    expect(buttons).toHaveLength(1);
+    const toolbar = buttons[0].closest(".flex-wrap");
+    expect(toolbar).toContainElement(
+      screen.getByRole("searchbox", { name: "Search groups" }),
+    );
+  });
+
   it("Private filter keeps only private groups", async () => {
     render(<GroupsPage />);
     await userEvent.click(screen.getByRole("radio", { name: "Private" }));

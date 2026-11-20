@@ -129,7 +129,10 @@ export function ErrorCard({
   );
 }
 
-export const LISTS_CRUMB: Crumb = { label: "Lists", href: "/app/lists" };
+export const LISTS_CRUMB: Crumb = {
+  label: "Lists",
+  href: "/app/inbox?view=lists",
+};
 export const TEMPLATES_CRUMB: Crumb = {
   label: "Templates",
   href: "/app/lists/templates",

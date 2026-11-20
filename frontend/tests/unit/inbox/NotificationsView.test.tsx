@@ -1,6 +1,6 @@
 /**
- * @file tests/unit/notifications/NotificationsPage.test.tsx
- * @brief /app/notifications: header, filter toggle, mark all read.
+ * @file tests/unit/inbox/NotificationsView.test.tsx
+ * @brief NotificationsView: filter toggle, list, mark all read.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/en-US.json";
 import { markAllRead } from "@/lib/api/notifications";
-import NotificationsPage from "@/app/app/notifications/page";
+import { NotificationsView } from "@/components/inbox/NotificationsView";
 
 vi.mock("@/lib/api/notifications", () => ({
   markAllRead: vi.fn(),
@@ -27,20 +27,18 @@ function setup() {
   render(
     <NextIntlClientProvider locale="en-US" messages={messages}>
       <QueryClientProvider client={new QueryClient()}>
-        <NotificationsPage />
+        <NotificationsView />
       </QueryClientProvider>
     </NextIntlClientProvider>,
   );
 }
 
-describe("NotificationsPage", () => {
+describe("NotificationsView", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders title and list with the All filter", () => {
+  it("renders the list with the All filter and no page heading", () => {
     setup();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Notifications" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(screen.getByTestId("list")).toHaveTextContent("all");
   });
 

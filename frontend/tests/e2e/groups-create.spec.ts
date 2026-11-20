@@ -32,7 +32,7 @@ test("create a group, then another user joins and leaves it", async ({
   test.setTimeout(90_000);
   const name = `E2E circle ${Date.now().toString(36)}`;
   await login(page);
-  await page.goto("/app/subgroups");
+  await page.goto("/app/community?view=groups");
 
   const newGroup = page.getByRole("button", { name: "New group" });
   const dialog = page.getByRole("dialog", { name: "New group" });
@@ -59,7 +59,7 @@ test("create a group, then another user joins and leaves it", async ({
 
   const other = await createSecondUser(browser, request, "eg");
   try {
-    await other.page.goto("/app/subgroups");
+    await other.page.goto("/app/community?view=groups");
     await other.page
       .getByRole("searchbox", { name: "Search groups" })
       .fill(name);

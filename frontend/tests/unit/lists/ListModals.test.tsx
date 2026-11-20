@@ -46,6 +46,23 @@ describe("ListCreateModal", () => {
     );
   });
 
+  it("creates inside a group when subgroupId is given", async () => {
+    render(
+      <ListCreateModal
+        open
+        onClose={vi.fn()}
+        communityId="c1"
+        subgroupId="g1"
+      />,
+    );
+    await userEvent.type(screen.getByLabelText("Title"), "Chores");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(h.create.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ visibility: "subgroup", subgroupId: "g1" }),
+      expect.anything(),
+    );
+  });
+
   it("requires a template in template mode, then clones", async () => {
     render(<ListCreateModal open onClose={vi.fn()} communityId="c1" />);
     await userEvent.click(screen.getByRole("radio", { name: "From template" }));

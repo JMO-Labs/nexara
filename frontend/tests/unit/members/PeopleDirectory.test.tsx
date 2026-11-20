@@ -20,7 +20,7 @@ vi.mock("@/hooks/useMembers", () => ({
   useDirectory: (q: string, f: string) => useDirectory(q, f),
 }));
 
-import MembersPage from "@/app/app/members/page";
+import { PeopleDirectory } from "@/components/members/PeopleDirectory";
 
 const person = (o: Record<string, unknown> = {}) => ({
   user_id: "u1",
@@ -57,7 +57,7 @@ afterEach(() => vi.useRealTimers());
 describe("PeopleDirectory", () => {
   it("renders header, card with groups, status and actions", () => {
     state = ready([person({ online: true })]);
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     expect(
       screen.getByRole("heading", { name: "People", level: 1 }),
     ).toBeInTheDocument();
@@ -67,9 +67,17 @@ describe("PeopleDirectory", () => {
     expect(screen.queryByText("u1")).toBeNull();
   });
 
+  it("embedded hides the page header but keeps the toolbar", () => {
+    renderWithProviders(<PeopleDirectory embedded />);
+    expect(
+      screen.queryByRole("heading", { name: "People", level: 1 }),
+    ).toBeNull();
+    expect(screen.getByLabelText("Search people")).toBeInTheDocument();
+  });
+
   it("Message opens a DM and Profile navigates", async () => {
     mutateAsync.mockResolvedValue({ id: "c1" });
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     fireEvent.click(screen.getByRole("button", { name: /Message Tomás/ }));
     await act(async () => {});
     expect(push).toHaveBeenCalledWith("/app/chat/c1");
@@ -80,7 +88,7 @@ describe("PeopleDirectory", () => {
   });
 
   it("debounces search by 250ms", () => {
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     fireEvent.change(screen.getByLabelText("Search people"), {
       target: { value: "tom" },
     });
@@ -92,7 +100,7 @@ describe("PeopleDirectory", () => {
   });
 
   it("filter segments change the query filter", () => {
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     fireEvent.click(screen.getByRole("radio", { name: "Online" }));
     expect(useDirectory).toHaveBeenLastCalledWith("", "online");
     fireEvent.click(screen.getByRole("radio", { name: "My groups" }));
@@ -100,24 +108,24 @@ describe("PeopleDirectory", () => {
   });
 
   it("shows Load more only when another page exists", () => {
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
   it("Load more fetches the next page", () => {
     state = ready([person()], true);
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(fetchNextPage).toHaveBeenCalled();
   });
 
   it("shows empty and loading states", () => {
     state = ready([]);
-    const { unmount } = renderWithProviders(<MembersPage />);
+    const { unmount } = renderWithProviders(<PeopleDirectory />);
     expect(screen.getByText("No one found")).toBeInTheDocument();
     unmount();
     state = { ...ready([]), isLoading: true, data: undefined };
-    renderWithProviders(<MembersPage />);
+    renderWithProviders(<PeopleDirectory />);
     expect(screen.getByTestId("people-skeleton")).toBeInTheDocument();
   });
 });

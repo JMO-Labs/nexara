@@ -1,11 +1,20 @@
+/**
+ * @file tests/unit/layout/navItems.test.ts
+ * @brief Nav config: top/more items, legacy match prefixes, active checks.
+ */
 import { describe, it, expect } from "vitest";
 import {
   TAB_NAV,
   TOP_NAV,
   MORE_NAV,
+  PHONE_EXTRA_NAV,
   visibleNav,
   isNavActive,
+  isItemActive,
 } from "@/components/layout/navItems";
+
+const find = (items: typeof TOP_NAV, label: string) =>
+  items.find((i) => i.label === label)!;
 
 describe("navItems", () => {
   it("tab nav is the single source", () => {
@@ -20,28 +29,27 @@ describe("navItems", () => {
       "Chat",
       "Calendar",
       "Photos",
-      "Groups",
+      "Community",
     ]);
   });
-  it("more nav labels and help action", () => {
+  it("Community is the top item and matches legacy routes", () => {
+    const community = find(TOP_NAV, "Community");
+    expect(community.href).toBe("/app/community");
+    expect(community.match).toEqual(["/app/members", "/app/subgroups"]);
+  });
+  it("phone extra nav is Community only", () => {
+    expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual(["Community"]);
+  });
+  it("more nav is Inbox, Settings, Admin", () => {
     expect(MORE_NAV.map((i) => i.label)).toEqual([
-      "People",
-      "Lists",
-      "Kudos",
-      "Saved",
-      "Notifications",
+      "Inbox",
       "Settings",
       "Admin",
-      "Help",
     ]);
-    const help = MORE_NAV.find((i) => i.label === "Help");
-    expect(help?.action).toBe("help");
-    expect(help?.href).toBeUndefined();
-  });
-  it("has Saved in more nav", () => {
-    expect(MORE_NAV.find((i) => i.label === "Saved")?.href).toBe(
-      "/app/bookmarks",
-    );
+    expect(find(MORE_NAV, "Inbox")).toMatchObject({
+      href: "/app/inbox",
+      match: ["/app/notifications", "/app/bookmarks", "/app/lists"],
+    });
   });
   it("hides Admin for non-admins", () => {
     expect(visibleNav(MORE_NAV, false).map((i) => i.label)).not.toContain(
@@ -49,14 +57,22 @@ describe("navItems", () => {
     );
     expect(visibleNav(MORE_NAV, true).map((i) => i.label)).toContain("Admin");
   });
-  it("has a Lists entry", () => {
-    expect(MORE_NAV).toContainEqual(
-      expect.objectContaining({ label: "Lists", href: "/app/lists" }),
-    );
-  });
   it("isNavActive", () => {
     expect(isNavActive("/app/chat/abc", "/app/chat")).toBe(true);
     expect(isNavActive("/app/chat", "/app")).toBe(false);
+  });
+  it("isItemActive also honours match prefixes", () => {
+    const community = find(TOP_NAV, "Community");
+    expect(isItemActive("/app/members/123", community)).toBe(true);
+    expect(isItemActive("/app/subgroups/choir", community)).toBe(true);
+    expect(isItemActive("/app/community", community)).toBe(true);
+    expect(isItemActive("/app/events", community)).toBe(false);
+  });
+  it("isItemActive honours Inbox match prefixes", () => {
+    const inbox = find(MORE_NAV, "Inbox");
+    expect(isItemActive("/app/bookmarks", inbox)).toBe(true);
+    expect(isItemActive("/app/lists/x", inbox)).toBe(true);
+    expect(isItemActive("/app/settings", inbox)).toBe(false);
   });
 });
 

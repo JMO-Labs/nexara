@@ -1,13 +1,20 @@
 /**
  * @file tests/unit/home/tiles/FeedTile.test.tsx
- * @brief FeedTile: scope filtering, empty states, summary count, link.
+ * @brief FeedTile: scope filtering, empty states, summary count, link,
+ *        feed filter pills (All / Kudos / Prompts) driven by ?feed=.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+const nav = vi.hoisted(() => ({
+  replace: vi.fn(),
+  params: new URLSearchParams(),
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: nav.replace }),
   usePathname: () => "/app",
+  useSearchParams: () => nav.params,
 }));
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { FeedItem } from "@/lib/api/home";
 
 const state = vi.hoisted(() => ({ hook: {} as Record<string, unknown> }));
@@ -33,6 +40,11 @@ vi.mock("@/components/feed/PostComposer", () => ({
 vi.mock("@/components/feed/KudosComposer", () => ({
   KudosComposer: () => null,
 }));
+vi.mock("@/components/feed/KudosWall", () => ({
+  KudosWall: (p: { embedded?: boolean }) => (
+    <div>kudos wall {p.embedded ? "embedded" : "page"}</div>
+  ),
+}));
 vi.mock("@/components/feed/PostCard", () => ({
   PostCard: ({ post }: { post: { id: string } }) => <div>post {post.id}</div>,
 }));
@@ -45,17 +57,19 @@ vi.mock("@/components/feed/ActivityLine", () => ({
 import { FeedTile } from "@/components/home/tiles/FeedTile";
 import { useHomeScope } from "@/stores/homeScope";
 
-const post = (id: string, sg: string | null) =>
+const post = (id: string, sg: string | null, extra = {}) =>
   ({
     kind: "post",
     id,
     created_at: "t",
-    post: { id, subgroup_id: sg },
+    post: { id, subgroup_id: sg, ...extra },
   }) as unknown as FeedItem;
 const act = (id: string) =>
   ({ kind: "activity", id, created_at: "t", activity: { id } }) as FeedItem;
 
 beforeEach(() => {
+  nav.replace.mockClear();
+  nav.params = new URLSearchParams();
   useHomeScope.setState({ scope: "all" });
   state.hook = {
     items: [post("pa", "a"), post("pb", "b"), act("x")],
@@ -122,5 +136,58 @@ describe("FeedTile", () => {
     expect(
       screen.getByRole("button", { name: "Create your first post" }),
     ).toBeTruthy();
+  });
+
+  it("shows All / Kudos / Prompts pills, All selected by default", () => {
+    render(ui());
+    const group = screen.getByRole("radiogroup", { name: "Feed filter" });
+    expect(group).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "All" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.getByRole("radio", { name: "Kudos" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Prompts" })).toBeTruthy();
+  });
+
+  it("?feed=kudos renders the embedded KudosWall, not the feed", () => {
+    nav.params = new URLSearchParams("feed=kudos");
+    render(ui());
+    expect(screen.getByText("kudos wall embedded")).toBeTruthy();
+    expect(screen.queryByText("post pa")).toBeNull();
+    expect(screen.queryByText("activity x")).toBeNull();
+    expect(
+      screen.getByRole("radio", { name: "Kudos" }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("?feed=prompts keeps only prompt replies and posts (drops normal posts and activity)", () => {
+    nav.params = new URLSearchParams("feed=prompts");
+    state.hook.items = [
+      post("reply", null, { reply_to_prompt_id: "p1" }),
+      post("prompt", null, { is_prompt_post: true }),
+      post("normal", null),
+      act("x"),
+    ];
+    render(ui());
+    expect(screen.getByText("post reply")).toBeTruthy();
+    expect(screen.getByText("post prompt")).toBeTruthy();
+    expect(screen.queryByText("post normal")).toBeNull();
+    expect(screen.queryByText("activity x")).toBeNull();
+  });
+
+  it("clicking Kudos replaces the URL with feed=kudos, keeping other params", async () => {
+    nav.params = new URLSearchParams("tile=photos");
+    render(ui());
+    await userEvent.click(screen.getByRole("radio", { name: "Kudos" }));
+    expect(nav.replace).toHaveBeenCalledWith("/app?tile=photos&feed=kudos", {
+      scroll: false,
+    });
+  });
+
+  it("clicking All removes the feed param", async () => {
+    nav.params = new URLSearchParams("feed=kudos");
+    render(ui());
+    await userEvent.click(screen.getByRole("radio", { name: "All" }));
+    expect(nav.replace).toHaveBeenCalledWith("/app", { scroll: false });
   });
 });

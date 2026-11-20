@@ -1,9 +1,13 @@
 /**
  * @file app/app/kudos/page.tsx
- * @brief Kudos Wall route.
+ * @brief Legacy Kudos route; redirects to the Home feed Kudos filter.
  */
-import { KudosWall } from "@/components/feed/KudosWall";
+import { redirect } from "next/navigation";
 
+/**
+ * @brief Redirect to /app with the Kudos feed filter selected.
+ * @return never
+ */
 export default function KudosPage() {
-  return <KudosWall />;
+  redirect("/app?feed=kudos");
 }

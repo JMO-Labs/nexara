@@ -2,6 +2,8 @@
 /**
  * @file components/feed/KudosWall.tsx
  * @brief Kudos Wall: grid of kudos with group filter, sort and load-more.
+ *        Embedded mode (Home feed tile) drops the page header and uses a
+ *        single-column list.
  */
 import * as React from "react";
 import { Trophy } from "lucide-react";
@@ -16,11 +18,17 @@ import { KudosComposer } from "./KudosComposer";
 const selectCls =
   "glass-btn h-9 rounded-full px-3 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
+export interface KudosWallProps {
+  /** Home feed tile: no page header, compact toolbar, single column. */
+  embedded?: boolean;
+}
+
 /**
  * @brief Kudos wall page body.
+ * @param embedded compact in-tile layout
  * @return wall element
  */
-export function KudosWall() {
+export function KudosWall({ embedded = false }: KudosWallProps = {}) {
   const t = useTranslations("kudos");
   const [group, setGroup] = React.useState("");
   const [sort, setSort] = React.useState<"newest" | "oldest">("newest");
@@ -38,16 +46,15 @@ export function KudosWall() {
     );
   }, [wall.data, group, sort]);
 
+  const sendButton = (
+    <Button className="rounded-full" onClick={() => setComposing(true)}>
+      {t("sendButton")}
+    </Button>
+  );
+
   return (
     <>
-      <PageHeader
-        title={t("wallTitle")}
-        actions={
-          <Button className="rounded-full" onClick={() => setComposing(true)}>
-            {t("sendButton")}
-          </Button>
-        }
-      />
+      {!embedded && <PageHeader title={t("wallTitle")} actions={sendButton} />}
       <Toolbar>
         <Segmented
           label={t("sort")}
@@ -71,6 +78,7 @@ export function KudosWall() {
             </option>
           ))}
         </select>
+        {embedded && sendButton}
       </Toolbar>
 
       {wall.isError ? (
@@ -82,7 +90,13 @@ export function KudosWall() {
           description={t("emptyDesc")}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className={
+            embedded
+              ? "flex flex-col gap-3"
+              : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          }
+        >
           {items.map((k) => (
             <KudosCard
               key={k.id}

@@ -47,6 +47,7 @@ const IDS = [
   "engagement",
   "storage",
   "plugins",
+  "help",
 ];
 
 describe("SettingsTabs", () => {
@@ -54,7 +55,7 @@ describe("SettingsTabs", () => {
     nav.tab = null;
   });
 
-  it("renders the Settings header and a nav with 9 tab links", () => {
+  it("renders the Settings header and a nav with 10 tab links", () => {
     render(<SettingsTabs />);
     expect(
       screen.getByRole("heading", { name: "Settings", level: 1 }),
@@ -88,6 +89,14 @@ describe("SettingsTabs", () => {
     expect(screen.getByRole("link", { name: "Account" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  it("shows the Help tab for ?tab=help", () => {
+    nav.tab = "help";
+    render(<SettingsTabs />);
+    expect(
+      screen.getByRole("button", { name: "Keyboard shortcuts" }),
+    ).toBeInTheDocument();
   });
 
   it("falls back to account for an unknown tab", () => {

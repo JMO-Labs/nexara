@@ -1,15 +1,27 @@
 /**
  * @file app/app/lists/page.tsx
- * @brief Lists route; renders ListsBrowseView.
+ * @brief Legacy lists index; redirects to /app/inbox?view=lists.
  */
-import type { Metadata } from "next";
-import { ListsBrowseView } from "@/components/lists/pages/ListsBrowseView";
-import { listsMetadata } from "@/components/lists/pages/metadata";
+import { redirect } from "next/navigation";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return listsMetadata("Lists", "Shared lists for your community.");
-}
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default function Page() {
-  return <ListsBrowseView />;
+/**
+ * @brief Redirect to the Inbox Lists tab, preserving other query params.
+ * @param props searchParams promise
+ * @return never
+ */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (Array.isArray(v)) v.forEach((x) => qs.append(k, x));
+    else if (v !== undefined) qs.append(k, v);
+  }
+  qs.set("view", "lists");
+  redirect(`/app/inbox?${qs}`);
 }

@@ -1,6 +1,6 @@
 /**
  * @file tests/e2e/people-directory.spec.ts
- * @brief /app/members: search finds a freshly registered user by username and
+ * @brief /app/community (People view): search finds a freshly registered user by username and
  *        the Profile button opens their profile page.
  */
 import { test, expect } from "@playwright/test";
@@ -16,7 +16,7 @@ test("search finds the second user and opens their profile", async ({
   const other = await createSecondUser(browser, request, "ep");
   try {
     await login(page);
-    await page.goto("/app/members");
+    await page.goto("/app/community");
     await page
       .getByRole("searchbox", { name: "Search people" })
       .fill(other.username);

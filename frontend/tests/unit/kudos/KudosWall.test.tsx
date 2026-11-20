@@ -29,12 +29,12 @@ const k = (id: string, name: string, at: string, sg: string | null = null) => ({
   recipient: { id, username: id, display_name: name, avatar_url: null },
 });
 
-function wrap() {
+function wrap(embedded = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <NextIntlClientProvider locale="en-US" messages={messages}>
       <QueryClientProvider client={qc}>
-        <KudosWall />
+        <KudosWall embedded={embedded} />
       </QueryClientProvider>
     </NextIntlClientProvider>,
   );
@@ -85,5 +85,35 @@ describe("KudosWall", () => {
     expect((await names())[0]).toMatch(/Cy/);
     await userEvent.selectOptions(screen.getByLabelText("Group"), "g1");
     expect(await screen.findAllByRole("article")).toHaveLength(1);
+  });
+
+  it("embedded: no page header, single-column list, compact toolbar", async () => {
+    listKudos.mockResolvedValue({
+      kudos: [k("a", "Ana", "2026-01-02T00:00:00Z")],
+      pagination: { has_more: false },
+    });
+    wrap(true);
+    const article = await screen.findByRole("article");
+    expect(
+      screen.queryByRole("heading", { level: 1, name: "Kudos" }),
+    ).toBeNull();
+    const list = article.parentElement as HTMLElement;
+    expect(list.className).toContain("flex-col");
+    expect(list.className).not.toContain("grid");
+    expect(
+      screen.getByRole("button", { name: "Send Kudos" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Group")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Oldest" })).toBeInTheDocument();
+  });
+
+  it("non-embedded keeps the multi-column grid", async () => {
+    listKudos.mockResolvedValue({
+      kudos: [k("a", "Ana", "2026-01-02T00:00:00Z")],
+      pagination: { has_more: false },
+    });
+    wrap();
+    const article = await screen.findByRole("article");
+    expect((article.parentElement as HTMLElement).className).toContain("grid");
   });
 });

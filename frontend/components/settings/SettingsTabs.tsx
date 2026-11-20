@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Bell,
   CalendarDays,
+  CircleHelp,
   HardDrive,
   Heart,
   Lock,
@@ -28,6 +29,7 @@ import { StorageTab } from "./StorageTab";
 import { NudgePreferences } from "./NudgePreferences";
 import { PluginsSettingsTab } from "./PluginsSettingsTab";
 import { PluginSettingsProvider } from "@/lib/plugins/PluginSettingsContext";
+import { HelpTab } from "./HelpTab";
 
 const TABS: {
   id: string;
@@ -59,6 +61,7 @@ const TABS: {
   },
   { id: "storage", label: "Storage", icon: HardDrive, Body: StorageTab },
   { id: "plugins", label: "Plugins", icon: Puzzle, Body: PluginsSettingsTab },
+  { id: "help", label: "Help", icon: CircleHelp, Body: HelpTab },
 ];
 
 const ITEMS = TABS.map(({ id, label, icon }) => ({

@@ -27,33 +27,36 @@ const SORTS: { value: ListSort; label: string }[] = [
 ];
 
 /** @brief Lists overview page body. */
-export function ListsBrowseView() {
+export function ListsBrowseView({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const communityId = useCommunityId();
   const [visibility, setVisibility] = useState(ALL);
   const [sortBy, setSortBy] = useState<ListSort>("updated");
+  const actions = (
+    <>
+      <Button asChild variant="outline">
+        <Link href="/app/lists/templates">
+          <LayoutTemplate aria-hidden className="size-4" />
+          Templates
+        </Link>
+      </Button>
+      <Button asChild>
+        <Link href="/app/lists/new">
+          <Plus aria-hidden className="size-4" />
+          New list
+        </Link>
+      </Button>
+    </>
+  );
   return (
     <div className="flex flex-col">
-      <PageHeader
-        crumbs={[{ label: "Lists" }]}
-        title="Lists"
-        actions={
-          <>
-            <Button asChild variant="outline">
-              <Link href="/app/lists/templates">
-                <LayoutTemplate aria-hidden className="size-4" />
-                Templates
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/app/lists/new">
-                <Plus aria-hidden className="size-4" />
-                New list
-              </Link>
-            </Button>
-          </>
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          crumbs={[{ label: "Lists" }]}
+          title="Lists"
+          actions={actions}
+        />
+      )}
       <Toolbar>
         <Segmented
           label="Visibility"
@@ -67,6 +70,7 @@ export function ListsBrowseView() {
           onChange={setSortBy}
           options={SORTS}
         />
+        {embedded && actions}
       </Toolbar>
       <ListCardGrid
         communityId={communityId}

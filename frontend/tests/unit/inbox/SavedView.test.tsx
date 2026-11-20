@@ -1,5 +1,6 @@
 /**
- * @file tests/unit/bookmarks/BookmarksPage.test.tsx
+ * @file tests/unit/inbox/SavedView.test.tsx
+ * @brief SavedView: empty state and cursor pagination of saved posts.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -15,13 +16,13 @@ vi.mock("@/components/feed/PostCard", () => ({
   ),
 }));
 import * as api from "@/lib/api/bookmarks";
-import BookmarksPage from "@/app/app/bookmarks/page";
+import { SavedView } from "@/components/inbox/SavedView";
 
 function wrap() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <BookmarksPage />
+      <SavedView />
     </QueryClientProvider>,
   );
 }
@@ -33,19 +34,7 @@ const bm = (id: string) => ({
 
 beforeEach(() => vi.resetAllMocks());
 
-describe("BookmarksPage", () => {
-  it("titles the page Saved", async () => {
-    vi.mocked(api.listBookmarks).mockResolvedValue({
-      bookmarks: [],
-      pagination: { cursor: null, has_more: false },
-    } as never);
-    wrap();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Saved" }),
-    ).toBeInTheDocument();
-    expect(await screen.findByText(/Nothing saved yet/)).toBeInTheDocument();
-  });
-
+describe("SavedView", () => {
   it("shows empty state", async () => {
     vi.mocked(api.listBookmarks).mockResolvedValue({
       bookmarks: [],
