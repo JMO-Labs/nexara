@@ -10,6 +10,7 @@ import uuid
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.services.list_field_types  # noqa: F401  (registers builtin field types)
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, get_dispatcher
 from app.repositories.list_completion_repo import ListCompletionRepository

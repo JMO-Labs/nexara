@@ -38,6 +38,7 @@ from app.schemas.list import (
     SignupOut,
 )
 from app.services.list_completion_service import ListCompletionService
+from app.services.list_field_registry import ListFieldRegistry
 from app.services.list_items_service import ListItemService
 from app.services.list_service import ListService
 from app.services.list_signup_service import ListSignupService
@@ -91,6 +92,13 @@ async def create_list(
     """@brief Create a list owned by the caller."""
     lst = await service.create(user.id, **body.model_dump(exclude={"color"}))
     return ListOut.model_validate(lst)
+
+
+@router.get("/field-types")
+async def list_field_types(_user: User = Depends(get_current_user)) -> list[dict[str, str]]:
+    """@brief Registered field types (declared before ``/{list_id}`` so it is not captured)."""
+    reg = ListFieldRegistry()
+    return [{"key": k, "label": getattr(reg.get(k), "label", "") or k} for k in reg.keys()]
 
 
 @router.get("/{list_id}", response_model=ListOut)

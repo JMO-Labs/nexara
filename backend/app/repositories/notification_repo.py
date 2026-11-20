@@ -75,14 +75,14 @@ class NotificationRepository(BaseRepository[Notification]):
         @param cursor Opaque cursor from previous page.
         @param limit Max items per page.
         @param types Restrict to these type keys (None = all).
-        @param unread_only Only rows with read_at NULL.
+        @param unread_only Only rows with read_at and dismissed_at NULL.
         @return Tuple of (items, next_cursor).
         """
         stmt = select(Notification).where(Notification.user_id == user_id)
         if types is not None:
             stmt = stmt.where(Notification.type.in_(types))
         if unread_only:
-            stmt = stmt.where(Notification.read_at.is_(None))
+            stmt = stmt.where(Notification.read_at.is_(None), Notification.dismissed_at.is_(None))
         stmt = stmt.order_by(Notification.created_at.desc())
 
         if cursor:
@@ -231,7 +231,7 @@ class NotificationRepository(BaseRepository[Notification]):
             select(func.count())
             .select_from(Notification)
             .where(Notification.user_id == user_id)
-            .where(Notification.read_at.is_(None))
+            .where(Notification.read_at.is_(None), Notification.dismissed_at.is_(None))
         )
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
@@ -245,7 +245,11 @@ class NotificationRepository(BaseRepository[Notification]):
         """
         stmt = (
             select(Notification.type, func.count())
-            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+            .where(
+                Notification.user_id == user_id,
+                Notification.read_at.is_(None),
+                Notification.dismissed_at.is_(None),
+            )
             .group_by(Notification.type)
         )
         result = await self._session.execute(stmt)

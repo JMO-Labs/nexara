@@ -11,7 +11,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, literal, or_, select, union_all
+from sqlalchemy import Text, and_, cast, exists, literal, null, or_, select, union_all
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event
@@ -47,7 +48,8 @@ class SubgroupMediaAggregateMixin:
         - scope='community': community-root only (subgroup_id IS NULL)
         - scope='subgroup': specific subgroup_id only
 
-        Uses UNION ALL across posts, galleries, and events.
+        Uses UNION ALL across posts, galleries, events, and (scope all/personal) the
+        viewer's own unattached uploads (source='upload').
 
         @param community_id Community scope.
         @param viewer_id Requesting user ID (for block filter).
@@ -66,7 +68,7 @@ class SubgroupMediaAggregateMixin:
         cursor_id = None
         if cursor:
             try:
-                parts = cursor.split(":")
+                parts = cursor.rsplit(":", 1)  # ISO timestamp itself contains ":"
                 if len(parts) == 2:
                     cursor_ts = datetime.fromisoformat(parts[0])
                     cursor_id = uuid.UUID(parts[1])
@@ -191,6 +193,32 @@ class SubgroupMediaAggregateMixin:
             )
             queries.append(event_q)
 
+        # Source 4: viewer's own uploads not attached to any post/gallery (dedupes once attached)
+        if source in ("all", "upload") and scope in ("all", "personal"):
+            upload_q = select(
+                Media.id,
+                Media.filename,
+                Media.content_type,
+                Media.storage_key,
+                Media.thumbnail_key,
+                Media.size_bytes,
+                Media.width,
+                Media.height,
+                Media.duration_secs,
+                Media.alt_text,
+                Media.status,
+                Media.created_at,
+                cast(null(), UUID(as_uuid=True)).label("source_id"),
+                cast(null(), Text).label("source_title"),
+                literal("upload").label("source"),
+            ).where(
+                Media.community_id == community_id,
+                Media.uploader_id == viewer_id,
+                ~exists().where(PostMedia.media_id == Media.id),
+                ~exists().where(GalleryItem.media_id == Media.id),
+            )
+            queries.append(upload_q)
+
         if not queries:
             return [], None
 
@@ -241,7 +269,7 @@ class SubgroupMediaAggregateMixin:
                         "created_at": row.created_at.isoformat(),
                     },
                     "source": row.source,
-                    "source_id": str(row.source_id),
+                    "source_id": str(row.source_id) if row.source_id else None,
                     "source_title": row.source_title,
                     "created_at": row.created_at.isoformat(),
                 }
