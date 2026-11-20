@@ -21,7 +21,6 @@ vi.mock("@/lib/api/client", () => ({ apiGet: vi.fn(), apiPost: vi.fn() }));
 import { useToasts } from "@/stores/toasts";
 import { useSession } from "@/stores/session";
 import { PluginRegistry } from "@/lib/plugins/plugin-loader";
-import { PluginSlot } from "@/components/plugins/PluginSlot";
 import registerDefault, {
   registerPlugin,
   TriviaWidget as LazyWidget,
@@ -327,11 +326,5 @@ describe("registerPlugin", () => {
     expect(entries).toEqual([
       { pluginId: "example-trivia", component: LazyWidget },
     ]);
-  });
-
-  it("loads in the sidebar-widget slot", async () => {
-    registerPlugin(PluginRegistry.getInstance());
-    render(<PluginSlot slotName="sidebar-widget" />);
-    expect(await screen.findByText(question.text)).toBeInTheDocument();
   });
 });

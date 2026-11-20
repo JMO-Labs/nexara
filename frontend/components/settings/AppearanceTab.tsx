@@ -5,7 +5,8 @@
  */
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
-import { Card, SettingsRow, Select, Option, Switch } from "@/components/ui";
+import { SettingsRow, Select, Option, Switch } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
 import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
@@ -69,9 +70,7 @@ export function AppearanceTab() {
   };
 
   return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-2 text-lg font-semibold">Appearance</h2>
-
+    <Panel title="Appearance">
       <SettingsRow
         label="Theme"
         description="Choose light, dark, or follow your device."
@@ -204,6 +203,6 @@ export function AppearanceTab() {
           <Option value="en-US">English (US)</Option>
         </Select>
       </SettingsRow>
-    </Card>
+    </Panel>
   );
 }

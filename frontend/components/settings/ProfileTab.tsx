@@ -7,7 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, SettingsRow, Input, Textarea, Button } from "@/components/ui";
+import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { useUpdateProfile } from "@/hooks/useSettings";
 
 const Schema = z.object({
@@ -45,8 +46,7 @@ export function ProfileTab() {
   };
 
   return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-2 text-lg font-semibold">Profile information</h2>
+    <Panel title="Profile information">
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <SettingsRow
           label="Display name"
@@ -120,6 +120,6 @@ export function ProfileTab() {
           </Button>
         </div>
       </form>
-    </Card>
+    </Panel>
   );
 }

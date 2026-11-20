@@ -1,19 +1,16 @@
 /**
  * @file app/app/admin/moderation/page.tsx
- * @brief Moderation queue admin page.
+ * @brief Moderation queue admin page (frame and admin gate in admin/layout.tsx).
  */
-import { ModerationGate } from "@/components/moderation/ModerationGate";
+import { Panel } from "@/components/ui/page";
+import { ModerationQueue } from "@/components/moderation/ModerationQueue";
 
 export const metadata = { title: "Moderation" };
 
 export default function ModerationPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-black">Moderation</h1>
-        <p className="text-sm text-muted">Review reported content.</p>
-      </div>
-      <ModerationGate />
-    </div>
+    <Panel as="div">
+      <ModerationQueue />
+    </Panel>
   );
 }

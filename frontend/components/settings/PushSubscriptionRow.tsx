@@ -4,7 +4,8 @@
  * @brief Push notification opt-in row for the Notifications settings tab.
  *        Shows current permission, lets the user subscribe/unsubscribe.
  */
-import { Button, Badge, Card } from "@/components/ui";
+import { Button, Badge } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const alertCls = "rounded-2xl bg-surface p-3 text-sm border-l-4";
@@ -34,7 +35,7 @@ export function PushSubscriptionRow() {
   }
 
   return (
-    <Card className="max-w-3xl space-y-3 p-4 md:p-6">
+    <Panel className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold">Push notifications</h2>
         <Badge tone={isSubscribed ? "leaf" : "neutral"}>
@@ -74,6 +75,6 @@ export function PushSubscriptionRow() {
           {error.message}
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }

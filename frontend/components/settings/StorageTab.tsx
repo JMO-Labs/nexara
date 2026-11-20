@@ -13,7 +13,7 @@ import {
   Image,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { useStorage } from "@/hooks/useStorage";
 import { useSession } from "@/stores/session";
 import type { StorageUsage } from "@/lib/api/storage";
@@ -150,10 +150,5 @@ export function StorageTab() {
     );
   }
 
-  return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-4 text-lg font-semibold">Storage</h2>
-      {body}
-    </Card>
-  );
+  return <Panel title="Storage">{body}</Panel>;
 }

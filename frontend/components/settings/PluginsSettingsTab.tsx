@@ -4,6 +4,7 @@
  * @brief Plugins settings tab: empty state until plugins register sections.
  *        Phase 4 will inject plugin sections here via named slots.
  */
+import { Panel } from "@/components/ui/page";
 import { usePluginSettingsSections } from "@/lib/plugins/PluginSettingsContext";
 
 /**
@@ -14,9 +15,8 @@ export function PluginsSettingsTab() {
   const sections = usePluginSettingsSections();
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-xl font-bold">Plugins</h2>
       {sections.length === 0 ? (
-        <div className="rounded-xl bg-surface p-4">
+        <Panel title="Plugins">
           <p className="text-sm">
             Plugin settings will appear here when plugins are installed.
           </p>
@@ -24,13 +24,16 @@ export function PluginsSettingsTab() {
             Plugins extend Nexara with custom features. Install from Plugin
             Gallery.
           </p>
-        </div>
+        </Panel>
       ) : (
-        sections.map(({ pluginId, Component }) => (
-          <section key={pluginId} aria-label={pluginId}>
-            <Component />
-          </section>
-        ))
+        <>
+          <h2 className="text-xl font-bold">Plugins</h2>
+          {sections.map(({ pluginId, Component }) => (
+            <section key={pluginId} aria-label={pluginId}>
+              <Component />
+            </section>
+          ))}
+        </>
       )}
     </div>
   );

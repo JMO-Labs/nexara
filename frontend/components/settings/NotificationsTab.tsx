@@ -6,7 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Card, Skeleton } from "@/components/ui";
+import { Skeleton } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { getPreferences, patchPreferences } from "@/lib/api/notifications";
 import { useNotificationsSync } from "@/hooks/useNotificationsSync";
 import { useNotificationRegistry } from "@/lib/notifications/registry";
@@ -22,7 +23,6 @@ import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
 import { WebhookList } from "./WebhookList";
 
 const DEBOUNCE_MS = 400;
-const cardCls = "max-w-3xl p-4 md:p-6";
 
 /**
  * @brief Notifications tab.
@@ -92,33 +92,29 @@ export function NotificationsTab() {
     });
 
   return (
-    <div className="space-y-6">
-      <Card className={cardCls}>
-        <h2 className="mb-2 text-lg font-semibold">{t("snooze_title")}</h2>
+    <div className="flex flex-col gap-4">
+      <Panel title={t("snooze_title")}>
         <SnoozeControls until={prefs.dnd_until} />
-      </Card>
-      <Card className={cardCls}>
-        <h2 className="mb-2 text-lg font-semibold">{t("dnd_title")}</h2>
+      </Panel>
+      <Panel title={t("dnd_title")}>
         <DnDScheduleEditor
           schedule={prefs.dnd_schedule}
           timezone={prefs.dnd_timezone}
           onChange={(s, tz) => change({ dnd_schedule: s, dnd_timezone: tz })}
         />
-      </Card>
+      </Panel>
       <PushSubscriptionRow />
-      <Card className={cardCls}>
-        <h2 className="mb-2 text-lg font-semibold">{t("matrix_title")}</h2>
+      <Panel title={t("matrix_title")}>
         <NotificationMatrix
           types={types}
           prefs={prefs}
           onChannel={onChannel}
           onCadence={onCadence}
         />
-      </Card>
-      <Card className={cardCls}>
-        <h2 className="mb-2 text-lg font-semibold">{t("webhooks_title")}</h2>
+      </Panel>
+      <Panel title={t("webhooks_title")}>
         <WebhookList />
-      </Card>
+      </Panel>
     </div>
   );
 }

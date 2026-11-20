@@ -1,0 +1,103 @@
+/**
+ * @file tests/unit/settings/SettingsTabs.test.tsx
+ * @brief SettingsTabs: PageHeader + side nav, active tab via ?tab=.
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+
+const nav = vi.hoisted(() => ({ tab: null as string | null }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => ({ get: () => nav.tab }),
+}));
+const stub = vi.hoisted(() => (name: string) => () => <p>{`body:${name}`}</p>);
+vi.mock("@/components/events/CalendarSubscriptionsPanel", () => ({
+  CalendarSubscriptionsPanel: stub("calendar"),
+}));
+vi.mock("@/components/settings/AccountTab", () => ({
+  AccountTab: stub("account"),
+}));
+vi.mock("@/components/settings/ProfileTab", () => ({
+  ProfileTab: stub("profile"),
+}));
+vi.mock("@/components/settings/NotificationsTab", () => ({
+  NotificationsTab: stub("notifications"),
+}));
+vi.mock("@/components/settings/PrivacyTab", () => ({
+  PrivacyTab: stub("privacy"),
+}));
+vi.mock("@/components/settings/AppearanceTab", () => ({
+  AppearanceTab: stub("appearance"),
+}));
+vi.mock("@/components/settings/NudgePreferences", () => ({
+  NudgePreferences: stub("engagement"),
+}));
+vi.mock("@/components/settings/StorageTab", () => ({
+  StorageTab: stub("storage"),
+}));
+
+import { SettingsTabs } from "@/components/settings/SettingsTabs";
+
+const IDS = [
+  "account",
+  "profile",
+  "notifications",
+  "privacy",
+  "appearance",
+  "calendar",
+  "engagement",
+  "storage",
+  "plugins",
+];
+
+describe("SettingsTabs", () => {
+  beforeEach(() => {
+    nav.tab = null;
+  });
+
+  it("renders the Settings header and a nav with 9 tab links", () => {
+    render(<SettingsTabs />);
+    expect(
+      screen.getByRole("heading", { name: "Settings", level: 1 }),
+    ).toBeTruthy();
+    const links = screen
+      .getByRole("navigation", { name: "Settings sections" })
+      .querySelectorAll("a");
+    expect([...links].map((a) => a.getAttribute("href"))).toEqual(
+      IDS.map((i) => `?tab=${i}`),
+    );
+    expect(links[0].querySelector("svg")).not.toBeNull();
+  });
+
+  it("defaults to the account tab", () => {
+    render(<SettingsTabs />);
+    expect(screen.getByText("body:account")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("shows the tab named by ?tab=", () => {
+    nav.tab = "privacy";
+    render(<SettingsTabs />);
+    expect(screen.getByText("body:privacy")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Account" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("falls back to account for an unknown tab", () => {
+    nav.tab = "nope";
+    render(<SettingsTabs />);
+    expect(screen.getByText("body:account")).toBeInTheDocument();
+  });
+
+  it("does not use bg-accent or its own max-width wrapper", () => {
+    const { container } = render(<SettingsTabs />);
+    expect(container.innerHTML).not.toMatch(/bg-accent|max-w-5xl/);
+  });
+});

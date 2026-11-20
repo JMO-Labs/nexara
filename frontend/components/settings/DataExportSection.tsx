@@ -4,7 +4,8 @@
  * @brief "Download My Data" section: request, progress, download, expiry.
  */
 import { useEffect, useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import {
   useExportHistory,
   useExportStatus,
@@ -81,9 +82,8 @@ export function DataExportSection() {
     message = "Your export failed. Please try again.";
 
   return (
-    <Card className="p-4">
-      <h2 className="text-lg font-bold">{LABEL}</h2>
-      <p className="mt-1 text-sm text-muted">
+    <Panel title={LABEL}>
+      <p className="text-sm text-muted">
         Request a ZIP file with all your posts, comments, media, events, and
         profile data. Downloads expire after 48 hours.
       </p>
@@ -107,6 +107,6 @@ export function DataExportSection() {
         {message}
       </p>
       <History items={history.data ?? []} />
-    </Card>
+    </Panel>
   );
 }
