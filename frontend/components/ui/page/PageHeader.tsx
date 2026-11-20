@@ -36,11 +36,11 @@ export function PageHeader({
             {back.label}
           </Link>
         )}
-        <h1 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
+        <h1 className="text-[32px] leading-tight font-medium tracking-[-0.02em] text-ink md:text-[40px]">
           {title}
         </h1>
         {description && (
-          <p className="mt-1 text-sm text-muted">{description}</p>
+          <p className="mt-1 text-[15px] text-muted">{description}</p>
         )}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

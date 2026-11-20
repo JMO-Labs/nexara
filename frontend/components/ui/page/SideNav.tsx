@@ -23,7 +23,7 @@ export function SideNav({ items, activeId, label }: SideNavProps) {
   return (
     <nav
       aria-label={label}
-      className="glass flex gap-1 overflow-x-auto whitespace-nowrap rounded-full p-1 md:flex-col md:overflow-visible md:rounded-[28px] md:p-2"
+      className="glass flex flex-wrap gap-1 rounded-[24px] p-1.5 md:flex-col md:flex-nowrap md:rounded-[28px] md:p-2"
     >
       {items.map((it) => {
         const active = it.id === activeId;

@@ -142,7 +142,7 @@ describe("GroupHub", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("tab nav scrolls horizontally on phone and marks the active tab", () => {
+  it("tab nav wraps on phone (no clipped pills) and marks the active tab", () => {
     vi.spyOn(useSubgroupsModule, "useSubgroupDetail").mockReturnValue({
       data: mockSubgroupDetail,
       isLoading: false,
@@ -150,7 +150,7 @@ describe("GroupHub", () => {
 
     wrap(<GroupHub slug="hiking" />);
     const nav = screen.getByRole("navigation", { name: /group sections/i });
-    expect(nav.className).toMatch(/overflow-x-auto/);
+    expect(nav.className).toMatch(/flex-wrap/);
     expect(screen.getByRole("link", { name: /overview/i })).toHaveAttribute(
       "aria-current",
       "page",

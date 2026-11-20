@@ -11,15 +11,16 @@ import { cn } from "@/lib/utils";
 
 /** @brief Shared variant/size classes for Button and IconButton. */
 export const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 font-semibold whitespace-nowrap transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+  "inline-flex shrink-0 items-center rounded-full justify-center gap-2 font-semibold whitespace-nowrap transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary: "rounded-full bg-surface-strong text-bg hover:opacity-90",
-        secondary: "glass-btn rounded-full text-ink",
+        primary: "bg-surface-strong text-bg hover:opacity-90",
+        secondary: "glass-btn text-ink",
         ghost: "bg-transparent hover:bg-surface",
         glass: "glass-btn text-ink",
-        outline: "border border-current bg-transparent hover:bg-surface",
+        // Brand has no outline style; legacy callers get the glass pill.
+        outline: "glass-btn text-ink",
         destructive:
           "bg-destructive text-destructive-foreground hover:opacity-90",
       },
@@ -28,7 +29,8 @@ export const buttonVariants = cva(
         md: "h-10 px-4 text-sm",
         lg: "h-12 px-6 text-base",
       },
-      shape: { rect: "rounded-xl", round: "rounded-full px-0" },
+      // Everything is a pill; "round" is the icon-only circle.
+      shape: { rect: "", round: "px-0" },
     },
     defaultVariants: { variant: "primary", size: "md", shape: "rect" },
   },

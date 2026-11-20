@@ -22,7 +22,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {(a) => (
           <input
             ref={ref}
-            className={cn(controlClass, "h-10", className)}
+            className={cn(controlClass, "h-11 rounded-full", className)}
             {...a}
             {...rest}
           />

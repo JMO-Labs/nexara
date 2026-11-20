@@ -59,4 +59,4 @@ export function Field({
 }
 
 export const controlClass =
-  "w-full rounded-xl border border-current/30 bg-surface px-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:border-destructive disabled:opacity-50";
+  "glass-item w-full rounded-[20px] px-4 text-base text-ink placeholder:text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:ring-1 aria-invalid:ring-[var(--nx-red)] disabled:opacity-50";

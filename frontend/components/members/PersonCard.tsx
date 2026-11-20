@@ -66,7 +66,7 @@ export function PersonCard({ person }: { person: DirectoryPerson }) {
           onClick={message}
           disabled={dm.isPending}
           aria-label={`Message ${person.display_name}`}
-          className="min-h-11 flex-1 rounded-full bg-[var(--nx-pill)] p-2 text-[13px] text-[var(--nx-pill-ink)] disabled:opacity-60"
+          className="min-h-11 flex-1 rounded-full bg-surface-strong p-2 text-[13px] text-bg disabled:opacity-60"
         >
           Message
         </button>

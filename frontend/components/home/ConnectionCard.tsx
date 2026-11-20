@@ -53,7 +53,7 @@ export function ConnectionCard({
         <button
           type="button"
           onClick={message}
-          className="flex-1 rounded-full bg-[var(--nx-pill)] p-2 text-[13px] text-[var(--nx-pill-ink)]"
+          className="flex-1 rounded-full bg-surface-strong p-2 text-[13px] text-bg"
         >
           Message
         </button>

@@ -104,7 +104,7 @@ export function MemberHeader({
               type="button"
               onClick={message}
               disabled={dm.isPending}
-              className="min-h-11 rounded-full bg-[var(--nx-pill)] px-5 py-2 text-sm text-[var(--nx-pill-ink)] disabled:opacity-60"
+              className="min-h-11 rounded-full bg-surface-strong px-5 py-2 text-sm text-bg disabled:opacity-60"
             >
               Message
             </button>
