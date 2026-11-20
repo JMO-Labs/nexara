@@ -89,12 +89,8 @@ test("user creates a list, adds two items and completes one", async ({
   expect((await completed).ok()).toBeTruthy();
 
   await page.goto("/app/inbox?view=lists");
-  const card = page
-    .locator("div")
-    .filter({ has: page.getByRole("button", { name: title }) })
-    .filter({ hasText: /\d+\/\d+ done/ })
-    .last();
-  await expect(card.getByText("1/2 done")).toBeVisible();
+  const row = page.getByTestId("inbox-row").filter({ hasText: title });
+  await expect(row).toContainText("1/2 done");
 });
 
 test("user claims a signup slot and releases it", async () => {

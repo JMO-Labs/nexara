@@ -21,7 +21,7 @@ import { ErrorCard, LISTS_CRUMB, PageHeader, PageSkeleton } from "./PageChrome";
  * @param props list id and render function
  * @return state UI or children(list)
  */
-function WithList({
+export function WithList({
   id,
   children,
 }: {
