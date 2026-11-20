@@ -262,3 +262,22 @@ def _load_plugin_tasks(**kwargs: object) -> None:
     from app.plugins.task_loader import load_plugin_tasks
 
     logger.info("plugin_tasks_loaded", plugins=load_plugin_tasks())
+
+
+@signals.worker_process_init.connect
+def _per_task_db_connections(**kwargs: object) -> None:
+    """
+    @brief Rebind the shared session factory to a NullPool engine in workers.
+
+    Each task runs under its own ``asyncio.run`` loop; a pooled asyncpg
+    connection from a previous task belongs to a dead loop and fails with
+    "attached to a different loop". NullPool opens a fresh connection per use.
+    """
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.db.session import async_session_factory
+
+    async_session_factory.configure(
+        bind=create_async_engine(get_settings().DATABASE_URL, poolclass=NullPool)
+    )
