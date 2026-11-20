@@ -17,5 +17,5 @@ def test_list_notif_migration_follows_apprise_prefs() -> None:
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == [REV]
+    assert len(script.get_heads()) == 1  # head moves; parent pin below matters
     assert script.get_revision(REV).down_revision == "c5d6e7f8a9b0"

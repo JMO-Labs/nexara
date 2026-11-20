@@ -12,6 +12,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+HOME_PATTERN_RE = r"^(none|dots|topo|contour|waves|grain)$"
+
 DEFAULT_WIDGET_ORDER: list[str] = ["upcoming-events", "my-groups", "media", "quick-actions"]
 
 
@@ -119,6 +121,8 @@ class UserSettingsResponse(BaseModel):
     receive_nudges: bool = True
     receive_gentle_nudges: bool = True
     home_layout: HomeLayoutSchema | None = None
+    home_pattern: str | None = None
+    reduce_transparency: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -141,6 +145,8 @@ class UserSettingsUpdate(BaseModel):
     receive_nudges: bool | None = None
     receive_gentle_nudges: bool | None = None
     home_layout: HomeLayoutSchema | None = None
+    home_pattern: str | None = Field(default=None, pattern=HOME_PATTERN_RE)
+    reduce_transparency: bool | None = None
 
 
 class ProfileUpdate(BaseModel):

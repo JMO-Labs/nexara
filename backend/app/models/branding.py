@@ -101,6 +101,7 @@ class CommunityBranding(Base):
         nullable=False,
         server_default="false",
     )
+    home_pattern: Mapped[str] = mapped_column(Text, nullable=False, server_default="contour")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

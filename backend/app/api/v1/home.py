@@ -15,7 +15,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1 import home_activity, home_feed
+from app.api.v1 import home_activity, home_chats, home_feed, home_needs, home_people
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.repositories.event_repo import EventRepository
@@ -33,6 +33,9 @@ router = APIRouter(prefix="/home", tags=["home"])
 
 router.include_router(home_activity.router)
 router.include_router(home_feed.router)
+router.include_router(home_chats.router)
+router.include_router(home_people.router)
+router.include_router(home_needs.router)
 
 
 def _build_service(
