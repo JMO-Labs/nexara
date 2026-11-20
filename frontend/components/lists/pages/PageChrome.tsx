@@ -8,8 +8,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { PageHeader as SharedPageHeader, Panel } from "@/components/ui/page";
 
 export interface Crumb {
   label: string;
@@ -43,7 +43,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
 }
 
 /**
- * @brief Page header with breadcrumbs, title and optional actions.
+ * @brief Page header: breadcrumb line above the shared PageHeader.
  * @param props crumbs, title, actions; hideTitle keeps the h1 for screen
  *        readers only (when the body already shows the title visually)
  * @return header
@@ -60,15 +60,17 @@ export function PageHeader({
   hideTitle?: boolean;
 }) {
   return (
-    <header className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <Breadcrumbs items={crumbs} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className={hideTitle ? "sr-only" : "text-3xl font-black"}>
-          {title}
-        </h1>
-        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-      </div>
-    </header>
+      {hideTitle ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="sr-only">{title}</h1>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        </div>
+      ) : (
+        <SharedPageHeader title={title} actions={actions} />
+      )}
+    </div>
   );
 }
 
@@ -107,7 +109,11 @@ export function ErrorCard({
   onRetry?: () => void;
 }) {
   return (
-    <Card role="alert" className="flex flex-col items-start gap-3 p-6">
+    <Panel
+      as="div"
+      role="alert"
+      className="flex flex-col items-start gap-3 p-6"
+    >
       <div className="flex items-center gap-2">
         <AlertTriangle aria-hidden className="size-5 text-destructive" />
         <h2 className="text-lg font-semibold">{title}</h2>
@@ -118,7 +124,7 @@ export function ErrorCard({
           Try again
         </Button>
       )}
-    </Card>
+    </Panel>
   );
 }
 

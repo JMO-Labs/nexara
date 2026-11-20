@@ -5,17 +5,16 @@
  *        and bulk dismiss. Opens on the `notifications:drawer-open` event.
  */
 import { useCallback, useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
-import { dismissOne, listNotifications } from "@/lib/api/notifications";
-import { useNotificationRegistry } from "@/lib/notifications/registry";
-import type { NotificationItem } from "@/lib/notifications/types";
+import { dismissOne } from "@/lib/api/notifications";
 import { useNotificationsSync } from "@/hooks/useNotificationsSync";
-import { NotifRow } from "./NotifRow";
-
-type Filter = "all" | "unread";
+import {
+  NotificationList,
+  type NotificationFilter as Filter,
+} from "./NotificationList";
 
 /** @brief Event name that opens the drawer. */
 export const DRAWER_OPEN_EVENT = "notifications:drawer-open";
@@ -31,19 +30,12 @@ export function NotificationsDrawer() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { byKey } = useNotificationRegistry();
 
   useEffect(() => {
     const onOpen = () => setOpen(true);
     window.addEventListener(DRAWER_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(DRAWER_OPEN_EVENT, onOpen);
   }, []);
-
-  const { data } = useQuery({
-    queryKey: ["notifications", "history"],
-    queryFn: () => listNotifications(),
-    enabled: open,
-  });
 
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["notifications"] });
@@ -57,12 +49,6 @@ export function NotificationsDrawer() {
       invalidate();
     },
   });
-
-  const all = (data?.items ?? []) as unknown as NotificationItem[];
-  const items =
-    filter === "unread"
-      ? all.filter((n) => !n.read_at && !n.dismissed_at)
-      : all;
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -105,28 +91,12 @@ export function NotificationsDrawer() {
             </Button>
           )}
         </div>
-        {items.length === 0 ? (
-          <p className="text-muted py-6 text-center text-sm">
-            {t("notifications.drawer.empty")}
-          </p>
-        ) : (
-          <div>
-            {items.map((n) => {
-              const type = byKey.get(n.type);
-              if (!type) return null;
-              return (
-                <NotifRow
-                  key={n.id}
-                  item={n}
-                  type={type}
-                  selected={selected.has(n.id)}
-                  onSelectChange={toggle}
-                  onDismissed={invalidate}
-                />
-              );
-            })}
-          </div>
-        )}
+        <NotificationList
+          filter={filter}
+          enabled={open}
+          selected={selected}
+          onSelectChange={toggle}
+        />
       </div>
     </Drawer>
   );

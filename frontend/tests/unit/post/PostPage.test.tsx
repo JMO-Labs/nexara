@@ -37,6 +37,10 @@ describe("PostPage", () => {
     expect(link).toHaveAttribute("href", "/app");
     expect(screen.getByText("post-card")).toBeInTheDocument();
     expect(screen.getByText("comments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Post" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("comments").closest(".glass")).not.toBeNull();
   });
   it("shows not found when no post and no error", async () => {
     state.v = {};
@@ -62,7 +66,7 @@ describe("PostPage", () => {
     await setup();
     const root = screen.getByText("post-card").closest("div.mx-auto");
     expect(root).not.toBeNull();
-    expect(root).toHaveClass("w-full", "max-w-180", "flex-col");
+    expect(root).toHaveClass("w-full", "max-w-3xl", "flex-col");
     expect(root!.className).not.toMatch(/\bgrid|\bmd:flex-row|\bcols-/);
   });
 });

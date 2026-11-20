@@ -7,13 +7,14 @@ import * as React from "react";
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, EmptyState } from "@/components/ui";
+import { PageHeader, Segmented, Toolbar } from "@/components/ui/page";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useKudosWall } from "@/hooks/useKudos";
 import { KudosCard } from "./KudosCard";
 import { KudosComposer } from "./KudosComposer";
 
 const selectCls =
-  "h-10 rounded-xl border border-current/30 bg-surface px-3 text-sm";
+  "glass-btn h-9 rounded-full px-3 text-sm text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 /**
  * @brief Kudos wall page body.
@@ -38,37 +39,39 @@ export function KudosWall() {
   }, [wall.data, group, sort]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <h1 className="mr-auto text-2xl font-black">{t("wallTitle")}</h1>
-        <label className="flex flex-col gap-1 text-xs font-semibold">
-          {t("filterGroup")}
-          <select
-            className={selectCls}
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-          >
-            <option value="">{t("allGroups")}</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold">
-          {t("sort")}
-          <select
-            className={selectCls}
-            value={sort}
-            onChange={(e) => setSort(e.target.value as "newest" | "oldest")}
-          >
-            <option value="newest">{t("newest")}</option>
-            <option value="oldest">{t("oldest")}</option>
-          </select>
-        </label>
-        <Button onClick={() => setComposing(true)}>{t("sendButton")}</Button>
-      </div>
+    <>
+      <PageHeader
+        title={t("wallTitle")}
+        actions={
+          <Button className="rounded-full" onClick={() => setComposing(true)}>
+            {t("sendButton")}
+          </Button>
+        }
+      />
+      <Toolbar>
+        <Segmented
+          label={t("sort")}
+          value={sort}
+          onChange={setSort}
+          options={[
+            { value: "newest", label: t("newest") },
+            { value: "oldest", label: t("oldest") },
+          ]}
+        />
+        <select
+          aria-label={t("filterGroup")}
+          className={selectCls}
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+        >
+          <option value="">{t("allGroups")}</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
 
       {wall.isError ? (
         <p role="alert">{t("error")}</p>
@@ -96,6 +99,7 @@ export function KudosWall() {
       {wall.hasNextPage && (
         <Button
           variant="secondary"
+          className="mx-auto mt-4"
           onClick={() => wall.fetchNextPage()}
           disabled={wall.isFetchingNextPage}
         >
@@ -103,7 +107,7 @@ export function KudosWall() {
         </Button>
       )}
       <KudosComposer open={composing} onClose={() => setComposing(false)} />
-    </div>
+    </>
   );
 }
 

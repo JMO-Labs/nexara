@@ -4,7 +4,7 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { list } from "../listFixtures";
 
@@ -96,11 +96,10 @@ describe("list page views", () => {
       "/app/lists/templates",
     );
     expect(screen.getByText("grid c1 all updated")).toBeInTheDocument();
-    await userEvent.selectOptions(
-      screen.getByLabelText("Visibility"),
-      "private",
-    );
-    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "title");
+    const vis = within(screen.getByRole("radiogroup", { name: "Visibility" }));
+    await userEvent.click(vis.getByRole("radio", { name: "Private" }));
+    const sort = within(screen.getByRole("radiogroup", { name: "Sort by" }));
+    await userEvent.click(sort.getByRole("radio", { name: "Title" }));
     await userEvent.click(screen.getByText("grid c1 private title"));
     expect(push).toHaveBeenCalledWith("/app/lists/l9");
   });

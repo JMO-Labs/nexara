@@ -8,12 +8,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Option, Select } from "@/components/ui/Select";
+import { Segmented, Toolbar } from "@/components/ui/page";
 import { useCommunityId } from "@/hooks/useCommunityId";
 import { ListCardGrid, type ListSort } from "../ListCardGrid";
 import { PageHeader } from "./PageChrome";
 
 const ALL = "all";
+const VISIBILITY = [
+  { value: ALL, label: "All lists" },
+  { value: "community", label: "Community" },
+  { value: "subgroup", label: "Group" },
+  { value: "private", label: "Private" },
+];
+const SORTS: { value: ListSort; label: string }[] = [
+  { value: "updated", label: "Recently updated" },
+  { value: "created", label: "Newest" },
+  { value: "title", label: "Title" },
+];
 
 /** @brief Lists overview page body. */
 export function ListsBrowseView() {
@@ -22,7 +33,7 @@ export function ListsBrowseView() {
   const [visibility, setVisibility] = useState(ALL);
   const [sortBy, setSortBy] = useState<ListSort>("updated");
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       <PageHeader
         crumbs={[{ label: "Lists" }]}
         title="Lists"
@@ -43,27 +54,20 @@ export function ListsBrowseView() {
           </>
         }
       />
-      <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
-        <Select
+      <Toolbar>
+        <Segmented
           label="Visibility"
           value={visibility}
-          onValueChange={setVisibility}
-        >
-          <Option value={ALL}>All lists</Option>
-          <Option value="community">Community</Option>
-          <Option value="subgroup">Group</Option>
-          <Option value="private">Private</Option>
-        </Select>
-        <Select
+          onChange={setVisibility}
+          options={VISIBILITY}
+        />
+        <Segmented
           label="Sort by"
           value={sortBy}
-          onValueChange={(v) => setSortBy(v as ListSort)}
-        >
-          <Option value="updated">Recently updated</Option>
-          <Option value="created">Newest</Option>
-          <Option value="title">Title</Option>
-        </Select>
-      </div>
+          onChange={setSortBy}
+          options={SORTS}
+        />
+      </Toolbar>
       <ListCardGrid
         communityId={communityId}
         visibility={visibility === ALL ? undefined : visibility}

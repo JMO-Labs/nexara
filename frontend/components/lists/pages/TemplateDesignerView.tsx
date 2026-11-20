@@ -4,6 +4,7 @@
  * @brief /app/lists/templates/new (create) and /templates/[id] (edit)
  *        wrappers around TemplateDesigner.
  */
+import { Panel } from "@/components/ui/page";
 import { useRouter } from "next/navigation";
 import {
   useListTemplate,
@@ -34,13 +35,15 @@ export function TemplateNewView() {
         crumbs={[LISTS_CRUMB, TEMPLATES_CRUMB, { label: "New" }]}
         title="New template"
       />
-      <TemplateDesigner
-        initial={EMPTY}
-        saving={create.isPending}
-        onSave={(d) =>
-          create.mutate(toInput(d), { onSuccess: () => router.push(GALLERY) })
-        }
-      />
+      <Panel>
+        <TemplateDesigner
+          initial={EMPTY}
+          saving={create.isPending}
+          onSave={(d) =>
+            create.mutate(toInput(d), { onSuccess: () => router.push(GALLERY) })
+          }
+        />
+      </Panel>
     </div>
   );
 }
@@ -63,17 +66,19 @@ export function TemplateEditView({ id }: { id: string }) {
         crumbs={[LISTS_CRUMB, TEMPLATES_CRUMB, { label: data.name }]}
         title="Edit template"
       />
-      <TemplateDesigner
-        key={data.id}
-        initial={fromApi(data)}
-        saving={update.isPending}
-        onSave={(d) =>
-          update.mutate(
-            { id, data: toInput(d) },
-            { onSuccess: () => router.push(GALLERY) },
-          )
-        }
-      />
+      <Panel>
+        <TemplateDesigner
+          key={data.id}
+          initial={fromApi(data)}
+          saving={update.isPending}
+          onSave={(d) =>
+            update.mutate(
+              { id, data: toInput(d) },
+              { onSuccess: () => router.push(GALLERY) },
+            )
+          }
+        />
+      </Panel>
     </div>
   );
 }

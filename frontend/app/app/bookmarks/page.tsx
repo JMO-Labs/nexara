@@ -1,11 +1,12 @@
 "use client";
 /**
  * @file app/app/bookmarks/page.tsx
- * @brief Bookmarks page: cursor-paginated list of saved posts.
+ * @brief Saved page (bookmarks): cursor-paginated list of saved posts.
  */
 import { Bookmark } from "lucide-react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Button, EmptyState } from "@/components/ui";
+import { PageHeader } from "@/components/ui/page";
 import { PostCard } from "@/components/feed/PostCard";
 import { listBookmarks } from "@/lib/api/bookmarks";
 
@@ -22,11 +23,11 @@ export default function BookmarksPage() {
   const items = q.data?.pages.flatMap((p) => p.bookmarks) ?? [];
 
   return (
-    <div className="mx-auto max-w-[720px] p-4 md:p-8">
-      <h1 className="mb-6 text-3xl font-black tracking-tight">Bookmarks</h1>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title="Saved" description="Posts you bookmarked for later." />
       {q.isError ? (
         <p role="alert">
-          Could not load bookmarks.{" "}
+          Could not load saved posts.{" "}
           <Button variant="ghost" size="sm" onClick={() => q.refetch()}>
             Retry
           </Button>
@@ -36,7 +37,7 @@ export default function BookmarksPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={Bookmark}
-          title="No bookmarks yet"
+          title="Nothing saved yet"
           description="Save posts for later reading!"
         />
       ) : (

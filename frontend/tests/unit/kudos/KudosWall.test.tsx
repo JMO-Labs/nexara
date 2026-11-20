@@ -49,6 +49,17 @@ describe("KudosWall", () => {
     expect(await screen.findByText("No kudos yet")).toBeInTheDocument();
   });
 
+  it("shows the Kudos page title and a Send Kudos action", async () => {
+    listKudos.mockResolvedValue({ kudos: [], pagination: { has_more: false } });
+    wrap();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kudos" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send Kudos" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders newest first, oldest on sort change, and paginates", async () => {
     listKudos
       .mockResolvedValueOnce({
@@ -70,7 +81,7 @@ describe("KudosWall", () => {
     expect(await screen.findByText("Cy")).toBeInTheDocument();
     expect(listKudos).toHaveBeenLastCalledWith("c2");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    await userEvent.selectOptions(screen.getByLabelText("Sort"), "oldest");
+    await userEvent.click(screen.getByRole("radio", { name: "Oldest" }));
     expect((await names())[0]).toMatch(/Cy/);
     await userEvent.selectOptions(screen.getByLabelText("Group"), "g1");
     expect(await screen.findAllByRole("article")).toHaveLength(1);

@@ -3,6 +3,7 @@
  * @file components/lists/ListDetailPanel.tsx
  * @brief One list in detail: Items, Members and Settings tabs.
  */
+import { Panel } from "@/components/ui/page";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Tab, TabList, TabPanel, Tabs } from "@/components/ui/Tabs";
@@ -104,7 +105,7 @@ function SettingsTab({ list, communityId }: ListDetailPanelProps) {
  */
 export function ListDetailPanel({ list, communityId }: ListDetailPanelProps) {
   return (
-    <section
+    <Panel
       className="flex flex-col gap-3"
       aria-labelledby={`list-${list.id}-title`}
     >
@@ -137,6 +138,6 @@ export function ListDetailPanel({ list, communityId }: ListDetailPanelProps) {
           <SettingsTab list={list} communityId={communityId} />
         </TabPanel>
       </Tabs>
-    </section>
+    </Panel>
   );
 }

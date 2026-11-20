@@ -34,13 +34,25 @@ const bm = (id: string) => ({
 beforeEach(() => vi.resetAllMocks());
 
 describe("BookmarksPage", () => {
+  it("titles the page Saved", async () => {
+    vi.mocked(api.listBookmarks).mockResolvedValue({
+      bookmarks: [],
+      pagination: { cursor: null, has_more: false },
+    } as never);
+    wrap();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Saved" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing saved yet/)).toBeInTheDocument();
+  });
+
   it("shows empty state", async () => {
     vi.mocked(api.listBookmarks).mockResolvedValue({
       bookmarks: [],
       pagination: { cursor: null, has_more: false },
     } as never);
     wrap();
-    expect(await screen.findByText(/No bookmarks yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/Nothing saved yet/)).toBeInTheDocument();
   });
 
   it("lists and loads more", async () => {
