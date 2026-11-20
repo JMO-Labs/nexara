@@ -12,7 +12,7 @@ Enrichment helpers live in post_enrichment.py.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -275,6 +275,7 @@ class PostRepository(BaseRepository[Post]):
         @return The updated Post ORM instance.
         """
         post.content = content
+        post.edited_at = datetime.now(UTC)
         await self._session.flush()
         await self._session.refresh(post)
         return post

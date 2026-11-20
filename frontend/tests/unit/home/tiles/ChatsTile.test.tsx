@@ -218,13 +218,14 @@ describe("ChatsTile", () => {
       expect(l).toHaveAttribute("href", "/app/chat");
   });
 
-  it("caps the thread list height and does not stretch the inline thread", () => {
+  it("fills the tile, caps on phone, and never squeezes the open row", () => {
     renderWithProviders(<ChatsTile open onToggle={() => {}} />);
     const list = row("Family").closest("ul") as HTMLElement;
-    expect(list.className).toContain("max-h-[420px]");
+    expect(list.className).toContain("max-md:max-h-[420px]");
+    expect(list.className).toContain("overflow-y-auto");
     // Rows must not shrink, or the open thread overlaps the next row.
     expect(list.className).toContain("[&>li]:shrink-0");
-    expect(list.className).not.toContain("flex-1");
+    expect(row("Family").closest("li")!.className).not.toContain("flex-1");
     const inline = screen.getByRole("textbox", { name: /reply to family/i });
     const root = inline.closest("form")!.parentElement as HTMLElement;
     expect(root.className).not.toContain("flex-1");

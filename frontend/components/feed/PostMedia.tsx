@@ -39,7 +39,7 @@ export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
         <div
           key={m.id}
           onClick={() => onClick?.(i)}
-          className={`relative overflow-hidden bg-bg ${
+          className={`group relative overflow-hidden bg-bg ${
             onClick ? "cursor-pointer" : ""
           } ${visible.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}
         >
@@ -61,13 +61,13 @@ export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
           ) : null}
           {canReport ? (
             <div
-              className="absolute right-2 top-2"
+              className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
               onClick={(e) => e.stopPropagation()}
             >
               <ReportButton
                 targetType="media"
                 targetId={m.id}
-                className="inline-flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               />
             </div>
           ) : null}
