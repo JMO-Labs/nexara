@@ -46,6 +46,15 @@ alembic upgrade head
 
 echo "Migrations complete."
 
+# ── 2b. JWT signing keys ─────────────────────────────────────────────────────
+# Generate once, before the workers start, so every uvicorn/celery process
+# signs and verifies with the same key pair (per-process ephemeral keys made
+# ~half of authenticated requests fail with 401). /data is a volume, so keys
+# survive container recreation.
+python -c "from app.core.config import get_settings; from app.core.security import _load_or_generate_rsa_keys; _load_or_generate_rsa_keys(get_settings())"
+chown nexara:nexara /data /data/*.pem 2>/dev/null || true
+echo "JWT keys ready."
+
 # ── 3. Launch supervisord ────────────────────────────────────────────────────
 echo "Starting supervisord..."
 exec /usr/bin/supervisord -c /etc/supervisord.conf

@@ -61,6 +61,12 @@ async def register_user(
     else:
         invite = None
 
+    # Fresh install only: the very first account ever created becomes admin.
+    # Never re-arms (counts deleted/inactive users too); later recovery uses
+    # scripts/create_admin.py.
+    if await svc._user_repo.is_first_user(cid):
+        role = "admin"
+
     if await svc._password_svc.check_hibp(password):
         raise ConflictError(
             message=_("This password has appeared in a data breach"),

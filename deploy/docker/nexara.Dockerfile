@@ -75,10 +75,15 @@ COPY deploy/supervisord/supervisord.conf /etc/supervisord.conf
 COPY deploy/supervisord/conf.d/ /etc/supervisor.d/
 COPY deploy/valkey/valkey.conf /etc/valkey/valkey.conf
 
+# Entrypoint: wait for DB, run migrations, exec supervisord
+COPY deploy/scripts/startup.sh /app/startup.sh
+
 # Runtime dirs
+# Alpine valkey pkg ships /etc/valkey as 0750 valkey:valkey; valkey runs as nexara
 RUN mkdir -p /run/nginx /data/media \
+    && chmod 0755 /etc/valkey /app/startup.sh \
     && chown -R nexara:nexara /data/media /app
 
 EXPOSE 8080 9090
 
-CMD ["supervisord", "-c", "/etc/supervisord.conf", "-n"]
+CMD ["/app/startup.sh"]

@@ -120,6 +120,26 @@ class UserRepository(BaseRepository[User]):
         user = await self.find_by_username(username)
         return user is not None
 
+    async def is_first_user(self, community_id: uuid.UUID) -> bool:
+        """
+        @brief True only if the community has never had any user (deleted and
+               inactive rows included), serialised by a transaction-scoped
+               advisory lock so concurrent first registrations cannot both win.
+
+        @param community_id Community scope.
+        @return Whether the caller is registering the very first account.
+        """
+        from sqlalchemy import func as sa_func
+        from sqlalchemy import text
+
+        await self._session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+            {"k": f"first-user:{community_id}"},
+        )
+        stmt = select(sa_func.count()).select_from(User).where(User.community_id == community_id)
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one()) == 0
+
     async def list_by_community(
         self,
         community_id: uuid.UUID,
