@@ -112,3 +112,15 @@ export function useMotionProps(variants: Variants) {
     exit: "exit",
   } as const;
 }
+
+/** Home page entrance container: staggers its sections. */
+export const homeStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+/** Home page section / tile entrance: fade + rise. */
+export const homeTile: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};

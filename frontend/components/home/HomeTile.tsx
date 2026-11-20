@@ -5,6 +5,8 @@
  */
 import * as React from "react";
 import Link from "next/link";
+import { animate, useReducedMotion } from "framer-motion";
+import { collapseTransition } from "@/components/ui/motion";
 import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TileId } from "@/hooks/useHomeAccordion";
@@ -48,6 +50,61 @@ export function HomeTile({
   className,
 }: HomeTileProps) {
   const bodyId = `tile-body-${id}`;
+  const reduced = useReducedMotion();
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const wasOpen = React.useRef(open);
+  const leaving = React.useRef(false);
+  const replay = React.useRef(false);
+
+  // Phone accordion: animate height on open only. CSS owns the rest state, so
+  // desktop and no-JS content is never hidden; inline styles are cleared after.
+  React.useLayoutEffect(() => {
+    const was = wasOpen.current;
+    wasOpen.current = open;
+    const el = bodyRef.current;
+    if (!open || was || !el || reduced) return;
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    el.style.overflow = "hidden";
+    const clear = () => {
+      el.style.overflow = "";
+      el.style.height = "";
+    };
+    animate(el, { height: [0, el.scrollHeight] }, collapseTransition).then(
+      clear,
+      clear,
+    );
+  }, [open, reduced]);
+
+  const onLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (replay.current) return;
+    if (
+      reduced ||
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey
+    )
+      return;
+    e.preventDefault();
+    const el = sectionRef.current;
+    const anchor = e.currentTarget;
+    if (!el || leaving.current) return;
+    leaving.current = true;
+    try {
+      await animate(el, { scale: 1.02, opacity: 0.6 }, { duration: 0.15 });
+    } finally {
+      // Re-dispatch the click so next/link performs the client navigation.
+      replay.current = true;
+      anchor.click();
+      replay.current = false;
+      leaving.current = false;
+      // Never leave the tile faded if navigation is slow.
+      animate(el, { scale: 1, opacity: 1 }, { duration: 0.2 });
+    }
+  };
   const onMove = (e: React.PointerEvent<HTMLElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     if (!r.width || !r.height) return;
@@ -62,6 +119,7 @@ export function HomeTile({
   };
   return (
     <section
+      ref={sectionRef}
       data-tile={id}
       onPointerMove={onMove}
       className={cn(
@@ -110,12 +168,14 @@ export function HomeTile({
         </h2>
         <Link
           href={href}
+          onClick={onLinkClick}
           className="text-sm text-[var(--nx-muted)] hover:underline"
         >
           {linkLabel}
         </Link>
       </header>
       <div
+        ref={bodyRef}
         id={bodyId}
         className={cn(
           "min-h-0 flex-1 flex-col px-3 pb-3 md:px-4 md:pb-4",
