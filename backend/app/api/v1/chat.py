@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
+from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
 from app.repositories.moderation_repo import ModerationRepository
 from app.schemas.chat import (
@@ -48,6 +49,7 @@ def _build_service(
         message_repo=ChatMessageRepository(db),
         community_id=community_id,
         moderation_repo=ModerationRepository(db),
+        read_repo=ChatReadRepository(db),
     )
 
 
@@ -59,6 +61,16 @@ async def list_channels(
     """@brief List every channel the authenticated user can access."""
     channels = await service.list_channels(user)
     return [ChannelResponse.model_validate(c) for c in channels]
+
+
+@router.post("/channels/{channel_id}/read", status_code=204)
+async def mark_channel_read(
+    channel_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: ChatService = Depends(_build_service),
+) -> None:
+    """@brief Mark a channel as read for the caller (404 when inaccessible)."""
+    await service.mark_read(user, channel_id)
 
 
 @router.get(

@@ -27,6 +27,7 @@ from app.models.subgroup import ChatChannel
 from app.models.user import User
 from app.plugins.hooks import HookRegistry
 from app.repositories.activity_repo import ActivityRepository
+from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import (
     TOMBSTONE_CONTENT,
     ChatChannelRepository,
@@ -66,6 +67,8 @@ class ChatService(ChatInternalsMixin):
         pub/sub channel (defaults to :func:`realtime.pubsub.publish`).
     @param link_preview_enqueue Optional callable dispatching a Celery
         task for URL scraping (defaults to the real Celery task).
+    @param read_repo Optional ChatReadRepository; when set, sending a message
+        marks the channel read for the author.
     """
 
     def __init__(
@@ -79,6 +82,7 @@ class ChatService(ChatInternalsMixin):
         link_preview_enqueue: Any = None,
         activity_repo: ActivityRepository | None = None,
         moderation_repo: ModerationRepository | None = None,
+        read_repo: ChatReadRepository | None = None,
     ) -> None:
         self._channel_repo = channel_repo
         self._message_repo = message_repo
@@ -88,6 +92,7 @@ class ChatService(ChatInternalsMixin):
         self._link_preview_enqueue = link_preview_enqueue
         self._activity_repo = activity_repo
         self._moderation_repo = moderation_repo
+        self._read_repo = read_repo
 
     # ── Channel management ───────────────────────────────────────────
 
@@ -197,6 +202,21 @@ class ChatService(ChatInternalsMixin):
             )
         return threads
 
+    async def mark_read(self, user: User, channel_id: uuid.UUID) -> None:
+        """
+        @brief Mark a channel as read for the user (now).
+
+        @param user Reading user.
+        @param channel_id Channel UUID.
+        @raises NotFoundError If the channel is unknown or inaccessible.
+        """
+        channel = await self._channel_repo.get_for_user(channel_id, user.id, self._community_id)
+        if channel is None:
+            raise NotFoundError(_("Channel not found"))
+        if self._read_repo is None:
+            return
+        await self._read_repo.mark_read(user.id, channel.id, self._community_id)
+
     # ── Message flow ─────────────────────────────────────────────────
 
     async def send_message(
@@ -241,6 +261,8 @@ class ChatService(ChatInternalsMixin):
             author_id=user.id,
             content=content,
         )
+        if self._read_repo is not None:
+            await self._read_repo.mark_read(user.id, channel.id, self._community_id)
         payload = serialize_message(message, user)
         await HookRegistry.emit("after_chat_sent", message_id=message.id, **hook_kw)
 
