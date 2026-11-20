@@ -118,6 +118,11 @@ export const qk = {
   kudos: {
     wall: () => ["kudos", "wall"] as const,
   },
+  people: {
+    directory: (q: string, filter: string) =>
+      ["people", "directory", q, filter] as const,
+    profile: (id: string) => ["people", "profile", id] as const,
+  },
   home: {
     layout: () => ["home-layout"] as const,
     summary: () => ["home-summary"] as const,

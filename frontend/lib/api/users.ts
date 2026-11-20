@@ -50,3 +50,73 @@ export const addInterest = (slug: string) =>
   apiPost<{ slug: string }>("/api/v1/users/me/interests", {
     category_slug: slug,
   });
+
+/** @brief Public profile of a community member (GET /users/{id}). */
+export interface UserProfile {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  title: string | null;
+  pronouns: string | null;
+  location: string | null;
+  website_url: string | null;
+  role: string;
+  created_at: string;
+  last_seen_at: string | null;
+}
+
+/** @brief A group shared between the viewer and another member. */
+export interface SharedGroup {
+  id: string;
+  name: string;
+  accent_color: string | null;
+}
+
+/** @brief One entry of the people directory (privacy already applied). */
+export interface DirectoryPerson {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  online: boolean;
+  last_seen_at: string | null;
+  shared_groups: SharedGroup[];
+  primary_group_id: string | null;
+}
+
+/** @brief A page of directory entries. */
+export interface DirectoryPage {
+  items: DirectoryPerson[];
+  next_cursor: string | null;
+}
+
+/** @brief Directory filter. */
+export type DirectoryFilter = "all" | "online" | "groups";
+
+/**
+ * @brief Fetch one page of the people directory.
+ * @param params search text, filter, page size and cursor
+ */
+export const getDirectory = (params: {
+  q?: string;
+  filter?: DirectoryFilter;
+  limit?: number;
+  cursor?: string | null;
+}) => {
+  const qs = new URLSearchParams({
+    filter: params.filter ?? "all",
+    limit: String(params.limit ?? 24),
+  });
+  if (params.q) qs.set("q", params.q);
+  if (params.cursor) qs.set("cursor", params.cursor);
+  return apiGet<DirectoryPage>(`/api/v1/users/directory?${qs}`);
+};
+
+/**
+ * @brief Fetch a member's public profile.
+ * @param id user id
+ */
+export const getUserProfile = (id: string) =>
+  apiGet<UserProfile>(`/api/v1/users/${encodeURIComponent(id)}`);
