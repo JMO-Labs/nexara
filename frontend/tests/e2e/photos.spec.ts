@@ -35,11 +35,8 @@ test("uploaded photo appears in All photos", async ({ page }) => {
   await expect(grid).toBeVisible();
   // First tile is the newest photo; capture it to detect the new upload
   // (the list is paged, so counting items stops working past one page).
-  const firstBefore = await grid
-    .getByRole("listitem")
-    .first()
-    .innerHTML()
-    .catch(() => "");
+  const newest = grid.locator("img").first();
+  const firstBefore = await newest.getAttribute("src").catch(() => null);
 
   await page.getByRole("button", { name: "Upload photos" }).click();
   const chooser = page.waitForEvent("filechooser");
@@ -48,7 +45,7 @@ test("uploaded photo appears in All photos", async ({ page }) => {
   await expect(page.getByText("Done")).toBeVisible({ timeout: 30_000 });
 
   await expect
-    .poll(() => grid.getByRole("listitem").first().innerHTML(), {
+    .poll(() => newest.getAttribute("src"), {
       timeout: 10_000,
     })
     .not.toBe(firstBefore);
