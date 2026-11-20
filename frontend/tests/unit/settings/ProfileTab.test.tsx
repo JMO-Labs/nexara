@@ -43,6 +43,22 @@ describe("ProfileTab", () => {
     } as any);
   });
 
+  it("a late profile refetch does not overwrite what the user typed", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<ProfileTab />, { wrapper: createWrapper() });
+    const name = screen.getByLabelText(/display name/i);
+    await user.clear(name);
+    await user.type(name, "Typed name");
+    vi.mocked(settingsHooks.useMyProfile).mockReturnValue({
+      data: { ...PROFILE, bio: "Refetched bio" },
+    } as any);
+    rerender(<ProfileTab />);
+    await waitFor(() =>
+      expect(screen.getByLabelText(/bio/i)).toHaveValue("Refetched bio"),
+    );
+    expect(name).toHaveValue("Typed name");
+  });
+
   it("renders profile form fields", () => {
     render(<ProfileTab />, { wrapper: createWrapper() });
 

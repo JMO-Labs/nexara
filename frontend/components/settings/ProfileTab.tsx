@@ -54,8 +54,10 @@ export function ProfileTab() {
   const err = formState.errors;
   const pronounsLen = (watch("pronouns") ?? "").length;
 
+  // Sync server data into the form, but never clobber fields the user has
+  // already edited (profile can load or refetch after they start typing).
   useEffect(() => {
-    if (profile) reset(toFormData(profile));
+    if (profile) reset(toFormData(profile), { keepDirtyValues: true });
   }, [profile, reset]);
 
   const onSubmit = (data: FormData) => {
