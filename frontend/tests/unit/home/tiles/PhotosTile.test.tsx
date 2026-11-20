@@ -37,9 +37,7 @@ describe("PhotosTile", () => {
     imgs.forEach((i) => expect(i.className).toContain("object-cover"));
     expect(imgs[0]).toHaveAttribute("alt", "Cake");
     expect(imgs[0]).toHaveAttribute("src", "/api/v1/media/m0/thumbnail");
-    expect(
-      screen.getByRole("heading", { name: "Birthday" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Photos" })).toBeInTheDocument();
     expect(screen.getByText("+")).toBeInTheDocument();
     expect(container.querySelector(".sweep")).toBeNull();
   });
@@ -54,14 +52,18 @@ describe("PhotosTile", () => {
     );
   });
 
-  it("titles upload-sourced items 'Your uploads'", () => {
+  it("keeps a fixed title whatever the newest photo's caption", () => {
     data = {
-      items: [{ ...item(1), source: "upload", source_title: null }],
+      items: [
+        {
+          ...item(1),
+          source: "post",
+          source_title: "A very long post caption",
+        },
+      ],
       next_cursor: null,
     };
     renderWithProviders(ui());
-    expect(
-      screen.getByRole("heading", { name: "Your uploads" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Photos" })).toBeInTheDocument();
   });
 });

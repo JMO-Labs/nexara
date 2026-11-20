@@ -38,7 +38,7 @@ export function ChatThreadRow({
       layout={reduce ? false : "position"}
       className={cn(
         "flex list-none flex-col rounded-[22px]",
-        open && "glass-item min-h-0 flex-1",
+        open && "glass-item",
       )}
     >
       <ThreadRow

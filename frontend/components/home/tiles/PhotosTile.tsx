@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Image as ImageIcon } from "lucide-react";
 import { HomeTile, type TileSlotProps } from "@/components/home/HomeTile";
 import { useHomeMedia } from "@/hooks/useHomeMedia";
-import { photoTitle } from "@/lib/photoTitle";
 import { mediaThumbUrl } from "@/lib/mediaUrl";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +20,10 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
   // 2x2 hero + 5 thumbs fill exactly three rows of a 3-col grid.
   const items = (data?.items ?? []).slice(0, 6);
   const more = (data?.items?.length ?? 0) > 6 || !!data?.next_cursor;
-  const title = (items[0] && photoTitle(items[0])) ?? "Recent photos";
   return (
     <HomeTile
       id="photos"
-      title={title}
+      title="Photos"
       icon={ImageIcon}
       href="/app/photos"
       linkLabel="See galleries"
