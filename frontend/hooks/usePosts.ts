@@ -78,6 +78,9 @@ export function useCreatePost() {
       });
       // Invalidate all feed queries to catch any subgroup-scoped feeds
       qc.invalidateQueries({ queryKey: qk.feed.all() });
+      // Home has its own merged feed cache; refresh it so the author sees
+      // their post without waiting for a realtime event.
+      qc.invalidateQueries({ queryKey: qk.home.feed() });
     },
   });
 }
