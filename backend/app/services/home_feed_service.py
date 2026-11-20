@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.models.user import User
 from app.repositories.post_repo import PostRepository
@@ -51,25 +51,26 @@ class HomeFeedService:
         @return HomeFeedResponse; next_cursor is the last item's created_at when more may exist.
         """
         subgroup_ids = list((await self._members.list_my_roles(viewer.id)).keys())
+        cursor_ts = _parse(cursor)
         posts, post_next = await self._posts.list_feed(
             self._community_id,
             viewer_id=viewer.id,
-            cursor=cursor,
+            cursor=cursor_ts.isoformat() if cursor_ts else None,
             limit=limit,
             subgroup_ids=subgroup_ids,
         )
         act = await self._activity.list_for_user(
             viewer,
-            cursor=_parse(cursor),
+            cursor=cursor_ts,
             limit=limit,
             window_seconds=ACTIVITY_WINDOW_SECONDS,
             subgroup_ids=subgroup_ids,
         )
         merged: list[FeedItem] = [
-            PostFeedItem(id=p["id"], created_at=p["created_at"], post=p) for p in posts
+            PostFeedItem(id=p["id"], created_at=_aware(p["created_at"]), post=p) for p in posts
         ]
         merged += [
-            ActivityFeedItem(id=a.id, created_at=a.created_at, activity=a)
+            ActivityFeedItem(id=a.id, created_at=_aware(a.created_at), activity=a)
             for a in act.items
             if a.verb != "post.created" and not a.verb.startswith("chat.")
         ]
@@ -82,9 +83,14 @@ class HomeFeedService:
         return HomeFeedResponse(items=page, next_cursor=next_cursor)
 
 
+def _aware(dt: datetime) -> datetime:
+    """@brief Treat naive timestamps (some activity rows) as UTC so sorting and cursors agree."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+
 def _parse(cursor: str | None) -> datetime | None:
-    """@brief Parse an ISO cursor; invalid values are ignored."""
+    """@brief Parse an ISO cursor as an aware UTC datetime; invalid values are ignored."""
     try:
-        return datetime.fromisoformat(cursor) if cursor else None
+        return _aware(datetime.fromisoformat(cursor)) if cursor else None
     except ValueError:
         return None

@@ -21,7 +21,28 @@ logger = structlog.get_logger(__name__)
 
 settings = get_settings()
 
-celery_app = Celery("nexara")
+celery_app = Celery(
+    "nexara",
+    # Explicit so worker/beat register every core task (nothing else imports them).
+    include=[
+        "app.tasks.ai_tasks",
+        "app.tasks.birthday_tasks",
+        "app.tasks.email_tasks",
+        "app.tasks.event_tasks",
+        "app.tasks.export_tasks",
+        "app.tasks.gallery_tasks",
+        "app.tasks.link_preview_tasks",
+        "app.tasks.list_tasks",
+        "app.tasks.maintenance_tasks",
+        "app.tasks.media_tasks",
+        "app.tasks.notification_tasks",
+        "app.tasks.nudge_tasks",
+        "app.tasks.plugin_tasks",
+        "app.tasks.poll_tasks",
+        "app.tasks.prompt_tasks",
+        "app.tasks.retention_tasks",
+    ],
+)
 """@brief The Celery application instance."""
 
 celery_app.conf.update(
