@@ -95,6 +95,13 @@ class TestCrud:
         with pytest.raises(AppError):
             await svc.create(uuid.uuid4(), title="T", visibility="subgroup")
 
+    async def test_create_subgroup_rejects_non_member(self):
+        svc, _, _ = _svc()  # _subgroup_ids -> []
+        with pytest.raises(AuthorizationError):
+            await svc.create(
+                uuid.uuid4(), title="T", visibility="subgroup", subgroup_id=uuid.uuid4()
+            )
+
     async def test_get_hidden_raises_not_found(self):
         svc, repo, _ = _svc()
         repo.get_by_id.return_value = _list("private")

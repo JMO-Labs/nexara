@@ -114,11 +114,14 @@ class ListService:
         @param field_schema Optional initial schema; each field's config is validated.
         @return Persisted List.
         @raises AppError On invalid visibility / subgroup combination or field config.
+        @raises AuthorizationError When the owner is not in the target subgroup.
         """
         if visibility not in VISIBILITIES:
             raise AppError("VALIDATION_ERROR", _("Invalid visibility"), 422)
         if visibility == "subgroup" and subgroup_id is None:
             raise AppError("VALIDATION_ERROR", _("subgroup_id required"), 422)
+        if visibility == "subgroup" and subgroup_id not in await self._subgroup_ids(owner_id):
+            raise AuthorizationError(_("Not a member of this group"))
         schema = list(field_schema or [])
         for field in schema:
             try:

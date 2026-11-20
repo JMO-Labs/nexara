@@ -84,7 +84,6 @@ export function ListCreateModal({
       {
         title: d.title,
         description: d.description || null,
-        // ponytail: template clones stay ungrouped; clone API has no subgroup_id.
         ...(subgroupId
           ? { visibility: "subgroup" as const, subgroupId }
           : { visibility: d.visibility }),
@@ -102,7 +101,8 @@ export function ListCreateModal({
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-4"
       >
-        <fieldset className="flex gap-4">
+        {/* Template clones cannot target a group, so groups start blank. */}
+        <fieldset className={subgroupId ? "hidden" : "flex gap-4"}>
           <legend className="sr-only">Start from</legend>
           <label className="flex items-center gap-2 text-sm">
             <input type="radio" value="custom" {...register("mode")} />
@@ -144,11 +144,17 @@ export function ListCreateModal({
             {...register("description")}
           />
         )}
-        <NativeSelect label="Visibility" {...register("visibility")}>
-          <option value="community">Community</option>
-          {!isTemplate && <option value="members">Members only</option>}
-          <option value="private">Private</option>
-        </NativeSelect>
+        {subgroupId ? (
+          <p className="text-sm text-muted">
+            Visible to members of this group.
+          </p>
+        ) : (
+          <NativeSelect label="Visibility" {...register("visibility")}>
+            <option value="community">Community</option>
+            {!isTemplate && <option value="members">Members only</option>}
+            <option value="private">Private</option>
+          </NativeSelect>
+        )}
         {!isTemplate && <ColorInput label="Color" {...register("color")} />}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>

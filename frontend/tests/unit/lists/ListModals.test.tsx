@@ -55,6 +55,10 @@ describe("ListCreateModal", () => {
         subgroupId="g1"
       />,
     );
+    expect(screen.queryByLabelText("Visibility")).toBeNull();
+    expect(
+      screen.getByText("Visible to members of this group."),
+    ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Title"), "Chores");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(h.create.mutate).toHaveBeenCalledWith(
