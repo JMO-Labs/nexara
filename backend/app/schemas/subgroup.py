@@ -63,9 +63,26 @@ class SubgroupUpdate(BaseModel):
     accent_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
 
 
+class MemberPreview(BaseModel):
+    """
+    @brief Minimal member summary used for avatar stacks in list responses.
+
+    @param id User ID.
+    @param display_name Display name, or ``None``.
+    @param avatar_url Avatar URL, or ``None``.
+    """
+
+    id: UUID
+    display_name: str | None = None
+    avatar_url: str | None = None
+
+
 class SubgroupResponse(BaseModel):
     """
     @brief Summary subgroup representation returned from list endpoints.
+
+    @param member_preview Up to 4 active members for avatar stacks.
+    @param member_count Number of members in the subgroup.
     """
 
     id: UUID
@@ -84,6 +101,8 @@ class SubgroupResponse(BaseModel):
     updated_at: datetime
     my_role: str | None = None
     is_member: bool = False
+    member_preview: list[MemberPreview] = Field(default_factory=list, max_length=4)
+    member_count: int = 0
 
     model_config = {"from_attributes": True}
 

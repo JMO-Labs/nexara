@@ -284,19 +284,14 @@ class NotificationRepository(BaseRepository[Notification]):
         @return Number of notifications updated.
         """
         stmt = (
-            select(Notification)
-            .where(Notification.user_id == user_id)
-            .where(Notification.read_at.is_(None))
+            update(Notification)
+            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+            .values(read_at=datetime.now(UTC))
         )
         if types is not None:
             stmt = stmt.where(Notification.type.in_(types))
         result = await self._session.execute(stmt)
-        notifications = result.scalars().all()
-        now = datetime.now(UTC)
-        for n in notifications:
-            n.read_at = now
-        await self._session.flush()
-        return len(notifications)
+        return cast(int, getattr(result, "rowcount", 0)) or 0
 
     async def delete_all_for_user(
         self,

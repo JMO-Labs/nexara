@@ -22,6 +22,16 @@ export interface Subgroup {
   my_role: "owner" | "moderator" | "member" | null;
   /** True when the viewer is a member (server-computed). */
   is_member: boolean;
+  /** Up to 4 active members for avatar stacks (list endpoint only). */
+  member_preview?: MemberPreview[];
+  /** Total member count (list endpoint only). */
+  member_count?: number;
+}
+
+export interface MemberPreview {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
 export interface SubgroupDetail extends Subgroup {

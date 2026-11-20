@@ -27,14 +27,16 @@ NEW_DEFAULTS = {
 
 
 def test_migration_parent_and_head() -> None:
-    """@brief 0033 revises 0032_home_glass_bento and is the head."""
+    """@brief 0033 revises 0032_home_glass_bento and is on the head's chain."""
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
     rev = script.get_revision(REV)
     assert rev is not None
     assert rev.down_revision == "0032_home_glass_bento"
-    assert script.get_heads() == [REV]
+    heads = script.get_heads()
+    assert len(heads) == 1
+    assert REV in {r.revision for r in script.iterate_revisions(heads[0], "base")}
 
 
 def test_model_server_defaults_are_new_palette() -> None:

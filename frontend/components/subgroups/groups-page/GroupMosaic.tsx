@@ -105,7 +105,13 @@ export function GroupMosaic({
           onJoin={onJoin}
           onLeave={onLeave}
           busy={joinBusy === g.slug || leaveBusy === g.slug}
-          avatars={<MemberStack slug={g.slug} />}
+          avatars={
+            <MemberStack
+              slug={g.slug}
+              preview={g.member_preview}
+              count={g.member_count}
+            />
+          }
         />
       ))}
     </div>

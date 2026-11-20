@@ -202,3 +202,5 @@ class PostMedia(Base):
         primary_key=True,
     )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+
+    __table_args__ = (Index("post_media_media_idx", "media_id"),)

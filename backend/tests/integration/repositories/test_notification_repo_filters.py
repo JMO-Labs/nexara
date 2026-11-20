@@ -104,6 +104,17 @@ async def test_mark_all_read_by_types(session: AsyncSession) -> None:
     assert await repo.unread_counts_by_type(u.id) == {"comment": 1}
 
 
+async def test_mark_all_read_sets_read_at_and_returns_rowcount(session: AsyncSession) -> None:
+    u = await _user(session)
+    await _notif(session, u, "mention")
+    await _notif(session, u, "comment")
+    await _notif(session, u, "comment", read=True)
+    repo = NotificationRepository(session)
+    assert await repo.mark_all_read(u.id) == 2
+    assert await repo.get_unread_count(u.id) == 0
+    assert await repo.mark_all_read(u.id) == 0
+
+
 async def test_delete_all_with_type_and_before(session: AsyncSession) -> None:
     u = await _user(session)
     await _notif(session, u, "mention", age_days=10)

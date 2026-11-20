@@ -27,6 +27,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.subgroup import (
     AddMemberRequest,
     MediaAggregateListResponse,
+    MemberPreview,
     MembershipResponse,
     PinPostRequest,
     RoleChangeRequest,
@@ -99,12 +100,14 @@ async def list_subgroups(
     service: SubgroupService = Depends(_build_service),
 ) -> list[SubgroupResponse]:
     """@brief List subgroups visible to the current user."""
-    rows = await service.list_subgroups_with_membership(user)
+    rows = await service.list_subgroup_cards(user)
     out: list[SubgroupResponse] = []
-    for s, role in rows:
+    for s, role, previews, count in rows:
         resp = SubgroupResponse.model_validate(s)
         resp.my_role = role
         resp.is_member = role is not None
+        resp.member_preview = [MemberPreview(**p) for p in previews]
+        resp.member_count = count
         out.append(resp)
     return out
 

@@ -824,3 +824,42 @@ class TestListWithMembership:
         assert [(s.slug, role) for s, role in rows] == [("joined", "member"), ("other", None)]
         member_repo.list_my_roles.assert_awaited_once_with(user.id)
         member_repo.get_membership.assert_not_awaited()
+
+
+class TestListCardsWithPreviews:
+    """@brief List rows carry a member preview and count from one batched lookup each."""
+
+    @pytest.mark.asyncio
+    async def test_attaches_previews_and_counts_per_subgroup(
+        self, service, subgroup_repo, member_repo
+    ):
+        user = _make_user()
+        joined = _make_subgroup(slug="joined")
+        other = _make_subgroup(slug="other")
+        subgroup_repo.list_visible_for_user.return_value = [joined, other]
+        member_repo.list_my_roles.return_value = {joined.id: "member"}
+        preview = {"id": uuid.uuid4(), "display_name": "A", "avatar_url": None}
+        member_repo.list_member_previews.return_value = {joined.id: [preview]}
+        member_repo.count_members_bulk.return_value = {joined.id: 5, other.id: 0}
+
+        rows = await service.list_subgroup_cards(user)
+
+        assert [(s.slug, role, prev, cnt) for s, role, prev, cnt in rows] == [
+            ("joined", "member", [preview], 5),
+            ("other", None, [], 0),
+        ]
+        member_repo.list_member_previews.assert_awaited_once_with(
+            service._community_id, [joined.id, other.id], limit=4
+        )
+        member_repo.count_members_bulk.assert_awaited_once_with(
+            service._community_id, [joined.id, other.id]
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_subgroups_skips_member_queries(self, service, subgroup_repo, member_repo):
+        subgroup_repo.list_visible_for_user.return_value = []
+        member_repo.list_my_roles.return_value = {}
+
+        assert await service.list_subgroup_cards(_make_user()) == []
+        member_repo.list_member_previews.assert_not_awaited()
+        member_repo.count_members_bulk.assert_not_awaited()

@@ -276,6 +276,26 @@ class SubgroupCrudMixin:
         roles = await self._member_repo.list_my_roles(user.id)
         return [(s, roles.get(s.id)) for s in subgroups]
 
+    async def list_subgroup_cards(
+        self,
+        user: User,
+    ) -> list[tuple[Subgroup, str | None, list[dict[str, Any]], int]]:
+        """
+        @brief Visible subgroups with viewer role, member preview and member count.
+
+        Two batched lookups cover the whole page (no per-subgroup queries).
+
+        @param user Requesting user.
+        @return List of (Subgroup, role-or-None, preview members, member count) tuples.
+        """
+        rows = await self.list_subgroups_with_membership(user)
+        if not rows:
+            return []
+        ids = [s.id for s, _ in rows]
+        previews = await self._member_repo.list_member_previews(self._community_id, ids, limit=4)
+        counts = await self._member_repo.count_members_bulk(self._community_id, ids)
+        return [(s, role, previews.get(s.id, []), counts.get(s.id, 0)) for s, role in rows]
+
     async def update_subgroup(
         self,
         slug: str,
