@@ -83,7 +83,7 @@ function OptionPills<T extends string>({
             onClick={() => onPick(o)}
             className={cn(
               "focus-visible:outline-accent min-h-11 rounded-full px-3 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-8",
-              o === value ? "bg-accent text-bg" : "bg-bg text-ink",
+              o === value ? "bg-surface-strong text-bg" : "glass-item text-ink",
               editable && o !== value && "hover:opacity-80",
             )}
           >
