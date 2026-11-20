@@ -46,19 +46,19 @@ export interface ReportPage {
 
 /** @brief Submit a content report. @param body report payload */
 export const createReport = (body: ReportInput) =>
-  apiPost<{ id: string; status: string }>("/moderation/reports", body);
+  apiPost<{ id: string; status: string }>("/api/v1/moderation/reports", body);
 
 /** @brief Block a user. @param userId user to block */
 export const blockUser = (userId: string) =>
-  apiPost<{ id: string }>(`/users/${seg(userId)}/block`);
+  apiPost<{ id: string }>(`/api/v1/users/${seg(userId)}/block`);
 
 /** @brief Unblock a user. @param userId user to unblock */
 export const unblockUser = (userId: string) =>
-  apiDelete(`/users/${seg(userId)}/block`);
+  apiDelete(`/api/v1/users/${seg(userId)}/block`);
 
 /** @brief List reports (admin). @param status filter */
 export const listReports = (status: string = "pending") =>
-  apiGet<ReportPage>(`/admin/moderation/reports?status=${seg(status)}`);
+  apiGet<ReportPage>(`/api/v1/admin/moderation/reports?status=${seg(status)}`);
 
 /** @brief Apply an admin action to a report. */
 export const reportAction = (
@@ -67,6 +67,6 @@ export const reportAction = (
   note?: string,
 ) =>
   apiPost<{ id: string; status: string }>(
-    `/admin/moderation/reports/${seg(id)}/action`,
+    `/api/v1/admin/moderation/reports/${seg(id)}/action`,
     { action, note: note || undefined },
   );

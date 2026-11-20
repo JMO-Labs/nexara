@@ -38,7 +38,8 @@ export interface MessageResponse {
  * @brief List all pending invites.
  * @return Array of InviteResponse
  */
-export const listInvites = () => apiGet<InviteResponse[]>("/api/v1/invites");
+export const listInvites = () =>
+  apiGet<InviteResponse[]>("/api/v1/admin/invites");
 
 /**
  * @brief Create a new invite.
@@ -47,7 +48,7 @@ export const listInvites = () => apiGet<InviteResponse[]>("/api/v1/invites");
  * @return InviteCreateResponse
  */
 export const createInvite = (email: string, role: string) =>
-  apiPost<InviteCreateResponse>("/api/v1/invites", { email, role });
+  apiPost<InviteCreateResponse>("/api/v1/admin/invites", { email, role });
 
 /**
  * @brief Revoke an invite.
@@ -55,4 +56,4 @@ export const createInvite = (email: string, role: string) =>
  * @return MessageResponse
  */
 export const revokeInvite = (inviteId: string) =>
-  apiDelete<MessageResponse>(`/api/v1/invites/${seg(inviteId)}`);
+  apiDelete<MessageResponse>(`/api/v1/admin/invites/${seg(inviteId)}`);

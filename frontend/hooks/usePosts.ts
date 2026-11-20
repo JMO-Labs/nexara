@@ -248,6 +248,7 @@ export function useTogglePostReaction(postId: string) {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.feed.all() });
+      qc.invalidateQueries({ queryKey: qk.home.feed() });
     },
   });
 }

@@ -106,4 +106,9 @@ describe("useTogglePostReaction optimistic", () => {
     opts().onSettled();
     expect(inv).toHaveBeenCalledWith({ queryKey: qk.feed.all() });
   });
+  it("also refreshes the unified home feed on settled", () => {
+    const inv = vi.spyOn(qc, "invalidateQueries");
+    opts().onSettled();
+    expect(inv).toHaveBeenCalledWith({ queryKey: qk.home.feed() });
+  });
 });

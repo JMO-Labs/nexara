@@ -56,8 +56,18 @@ const BASE = "/api/v1/notifications";
 export const listTypes = () =>
   apiGet<NotificationTypeDescriptor[]>(`${BASE}/types`);
 
-export const listActive = () =>
-  apiGet<{ items: ActiveNotificationItem[] }>(`${BASE}/active`);
+/**
+ * @brief Active (bell) notifications. The API returns a bare array; wrap it
+ *        so callers always get `{ items }`.
+ */
+export const listActive = async (): Promise<{
+  items: ActiveNotificationItem[];
+}> => {
+  const r = await apiGet<
+    ActiveNotificationItem[] | { items: ActiveNotificationItem[] }
+  >(`${BASE}/active`);
+  return Array.isArray(r) ? { items: r } : r;
+};
 
 export const dismissOne = (id: string) =>
   apiPost<{ message: string }>(`${BASE}/${seg(id)}/dismiss`);
