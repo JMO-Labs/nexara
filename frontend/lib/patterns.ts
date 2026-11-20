@@ -39,26 +39,59 @@ function topo(): string {
   return `<svg ${NS} width="440" height="440"><path d="${d}" fill="none" stroke="#000" stroke-width="1"/></svg>`;
 }
 
+/**
+ * @brief Topographic contour lines: marching squares over a tileable
+ *        height field (integer frequencies over T so edges wrap).
+ */
 function contour(): string {
-  const T = 480;
+  const T = 640;
   const st = 8;
-  const tau = Math.PI * 2;
+  const n = T / st;
+  const k = (Math.PI * 2) / T;
   const h = (x: number, y: number) =>
-    0.5 * Math.sin(tau * (x / T + 0.3)) * Math.cos((tau * y) / T) +
-    0.3 * Math.sin((tau * (2 * x + y)) / T + 1.3) +
-    0.25 * Math.cos((tau * (x - 2 * y)) / T + 0.7) +
-    0.12 * Math.sin((tau * 3 * y) / T + 2);
-  let big = "";
-  let small = "";
-  for (let x = 0; x < T; x += st) {
-    for (let y = 0; y < T; y += st) {
-      const v = h(x, y) * 5;
-      const d = Math.abs(v - Math.round(v));
-      if (d < 0.13) big += `M${x} ${y}h0`;
-      else if (x % 16 === 0 && y % 16 === 0) small += `M${x} ${y}h0`;
+    Math.sin(k * x + 0.3) * Math.cos(k * y) +
+    0.6 * Math.sin(k * (2 * x + y) + 1.3) +
+    0.45 * Math.cos(k * (x - 2 * y) + 0.7) +
+    0.25 * Math.sin(k * 3 * y + 2) +
+    0.15 * Math.cos(k * (3 * x + 2 * y) + 0.4);
+  const g: number[][] = [];
+  for (let i = 0; i <= n; i++) {
+    g.push([]);
+    for (let j = 0; j <= n; j++) g[i].push(h(i * st, j * st));
+  }
+  const f = (v: number) => +v.toFixed(1);
+  let d = "";
+  for (let L = -2.2; L <= 2.2; L += 0.22) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const x = i * st;
+        const y = j * st;
+        // corners: tl, tr, br, bl
+        const c = [g[i][j], g[i + 1][j], g[i + 1][j + 1], g[i][j + 1]];
+        const xy = [
+          [x, y],
+          [x + st, y],
+          [x + st, y + st],
+          [x, y + st],
+        ];
+        const pts: string[] = [];
+        for (let e = 0; e < 4; e++) {
+          const a = c[e];
+          const b = c[(e + 1) % 4];
+          if (a < L !== b < L) {
+            const t = (L - a) / (b - a);
+            const [x0, y0] = xy[e];
+            const [x1, y1] = xy[(e + 1) % 4];
+            pts.push(`${f(x0 + t * (x1 - x0))} ${f(y0 + t * (y1 - y0))}`);
+          }
+        }
+        // ponytail: saddle cells (4 crossings) pair in edge order; fine at this scale
+        for (let q = 0; q + 1 < pts.length; q += 2)
+          d += `M${pts[q]}L${pts[q + 1]}`;
+      }
     }
   }
-  return `<svg ${NS} width="${T}" height="${T}"><g fill="none" stroke="#000" stroke-linecap="round"><path d="${big}" stroke-width="2.6"/><path d="${small}" stroke-width="1.4" opacity=".55"/></g></svg>`;
+  return `<svg ${NS} width="${T}" height="${T}"><path d="${d}" fill="none" stroke="#000" stroke-width="1" stroke-linecap="round"/></svg>`;
 }
 
 const SVGS: Record<Exclude<HomePattern, "none">, () => string> = {
