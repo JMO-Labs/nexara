@@ -74,13 +74,8 @@ describe("HomeTile", () => {
     );
   });
 
-  it("sets --mx/--my on pointer move", () => {
+  it("lifts on hover via glass-lift", () => {
     const { container } = render(tile());
-    const section = container.querySelector("section")!;
-    section.getBoundingClientRect = () =>
-      ({ left: 0, top: 0, width: 200, height: 100 }) as DOMRect;
-    fireEvent.pointerMove(section, { clientX: 50, clientY: 25 });
-    expect(section.style.getPropertyValue("--mx")).toBe("25%");
-    expect(section.style.getPropertyValue("--my")).toBe("25%");
+    expect(container.querySelector("section")).toHaveClass("glass-lift");
   });
 });

@@ -101,25 +101,12 @@ export function HomeTile({
       animate(el, { scale: 1, opacity: 1 }, { duration: 0.2 });
     }
   };
-  const onMove = (e: React.PointerEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    if (!r.width || !r.height) return;
-    e.currentTarget.style.setProperty(
-      "--mx",
-      `${((e.clientX - r.left) / r.width) * 100}%`,
-    );
-    e.currentTarget.style.setProperty(
-      "--my",
-      `${((e.clientY - r.top) / r.height) * 100}%`,
-    );
-  };
   return (
     <section
       ref={sectionRef}
       data-tile={id}
-      onPointerMove={onMove}
       className={cn(
-        "glass glass-sheen flex min-h-0 flex-col rounded-[26px] md:rounded-[32px]",
+        "glass glass-lift flex min-h-0 flex-col rounded-[26px] md:rounded-[32px]",
         className,
       )}
     >
