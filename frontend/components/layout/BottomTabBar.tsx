@@ -5,11 +5,10 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, House, Images, MessageCircle } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatRealtime } from "@/hooks/useChat";
-import { isNavActive } from "./navItems";
+import { TAB_NAV, isNavActive, type NavItem } from "./navItems";
 import { CreateMenu } from "./CreateMenu";
 
 /** Bottom padding Shell applies so content clears the bar. */
@@ -19,14 +18,8 @@ export const TAB_BAR_CLEARANCE =
 const TAB =
   "relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-1 text-xs";
 
-const LEFT = [
-  { label: "Home", href: "/app", Icon: House },
-  { label: "Chat", href: "/app/chat", Icon: MessageCircle },
-];
-const RIGHT = [
-  { label: "Calendar", href: "/app/events", Icon: CalendarDays },
-  { label: "Photos", href: "/app/galleries", Icon: Images },
-];
+const LEFT = TAB_NAV.slice(0, 2);
+const RIGHT = TAB_NAV.slice(2);
 
 /**
  * @brief Phone bottom tab bar.
@@ -38,7 +31,7 @@ export function BottomTabBar() {
   const { unread } = useChatRealtime();
   const total = Object.values(unread).reduce((a, b) => a + b, 0);
 
-  const item = ({ label, href, Icon }: (typeof LEFT)[number]) => {
+  const item = ({ label, href = "/app", Icon }: NavItem) => {
     const active = isNavActive(pathname, href);
     return (
       <Link

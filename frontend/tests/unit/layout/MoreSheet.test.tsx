@@ -17,6 +17,7 @@ vi.mock("@/lib/api/auth", () => ({
 vi.mock("@/lib/auth/session", () => ({ setAccessToken: vi.fn() }));
 
 import { useSession } from "@/stores/session";
+import { useModals } from "@/stores/modals";
 import { MoreSheet } from "@/components/layout/MoreSheet";
 
 describe("MoreSheet", () => {
@@ -35,15 +36,29 @@ describe("MoreSheet", () => {
   it("opens and lists nav links", () => {
     renderWithProviders(<MoreSheet open onClose={vi.fn()} />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Galleries" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "People" })).toHaveAttribute(
       "href",
-      "/app/galleries",
+      "/app/members",
     );
     expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
+    // Groups is not in the phone tab bar, so the sheet must expose it.
+    expect(screen.getByRole("link", { name: "Groups" })).toHaveAttribute(
+      "href",
+      "/app/subgroups",
+    );
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
     expect(
       screen.getByRole("button", { name: /sign out/i }),
     ).toBeInTheDocument();
+  });
+
+  it("Help button opens shortcuts modal and closes sheet", async () => {
+    const onClose = vi.fn();
+    useModals.setState({ keyboardShortcutsOpen: false });
+    renderWithProviders(<MoreSheet open onClose={onClose} />);
+    await userEvent.click(screen.getByRole("button", { name: "Help" }));
+    expect(useModals.getState().keyboardShortcutsOpen).toBe(true);
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("closes on Escape", async () => {

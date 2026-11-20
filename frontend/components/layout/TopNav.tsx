@@ -9,6 +9,7 @@ import { ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
+import { useModals } from "@/stores/modals";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import {
   DropdownMenu,
@@ -37,6 +38,7 @@ export function TopNav() {
   const dir = useScrollDirection(80);
   const admin = useSession((s) => isAdmin(s.user));
   const compact = dir === "down" && !reduced;
+  const setHelpOpen = useModals((s) => s.setKeyboardShortcutsOpen);
   const more = visibleNav(MORE_NAV, admin);
   return (
     <motion.nav
@@ -46,7 +48,7 @@ export function TopNav() {
       data-compact={compact ? "true" : undefined}
       className="glass flex items-center gap-0.5 rounded-full p-1"
     >
-      {TOP_NAV.map(({ label, href }) => {
+      {TOP_NAV.map(({ label, href = "/app" }) => {
         const active = isNavActive(pathname, href);
         if (compact && !active) return null;
         return (
@@ -74,15 +76,28 @@ export function TopNav() {
             More
             <ChevronDown aria-hidden className="size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-48">
-            {more.map(({ label, href, Icon }) => (
-              <DropdownMenuItem key={href} asChild>
-                <Link href={href}>
+          <DropdownMenuContent
+            align="end"
+            className="glass min-w-48 rounded-3xl bg-[var(--nx-glass-solid)]"
+          >
+            {more.map(({ label, href, action, Icon }) =>
+              action === "help" || !href ? (
+                <DropdownMenuItem
+                  key={label}
+                  onSelect={() => setHelpOpen(true)}
+                >
                   <Icon aria-hidden className="size-4" />
                   {label}
-                </Link>
-              </DropdownMenuItem>
-            ))}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem key={label} asChild>
+                  <Link href={href}>
+                    <Icon aria-hidden className="size-4" />
+                    {label}
+                  </Link>
+                </DropdownMenuItem>
+              ),
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

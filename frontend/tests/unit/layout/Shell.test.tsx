@@ -86,6 +86,17 @@ describe("Shell", () => {
     );
   });
 
+  it("frames main at 1440px centred", () => {
+    setup();
+    expect(screen.getByRole("main")).toHaveClass(
+      "mx-auto",
+      "w-full",
+      "max-w-[1440px]",
+      "px-4",
+      "md:px-8",
+    );
+  });
+
   it("makes the skip link the first tab stop", async () => {
     setup();
     await userEvent.tab();

@@ -8,7 +8,6 @@ import {
   CalendarDays,
   Users,
   Images,
-  Film,
   List,
   Contact,
   Trophy,
@@ -22,7 +21,10 @@ import {
 
 export interface NavItem {
   label: string;
-  href: string;
+  /** Absent for action items (no route). */
+  href?: string;
+  /** Non-link behaviour; "help" opens the shortcuts/help surface. */
+  action?: "help";
   Icon: LucideIcon;
   adminOnly?: boolean;
 }
@@ -57,31 +59,32 @@ export function visibleNav(items: NavItem[], isAdmin: boolean): NavItem[] {
   return items.filter((i) => !i.adminOnly || isAdmin);
 }
 
-export const PRIMARY_NAV: NavItem[] = [
+/** @brief Phone tab bar items (Create sits between the halves). */
+export const TAB_NAV: NavItem[] = [
   { label: "Home", href: "/app", Icon: House },
   { label: "Chat", href: "/app/chat", Icon: MessageCircle },
   { label: "Calendar", href: "/app/events", Icon: CalendarDays },
-  { label: "Groups", href: "/app/subgroups", Icon: Users },
+  { label: "Photos", href: "/app/photos", Icon: Images },
 ];
 
 /** @brief Desktop top pill nav; overflow lives under a More dropdown. */
 export const TOP_NAV: NavItem[] = [
-  { label: "Home", href: "/app", Icon: House },
-  { label: "Chat", href: "/app/chat", Icon: MessageCircle },
-  { label: "Calendar", href: "/app/events", Icon: CalendarDays },
-  { label: "Photos", href: "/app/galleries", Icon: Images },
+  ...TAB_NAV,
   { label: "Groups", href: "/app/subgroups", Icon: Users },
 ];
 
+/** @brief Top-nav items that the phone tab bar has no room for (shown first in the More sheet). */
+export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
+  (t) => !TAB_NAV.some((x) => x.href === t.href),
+);
+
 export const MORE_NAV: NavItem[] = [
-  { label: "Galleries", href: "/app/galleries", Icon: Images },
+  { label: "People", href: "/app/members", Icon: Contact },
   { label: "Lists", href: "/app/lists", Icon: List },
-  { label: "Media", href: "/app/media", Icon: Film },
   { label: "Kudos", href: "/app/kudos", Icon: Trophy },
-  { label: "Bookmarks", href: "/app/bookmarks", Icon: Bookmark },
-  { label: "Members", href: "/app/members", Icon: Contact },
+  { label: "Saved", href: "/app/bookmarks", Icon: Bookmark },
   { label: "Notifications", href: "/app/notifications", Icon: Bell },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },
-  { label: "Help", href: "/app/help", Icon: CircleHelp },
+  { label: "Help", action: "help", Icon: CircleHelp },
 ];

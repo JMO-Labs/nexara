@@ -1,22 +1,45 @@
 import { describe, it, expect } from "vitest";
 import {
-  PRIMARY_NAV,
+  TAB_NAV,
+  TOP_NAV,
   MORE_NAV,
   visibleNav,
   isNavActive,
 } from "@/components/layout/navItems";
 
 describe("navItems", () => {
-  it("primary labels", () => {
-    expect(PRIMARY_NAV.map((i) => i.label)).toEqual([
+  it("tab nav is the single source", () => {
+    expect(TAB_NAV.map((i) => i.href)).toEqual([
+      "/app",
+      "/app/chat",
+      "/app/events",
+      "/app/photos",
+    ]);
+    expect(TOP_NAV.map((i) => i.label)).toEqual([
       "Home",
       "Chat",
       "Calendar",
+      "Photos",
       "Groups",
     ]);
   });
-  it("has Bookmarks in more nav", () => {
-    expect(MORE_NAV.find((i) => i.label === "Bookmarks")?.href).toBe(
+  it("more nav labels and help action", () => {
+    expect(MORE_NAV.map((i) => i.label)).toEqual([
+      "People",
+      "Lists",
+      "Kudos",
+      "Saved",
+      "Notifications",
+      "Settings",
+      "Admin",
+      "Help",
+    ]);
+    const help = MORE_NAV.find((i) => i.label === "Help");
+    expect(help?.action).toBe("help");
+    expect(help?.href).toBeUndefined();
+  });
+  it("has Saved in more nav", () => {
+    expect(MORE_NAV.find((i) => i.label === "Saved")?.href).toBe(
       "/app/bookmarks",
     );
   });

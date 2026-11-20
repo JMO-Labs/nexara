@@ -50,6 +50,10 @@ describe("BottomTabBar", () => {
       "aria-current",
       "page",
     );
+    expect(screen.getByRole("link", { name: "Photos" })).toHaveAttribute(
+      "href",
+      "/app/photos",
+    );
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Primary" });
@@ -60,8 +64,10 @@ describe("BottomTabBar", () => {
   it("MoreSheet lists overflow items, no Admin for non-admin", () => {
     render(<MoreSheet open onClose={() => {}} />);
     const dlg = screen.getByRole("dialog", { name: "More" });
-    for (const n of ["Galleries", "Media", "Settings", "Help"])
+    for (const n of ["People", "Saved", "Notifications", "Settings"])
       expect(dlg).toContainElement(screen.getByRole("link", { name: n }));
+    expect(dlg).toContainElement(screen.getByRole("button", { name: "Help" }));
+    expect(screen.queryByRole("link", { name: "Help" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
   });
 

@@ -42,10 +42,7 @@ export default function AppHome() {
   const sectionProps = animateIn ? { variants: homeTile } : {};
   const { open, toggle } = useHomeAccordion(mention ? "chat" : "next");
   return (
-    <motion.div
-      className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-6"
-      {...rootProps}
-    >
+    <motion.div className="py-6" {...rootProps}>
       <motion.div
         {...sectionProps}
         className="mb-4 flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between md:gap-6"
