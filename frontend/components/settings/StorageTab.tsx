@@ -111,7 +111,7 @@ export function StorageTab() {
             </div>
             <p className="mt-1 text-sm">{shown}% used</p>
             <Link
-              href="/app/media"
+              href="/app/photos?view=all"
               className="mt-3 inline-block text-sm font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2"
             >
               Manage media

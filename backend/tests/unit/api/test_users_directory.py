@@ -29,6 +29,7 @@ async def test_directory_returns_items_and_passes_params(test_app):
 
     user = MagicMock(spec=User)
     user.id = uuid.uuid4()
+    user.role = "member"
     svc = AsyncMock()
     svc.list.return_value = DirectoryResponse(
         items=[
@@ -60,5 +61,27 @@ async def test_directory_returns_items_and_passes_params(test_app):
         kw = svc.list.call_args.kwargs
         assert kw == {"q": "ru", "filter": "online", "limit": 5, "cursor": "24"}
         assert bad_filter.status_code == 422 and bad_limit.status_code == 422
+    finally:
+        test_app.dependency_overrides.clear()
+
+
+async def test_directory_rejects_roles_outside_admin_member(test_app):
+    """@brief Same gate as GET /users: only admins and members may browse people."""
+    from app.api.v1 import users_directory as mod
+    from app.models.user import User
+
+    user = MagicMock(spec=User)
+    user.id = uuid.uuid4()
+    user.role = "guest"
+
+    async def _u():
+        return user
+
+    test_app.dependency_overrides[get_current_user] = _u
+    test_app.dependency_overrides[mod._build_service] = lambda: AsyncMock()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
+            r = await c.get("/api/v1/users/directory")
+        assert r.status_code == 403
     finally:
         test_app.dependency_overrides.clear()

@@ -264,7 +264,7 @@ describe("GlobalCommandPalette", () => {
 
   it.each([
     ["polls", { id: "p1", parent_id: "post9" }, "/app/post/post9"],
-    ["galleries", { id: "g1" }, "/app/galleries?gallery=g1"],
+    ["galleries", { id: "g1" }, "/app/photos?gallery=g1"],
     ["subgroups", { id: "s1", slug: "choir" }, "/app/subgroups/choir"],
   ])("navigates for %s result", async (type, extra, href) => {
     (useGlobalSearch as ReturnType<typeof vi.fn>).mockReturnValue({

@@ -68,7 +68,7 @@ const NAV_ACTIONS: CommandItem[] = [
   {
     id: "nav-galleries",
     label: "Galleries",
-    hint: "/app/galleries",
+    hint: "/app/photos",
     group: "Jump to",
     onSelect: () => {},
   },
@@ -108,7 +108,7 @@ function PaletteBody() {
       } else if (item.type === "polls") {
         href = `/app/post/${item.parent_id}`;
       } else if (item.type === "galleries") {
-        href = `/app/galleries?gallery=${item.id}`;
+        href = `/app/photos?gallery=${item.id}`;
       } else if (item.type === "subgroups") {
         href = `/app/subgroups/${item.slug ?? item.id}`;
       } else if (item.type === "comments") {
@@ -151,7 +151,7 @@ function PaletteBody() {
         else if (nav.id === "nav-chat") href = "/app/chat";
         else if (nav.id === "nav-events") href = "/app/events";
         else if (nav.id === "nav-subgroups") href = "/app/subgroups";
-        else if (nav.id === "nav-galleries") href = "/app/galleries";
+        else if (nav.id === "nav-galleries") href = "/app/photos";
         else if (nav.id === "nav-settings") href = "/app/settings";
         router.push(href);
         setOpen(false);

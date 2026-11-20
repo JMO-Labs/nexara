@@ -12,7 +12,7 @@ describe("EventGalleryLink", () => {
     render(<EventGalleryLink galleryId="g-1" />);
     expect(screen.getByRole("link", { name: /view gallery/i })).toHaveAttribute(
       "href",
-      "/app/galleries?gallery=g-1",
+      "/app/photos?gallery=g-1",
     );
   });
 

@@ -99,7 +99,7 @@ describe("StorageTab", () => {
     render(<StorageTab />);
     expect(screen.getByRole("link", { name: "Manage media" })).toHaveAttribute(
       "href",
-      "/app/media",
+      "/app/photos?view=all",
     );
   });
 

@@ -50,7 +50,7 @@ describe("PhotosTile", () => {
     expect(screen.getByText("No photos yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Upload photos" })).toHaveAttribute(
       "href",
-      "/app/galleries",
+      "/app/photos",
     );
   });
 });

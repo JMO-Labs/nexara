@@ -25,7 +25,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
       id="photos"
       title={title}
       icon={ImageIcon}
-      href="/app/galleries"
+      href="/app/photos"
       linkLabel="See galleries"
       summary={items.length ? `${items.length} new photos` : "Nothing new"}
       count={items.length}
@@ -36,7 +36,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center">
           <p className="text-sm text-[var(--nx-muted)]">No photos yet</p>
-          <Link href="/app/galleries" className="text-sm underline">
+          <Link href="/app/photos" className="text-sm underline">
             Upload photos
           </Link>
         </div>
@@ -45,7 +45,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
           {items.map((it, i) => (
             <Link
               key={it.media_id}
-              href="/app/galleries"
+              href="/app/photos"
               className={cn(
                 "relative block overflow-hidden rounded-xl",
                 i === 0 ? "col-span-2 row-span-2" : "aspect-square",

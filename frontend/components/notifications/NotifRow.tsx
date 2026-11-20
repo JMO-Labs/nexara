@@ -71,8 +71,11 @@ export function NotifRow({
       data-testid="notif-row"
       data-unread={unread}
       className={cn(
-        "border-ink/10 flex items-start gap-3 border-b px-4 py-3",
-        unread && "bg-surface",
+        "flex items-start gap-3 rounded-[20px] px-4 py-3",
+        // Unread: glass row with a blue dot-rail; read rows stay flat.
+        unread
+          ? "glass-item shadow-[inset_3px_0_0_var(--nx-blue)]"
+          : "hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,transparent)]",
       )}
     >
       {onSelectChange && (
