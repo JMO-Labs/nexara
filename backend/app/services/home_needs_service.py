@@ -49,7 +49,7 @@ class HomeNeedsService:
         subgroup_ids = list((await self._members.list_my_roles(viewer.id)).keys())
         rsvps = await self._repo.pending_rsvps(viewer.id, cid, subgroup_ids, now)
         polls = await self._repo.open_polls(viewer.id, cid, subgroup_ids, now)
-        prompt = await self._repo.unanswered_prompt(viewer.id, cid, now)
+        prompt = await self._repo.unanswered_prompt(viewer.id, cid, subgroup_ids, now)
         count, list_id, list_title = await self._repo.due_list_items(
             viewer.id, cid, subgroup_ids, now
         )

@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import and_, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.event import Event, EventAttendance
 from app.models.list import List, ListItem, ListMember
@@ -113,12 +114,17 @@ class HomeNeedsRepository(BaseRepository[Event]):
         self,
         viewer_id: uuid.UUID,
         community_id: uuid.UUID,
+        subgroup_ids: list[uuid.UUID],
         now: datetime,
     ) -> tuple[uuid.UUID, uuid.UUID, str] | None:
         """
-        @brief Newest active prompt the viewer has not replied to.
+        @brief Newest active prompt, visible to the viewer, they have not replied to.
+        @param subgroup_ids Viewer's subgroups; subgroup-scoped prompts outside them are hidden.
         @return (prompt_post_id, post_id, prompt title) or None.
         """
+        prompt_post = aliased(Post)
+        sg_ok = Prompt.subgroup_id.in_(subgroup_ids) if subgroup_ids else literal(False)
+        post_sg_ok = prompt_post.subgroup_id.in_(subgroup_ids) if subgroup_ids else literal(False)
         answered = exists().where(
             Post.reply_to_prompt_id == PromptPost.id,
             Post.author_id == viewer_id,
@@ -127,8 +133,13 @@ class HomeNeedsRepository(BaseRepository[Event]):
         stmt = (
             select(PromptPost.id, PromptPost.post_id, Prompt.title)
             .join(Prompt, Prompt.id == PromptPost.prompt_id)
+            .join(prompt_post, prompt_post.id == PromptPost.post_id)
             .where(
                 PromptPost.community_id == community_id,
+                or_(Prompt.subgroup_id.is_(None), sg_ok),
+                or_(prompt_post.subgroup_id.is_(None), post_sg_ok),
+                prompt_post.deleted_at.is_(None),
+                _not_blocked(prompt_post.author_id, viewer_id),
                 PromptPost.is_finalised.is_(False),
                 PromptPost.expires_at > now,
                 ~answered,

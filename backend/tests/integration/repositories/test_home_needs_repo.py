@@ -134,10 +134,16 @@ async def test_polls_exclusions(session, world):
     assert [p.id for p in rows] == [ok.id]
 
 
-async def _prompt(session, cid, author) -> PromptPost:
-    pr = Prompt(community_id=cid, title="Gratitude", body="b", frequency_type="weekly")
+async def _prompt(session, cid, author, subgroup_id=None) -> PromptPost:
+    pr = Prompt(
+        community_id=cid,
+        title="Gratitude",
+        body="b",
+        frequency_type="weekly",
+        subgroup_id=subgroup_id,
+    )
     session.add(pr)
-    post = await _post(session, cid, author, is_prompt_post=True)
+    post = await _post(session, cid, author, is_prompt_post=True, subgroup_id=subgroup_id)
     await session.flush()
     pp = PromptPost(
         community_id=cid,
@@ -155,10 +161,10 @@ async def test_prompt_unanswered_then_answered(session, world):
     cid, viewer, other = world
     repo = HomeNeedsRepository(session)
     pp = await _prompt(session, cid, other)
-    res = await repo.unanswered_prompt(viewer.id, cid, NOW)
+    res = await repo.unanswered_prompt(viewer.id, cid, [], NOW)
     assert res is not None and res[0] == pp.id and res[2] == "Gratitude"
     await _post(session, cid, viewer, reply_to_prompt_id=pp.id)
-    assert await repo.unanswered_prompt(viewer.id, cid, NOW) is None
+    assert await repo.unanswered_prompt(viewer.id, cid, [], NOW) is None
 
 
 async def test_prompt_expired_excluded(session, world):
@@ -166,7 +172,7 @@ async def test_prompt_expired_excluded(session, world):
     pp = await _prompt(session, cid, other)
     pp.expires_at = NOW - timedelta(minutes=1)
     await session.flush()
-    assert await HomeNeedsRepository(session).unanswered_prompt(viewer.id, cid, NOW) is None
+    assert await HomeNeedsRepository(session).unanswered_prompt(viewer.id, cid, [], NOW) is None
 
 
 async def _list(session, cid, owner, **kw) -> List:
@@ -196,3 +202,17 @@ async def test_list_items_none(session, world):
     cid, viewer, _ = world
     res = await HomeNeedsRepository(session).due_list_items(viewer.id, cid, [], NOW)
     assert res == (0, None, None)
+
+
+async def test_subgroup_prompt_hidden_from_non_members(session, world):
+    from app.models.subgroup import Subgroup
+
+    cid, viewer, other = world
+    sg = Subgroup(community_id=cid, name="g", slug=f"g-{uuid.uuid4().hex[:6]}")
+    session.add(sg)
+    await session.flush()
+    pp = await _prompt(session, cid, other, subgroup_id=sg.id)
+    repo = HomeNeedsRepository(session)
+    assert await repo.unanswered_prompt(viewer.id, cid, [], NOW) is None
+    res = await repo.unanswered_prompt(viewer.id, cid, [sg.id], NOW)
+    assert res is not None and res[0] == pp.id
