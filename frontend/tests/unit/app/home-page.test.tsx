@@ -1,48 +1,94 @@
 /**
  * @file tests/unit/app/home-page.test.tsx
- * @brief Home page: greeting, NextUp, feed and widget column.
+ * @brief Home page frame: greeting, scope bar, six slots, default accordion.
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { screen, fireEvent } from "@testing-library/react";
+import { renderWithProviders } from "../../utils/renderWithProviders";
+
+const chats = vi.hoisted(() => ({ data: { items: [] as unknown[] } }));
 
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
     sel({ user: { id: "u1", display_name: "Alice Smith" } }),
 }));
-vi.mock("@/components/home/HomeFeed", () => ({
-  HomeFeed: () => <div data-testid="feed" />,
+vi.mock("@/hooks/useHomeChats", () => ({ useHomeChats: () => chats }));
+vi.mock("@/hooks/useSubgroups", () => ({
+  useSubgroupList: () => ({ data: [] }),
 }));
-vi.mock("@/components/home/NextUpCard", () => ({
-  NextUpCard: () => <div data-testid="nextup" />,
+vi.mock("@/components/home/tiles/FeedTile", () => ({
+  FeedTile: ({
+    open,
+    onToggle,
+  }: {
+    open: boolean;
+    onToggle: (id: "feed") => void;
+  }) => (
+    <button
+      data-testid="feed"
+      data-open={open}
+      onClick={() => onToggle("feed")}
+    />
+  ),
 }));
-vi.mock("@/components/home/WidgetColumn", () => ({
-  WidgetColumn: () => <aside aria-label="Widgets" />,
+vi.mock("@/components/home/tiles/ChatsTile", () => ({
+  ChatsTile: ({ open }: { open: boolean }) => (
+    <div data-testid="chats" data-open={open} />
+  ),
+}));
+vi.mock("@/components/home/tiles/UpNextTile", () => ({
+  UpNextTile: ({ open }: { open: boolean }) => (
+    <div data-testid="next" data-open={open} />
+  ),
+}));
+vi.mock("@/components/home/tiles/PhotosTile", () => ({
+  PhotosTile: ({ open }: { open: boolean }) => (
+    <div data-testid="photos" data-open={open} />
+  ),
+}));
+vi.mock("@/components/home/PeopleStrip", () => ({
+  PeopleStrip: () => <div data-testid="people" />,
+}));
+vi.mock("@/components/home/NeedsChips", () => ({
+  NeedsChips: () => <div data-testid="needs" />,
 }));
 
 import AppHome from "@/app/app/page";
 
+beforeEach(() => {
+  chats.data = { items: [] };
+});
+
 describe("AppHome page", () => {
-  it("greets by first name", () => {
-    render(<AppHome />);
+  it("greets and renders the six slots without a nested main", () => {
+    const { container } = renderWithProviders(<AppHome />);
     expect(
-      screen.getByRole("heading", { level: 1, name: "Hi Alice." }),
+      screen.getByRole("heading", { level: 1, name: /^Good \w+, Alice$/ }),
     ).toBeInTheDocument();
+    for (const id of ["feed", "chats", "next", "photos", "people", "needs"]) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: /Everything/ })).toBeTruthy();
+    expect(container.querySelector("main")).toBeNull();
   });
 
-  it("renders next-up, feed and the Widgets aside", () => {
-    render(<AppHome />);
-    expect(screen.getByTestId("nextup")).toBeInTheDocument();
-    expect(screen.getByTestId("feed")).toBeInTheDocument();
-    expect(screen.getByLabelText("Widgets")).toBeInTheDocument();
+  it("opens Up next by default with no mentions", () => {
+    renderWithProviders(<AppHome />);
+    expect(screen.getByTestId("next").dataset.open).toBe("true");
+    expect(screen.getByTestId("chats").dataset.open).toBe("false");
   });
 
-  it("stacks on mobile, row with sidebar from md", () => {
-    render(<AppHome />);
-    const row = screen.getByTestId("feed").parentElement!.parentElement!;
-    expect(row.className).toContain("md:flex");
-    expect(row.className).not.toMatch(/(^|\s)flex(\s|$)/);
-    expect(screen.getByTestId("feed").parentElement!.className).toContain(
-      "w-full",
-    );
+  it("opens Chats by default when a thread mentions me", () => {
+    chats.data = { items: [{ channel_id: "c1", mentions_me: true }] };
+    renderWithProviders(<AppHome />);
+    expect(screen.getByTestId("chats").dataset.open).toBe("true");
+    expect(screen.getByTestId("next").dataset.open).toBe("false");
+  });
+
+  it("toggling a tile opens it and closes others", () => {
+    renderWithProviders(<AppHome />);
+    fireEvent.click(screen.getByTestId("feed"));
+    expect(screen.getByTestId("feed").dataset.open).toBe("true");
+    expect(screen.getByTestId("next").dataset.open).toBe("false");
   });
 });
