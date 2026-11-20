@@ -1,16 +1,23 @@
 "use client";
 /**
  * @file components/layout/TopBar.tsx
- * @brief Sticky top bar. Phone: logo mark, search, bell. Desktop: search,
- *        bell, avatar menu (side nav carries the logo).
+ * @brief Sticky top bar. Desktop: lockup, pill nav, create, search, bell,
+ *        avatar. Phone: lockup, create, bell, avatar button (More sheet).
  */
+import { useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { Avatar } from "@/components/ui/Avatar";
+import { BrandLockup } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import { AvatarMenu } from "./AvatarMenu";
+import { TopNav } from "./TopNav";
+import { CreateMenu } from "./CreateMenu";
+import { MoreSheet } from "./MoreSheet";
 import { useUI } from "@/stores/ui";
+import { useSession } from "@/stores/session";
 import { useBrandingStore } from "@/stores/branding";
 
 /**
@@ -20,26 +27,24 @@ import { useBrandingStore } from "@/stores/branding";
 export function TopBar() {
   const openPalette = useUI((s) => s.setCommandPaletteOpen);
   const { name, logoUrl } = useBrandingStore();
+  const user = useSession((s) => s.user);
+  const [moreOpen, setMoreOpen] = useState(false);
   return (
-    <header className="bg-bg sticky top-0 z-20 flex items-center gap-2 px-4 py-2 md:px-8">
+    <header className="sticky top-0 z-20 flex items-center gap-2 px-4 py-2 md:px-8">
       <NotificationsDrawer />
       <Link
         href="/app"
         aria-label={`${name} home`}
-        className="bg-sun text-surface-strong focus-visible:outline-accent grid size-9 place-items-center rounded-xl font-black focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden"
+        className="focus-visible:outline-accent rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
-          <img
-            src={logoUrl}
-            alt=""
-            className="size-9 rounded-xl object-cover"
-          />
-        ) : (
-          name.charAt(0).toUpperCase()
-        )}
+        <BrandLockup logoUrl={logoUrl} name={name} size={32} />
       </Link>
-      <div className="ml-auto flex items-center gap-1">
+      <div className="hidden flex-1 justify-center md:flex">
+        <TopNav />
+      </div>
+      <div className="ml-auto flex items-center gap-1 md:ml-0">
+        <CreateMenu className="hidden md:inline-flex" />
+        <CreateMenu compact className="md:hidden" />
         <IconButton
           variant="ghost"
           aria-label="Search"
@@ -55,7 +60,22 @@ export function TopBar() {
         <div className="hidden md:block">
           <AvatarMenu />
         </div>
+        <button
+          type="button"
+          aria-label="More"
+          aria-haspopup="dialog"
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen(true)}
+          className="focus-visible:outline-accent rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden"
+        >
+          <Avatar
+            src={user?.avatar_url ?? undefined}
+            name={user?.display_name ?? "You"}
+            size="md"
+          />
+        </button>
       </div>
+      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </header>
   );
 }

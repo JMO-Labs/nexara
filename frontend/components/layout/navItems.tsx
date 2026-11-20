@@ -64,6 +64,15 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: "Groups", href: "/app/subgroups", Icon: Users },
 ];
 
+/** @brief Desktop top pill nav; overflow lives under a More dropdown. */
+export const TOP_NAV: NavItem[] = [
+  { label: "Home", href: "/app", Icon: House },
+  { label: "Chat", href: "/app/chat", Icon: MessageCircle },
+  { label: "Calendar", href: "/app/events", Icon: CalendarDays },
+  { label: "Photos", href: "/app/galleries", Icon: Images },
+  { label: "Groups", href: "/app/subgroups", Icon: Users },
+];
+
 export const MORE_NAV: NavItem[] = [
   { label: "Galleries", href: "/app/galleries", Icon: Images },
   { label: "Lists", href: "/app/lists", Icon: List },

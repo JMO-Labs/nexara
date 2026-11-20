@@ -16,6 +16,20 @@ vi.mock("@/components/layout/AvatarMenu", () => ({
   AvatarMenu: () => <button aria-label="Account menu" />,
 }));
 
+vi.mock("@/components/layout/TopNav", () => ({
+  TopNav: () => <nav aria-label="Main" />,
+}));
+vi.mock("@/components/layout/CreateMenu", () => ({
+  CreateMenu: () => <button aria-label="Create" />,
+}));
+vi.mock("@/components/layout/MoreSheet", () => ({
+  MoreSheet: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog" aria-label="More" /> : null,
+}));
+vi.mock("@/hooks/useSettings", () => ({
+  useUserSettings: () => ({ data: undefined }),
+}));
+
 import { TopBar } from "@/components/layout/TopBar";
 import { useUI } from "@/stores/ui";
 
@@ -33,5 +47,21 @@ describe("TopBar", () => {
     expect(
       screen.getByRole("button", { name: "Notifications" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("TopBar nav", () => {
+  it("renders the main nav and create menu", () => {
+    render(<TopBar />);
+    expect(
+      screen.getByRole("navigation", { name: "Main" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Create" })).toHaveLength(2);
+  });
+
+  it("phone avatar button opens the More sheet", async () => {
+    render(<TopBar />);
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("dialog", { name: "More" })).toBeInTheDocument();
   });
 });

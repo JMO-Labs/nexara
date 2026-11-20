@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/layout/Shell.tsx
- * @brief Authenticated app shell. Composes SideNav + TopBar + main pane +
+ * @brief Authenticated app shell. Composes backdrop + TopBar + main pane +
  *        BottomTabBar. Bootstraps the session and gates rendering on it.
  *        Global ? listener opens keyboard shortcuts modal.
  */
@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useSessionBootstrap } from "@/hooks/useSession";
 import { useUI } from "@/stores/ui";
+import { useUserSettings } from "@/hooks/useSettings";
 import { useModals } from "@/stores/modals";
 import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
-import { SideNav } from "./SideNav";
+import { AppBackdrop } from "./AppBackdrop";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
@@ -32,6 +33,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const status = useSession((s) => s.status);
   const density = useUI((s) => s.density);
+  const { data: settings } = useUserSettings();
+  const reduced = (settings as { reduce_transparency?: boolean } | undefined)
+    ?.reduce_transparency;
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   useEffect(() => {
@@ -74,7 +78,12 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="bg-bg text-ink min-h-dvh" data-density={density}>
+      <div
+        className="text-ink min-h-dvh"
+        data-density={density}
+        data-transparency={reduced ? "reduced" : undefined}
+      >
+        <AppBackdrop />
         <a
           href="#main"
           className="bg-surface-strong text-bg focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
@@ -82,8 +91,7 @@ export function Shell({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <BrandingStyle />
-        <SideNav />
-        <div className="flex min-h-dvh min-w-0 flex-col md:pl-16">
+        <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />
           <main
             id="main"

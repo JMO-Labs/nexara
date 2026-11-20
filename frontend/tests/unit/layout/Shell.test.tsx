@@ -17,6 +17,17 @@ const { stub } = vi.hoisted(() => ({
   }),
 }));
 vi.mock("@/components/layout/TopBar", () => stub("TopBar"));
+vi.mock("@/components/layout/AppBackdrop", () =>
+  stub("AppBackdrop", "backdrop"),
+);
+vi.mock("@/components/layout/BottomTabBar", async (orig) => ({
+  ...(await orig<typeof import("@/components/layout/BottomTabBar")>()),
+  BottomTabBar: () => <nav aria-label="Primary" />,
+}));
+const settings = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock("@/hooks/useSettings", () => ({
+  useUserSettings: () => ({ data: settings.data }),
+}));
 vi.mock("@/components/layout/BrandingStyle", () => stub("BrandingStyle"));
 vi.mock("@/components/layout/ModalRoot", () => stub("ModalRoot"));
 vi.mock("@/components/help/KeyboardShortcutsModal", () =>
@@ -47,14 +58,25 @@ function setup() {
 }
 
 describe("Shell", () => {
-  it("renders both navigations", () => {
+  it("has no side rail, only the tab bar and backdrop", () => {
     setup();
     expect(
-      screen.getByRole("navigation", { name: "Main" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("navigation", { name: "Main" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("navigation", { name: "Primary" }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("backdrop")).toBeInTheDocument();
+  });
+
+  it("sets data-transparency when reduce_transparency is on", () => {
+    settings.data = { reduce_transparency: true };
+    const { container } = setup();
+    expect(container.querySelector("[data-density]")).toHaveAttribute(
+      "data-transparency",
+      "reduced",
+    );
+    settings.data = undefined;
   });
 
   it("pads main for the tab bar and safe area", () => {
