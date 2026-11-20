@@ -298,6 +298,32 @@ class TestListMedia:
     """@brief Tests for HomeService.list_media()."""
 
     @pytest.mark.asyncio
+    async def test_list_media_uses_memberships_not_discoverable_groups(self):
+        """Group media access comes from membership (member_subgroup_ids)."""
+        user = _make_user()
+        sid = uuid.uuid4()
+        subgroup_repo = AsyncMock(spec=SubgroupRepository)
+        subgroup_repo.member_subgroup_ids.return_value = [sid]
+        media_repo = AsyncMock(spec=SubgroupMediaRepository)
+        media_repo.list_aggregated.return_value = ([], None)
+        svc = _build_service(subgroup_repo=subgroup_repo, media_repo=media_repo)
+        await svc.list_media(user=user)
+        subgroup_repo.list_visible_for_user.assert_not_awaited()
+        assert media_repo.list_aggregated.call_args.kwargs["subgroup_ids"] == [sid]
+
+    @pytest.mark.asyncio
+    async def test_list_media_subgroup_scope_requires_membership(self):
+        """scope='subgroup' for a group the viewer is not in returns nothing."""
+        user = _make_user()
+        subgroup_repo = AsyncMock(spec=SubgroupRepository)
+        subgroup_repo.member_subgroup_ids.return_value = []
+        media_repo = AsyncMock(spec=SubgroupMediaRepository)
+        svc = _build_service(subgroup_repo=subgroup_repo, media_repo=media_repo)
+        items, cur = await svc.list_media(user=user, scope="subgroup", subgroup_id=uuid.uuid4())
+        assert items == [] and cur is None
+        media_repo.list_aggregated.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_list_media_returns_empty_when_no_subgroups_and_no_community_media(
         self,
     ):
@@ -305,7 +331,7 @@ class TestListMedia:
         user = _make_user()
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([], None)
@@ -325,7 +351,7 @@ class TestListMedia:
         sg2 = _make_subgroup(name="Beta")
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = [sg1, sg2]
+        subgroup_repo.member_subgroup_ids.return_value = [sg1.id, sg2.id]
 
         item_a = {
             "media_id": str(uuid.uuid4()),

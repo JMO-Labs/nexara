@@ -371,6 +371,19 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         result = await self._session.execute(stmt)
         return int(result.scalar_one() or 0) > 0
 
+    async def member_subgroup_ids(self, user_id: uuid.UUID) -> list[uuid.UUID]:
+        """
+        @brief Subgroups the user belongs to, expanded with descendants.
+
+        Membership (not discoverability) is what grants access to
+        subgroup-scoped content; matches EventService/ListService.
+        @param user_id Viewer user ID.
+        @return Subgroup IDs (direct memberships + their descendants).
+        """
+        stmt = select(SubgroupMember.subgroup_id).where(SubgroupMember.user_id == user_id)
+        direct = list((await self._session.execute(stmt)).scalars().all())
+        return await expand_with_descendants(self._session, direct)
+
 
 __all__ = [
     "SubgroupMemberRepository",

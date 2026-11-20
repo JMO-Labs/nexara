@@ -113,7 +113,8 @@ class HomeService:
         - scope='community': community-root only (subgroup_id IS NULL)
         - scope='subgroup': specific subgroup_id only
 
-        Respects visibility predicates (community / subgroup / private).
+        Respects visibility: group media needs membership; private media is
+        author/owner only.
 
         @param user Authenticated User model instance.
         @param limit Maximum number of items to return (capped at 200).
@@ -125,12 +126,11 @@ class HomeService:
         """
         limit = min(limit, 200)
 
-        # Resolve viewer's subgroup IDs for scope='all'
-        subgroups = await self._subgroup_repo.list_visible_for_user(
-            self._community_id,
-            user.id,
-        )
-        subgroup_ids = [sg.id for sg in subgroups]
+        # Only groups the viewer belongs to grant access to group media;
+        # discoverable-but-not-joined groups do not.
+        subgroup_ids = await self._subgroup_repo.member_subgroup_ids(user.id)
+        if scope == "subgroup" and subgroup_id not in subgroup_ids:
+            return [], None
 
         # Call aggregated query with scope
         return await self._media_repo.list_aggregated(
