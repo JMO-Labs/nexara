@@ -3,6 +3,10 @@
  * @brief ChatsTile: thread list, accordion, inline reply, empty/scope states.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/app",
+}));
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../utils/renderWithProviders";
 import type { HomeChatThread } from "@/lib/api/home";

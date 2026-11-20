@@ -5,6 +5,7 @@
  */
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { animate, useReducedMotion } from "framer-motion";
 import { collapseTransition } from "@/components/ui/motion";
 import { ChevronDown, type LucideIcon } from "lucide-react";
@@ -55,7 +56,7 @@ export function HomeTile({
   const sectionRef = React.useRef<HTMLElement>(null);
   const wasOpen = React.useRef(open);
   const leaving = React.useRef(false);
-  const replay = React.useRef(false);
+  const router = useRouter();
 
   // Phone accordion: animate height on open only. CSS owns the rest state, so
   // desktop and no-JS content is never hidden; inline styles are cleared after.
@@ -77,7 +78,6 @@ export function HomeTile({
   }, [open, reduced]);
 
   const onLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (replay.current) return;
     if (
       reduced ||
       e.defaultPrevented ||
@@ -90,16 +90,12 @@ export function HomeTile({
       return;
     e.preventDefault();
     const el = sectionRef.current;
-    const anchor = e.currentTarget;
     if (!el || leaving.current) return;
     leaving.current = true;
     try {
       await animate(el, { scale: 1.02, opacity: 0.6 }, { duration: 0.15 });
     } finally {
-      // Re-dispatch the click so next/link performs the client navigation.
-      replay.current = true;
-      anchor.click();
-      replay.current = false;
+      router.push(href);
       leaving.current = false;
       // Never leave the tile faded if navigation is slow.
       animate(el, { scale: 1, opacity: 1 }, { duration: 0.2 });

@@ -73,7 +73,7 @@ export function PostCard({
     <Card
       role="article"
       aria-label={cardLabel}
-      className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-surface))] md:p-4"
+      className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-item))] md:p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <PostHeader

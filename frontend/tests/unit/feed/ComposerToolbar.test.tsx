@@ -42,4 +42,18 @@ describe("ComposerToolbar", () => {
     fireEvent.click(screen.getByRole("button", { name: /post/i }));
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("fires onKudos from the Send kudos icon button", () => {
+    const onKudos = vi.fn();
+    renderWithProviders(
+      <ComposerToolbar
+        posting={false}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        onKudos={onKudos}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send kudos" }));
+    expect(onKudos).toHaveBeenCalledTimes(1);
+  });
 });

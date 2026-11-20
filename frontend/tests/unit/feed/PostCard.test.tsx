@@ -215,7 +215,7 @@ describe("PostCard kudos", () => {
     } as unknown as Post;
     render(<PostCard post={kudos} />);
     const card = screen.getByRole("article");
-    expect(card.className).toMatch(/bg-purple-100/);
+    expect(card.className).toMatch(/glass-item/);
     expect(screen.getByText("Ana Lima")).toHaveClass("font-bold");
     expect(screen.getByTestId("kudos-message")).toHaveTextContent(
       "Thanks for the help!",
@@ -226,6 +226,6 @@ describe("PostCard kudos", () => {
   it("renders the normal card without a recipient", () => {
     render(<PostCard post={base} />);
     expect(screen.queryByTestId("kudos-trophy")).toBeNull();
-    expect(screen.getByRole("article").className).not.toMatch(/bg-purple-100/);
+    expect(screen.queryByTestId("kudos-bar")).toBeNull();
   });
 });

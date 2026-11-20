@@ -11,17 +11,9 @@ const animateMock = vi.hoisted(() =>
   vi.fn(() => ({ then: (r: () => void) => r() })),
 );
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/link", () => ({
-  default: ({ href, onClick, ...r }: React.ComponentProps<"a">) => (
-    <a
-      href={href}
-      onClick={(e) => {
-        onClick?.(e);
-        if (!e.defaultPrevented) push(href);
-      }}
-      {...r}
-    />
-  ),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => "/app",
 }));
 vi.mock("framer-motion", async () => {
   const actual =

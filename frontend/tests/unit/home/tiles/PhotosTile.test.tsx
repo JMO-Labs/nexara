@@ -3,6 +3,10 @@
  * @brief PhotosTile: mosaic, cap, empty state.
  */
 import { describe, it, expect, vi } from "vitest";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/app",
+}));
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../utils/renderWithProviders";
 

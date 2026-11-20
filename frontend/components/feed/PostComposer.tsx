@@ -1,8 +1,8 @@
 "use client";
 /**
  * @file components/feed/PostComposer.tsx
- * @brief Tailwind/shadcn-skinned Tiptap-based rich-text composer for new posts. Inline trigger row
- *        opens an editor; supports submit on Cmd/Ctrl+Enter.
+ * @brief Glass Tiptap-based rich-text composer for new posts. Compact one-line row
+ *        expands to an editor with audience pills and a kudos trigger; supports submit on Cmd/Ctrl+Enter.
  *        Polls and media attachment surfaced as toggles; payload pieces
  *        are attached as media_ids / poll on submit.
  *        Supports reply-to-prompt with banner display and state management.
@@ -17,7 +17,6 @@ import {
   Button,
   Chip,
   IconButton,
-  ScopeSelect,
   type ScopeValue,
 } from "@/components/ui";
 import { useSession } from "@/stores/session";
@@ -25,7 +24,9 @@ import { useCreatePost } from "@/hooks/usePosts";
 import { useCalendars } from "@/hooks/useCalendars";
 import { addInterest } from "@/lib/api/users";
 import { useToasts } from "@/stores/toasts";
-import { ComposerToolbar } from "./ComposerToolbar";
+import { AudiencePicker } from "./AudiencePicker";
+import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
+import { KudosComposer } from "./KudosComposer";
 import { X } from "lucide-react";
 
 export interface PostComposerProps {
@@ -52,6 +53,7 @@ export function PostComposer({
   const { data: calendars } = useCalendars();
   const [expanded, setExpanded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [kudosOpen, setKudosOpen] = React.useState(false);
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
   const [scope, setScope] = React.useState<ScopeValue>({
@@ -79,7 +81,7 @@ export function PostComposer({
         link: { openOnClick: false, autolink: true },
       }),
       Placeholder.configure({
-        placeholder: "Share something with your community…",
+        placeholder: "Share something with everyone…",
       }),
     ],
     immediatelyRender: false,
@@ -149,6 +151,10 @@ export function PostComposer({
     scope,
   ]);
 
+  React.useEffect(() => {
+    if (expanded) editor?.commands.focus();
+  }, [expanded, editor]);
+
   if (!me) return null;
 
   const interestPrompt = showInterest ? (
@@ -190,33 +196,36 @@ export function PostComposer({
     </div>
   ) : null;
 
+  const kudosModal = kudosOpen ? (
+    <KudosComposer open onClose={() => setKudosOpen(false)} />
+  ) : null;
+
   if (!expanded) {
     return (
       <div>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="bg-surface text-muted focus-visible:outline-accent flex w-full cursor-text items-center gap-3 rounded-[1.25rem] border border-muted/40 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
+        <div className="glass-item flex w-full items-center gap-2 rounded-[22px] p-2 pl-3">
           <Avatar
             src={me.avatar_url ?? undefined}
             name={me.display_name}
             size="sm"
           />
-          <span className="text-base">
-            Share something with your community…
-          </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-muted focus-visible:outline-accent min-w-0 flex-1 cursor-text truncate rounded-full px-2 py-1.5 text-left text-base focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Share something with everyone
+          </button>
+          <ComposerIcons onKudos={() => setKudosOpen(true)} />
+        </div>
         {interestPrompt}
+        {kudosModal}
       </div>
     );
   }
 
   return (
-    <div
-      className="bg-surface rounded-[1.25rem] border border-muted/40 p-3"
-      data-tour="composer"
-    >
+    <div className="glass-item rounded-[22px] p-3" data-tour="composer">
       {replyToPromptId && replyToPromptTitle && (
         <div className="bg-bg mb-3 flex items-center justify-between gap-2 rounded-xl p-2 text-sm">
           <p>
@@ -240,7 +249,7 @@ export function PostComposer({
           size="sm"
         />
         <div className="min-w-0 grow">
-          <div className="min-h-20 rounded-xl border border-muted/40 p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
+          <div className="min-h-20 rounded-xl p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
             <EditorContent editor={editor} />
           </div>
           {error ? (
@@ -250,7 +259,7 @@ export function PostComposer({
           ) : null}
           {!defaultSubgroupId && (
             <div className="mt-3 mb-2">
-              <ScopeSelect
+              <AudiencePicker
                 value={scope}
                 onChange={setScope}
                 subgroups={myGroups}
@@ -259,6 +268,7 @@ export function PostComposer({
           )}
           <ComposerToolbar
             posting={createMut.isPending}
+            onKudos={() => setKudosOpen(true)}
             onSubmit={submit}
             onCancel={() => {
               editor?.commands.clearContent();
@@ -269,6 +279,7 @@ export function PostComposer({
         </div>
       </div>
       {interestPrompt}
+      {kudosModal}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * @file components/feed/KudosCard.tsx
- * @brief Distinct purple card for a kudos: trophy, recipient, message, sender.
+ * @brief Glass-item card for a kudos (sun accent bar): trophy, recipient, message, sender.
  */
 import { Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui";
@@ -35,9 +35,15 @@ export function KudosCard({
   return (
     <article
       aria-busy={pending || undefined}
-      className="flex gap-3 rounded-2xl border border-purple-200 bg-purple-100 p-4 text-purple-950 data-[pending=true]:opacity-60"
+      className="glass-item text-ink relative flex gap-3 overflow-hidden rounded-[24px] p-4 pl-5 data-[pending=true]:opacity-60"
       data-pending={pending ? "true" : undefined}
     >
+      <span
+        aria-hidden="true"
+        data-testid="kudos-bar"
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{ background: "var(--nx-sun)" }}
+      />
       <Avatar
         src={recipient.avatar_url ?? undefined}
         name={recipient.display_name}
@@ -48,7 +54,8 @@ export function KudosCard({
           <Trophy
             data-testid="kudos-trophy"
             aria-hidden="true"
-            className="size-4 shrink-0 text-purple-700"
+            className="size-4 shrink-0"
+            style={{ color: "var(--nx-sun)" }}
           />
           <span className="truncate font-bold">{recipient.display_name}</span>
         </div>
@@ -57,7 +64,7 @@ export function KudosCard({
             {message}
           </p>
         ) : null}
-        <p className="text-xs text-purple-900">
+        <p className="text-xs text-[var(--nx-muted)]">
           {authorName ? `${authorName} · ` : ""}
           <time dateTime={createdAt}>
             {new Date(createdAt).toLocaleDateString()}

@@ -3,6 +3,10 @@
  * @brief HomeTile: accordion header semantics and pointer sheen.
  */
 import { describe, it, expect, vi } from "vitest";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/app",
+}));
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Calendar } from "lucide-react";
 import { HomeTile } from "@/components/home/HomeTile";

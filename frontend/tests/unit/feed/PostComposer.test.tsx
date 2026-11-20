@@ -19,7 +19,7 @@ vi.mock("@/hooks/usePosts", () => ({
 // Now safe to import component and dependencies
 import React, { useState } from "react";
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useToasts } from "@/stores/toasts";
 import { PostComposer } from "@/components/feed/PostComposer";
@@ -47,6 +47,10 @@ vi.mock("@/hooks/useCalendars", () => ({
   }),
 }));
 
+vi.mock("@/components/feed/KudosComposer", () => ({
+  KudosComposer: () => <div role="dialog" aria-label="Send Kudos" />,
+}));
+
 describe("PostComposer", () => {
   function wrap(ui: React.ReactNode) {
     return render(<>{ui}</>);
@@ -59,14 +63,14 @@ describe("PostComposer", () => {
 
   it("renders collapsed state initially", () => {
     wrap(<PostComposer />);
-    const trigger = screen.getByText(/Share something with your community/i);
+    const trigger = screen.getByText(/Share something with everyone/i);
     expect(trigger).toBeInTheDocument();
   });
 
   it("mounts the rich-text editor and accepts typed text", async () => {
     const user = userEvent.setup();
     wrap(<PostComposer />);
-    await user.click(screen.getByText(/Share something with your community/i));
+    await user.click(screen.getByText(/Share something with everyone/i));
     const editor = await screen.findByRole("textbox");
     await user.click(editor);
     await user.keyboard("hello tiptap");
@@ -84,7 +88,7 @@ describe("PostComposer", () => {
       );
 
       // Expand the composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Check for banner text - it should show "Replying to: <title>"
@@ -99,7 +103,7 @@ describe("PostComposer", () => {
       wrap(<PostComposer replyToPromptId="prompt1" />);
 
       // Expand the composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Banner should not appear without title
@@ -132,7 +136,7 @@ describe("PostComposer", () => {
       wrap(<TestWrapper />);
 
       // Expand composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Find and click the clear button (X button in the banner)
@@ -156,7 +160,7 @@ describe("PostComposer", () => {
       );
 
       // Expand composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Type content in the editor
@@ -182,7 +186,7 @@ describe("PostComposer", () => {
       wrap(<PostComposer />);
 
       // Expand composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Type content
@@ -208,7 +212,7 @@ describe("PostComposer", () => {
       wrap(<PostComposer />);
 
       // Expand composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Type content
@@ -234,9 +238,7 @@ describe("PostComposer", () => {
     async function open(ui: React.ReactNode, text = "Hello") {
       const user = userEvent.setup();
       wrap(ui);
-      await user.click(
-        screen.getByText(/Share something with your community/i),
-      );
+      await user.click(screen.getByText(/Share something with everyone/i));
       await user.click(document.querySelector(".tiptap-editor") as HTMLElement);
       await user.keyboard(text);
       return user;
@@ -283,7 +285,7 @@ describe("PostComposer", () => {
       );
 
       // Expand composer
-      const trigger = screen.getByText(/Share something with your community/i);
+      const trigger = screen.getByText(/Share something with everyone/i);
       await user.click(trigger);
 
       // Look for the banner text
@@ -293,6 +295,78 @@ describe("PostComposer", () => {
       // Check that the X button is present
       const clearBtn = screen.getByLabelText(/clear reply/i);
       expect(clearBtn).toBeInTheDocument();
+    });
+  });
+
+  describe("glass composer", () => {
+    it("collapsed row has no audience picker; expands on click", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      expect(screen.queryByRole("radiogroup")).toBeNull();
+      await user.click(screen.getByText(/Share something with everyone/i));
+      expect(
+        screen.getByRole("radiogroup", { name: "Share with" }),
+      ).toBeInTheDocument();
+    });
+
+    it("audience offers Community, A specific group, Just me", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      await user.click(screen.getByText(/Share something with everyone/i));
+      const radios = screen.getAllByRole("radio");
+      expect(radios.map((r) => r.textContent)).toEqual([
+        "Community",
+        "A specific group",
+        "Just me",
+      ]);
+      expect(radios[0]).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("Just me posts with private visibility", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      await user.click(screen.getByText(/Share something with everyone/i));
+      await user.click(screen.getByRole("radio", { name: "Just me" }));
+      await user.click(document.querySelector(".tiptap-editor") as HTMLElement);
+      await user.keyboard("secret");
+      await user.click(screen.getByRole("button", { name: "Post" }));
+      const args = mockCreatePost.mock.calls[0]?.[0];
+      expect(args.visibility).toBe("private");
+      expect(args.subgroup_id).toBeNull();
+    });
+
+    it("arrow keys move the audience selection", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      await user.click(screen.getByText(/Share something with everyone/i));
+      await waitFor(() =>
+        expect(document.activeElement?.closest(".tiptap-editor")).toBeTruthy(),
+      );
+      screen.getByRole("radio", { name: "Community" }).focus();
+      await user.keyboard("{ArrowRight}");
+      expect(
+        screen.getByRole("radio", { name: "A specific group" }),
+      ).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("Send kudos toolbar button opens the kudos composer", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      await user.click(screen.getByText(/Share something with everyone/i));
+      expect(screen.queryByRole("dialog", { name: "Send Kudos" })).toBeNull();
+      await user.click(screen.getByRole("button", { name: "Send kudos" }));
+      expect(
+        screen.getByRole("dialog", { name: "Send Kudos" }),
+      ).toBeInTheDocument();
+    });
+
+    it("Send kudos is also available from the collapsed row", async () => {
+      const user = userEvent.setup();
+      wrap(<PostComposer />);
+      await user.click(screen.getByRole("button", { name: "Send kudos" }));
+      expect(
+        screen.getByRole("dialog", { name: "Send Kudos" }),
+      ).toBeInTheDocument();
     });
   });
 });

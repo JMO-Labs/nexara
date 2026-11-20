@@ -6,11 +6,9 @@
  */
 import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useTranslations } from "next-intl";
-import { AlertCircle, MessageSquarePlus, Trophy } from "lucide-react";
+import { AlertCircle, MessageSquarePlus } from "lucide-react";
 import { Button, Card, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
-import { KudosComposer } from "@/components/feed/KudosComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { PromptPostCard } from "@/components/feed/PromptPostCard";
@@ -68,8 +66,6 @@ export function HomeFeed({
     title: string;
   } | null>(null);
   const reduced = useReducedMotion();
-  const tk = useTranslations("kudos");
-  const [kudosOpen, setKudosOpen] = React.useState(false);
   const composerRef = React.useRef<HTMLDivElement>(null);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const nextRef = React.useRef({ fetchNextPage, hasNextPage });
@@ -151,19 +147,6 @@ export function HomeFeed({
             onPosted={() => setReplyTo(null)}
           />
         </div>
-        <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setKudosOpen(true)}
-          >
-            <Trophy className="size-4" aria-hidden="true" />
-            {tk("sendButton")}
-          </Button>
-        </div>
-        {kudosOpen ? (
-          <KudosComposer open onClose={() => setKudosOpen(false)} />
-        ) : null}
         {prompts && prompts.length > 0 && (
           <section aria-label="Active prompts" className="flex flex-col gap-2">
             {prompts.map((p) => (
@@ -238,7 +221,7 @@ export function HomeFeed({
                       data-new={fresh ? "true" : undefined}
                       className={cn(
                         "rounded-lg data-[new=true]:motion-safe:ring-2 data-[new=true]:motion-safe:ring-accent",
-                        embedded && "glass-item",
+                        embedded && i.kind === "activity" && "glass-item",
                       )}
                       {...(reduced
                         ? {}

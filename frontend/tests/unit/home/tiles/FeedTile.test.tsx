@@ -3,6 +3,10 @@
  * @brief FeedTile: scope filtering, empty states, summary count, link.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => "/app",
+}));
 import { render, screen } from "@testing-library/react";
 import type { FeedItem } from "@/lib/api/home";
 

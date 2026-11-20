@@ -29,14 +29,14 @@ describe("NeedsChips", () => {
     expect(screen.getByText("Needs you")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /RSVP to Thanksgiving/ }),
-    ).toHaveAttribute("href", "/app/events?e=e1");
+    ).toHaveAttribute("href", "/app/events?event=e1");
     expect(screen.getByRole("link", { name: /Vote: Carpool/ })).toHaveAttribute(
       "href",
       "/app/post/p1",
     );
     expect(
       screen.getByRole("link", { name: /Today's prompt/ }),
-    ).toHaveAttribute("href", "/app/post/p2");
+    ).toHaveAttribute("href", "/app/prompts/pp");
     expect(
       screen.getByRole("link", { name: /2 list items due/ }),
     ).toHaveAttribute("href", "/app/lists/l1");

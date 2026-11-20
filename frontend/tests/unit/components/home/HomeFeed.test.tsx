@@ -155,7 +155,7 @@ describe("HomeFeed", () => {
     state.hook.isLoading = true;
     render(<HomeFeed />);
     for (const e of screen.getAllByTestId("feed-skeleton")) {
-      expect(e.className).toContain("bg-surface");
+      expect(e.className).toContain("glass-item");
       expect(e.className).toContain("p-3");
       expect(e.className).toContain("md:p-4");
     }
@@ -196,12 +196,8 @@ describe("HomeFeed", () => {
 });
 
 describe("HomeFeed kudos action", () => {
-  it("opens the Send Kudos dialog from the feed button", () => {
+  it("no longer renders a floating Send Kudos button", () => {
     render(<HomeFeed />);
-    expect(screen.queryByRole("dialog", { name: "Send Kudos" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Send Kudos" }));
-    expect(
-      screen.getByRole("dialog", { name: "Send Kudos" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Send Kudos/i })).toBeNull();
   });
 });

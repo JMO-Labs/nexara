@@ -43,7 +43,7 @@ export function NeedsChips() {
     ...data.rsvps.map((r) => ({
       key: `r-${r.event_id}`,
       text: `RSVP to ${r.title}`,
-      href: `/app/events?e=${r.event_id}`,
+      href: `/app/events?event=${r.event_id}`,
       icon: CalendarCheck,
       hot: true,
     })),
@@ -58,7 +58,7 @@ export function NeedsChips() {
           {
             key: "prompt",
             text: "Today's prompt",
-            href: `/app/post/${data.prompt.post_id}`,
+            href: `/app/prompts/${data.prompt.prompt_post_id}`,
             icon: Sparkles,
           },
         ]
