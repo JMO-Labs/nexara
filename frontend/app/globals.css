@@ -116,6 +116,11 @@
 }
 
 @layer base {
+  /* Rem-based UI grows 16px -> 18px between 1600px and 2400px viewports so
+     very wide screens scale up instead of stretching. */
+  html {
+    font-size: clamp(100%, calc(100% + (100vw - 1600px) * 0.0025), 112.5%);
+  }
   body {
     @apply bg-bg text-ink font-sans antialiased;
   }

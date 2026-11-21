@@ -13,6 +13,7 @@ import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
 import { PostHeader } from "./PostHeader";
 import { PostBody } from "./PostBody";
 import { PostMedia } from "./PostMedia";
+import { PollCard } from "./PollCard";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
 import { BookmarkButton } from "./BookmarkButton";
@@ -115,6 +116,7 @@ export function PostCard({
           )}
         </div>
       ) : null}
+      {post.poll ? <PollCard poll={post.poll} /> : null}
       {post.media.length > 0 ? (
         <PostMedia
           media={post.media}

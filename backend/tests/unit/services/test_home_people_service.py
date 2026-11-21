@@ -102,7 +102,7 @@ async def test_hides_birthday_unless_community():
 
 async def test_birthday_today_and_out_of_window():
     a = _row("A", birthday=date(1990, 11, 19))
-    b = _row("B", birthday=date(1990, 11, 27))
+    b = _row("B", birthday=date(1990, 12, 4))
     svc, _ = _svc([a, b])
     r = await svc.list(_viewer(), 10)
     by = {p.display_name: p.birthday_in_days for p in r.items}

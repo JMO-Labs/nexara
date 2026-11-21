@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/feed/ComposerToolbar.tsx
- * @brief Action row for PostComposer: attach/poll (disabled), kudos, cancel, post.
+ * @brief Action row for PostComposer: photos, poll, kudos, cancel, post.
  */
 import { Image as ImageIcon, BarChart3, Trophy, X } from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
@@ -11,22 +11,35 @@ export interface ComposerToolbarProps {
   onSubmit: () => void;
   onCancel: () => void;
   onKudos?: () => void;
+  onPhotos?: () => void;
+  onPoll?: () => void;
+  postDisabled?: boolean;
 }
 
 /**
- * @brief Image, poll (disabled) and kudos icon buttons.
+ * @brief Photo, poll and kudos icon buttons (each hidden without a handler).
  * @param onKudos opens the kudos composer
+ * @param onPhotos opens the file picker
+ * @param onPoll toggles the poll editor
  * @return fragment of icon buttons
  */
-export function ComposerIcons({ onKudos }: { onKudos?: () => void }) {
+export function ComposerIcons({
+  onKudos,
+  onPhotos,
+  onPoll,
+}: {
+  onKudos?: () => void;
+  onPhotos?: () => void;
+  onPoll?: () => void;
+}) {
   return (
     <>
       <IconButton
-        aria-label="Attach media"
+        aria-label="Add photos"
         variant="ghost"
         size="sm"
-        disabled
-        title="Coming soon"
+        onClick={onPhotos}
+        disabled={!onPhotos}
       >
         <ImageIcon className="size-[18px]" aria-hidden />
       </IconButton>
@@ -34,8 +47,8 @@ export function ComposerIcons({ onKudos }: { onKudos?: () => void }) {
         aria-label="Add poll"
         variant="ghost"
         size="sm"
-        disabled
-        title="Coming soon"
+        onClick={onPoll}
+        disabled={!onPoll}
       >
         <BarChart3 className="size-[18px]" aria-hidden />
       </IconButton>
@@ -66,10 +79,13 @@ export function ComposerToolbar({
   onSubmit,
   onCancel,
   onKudos,
+  onPhotos,
+  onPoll,
+  postDisabled,
 }: ComposerToolbarProps) {
   return (
     <div className="mt-2 flex items-center gap-2">
-      <ComposerIcons onKudos={onKudos} />
+      <ComposerIcons onKudos={onKudos} onPhotos={onPhotos} onPoll={onPoll} />
       <div className="grow" />
       <IconButton
         aria-label="Cancel"
@@ -79,7 +95,12 @@ export function ComposerToolbar({
       >
         <X className="size-[18px]" aria-hidden />
       </IconButton>
-      <Button onClick={onSubmit} loading={posting} size="sm">
+      <Button
+        onClick={onSubmit}
+        loading={posting}
+        disabled={postDisabled}
+        size="sm"
+      >
         Post
       </Button>
     </div>

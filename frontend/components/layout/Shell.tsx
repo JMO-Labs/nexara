@@ -108,7 +108,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <main
             id="main"
             className={cn(
-              "relative mx-auto w-full max-w-[1440px] flex-1 px-4 md:px-8",
+              "relative mx-auto w-full max-w-[2400px] flex-1 px-4 md:px-8",
               TAB_BAR_CLEARANCE,
             )}
             aria-busy={isBooting || undefined}

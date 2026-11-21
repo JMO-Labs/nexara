@@ -98,12 +98,12 @@ describe("Shell", () => {
     );
   });
 
-  it("frames main at 1440px centred", () => {
+  it("frames main at 2400px centred", () => {
     setup();
     expect(screen.getByRole("main")).toHaveClass(
       "mx-auto",
       "w-full",
-      "max-w-[1440px]",
+      "max-w-[2400px]",
       "px-4",
       "md:px-8",
     );

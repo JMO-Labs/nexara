@@ -13,6 +13,8 @@ import { Greeting } from "@/components/home/Greeting";
 import { ScopeBar } from "@/components/home/ScopeBar";
 import { PeopleStrip } from "@/components/home/PeopleStrip";
 import { NeedsChips } from "@/components/home/NeedsChips";
+import { PeopleTile } from "@/components/home/tiles/PeopleTile";
+import { ListsTile } from "@/components/home/tiles/ListsTile";
 import { FeedTile } from "@/components/home/tiles/FeedTile";
 import { ChatsTile } from "@/components/home/tiles/ChatsTile";
 import { UpNextTile } from "@/components/home/tiles/UpNextTile";
@@ -45,7 +47,7 @@ export default function AppHome() {
     <motion.div className="py-6" {...rootProps}>
       <motion.div
         {...sectionProps}
-        className="mb-4 flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between md:gap-6"
+        className="relative z-30 mb-4 flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between md:gap-6"
       >
         <Greeting name={name} />
         <PeopleStrip />
@@ -55,12 +57,14 @@ export default function AppHome() {
       </motion.div>
       <motion.div
         {...sectionProps}
-        className="flex flex-col gap-2.5 md:grid md:h-[800px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos']"
+        className="flex flex-col gap-2.5 md:grid md:h-[1158px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr_340px] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_lists_lists'] min-[1800px]:h-[800px] min-[1800px]:grid-cols-[1.3fr_1fr_.8fr_.8fr] min-[1800px]:grid-rows-[auto_1fr] min-[1800px]:[grid-template-areas:'feed_chat_next_people''feed_chat_photos_lists']"
       >
         <UpNextTile open={open === "next"} onToggle={toggle} />
         <ChatsTile open={open === "chat"} onToggle={toggle} />
         <PhotosTile open={open === "photos"} onToggle={toggle} />
         <FeedTile open={open === "feed"} onToggle={toggle} />
+        <PeopleTile open={open === "people"} onToggle={toggle} />
+        <ListsTile open={open === "lists"} onToggle={toggle} />
       </motion.div>
     </motion.div>
   );

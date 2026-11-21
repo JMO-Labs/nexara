@@ -14,12 +14,12 @@ from app.repositories.home_people_repo import HomePeopleRepository, PersonRow
 from app.schemas.home_people import HomePeopleResponse, HomePerson, SharedGroup
 from app.services.realtime import presence
 
-BIRTHDAY_WINDOW_DAYS = 7
+BIRTHDAY_WINDOW_DAYS = 14
 
 
 def birthday_in_days(birthday: date | None, today: date) -> int | None:
     """
-    @brief Days until the next birthday if within 0..7, else None.
+    @brief Days until the next birthday if within 0..14, else None.
     @param birthday Date of birth (year ignored); Feb 29 maps to Feb 28 in non-leap years.
     @param today Reference date.
     """
