@@ -3,7 +3,13 @@
  * @brief Social detection, vCard export and birthday text.
  */
 import { describe, it, expect } from "vitest";
-import { birthdayText, mapsUrl, socialFor, toVCard } from "@/lib/profile";
+import {
+  birthdayText,
+  isHttpUrl,
+  mapsUrl,
+  socialFor,
+  toVCard,
+} from "@/lib/profile";
 import type { UserProfile } from "@/lib/api/users";
 
 describe("socialFor", () => {
@@ -46,5 +52,31 @@ describe("birthdayText / mapsUrl", () => {
     expect(birthdayText("--11-24")).not.toMatch(/\d{4}/);
     expect(birthdayText("1948-11-24")).toMatch(/1948/);
     expect(mapsUrl("1 Main St")).toContain("query=1%20Main%20St");
+  });
+});
+
+describe("hardening", () => {
+  it("vCard cannot gain lines from CR/LF or bad birthdays/URLs", () => {
+    const v = toVCard({
+      display_name: "Eve",
+      phone: "1\r\nEMAIL:evil@x.io",
+      bio: "a\rb\u0007c",
+      birthday: "1990-01-01\r\nX:1",
+      website_url: "javascript:alert(1)",
+      links: [],
+    } as unknown as UserProfile);
+    const lines = v.trimEnd().split("\r\n");
+    expect(lines.filter((l) => l.startsWith("EMAIL"))).toHaveLength(0);
+    expect(lines).toContain("TEL;TYPE=CELL:1\\nEMAIL:evil@x.io");
+    expect(lines).toContain("NOTE:a\\nbc");
+    expect(v).not.toContain("BDAY");
+    expect(v).not.toContain("javascript");
+  });
+
+  it("isHttpUrl", () => {
+    expect(isHttpUrl("https://a.io")).toBe(true);
+    expect(isHttpUrl("javascript:alert(1)")).toBe(false);
+    expect(isHttpUrl("data:text/html,x")).toBe(false);
+    expect(isHttpUrl("/relative")).toBe(false);
   });
 });

@@ -22,7 +22,13 @@ import {
 } from "lucide-react";
 import { Panel } from "@/components/ui/page";
 import type { UserProfile } from "@/lib/api/users";
-import { birthdayText, mapsUrl, socialFor, toVCard } from "@/lib/profile";
+import {
+  birthdayText,
+  isHttpUrl,
+  mapsUrl,
+  socialFor,
+  toVCard,
+} from "@/lib/profile";
 
 function Row({
   icon: Icon,
@@ -64,7 +70,7 @@ export function AboutCard({
   const links = [
     ...(p.website_url ? [{ label: "", url: p.website_url }] : []),
     ...(p.links ?? []),
-  ];
+  ].filter((l) => isHttpUrl(l.url));
   const socials = links.filter((l) => socialFor(l.url));
   const sites = links.filter((l) => !socialFor(l.url));
   const ec = p.emergency_contact;

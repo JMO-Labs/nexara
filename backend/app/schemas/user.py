@@ -83,7 +83,7 @@ class UserUpdateRequest(BaseModel):
     title: str | None = Field(None, max_length=50)
     pronouns: str | None = Field(None, max_length=50, description="User pronouns")
     location: str | None = Field(None, max_length=100)
-    website_url: HttpUrl | str | None = None
+    website_url: HttpUrl | None = None
     birthday: date | None = None
 
 

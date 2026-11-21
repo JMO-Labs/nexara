@@ -55,6 +55,17 @@ describe("AboutCard", () => {
     expect(screen.queryByText("Emergency contact")).toBeNull();
   });
 
+  it("drops non-http links like javascript:", () => {
+    renderWithProviders(
+      <AboutCard
+        isSelf={false}
+        profile={{ ...base, website_url: "javascript:alert(1)" }}
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText(/hasn't shared any details/)).toBeInTheDocument();
+  });
+
   it("empty states differ for self and others", () => {
     const { unmount } = renderWithProviders(
       <AboutCard isSelf={false} profile={base} />,

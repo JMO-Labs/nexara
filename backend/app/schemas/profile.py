@@ -43,7 +43,7 @@ class ProfileUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=50)
     pronouns: str | None = Field(default=None, max_length=50)
     location: str | None = Field(default=None, max_length=100)
-    website_url: str | None = Field(default=None, max_length=300)
+    website_url: str | None = Field(default=None, max_length=300, pattern=r"^(https?://\S+)?$")
     birthday: date | None = None
     banner_media_id: UUID | None = None
     phone: str | None = Field(default=None, max_length=40)

@@ -149,6 +149,9 @@ class TestUpdateProfileFields:
 
         with pytest.raises(ValidationError):
             ProfileUpdate(links=[{"label": "x", "url": "javascript:alert(1)"}])
+        with pytest.raises(ValidationError):
+            ProfileUpdate(website_url="javascript:alert(1)")
+        assert ProfileUpdate(website_url="").website_url == ""
         assert ProfileUpdate(skills=[" Plumbing ", "plumbing", ""]).skills == ["Plumbing"]
 
 

@@ -67,11 +67,25 @@ export function socialFor(url: string): SimpleIcon | null {
 export const mapsUrl = (address: string) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
+const CTRL = /[\u0000-\u0009\u000b-\u001f\u007f]/g;
+/** @brief vCard text escape: any line break -> \n, other controls dropped. */
 const esc = (v: string) =>
   v
+    .replace(/\r\n|\r|\n/g, "\n")
+    .replace(CTRL, "")
     .replace(/\\/g, "\\\\")
     .replace(/\n/g, "\\n")
     .replace(/([,;])/g, "\\$1");
+
+/** @brief True for absolute http(s) URLs only (never javascript:, data:, ...). */
+export function isHttpUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * @brief vCard 3.0 text from the (already privacy-filtered) profile.
@@ -85,12 +99,13 @@ export function toVCard(p: UserProfile): string {
   if (p.phone) lines.push(`TEL;TYPE=CELL:${esc(p.phone)}`);
   if (p.contact_email) lines.push(`EMAIL:${esc(p.contact_email)}`);
   if (p.address) lines.push(`ADR;TYPE=HOME:;;${esc(p.address)};;;;`);
-  if (p.birthday) lines.push(`BDAY:${p.birthday}`);
+  if (p.birthday && /^(\d{4}|-)-\d{2}-\d{2}$/.test(p.birthday))
+    lines.push(`BDAY:${p.birthday}`);
   if (p.title) lines.push(`TITLE:${esc(p.title)}`);
   for (const l of [
     ...(p.website_url ? [{ url: p.website_url }] : []),
     ...(p.links ?? []),
-  ])
+  ].filter((l) => isHttpUrl(l.url)))
     lines.push(`URL:${esc(l.url)}`);
   if (p.bio) lines.push(`NOTE:${esc(p.bio)}`);
   lines.push("END:VCARD");
