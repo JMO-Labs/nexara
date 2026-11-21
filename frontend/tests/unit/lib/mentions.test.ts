@@ -36,11 +36,12 @@ describe("matchMembers", () => {
       display_name: "Ruth Alvarez",
       avatar_url: null,
     },
+    { id: "3", username: "jordan", display_name: "Jordan Lee", avatar_url: null },
     { id: "2", username: "leo", display_name: "Leo Soto", avatar_url: null },
   ];
   it("matches username or any name word", () => {
     expect(matchMembers(people, "al").map((p) => p.id)).toEqual(["1"]);
-    expect(matchMembers(people, "le").map((p) => p.id)).toEqual(["2"]);
-    expect(matchMembers(people, "")).toHaveLength(2);
+    expect(matchMembers(people, "le").map((p) => p.id)).toEqual(["2", "3"]);
+    expect(matchMembers(people, "")).toHaveLength(3);
   });
 });

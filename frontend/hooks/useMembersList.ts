@@ -28,6 +28,12 @@ export function matchMembers(
   limit = 6,
 ): UserSummary[] {
   const n = q.toLowerCase();
+  const rank = (u: UserSummary) =>
+    u.username.toLowerCase().startsWith(n)
+      ? 0
+      : u.display_name.toLowerCase().startsWith(n)
+        ? 1
+        : 2;
   return list
     .filter(
       (u) =>
@@ -38,5 +44,6 @@ export function matchMembers(
           .split(/\s+/)
           .some((w) => w.startsWith(n)),
     )
+    .sort((a, b) => rank(a) - rank(b))
     .slice(0, limit);
 }
