@@ -22,6 +22,16 @@ export interface CurrentUser {
   pronouns?: string | null;
   location?: string | null;
   website_url?: string | null;
+  birthday?: string | null;
+  banner_media_id?: string | null;
+  phone?: string | null;
+  contact_email?: string | null;
+  address?: string | null;
+  links?: { label: string; url: string }[];
+  emergency_contact?: { name: string; phone: string; relation: string } | null;
+  skills?: string[];
+  availability?: string | null;
+  dietary?: string | null;
 }
 
 export interface UserSummary {
@@ -70,6 +80,20 @@ export interface UserProfile {
   role: string;
   created_at: string;
   last_seen_at: string | null;
+  /** Fields below are null/empty when the viewer may not see them. */
+  banner_media_id?: string | null;
+  /** ISO date, or "--MM-DD" when the year is hidden. */
+  birthday?: string | null;
+  phone?: string | null;
+  contact_email?: string | null;
+  address?: string | null;
+  links?: { label: string; url: string }[];
+  emergency_contact?: { name: string; phone: string; relation: string } | null;
+  skills?: string[];
+  availability?: string | null;
+  dietary?: string | null;
+  /** Own profile only: resolved privacy level per field. */
+  field_visibility?: Record<string, "private" | "groups" | "community"> | null;
 }
 
 /** @brief A group shared between the viewer and another member. */

@@ -11,6 +11,13 @@ import * as settingsHooks from "@/hooks/useSettings";
 import { useToasts } from "@/stores/toasts";
 
 vi.mock("@/hooks/useSettings");
+// The details panel and privacy pickers have their own tests.
+vi.mock("@/components/settings/ProfileDetailsPanel", () => ({
+  ProfileDetailsPanel: () => null,
+}));
+vi.mock("@/components/settings/VisibilitySelect", () => ({
+  VisibilitySelect: () => null,
+}));
 
 const createWrapper = () => {
   const queryClient = new QueryClient();
