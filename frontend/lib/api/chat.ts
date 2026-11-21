@@ -70,5 +70,14 @@ export const deleteDmThread = (channelId: string) =>
   apiDelete<void>(`/api/v1/chat/dm/${seg(channelId)}`);
 
 /** @brief Mark a channel as read for the viewer (204). */
+/**
+ * @brief Send a message over HTTP (works without the live socket; the
+ *        server still broadcasts it to everyone in the channel).
+ */
+export const postChatMessage = (channelId: string, content: string) =>
+  apiPost<ChatMessage>(`/api/v1/chat/channels/${seg(channelId)}/messages`, {
+    content,
+  });
+
 export const markChannelRead = (channelId: string): Promise<void> =>
   apiPost<void>(`/api/v1/chat/channels/${seg(channelId)}/read`, {});

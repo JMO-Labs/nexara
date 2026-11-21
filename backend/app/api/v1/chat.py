@@ -14,20 +14,25 @@ import uuid
 
 import structlog
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.exceptions import ValidationError
+from app.core.i18n import _
 from app.models.user import User
 from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
 from app.repositories.moderation_repo import ModerationRepository
 from app.schemas.chat import (
     ChannelResponse,
+    ChatMessageResponse,
     DirectMessageThreadResponse,
     MessageHistoryResponse,
 )
 from app.services.chat_service import ChatService
+from app.services.realtime.handlers.chat_handler import chat_rate_limiter
 
 logger = structlog.get_logger(__name__)
 
@@ -51,6 +56,39 @@ def _build_service(
         moderation_repo=ModerationRepository(db),
         read_repo=ChatReadRepository(db),
     )
+
+
+class SendMessageBody(BaseModel):
+    """@brief Body for posting a message over HTTP (no live socket needed)."""
+
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+@router.post(
+    "/channels/{channel_id}/messages",
+    response_model=ChatMessageResponse,
+    status_code=201,
+)
+async def post_message(
+    channel_id: uuid.UUID,
+    body: SendMessageBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> ChatMessageResponse:
+    """@brief Send a message; same checks, rate limit and broadcast as the socket."""
+    service = ChatService(
+        channel_repo=ChatChannelRepository(db),
+        message_repo=ChatMessageRepository(db),
+        community_id=community_id,
+        rate_limiter=chat_rate_limiter(),
+        moderation_repo=ModerationRepository(db),
+        read_repo=ChatReadRepository(db),
+    )
+    content = body.content.strip()
+    if not content:
+        raise ValidationError(message=_("Message is empty"))
+    return ChatMessageResponse.model_validate(await service.send_message(user, channel_id, content))
 
 
 @router.get("/channels", response_model=list[ChannelResponse])

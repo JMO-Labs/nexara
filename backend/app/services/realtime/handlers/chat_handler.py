@@ -107,7 +107,7 @@ async def _handle_message(
                 channel_repo=ChatChannelRepository(session),
                 message_repo=ChatMessageRepository(session),
                 community_id=community_id,
-                rate_limiter=_maybe_rate_limiter(),
+                rate_limiter=chat_rate_limiter(),
                 moderation_repo=ModerationRepository(session),
                 read_repo=ChatReadRepository(session),
             )
@@ -182,7 +182,7 @@ async def _send_error(ws: WebSocket, code: str, message: str) -> None:
         logger.debug("chat_handler_send_error_failed", exc_info=True)
 
 
-def _maybe_rate_limiter() -> Any:
+def chat_rate_limiter() -> Any:
     """@brief Return the Valkey cache pool for rate-limit counters (or None)."""
     try:
         from app.core.valkey import DB_CACHE, get_pool

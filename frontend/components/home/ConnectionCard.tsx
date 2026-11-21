@@ -7,7 +7,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, SendHorizontal } from "lucide-react";
-import { sendChatMessage, useCreateDm } from "@/hooks/useChat";
+import { useCreateDm } from "@/hooks/useChat";
+import { postChatMessage } from "@/lib/api/chat";
 import type { HomePerson } from "@/lib/api/home";
 import { FavoriteButton } from "./FavoriteButton";
 
@@ -31,6 +32,7 @@ export function ConnectionCard({
 
   const [text, setText] = React.useState("");
   const [sent, setSent] = React.useState<"ok" | "fail" | null>(null);
+  const [sending, setSending] = React.useState(false);
 
   const message = async () => {
     const channel = await dm.mutateAsync(person.user_id);
@@ -41,10 +43,17 @@ export function ConnectionCard({
     e.preventDefault();
     const content = text.trim();
     if (!content) return;
-    const channel = await dm.mutateAsync(person.user_id);
-    if (!sendChatMessage(channel.id, content)) return setSent("fail");
-    setText("");
-    setSent("ok");
+    setSending(true);
+    try {
+      const channel = await dm.mutateAsync(person.user_id);
+      await postChatMessage(channel.id, content);
+      setText("");
+      setSent("ok");
+    } catch {
+      setSent("fail");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -90,7 +99,7 @@ export function ConnectionCard({
         <button
           type="submit"
           aria-label="Send"
-          disabled={!text.trim() || dm.isPending}
+          disabled={!text.trim() || sending}
           className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-strong text-bg disabled:opacity-40"
         >
           <SendHorizontal className="size-4" aria-hidden />
@@ -98,7 +107,7 @@ export function ConnectionCard({
       </form>
       {sent === "fail" && (
         <p role="alert" className="mb-2 text-xs text-destructive">
-          Chat is offline. Try again in a moment.
+          Couldn't send. Try again.
         </p>
       )}
       {sent === "ok" && (
