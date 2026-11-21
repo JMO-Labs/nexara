@@ -203,15 +203,19 @@ export function ProfileDetailsPanel() {
       >
         <div className="flex flex-col gap-2">
           {d.links.map((l, i) => (
-            <div key={i} className="flex gap-2">
-              <Input
-                aria-label={`Link ${i + 1} label`}
-                placeholder="Label (optional)"
-                value={l.label}
-                maxLength={40}
-                onChange={(e) => setLink(i, { label: e.target.value })}
-                className="w-36"
-              />
+            <div
+              key={i}
+              className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto]"
+            >
+              <div className="col-span-2 sm:col-span-1">
+                <Input
+                  aria-label={`Link ${i + 1} label`}
+                  placeholder="Label (optional)"
+                  value={l.label}
+                  maxLength={40}
+                  onChange={(e) => setLink(i, { label: e.target.value })}
+                />
+              </div>
               <Input
                 type="url"
                 aria-label={`Link ${i + 1} URL`}
@@ -223,6 +227,7 @@ export function ProfileDetailsPanel() {
                 aria-label={`Remove link ${i + 1}`}
                 variant="ghost"
                 size="sm"
+                className="self-center"
                 onClick={() =>
                   set({ links: d.links.filter((_, j) => j !== i) })
                 }
@@ -280,20 +285,22 @@ export function ProfileDetailsPanel() {
         />
       </Field>
       <Field label="Emergency contact" field="emergency_contact">
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           <Input
             aria-label="Emergency contact name"
             placeholder="Name"
             value={d.ec_name}
             onChange={(e) => set({ ec_name: e.target.value })}
           />
-          <Input
-            type="tel"
-            aria-label="Emergency contact phone"
-            placeholder="Phone"
-            value={d.ec_phone}
-            onChange={(e) => set({ ec_phone: e.target.value })}
-          />
+          <div className="sm:col-span-2">
+            <Input
+              type="tel"
+              aria-label="Emergency contact phone"
+              placeholder="Phone"
+              value={d.ec_phone}
+              onChange={(e) => set({ ec_phone: e.target.value })}
+            />
+          </div>
           <Input
             aria-label="Emergency contact relation"
             placeholder="Relation"
