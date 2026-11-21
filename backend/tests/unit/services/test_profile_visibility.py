@@ -76,6 +76,7 @@ def _svc(target, settings, shares=False):
     repo.get_user.return_value = target
     repo.get_settings.return_value = settings
     repo.shares_group.return_value = shares
+    repo.blocked_either_way.return_value = False
     return ProfileService(repo, CID), repo
 
 
@@ -116,3 +117,11 @@ async def test_unknown_user_404():
     svc, repo = _svc(None, None)
     with pytest.raises(NotFoundError):
         await svc.view(uuid.uuid4(), _viewer())
+
+
+async def test_blocked_either_way_404():
+    t = _target()
+    svc, repo = _svc(t, _settings({}))
+    repo.blocked_either_way.return_value = True
+    with pytest.raises(NotFoundError):
+        await svc.view(t.id, _viewer())

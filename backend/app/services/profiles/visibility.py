@@ -1,7 +1,8 @@
 """
 @file visibility.py
 @brief Per-field profile privacy. Each optional field has a level:
-       private (owner only), groups (people sharing a group) or community.
+       private (owner only), groups (people sharing an invite-only or
+       approval group, see ProfileRepository.shares_group) or community.
        Fields predating per-field privacy default to the legacy
        profile_visible_to; fields added with it default to private.
 """

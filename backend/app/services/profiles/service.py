@@ -29,7 +29,9 @@ class ProfileService:
         @raises NotFoundError when the user is not in the community.
         """
         target = await self._repo.get_user(user_id, self._community_id)
-        if target is None:
+        if target is None or (
+            viewer.id != target.id and await self._repo.blocked_either_way(viewer.id, target.id)
+        ):
             raise NotFoundError(message=_("User not found"))
         settings = await self._repo.get_settings(target.id)
         is_self = viewer.id == target.id
