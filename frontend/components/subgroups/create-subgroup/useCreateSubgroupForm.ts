@@ -5,7 +5,6 @@
  */
 import * as React from "react";
 import { useCreateSubgroup } from "@/hooks/useSubgroups";
-import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { slugify, isValidSlugFormat } from "@/lib/slug";
 import { getSubgroup } from "@/lib/api/subgroups";
 import { searchAll } from "@/lib/api/search";
@@ -25,7 +24,6 @@ export interface OwnerUser {
  */
 export function useCreateSubgroupForm(onClose: () => void) {
   const create = useCreateSubgroup();
-  const mediaUpload = useMediaUpload();
 
   const [name, setName] = React.useState("");
   const [slug, setSlug] = React.useState("");
@@ -94,14 +92,6 @@ export function useCreateSubgroupForm(onClose: () => void) {
     return () => clearTimeout(timer);
   }, [ownerQuery]);
 
-  const uploadCover = async (file: File) => {
-    try {
-      setCoverMediaId(await mediaUpload.mutateAsync(file));
-    } catch {
-      // Error handled by useMediaUpload
-    }
-  };
-
   const toggleAssignOwner = () => {
     if (assignOwner) {
       setSelectedOwner(null);
@@ -147,8 +137,6 @@ export function useCreateSubgroupForm(onClose: () => void) {
     setJoinPolicy,
     coverMediaId,
     setCoverMediaId,
-    uploadCover,
-    uploading: mediaUpload.isPending,
     assignOwner,
     toggleAssignOwner,
     selectedOwner,

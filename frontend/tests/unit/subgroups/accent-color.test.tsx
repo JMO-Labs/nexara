@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/subgroups/accent-color.test.tsx
- * @brief Subgroup accent color: header usage, fallback, editor AA warning.
+ * @brief Subgroup accent color: header usage, fallback, editor validation.
  */
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
@@ -72,11 +72,12 @@ describe("subgroup accent color", () => {
     expect(palette).toContain(rgbToHex(rgb).toLowerCase());
   });
 
-  it("editor warns when accent fails AA", () => {
+  it("accepts any hex (decorative only) and flags malformed input", () => {
     wrap(<SettingsTab subgroup={base} />);
-    fireEvent.change(screen.getByLabelText("Accent color"), {
-      target: { value: "#1B3524" },
-    });
-    expect(screen.getByText(/4\.5:1 contrast/)).toBeInTheDocument();
+    const field = screen.getByLabelText("Accent color");
+    fireEvent.change(field, { target: { value: "#1B3524" } });
+    expect(screen.queryByText(/hex color like/)).toBeNull();
+    fireEvent.change(field, { target: { value: "#12" } });
+    expect(screen.getByText(/hex color like/)).toBeInTheDocument();
   });
 });

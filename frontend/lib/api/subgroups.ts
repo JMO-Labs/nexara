@@ -64,6 +64,7 @@ export interface CreateSubgroupBody {
 
 export interface UpdateSubgroupBody {
   name?: string;
+  avatar_url?: string | null;
   description?: string | null;
   cover_media_id?: string | null;
   accent_color?: string | null;

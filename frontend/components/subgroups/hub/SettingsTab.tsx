@@ -1,16 +1,14 @@
 /**
  * @file components/subgroups/hub/SettingsTab.tsx
- * @brief Group settings tab with cover/logo upload.
+ * @brief Group settings tab: details, accent colour, logo URL and cover
+ *        (upload or link via CoverPicker; saved immediately).
  */
 "use client";
 
 import * as React from "react";
 import { Input, Textarea, Select, Option, Button } from "@/components/ui";
-import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useUpdateSubgroup } from "@/hooks/useSubgroups";
-import { useMediaUpload } from "@/hooks/useMediaUpload";
-import { useToasts } from "@/stores/toasts";
-import { accentPassesAA } from "@/lib/api/branding";
+import { CoverPicker } from "@/components/media/CoverPicker";
 import { groupColor } from "@/lib/groupColor";
 import type { SubgroupDetail, UpdateSubgroupBody } from "@/lib/api/subgroups";
 
@@ -22,8 +20,6 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   const canManage =
     subgroup.my_role === "owner" || subgroup.my_role === "moderator";
   const update = useUpdateSubgroup(subgroup.slug);
-  const mediaUpload = useMediaUpload();
-  const toasts = useToasts();
   const [accent, setAccent] = React.useState(subgroup.accent_color ?? "");
   const [name, setName] = React.useState(subgroup.name);
   const [description, setDescription] = React.useState(
@@ -34,7 +30,6 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   >(subgroup.join_policy);
   const [isPrivate, setIsPrivate] = React.useState(subgroup.is_private);
   const [avatarUrl, setAvatarUrl] = React.useState(subgroup.avatar_url ?? "");
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [coverMediaId, setCoverMediaId] = React.useState<string | null>(
     subgroup.cover_media_id ?? null,
   );
@@ -48,8 +43,8 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   }
 
   const accentError =
-    accent !== "" && !accentPassesAA(accent)
-      ? "Accent needs at least 4.5:1 contrast with the dark green text."
+    accent !== "" && !/^#[0-9a-fA-F]{6}$/.test(accent)
+      ? "Use a hex color like #C6B4F5."
       : undefined;
 
   const submit = (e: React.FormEvent) => {
@@ -61,27 +56,8 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
       description,
       join_policy: joinPolicy,
       is_private: isPrivate,
+      avatar_url: avatarUrl.trim() || null,
     });
-  };
-
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.currentTarget.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-
-    try {
-      const mediaId = await mediaUpload.mutateAsync(file);
-      setCoverMediaId(mediaId);
-      update.mutate({ cover_media_id: mediaId });
-    } catch (err) {
-      toasts.push({
-        variant: "danger",
-        title: "Upload failed",
-        message:
-          err instanceof Error ? err.message : "Failed to upload cover image",
-      });
-    }
   };
 
   return (
@@ -135,7 +111,9 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
           type="color"
           aria-label="Accent color picker"
           value={
-            accentPassesAA(accent) ? accent : groupColor(subgroup.id, null)
+            accentError || accent === ""
+              ? groupColor(subgroup.id, null)
+              : accent
           }
           onChange={(e) => setAccent(e.target.value)}
           className="size-11 shrink-0 cursor-pointer rounded-xl"
@@ -159,31 +137,13 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
         placeholder="https://example.com/logo.png"
       />
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-semibold">Cover image</span>
-        {coverMediaId && (
-          <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-surface">
-            <MediaThumb mediaId={coverMediaId} alt="Cover preview" />
-          </div>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          className="self-start"
-          disabled={mediaUpload.isPending}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {mediaUpload.isPending ? "Uploading…" : "Upload cover"}
-        </Button>
-        <input
-          type="file"
-          accept="image/*"
-          hidden
-          aria-label="Cover image file"
-          ref={fileInputRef}
-          onChange={handleCoverUpload}
-        />
-      </div>
+      <CoverPicker
+        mediaId={coverMediaId}
+        onChange={(id) => {
+          setCoverMediaId(id);
+          update.mutate({ cover_media_id: id });
+        }}
+      />
 
       <Button type="submit" size="lg" loading={update.isPending}>
         Save changes

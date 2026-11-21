@@ -783,13 +783,12 @@ class TestAccentColor:
         subgroup_repo.update_fields.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_low_contrast_rejected(self, service, subgroup_repo, member_repo):
-        from app.core.exceptions import ValidationError
-
+    async def test_dark_accent_accepted(self, service, subgroup_repo, member_repo):
+        """Group accents are decorative (no text on them), so any hex saves."""
         owner = await self._setup(subgroup_repo, member_repo)
-        with pytest.raises(ValidationError):
-            await service.update_subgroup("family", owner, {"accent_color": "#1B3524"})
-        subgroup_repo.update_fields.assert_not_awaited()
+        await service.update_subgroup("family", owner, {"accent_color": "#1B3524"})
+        data = subgroup_repo.update_fields.await_args[0][1]
+        assert data["accent_color"] == "#1B3524"
 
     @pytest.mark.asyncio
     async def test_valid_accent_persisted(self, service, subgroup_repo, member_repo):

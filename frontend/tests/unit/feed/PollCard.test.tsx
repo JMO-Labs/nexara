@@ -48,7 +48,9 @@ const poll = (p: Partial<Poll> = {}): Poll => ({
 });
 
 describe("PollCard", () => {
-  beforeEach(() => votePoll.mockReset().mockResolvedValue({ total_votes: 5 }));
+  beforeEach(() => {
+    votePoll.mockReset().mockResolvedValue({ total_votes: 5 });
+  });
 
   it("hides results before voting and votes on tap", async () => {
     renderWithProviders(<PollCard poll={poll()} />);

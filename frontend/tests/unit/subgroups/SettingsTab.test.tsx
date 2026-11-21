@@ -59,7 +59,7 @@ describe("SettingsTab", () => {
   it("displays cover upload button for owner", () => {
     wrap(<SettingsTab subgroup={mockSubgroup} />);
     expect(
-      screen.getByRole("button", { name: /upload cover/i }),
+      screen.getByRole("button", { name: /upload image/i }),
     ).toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe("SettingsTab", () => {
 
     wrap(<SettingsTab subgroup={mockSubgroup} />);
 
-    const uploadBtn = screen.getByRole("button", { name: /upload cover/i });
+    const uploadBtn = screen.getByRole("button", { name: /upload image/i });
     expect(uploadBtn).toBeInTheDocument();
     const fileInput = screen.getByLabelText(
       /cover image file/i,

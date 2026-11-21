@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -54,7 +54,9 @@ async def safe_fetch(
     timeout: float = 30.0,
     max_bytes: int = 10 * 1024 * 1024,
 ) -> bytes:
-    """Fetch a URL with SSRF protection. Manual redirect handling, validate every hop."""
+    """Fetch a URL with SSRF protection. Manual redirect handling, validate every hop.
+
+    Streams the body and stops at ``max_bytes`` (result is truncated there)."""
     current = _validate_url(url)
     async with httpx.AsyncClient(
         timeout=timeout,
@@ -62,13 +64,20 @@ async def safe_fetch(
         limits=httpx.Limits(max_connections=10),
     ) as client:
         for _ in range(_MAX_REDIRECTS + 1):
-            resp = await client.get(current)
-            if resp.is_redirect:
-                loc = resp.headers.get("location")
-                if not loc:
-                    raise UnsafeUrlError("Redirect without Location header")
-                current = _validate_url(loc)
-                continue
-            content = resp.content[:max_bytes]
-            return content
+            # ponytail: host is validated before httpx re-resolves it (DNS
+            # rebinding window); pin the resolved IP via a custom transport
+            # if this ever fetches attacker-chosen hosts at volume.
+            async with client.stream("GET", current) as resp:
+                if resp.is_redirect:
+                    loc = resp.headers.get("location")
+                    if not loc:
+                        raise UnsafeUrlError("Redirect without Location header")
+                    current = _validate_url(urljoin(current, loc))
+                    continue
+                buf = bytearray()
+                async for chunk in resp.aiter_bytes():
+                    buf += chunk
+                    if len(buf) >= max_bytes:
+                        break
+                return bytes(buf[:max_bytes])
         raise UnsafeUrlError("Too many redirects")

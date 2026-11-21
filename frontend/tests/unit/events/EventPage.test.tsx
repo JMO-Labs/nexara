@@ -32,7 +32,9 @@ const ev = (starts_at: string) => ({
 });
 
 describe("EventPage", () => {
-  beforeEach(() => useEventDetail.mockReset());
+  beforeEach(() => {
+    useEventDetail.mockReset();
+  });
 
   it("shows skeleton while loading", () => {
     useEventDetail.mockReturnValue({ isLoading: true });

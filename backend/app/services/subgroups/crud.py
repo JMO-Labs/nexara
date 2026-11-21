@@ -22,7 +22,6 @@ from app.models.subgroup import ChatChannel, Subgroup
 from app.models.user import User
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.activity_publish import record_activity
-from app.services.branding.contrast import accent_passes_aa
 from app.services.subgroups.helpers import is_admin, require_role
 
 if TYPE_CHECKING:
@@ -329,10 +328,6 @@ class SubgroupCrudMixin:
         if accent is not None:
             if not _ACCENT_HEX_RE.match(accent):
                 raise ValidationError(message=_("Accent color must be a #RRGGBB hex value"))
-            if not accent_passes_aa(accent):
-                raise ValidationError(
-                    message=_("Accent color lacks sufficient contrast (WCAG AA 4.5:1)")
-                )
 
         if "cover_media_id" in updates and updates["cover_media_id"] is not None:
             media = await self._subgroup_repo.get_media_by_id(updates["cover_media_id"])

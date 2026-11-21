@@ -158,8 +158,10 @@ async def update_subgroup(
 ) -> SubgroupDetailResponse:
     """@brief Update a subgroup (owner/moderator/admin only)."""
     raw = body.model_dump(exclude_unset=True)
-    # Allow explicit ``parent_id: null`` to detach; strip None for everything else.
-    updates = {k: v for k, v in raw.items() if v is not None or k in ("parent_id", "accent_color")}
+    # Explicit null clears these (detach parent, reset colour/logo/cover);
+    # None is stripped for everything else.
+    clearable = ("parent_id", "accent_color", "avatar_url", "cover_media_id")
+    updates = {k: v for k, v in raw.items() if v is not None or k in clearable}
     subgroup = await service.update_subgroup(slug, user, updates)
     return await _detail_response(service, subgroup, user)
 
