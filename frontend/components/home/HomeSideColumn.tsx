@@ -7,12 +7,7 @@
  *        No saved choice = auto: rail below 3xl, open at 3xl.
  */
 import * as React from "react";
-import {
-  ListChecks,
-  PanelRightClose,
-  PanelRightOpen,
-  Users,
-} from "lucide-react";
+import { ChevronRight, ListChecks, PanelRightOpen, Users } from "lucide-react";
 import { PeopleTile } from "@/components/home/tiles/PeopleTile";
 import { ListsTile } from "@/components/home/tiles/ListsTile";
 import type { TileSlotProps } from "@/components/home/HomeTile";
@@ -97,9 +92,9 @@ export function HomeSideColumn({
           aria-label="Collapse side column"
           title="Collapse"
           onClick={() => set("closed")}
-          className="glass absolute top-3 -left-3 z-10 hidden size-7 place-items-center rounded-full text-muted hover:text-ink lg:grid"
+          className="glass absolute top-1/2 -left-[14px] z-10 hidden h-14 w-[10px] -translate-y-1/2 place-items-center rounded-full text-muted transition-[width] hover:w-4 hover:text-ink focus-visible:w-4 lg:grid"
         >
-          <PanelRightClose className="size-3.5" aria-hidden />
+          <ChevronRight className="size-3" aria-hidden />
         </button>
       </div>
       <nav
@@ -121,7 +116,11 @@ export function HomeSideColumn({
         <span className="h-px w-8 bg-[var(--nx-line)]" aria-hidden />
         <button
           type="button"
-          aria-label={bdays ? `People, ${bdays} birthday${bdays === 1 ? "" : "s"} soon` : "People"}
+          aria-label={
+            bdays
+              ? `People, ${bdays} birthday${bdays === 1 ? "" : "s"} soon`
+              : "People"
+          }
           title="People"
           onClick={() => set("open")}
           className={railBtn}
