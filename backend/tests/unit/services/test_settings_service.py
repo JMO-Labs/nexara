@@ -11,7 +11,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.settings import NotificationPreferences, ProfileUpdate, UserSettingsUpdate
+from app.schemas.profile import ProfileUpdate
+from app.schemas.settings import NotificationPreferences, UserSettingsUpdate
 from app.services.settings_service import SettingsService
 
 COMMUNITY_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -99,6 +100,56 @@ class TestUpdateProfile:
 
         assert "display_name" in result
         mock_user_repo.update.assert_awaited_once()
+
+
+class TestUpdateProfileFields:
+    """@brief Clearing, pronouns, per-field visibility merge, banner vetting."""
+
+    def _svc(self, current_vis=None):
+        settings_repo, user_repo = AsyncMock(), AsyncMock()
+        user = MagicMock()
+        user.community_id = COMMUNITY_ID
+        user_repo.get_by_id.return_value = user
+        row = MagicMock()
+        row.field_visibility = current_vis or {}
+        settings_repo.get_or_create.return_value = row
+        return SettingsService(settings_repo, user_repo, COMMUNITY_ID), settings_repo, user_repo
+
+    @pytest.mark.asyncio
+    async def test_clears_blanks_and_saves_pronouns(self):
+        svc, _, users = self._svc()
+        await svc.update_profile(
+            USER_ID, ProfileUpdate(pronouns="they/them", phone="", links=None, display_name=None)
+        )
+        data = users.update.await_args.args[1]
+        assert data == {"pronouns": "they/them", "phone": None, "links": []}
+
+    @pytest.mark.asyncio
+    async def test_merges_field_visibility(self):
+        svc, settings, users = self._svc({"bio": "groups"})
+        await svc.update_profile(USER_ID, ProfileUpdate(field_visibility={"phone": "community"}))
+        users.update.assert_not_awaited()
+        vis = settings.update.await_args.args[1]["field_visibility"]
+        assert vis == {"bio": "groups", "phone": "community"}
+
+    @pytest.mark.asyncio
+    async def test_rejects_banner_from_other_community(self):
+        from app.core.exceptions import NotFoundError
+
+        svc, _, users = self._svc()
+        media = MagicMock()
+        media.community_id = uuid.uuid4()
+        users.get_media.return_value = media
+        with pytest.raises(NotFoundError):
+            await svc.update_profile(USER_ID, ProfileUpdate(banner_media_id=uuid.uuid4()))
+        users.update.assert_not_awaited()
+
+    def test_rejects_bad_links_and_dedupes_skills(self):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            ProfileUpdate(links=[{"label": "x", "url": "javascript:alert(1)"}])
+        assert ProfileUpdate(skills=[" Plumbing ", "plumbing", ""]).skills == ["Plumbing"]
 
 
 class TestUpdateEmail:

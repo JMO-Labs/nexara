@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.media import Media
 from app.models.user import User
 from app.repositories.base import BaseRepository
 
@@ -230,3 +231,7 @@ class UserRepository(BaseRepository[User]):
             User.id.notin_(blockers),
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def get_media(self, media_id: uuid.UUID) -> Media | None:
+        """@brief Media row by id (used to vet a profile banner)."""
+        return await self._session.get(Media, media_id)

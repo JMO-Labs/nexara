@@ -42,6 +42,10 @@ def _mock_user(**overrides) -> MagicMock:
     user.location = ""
     user.website_url = ""
     user.birthday = None
+    user.banner_media_id = None
+    for f in ("phone", "contact_email", "address", "emergency_contact", "availability", "dietary"):
+        setattr(user, f, None)
+    user.links, user.skills = [], []
     user.pronouns = ""
     return user
 

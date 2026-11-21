@@ -152,6 +152,11 @@ class UserSettings(Base):
     # Home page layout — arbitrary JSON blob; None means "use default"
     home_layout: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True, default=None)
 
+    # Per-field profile visibility: {field: "private" | "groups" | "community"}.
+    field_visibility: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, server_default="{}", default=dict
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -17,7 +17,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -64,6 +64,19 @@ class User(Base):
         UUID(as_uuid=True),
         ForeignKey("media.id", ondelete="SET NULL", use_alter=True),
     )
+    # Optional contact/about fields; who sees each is user_settings.field_visibility.
+    phone: Mapped[str | None] = mapped_column(Text)
+    contact_email: Mapped[str | None] = mapped_column(Text)
+    address: Mapped[str | None] = mapped_column(Text)
+    links: Mapped[list[dict[str, str]]] = mapped_column(
+        JSONB, nullable=False, server_default="[]", default=list
+    )
+    emergency_contact: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    skills: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default="[]", default=list
+    )
+    availability: Mapped[str | None] = mapped_column(Text)
+    dietary: Mapped[str | None] = mapped_column(Text)
 
     # Security
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

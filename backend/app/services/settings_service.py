@@ -10,12 +10,13 @@ from typing import Any
 
 import structlog
 
+from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
+from app.schemas.profile import ProfileUpdate
 from app.schemas.settings import (
     NotificationPreferences,
-    ProfileUpdate,
     UserSettingsResponse,
     UserSettingsUpdate,
 )
@@ -114,9 +115,33 @@ class SettingsService:
         if user is None:
             raise ValueError(_("User not found"))
 
-        update_dict = data.model_dump(exclude_none=True)
-        await self._user_repo.update(user, update_dict)
-        logger.info("profile_updated", user_id=str(user_id), fields=list(update_dict.keys()))
+        raw = data.model_dump(mode="json", exclude_unset=True)
+        visibility = raw.pop("field_visibility", None)
+        if raw.get("display_name") is None:
+            raw.pop("display_name", None)  # required; never cleared
+        update_dict = {k: (None if v == "" else v) for k, v in raw.items()}
+        for k in ("links", "skills"):
+            if k in update_dict and update_dict[k] is None:
+                update_dict[k] = []
+        if "birthday" in update_dict:
+            update_dict["birthday"] = data.birthday
+        if update_dict.get("banner_media_id") is not None:
+            media = await self._user_repo.get_media(data.banner_media_id)  # type: ignore[arg-type]
+            if media is None or media.community_id != user.community_id:
+                raise NotFoundError(message=_("Banner image not found"))
+            update_dict["banner_media_id"] = data.banner_media_id
+        if update_dict:
+            await self._user_repo.update(user, update_dict)
+        if visibility:
+            row = await self._settings_repo.get_or_create(user_id, user.community_id)
+            await self._settings_repo.update(
+                user_id, {"field_visibility": {**(row.field_visibility or {}), **visibility}}
+            )
+        logger.info(
+            "profile_updated",
+            user_id=str(user_id),
+            fields=list(update_dict.keys()) + (["field_visibility"] if visibility else []),
+        )
         return update_dict
 
     async def update_email(

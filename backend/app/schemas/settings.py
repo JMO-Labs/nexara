@@ -125,6 +125,7 @@ class UserSettingsResponse(BaseModel):
     home_layout: HomeLayoutSchema | None = None
     home_pattern: str | None = None
     reduce_transparency: bool = False
+    field_visibility: dict[str, str] = Field(default_factory=dict)
 
     model_config = {"from_attributes": True}
 
@@ -149,13 +150,3 @@ class UserSettingsUpdate(BaseModel):
     home_layout: HomeLayoutSchema | None = None
     home_pattern: str | None = Field(default=None, pattern=HOME_PATTERN_RE)
     reduce_transparency: bool | None = None
-
-
-class ProfileUpdate(BaseModel):
-    """@brief Payload for updating user profile fields."""
-
-    display_name: str | None = Field(default=None, min_length=1, max_length=100)
-    bio: str | None = Field(default=None, max_length=500)
-    location: str | None = Field(default=None, max_length=100)
-    website_url: str | None = Field(default=None, max_length=300)
-    title: str | None = Field(default=None, max_length=50)

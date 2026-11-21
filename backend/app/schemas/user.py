@@ -54,6 +54,15 @@ class UserDetailResponse(BaseModel):
     location: str | None = None
     website_url: str | None = None
     birthday: date | None = None
+    banner_media_id: UUID | None = None
+    phone: str | None = None
+    contact_email: str | None = None
+    address: str | None = None
+    links: list[dict[str, str]] = []
+    emergency_contact: dict[str, str] | None = None
+    skills: list[str] = []
+    availability: str | None = None
+    dietary: str | None = None
     role: str
     totp_enabled: bool
     storage_used: int

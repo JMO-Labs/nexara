@@ -35,16 +35,39 @@ def _mock(spec, **kw):
     return m
 
 
-def _settings(uid, profile="community", bday="nobody"):
-    return _mock(UserSettings, user_id=uid, profile_visible_to=profile, show_birthday_to=bday)
+OPEN = {"contact_email": "community", "phone": "community"}
+
+
+def _settings(uid, vis=None, bday="nobody", profile="community"):
+    return _mock(
+        UserSettings,
+        user_id=uid,
+        profile_visible_to=profile,
+        show_birthday_to=bday,
+        field_visibility=vis if vis is not None else {"contact_email": "community"},
+    )
 
 
 def _setup(share: dict, prefs: dict | None = None):
     """@brief Repos mocked with spec; prefs maps uid -> UserSettings mock (absent = no row)."""
     items = [_mock(ListItem, id=uuid.uuid4(), values={"who": str(u)}) for u in (U1, U2)]
     users = [
-        _mock(User, id=U1, email="a@x.io", birthday=date(2000, 1, 2)),
-        _mock(User, id=U2, email="b@x.io", birthday=date(1999, 3, 4)),
+        _mock(
+            User,
+            id=U1,
+            email="login1@x.io",
+            contact_email="a@x.io",
+            phone="555-1",
+            birthday=date(2000, 1, 2),
+        ),
+        _mock(
+            User,
+            id=U2,
+            email="login2@x.io",
+            contact_email="b@x.io",
+            phone="555-2",
+            birthday=date(1999, 3, 4),
+        ),
     ]
     if prefs is None:
         prefs = {U1: _settings(U1), U2: _settings(U2)}
@@ -73,7 +96,7 @@ async def test_resolve_gates_and_batches():
     assert out[items[0].id]["mail"] == "a@x.io"
     assert out[items[1].id]["mail"] is None  # share_personal off
     assert out[items[0].id]["bday"] is None  # show_birthday_to=nobody
-    assert out[items[0].id]["tel"] is None  # no phone column: graceful
+    assert out[items[0].id]["tel"] is None  # phone not opted in (private)
     repos.users.get_many.assert_awaited_once()
     repos.settings.get_many.assert_awaited_once()
 
@@ -87,18 +110,26 @@ async def test_repos_receive_community_and_viewer():
     assert repos.settings.get_many.await_args.args[1] == CID
 
 
-async def test_profile_private_hides_email():
-    prefs = {U1: _settings(U1, profile="private"), U2: _settings(U2)}
+async def test_fields_follow_per_field_visibility():
+    prefs = {U1: _settings(U1, vis={}), U2: _settings(U2, vis=OPEN)}
     items, repos = _setup({U1: True, U2: True}, prefs)
     out = await _resolve(UserPullResolver(), items, repos)
+    assert out[items[0].id]["mail"] is None  # new fields default private
+    assert out[items[1].id]["mail"] == "b@x.io"  # contact email, never login
+    assert out[items[1].id]["tel"] == "555-2"
+
+
+async def test_groups_level_is_not_enough_for_lists():
+    prefs = {U1: _settings(U1, vis={"contact_email": "groups"})}
+    items, repos = _setup({U1: True}, prefs)
+    out = await _resolve(UserPullResolver(), items, repos)
     assert out[items[0].id]["mail"] is None
-    assert out[items[1].id]["mail"] == "b@x.io"
 
 
-async def test_missing_settings_row_defaults_to_community():
+async def test_missing_settings_row_uses_defaults():
     items, repos = _setup({U1: True}, prefs={})
     out = await _resolve(UserPullResolver(), items, repos)
-    assert out[items[0].id]["mail"] == "a@x.io"
+    assert out[items[0].id]["mail"] is None  # contact fields private by default
     assert out[items[0].id]["bday"] == date(2000, 1, 2)
 
 
