@@ -105,7 +105,7 @@ describe("PeopleStrip", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Family")).toBeInTheDocument();
     expect(screen.getByText("3 shared events this month")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Message" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app/chat/ch9"));
     expect(mutateAsync).toHaveBeenCalledWith("u1");
     fireEvent.click(screen.getByRole("button", { name: "Profile" }));

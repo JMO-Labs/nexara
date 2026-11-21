@@ -4,13 +4,16 @@
  * @brief Card body for a person in the home people strip; PeopleStrip shows it
  *        in a Radix HoverCard (portaled, with open/close delays).
  */
+import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useCreateDm } from "@/hooks/useChat";
+import { Check, SendHorizontal } from "lucide-react";
+import { sendChatMessage, useCreateDm } from "@/hooks/useChat";
 import type { HomePerson } from "@/lib/api/home";
 import { FavoriteButton } from "./FavoriteButton";
 
 /**
- * @brief Connection card with shared context and Message/Profile actions.
+ * @brief Connection card: shared context, quick message box (sends into the
+ *        DM without leaving Home), Open chat and Profile.
  * @param person The person shown.
  * @param status Human status line ("" to omit).
  * @return Card body.
@@ -26,9 +29,22 @@ export function ConnectionCard({
   const dm = useCreateDm();
   const first = person.display_name.split(" ")[0];
 
+  const [text, setText] = React.useState("");
+  const [sent, setSent] = React.useState<"ok" | "fail" | null>(null);
+
   const message = async () => {
     const channel = await dm.mutateAsync(person.user_id);
     router.push(`/app/chat/${channel.id}`);
+  };
+
+  const quickSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const content = text.trim();
+    if (!content) return;
+    const channel = await dm.mutateAsync(person.user_id);
+    if (!sendChatMessage(channel.id, content)) return setSent("fail");
+    setText("");
+    setSent("ok");
   };
 
   return (
@@ -55,13 +71,52 @@ export function ConnectionCard({
         )}
         {status && <li>{status}</li>}
       </ul>
+      <form
+        onSubmit={quickSend}
+        className="mb-2 flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--nx-ink)_7%,transparent)] py-1 pr-1 pl-3.5"
+      >
+        <input
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setSent(null);
+          }}
+          aria-label={`Message ${first}`}
+          placeholder={`Message ${first}`}
+          autoComplete="off"
+          maxLength={4000}
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--nx-faint)]"
+        />
+        <button
+          type="submit"
+          aria-label="Send"
+          disabled={!text.trim() || dm.isPending}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-strong text-bg disabled:opacity-40"
+        >
+          <SendHorizontal className="size-4" aria-hidden />
+        </button>
+      </form>
+      {sent === "fail" && (
+        <p role="alert" className="mb-2 text-xs text-destructive">
+          Chat is offline. Try again in a moment.
+        </p>
+      )}
+      {sent === "ok" && (
+        <p
+          role="status"
+          className="mb-2 flex items-center gap-1 text-xs text-[var(--nx-muted)]"
+        >
+          <Check className="size-3.5 text-[var(--nx-ok)]" aria-hidden /> Sent to{" "}
+          {first}
+        </p>
+      )}
       <div className="flex gap-2">
         <button
           type="button"
           onClick={message}
-          className="flex-1 rounded-full bg-surface-strong p-2 text-sm font-medium text-bg"
+          className="glass-item flex-1 rounded-full p-2 text-sm font-medium text-ink"
         >
-          Message
+          Open chat
         </button>
         <button
           type="button"

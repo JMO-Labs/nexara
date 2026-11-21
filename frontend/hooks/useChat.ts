@@ -319,9 +319,12 @@ export function useChatRealtime(): {
   return { status, typing: typingByChannel, send, unread, markRead };
 }
 
-/** @brief Imperative helper to send a chat.message frame. */
-export function sendChatMessage(channelId: string, content: string): void {
-  chatWs.send({
+/**
+ * @brief Imperative helper to send a chat.message frame.
+ * @return false when the chat socket is not connected (nothing sent)
+ */
+export function sendChatMessage(channelId: string, content: string): boolean {
+  return chatWs.send({
     type: "chat.message",
     payload: { channel_id: channelId, content },
   });

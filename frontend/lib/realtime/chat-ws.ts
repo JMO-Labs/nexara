@@ -109,10 +109,13 @@ class ChatWsManager {
     return () => this.statusListeners.delete(fn);
   }
 
-  send(frame: WsFrame): void {
+  /** @return true when the frame was handed to an open, authed socket. */
+  send(frame: WsFrame): boolean {
     if (this.socket?.readyState === WebSocket.OPEN && this.authed) {
       this.socket.send(JSON.stringify(frame));
+      return true;
     }
+    return false;
   }
 
   private setStatus(s: WsStatus): void {
