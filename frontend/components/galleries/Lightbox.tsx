@@ -4,6 +4,7 @@
  * @brief Full-screen modal viewer for gallery items: focus trap, arrows, Esc.
  */
 import * as React from "react";
+import { PhotoTags } from "./PhotoTags";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { API_BASE } from "@/lib/auth/session";
@@ -52,6 +53,8 @@ export function Lightbox({
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement | null)?.tagName === "INPUT";
+      if (typing && (e.key === "ArrowLeft" || e.key === "ArrowRight")) return;
       if (e.key === "Escape") {
         e.stopImmediatePropagation();
         onClose();
@@ -59,7 +62,9 @@ export function Lightbox({
       else if (e.key === "ArrowLeft") prev();
       else if (e.key === "Tab" && ref.current) {
         const f = Array.from(
-          ref.current.querySelectorAll<HTMLElement>("button:not([disabled])"),
+          ref.current.querySelectorAll<HTMLElement>(
+            "button:not([disabled]), input, a[href]",
+          ),
         );
         if (f.length === 0) {
           e.preventDefault();
@@ -151,6 +156,7 @@ export function Lightbox({
           <ChevronRight className="size-7 text-white" aria-hidden="true" />
         </IconButton>
       </div>
+      <PhotoTags key={item.media_id} mediaId={item.media_id} />
       {item.caption && (
         <p
           className="p-4 text-center text-sm text-white"

@@ -17,6 +17,8 @@ import { Lightbox } from "@/components/galleries/Lightbox";
 import type { Post } from "@/lib/api/posts";
 import type { EventItem } from "@/lib/api/events";
 
+vi.mock("@/components/galleries/PhotoTags", () => ({ PhotoTags: () => null }));
+
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("next/link", () => ({
   default: ({

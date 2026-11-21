@@ -32,6 +32,15 @@ class ProfileRepository:
         )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
+    async def get_by_username(self, username: str, community_id: uuid.UUID) -> User | None:
+        """@brief Active, non-deleted user by username in the community."""
+        stmt = select(User).where(
+            User.username == username,
+            User.community_id == community_id,
+            User.deleted_at.is_(None),
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
     async def get_settings(self, user_id: uuid.UUID) -> UserSettings | None:
         """@brief The user's settings row, if any."""
         stmt = select(UserSettings).where(UserSettings.user_id == user_id)

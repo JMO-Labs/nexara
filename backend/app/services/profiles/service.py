@@ -67,3 +67,14 @@ class ProfileService:
         if is_self:
             data["field_visibility"] = levels
         return ProfileResponse.model_validate(data)
+
+    async def lookup(self, username: str, viewer: User) -> User:
+        """
+        @brief Member by username in the community (404 if missing or blocked).
+        """
+        target = await self._repo.get_by_username(username, self._community_id)
+        if target is None or (
+            viewer.id != target.id and await self._repo.blocked_either_way(viewer.id, target.id)
+        ):
+            raise NotFoundError(message=_("User not found"))
+        return target

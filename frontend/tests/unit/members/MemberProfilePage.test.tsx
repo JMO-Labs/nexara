@@ -13,6 +13,7 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "u2" }),
   useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/components/members/MemberGalleriesTab", () => ({
   MemberGalleriesTab: () => <div>galleries-tab</div>,

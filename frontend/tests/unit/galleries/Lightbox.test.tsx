@@ -8,6 +8,8 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Lightbox } from "@/components/galleries/Lightbox";
 import type { GalleryItem } from "@/lib/api/galleries";
 
+vi.mock("@/components/galleries/PhotoTags", () => ({ PhotoTags: () => null }));
+
 const items: GalleryItem[] = [
   {
     id: "i1",
