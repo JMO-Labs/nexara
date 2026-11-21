@@ -8,6 +8,7 @@ Split from subgroup_repo.py; ``SubgroupMemberRepository`` is re-exported there.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import func, select
 
@@ -159,6 +160,92 @@ class SubgroupMemberRepository(BaseRepository[SubgroupMember]):
         )
         result = await self._session.execute(stmt)
         return int(result.scalar_one() or 0)
+
+    async def list_member_previews(
+        self,
+        community_id: uuid.UUID,
+        subgroup_ids: list[uuid.UUID],
+        *,
+        limit: int = 4,
+    ) -> dict[uuid.UUID, list[dict[str, Any]]]:
+        """
+        @brief Batched preview of up to ``limit`` active members per subgroup.
+
+        Single query for all subgroups: a row_number() window over joined_at
+        keeps the earliest ``limit`` members of each subgroup.
+
+        @param community_id Community scope.
+        @param subgroup_ids Subgroup IDs to preview.
+        @param limit Max members per subgroup.
+        @return Dict keyed by subgroup_id -> list of ``{id, display_name, avatar_url}``.
+        """
+        if not subgroup_ids:
+            return {}
+        ranked = (
+            select(
+                SubgroupMember.subgroup_id.label("subgroup_id"),
+                User.id.label("user_id"),
+                User.display_name.label("display_name"),
+                User.avatar_url.label("avatar_url"),
+                func.row_number()
+                .over(
+                    partition_by=SubgroupMember.subgroup_id,
+                    order_by=(SubgroupMember.joined_at.asc(), User.id),
+                )
+                .label("rn"),
+            )
+            .join(User, User.id == SubgroupMember.user_id)
+            .where(
+                SubgroupMember.community_id == community_id,
+                SubgroupMember.subgroup_id.in_(subgroup_ids),
+                User.deleted_at.is_(None),
+                User.is_active.is_(True),
+            )
+            .subquery()
+        )
+        stmt = (
+            select(
+                ranked.c.subgroup_id,
+                ranked.c.user_id,
+                ranked.c.display_name,
+                ranked.c.avatar_url,
+            )
+            .where(ranked.c.rn <= limit)
+            .order_by(ranked.c.subgroup_id, ranked.c.rn)
+        )
+        result = await self._session.execute(stmt)
+        out: dict[uuid.UUID, list[dict[str, Any]]] = {}
+        for sid, uid, name, avatar in result.all():
+            out.setdefault(sid, []).append({"id": uid, "display_name": name, "avatar_url": avatar})
+        return out
+
+    async def count_members_bulk(
+        self,
+        community_id: uuid.UUID,
+        subgroup_ids: list[uuid.UUID],
+    ) -> dict[uuid.UUID, int]:
+        """
+        @brief Batched member counts for many subgroups (one grouped query).
+
+        @param community_id Community scope.
+        @param subgroup_ids Subgroup IDs to count.
+        @return Dict keyed by subgroup_id; every requested ID is present (0 if none).
+        """
+        counts = dict.fromkeys(subgroup_ids, 0)
+        if not subgroup_ids:
+            return counts
+        stmt = (
+            select(SubgroupMember.subgroup_id, func.count(SubgroupMember.user_id))
+            .where(
+                SubgroupMember.community_id == community_id,
+                SubgroupMember.subgroup_id.in_(subgroup_ids),
+            )
+            .group_by(SubgroupMember.subgroup_id)
+        )
+        result = await self._session.execute(stmt)
+        for sid, n in result.all():
+            counts[sid] = int(n)
+        return counts
 
     async def list_members(
         self,

@@ -22,7 +22,7 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
     return (
       <div
         ref={ref}
-        className="grid grid-cols-1 items-start gap-2 border-b border-ink/10 py-3 last:border-b-0 md:grid-cols-12 md:gap-4"
+        className="grid grid-cols-1 items-start gap-2 py-3 md:grid-cols-12 md:gap-4"
       >
         <div className="md:col-span-4">
           <p className="text-sm font-semibold">{label}</p>

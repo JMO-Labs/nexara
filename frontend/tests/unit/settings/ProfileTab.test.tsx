@@ -19,16 +19,44 @@ const createWrapper = () => {
   );
 };
 
+const PROFILE = {
+  display_name: "Ada L",
+  bio: "Hello there",
+  location: "London",
+  website_url: "https://ada.example",
+  title: "Engineer",
+  pronouns: "she/her",
+};
+
 describe("ProfileTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useToasts.getState().clear();
+    vi.mocked(settingsHooks.useMyProfile).mockReturnValue({
+      data: PROFILE,
+    } as any);
     vi.mocked(settingsHooks.useUpdateProfile).mockReturnValue({
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
       isPending: false,
       isSuccess: false,
     } as any);
+  });
+
+  it("a late profile refetch does not overwrite what the user typed", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<ProfileTab />, { wrapper: createWrapper() });
+    const name = screen.getByLabelText(/display name/i);
+    await user.clear(name);
+    await user.type(name, "Typed name");
+    vi.mocked(settingsHooks.useMyProfile).mockReturnValue({
+      data: { ...PROFILE, bio: "Refetched bio" },
+    } as any);
+    rerender(<ProfileTab />);
+    await waitFor(() =>
+      expect(screen.getByLabelText(/bio/i)).toHaveValue("Refetched bio"),
+    );
+    expect(name).toHaveValue("Typed name");
   });
 
   it("renders profile form fields", () => {
@@ -94,6 +122,7 @@ describe("ProfileTab", () => {
 
     const input = screen.getByLabelText(/pronouns \(optional\)/i);
     expect(input).toHaveAttribute("maxlength", "50");
+    await user.clear(input);
     await user.type(input, "they/them");
     expect(screen.getByText(/9\/50/)).toBeInTheDocument();
 
@@ -103,5 +132,59 @@ describe("ProfileTab", () => {
         expect.objectContaining({ pronouns: "they/them" }),
       );
     });
+  });
+
+  it("prefills fields from the current profile", () => {
+    render(<ProfileTab />, { wrapper: createWrapper() });
+    expect(screen.getByLabelText(/display name/i)).toHaveValue("Ada L");
+    expect(screen.getByLabelText(/bio/i)).toHaveValue("Hello there");
+    expect(screen.getByLabelText(/location/i)).toHaveValue("London");
+    expect(screen.getByLabelText(/website/i)).toHaveValue(
+      "https://ada.example",
+    );
+    expect(screen.getByLabelText(/title/i)).toHaveValue("Engineer");
+  });
+
+  it("fills fields when the profile arrives after first render", () => {
+    vi.mocked(settingsHooks.useMyProfile).mockReturnValue({
+      data: undefined,
+    } as any);
+    const { rerender } = render(<ProfileTab />, { wrapper: createWrapper() });
+    expect(screen.getByLabelText(/display name/i)).toHaveValue("");
+    vi.mocked(settingsHooks.useMyProfile).mockReturnValue({
+      data: PROFILE,
+    } as any);
+    rerender(<ProfileTab />);
+    expect(screen.getByLabelText(/display name/i)).toHaveValue("Ada L");
+  });
+
+  it("sends only the changed display name", async () => {
+    const user = userEvent.setup();
+    const mockMutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateProfile).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
+    render(<ProfileTab />, { wrapper: createWrapper() });
+    const input = screen.getByLabelText(/display name/i);
+    await user.clear(input);
+    await user.type(input, "Ada Lovelace");
+    await user.click(screen.getByRole("button", { name: /save profile/i }));
+    await waitFor(() =>
+      expect(mockMutate).toHaveBeenCalledWith({ display_name: "Ada Lovelace" }),
+    );
+  });
+
+  it("sends bio as empty string when cleared", async () => {
+    const user = userEvent.setup();
+    const mockMutate = vi.fn();
+    vi.mocked(settingsHooks.useUpdateProfile).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as any);
+    render(<ProfileTab />, { wrapper: createWrapper() });
+    await user.clear(screen.getByLabelText(/bio/i));
+    await user.click(screen.getByRole("button", { name: /save profile/i }));
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledWith({ bio: "" }));
   });
 });

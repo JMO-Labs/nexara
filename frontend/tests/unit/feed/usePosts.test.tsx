@@ -131,4 +131,18 @@ describe("usePosts", () => {
     expect(cache?.pages[0].items[0].id).toBe("new");
     expect(cache?.pages[0].items[1].id).toBe("old");
   });
+
+  it("useCreatePost refreshes the Home feed cache", async () => {
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    (api.createPost as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makePost({ id: "n2" }),
+    );
+    const { result } = renderHook(() => useCreatePost(), {
+      wrapper: wrapper(qc),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ content: "hi" });
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: qk.home.feed() });
+  });
 });

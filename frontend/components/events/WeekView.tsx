@@ -2,8 +2,8 @@
 /**
  * @file components/events/WeekView.tsx
  * @brief Weekly calendar grid view. 7 columns, hourly rows (48px each).
- *        Current time line (1px accent) with 6px dot. Scrolls sideways inside
- *        its own container on phones.
+ *        Current time line (1px accent) with 6px dot. Faint hour lines only;
+ *        event chips carry a colour dot. Scrolls sideways on phones.
  *        Multi-event overlap allowed via lane assignment.
  */
 import * as React from "react";
@@ -17,7 +17,8 @@ import {
 import type { EventItem } from "@/lib/api/events";
 import { assignTimeLanes, type TimeLane } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
-import { chipStyle } from "./toneStyle";
+import { formatTime } from "./formatTime";
+import { chipStyle, HAIRLINE, TODAY_PILL } from "./toneStyle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
@@ -96,9 +97,7 @@ export function WeekView({
                 <p
                   className={cn(
                     "mx-auto mt-0.5 flex size-7 items-center justify-center rounded-full text-sm",
-                    today
-                      ? "bg-accent font-black text-surface-strong"
-                      : "font-semibold text-ink",
+                    today ? TODAY_PILL : "font-semibold text-ink",
                   )}
                   aria-current={today ? "date" : undefined}
                 >
@@ -110,22 +109,23 @@ export function WeekView({
         </div>
 
         {/* Scrollable timeline */}
-        <div className="relative flex flex-1 overflow-y-auto overflow-x-hidden rounded-2xl bg-surface">
+        <div
+          className={cn(
+            "relative flex flex-1 overflow-y-auto overflow-x-hidden rounded-[22px]",
+          )}
+        >
           {/* Hour label gutter */}
-          <div
-            className="shrink-0 border-r border-ink/15"
-            style={{ width: HOUR_LABEL_WIDTH }}
-          >
+          <div className="shrink-0" style={{ width: HOUR_LABEL_WIDTH }}>
             {Array.from({ length: 24 }).map((_, hour) => (
               <div
                 key={hour}
                 className={cn(
-                  "flex items-start justify-end pr-2 pt-0.5 text-[11px] font-semibold text-muted",
-                  hour < 23 && "border-b border-ink/15",
+                  "flex items-start justify-end pr-2 pt-0.5 text-[11px] font-medium text-muted",
+                  hour < 23 && cn("border-b", HAIRLINE),
                 )}
                 style={{ height: HOUR_HEIGHT }}
               >
-                {hour === 0 ? "" : format(new Date().setHours(hour, 0), "h a")}
+                {formatTime(new Date(2000, 0, 1, hour, 0))}
               </div>
             ))}
           </div>
@@ -141,9 +141,8 @@ export function WeekView({
                   <div
                     key={`${hour}-${dayIdx}`}
                     className={cn(
-                      "hover:bg-bg motion-safe:transition-colors",
-                      dayIdx < 6 && "border-r border-ink/15",
-                      hour < 23 && "border-b border-ink/15",
+                      "hover:bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)] motion-safe:transition-colors",
+                      hour < 23 && cn("border-b", HAIRLINE),
                     )}
                     style={{ height: HOUR_HEIGHT }}
                   />
@@ -171,17 +170,21 @@ export function WeekView({
                         onSelectEvent(seg.event);
                       }
                     }}
-                    className="absolute z-10 box-border cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded border px-1 py-0.5 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                    className="absolute z-10 box-border flex cursor-pointer items-center gap-1 overflow-hidden rounded-lg px-1.5 py-0.5 text-[11px] font-semibold leading-tight outline-none hover:z-[11] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                     style={{
                       left: `${dayLeftPct + seg.lane * laneWidthPct}%`,
                       width: `calc(${laneWidthPct}% - 2px)`,
                       top: seg.topOffset,
                       height: seg.height,
                       ...chipStyle(seg.tone, isSelected),
-                      ...(isSelected ? {} : { borderColor: "transparent" }),
                     }}
                   >
-                    {seg.event.title}
+                    <span
+                      aria-hidden="true"
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: seg.tone.solid }}
+                    />
+                    <span className="min-w-0 truncate">{seg.event.title}</span>
                   </div>
                 );
               });

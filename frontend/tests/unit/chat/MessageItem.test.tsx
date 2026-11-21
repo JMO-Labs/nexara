@@ -47,18 +47,27 @@ describe("MessageItem", () => {
 });
 
 describe("MessageItem bubbles", () => {
-  it("own bubble uses strong surface, others plain surface", () => {
+  it("own bubble uses strong surface, others nx-bubble", () => {
     const { rerender, container } = render(
       <MessageItem message={base} isSelf />,
     );
     expect(container.querySelector(".bg-surface-strong")).not.toBeNull();
     rerender(<MessageItem message={base} />);
     expect(container.querySelector(".bg-surface-strong")).toBeNull();
-    expect(container.querySelector(".bg-surface")).not.toBeNull();
+    expect(
+      container.querySelector(".bg-\\[var\\(--nx-bubble\\)\\]"),
+    ).not.toBeNull();
   });
 });
 
 describe("MessageItem report", () => {
+  it("own bubble text inherits ink-on-strong colour (not text-ink)", () => {
+    const { container } = render(<MessageItem message={base} isSelf />);
+    const md = container.querySelector(".nx-md")!;
+    expect(md.className).toContain("text-inherit");
+    expect(md.className).not.toMatch(/(^| )text-ink( |$)/);
+  });
+
   it("shows Report for another user's message", () => {
     render(<MessageItem message={base} />);
     expect(screen.getByRole("button", { name: /report/i })).toBeInTheDocument();

@@ -39,17 +39,21 @@ export function EmptyState({
       )}
     >
       {illustration ??
-        (Icon && <Icon className="size-10 text-leaf" aria-hidden="true" />)}
+        (Icon && (
+          <span className="glass-item flex size-16 items-center justify-center rounded-full">
+            <Icon className="size-7 text-ink" aria-hidden="true" />
+          </span>
+        ))}
       <h3
         className={cn(
-          "font-black tracking-tight",
+          "font-medium tracking-tight",
           compact ? "text-lg" : "text-2xl",
         )}
       >
         {title}
       </h3>
       {description && (
-        <p className="max-w-md text-sm opacity-80">{description}</p>
+        <p className="max-w-md text-sm text-muted">{description}</p>
       )}
       {action && <div className="mt-1">{action}</div>}
     </div>

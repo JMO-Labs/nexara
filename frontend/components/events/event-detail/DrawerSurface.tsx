@@ -2,7 +2,7 @@
 /**
  * @file components/events/event-detail/DrawerSurface.tsx
  * @brief Resizable bottom-sheet surface: tone strip, drag handle, header
- *        actions and body. Height springs between collapsed/expanded snaps.
+ *        actions and body (glass-solid surface). Height springs between collapsed/expanded snaps.
  */
 import * as React from "react";
 import { motion, useMotionValue, animate } from "framer-motion";
@@ -107,7 +107,7 @@ export const DrawerSurface = React.forwardRef<
     <motion.div
       ref={ref}
       style={{ height: heightMV }}
-      className="flex flex-col overflow-hidden rounded-t-[1.25rem] border border-b-0 border-ink/15 bg-surface text-ink shadow-[0_-16px_40px_rgba(0,0,0,0.18)]"
+      className="flex flex-col overflow-hidden rounded-t-[32px] border border-b-0 border-[var(--nx-glass-edge)] bg-[var(--nx-glass-solid)] text-ink shadow-[0_-16px_40px_rgba(0,0,0,0.18)]"
       role="region"
       aria-label="Event details"
     >
@@ -139,12 +139,7 @@ export const DrawerSurface = React.forwardRef<
       </div>
       <div className="flex shrink-0 items-start justify-between gap-4 px-4 pt-1 pb-3 md:px-6">
         <div className="min-w-0">
-          <p
-            className="mb-1 text-xs font-bold tracking-widest"
-            style={{ color: tone.onSoft }}
-          >
-            {tone.label}
-          </p>
+          <p className="mb-1 text-xs font-semibold text-muted">{tone.label}</p>
           <h2 className="font-display text-2xl leading-tight break-words">
             {event.title}
           </h2>

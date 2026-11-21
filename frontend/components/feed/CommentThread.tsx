@@ -5,7 +5,14 @@
  */
 import * as React from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Avatar, Button, Textarea, Skeleton, Markdown } from "@/components/ui";
+import { MessageCircle } from "lucide-react";
+import {
+  Avatar,
+  Button,
+  EmptyState,
+  Skeleton,
+  Markdown,
+} from "@/components/ui";
 import { useComments, useCreateComment } from "@/hooks/usePosts";
 import { ReportButton } from "@/components/common/ReportButton";
 import type { Comment } from "@/lib/api/posts";
@@ -40,7 +47,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
         size="sm"
       />
       <div className="min-w-0 grow">
-        <div className="rounded-xl bg-bg px-3 py-2">
+        <div className="glass-item rounded-[20px] px-3 py-2">
           <p className="text-sm font-semibold">{comment.author.display_name}</p>
           <Markdown content={comment.content} size="sm" />
         </div>
@@ -128,14 +135,14 @@ export function CommentThread({
 
   return (
     <div className="mt-2 flex flex-col gap-2">
-      <div className="flex items-start gap-2">
-        <Textarea
+      <div className="flex items-center gap-2 rounded-full glass-item p-1.5 pl-4">
+        <textarea
           aria-label={replyTo ? "Write a reply" : "Add a comment"}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={replyTo ? "Write a reply…" : "Add a comment…"}
           rows={1}
-          className="min-h-10 grow"
+          className="field-sizing-content max-h-32 grow resize-none bg-transparent py-2 text-base text-ink placeholder:text-muted outline-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
@@ -148,6 +155,7 @@ export function CommentThread({
           onClick={submit}
           loading={createMut.isPending}
           disabled={!text.trim()}
+          className="disabled:opacity-40"
         >
           Send
         </Button>
@@ -174,14 +182,16 @@ export function CommentThread({
           </Button>
         </div>
       ) : flat.length === 0 ? (
-        <p className="py-2 text-sm text-ink/75">
-          <span className="font-semibold">Be first to comment</span>
-          {" — share your thoughts above."}
-        </p>
+        <EmptyState
+          compact
+          icon={MessageCircle}
+          title="No comments yet"
+          description="Start the conversation."
+        />
       ) : (
         <div
           ref={scrollRef}
-          className="overflow-y-auto border-y border-ink/15 pr-1 motion-safe:transition-[max-height]"
+          className="overflow-y-auto py-1 pr-1 motion-safe:transition-[max-height]"
           style={{ maxHeight: expanded ? EXPANDED_MAX : COLLAPSED_MAX }}
         >
           {flat.map((c) => (

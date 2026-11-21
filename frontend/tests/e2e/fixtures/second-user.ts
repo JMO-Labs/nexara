@@ -39,6 +39,18 @@ async function createInvite(
   return (await res.json()).raw_token as string;
 }
 
+/** @brief Close the first-run "Welcome to the community" dialog if shown. */
+export async function dismissWelcome(page: Page): Promise<void> {
+  const skip = page.getByRole("button", { name: "Skip for now" });
+  try {
+    await skip.waitFor({ state: "visible", timeout: 5_000 });
+    await skip.click();
+    await skip.waitFor({ state: "hidden" });
+  } catch {
+    /* dialog not shown */
+  }
+}
+
 /**
  * @brief Invite and register a fresh user in a new browser context.
  * @param browser Playwright browser.
@@ -68,5 +80,16 @@ export async function createSecondUser(
     .getByRole("button", { name: /create account|sign up|register/i })
     .click();
   await expect(page).toHaveURL(/\/app/);
+  // Mark onboarding done server-side so the welcome dialog cannot pop up
+  // late (under load) over whatever the test does next.
+  const auth = await request.post("/api/v1/auth/login", {
+    data: { email, password },
+  });
+  const { access_token } = await auth.json();
+  await request.patch("/api/v1/users/me/onboarding", {
+    headers: { Authorization: `Bearer ${access_token}` },
+    data: {},
+  });
+  await dismissWelcome(page);
   return { username, email, password, context, page };
 }

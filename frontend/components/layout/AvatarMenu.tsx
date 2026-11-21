@@ -4,7 +4,6 @@
  * @brief Avatar dropdown with settings / admin / shortcuts / sign-out.
  */
 import { Tooltip } from "@/components/ui/Tooltip";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import {
@@ -17,29 +16,18 @@ import {
 } from "@/components/ui/shadcn/dropdown-menu";
 import { useSession } from "@/stores/session";
 import { useModals } from "@/stores/modals";
-import { logout as apiLogout } from "@/lib/api/auth";
-import { setAccessToken } from "@/lib/auth/session";
+import { useSignOut } from "@/hooks/useSignOut";
+import { isAdmin } from "./navItems";
 
 /**
  * @brief Account menu.
  * @return dropdown menu with avatar trigger
  */
 export function AvatarMenu() {
-  const router = useRouter();
   const user = useSession((s) => s.user);
-  const reset = useSession((s) => s.reset);
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
-  const onLogout = async () => {
-    try {
-      await apiLogout();
-    } catch {
-      /* ignore: local state is what matters */
-    }
-    setAccessToken(null);
-    reset();
-    router.replace("/login");
-  };
+  const onLogout = useSignOut();
 
   return (
     <DropdownMenu>
@@ -56,7 +44,10 @@ export function AvatarMenu() {
           />
         </DropdownMenuTrigger>
       </Tooltip>
-      <DropdownMenuContent align="end" className="min-w-56">
+      <DropdownMenuContent
+        align="end"
+        className="glass min-w-56 rounded-3xl bg-[var(--nx-glass-solid)]"
+      >
         <DropdownMenuLabel className="flex flex-col">
           <span className="font-semibold">
             {user?.display_name ?? "Signed in"}
@@ -64,19 +55,26 @@ export function AvatarMenu() {
           <span className="text-muted text-xs font-normal">{user?.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user?.id && (
+          <DropdownMenuItem asChild>
+            <Link href={`/app/members/${user.id}`}>Profile</Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link href="/app/settings" data-tour="settings">
             Settings
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/app/admin" data-tour="admin-link">
-            Admin
-          </Link>
-        </DropdownMenuItem>
+        {isAdmin(user) && (
+          <DropdownMenuItem asChild>
+            <Link href="/app/admin" data-tour="admin-link">
+              Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => setKeyboardShortcutsOpen(true)}>
-          Keyboard shortcuts
+          Help & shortcuts
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onLogout}>

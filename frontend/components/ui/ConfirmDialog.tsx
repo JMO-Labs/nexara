@@ -5,7 +5,6 @@
  *        Mount once in Shell. Use `await confirm({ ... })`.
  * @return true if confirmed, false if cancelled or Escaped.
  */
-import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { Modal } from "./Modal";
 import { Button } from "./shadcn/button";
@@ -30,7 +29,6 @@ export function ConfirmDialog() {
           </Button>
           <Button
             variant={s.tone === "danger" ? "destructive" : "default"}
-            className={cn(s.tone !== "danger" && "bg-accent text-white")}
             onClick={s.accept}
             data-testid="confirm-dialog-confirm"
           >

@@ -63,9 +63,26 @@ class SubgroupUpdate(BaseModel):
     accent_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
 
 
+class MemberPreview(BaseModel):
+    """
+    @brief Minimal member summary used for avatar stacks in list responses.
+
+    @param id User ID.
+    @param display_name Display name, or ``None``.
+    @param avatar_url Avatar URL, or ``None``.
+    """
+
+    id: UUID
+    display_name: str | None = None
+    avatar_url: str | None = None
+
+
 class SubgroupResponse(BaseModel):
     """
     @brief Summary subgroup representation returned from list endpoints.
+
+    @param member_preview Up to 4 active members for avatar stacks.
+    @param member_count Number of members in the subgroup.
     """
 
     id: UUID
@@ -84,6 +101,8 @@ class SubgroupResponse(BaseModel):
     updated_at: datetime
     my_role: str | None = None
     is_member: bool = False
+    member_preview: list[MemberPreview] = Field(default_factory=list, max_length=4)
+    member_count: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -169,7 +188,7 @@ class MediaItemResponse(BaseModel):
 
     @param media_id UUID of the media file.
     @param media Embedded media metadata (from MediaResponse schema).
-    @param source Source type: 'post', 'gallery', or 'event'.
+    @param source Source type: 'post', 'gallery', 'event', or 'upload'.
     @param source_id UUID of the source (post, gallery, or event).
     @param source_title Human-readable title of the source.
     @param created_at ISO timestamp when the media was added.
@@ -178,7 +197,7 @@ class MediaItemResponse(BaseModel):
     media_id: str
     media: dict[str, object]
     source: str
-    source_id: str
+    source_id: str | None = None  # None for standalone uploads (source="upload")
     source_title: str | None = None
     created_at: datetime
 

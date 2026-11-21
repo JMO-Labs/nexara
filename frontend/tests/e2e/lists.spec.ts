@@ -48,18 +48,23 @@ test("user creates a list, adds two items and completes one", async ({
 }) => {
   const title = `E2E list ${uniqueId()}`;
   await login(page);
-  await page.goto("/app/lists");
+  await page.goto("/app/inbox?view=lists");
   await page.getByRole("link", { name: "New list" }).click();
 
-  const dialog = page.getByRole("dialog", { name: "New list" });
-  await dialog.getByLabel("Title").fill(title);
+  await expect(
+    page.getByRole("heading", { name: "New list", level: 1 }),
+  ).toBeVisible();
+  await page.getByLabel("Title").fill(title);
   const created = page.waitForResponse(
     (r) =>
       r.url().endsWith(LISTS) &&
       r.request().method() === "POST" &&
       r.status() === 201,
   );
-  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Create", exact: true })
+    .click();
   const listId = ((await (await created).json()) as { id: string }).id;
   listIds.push(listId);
 
@@ -88,13 +93,9 @@ test("user creates a list, adds two items and completes one", async ({
   await page.getByRole("checkbox", { name: "Complete Item 1" }).click();
   expect((await completed).ok()).toBeTruthy();
 
-  await page.goto("/app/lists");
-  const card = page
-    .locator("div")
-    .filter({ has: page.getByRole("button", { name: title }) })
-    .filter({ hasText: /\d+\/\d+ done/ })
-    .last();
-  await expect(card.getByText("1/2 done")).toBeVisible();
+  await page.goto("/app/inbox?view=lists");
+  const row = page.getByTestId("inbox-row").filter({ hasText: title });
+  await expect(row).toContainText("1/2 done");
 });
 
 test("user claims a signup slot and releases it", async () => {

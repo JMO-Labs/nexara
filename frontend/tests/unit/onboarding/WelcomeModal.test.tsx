@@ -36,6 +36,14 @@ describe("WelcomeModal", () => {
     expect(useSession.getState().user?.tour_completed_at).toBeTruthy();
   });
 
+  it("Find friends links to the Community page", () => {
+    render(<WelcomeModal />);
+    expect(screen.getByRole("link", { name: /Find friends/ })).toHaveAttribute(
+      "href",
+      "/app/community",
+    );
+  });
+
   it("Skip for now marks onboarding done", async () => {
     render(<WelcomeModal />);
     await userEvent.click(screen.getByRole("button", { name: "Skip for now" }));

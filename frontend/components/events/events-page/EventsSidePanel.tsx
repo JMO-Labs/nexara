@@ -1,72 +1,87 @@
 "use client";
 /**
  * @file components/events/events-page/EventsSidePanel.tsx
- * @brief Countdown, mini calendar (day click expands inline) and event rail
- *        shown beside (lg) or below the main view.
+ * @brief Calendar aside: "Up next" panel (upcoming rail) and a selected-day
+ *        (or month) list panel. The day panel is hidden in list view.
  */
-import { EventCountdown } from "@/components/events/EventCountdown";
+import { format } from "date-fns";
+import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { EventRail } from "@/components/events/EventRail";
-import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import type { EventItem } from "@/lib/api/events";
 
 export interface EventsSidePanelProps {
-  nextEvent: EventItem | null;
-  events: EventItem[];
-  month: Date;
-  onMonthChange: (m: Date) => void;
+  upcoming: EventItem[];
   railEvents: EventItem[];
   selectedDay: Date | null;
   selectedEventId: string | null;
   subgroupNames: Map<string, string>;
   onSelectEvent: (ev: EventItem) => void;
   onClearDay: () => void;
+  /** Opens the create modal from the empty day state. */
+  onCreate?: () => void;
+  /** False in list view, where the day panel repeats the list. */
+  showDayPanel?: boolean;
 }
 
 /**
- * @brief Side panel with countdown and event rail.
+ * @brief Side panels beside (lg) or below the main calendar.
  * @param props see EventsSidePanelProps
  * @return aside element
  */
 export function EventsSidePanel(p: EventsSidePanelProps) {
+  const showDayPanel = p.showDayPanel ?? true;
   return (
     <aside
       aria-label="Event list"
-      className="bg-surface border-ink/10 flex flex-col overflow-hidden rounded-2xl border lg:sticky lg:top-4 lg:h-[calc(100vh-160px)]"
+      className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4"
     >
-      {p.nextEvent && (
-        <EventCountdown event={p.nextEvent} key={p.nextEvent.id} />
-      )}
-      <div className="border-ink/10 border-b p-3">
-        <CalendarWidget
-          events={p.events}
-          month={p.month}
-          onMonthChange={p.onMonthChange}
-          onSelectEvent={p.onSelectEvent}
-        />
-      </div>
-      <div className="border-ink/10 flex items-center justify-between border-b px-4 py-2">
-        <h2 className="text-muted text-sm font-semibold">
-          {p.selectedDay ? "This day" : "This month"}
-        </h2>
-        {p.selectedDay && (
-          <button
-            type="button"
-            onClick={p.onClearDay}
-            className="text-muted hover:text-ink min-h-11 px-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            Clear
-          </button>
+      <Panel title="Up next">
+        {p.upcoming.length === 0 ? (
+          <p className="text-sm text-muted">Nothing coming up</p>
+        ) : (
+          <div className="max-h-72 overflow-y-auto pb-6 [mask-image:linear-gradient(to_bottom,black_calc(100%_-_1.5rem),transparent)]">
+            <EventRail
+              events={p.upcoming}
+              selectedDay={null}
+              selectedEventId={p.selectedEventId}
+              subgroupNames={p.subgroupNames}
+              onSelectEvent={p.onSelectEvent}
+            />
+          </div>
         )}
-      </div>
-      <div className="min-h-0 flex-1">
-        <EventRail
-          events={p.railEvents}
-          selectedDay={p.selectedDay}
-          selectedEventId={p.selectedEventId}
-          subgroupNames={p.subgroupNames}
-          onSelectEvent={p.onSelectEvent}
-        />
-      </div>
+      </Panel>
+      {showDayPanel && (
+        <Panel
+          title={
+            p.selectedDay ? format(p.selectedDay, "EEE, MMM d") : "This month"
+          }
+          actions={
+            p.selectedDay ? (
+              <Button variant="glass" size="sm" onClick={p.onClearDay}>
+                Clear
+              </Button>
+            ) : undefined
+          }
+        >
+          <div className="max-h-80 overflow-y-auto">
+            <EventRail
+              events={p.railEvents}
+              selectedDay={p.selectedDay}
+              selectedEventId={p.selectedEventId}
+              subgroupNames={p.subgroupNames}
+              onSelectEvent={p.onSelectEvent}
+              emptyAction={
+                p.onCreate ? (
+                  <Button size="sm" onClick={p.onCreate}>
+                    New event
+                  </Button>
+                ) : undefined
+              }
+            />
+          </div>
+        </Panel>
+      )}
     </aside>
   );
 }

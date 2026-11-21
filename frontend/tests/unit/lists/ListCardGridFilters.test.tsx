@@ -12,6 +12,7 @@ const lists = [
     id: "a",
     title: "Beta",
     visibility: "community",
+    subgroupId: "s1",
     updatedAt: "2026-01-01T00:00:00Z",
     createdAt: "2026-03-01T00:00:00Z",
   },
@@ -20,6 +21,7 @@ const lists = [
     id: "b",
     title: "Alpha",
     visibility: "private",
+    subgroupId: null,
     updatedAt: "2026-02-01T00:00:00Z",
     createdAt: "2026-01-01T00:00:00Z",
   },
@@ -28,6 +30,7 @@ const lists = [
     id: "c",
     title: "Gamma",
     visibility: "community",
+    subgroupId: "s1",
     updatedAt: "2026-03-01T00:00:00Z",
     createdAt: "2026-02-01T00:00:00Z",
   },
@@ -58,6 +61,10 @@ describe("ListCardGrid filters", () => {
   it("sorts by created date", () => {
     render(<ListCardGrid communityId="c1" sortBy="created" />);
     expect(titles()).toEqual(["Beta", "Gamma", "Alpha"]);
+  });
+  it("keeps only lists of the given subgroup", () => {
+    render(<ListCardGrid communityId="c1" subgroupId="s1" />);
+    expect(titles()).toEqual(["Gamma", "Beta"]);
   });
   it("shows an empty state when the filter matches nothing", () => {
     render(<ListCardGrid communityId="c1" visibility="subgroup" />);

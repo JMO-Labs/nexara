@@ -110,12 +110,14 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
       style={{ width: CARD_W, height: isMinimized ? HEADER_H : CARD_H }}
-      className="flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-border bg-bg text-ink shadow-lg motion-safe:transition-[height] motion-safe:duration-200"
+      className="flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden glass rounded-[28px] text-ink shadow-lg motion-safe:transition-[height] motion-safe:duration-200"
     >
       <div
         style={{ height: HEADER_H }}
-        className={`flex shrink-0 items-center gap-1 bg-surface px-3 ${
-          isMinimized ? "cursor-pointer" : "border-b border-border"
+        className={`flex shrink-0 items-center gap-1 px-3 ${
+          isMinimized
+            ? "cursor-pointer"
+            : "border-b border-[var(--nx-glass-edge)]"
         }`}
         onClick={() => isMinimized && toggleMinimize(threadId)}
       >
@@ -163,7 +165,7 @@ export function ChatHead({ threadId, label }: ChatHeadProps) {
               onStartConversation={() => composerRef.current?.focus()}
             />
           </div>
-          <div className="shrink-0 border-t border-border">
+          <div className="shrink-0">
             <Composer
               ref={composerRef}
               onSend={handleSend}

@@ -141,6 +141,11 @@ class UserSettings(Base):
     font_size: Mapped[str] = mapped_column(Text, nullable=False, server_default="medium")
     compact_feed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
+    home_pattern: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reduce_transparency: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+
     # Locale
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="en-US")
 

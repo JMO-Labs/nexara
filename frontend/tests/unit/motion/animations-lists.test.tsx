@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/motion/animations-lists.test.tsx
- * @brief Gallery grid, admin KPI and feed list animations + reduced motion.
+ * @brief Admin KPI and feed list animations + reduced motion.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -15,17 +15,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-const galleryState = vi.hoisted(() => ({
-  value: { data: undefined as unknown, isLoading: true, error: null },
-}));
-vi.mock("@/hooks/useGalleries", () => ({
-  useGalleryList: () => galleryState.value,
-}));
-vi.mock("@/components/galleries/GalleryCard", () => ({
-  GalleryCard: ({ gallery }: { gallery: { id: string } }) => (
-    <div>card {gallery.id}</div>
-  ),
-}));
 vi.mock("@/hooks/useAdmin", () => ({
   useAdminMetrics: () => ({
     isLoading: false,
@@ -46,41 +35,10 @@ vi.mock("@/hooks/useAdmin", () => ({
   }),
 }));
 
-import { GalleryGrid } from "@/components/galleries/GalleryGrid";
 import { MetricsTab } from "@/components/admin/MetricsTab";
 
 beforeEach(() => {
   reduced = false;
-});
-
-describe("GalleryGrid motion", () => {
-  it("fades skeleton and items in", () => {
-    galleryState.value = { data: undefined, isLoading: true, error: null };
-    const { unmount } = render(<GalleryGrid onSelect={vi.fn()} />);
-    expect(screen.getByTestId("gallery-skeleton")).toHaveStyle({
-      opacity: "0",
-    });
-    unmount();
-    galleryState.value = {
-      data: { items: [{ id: "a" }, { id: "b" }] },
-      isLoading: false,
-      error: null,
-    };
-    render(<GalleryGrid onSelect={vi.fn()} />);
-    const items = screen.getAllByTestId("gallery-item");
-    expect(items).toHaveLength(2);
-    expect(items[0]).toHaveStyle({ opacity: "0" });
-  });
-  it("skips animation under reduced motion", () => {
-    reduced = true;
-    galleryState.value = {
-      data: { items: [{ id: "a" }] },
-      isLoading: false,
-      error: null,
-    };
-    render(<GalleryGrid onSelect={vi.fn()} />);
-    expect(screen.getByTestId("gallery-item").style.opacity).toBe("");
-  });
 });
 
 describe("MetricsTab KPI stagger", () => {

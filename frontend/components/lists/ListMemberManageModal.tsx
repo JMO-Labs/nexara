@@ -4,7 +4,7 @@
  * @brief Manage members of a list: list, remove, add by user id + role.
  */
 import { useId } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { UserMinus } from "lucide-react";
@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { Option, Select } from "@/components/ui/Select";
 import { DialogFooter } from "@/components/ui/shadcn/dialog";
 import {
   useListMemberAdd,
   useListMemberRemove,
   useListMembers,
 } from "@/hooks/useListActions";
-import { NativeSelect } from "./listFormFields";
 
 const Schema = z.object({
   userId: z.string().trim().uuid("Enter a valid user ID"),
@@ -47,10 +47,11 @@ export function ListMemberManageModal({
   const members = useListMembers(listId);
   const add = useListMemberAdd(listId);
   const remove = useListMemberRemove(listId);
-  const { register, handleSubmit, reset, formState } = useForm<FormData>({
-    resolver: zodResolver(Schema),
-    defaultValues: { userId: "", role: "viewer" },
-  });
+  const { register, control, handleSubmit, reset, formState } =
+    useForm<FormData>({
+      resolver: zodResolver(Schema),
+      defaultValues: { userId: "", role: "viewer" },
+    });
 
   const onSubmit = (d: FormData) => add.mutate(d, { onSuccess: () => reset() });
 
@@ -92,10 +93,23 @@ export function ListMemberManageModal({
               {...register("userId")}
             />
           </div>
-          <NativeSelect label="Role" {...register("role")}>
-            <option value="viewer">Viewer</option>
-            <option value="editor">Editor</option>
-          </NativeSelect>
+          <div className="flex flex-col gap-1.5 sm:w-44">
+            <span className="text-sm font-semibold">Role</span>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Role"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <Option value="viewer">Viewer</Option>
+                  <Option value="editor">Editor</Option>
+                </Select>
+              )}
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>

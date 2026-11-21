@@ -27,6 +27,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.subgroup import (
     AddMemberRequest,
     MediaAggregateListResponse,
+    MemberPreview,
     MembershipResponse,
     PinPostRequest,
     RoleChangeRequest,
@@ -99,12 +100,14 @@ async def list_subgroups(
     service: SubgroupService = Depends(_build_service),
 ) -> list[SubgroupResponse]:
     """@brief List subgroups visible to the current user."""
-    rows = await service.list_subgroups_with_membership(user)
+    rows = await service.list_subgroup_cards(user)
     out: list[SubgroupResponse] = []
-    for s, role in rows:
+    for s, role, previews, count in rows:
         resp = SubgroupResponse.model_validate(s)
         resp.my_role = role
         resp.is_member = role is not None
+        resp.member_preview = [MemberPreview(**p) for p in previews]
+        resp.member_count = count
         out.append(resp)
     return out
 
@@ -155,8 +158,10 @@ async def update_subgroup(
 ) -> SubgroupDetailResponse:
     """@brief Update a subgroup (owner/moderator/admin only)."""
     raw = body.model_dump(exclude_unset=True)
-    # Allow explicit ``parent_id: null`` to detach; strip None for everything else.
-    updates = {k: v for k, v in raw.items() if v is not None or k in ("parent_id", "accent_color")}
+    # Explicit null clears these (detach parent, reset colour/logo/cover);
+    # None is stripped for everything else.
+    clearable = ("parent_id", "accent_color", "avatar_url", "cover_media_id")
+    updates = {k: v for k, v in raw.items() if v is not None or k in clearable}
     subgroup = await service.update_subgroup(slug, user, updates)
     return await _detail_response(service, subgroup, user)
 

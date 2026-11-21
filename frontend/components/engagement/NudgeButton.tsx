@@ -127,7 +127,7 @@ export function NudgeButton({ userId }: { userId: string }) {
       type="button"
       onClick={onClick}
       disabled={cooling || busy}
-      className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-surface-strong outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
+      className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-bg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
     >
       <Hand aria-hidden="true" className="size-4" />
       {cooldown === null ? (

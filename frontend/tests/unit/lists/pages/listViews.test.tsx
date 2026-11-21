@@ -4,12 +4,15 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { list } from "../listFixtures";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
     sel({ user: { community_id: "c1" } }),
@@ -45,19 +48,15 @@ vi.mock("@/components/lists/ListCardGrid", () => ({
     </button>
   ),
 }));
-vi.mock("@/components/lists/ListCreateModal", () => ({
-  ListCreateModal: (p: { open: boolean; onClose: () => void }) =>
-    p.open ? <button onClick={p.onClose}>close create</button> : null,
+vi.mock("@/components/lists/ListCreateForm", () => ({
+  ListCreateForm: (p: { onCancel: () => void }) => (
+    <button onClick={p.onCancel}>close create</button>
+  ),
 }));
-vi.mock("@/components/lists/ListEditModal", () => ({
-  ListEditModal: (p: {
-    open: boolean;
-    onClose: () => void;
-    list: { title: string };
-  }) =>
-    p.open ? (
-      <button onClick={p.onClose}>close edit {p.list.title}</button>
-    ) : null,
+vi.mock("@/components/lists/ListEditForm", () => ({
+  ListEditForm: (p: { onCancel: () => void; list: { title: string } }) => (
+    <button onClick={p.onCancel}>close edit {p.list.title}</button>
+  ),
 }));
 vi.mock("@/components/lists/ListDetailPanel", () => ({
   ListDetailPanel: (p: { list: { id: string }; communityId: string }) => (
@@ -81,12 +80,10 @@ import {
 beforeEach(() => vi.clearAllMocks());
 
 describe("list page views", () => {
-  it("browse view shows filters, grid, breadcrumbs and links", async () => {
+  it("browse view shows filters, grid and links (no redundant root crumb)", async () => {
     render(<ListsBrowseView />);
     expect(screen.getByRole("heading", { name: "Lists" })).toBeVisible();
-    expect(
-      screen.getByRole("navigation", { name: "Breadcrumb" }),
-    ).toBeVisible();
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
     expect(screen.getByRole("link", { name: /New list/ })).toHaveAttribute(
       "href",
       "/app/lists/new",
@@ -96,19 +93,28 @@ describe("list page views", () => {
       "/app/lists/templates",
     );
     expect(screen.getByText("grid c1 all updated")).toBeInTheDocument();
-    await userEvent.selectOptions(
-      screen.getByLabelText("Visibility"),
-      "private",
-    );
-    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "title");
+    const vis = within(screen.getByRole("radiogroup", { name: "Visibility" }));
+    await userEvent.click(vis.getByRole("radio", { name: "Private" }));
+    const sort = within(screen.getByRole("radiogroup", { name: "Sort by" }));
+    await userEvent.click(sort.getByRole("radio", { name: "Title" }));
     await userEvent.click(screen.getByText("grid c1 private title"));
     expect(push).toHaveBeenCalledWith("/app/lists/l9");
   });
 
-  it("new view opens the create modal and returns on close", async () => {
+  it("embedded browse view drops its header and keeps the buttons", () => {
+    render(<ListsBrowseView embedded />);
+    expect(screen.queryByRole("heading", { name: "Lists" })).toBeNull();
+    expect(screen.getByRole("link", { name: /New list/ })).toHaveAttribute(
+      "href",
+      "/app/lists/new",
+    );
+    expect(screen.getByRole("link", { name: /Templates/ })).toBeVisible();
+  });
+
+  it("new view renders the create form inline and returns on cancel", async () => {
     render(<ListNewView />);
     await userEvent.click(screen.getByText("close create"));
-    expect(push).toHaveBeenCalledWith("/app/lists");
+    expect(push).toHaveBeenCalledWith("/app/inbox?view=lists");
   });
 
   it("detail view renders loading, error and panel states", () => {
@@ -131,7 +137,7 @@ describe("list page views", () => {
     ).toBeInTheDocument();
   });
 
-  it("edit view shows the edit modal and returns to detail", async () => {
+  it("edit view renders the edit form inline and returns to detail", async () => {
     q.useList.mockReturnValue({ isLoading: false, data: list });
     render(<ListEditView id="l1" />);
     await userEvent.click(screen.getByText("close edit Camping gear"));

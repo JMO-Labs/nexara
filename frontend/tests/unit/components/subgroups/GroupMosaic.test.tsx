@@ -12,6 +12,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock("@/hooks/useSubgroups", () => ({
+  useSubgroupMembers: () => ({ data: [] }),
+}));
+
 const base: GroupMosaicProps = {
   data: [],
   isLoading: false,
@@ -56,7 +60,7 @@ describe("GroupMosaic", () => {
     expect(screen.getByText(/no groups match/i)).toBeTruthy();
   });
 
-  it("grid is single column on mobile and 3 columns on lg", () => {
+  it("grid auto-fills 260px min columns (1 on phone, more as width allows)", () => {
     const g = {
       id: "1",
       slug: "a",
@@ -66,8 +70,7 @@ describe("GroupMosaic", () => {
     };
     const { container } = render(<GroupMosaic {...base} data={[g as never]} />);
     const grid = container.firstElementChild;
-    expect(grid?.className).toMatch(/grid-cols-1/);
-    expect(grid?.className).toMatch(/lg:grid-cols-3/);
+    expect(grid?.className).toMatch(/auto-fill,minmax\(min\(100%,260px\)/);
   });
 
   it("shows Leave when is_member and Join when not, from the flag", () => {

@@ -63,8 +63,8 @@ class Notification(Base):
         Index(
             "notifications_user_unread_idx",
             "user_id",
-            "read_at",
-            postgresql_where=(read_at.is_(None)),
+            created_at.desc(),
+            postgresql_where=(read_at.is_(None) & dismissed_at.is_(None)),
         ),
         Index(
             "notifications_group_active_idx",

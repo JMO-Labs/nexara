@@ -4,7 +4,7 @@
  *        summary stats and aggregated media feed.
  */
 
-import { apiGet, apiPut } from "./client";
+import { apiDelete, apiGet, apiPut, seg } from "./client";
 import type { Post } from "./posts";
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ export interface HomeMediaItem {
     created_at: string;
   };
   source: string;
-  source_id: string;
+  source_id: string | null;
   source_title: string | null;
   created_at: string;
 }
@@ -132,6 +132,7 @@ export const getHomeMedia = (
         limit?: number;
         scope?: "all" | "community" | "subgroup" | "personal";
         subgroupId?: string;
+        cursor?: string | null;
       } = 24,
 ): Promise<HomeMediaResponse> => {
   const params = typeof opts === "number" ? { limit: opts } : opts;
@@ -141,6 +142,7 @@ export const getHomeMedia = (
   qs.set("limit", String(limit));
   qs.set("scope", scope);
   if (params.subgroupId) qs.set("subgroup_id", params.subgroupId);
+  if ("cursor" in params && params.cursor) qs.set("cursor", params.cursor);
   return apiGet<HomeMediaResponse>(`${HOME}/media?${qs.toString()}`);
 };
 
@@ -187,3 +189,90 @@ export const getHomeFeed = (cursor?: string): Promise<HomeFeedResponse> => {
   const q = qs.toString();
   return apiGet<HomeFeedResponse>(`${HOME}/feed${q ? `?${q}` : ""}`);
 };
+
+/** @brief One ranked chat thread on the home page. */
+export interface HomeChatThread {
+  channel_id: string;
+  name: string;
+  channel_type: "community" | "subgroup" | "direct";
+  subgroup_id: string | null;
+  peer: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  last_message: {
+    id: string;
+    author_name: string | null;
+    content: string;
+    created_at: string;
+  } | null;
+  unread_count: number;
+  mentions_me: boolean;
+  last_activity_at: string;
+}
+
+/** @brief Response of GET /home/chats. */
+export interface HomeChatsResponse {
+  items: HomeChatThread[];
+}
+
+/** @brief A person shown in the home people strip. */
+export interface HomePerson {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  online: boolean;
+  birthday_in_days: number | null;
+  last_seen_at: string | null;
+  shared_groups: { id: string; name: string; accent_color: string | null }[];
+  primary_group_id: string | null;
+  shared_events_30d: number;
+  /** Pinned by the viewer; pinned people come first, in pin order. */
+  favorite?: boolean;
+}
+
+/** @brief Response of GET /home/people. */
+export interface HomePeopleResponse {
+  items: HomePerson[];
+}
+
+/** @brief Response of GET /home/needs. */
+export interface HomeNeeds {
+  rsvps: { event_id: string; title: string; starts_at: string }[];
+  polls: { post_id: string; question: string }[];
+  prompt: { prompt_post_id: string; post_id: string; title: string } | null;
+  list_items: { count: number; list_id: string; list_title: string } | null;
+}
+
+/**
+ * @brief Fetch ranked chat threads for the home page.
+ * @param limit Max threads (1..20).
+ */
+export const getHomeChats = (limit = 4): Promise<HomeChatsResponse> =>
+  apiGet<HomeChatsResponse>(`${HOME}/chats?limit=${limit}`);
+
+/**
+ * @brief Fetch people for the home strip.
+ * @param limit Max people (1..20).
+ */
+export const getHomePeople = (limit = 10): Promise<HomePeopleResponse> =>
+  apiGet<HomePeopleResponse>(`${HOME}/people?limit=${limit}`);
+
+/**
+ * @brief Pin or unpin a person in the viewer's people strip.
+ * @param userId person to (un)pin
+ * @param on true to pin
+ * @return pinned ids in order
+ */
+export const setFavorite = (userId: string, on: boolean) => {
+  const path = `${HOME}/people/favorites/${seg(userId)}`;
+  return on
+    ? apiPut<{ favorites: string[] }>(path)
+    : apiDelete<{ favorites: string[] }>(path);
+};
+
+/** @brief Fetch "needs you" items for the home page. */
+export const getHomeNeeds = (): Promise<HomeNeeds> =>
+  apiGet<HomeNeeds>(`${HOME}/needs`);

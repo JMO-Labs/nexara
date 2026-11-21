@@ -26,6 +26,11 @@ describe("notifications v2 client", () => {
     ]);
   });
 
+  it("listActive wraps the API's bare array as { items }", async () => {
+    vi.spyOn(client, "apiGet").mockResolvedValue([{ id: "a" }] as never);
+    expect(await notif.listActive()).toEqual({ items: [{ id: "a" }] });
+  });
+
   it("POST helpers use expected paths and bodies", async () => {
     const post = vi.spyOn(client, "apiPost").mockResolvedValue(ok as never);
     await notif.dismissOne("n 1");

@@ -6,7 +6,7 @@
  */
 import * as React from "react";
 import type { ComponentProps } from "react";
-import { ArrowLeft, ChevronRight, Rows2, Rows3 } from "lucide-react";
+import { ArrowLeft, PanelRight, Rows2, Rows3 } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { MessageList } from "../MessageList";
 import { Composer, type ComposerHandle } from "../Composer";
@@ -15,6 +15,10 @@ import { readDensity, writeDensity, type Density } from "./helpers";
 
 export interface ThreadPaneProps {
   title: string;
+  /** Group colour for the header dot. */
+  color?: string;
+  /** Secondary header line (e.g. channel type). */
+  subtitle?: string;
   onBack: () => void;
   detailsOpen: boolean;
   onToggleDetails: () => void;
@@ -30,6 +34,8 @@ export interface ThreadPaneProps {
  */
 export function ThreadPane({
   title,
+  color = "var(--nx-blue)",
+  subtitle,
   onBack,
   detailsOpen,
   onToggleDetails,
@@ -52,9 +58,9 @@ export function ThreadPane({
   return (
     <section
       aria-label={title}
-      className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+      className="glass flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[32px]"
     >
-      <header className="bg-surface flex shrink-0 items-center gap-2 border-b border-border px-2 py-2 md:px-4">
+      <header className="flex shrink-0 items-center gap-2 px-2 py-2 md:px-4">
         <IconButton
           aria-label="Back to channels"
           variant="ghost"
@@ -63,15 +69,28 @@ export function ThreadPane({
         >
           <ArrowLeft className="size-5" aria-hidden="true" />
         </IconButton>
-        <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">
-          {title}
-        </h2>
+        <i
+          aria-hidden
+          data-testid="thread-dot"
+          className="size-2.5 shrink-0 rounded-full"
+          style={{ background: color }}
+        />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-lg font-semibold">{title}</h2>
+          {subtitle && (
+            <p className="truncate text-xs text-[var(--nx-muted)]">
+              {subtitle}
+            </p>
+          )}
+        </div>
         <IconButton
           aria-label={
             compact ? "Use comfortable density" : "Use compact density"
           }
           aria-pressed={compact}
-          variant="ghost"
+          variant="glass"
+          size="md"
+          className="rounded-full"
           onClick={() => setDensity(compact ? "comfortable" : "compact")}
         >
           {compact ? (
@@ -83,14 +102,13 @@ export function ThreadPane({
         <IconButton
           aria-label={detailsOpen ? "Close thread panel" : "Open thread panel"}
           aria-pressed={detailsOpen}
-          variant="ghost"
-          className="hidden lg:inline-flex"
+          variant="glass"
+          size="md"
+          className="hidden rounded-full lg:inline-flex"
+          tooltip={detailsOpen ? "Close thread panel" : "Open thread panel"}
           onClick={onToggleDetails}
         >
-          <ChevronRight
-            className={`size-5 ${detailsOpen ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
+          <PanelRight className="size-5" aria-hidden="true" />
         </IconButton>
       </header>
       <MessageList
@@ -112,11 +130,9 @@ export function DetailsPane() {
   return (
     <aside
       aria-label="Details"
-      className="bg-surface hidden min-h-0 min-w-0 flex-col border-l border-border lg:flex"
+      className="glass hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-[32px] lg:flex"
     >
-      <h2 className="shrink-0 border-b border-border px-4 py-3 text-sm font-semibold">
-        Details
-      </h2>
+      <h2 className="shrink-0 px-4 py-3 text-sm font-semibold">Details</h2>
       <p className="text-muted flex-1 overflow-auto p-4 text-sm">
         Thread details and conversation info will appear here.
       </p>

@@ -8,16 +8,16 @@ import {
   Home,
   CalendarDays,
   Image as ImageIcon,
-  Film,
   Newspaper,
+  List,
   Users,
   Settings,
 } from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { EventsTab } from "./EventsTab";
-import { GalleriesTab } from "./GalleriesTab";
-import { MediaTab } from "./MediaTab";
+import { PhotosTab } from "./PhotosTab";
 import { PostsTab } from "./PostsTab";
+import { ListsTab } from "./ListsTab";
 import { MembersTab } from "./MembersTab";
 import { SettingsTab } from "./SettingsTab";
 
@@ -39,14 +39,9 @@ export const GROUP_TABS: GroupTab[] = [
     Icon: CalendarDays,
     Component: EventsTab,
   },
-  {
-    id: "galleries",
-    label: "Galleries",
-    Icon: ImageIcon,
-    Component: GalleriesTab,
-  },
-  { id: "media", label: "Media", Icon: Film, Component: MediaTab },
+  { id: "photos", label: "Photos", Icon: ImageIcon, Component: PhotosTab },
   { id: "posts", label: "Posts", Icon: Newspaper, Component: PostsTab },
+  { id: "lists", label: "Lists", Icon: List, Component: ListsTab },
   { id: "members", label: "Members", Icon: Users, Component: MembersTab },
   {
     id: "settings",

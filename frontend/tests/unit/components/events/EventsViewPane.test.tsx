@@ -88,4 +88,25 @@ describe("EventsViewPane states", () => {
     ]);
     expect(heads[0].className).toMatch(/(^|\s)sticky(\s|$)/);
   });
+
+  it("week view has no nested period navigation", () => {
+    setup({
+      view: "week",
+      events: [ev("1", "A", "2025-01-06T12:00:00")],
+    });
+    expect(
+      screen.queryByRole("button", { name: /^Previous week$/ }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Next week$/ })).toBeNull();
+  });
+
+  it("day view has no nested period navigation", () => {
+    setup({
+      view: "day",
+      events: [ev("1", "A", "2025-01-06T12:00:00")],
+      selectedDay: new Date(2025, 0, 6),
+    });
+    expect(screen.queryByRole("button", { name: /^Previous day$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Next day$/ })).toBeNull();
+  });
 });

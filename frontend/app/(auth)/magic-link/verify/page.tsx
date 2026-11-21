@@ -48,7 +48,10 @@ export default function MagicLinkVerifyPage() {
         >
           {message}
         </p>
-        <Link href="/magic-link" className="underline">
+        <Link
+          href="/magic-link"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Request a new link
         </Link>
       </AuthCard>

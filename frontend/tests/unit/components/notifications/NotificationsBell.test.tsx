@@ -1,6 +1,7 @@
 /**
  * @file tests/unit/components/notifications/NotificationsBell.test.tsx
- * @brief NotificationsBell: active-only list, badge, dismiss, drawer, SSE.
+ * @brief NotificationsBell: red dot, active-only list as inbox rows, row
+ *        opens the Inbox (marks read), mark all, SSE.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -12,7 +13,12 @@ const api = vi.hoisted(() => ({
   listActive: vi.fn(),
   listNotifications: vi.fn(),
   dismissOne: vi.fn(),
+  markRead: vi.fn(),
+  markAllRead: vi.fn(),
 }));
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => nav }));
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 const sse = vi.hoisted(() => ({
   opts: null as null | Record<string, unknown>,
 }));
@@ -27,20 +33,26 @@ vi.mock("@/lib/notifications/registry", () => ({
     byKey: new Map([["mention", { key: "mention" }]]),
   }),
 }));
-vi.mock("@/components/notifications/NotifRow", () => ({
-  NotifRow: ({
-    item,
-    onDismissed,
-  }: {
-    item: { id: string };
-    onDismissed: (id: string) => void;
-  }) => <button onClick={() => onDismissed(item.id)}>row {item.id}</button>,
+vi.mock("@/components/inbox/useInboxItems", () => ({
+  notifEntry: (n: { id: string; read_at?: string | null }) => ({
+    kind: "notif",
+    id: n.id,
+    title: `row ${n.id}`,
+    snippet: "",
+    time: "2026-11-20T10:00:00Z",
+    unread: !n.read_at,
+  }),
 }));
 
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { useSession } from "@/stores/session";
 
-const item = (id: string) => ({ id, type: "mention", payload: {} });
+const item = (id: string, read_at: string | null = null) => ({
+  id,
+  type: "mention",
+  payload: {},
+  read_at,
+});
 let qc: QueryClient;
 
 function setup() {
@@ -61,6 +73,8 @@ describe("NotificationsBell", () => {
     api.getUnreadCount.mockResolvedValue({ count: 3 });
     api.listActive.mockResolvedValue({ items: [item("a"), item("b")] });
     api.dismissOne.mockResolvedValue({ message: "ok" });
+    api.markRead.mockResolvedValue({ message: "ok" });
+    api.markAllRead.mockResolvedValue({ message: "ok" });
   });
 
   it("shows unread count in label and badge", async () => {
@@ -68,7 +82,8 @@ describe("NotificationsBell", () => {
     expect(
       await screen.findByRole("button", { name: "Notifications, 3 unread" }),
     ).toBeInTheDocument();
-    expect(await screen.findByTestId("unread-badge")).toHaveTextContent("3");
+    // Brand: a quiet red dot, no number.
+    expect(await screen.findByTestId("unread-badge")).toHaveTextContent("");
   });
 
   it("fetches active list only when open, never listNotifications", async () => {
@@ -80,26 +95,34 @@ describe("NotificationsBell", () => {
     expect(api.listNotifications).not.toHaveBeenCalled();
   });
 
-  it("dismissing a row removes it optimistically", async () => {
+  it("clicking an unread row marks it read and opens it in the Inbox", async () => {
     setup();
     await openBell();
     await userEvent.click(await screen.findByText("row a"));
-    await waitFor(() =>
-      expect(screen.queryByText("row a")).not.toBeInTheDocument(),
-    );
-    expect(screen.getByText("row b")).toBeInTheDocument();
+    expect(api.markRead).toHaveBeenCalledWith("a");
+    expect(nav.push).toHaveBeenCalledWith("/app/inbox?item=a");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("View all dispatches drawer-open event", async () => {
+  it("clicking a read row does not call markRead", async () => {
+    api.listActive.mockResolvedValue({ items: [item("r", "2026-11-20")] });
     setup();
-    const spy = vi.fn();
-    window.addEventListener("notifications:drawer-open", spy);
+    await openBell();
+    await userEvent.click(await screen.findByText("row r"));
+    expect(api.markRead).not.toHaveBeenCalled();
+  });
+
+  it("Mark all read calls the API; footer links to the Inbox", async () => {
+    setup();
     await openBell();
     await userEvent.click(
-      await screen.findByRole("button", { name: "View all" }),
+      await screen.findByRole("button", { name: "Mark all read" }),
     );
-    expect(spy).toHaveBeenCalled();
-    window.removeEventListener("notifications:drawer-open", spy);
+    expect(api.markAllRead).toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Open inbox" })).toHaveAttribute(
+      "href",
+      "/app/inbox",
+    );
   });
 
   it("shows empty state", async () => {
@@ -107,7 +130,9 @@ describe("NotificationsBell", () => {
     api.listActive.mockResolvedValue({ items: [] });
     setup();
     await openBell();
-    expect(await screen.findByText("All caught up.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("You're all caught up."),
+    ).toBeInTheDocument();
   });
 
   it("Escape closes the panel", async () => {

@@ -115,6 +115,8 @@ export function isDesktop(): boolean {
  */
 export function gridClass(showDetails: boolean): string {
   const base =
-    "bg-bg grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[280px_1fr]";
-  return showDetails ? `${base} lg:grid-cols-[280px_1fr_320px]` : base;
+    "grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[300px_minmax(0,1fr)] md:gap-[18px]";
+  return showDetails
+    ? `${base} lg:grid-cols-[300px_minmax(0,1fr)_320px]`
+    : base;
 }

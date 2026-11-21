@@ -49,7 +49,10 @@ export default function OAuthCallbackPage() {
         >
           {error ?? "Missing OAuth code."}
         </p>
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </AuthCard>

@@ -27,4 +27,15 @@ describe("Drawer", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("stacks above the sticky top bar (z-20) and its popovers", () => {
+    render(
+      <Drawer open onClose={() => {}} title="Album" side="right">
+        x
+      </Drawer>,
+    );
+    expect(screen.getByRole("dialog", { name: "Album" })).toHaveClass(
+      "z-[1100]",
+    );
+  });
 });

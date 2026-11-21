@@ -10,9 +10,9 @@ import {
   useTestAIConnection,
   useUpdateAdminAIConfig,
 } from "@/hooks/useAdminAI";
-import { Button, Card, Switch } from "@/components/ui";
+import { Button, Switch } from "@/components/ui";
+import { Panel, Segmented } from "@/components/ui/page";
 import { Progress } from "@/components/ui/shadcn/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/shadcn/radio-group";
 import { AdminLoading, AdminNotice } from "./AdminState";
 import { AIMetricsChart, usd } from "./AIMetricsChart";
 
@@ -26,6 +26,7 @@ const SASS = [
   "Moderate: playful roasts with a wink.",
   "Spicy: bold, sharp-tongued banter.",
 ];
+const SASS_NAMES = ["Mild", "Moderate", "Spicy"];
 const FEATURE_LABEL: Record<string, string> = {
   ocr: "OCR",
   suggestion: "Suggestions",
@@ -37,30 +38,20 @@ function ProviderSection() {
   const test = useTestAIConnection();
   const result = test.data;
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <h2 className="text-lg font-bold" id="ai-provider">
-        Provider configuration
-      </h2>
-      <RadioGroup
-        aria-labelledby="ai-provider"
-        aria-readonly="true"
+    <Panel title="Provider configuration" className="flex flex-col gap-3">
+      {/* Read-only: the provider is set by the server environment. */}
+      <Segmented
+        label="AI provider"
+        options={PROVIDERS.map((p) => ({ value: p.id, label: p.label }))}
         value={data?.provider ?? ""}
-        onValueChange={() => {}}
-        className="flex flex-wrap gap-4"
-      >
-        {PROVIDERS.map((p) => (
-          <label key={p.id} className="flex min-h-11 items-center gap-2">
-            <RadioGroupItem value={p.id} aria-label={p.label} />
-            {p.label}
-          </label>
-        ))}
-      </RadioGroup>
+        onChange={() => {}}
+      />
       <p className="text-sm text-muted">
         Your data is sent to selected provider. OpenAI/Anthropic are
         cloud-based. Ollama runs locally. The provider is set by the server
         environment.
       </p>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => test.mutate()} disabled={test.isPending}>
           {test.isPending ? "Testing..." : "Test connection"}
         </Button>
@@ -76,7 +67,7 @@ function ProviderSection() {
           </span>
         )}
       </div>
-    </Card>
+    </Panel>
   );
 }
 
@@ -96,8 +87,7 @@ function SassybotSection() {
     }
   }, [data]);
   return (
-    <Card className="flex flex-col gap-4 p-4">
-      <h2 className="text-lg font-bold">Sassybot settings</h2>
+    <Panel title="Sassybot settings" className="flex flex-col gap-4">
       <label className="flex min-h-11 items-center justify-between gap-3">
         Enable Sassybot
         <Switch
@@ -107,7 +97,10 @@ function SassybotSection() {
         />
       </label>
       <div className="flex flex-col gap-1">
-        <label htmlFor="sass-level">Sass level</label>
+        <div className="flex justify-between">
+          <label htmlFor="sass-level">Sass level</label>
+          <span>{SASS_NAMES[form.sass_level - 1]}</span>
+        </div>
         <input
           id="sass-level"
           type="range"
@@ -119,7 +112,7 @@ function SassybotSection() {
           onChange={(e) =>
             setForm({ ...form, sass_level: Number(e.target.value) })
           }
-          className="min-h-11 w-full accent-[var(--accent)]"
+          className="min-h-11 w-full accent-[var(--nx-surface-strong)]"
         />
         <p className="text-sm text-muted">{SASS[form.sass_level - 1]}</p>
       </div>
@@ -138,7 +131,7 @@ function SassybotSection() {
           onChange={(e) =>
             setForm({ ...form, probability: Number(e.target.value) })
           }
-          className="min-h-11 w-full accent-[var(--accent)]"
+          className="min-h-11 w-full accent-[var(--nx-surface-strong)]"
         />
       </div>
       <label className="flex min-h-11 items-center justify-between gap-3">
@@ -153,7 +146,7 @@ function SassybotSection() {
       <p className="text-sm text-muted">
         Sassybot generates witty comments. Users can opt out in settings.
       </p>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
           {update.isPending ? "Saving..." : "Save"}
         </Button>
@@ -162,7 +155,7 @@ function SassybotSection() {
           <AdminNotice tone="error">Failed to save settings.</AdminNotice>
         )}
       </div>
-    </Card>
+    </Panel>
   );
 }
 
@@ -175,8 +168,7 @@ function MetricsSection() {
     ? Math.round((data.daily_usage_cents / data.daily_budget_cents) * 100)
     : 0;
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <h2 className="text-lg font-bold">Budget &amp; metrics</h2>
+    <Panel title="Budget and metrics" className="flex flex-col gap-3">
       <p>
         {`Daily Budget: ${usd(data.daily_usage_cents)} / ${usd(data.daily_budget_cents)} spent (${pct}% used)`}
       </p>
@@ -212,7 +204,7 @@ function MetricsSection() {
           ))}
         </tbody>
       </table>
-    </Card>
+    </Panel>
   );
 }
 

@@ -35,15 +35,25 @@ describe("MoreSheet", () => {
   it("opens and lists nav links", () => {
     renderWithProviders(<MoreSheet open onClose={vi.fn()} />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Galleries" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Community" })).toHaveAttribute(
       "href",
-      "/app/galleries",
+      "/app/community",
+    );
+    expect(screen.getByRole("link", { name: "Inbox" })).toHaveAttribute(
+      "href",
+      "/app/inbox",
     );
     expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
     expect(
       screen.getByRole("button", { name: /sign out/i }),
     ).toBeInTheDocument();
+  });
+
+  it("no longer lists Help (it lives in Settings)", () => {
+    renderWithProviders(<MoreSheet open onClose={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Help" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Help" })).toBeNull();
   });
 
   it("closes on Escape", async () => {

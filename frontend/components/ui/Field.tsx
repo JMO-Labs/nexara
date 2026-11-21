@@ -37,7 +37,7 @@ export function Field({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={cid} className="text-sm font-semibold">
+        <label htmlFor={cid} className="text-sm font-medium">
           {label}
         </label>
       )}
@@ -49,7 +49,7 @@ export function Field({
       {msg && (
         <p
           id={msgId}
-          className={error ? "text-sm text-destructive" : "text-sm opacity-70"}
+          className={error ? "text-sm text-destructive" : "text-sm text-muted"}
         >
           {msg}
         </p>
@@ -59,4 +59,4 @@ export function Field({
 }
 
 export const controlClass =
-  "w-full rounded-xl border border-current/30 bg-surface px-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:border-destructive disabled:opacity-50";
+  "w-full rounded-[20px] border border-[color-mix(in_srgb,var(--nx-ink)_14%,transparent)] bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)] px-4 text-base text-ink placeholder:text-muted outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent aria-invalid:ring-1 aria-invalid:ring-[var(--nx-red)] disabled:opacity-50";

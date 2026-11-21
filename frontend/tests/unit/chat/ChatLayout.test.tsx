@@ -75,4 +75,12 @@ describe("ChatLayout", () => {
     fireEvent.click(screen.getByLabelText("Back to channels"));
     expect(push).toHaveBeenCalledWith("/app/chat");
   });
+
+  it("renders thread header with group dot and bubble surfaces", () => {
+    wrap("c1");
+    const section = screen.getByLabelText("# general");
+    expect(section.className).toMatch(/glass/);
+    expect(section.className).toMatch(/rounded-\[32px\]/);
+    expect(screen.getByTestId("thread-dot")).toBeInTheDocument();
+  });
 });

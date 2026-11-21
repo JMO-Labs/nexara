@@ -45,7 +45,10 @@ export default function TwoFactorPage() {
         title="Two-factor session expired"
         subtitle="Start the sign-in flow again to receive a fresh prompt."
       >
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+        >
           Back to sign-in
         </Link>
       </AuthCard>

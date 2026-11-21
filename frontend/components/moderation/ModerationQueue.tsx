@@ -5,8 +5,17 @@
  *        batch actions.
  */
 import * as React from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { Button, Checkbox, Option, Select, Skeleton } from "@/components/ui";
+import { ChevronDown, ChevronRight, ShieldCheck } from "lucide-react";
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  IconButton,
+  Option,
+  Select,
+} from "@/components/ui";
+import { Toolbar } from "@/components/ui/page";
+import { AdminNotice } from "@/components/admin/AdminState";
 import { useReportAction, useReports } from "@/hooks/useModeration";
 import type { ReportActionType } from "@/lib/api/moderation";
 import { useConfirmDialog } from "@/stores/confirmDialog";
@@ -39,7 +48,7 @@ function confirmAction(action: ReportActionType, count: number) {
   });
 }
 
-/** @brief Moderation queue (admin). @return table element */
+/** @brief Moderation queue (admin). @return list of glass report rows */
 export function ModerationQueue() {
   const { data, isLoading, isError } = useReports();
   const act = useReportAction();
@@ -49,11 +58,33 @@ export function ModerationQueue() {
   const [notes, setNotes] = React.useState<Record<string, string>>({});
   const [batch, setBatch] = React.useState<ReportActionType>("dismiss");
 
-  if (isLoading) return <Skeleton height={120} />;
-  if (isError || !data) return <p role="alert">Couldn&apos;t load reports.</p>;
+  if (isLoading)
+    return (
+      <div
+        role="status"
+        aria-label="Loading reports"
+        className="flex flex-col gap-2"
+      >
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="glass-item h-16 rounded-[20px] motion-safe:animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  if (isError || !data)
+    return <AdminNotice tone="error">Couldn&apos;t load reports.</AdminNotice>;
   const items = data.items;
   if (items.length === 0)
-    return <p className="text-sm text-muted">No pending reports.</p>;
+    return (
+      <EmptyState
+        compact
+        icon={ShieldCheck}
+        title="All clear"
+        description="No reports are waiting for review."
+      />
+    );
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -89,8 +120,8 @@ export function ModerationQueue() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm">{sel.size} selected</span>
+      <Toolbar className="mb-0">
+        <span className="px-2 text-sm">{sel.size} selected</span>
         <div className="w-40">
           <Select
             label="Batch action"
@@ -114,102 +145,89 @@ export function ModerationQueue() {
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="glass"
           disabled={sel.size === 0}
           onClick={() => applyBatch("dismiss")}
         >
           Dismiss selected
         </Button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-ink/15">
-              <th className="w-8" />
-              <th className="w-8" />
-              <th>Date</th>
-              <th>Content</th>
-              <th>Reporter</th>
-              <th>Reason</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((r) => (
-              <React.Fragment key={r.id}>
-                <tr className="border-b border-ink/10 align-top">
-                  <td>
-                    <Checkbox
-                      aria-label={`Select ${r.id}`}
-                      checked={sel.has(r.id)}
-                      onCheckedChange={() => toggle(r.id)}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      aria-label={`Expand report ${r.id}`}
-                      aria-expanded={open === r.id}
-                      onClick={() => setOpen(open === r.id ? null : r.id)}
-                    >
-                      {open === r.id ? (
-                        <ChevronDown className="size-4" aria-hidden="true" />
-                      ) : (
-                        <ChevronRight className="size-4" aria-hidden="true" />
-                      )}
-                    </button>
-                  </td>
-                  <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                  <td>
-                    {r.target_type}:{" "}
-                    {(r.description ?? r.target_id).slice(0, 100)}
-                  </td>
-                  <td>{r.reporter_id.slice(0, 8)}</td>
-                  <td>{r.reason}</td>
-                  <td>
-                    <div className="w-36">
-                      <Select
-                        label={`Action for ${r.id}`}
-                        placeholder="Choose…"
-                        onValueChange={(v) =>
-                          void applyRow(r.id, v as ReportActionType)
-                        }
-                      >
-                        {ACTIONS.map((a) => (
-                          <Option key={a.value} value={a.value}>
-                            {a.label}
-                          </Option>
-                        ))}
-                      </Select>
-                    </div>
-                  </td>
-                </tr>
+      </Toolbar>
+      <ul className="flex flex-col gap-2">
+        {items.map((r) => (
+          <li
+            key={r.id}
+            className="glass-item flex flex-col gap-2 rounded-[20px] p-3"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <Checkbox
+                aria-label={`Select ${r.id}`}
+                checked={sel.has(r.id)}
+                onCheckedChange={() => toggle(r.id)}
+              />
+              <IconButton
+                variant="glass"
+                size="sm"
+                aria-label={`Expand report ${r.id}`}
+                aria-expanded={open === r.id}
+                onClick={() => setOpen(open === r.id ? null : r.id)}
+              >
                 {open === r.id ? (
-                  <tr className="border-b border-ink/10 bg-surface">
-                    <td colSpan={7} className="p-3">
-                      <p>{r.description ?? "No details provided."}</p>
-                      <p className="mt-1 text-xs text-muted">
-                        Target {r.target_type} {r.target_id} · reporter{" "}
-                        {r.reporter_id} · status {r.status}
-                      </p>
-                      <label className="mt-2 block text-xs font-semibold">
-                        Admin notes
-                        <textarea
-                          className="mt-1 block w-full rounded border border-ink/20 bg-bg p-2 text-sm"
-                          value={notes[r.id] ?? ""}
-                          onChange={(e) =>
-                            setNotes({ ...notes, [r.id]: e.target.value })
-                          }
-                        />
-                      </label>
-                    </td>
-                  </tr>
-                ) : null}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <ChevronDown className="size-4" aria-hidden="true" />
+                ) : (
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                )}
+              </IconButton>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">
+                  {r.target_type}:{" "}
+                  {(r.description ?? r.target_id).slice(0, 100)}
+                </p>
+                <p className="text-sm text-muted">
+                  <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                  {" · "}
+                  <span>{r.reason}</span>
+                  {" · "}
+                  <span>Reporter {r.reporter_id.slice(0, 8)}</span>
+                </p>
+              </div>
+              <div className="w-36">
+                <Select
+                  label={`Action for ${r.id}`}
+                  placeholder="Choose…"
+                  onValueChange={(v) =>
+                    void applyRow(r.id, v as ReportActionType)
+                  }
+                >
+                  {ACTIONS.map((a) => (
+                    <Option key={a.value} value={a.value}>
+                      {a.label}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+            {open === r.id ? (
+              <div className="flex flex-col gap-2 px-1 pb-1">
+                <p>{r.description ?? "No details provided."}</p>
+                <p className="text-xs text-muted">
+                  Target {r.target_type} {r.target_id} · reporter{" "}
+                  {r.reporter_id} · status {r.status}
+                </p>
+                <label className="block text-xs font-semibold">
+                  Admin notes
+                  <textarea
+                    className="glass-item mt-1 block w-full rounded-[20px] p-3 text-sm"
+                    value={notes[r.id] ?? ""}
+                    onChange={(e) =>
+                      setNotes({ ...notes, [r.id]: e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

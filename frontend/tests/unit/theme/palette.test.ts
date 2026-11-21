@@ -9,17 +9,27 @@ test.each(["light", "dark"] as const)("%s palette meets AA", (mode) => {
   const p = palette[mode];
   expect(contrastRatio(p.ink, p.bg)).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(p.ink, p.surface)).toBeGreaterThanOrEqual(4.5);
-  expect(contrastRatio(p.accent, p["surface-strong"])).toBeGreaterThanOrEqual(
-    4.5,
-  );
-  // secondary text sits on page/cards; nav-muted sits on the forest nav bars
+  // surface-strong is now an inverted fill; page bg is its readable foreground
+  expect(contrastRatio(p.bg, p["surface-strong"])).toBeGreaterThanOrEqual(4.5);
+  // secondary text sits on page/cards; nav-muted sits on the glass nav pill
   expect(contrastRatio(p.muted, p.bg)).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(p.muted, p.surface)).toBeGreaterThanOrEqual(4.5);
   expect(
-    contrastRatio(p["nav-muted"], p["surface-strong"]),
+    contrastRatio(p["nav-muted"], p["glass-solid"]),
   ).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(p.danger, p.surface)).toBeGreaterThanOrEqual(4.5);
   expect(contrastRatio(p.danger, p.bg)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(p.ink, p["glass-solid"])).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(p.muted, p["glass-solid"])).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(p.accent, p.surface)).toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(p["danger-fg"], p.danger)).toBeGreaterThanOrEqual(4.5);
+});
+
+test("glass bento palette values", () => {
+  expect(palette.light.bg).toBe("#E4E4E4");
+  expect(palette.dark.bg).toBe("#0D1117");
+  expect(palette.light.blue).toBe("#83A2DB");
+  expect(palette.dark.ok).toBe("#5CC08A");
 });
 
 test.each(["light", "dark"] as const)(
@@ -30,11 +40,13 @@ test.each(["light", "dark"] as const)(
   },
 );
 
-test("forest text on lilac fill meets AA", () => {
-  expect(
-    contrastRatio(palette.light["surface-strong"], palette.light.accent),
-  ).toBeGreaterThanOrEqual(4.5);
-});
+test.each(["light", "dark"] as const)(
+  "%s page-bg text on accent fill meets AA",
+  (mode) => {
+    const p = palette[mode];
+    expect(contrastRatio(p.bg, p.accent)).toBeGreaterThanOrEqual(4.5);
+  },
+);
 
 /** Blend fg over bg at the given alpha (EmptyState uses opacity-80 text). */
 function blend(fg: string, bg: string, a: number): string {

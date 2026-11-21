@@ -26,7 +26,6 @@ vi.mock("@/components/lists/pages/TemplateDesignerView", () => ({
   TemplateEditView: ({ id }: { id: string }) => <p>tpl edit {id}</p>,
 }));
 
-import * as browse from "@/app/app/lists/page";
 import * as create from "@/app/app/lists/new/page";
 import * as detail from "@/app/app/lists/[id]/page";
 import * as edit from "@/app/app/lists/[id]/edit/page";
@@ -49,7 +48,6 @@ interface RouteCase {
 }
 
 const routes: RouteCase[] = [
-  { mod: browse, args: {}, text: "browse", title: "Lists" },
   { mod: create, args: {}, text: "new", title: "New list" },
   { mod: detail, args: params("l1"), text: "detail l1", title: "List" },
   { mod: edit, args: params("l1"), text: "edit l1", title: "Edit list" },

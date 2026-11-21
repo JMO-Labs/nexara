@@ -15,8 +15,15 @@ vi.mock("@/lib/api/auth", () => ({
   logout: (...a: unknown[]) => logout(...a),
 }));
 vi.mock("@/lib/auth/session", () => ({ setAccessToken: vi.fn() }));
+const unread = vi.hoisted(() => ({
+  value: { a: 1, b: 2 } as Record<string, number>,
+}));
+vi.mock("@/hooks/useChat", () => ({
+  useChatRealtime: () => ({ unread: unread.value }),
+}));
 
 import { useSession } from "@/stores/session";
+import { MoreSheet } from "@/components/layout/MoreSheet";
 import {
   BottomTabBar,
   TAB_BAR_CLEARANCE,
@@ -35,54 +42,43 @@ describe("BottomTabBar", () => {
     setAdmin(false);
   });
 
-  it("renders 4 primary links and a More button", () => {
+  it("renders 5 items with a Chat unread badge", () => {
     render(<BottomTabBar />);
-    for (const n of ["Home", "Chat", "Calendar", "Groups"])
+    for (const n of ["Home", "Calendar", "Photos"])
       expect(screen.getByRole("link", { name: n })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Chat" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Chat/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Photos" })).toHaveAttribute(
+      "href",
+      "/app/photos",
+    );
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(nav.querySelectorAll("a, button")).toHaveLength(5);
     expect(TAB_BAR_CLEARANCE).toContain("safe-area-inset-bottom");
   });
 
-  it("opens More dialog with overflow items, no Admin for non-admin", async () => {
-    render(<BottomTabBar />);
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
+  it("MoreSheet lists overflow items, no Admin for non-admin", () => {
+    render(<MoreSheet open onClose={() => {}} />);
     const dlg = screen.getByRole("dialog", { name: "More" });
-    for (const n of [
-      "Galleries",
-      "Media",
-      "Kudos",
-      "Bookmarks",
-      "Members",
-      "Notifications",
-      "Settings",
-      "Help",
-    ])
+    for (const n of ["Community", "Inbox", "Settings"])
       expect(dlg).toContainElement(screen.getByRole("link", { name: n }));
+    expect(screen.queryByRole("button", { name: "Help" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Admin" })).toBeNull();
   });
 
-  it("shows Admin for admins", async () => {
+  it("MoreSheet shows Admin for admins", () => {
     setAdmin(true);
-    render(<BottomTabBar />);
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    render(<MoreSheet open onClose={() => {}} />);
     expect(screen.getByRole("link", { name: "Admin" })).toBeInTheDocument();
   });
 
-  it("Sign out calls logout", async () => {
-    render(<BottomTabBar />);
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
+  it("MoreSheet Sign out calls logout", async () => {
+    render(<MoreSheet open onClose={() => {}} />);
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(logout).toHaveBeenCalled();
-  });
-
-  it("Escape closes the sheet", async () => {
-    render(<BottomTabBar />);
-    await userEvent.click(screen.getByRole("button", { name: "More" }));
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

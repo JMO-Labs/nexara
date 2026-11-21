@@ -259,5 +259,6 @@ async def enrich_posts(
             ),
             "created_at": post.created_at.isoformat(),
             "updated_at": post.updated_at.isoformat(),
+            "edited_at": post.edited_at.isoformat() if post.edited_at else None,
         }
     return enriched

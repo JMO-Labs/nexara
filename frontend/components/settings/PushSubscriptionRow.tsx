@@ -4,10 +4,11 @@
  * @brief Push notification opt-in row for the Notifications settings tab.
  *        Shows current permission, lets the user subscribe/unsubscribe.
  */
-import { Button, Badge, Card } from "@/components/ui";
+import { Button, Badge } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-const alertCls = "rounded-2xl bg-surface p-3 text-sm border-l-4";
+const alertCls = "glass-item rounded-[20px] p-3 text-sm";
 
 /**
  * @brief Push subscription controls.
@@ -27,20 +28,19 @@ export function PushSubscriptionRow() {
 
   if (!supported) {
     return (
-      <div role="status" className={`${alertCls} border-muted`}>
+      <div role="status" className={alertCls}>
         Web Push is not supported in this browser.
       </div>
     );
   }
 
   return (
-    <Card className="max-w-3xl space-y-3 p-4 md:p-6">
+    <Panel className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold">Push notifications</h2>
         <Badge tone={isSubscribed ? "leaf" : "neutral"}>
           {isSubscribed ? "Active" : "Inactive"}
         </Badge>
-        <Badge>permission: {permission}</Badge>
       </div>
       <p className="text-sm text-muted">
         Receive notifications on this device even when Nexara is closed.
@@ -56,7 +56,7 @@ export function PushSubscriptionRow() {
           </Button>
         ) : (
           <Button
-            variant="outline"
+            variant="secondary"
             loading={isUnsubscribing}
             onClick={() => unsubscribe().catch(() => {})}
           >
@@ -65,15 +65,15 @@ export function PushSubscriptionRow() {
         )}
       </div>
       {permission === "denied" && (
-        <div role="alert" className={`${alertCls} border-sun`}>
+        <div role="alert" className={alertCls}>
           Notifications are blocked. Enable them in your browser site settings.
         </div>
       )}
       {error && (
-        <div role="alert" className={`${alertCls} border-destructive`}>
+        <div role="alert" className={alertCls}>
           {error.message}
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }

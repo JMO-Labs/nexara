@@ -154,6 +154,18 @@ Create a list owned by the caller. `subgroup_id` is required when
 
 **Errors:** `422 VALIDATION_ERROR` (empty title, invalid visibility, missing `subgroup_id`, invalid field schema).
 
+### `GET /api/v1/lists/field-types`
+
+Registered field types. Declared before `/{list_id}` so it is not captured by it.
+
+**Auth:** Bearer token.
+
+**Response `200`:**
+
+```json
+[{ "key": "text", "label": "Text" }]
+```
+
 ### `GET /api/v1/lists/{list_id}`
 
 Fetch a visible list.

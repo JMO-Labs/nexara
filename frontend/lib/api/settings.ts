@@ -3,6 +3,7 @@
  * @brief User settings endpoints: profile, notifications, appearance, email.
  */
 import { apiGet, apiPut } from "./client";
+import type { HomePattern } from "@/lib/patterns";
 
 export interface PrivacyAppearanceSettings {
   profile_visible_to: "community" | "admin_only";
@@ -31,6 +32,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   notif_invite_accepted_inapp: boolean;
   notif_invite_accepted_email: boolean;
   mute_all_email: boolean;
+  home_pattern?: HomePattern | null;
+  reduce_transparency?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }
@@ -72,6 +75,8 @@ export interface NotificationPreferences extends NotificationChannelFlags {
 export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   theme?: "system" | "light" | "dark";
   locale?: string;
+  home_pattern?: HomePattern | null;
+  reduce_transparency?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }
@@ -95,7 +100,7 @@ const SETTINGS = "/api/v1/settings";
  * @brief Get current user's settings.
  * @return UserSettings object with theme, locale, and notification preferences.
  */
-export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}`);
+export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}/`);
 
 /**
  * @brief Update settings (theme, locale).
@@ -103,7 +108,7 @@ export const getSettings = () => apiGet<UserSettings>(`${SETTINGS}`);
  * @return Updated UserSettings.
  */
 export const updateSettings = (body: Partial<UserSettingsUpdate>) =>
-  apiPut<UserSettings>(`${SETTINGS}`, body);
+  apiPut<UserSettings>(`${SETTINGS}/`, body);
 
 /**
  * @brief Get notification preferences.

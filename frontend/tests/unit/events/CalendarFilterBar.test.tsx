@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/events/CalendarFilterBar.test.tsx
- * @brief Filter bar: month nav, create action and calendar toggling.
+ * @brief Toolbar: month nav + label, view switcher and calendar toggling.
  */
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
@@ -34,28 +34,55 @@ function setup() {
     selected: ["c1"],
     onSelectedChange: vi.fn(),
     calendars,
-    onCreate: vi.fn(),
+    view: "month" as const,
+    onViewChange: vi.fn(),
   };
   renderWithProviders(<CalendarFilterBar {...props} />);
   return props;
 }
 
 describe("CalendarFilterBar", () => {
-  it("renders month title and filter trigger", () => {
+  it("renders month label, view switcher and filter trigger", () => {
     setup();
-    expect(screen.getByText("May")).toBeInTheDocument();
-    expect(screen.getByText("Calendar, 2026")).toBeInTheDocument();
-    expect(screen.getByText("Calendars")).toBeInTheDocument();
+    expect(screen.getByText("May 2026")).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Calendar view" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Calendars")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^Calendars, / }),
+    ).toBeInTheDocument();
   });
 
-  it("navigates months and fires create", async () => {
+  it("does not own the create action (page header does)", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "New event" })).toBeNull();
+  });
+
+  it("changes view through the switcher", async () => {
+    const p = setup();
+    await userEvent.click(screen.getByRole("radio", { name: "Week" }));
+    expect(p.onViewChange).toHaveBeenCalledWith("week");
+  });
+
+  it("month chevrons are glass circle buttons", () => {
+    setup();
+    expect(screen.getByLabelText("Previous month").className).toContain(
+      "glass-btn",
+    );
+    expect(screen.getByLabelText("Next month").className).toContain(
+      "glass-btn",
+    );
+  });
+
+  it("navigates months and jumps to today", async () => {
     const p = setup();
     await userEvent.click(screen.getByLabelText("Previous month"));
     expect(p.onMonthChange.mock.calls[0][0].getMonth()).toBe(3);
     await userEvent.click(screen.getByLabelText("Next month"));
     expect(p.onMonthChange.mock.calls[1][0].getMonth()).toBe(5);
-    await userEvent.click(screen.getByRole("button", { name: "New event" }));
-    expect(p.onCreate).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+    expect(p.onMonthChange).toHaveBeenCalledTimes(3);
   });
 
   it("lists calendars in the popover and toggling calls onChange", async () => {

@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/subgroups/accent-color.test.tsx
- * @brief Subgroup accent color: header usage, fallback, editor AA warning.
+ * @brief Subgroup accent color: header usage, fallback, editor validation.
  */
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
@@ -9,6 +9,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { CoverBand } from "@/components/subgroups/hub/CoverBand";
 import { SettingsTab } from "@/components/subgroups/hub/SettingsTab";
+import { GROUP_PALETTE } from "@/lib/groupColor";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 
 vi.mock("@/lib/api/media");
@@ -36,6 +37,15 @@ const base: SubgroupDetail = {
   pinned_post_id: null,
 };
 
+function rgbToHex(rgb: string): string {
+  const m = rgb.match(/\d+/g);
+  if (!m) return rgb.toLowerCase();
+  return `#${m
+    .slice(0, 3)
+    .map((n) => Number(n).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
 function wrap(ui: React.ReactNode) {
   return render(
     <NextIntlClientProvider locale="en" messages={{}}>
@@ -45,26 +55,29 @@ function wrap(ui: React.ReactNode) {
 }
 
 describe("subgroup accent color", () => {
-  it("CoverBand uses subgroup accent when set", () => {
+  it("CoverBand tints its background with the subgroup accent when set", () => {
     const { container } = wrap(
       <CoverBand subgroup={{ ...base, accent_color: "#C6B4F5" }} />,
     );
-    expect(container.querySelector("[data-accent-bar]")).toHaveStyle({
-      backgroundColor: "#C6B4F5",
-    });
+    const band = container.firstElementChild as HTMLElement;
+    expect(band.style.background).toContain("rgb(198, 180, 245)");
+    expect(band.style.background).toContain("25%");
   });
 
-  it("CoverBand falls back to community accent var when null", () => {
+  it("CoverBand falls back to groupColor palette when null", () => {
     const { container } = wrap(<CoverBand subgroup={base} />);
-    const bar = container.querySelector("[data-accent-bar]") as HTMLElement;
-    expect(bar.getAttribute("style")).toContain("var(--nx-accent");
+    const band = container.firstElementChild as HTMLElement;
+    const palette = GROUP_PALETTE.map((c) => c.toLowerCase());
+    const rgb = band.style.background.match(/rgb\([^)]*\)/)?.[0] ?? "";
+    expect(palette).toContain(rgbToHex(rgb).toLowerCase());
   });
 
-  it("editor warns when accent fails AA", () => {
+  it("accepts any hex (decorative only) and flags malformed input", () => {
     wrap(<SettingsTab subgroup={base} />);
-    fireEvent.change(screen.getByLabelText("Accent color"), {
-      target: { value: "#1B3524" },
-    });
-    expect(screen.getByText(/4\.5:1 contrast/)).toBeInTheDocument();
+    const field = screen.getByLabelText("Accent color");
+    fireEvent.change(field, { target: { value: "#1B3524" } });
+    expect(screen.queryByText(/hex color like/)).toBeNull();
+    fireEvent.change(field, { target: { value: "#12" } });
+    expect(screen.getByText(/hex color like/)).toBeInTheDocument();
   });
 });

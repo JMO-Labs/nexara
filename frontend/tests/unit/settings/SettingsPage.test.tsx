@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 const tab: string | null = "plugins";
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({ get: () => tab }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@/components/events/CalendarSubscriptionsPanel", () => ({
   CalendarSubscriptionsPanel: () => null,
@@ -39,19 +40,13 @@ describe("Settings Plugins tab", () => {
 
   it("renders the empty state", () => {
     render(<SettingsTabs />);
+    expect(screen.getByText("No plugins installed")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Plugins", level: 2 }),
+      screen.getByText("Plugins extend Nexara with custom features."),
     ).toBeTruthy();
     expect(
-      screen.getByText(
-        "Plugin settings will appear here when plugins are installed.",
-      ),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Plugins extend Nexara with custom features. Install from Plugin Gallery.",
-      ),
-    ).toBeTruthy();
+      screen.getByRole("link", { name: "Browse plugins" }),
+    ).toHaveAttribute("href", "/app/admin/plugins");
   });
 });
 

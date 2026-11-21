@@ -65,14 +65,14 @@ class CommunityBranding(Base):
         UUID(as_uuid=True),
         ForeignKey("media.id", ondelete="SET NULL"),
     )
-    color_primary: Mapped[str] = mapped_column(Text, nullable=False, server_default="#3b82f6")
-    color_primary_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#2563eb")
-    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#C6B4F5")
-    color_surface_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#ffffff")
-    color_surface_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#1f2937")
-    color_text_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#111827")
-    color_text_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#f9fafb")
-    font_family: Mapped[str] = mapped_column(Text, nullable=False, server_default="Inter")
+    color_primary: Mapped[str] = mapped_column(Text, nullable=False, server_default="#10141A")
+    color_primary_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#E9ECF2")
+    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#3B5E9E")
+    color_surface_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#F5F6F9")
+    color_surface_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#1A202A")
+    color_text_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#10141A")
+    color_text_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#E9ECF2")
+    font_family: Mapped[str] = mapped_column(Text, nullable=False, server_default="Outfit")
     font_family_mono: Mapped[str] = mapped_column(
         Text,
         nullable=False,
@@ -101,6 +101,7 @@ class CommunityBranding(Base):
         nullable=False,
         server_default="false",
     )
+    home_pattern: Mapped[str] = mapped_column(Text, nullable=False, server_default="contour")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

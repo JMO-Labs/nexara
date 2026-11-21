@@ -4,7 +4,8 @@
  * @brief Media tab: grid of media from posts, galleries, and events with source filtering.
  */
 import * as React from "react";
-import { Badge, EmptyState, Skeleton } from "@/components/ui";
+import { EmptyState, Skeleton } from "@/components/ui";
+import { Segmented } from "@/components/ui/page";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useSubgroupMedia } from "@/hooks/useSubgroupMedia";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
@@ -33,7 +34,6 @@ export function MediaTab({ subgroup }: MediaTabProps) {
 
   const items = data?.pages.flatMap((p) => p.items) ?? [];
 
-  // Source filter chips
   const sourceOptions: { label: string; value: Source }[] = [
     { label: "All", value: "all" },
     { label: "Posts", value: "post" },
@@ -70,33 +70,19 @@ export function MediaTab({ subgroup }: MediaTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Media source"
-      >
-        {sourceOptions.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            aria-pressed={source === opt.value}
-            onClick={() => setSource(opt.value)}
-            className="min-h-11 rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <Badge
-              tone={source === opt.value ? "accent" : "neutral"}
-              className="px-4 py-2 text-sm"
-            >
-              {opt.label}
-            </Badge>
-          </button>
-        ))}
+      <div>
+        <Segmented
+          label="Media source"
+          options={sourceOptions}
+          value={source}
+          onChange={setSource}
+        />
       </div>
 
       {isLoading ? (
         <div className={grid}>
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} height="auto" className="aspect-square" />
+            <div key={i} className="glass-item aspect-square rounded-2xl" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -114,10 +100,7 @@ export function MediaTab({ subgroup }: MediaTabProps) {
             {items.map((item) => (
               <div
                 key={item.media_id}
-                role="button"
-                tabIndex={0}
-                aria-label={`${item.source_title || "media"}`}
-                className="relative aspect-square overflow-hidden rounded-xl bg-surface transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="bg-bg relative aspect-square overflow-hidden rounded-2xl"
               >
                 <MediaThumb
                   mediaId={item.media_id}

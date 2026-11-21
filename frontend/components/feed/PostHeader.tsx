@@ -63,7 +63,7 @@ export function PostHeader({
         </p>
         <p className="text-xs text-ink/75">
           @{post.author.username} · {time}
-          {post.updated_at !== post.created_at ? " · edited" : ""}
+          {post.edited_at ? " · edited" : ""}
         </p>
       </div>
       <DropdownMenu>

@@ -1,13 +1,26 @@
 "use client";
 /**
  * @file components/settings/SettingsTabs.tsx
- * @brief Settings page: section nav + detail. Deep-linkable via ?tab=.
- *        Phone: list first, then detail with a back link. md+: side nav + detail.
+ * @brief Settings page: PageHeader + TwoPane (SideNav | active section).
+ *        Phone shows a section picker instead of the clipped side nav.
+ *        Deep-linkable via ?tab=.
  */
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Bell,
+  CalendarDays,
+  CircleHelp,
+  HardDrive,
+  Heart,
+  KeyRound,
+  Lock,
+  Palette,
+  Puzzle,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
+import { Option, Select } from "@/components/ui/Select";
+import { PageHeader, SideNav, TwoPane } from "@/components/ui/page";
 import { CalendarSubscriptionsPanel } from "@/components/events/CalendarSubscriptionsPanel";
 import { AccountTab } from "./AccountTab";
 import { ProfileTab } from "./ProfileTab";
@@ -18,84 +31,138 @@ import { StorageTab } from "./StorageTab";
 import { NudgePreferences } from "./NudgePreferences";
 import { PluginsSettingsTab } from "./PluginsSettingsTab";
 import { PluginSettingsProvider } from "@/lib/plugins/PluginSettingsContext";
+import { HelpTab } from "./HelpTab";
 
-const TABS = [
-  { id: "account", label: "Account", Panel: AccountTab },
-  { id: "profile", label: "Profile", Panel: ProfileTab },
-  { id: "notifications", label: "Notifications", Panel: NotificationsTab },
-  { id: "privacy", label: "Privacy", Panel: PrivacyTab },
-  { id: "appearance", label: "Appearance", Panel: AppearanceTab },
-  { id: "calendar", label: "Calendar", Panel: CalendarSubscriptionsPanel },
-  { id: "engagement", label: "Engagement", Panel: NudgePreferences },
-  { id: "storage", label: "Storage", Panel: StorageTab },
-  { id: "plugins", label: "Plugins", Panel: PluginsSettingsTab },
+const TABS: {
+  id: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  Body: () => React.JSX.Element | null;
+}[] = [
+  {
+    id: "account",
+    label: "Account",
+    description: "Your sign-in email and data.",
+    icon: KeyRound,
+    Body: AccountTab,
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    description: "How you appear to other members.",
+    icon: UserRound,
+    Body: ProfileTab,
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "Choose what reaches you, when and where.",
+    icon: Bell,
+    Body: NotificationsTab,
+  },
+  {
+    id: "privacy",
+    label: "Privacy",
+    description: "Control who can see your profile and activity.",
+    icon: Lock,
+    Body: PrivacyTab,
+  },
+  {
+    id: "appearance",
+    label: "Appearance",
+    description: "Theme, text size and background.",
+    icon: Palette,
+    Body: AppearanceTab,
+  },
+  {
+    id: "calendar",
+    label: "Calendar",
+    description: "Subscribe to external calendars.",
+    icon: CalendarDays,
+    Body: CalendarSubscriptionsPanel,
+  },
+  {
+    id: "engagement",
+    label: "Engagement",
+    description: "Nudges and reminders to stay involved.",
+    icon: Heart,
+    Body: NudgePreferences,
+  },
+  {
+    id: "storage",
+    label: "Storage",
+    description: "How much media space you are using.",
+    icon: HardDrive,
+    Body: StorageTab,
+  },
+  {
+    id: "plugins",
+    label: "Plugins",
+    description: "Settings for installed plugins.",
+    icon: Puzzle,
+    Body: PluginsSettingsTab,
+  },
+  {
+    id: "help",
+    label: "Help",
+    description: "Keyboard shortcuts and quick help.",
+    icon: CircleHelp,
+    Body: HelpTab,
+  },
 ];
 
+const ITEMS = TABS.map(({ id, label, icon }) => ({
+  id,
+  label,
+  icon,
+  href: `?tab=${id}`,
+}));
+
 /**
- * @brief Settings sections with list-to-detail on phones.
+ * @brief Settings sections beside a glass side nav (phone: a picker).
  * @return settings layout
  */
 export function SettingsTabs() {
   const param = useSearchParams().get("tab");
-  const active = TABS.find((t) => t.id === param);
-  const current = active ?? TABS[0];
-  const Panel = current.Panel;
+  const router = useRouter();
+  const current = TABS.find((t) => t.id === param) ?? TABS[0];
+  const Body = current.Body;
 
   return (
     <PluginSettingsProvider>
-      <div className="mx-auto w-full max-w-5xl px-4 py-4 md:px-6 md:py-6">
-        <header className="mb-4">
-          <h1 className="text-3xl font-black">Settings</h1>
-          <p className="text-sm text-muted">
-            Manage your account preferences and settings.
-          </p>
-        </header>
-
-        <div className="md:grid md:grid-cols-[14rem_1fr] md:gap-6">
-          <nav
-            aria-label="Settings sections"
-            className={cn("md:block", active && "hidden")}
-          >
-            <ul className="flex flex-col gap-1">
-              {TABS.map(({ id, label }) => (
-                <li key={id}>
-                  <Link
-                    href={`?tab=${id}`}
-                    replace
-                    aria-current={current.id === id ? "page" : undefined}
-                    className={cn(
-                      "flex min-h-11 items-center justify-between rounded-xl px-3 text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                      "md:aria-[current=page]:bg-accent md:aria-[current=page]:text-surface-strong",
-                      "bg-surface md:bg-transparent md:hover:bg-surface",
-                    )}
-                  >
-                    {label}
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="size-4 md:hidden"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <section
-            aria-label={current.label}
-            className={cn("min-w-0 md:block", !active && "hidden")}
-          >
-            <Link
-              href="?"
-              replace
-              className="mb-3 inline-flex min-h-11 items-center gap-1 text-sm font-semibold md:hidden"
-            >
-              <ChevronLeft aria-hidden="true" className="size-4" />
-              All settings
-            </Link>
-            <Panel />
-          </section>
-        </div>
-      </div>
+      <PageHeader title="Settings" description={current.description} />
+      <TwoPane
+        aside={
+          <>
+            <div className="md:hidden">
+              <Select
+                label="Settings sections"
+                value={current.id}
+                onValueChange={(v) => router.push(`?tab=${v}`)}
+              >
+                {TABS.map((t) => (
+                  <Option key={t.id} value={t.id}>
+                    {t.label}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+            <div className="hidden md:block">
+              <SideNav
+                items={ITEMS}
+                activeId={current.id}
+                label="Settings sections"
+              />
+            </div>
+          </>
+        }
+        asideWidth={240}
+      >
+        <section aria-label={current.label} className="flex flex-col gap-4">
+          <Body />
+        </section>
+      </TwoPane>
     </PluginSettingsProvider>
   );
 }

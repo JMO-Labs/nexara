@@ -1,13 +1,13 @@
 "use client";
 /**
  * @file components/subgroups/groups-page/GroupMosaic.tsx
- * @brief Responsive mosaic of group tiles (every 5th tile spans 2 cols on
- *        wider screens) with error / loading / empty states.
+ * @brief Auto-fill grid (min 260px columns) of glass group cards with
+ *        error / loading / empty states.
  */
 import * as React from "react";
-import { motion } from "framer-motion";
 import { Button, Skeleton, EmptyState } from "@/components/ui";
 import { SubgroupCard } from "@/components/subgroups/SubgroupCard";
+import { MemberStack } from "./MemberStack";
 import type { Subgroup } from "@/lib/api/subgroups";
 
 export interface GroupMosaicProps {
@@ -26,10 +26,12 @@ export interface GroupMosaicProps {
   isFiltered?: boolean;
 }
 
-const GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-5 lg:grid-cols-3";
+/** Auto-fill columns (min 260px) so a few cards do not leave a large empty area. */
+const GRID =
+  "grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-3 md:gap-[18px]";
 
 /**
- * @brief Group tile mosaic.
+ * @brief Group card grid.
  * @param props list data, query state and action callbacks
  * @return grid or fallback state
  */
@@ -71,7 +73,7 @@ export function GroupMosaic({
         aria-label="Loading groups"
       >
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} height={i % 5 === 0 ? 360 : 240} />
+          <Skeleton key={i} height={300} />
         ))}
       </div>
     );
@@ -93,36 +95,25 @@ export function GroupMosaic({
   }
 
   return (
-    <div className={`${GRID} [grid-auto-flow:dense]`}>
-      {data.map((g, idx) => {
-        const anchor = idx % 5 === 0;
-        return (
-          <motion.div
-            key={g.id}
-            layout
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.42,
-              ease: [0.22, 1, 0.36, 1],
-              delay: Math.min(idx * 0.025, 0.32),
-            }}
-            className={anchor ? "flex sm:col-span-2" : "flex"}
-          >
-            <div className="flex-1">
-              <SubgroupCard
-                subgroup={g}
-                anchor={anchor}
-                isMember={g.is_member}
-                onSelect={onSelect}
-                onJoin={onJoin}
-                onLeave={onLeave}
-                busy={joinBusy === g.slug || leaveBusy === g.slug}
-              />
-            </div>
-          </motion.div>
-        );
-      })}
+    <div className={GRID}>
+      {data.map((g) => (
+        <SubgroupCard
+          key={g.id}
+          subgroup={g}
+          isMember={g.is_member}
+          onSelect={onSelect}
+          onJoin={onJoin}
+          onLeave={onLeave}
+          busy={joinBusy === g.slug || leaveBusy === g.slug}
+          avatars={
+            <MemberStack
+              slug={g.slug}
+              preview={g.member_preview}
+              count={g.member_count}
+            />
+          }
+        />
+      ))}
     </div>
   );
 }

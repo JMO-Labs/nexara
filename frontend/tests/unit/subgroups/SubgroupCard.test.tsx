@@ -38,6 +38,12 @@ describe("SubgroupCard", () => {
     vi.clearAllMocks();
   });
 
+  it("shows a sentence-case Open chip instead of raw policy text", () => {
+    wrap(<SubgroupCard subgroup={sg} onSelect={() => {}} />);
+    expect(screen.getByText("Open", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByText("open")).toBeNull();
+  });
+
   it("renders name + description + member count", () => {
     wrap(<SubgroupCard subgroup={sg} memberCount={4} onSelect={() => {}} />);
     expect(screen.getByText("Hiking")).toBeInTheDocument();
@@ -88,12 +94,12 @@ describe("SubgroupCard", () => {
     expect(onJoin).toHaveBeenCalledWith("hiking");
   });
 
-  it('navigates to hub route when "Open →" button clicked', () => {
+  it('navigates to hub route when "Open" button clicked', () => {
     const mockPush = vi.fn();
     vi.mocked(useRouter).mockReturnValue({ push: mockPush } as any);
     const onSelect = vi.fn();
     wrap(<SubgroupCard subgroup={sg} onSelect={onSelect} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open →" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Open / }));
     expect(mockPush).toHaveBeenCalledWith("/app/subgroups/hiking");
     expect(onSelect).not.toHaveBeenCalled();
   });

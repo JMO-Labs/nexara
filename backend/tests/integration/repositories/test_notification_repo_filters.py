@@ -104,6 +104,17 @@ async def test_mark_all_read_by_types(session: AsyncSession) -> None:
     assert await repo.unread_counts_by_type(u.id) == {"comment": 1}
 
 
+async def test_mark_all_read_sets_read_at_and_returns_rowcount(session: AsyncSession) -> None:
+    u = await _user(session)
+    await _notif(session, u, "mention")
+    await _notif(session, u, "comment")
+    await _notif(session, u, "comment", read=True)
+    repo = NotificationRepository(session)
+    assert await repo.mark_all_read(u.id) == 2
+    assert await repo.get_unread_count(u.id) == 0
+    assert await repo.mark_all_read(u.id) == 0
+
+
 async def test_delete_all_with_type_and_before(session: AsyncSession) -> None:
     u = await _user(session)
     await _notif(session, u, "mention", age_days=10)
@@ -123,3 +134,17 @@ async def test_delete_one_owner_isolation(session: AsyncSession) -> None:
     assert await repo.delete_one(other.id, n.id) is False
     assert await repo.delete_one(u.id, n.id) is True
     assert await repo.delete_one(u.id, n.id) is False
+
+
+async def test_dismissed_not_counted_unread(session: AsyncSession) -> None:
+    u = await _user(session)
+    await _notif(session, u, "chat")
+    gone = await _notif(session, u, "chat")
+    await _notif(session, u, "event")
+    repo = NotificationRepository(session)
+    await repo.dismiss(u.id, gone.id)
+
+    assert await repo.get_unread_count(u.id) == 2
+    assert await repo.unread_counts_by_type(u.id) == {"chat": 1, "event": 1}
+    rows, _ = await repo.list_for_user(u.id, unread_only=True)
+    assert gone.id not in {r.id for r in rows}

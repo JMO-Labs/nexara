@@ -37,6 +37,10 @@ describe("PostPage", () => {
     expect(link).toHaveAttribute("href", "/app");
     expect(screen.getByText("post-card")).toBeInTheDocument();
     expect(screen.getByText("comments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Post" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("comments").closest(".glass")).not.toBeNull();
   });
   it("shows not found when no post and no error", async () => {
     state.v = {};
@@ -57,12 +61,13 @@ describe("PostPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(refetch).toHaveBeenCalled();
   });
-  it("uses a single-column centered container (390px and 1280px)", async () => {
+  it("uses the full frame width with top padding clearing the TopBar", async () => {
     state.v = { data: { id: "1" } };
     await setup();
     const root = screen.getByText("post-card").closest("div.mx-auto");
     expect(root).not.toBeNull();
-    expect(root).toHaveClass("w-full", "max-w-180", "flex-col");
+    expect(root).toHaveClass("w-full", "flex-col", "pt-4", "md:pt-6");
+    expect(root!.className).not.toContain("max-w-3xl");
     expect(root!.className).not.toMatch(/\bgrid|\bmd:flex-row|\bcols-/);
   });
 });

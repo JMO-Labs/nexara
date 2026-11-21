@@ -7,6 +7,8 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Button, Modal, Textarea } from "@/components/ui";
+import { controlClass } from "@/components/ui/Field";
+import { cn } from "@/lib/utils";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useSendKudos } from "@/hooks/useKudos";
 import { listUsers, type UserSummary } from "@/lib/api/users";
@@ -103,13 +105,13 @@ export function KudosComposer({ open, onClose }: KudosComposerProps) {
               setQuery(e.target.value);
               setPicked(null);
             }}
-            className="h-11 w-full rounded-xl border border-current/30 bg-surface px-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-accent"
+            className={cn(controlClass, "h-11 rounded-full")}
           />
           {matches.length > 0 && (
             <ul
               id={listId}
               role="listbox"
-              className="absolute top-full z-10 mt-1 w-full rounded-xl border border-current/20 bg-surface p-1 shadow-lg"
+              className="glass absolute top-full z-10 mt-1 w-full rounded-[20px] p-1 shadow-[0_12px_32px_-12px_color-mix(in_srgb,var(--nx-ink)_35%,transparent)]"
             >
               {matches.map((u) => (
                 <li
@@ -156,7 +158,7 @@ export function KudosComposer({ open, onClose }: KudosComposerProps) {
               id={`${listId}-sg`}
               value={subgroupId}
               onChange={(e) => setSubgroupId(e.target.value)}
-              className="h-11 rounded-xl border border-current/30 bg-surface px-3"
+              className={cn(controlClass, "h-11 rounded-full")}
             >
               <option value="">{t("noGroup")}</option>
               {groups.map((g) => (

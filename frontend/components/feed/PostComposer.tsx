@@ -1,10 +1,10 @@
 "use client";
 /**
  * @file components/feed/PostComposer.tsx
- * @brief Tailwind/shadcn-skinned Tiptap-based rich-text composer for new posts. Inline trigger row
- *        opens an editor; supports submit on Cmd/Ctrl+Enter.
- *        Polls and media attachment surfaced as toggles; payload pieces
- *        are attached as media_ids / poll on submit.
+ * @brief Glass Tiptap-based rich-text composer for new posts. Compact one-line row
+ *        expands to an editor with audience pills and a kudos trigger; supports submit on Cmd/Ctrl+Enter.
+ *        Photos and a poll attach via ComposerAttachments and are sent
+ *        as media_ids / poll on submit.
  *        Supports reply-to-prompt with banner display and state management.
  *        Shows interest-capture prompt after submitting interest_capture replies.
  */
@@ -17,7 +17,6 @@ import {
   Button,
   Chip,
   IconButton,
-  ScopeSelect,
   type ScopeValue,
 } from "@/components/ui";
 import { useSession } from "@/stores/session";
@@ -25,7 +24,18 @@ import { useCreatePost } from "@/hooks/usePosts";
 import { useCalendars } from "@/hooks/useCalendars";
 import { addInterest } from "@/lib/api/users";
 import { useToasts } from "@/stores/toasts";
-import { ComposerToolbar } from "./ComposerToolbar";
+import { AudiencePicker } from "./AudiencePicker";
+import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
+import { KudosComposer } from "./KudosComposer";
+import {
+  MediaTray,
+  PollEditor,
+  emptyPoll,
+  pollPayload,
+  useMediaUploads,
+  type PollDraft,
+} from "./ComposerAttachments";
+import type { CreatePostBody } from "@/lib/api/posts";
 import { X } from "lucide-react";
 
 export interface PostComposerProps {
@@ -52,8 +62,20 @@ export function PostComposer({
   const { data: calendars } = useCalendars();
   const [expanded, setExpanded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [kudosOpen, setKudosOpen] = React.useState(false);
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
+  const [poll, setPoll] = React.useState<PollDraft | null>(null);
+  const uploads = useMediaUploads();
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const openPhotos = () => {
+    setExpanded(true);
+    fileRef.current?.click();
+  };
+  const togglePoll = () => {
+    setExpanded(true);
+    setPoll((p) => (p ? null : emptyPoll()));
+  };
   const [scope, setScope] = React.useState<ScopeValue>({
     visibility: defaultSubgroupId ? "subgroup" : "community",
     subgroup_id: defaultSubgroupId ?? null,
@@ -79,7 +101,7 @@ export function PostComposer({
         link: { openOnClick: false, autolink: true },
       }),
       Placeholder.configure({
-        placeholder: "Share something with your community…",
+        placeholder: "Share something with everyone…",
       }),
     ],
     immediatelyRender: false,
@@ -102,20 +124,22 @@ export function PostComposer({
   const submit = React.useCallback(async () => {
     if (!editor) return;
     const text = editor.getText().trim();
-    if (!text) {
+    const pollBody = poll ? pollPayload(poll) : undefined;
+    if (typeof pollBody === "string") {
+      setError(pollBody);
+      return;
+    }
+    if (!text && !pollBody && uploads.readyIds.length === 0) {
       setError("Add some content before posting.");
       return;
     }
     setError(null);
     try {
-      const payload: {
-        content: string;
-        reply_to_prompt_id?: string;
-        visibility?: string;
-        subgroup_id?: string | null;
-      } = {
+      const payload: CreatePostBody & { visibility?: string } = {
         content: text,
       };
+      if (pollBody) payload.poll = pollBody;
+      if (uploads.readyIds.length) payload.media_ids = uploads.readyIds;
       if (replyToPromptId) {
         payload.reply_to_prompt_id = replyToPromptId;
       }
@@ -127,6 +151,8 @@ export function PostComposer({
       }
       await createMut.mutateAsync(payload);
       editor.commands.clearContent();
+      setPoll(null);
+      uploads.reset();
       setExpanded(false);
       useToasts.getState().push({ variant: "success", message: "Posted" });
 
@@ -147,7 +173,13 @@ export function PostComposer({
     promptType,
     interestCategorySlug,
     scope,
+    poll,
+    uploads,
   ]);
+
+  React.useEffect(() => {
+    if (expanded) editor?.commands.focus();
+  }, [expanded, editor]);
 
   if (!me) return null;
 
@@ -190,33 +222,55 @@ export function PostComposer({
     </div>
   ) : null;
 
+  const fileInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept="image/*,video/*"
+      multiple
+      hidden
+      onChange={(e) => {
+        uploads.add(e.target.files);
+        e.target.value = "";
+      }}
+    />
+  );
+
+  const kudosModal = kudosOpen ? (
+    <KudosComposer open onClose={() => setKudosOpen(false)} />
+  ) : null;
+
   if (!expanded) {
     return (
       <div>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="bg-surface text-muted focus-visible:outline-accent flex w-full cursor-text items-center gap-3 rounded-[1.25rem] border border-muted/40 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
+        <div className="glass-item flex w-full items-center gap-2 rounded-[22px] p-2 pl-3">
           <Avatar
             src={me.avatar_url ?? undefined}
             name={me.display_name}
             size="sm"
           />
-          <span className="text-base">
-            Share something with your community…
-          </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-muted focus-visible:outline-accent min-w-0 flex-1 cursor-text truncate rounded-full px-2 py-1.5 text-left text-base focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Share something with everyone
+          </button>
+          <ComposerIcons
+            onKudos={() => setKudosOpen(true)}
+            onPhotos={openPhotos}
+            onPoll={togglePoll}
+          />
+        </div>
+        {fileInput}
         {interestPrompt}
+        {kudosModal}
       </div>
     );
   }
 
   return (
-    <div
-      className="bg-surface rounded-[1.25rem] border border-muted/40 p-3"
-      data-tour="composer"
-    >
+    <div className="glass-item rounded-[22px] p-3" data-tour="composer">
       {replyToPromptId && replyToPromptTitle && (
         <div className="bg-bg mb-3 flex items-center justify-between gap-2 rounded-xl p-2 text-sm">
           <p>
@@ -240,9 +294,18 @@ export function PostComposer({
           size="sm"
         />
         <div className="min-w-0 grow">
-          <div className="min-h-20 rounded-xl border border-muted/40 p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
+          <div className="min-h-20 rounded-xl p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
             <EditorContent editor={editor} />
           </div>
+          {poll && (
+            <PollEditor
+              value={poll}
+              onChange={setPoll}
+              onRemove={() => setPoll(null)}
+            />
+          )}
+          <MediaTray items={uploads.items} onRemove={uploads.remove} />
+          {fileInput}
           {error ? (
             <p role="alert" className="mt-1 text-xs text-destructive">
               {error}
@@ -250,7 +313,7 @@ export function PostComposer({
           ) : null}
           {!defaultSubgroupId && (
             <div className="mt-3 mb-2">
-              <ScopeSelect
+              <AudiencePicker
                 value={scope}
                 onChange={setScope}
                 subgroups={myGroups}
@@ -259,9 +322,15 @@ export function PostComposer({
           )}
           <ComposerToolbar
             posting={createMut.isPending}
+            onKudos={() => setKudosOpen(true)}
+            onPhotos={() => fileRef.current?.click()}
+            onPoll={togglePoll}
+            postDisabled={uploads.busy}
             onSubmit={submit}
             onCancel={() => {
               editor?.commands.clearContent();
+              setPoll(null);
+              uploads.reset();
               setExpanded(false);
               setError(null);
             }}
@@ -269,6 +338,7 @@ export function PostComposer({
         </div>
       </div>
       {interestPrompt}
+      {kudosModal}
     </div>
   );
 }

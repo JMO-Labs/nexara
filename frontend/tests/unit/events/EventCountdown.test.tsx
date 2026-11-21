@@ -78,10 +78,10 @@ describe("EventCountdown", () => {
     return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
   }
 
-  it("renders event title and countdown", () => {
+  it("renders countdown units without repeating the title", () => {
     const event = createEventAtOffset(120);
     wrap(<EventCountdown event={event} />);
-    expect(screen.getByText("Team Standup")).toBeInTheDocument();
+    expect(screen.queryByText("Team Standup")).toBeNull();
     expect(screen.getByText("hours")).toBeInTheDocument();
     expect(screen.getByText("min")).toBeInTheDocument();
   });
@@ -89,16 +89,14 @@ describe("EventCountdown", () => {
   it("renders with correct countdown values", () => {
     const event = createEventAtOffset(120);
     wrap(<EventCountdown event={event} />);
-    expect(screen.getByText("Team Standup")).toBeInTheDocument();
     // Check that numbers are rendered
     const numbers = screen.queryAllByText(/^\d+$/);
     expect(numbers.length).toBeGreaterThan(0);
   });
 
-  it("renders with divider styling", () => {
+  it("exposes an accessible summary", () => {
     const event = createEventAtOffset(120);
     wrap(<EventCountdown event={event} />);
-    // Just check that the component renders
-    expect(screen.getByText("Team Standup")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Starts in /)).toBeInTheDocument();
   });
 });

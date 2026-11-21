@@ -13,7 +13,8 @@ import {
   Image,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Button } from "@/components/ui/Button";
+import { Panel } from "@/components/ui/page";
 import { useStorage } from "@/hooks/useStorage";
 import { useSession } from "@/stores/session";
 import type { StorageUsage } from "@/lib/api/storage";
@@ -43,9 +44,9 @@ function toneFor(pct: number): "green" | "yellow" | "red" {
 }
 
 const TONE_BG = {
-  green: "bg-green-600",
-  yellow: "bg-yellow-500",
-  red: "bg-red-600",
+  green: "bg-[var(--nx-ok)]",
+  yellow: "bg-[var(--nx-sun)]",
+  red: "bg-[var(--nx-red)]",
 };
 
 /**
@@ -54,12 +55,25 @@ const TONE_BG = {
  */
 export function StorageTab() {
   const userId = useSession((s) => s.user?.id ?? "");
-  const { data, isLoading, isError } = useStorage(userId);
+  const { data, isLoading, isError, refetch } = useStorage(userId);
 
   let body: React.ReactNode;
   if (isLoading) body = <p role="status">Loading storage usage…</p>;
   else if (isError || !data)
-    body = <p role="alert">Could not load storage usage.</p>;
+    body = (
+      <div role="alert" className="flex flex-col items-start gap-3">
+        <p className="flex items-center gap-2 text-sm">
+          <AlertTriangle
+            aria-hidden="true"
+            className="size-4 text-[var(--nx-red)]"
+          />
+          We couldn&apos;t load your storage usage.
+        </p>
+        <Button variant="secondary" onClick={() => void refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
   else {
     const pct =
       data.quota_bytes > 0 ? (data.used_bytes / data.quota_bytes) * 100 : 0;
@@ -70,10 +84,8 @@ export function StorageTab() {
         {pct > 80 && (
           <div
             role="alert"
-            className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${
-              tone === "red"
-                ? "border-red-600 text-red-700"
-                : "border-yellow-600 text-yellow-800"
+            className={`glass-item mb-4 flex items-start gap-2 rounded-[20px] p-3 text-sm ${
+              tone === "red" ? "text-[var(--nx-red)]" : "text-ink"
             }`}
           >
             <AlertTriangle
@@ -111,7 +123,7 @@ export function StorageTab() {
             </div>
             <p className="mt-1 text-sm">{shown}% used</p>
             <Link
-              href="/app/media"
+              href="/app/photos?view=all"
               className="mt-3 inline-block text-sm font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2"
             >
               Manage media
@@ -150,10 +162,5 @@ export function StorageTab() {
     );
   }
 
-  return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-4 text-lg font-semibold">Storage</h2>
-      {body}
-    </Card>
-  );
+  return <Panel title="Storage">{body}</Panel>;
 }

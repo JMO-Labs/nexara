@@ -7,8 +7,8 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tones = {
-  neutral: "bg-bg text-ink",
-  accent: "bg-accent text-surface-strong",
+  neutral: "glass-item text-ink",
+  accent: "bg-[var(--nx-blue)]/15 text-ink",
   sun: "bg-sun text-surface-strong",
   leaf: "bg-leaf text-surface-strong",
 } as const;

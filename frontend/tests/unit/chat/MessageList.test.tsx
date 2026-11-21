@@ -44,4 +44,22 @@ describe("MessageList", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
     spy.mockRestore();
   });
+  it("centres messages in an 860px column and fades the top edge", () => {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ width: 400, height: 400 } as DOMRect);
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      value: 400,
+    });
+    const { container } = render(
+      <MessageList messages={[msg]} isLoading={false} {...props} />,
+    );
+    const scroller = container.querySelector("[data-density]") as HTMLElement;
+    expect(scroller.className).toContain("py-4");
+    expect(scroller.className).toContain("mask-image");
+    const column = screen.getByText("hello").closest(".max-w-\\[860px\\]");
+    expect(column).not.toBeNull();
+    spy.mockRestore();
+  });
 });

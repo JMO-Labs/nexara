@@ -44,10 +44,10 @@ export function RsvpInline({
             onClick={() => onClick(status)}
             disabled={rsvp.isPending}
             className={cn(
-              "inline-flex min-h-8 items-center rounded-full border px-3 text-sm font-semibold transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50",
+              "inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50",
               active
-                ? "border-accent bg-accent text-surface-strong"
-                : "border-ink/30 bg-transparent text-ink hover:bg-bg",
+                ? "bg-surface-strong text-bg"
+                : "glass-item text-ink hover:bg-white/30",
             )}
           >
             {label}

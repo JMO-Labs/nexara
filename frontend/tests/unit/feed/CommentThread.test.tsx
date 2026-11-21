@@ -28,7 +28,10 @@ describe("CommentThread", () => {
   it("shows empty state", () => {
     items = [];
     render(<CommentThread postId="p1" />);
-    expect(screen.getByText("Be first to comment")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "No comments yet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Start the conversation.")).toBeInTheDocument();
   });
 
   it("renders comments and sends a new one", async () => {
@@ -57,7 +60,7 @@ describe("CommentThread", () => {
     isError = true;
     const user = userEvent.setup();
     render(<CommentThread postId="p1" />);
-    expect(screen.queryByText("Be first to comment")).not.toBeInTheDocument();
+    expect(screen.queryByText("No comments yet")).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(/couldn.t load/i);
     await user.click(screen.getByRole("button", { name: /retry/i }));
     expect(refetch).toHaveBeenCalled();
@@ -76,5 +79,32 @@ describe("CommentThread", () => {
     ];
     render(<CommentThread postId="p1" />);
     expect(screen.getByRole("button", { name: "Report" })).toBeInTheDocument();
+  });
+});
+
+describe("CommentThread brand styling", () => {
+  it("renders a glass composer row with a borderless textarea", () => {
+    items = [];
+    render(<CommentThread postId="p1" />);
+    const field = screen.getByPlaceholderText("Add a comment…");
+    expect(field.parentElement).toHaveClass("glass-item", "rounded-full");
+    expect(field.className).toContain("resize-none");
+    expect(field.className).not.toContain("border-current");
+  });
+
+  it("uses glass-item bubbles and no hard dividers on the list", () => {
+    items = [
+      {
+        id: "c1",
+        content: "nice",
+        created_at: new Date().toISOString(),
+        author: { id: "u2", display_name: "Bob", avatar_url: null },
+        replies: [],
+      },
+    ];
+    const { container } = render(<CommentThread postId="p1" />);
+    const bubble = screen.getByText("Bob").parentElement as HTMLElement;
+    expect(bubble).toHaveClass("glass-item", "rounded-[20px]");
+    expect(container.innerHTML).not.toContain("border-y");
   });
 });

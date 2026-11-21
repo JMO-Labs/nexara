@@ -28,6 +28,7 @@ import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { API_BASE } from "@/lib/auth/session";
 import { useEventDetail } from "@/hooks/useEvents";
+import { useMemberProfile } from "@/hooks/useMembers";
 import { GalleryEventLink } from "./GalleryEventLink";
 import { cn } from "@/lib/utils";
 import type { Gallery } from "@/lib/api/galleries";
@@ -42,6 +43,44 @@ const POLICY: Array<Gallery["contribution_policy"]> = [
   "collaborators",
   "community",
 ];
+
+/** @brief Sentence-case a lowercase enum value, e.g. "owner only" -> "Owner only". */
+function sentence(value: string): string {
+  const text = value.replace("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * @brief Owner avatar, display name, item count and optional badge.
+ * @param ownerId owner user id (resolved to a display name)
+ * @param count number of items in the gallery
+ * @param badge optional node shown under the count
+ * @return owner header block
+ */
+function OwnerLine({
+  ownerId,
+  count,
+  badge,
+}: {
+  ownerId: string;
+  count: number;
+  badge: React.ReactNode;
+}) {
+  const { data: owner } = useMemberProfile(ownerId);
+  const name = owner?.display_name ?? "";
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <Avatar src={`${API_BASE}/api/v1/users/${ownerId}/avatar`} name={name} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{name}</p>
+        <p className="text-muted text-sm">
+          {count} {count === 1 ? "item" : "items"}
+        </p>
+        {badge && <div className="mt-1">{badge}</div>}
+      </div>
+    </div>
+  );
+}
 
 /** @brief Small section heading. */
 function Label({ children }: { children: React.ReactNode }) {
@@ -82,12 +121,12 @@ function OptionPills<T extends string>({
             disabled={!editable || o === value}
             onClick={() => onPick(o)}
             className={cn(
-              "focus-visible:outline-accent min-h-11 rounded-full px-3 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-8",
-              o === value ? "bg-accent text-surface-strong" : "bg-bg text-ink",
+              "focus-visible:outline-accent min-h-9 rounded-full px-3 text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2",
+              o === value ? "bg-surface-strong text-bg" : "glass-item text-ink",
               editable && o !== value && "hover:opacity-80",
             )}
           >
-            {o.replace("_", " ")}
+            {sentence(o)}
           </button>
         ))}
       </div>
@@ -168,27 +207,15 @@ export function GalleryDrawer({
       ) : (
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-3">
-            <Avatar
-              src={`${API_BASE}/api/v1/users/${gallery.owner_id}/avatar`}
-              name={gallery.owner_id}
+            <OwnerLine
+              ownerId={gallery.owner_id}
+              count={count}
+              badge={gallery.event_id ? <EventGalleryBadge /> : null}
             />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">
-                {gallery.owner_id}
-              </p>
-              <p className="text-muted text-sm">
-                {count} {count === 1 ? "item" : "items"}
-              </p>
-              {gallery.event_id && (
-                <div className="mt-1">
-                  <EventGalleryBadge />
-                </div>
-              )}
-            </div>
             {isOwner && (
               <IconButton
                 size="md"
-                variant="ghost"
+                variant="glass"
                 onClick={handleDelete}
                 disabled={deleteMut.isPending}
                 aria-label="Delete gallery"
@@ -261,7 +288,7 @@ export function GalleryDrawer({
                 {items!.map((it, idx) => (
                   <li
                     key={it.id}
-                    className="bg-bg relative aspect-square overflow-hidden rounded-xl"
+                    className="group bg-bg relative aspect-square overflow-hidden rounded-[18px]"
                   >
                     <button
                       type="button"
@@ -277,10 +304,10 @@ export function GalleryDrawer({
                     {isOwner && (
                       <IconButton
                         size="sm"
-                        variant="destructive"
+                        variant="glass"
                         onClick={() => handleRemoveItem(it.id)}
                         aria-label="Remove item"
-                        className="absolute top-1 right-1"
+                        className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                       </IconButton>

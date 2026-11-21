@@ -1,17 +1,17 @@
 /**
  * @file components/ui/Card.tsx
- * @brief Garden Club card. `featured` uses the sharp-corner leaf shape.
+ * @brief Glass-item card surface.
  */
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export type CardProps = React.HTMLAttributes<HTMLDivElement> & {
-  tone?: "default" | "featured";
+  tone?: "default";
 };
 
 /**
  * @brief Surface container.
- * @param tone default (surface) or featured (strong surface, leaf corner)
+ * @param tone default (glass-item surface)
  * @return card element
  */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
@@ -21,12 +21,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
   return (
     <div
       ref={ref}
-      className={cn(
-        tone === "featured"
-          ? "bg-surface-strong text-bg corner-leaf"
-          : "bg-surface text-ink rounded-[1.25rem]",
-        className,
-      )}
+      data-tone={tone}
+      className={cn("glass-item rounded-[24px] text-ink", className)}
       {...rest}
     />
   );

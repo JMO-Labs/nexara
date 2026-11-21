@@ -5,9 +5,10 @@
  */
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { format } from "date-fns";
+import { formatDistanceToNowStrict, format } from "date-fns";
 import { useAuditLog } from "@/hooks/useAdmin";
-import { Button, Card, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { Panel, SearchField, Toolbar } from "@/components/ui/page";
 import {
   Table,
   TableBody,
@@ -18,6 +19,20 @@ import {
 } from "@/components/ui/shadcn/table";
 import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
 
+/**
+ * @brief Turn an event code into a label, e.g. "invite.created" -> "Invite created".
+ * @param code raw action code
+ * @return sentence-case label
+ */
+const actionLabel = (code: string) => {
+  const words = code.replace(/[._]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+/**
+ * @brief Audit log viewer: search toolbar above a full-width table.
+ * @return tab content
+ */
 export function AuditLogTab() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState<string>("");
@@ -61,24 +76,23 @@ export function AuditLogTab() {
   });
 
   return (
-    <div className="grid gap-4 md:grid-cols-12">
-      <Card className="flex flex-col gap-3 p-4 md:col-span-3 md:self-start">
-        <h3 className="text-sm font-semibold">Filters</h3>
-        <Input
-          label="Action"
+    <div className="flex flex-col gap-3">
+      <Toolbar className="mb-0">
+        <SearchField
+          label="Filter by action"
           placeholder="Filter by action"
           value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
+          onChange={setActionFilter}
         />
-        <Input
-          label="Actor"
+        <SearchField
+          label="Filter by actor"
           placeholder="Filter by actor"
           value={actorFilter}
-          onChange={(e) => setActorFilter(e.target.value)}
+          onChange={setActorFilter}
         />
         {(actionFilter || actorFilter) && (
           <Button
-            variant="ghost"
+            variant="glass"
             size="sm"
             onClick={() => {
               setActionFilter("");
@@ -88,10 +102,10 @@ export function AuditLogTab() {
             Clear filters
           </Button>
         )}
-      </Card>
+      </Toolbar>
 
-      <div className="md:col-span-9">
-        <Card className="p-2">
+      <div>
+        <Panel as="div">
           <Table>
             <TableHeader className={stackTable.head}>
               <TableRow>
@@ -106,7 +120,7 @@ export function AuditLogTab() {
                 filtered.map((entry) => (
                   <TableRow key={entry.id} className={stackTable.row}>
                     <TableCell data-label="Action" className={stackTable.cell}>
-                      {entry.action}
+                      {actionLabel(entry.action)}
                     </TableCell>
                     <TableCell data-label="Actor" className={stackTable.cell}>
                       {entry.actor_display_name || "(system)"}
@@ -118,7 +132,14 @@ export function AuditLogTab() {
                       data-label="Timestamp"
                       className={`${stackTable.cell} whitespace-nowrap`}
                     >
-                      {format(new Date(entry.created_at), "MMM d HH:mm")}
+                      <time
+                        dateTime={new Date(entry.created_at).toISOString()}
+                        title={format(new Date(entry.created_at), "PPpp")}
+                      >
+                        {formatDistanceToNowStrict(new Date(entry.created_at), {
+                          addSuffix: true,
+                        })}
+                      </time>
                     </TableCell>
                   </TableRow>
                 ))
@@ -131,7 +152,7 @@ export function AuditLogTab() {
               )}
             </TableBody>
           </Table>
-        </Card>
+        </Panel>
 
         {auditLog.has_more && (
           <div className="mt-4 flex justify-center">

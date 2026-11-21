@@ -21,7 +21,28 @@ logger = structlog.get_logger(__name__)
 
 settings = get_settings()
 
-celery_app = Celery("nexara")
+celery_app = Celery(
+    "nexara",
+    # Explicit so worker/beat register every core task (nothing else imports them).
+    include=[
+        "app.tasks.ai_tasks",
+        "app.tasks.birthday_tasks",
+        "app.tasks.email_tasks",
+        "app.tasks.event_tasks",
+        "app.tasks.export_tasks",
+        "app.tasks.gallery_tasks",
+        "app.tasks.link_preview_tasks",
+        "app.tasks.list_tasks",
+        "app.tasks.maintenance_tasks",
+        "app.tasks.media_tasks",
+        "app.tasks.notification_tasks",
+        "app.tasks.nudge_tasks",
+        "app.tasks.plugin_tasks",
+        "app.tasks.poll_tasks",
+        "app.tasks.prompt_tasks",
+        "app.tasks.retention_tasks",
+    ],
+)
 """@brief The Celery application instance."""
 
 celery_app.conf.update(
@@ -241,3 +262,22 @@ def _load_plugin_tasks(**kwargs: object) -> None:
     from app.plugins.task_loader import load_plugin_tasks
 
     logger.info("plugin_tasks_loaded", plugins=load_plugin_tasks())
+
+
+@signals.worker_process_init.connect
+def _per_task_db_connections(**kwargs: object) -> None:
+    """
+    @brief Rebind the shared session factory to a NullPool engine in workers.
+
+    Each task runs under its own ``asyncio.run`` loop; a pooled asyncpg
+    connection from a previous task belongs to a dead loop and fails with
+    "attached to a different loop". NullPool opens a fresh connection per use.
+    """
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    from app.db.session import async_session_factory
+
+    async_session_factory.configure(
+        bind=create_async_engine(get_settings().DATABASE_URL, poolclass=NullPool)
+    )

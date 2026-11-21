@@ -61,9 +61,18 @@ describe("UsersTab polish", () => {
       data: mkUsers(1),
     } as any);
     render(<UsersTab />);
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(screen.getByRole("option", { name: "Compact" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Compact" }));
     expect(useUI.getState().density).toBe("compact");
+  });
+
+  it("shows status as a sentence-case badge", () => {
+    vi.mocked(useAdminModule.useAdminUsersInfinite).mockReturnValue({
+      isLoading: false,
+      data: mkUsers(1),
+    } as any);
+    render(<UsersTab />);
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.queryByText("active")).toBeNull();
   });
 
   it("requests the next page when more are available", () => {

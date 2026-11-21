@@ -36,7 +36,7 @@ def client_setup(test_app):
     user.id = uuid.uuid4()
     user.community_id = COMMUNITY_ID
     service = MagicMock()
-    service.list_subgroups_with_membership = AsyncMock()
+    service.list_subgroup_cards = AsyncMock()
 
     async def _override_user():
         return user
@@ -55,9 +55,9 @@ async def _get(app):
 
 async def test_list_sets_role_and_is_member(client_setup):
     app, service = client_setup
-    service.list_subgroups_with_membership.return_value = [
-        (_subgroup(None), "owner"),
-        (_subgroup(None), None),
+    service.list_subgroup_cards.return_value = [
+        (_subgroup(None), "owner", [], 0),
+        (_subgroup(None), None, [], 0),
     ]
 
     resp = await _get(app)
@@ -69,9 +69,23 @@ async def test_list_sets_role_and_is_member(client_setup):
 
 async def test_list_empty(client_setup):
     app, service = client_setup
-    service.list_subgroups_with_membership.return_value = []
+    service.list_subgroup_cards.return_value = []
 
     resp = await _get(app)
 
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+async def test_list_includes_member_preview_and_count(client_setup):
+    app, service = client_setup
+    pid = uuid.uuid4()
+    preview = {"id": pid, "display_name": "Ada", "avatar_url": None}
+    service.list_subgroup_cards.return_value = [(_subgroup(None), None, [preview], 7)]
+
+    resp = await _get(app)
+
+    assert resp.status_code == 200
+    row = resp.json()[0]
+    assert row["member_count"] == 7
+    assert row["member_preview"] == [{"id": str(pid), "display_name": "Ada", "avatar_url": None}]

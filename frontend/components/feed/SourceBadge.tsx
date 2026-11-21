@@ -24,7 +24,11 @@ export function SourceBadge({
   subgroupSlug,
 }: SourceBadgeProps) {
   if (!subgroupId) {
-    return <Badge aria-label="Posted in Community">Community</Badge>;
+    return (
+      <Badge aria-label="Posted in Community" className="text-muted">
+        Community
+      </Badge>
+    );
   }
   const name = subgroupName ?? "Subgroup";
   if (!subgroupSlug) {

@@ -26,4 +26,16 @@ describe("Input", () => {
     expect(el).toHaveAttribute("aria-invalid", "true");
     expect(el).toHaveAccessibleDescription("Too short");
   });
+
+  it("uses a theme-safe ink tint background and hairline border", () => {
+    render(<Input label="Name" />);
+    const cls = screen.getByLabelText("Name").className;
+    expect(cls).toContain(
+      "bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)]",
+    );
+    expect(cls).toContain(
+      "border-[color-mix(in_srgb,var(--nx-ink)_14%,transparent)]",
+    );
+    expect(cls).not.toContain("glass-item");
+  });
 });

@@ -148,3 +148,42 @@ async def test_chat_verbs_dropped():
     svc, _ = _service([], [_act(1, "chat.posted"), _act(2)], [])
     res = await svc.list(_viewer(), None, 20)
     assert [i.activity.verb for i in res.items] == ["post.commented"]
+
+
+def test_parse_treats_naive_cursor_as_utc():
+    """@brief A cursor without an offset must not reach Postgres naive (500 on page 2)."""
+    from app.services.home_feed_service import _parse
+
+    dt = _parse("2026-11-20T02:59:10")
+    assert dt is not None and dt.tzinfo is not None and dt.utcoffset() == timedelta(0)
+
+
+def test_aware_normalizes_naive_and_keeps_aware():
+    from app.services.home_feed_service import _aware
+
+    naive = datetime(2026, 11, 20, 2, 59, 10)
+    aware = datetime(2026, 11, 20, 2, 59, 10, tzinfo=UTC)
+    assert _aware(naive) == aware
+    assert _aware(aware) is aware
+
+
+async def test_naive_cursor_is_normalized_before_reaching_repos():
+    """@brief Page 2 with an offset-less cursor used to 500 in the post query."""
+    posts = [_post(i * 2) for i in range(3)]
+    svc, _ = _service(posts, [], [])
+    naive = (T0 - timedelta(minutes=1)).replace(tzinfo=None).isoformat()
+    res = await svc.list(_viewer(), naive, 2)
+    assert all(i.created_at < T0 for i in res.items)
+
+
+async def test_post_rows_with_string_timestamps_are_accepted():
+    """@brief PostRepository returns serialized dicts (created_at as ISO str)."""
+    posts = [_post(i * 2) for i in range(2)]
+    for p in posts:
+        p["created_at"] = p["created_at"].isoformat()
+
+    svc, _ = _service([], [], [])
+    svc._posts.list_feed = AsyncMock(return_value=(posts, None))
+    res = await svc.list(_viewer(), None, 5)
+    assert [i.kind for i in res.items] == ["post", "post"]
+    assert all(i.created_at.tzinfo is not None for i in res.items)

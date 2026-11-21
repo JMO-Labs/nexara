@@ -13,10 +13,12 @@ import uuid
 import structlog
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.rate_limit import limiter
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
@@ -30,6 +32,7 @@ from app.schemas.media import (
     MultipartPartResponse,
 )
 from app.schemas.post import ReactionResponse, ReactionToggle
+from app.services.media.url_import import import_image_from_url
 from app.services.media_service import MediaService
 from app.services.storage.factory import get_storage_backend
 
@@ -136,6 +139,24 @@ async def upload_media(
         content_type=content_type,
         size=size,
     )
+
+
+class ImportUrlRequest(BaseModel):
+    """@brief Body for importing an image from a public URL."""
+
+    url: str = Field(..., min_length=8, max_length=2000, pattern=r"^https?://")
+
+
+@router.post("/import-url", response_model=MediaResponse, status_code=201)
+@limiter.limit("10/minute")
+async def import_media_url(
+    request: Request,
+    body: ImportUrlRequest,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MediaResponse:
+    """@brief Download an image from a public URL and store it as media."""
+    return await import_image_from_url(service, user, body.url)
 
 
 @router.get("/{media_id}", response_model=MediaResponse)

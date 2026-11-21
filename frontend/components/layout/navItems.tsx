@@ -8,21 +8,17 @@ import {
   CalendarDays,
   Users,
   Images,
-  Film,
-  List,
-  Contact,
-  Trophy,
-  Bell,
-  Bookmark,
+  Inbox,
   Settings,
   ShieldCheck,
-  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
   label: string;
   href: string;
+  /** Extra path prefixes that also mark this item active. */
+  match?: string[];
   Icon: LucideIcon;
   adminOnly?: boolean;
 }
@@ -39,11 +35,17 @@ export function isNavActive(pathname: string, href: string): boolean {
 }
 
 /**
- * @brief Filter out admin-only items for non-admins.
- * @param items nav items
- * @param isAdmin viewer is admin
- * @return visible items
+ * @brief Whether a nav item is active: its href or any match prefix.
+ * @param pathname current path
+ * @param item nav item
+ * @return true when active
  */
+export function isItemActive(pathname: string, item: NavItem): boolean {
+  return [item.href, ...(item.match ?? [])].some((h) =>
+    isNavActive(pathname, h),
+  );
+}
+
 /**
  * @brief Admin check. Backend exposes only `role`, never `is_admin`.
  * @param user session user or null
@@ -53,26 +55,48 @@ export function isAdmin(user?: { role?: string } | null): boolean {
   return user?.role === "admin";
 }
 
+/**
+ * @brief Filter out admin-only items for non-admins.
+ * @param items nav items
+ * @param isAdmin viewer is admin
+ * @return visible items
+ */
 export function visibleNav(items: NavItem[], isAdmin: boolean): NavItem[] {
   return items.filter((i) => !i.adminOnly || isAdmin);
 }
 
-export const PRIMARY_NAV: NavItem[] = [
+/** @brief Phone tab bar items (Create sits between the halves). */
+export const TAB_NAV: NavItem[] = [
   { label: "Home", href: "/app", Icon: House },
   { label: "Chat", href: "/app/chat", Icon: MessageCircle },
   { label: "Calendar", href: "/app/events", Icon: CalendarDays },
-  { label: "Groups", href: "/app/subgroups", Icon: Users },
+  { label: "Photos", href: "/app/photos", Icon: Images },
 ];
 
+/** @brief Desktop top pill nav. Settings/Admin live in the avatar menu. */
+export const TOP_NAV: NavItem[] = [
+  ...TAB_NAV,
+  {
+    label: "Community",
+    href: "/app/community",
+    Icon: Users,
+    match: ["/app/members", "/app/subgroups"],
+  },
+  {
+    label: "Inbox",
+    href: "/app/inbox",
+    Icon: Inbox,
+    match: ["/app/notifications", "/app/bookmarks", "/app/lists"],
+  },
+];
+
+/** @brief Top-nav items that the phone tab bar has no room for (shown first in the More sheet). */
+export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
+  (t) => !TAB_NAV.some((x) => x.href === t.href),
+);
+
+/** @brief Phone More sheet extras (desktop uses the avatar menu). */
 export const MORE_NAV: NavItem[] = [
-  { label: "Galleries", href: "/app/galleries", Icon: Images },
-  { label: "Lists", href: "/app/lists", Icon: List },
-  { label: "Media", href: "/app/media", Icon: Film },
-  { label: "Kudos", href: "/app/kudos", Icon: Trophy },
-  { label: "Bookmarks", href: "/app/bookmarks", Icon: Bookmark },
-  { label: "Members", href: "/app/members", Icon: Contact },
-  { label: "Notifications", href: "/app/notifications", Icon: Bell },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },
-  { label: "Help", href: "/app/help", Icon: CircleHelp },
 ];

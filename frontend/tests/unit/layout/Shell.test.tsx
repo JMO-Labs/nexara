@@ -17,12 +17,22 @@ const { stub } = vi.hoisted(() => ({
   }),
 }));
 vi.mock("@/components/layout/TopBar", () => stub("TopBar"));
+vi.mock("@/components/layout/AppBackdrop", () =>
+  stub("AppBackdrop", "backdrop"),
+);
+vi.mock("@/components/layout/BottomTabBar", async (orig) => ({
+  ...(await orig<typeof import("@/components/layout/BottomTabBar")>()),
+  BottomTabBar: () => <nav aria-label="Primary" />,
+}));
+const settings = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock("@/hooks/useSettings", () => ({
+  useUserSettings: () => ({ data: settings.data }),
+}));
 vi.mock("@/components/layout/BrandingStyle", () => stub("BrandingStyle"));
 vi.mock("@/components/layout/ModalRoot", () => stub("ModalRoot"));
 vi.mock("@/components/help/KeyboardShortcutsModal", () =>
   stub("KeyboardShortcutsModal"),
 );
-vi.mock("@/components/help/HelpButton", () => stub("HelpButton"));
 vi.mock("@/components/onboarding/OnboardingTour", () => stub("OnboardingTour"));
 vi.mock("@/components/onboarding/WelcomeModal", () => stub("WelcomeModal"));
 vi.mock("@/components/ui/ConfirmDialog", () => stub("ConfirmDialog"));
@@ -47,20 +57,55 @@ function setup() {
 }
 
 describe("Shell", () => {
-  it("renders both navigations", () => {
+  it("does not mount page content or the top bar until the session is ready", () => {
+    // Mounting during boot fired every page query without a token (401 burst on reload).
+    useSession.setState({ user: null, status: "loading" });
+    render(
+      <Shell>
+        <p>content</p>
+      </Shell>,
+    );
+    expect(screen.queryByText("content")).toBeNull();
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+  });
+
+  it("has no side rail, only the tab bar and backdrop", () => {
     setup();
     expect(
-      screen.getByRole("navigation", { name: "Main" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("navigation", { name: "Main" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("navigation", { name: "Primary" }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("backdrop")).toBeInTheDocument();
+  });
+
+  it("sets data-transparency when reduce_transparency is on", () => {
+    settings.data = { reduce_transparency: true };
+    const { container } = setup();
+    expect(container.querySelector("[data-density]")).toHaveAttribute(
+      "data-transparency",
+      "reduced",
+    );
+    settings.data = undefined;
   });
 
   it("pads main for the tab bar and safe area", () => {
     setup();
     expect(screen.getByRole("main").className).toContain(
       "env(safe-area-inset-bottom)",
+    );
+  });
+
+  it("frames main at 2400px centred", () => {
+    setup();
+    expect(screen.getByRole("main")).toHaveClass(
+      "mx-auto",
+      "w-full",
+      "max-w-[2400px]",
+      "px-4",
+      "md:px-8",
     );
   });
 
@@ -91,5 +136,12 @@ describe("Shell", () => {
       "compact",
     );
     useUI.setState({ density: "comfortable" });
+  });
+
+  it("does not render a floating Help button (help lives in the avatar menu)", () => {
+    setup();
+    expect(
+      screen.queryByRole("button", { name: "Help menu" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Index, Text
+from sqlalchemy import Boolean, DateTime, Index, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -89,6 +89,7 @@ class ActivityEvent(Base):
         server_default="true",
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),  # column is timestamptz; naive mapping broke aware cursors
         nullable=False,
         server_default=func.now(),
     )

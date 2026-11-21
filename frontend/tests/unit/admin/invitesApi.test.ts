@@ -40,7 +40,7 @@ describe("invitesApi", () => {
 
       const result = await listInvites();
 
-      expect(client.apiGet).toHaveBeenCalledWith("/api/v1/invites");
+      expect(client.apiGet).toHaveBeenCalledWith("/api/v1/admin/invites");
       expect(result).toEqual(mockInvites);
     });
   });
@@ -57,7 +57,7 @@ describe("invitesApi", () => {
 
       const result = await createInvite("test@example.com", "member");
 
-      expect(client.apiPost).toHaveBeenCalledWith("/api/v1/invites", {
+      expect(client.apiPost).toHaveBeenCalledWith("/api/v1/admin/invites", {
         email: "test@example.com",
         role: "member",
       });
@@ -72,7 +72,9 @@ describe("invitesApi", () => {
 
       const result = await revokeInvite("invite-1");
 
-      expect(client.apiDelete).toHaveBeenCalledWith("/api/v1/invites/invite-1");
+      expect(client.apiDelete).toHaveBeenCalledWith(
+        "/api/v1/admin/invites/invite-1",
+      );
       expect(result).toEqual(mockResponse);
     });
   });

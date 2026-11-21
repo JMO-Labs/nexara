@@ -69,14 +69,23 @@ class TestUnreadCount:
 
 
 class TestMarkAllRead:
-    async def test_types_filter_and_count(self) -> None:
-        n = MagicMock()
-        session = _session()
-        session.execute.return_value.scalars.return_value.all.return_value = [n]
+    async def test_single_update_with_types_filter_returns_rowcount(self) -> None:
+        session = _session(rowcount=2)
         count = await NotificationRepository(session).mark_all_read(USER, types=["mention"])
-        assert count == 1
-        assert n.read_at is not None
-        assert "notifications.type in ('mention')" in _stmt(session)
+        assert count == 2
+        assert session.execute.await_count == 1
+        sql = _stmt(session)
+        assert sql.startswith("update notifications")
+        assert "read_at is null" in sql
+        assert "notifications.type in ('mention')" in sql
+        assert "select" not in sql
+
+    async def test_update_without_types_filter(self) -> None:
+        session = _session(rowcount=0)
+        assert await NotificationRepository(session).mark_all_read(USER) == 0
+        sql = _stmt(session)
+        assert sql.startswith("update notifications")
+        assert "notifications.type in" not in sql
 
 
 class TestDeleteAllForUser:

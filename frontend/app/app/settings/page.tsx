@@ -9,5 +9,9 @@ import { SettingsTabs } from "@/components/settings/SettingsTabs";
  * @return Server component wrapping the client SettingsTabs component.
  */
 export default function SettingsPage() {
-  return <SettingsTabs />;
+  return (
+    <div className="mx-auto w-full max-w-[960px]">
+      <SettingsTabs />
+    </div>
+  );
 }

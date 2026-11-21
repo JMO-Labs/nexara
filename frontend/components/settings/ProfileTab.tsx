@@ -3,12 +3,13 @@
  * @file components/settings/ProfileTab.tsx
  * @brief Profile settings tab: display name, bio, location, website, title.
  */
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, SettingsRow, Input, Textarea, Button } from "@/components/ui";
-import { useUpdateProfile } from "@/hooks/useSettings";
+import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
+import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 
 const Schema = z.object({
   display_name: z.string().optional(),
@@ -20,33 +21,57 @@ const Schema = z.object({
 });
 type FormData = z.infer<typeof Schema>;
 
+const FIELDS = [
+  "display_name",
+  "bio",
+  "location",
+  "website_url",
+  "title",
+  "pronouns",
+] as const;
+
+/** @brief Map a profile to form values (null -> empty string). */
+function toFormData(
+  p: Partial<Record<(typeof FIELDS)[number], string | null>>,
+) {
+  const out: FormData = {};
+  FIELDS.forEach((k) => {
+    out[k] = p[k] ?? "";
+  });
+  return out;
+}
+
 /**
  * @brief Profile edit form.
  * @return profile tab content
  */
 export function ProfileTab() {
-  const [initialValues] = useState<FormData>({});
+  const { data: profile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
-  const { register, handleSubmit, formState, watch } = useForm<FormData>({
-    resolver: zodResolver(Schema),
-    defaultValues: initialValues,
-  });
+  const { register, handleSubmit, formState, watch, reset } = useForm<FormData>(
+    { resolver: zodResolver(Schema), defaultValues: {} },
+  );
   const err = formState.errors;
   const pronounsLen = (watch("pronouns") ?? "").length;
 
+  // Sync server data into the form, but never clobber fields the user has
+  // already edited (profile can load or refetch after they start typing).
+  useEffect(() => {
+    if (profile) reset(toFormData(profile), { keepDirtyValues: true });
+  }, [profile, reset]);
+
   const onSubmit = (data: FormData) => {
-    const filtered: Record<string, unknown> = {};
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== "") {
-        filtered[key] = value;
-      }
+    const base = profile ? toFormData(profile) : ({} as FormData);
+    const changed: Record<string, string> = {};
+    (Object.keys(data) as (keyof FormData)[]).forEach((key) => {
+      const next = data[key] ?? "";
+      if (next !== (base[key] ?? "")) changed[key] = next;
     });
-    mutate(filtered);
+    if (Object.keys(changed).length > 0) mutate(changed);
   };
 
   return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-2 text-lg font-semibold">Profile information</h2>
+    <Panel title="Profile information">
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <SettingsRow
           label="Display name"
@@ -54,7 +79,7 @@ export function ProfileTab() {
         >
           <Input
             type="text"
-            label="Display name"
+            aria-label="Display name"
             error={err.display_name?.message}
             {...register("display_name")}
           />
@@ -62,7 +87,7 @@ export function ProfileTab() {
 
         <SettingsRow label="Bio" description="Tell us about yourself.">
           <Textarea
-            label="Bio"
+            aria-label="Bio"
             rows={3}
             placeholder="What's your story?"
             error={err.bio?.message}
@@ -73,7 +98,7 @@ export function ProfileTab() {
         <SettingsRow label="Location" description="Your location (optional).">
           <Input
             type="text"
-            label="Location"
+            aria-label="Location"
             placeholder="City, State"
             error={err.location?.message}
             {...register("location")}
@@ -83,7 +108,7 @@ export function ProfileTab() {
         <SettingsRow label="Website" description="Link to your website.">
           <Input
             type="url"
-            label="Website"
+            aria-label="Website"
             placeholder="https://example.com"
             error={err.website_url?.message}
             {...register("website_url")}
@@ -93,7 +118,7 @@ export function ProfileTab() {
         <SettingsRow label="Title" description="Your professional title.">
           <Input
             type="text"
-            label="Title"
+            aria-label="Title"
             placeholder="e.g., Designer"
             error={err.title?.message}
             {...register("title")}
@@ -106,7 +131,7 @@ export function ProfileTab() {
         >
           <Input
             type="text"
-            label="Pronouns (optional)"
+            aria-label="Pronouns (optional)"
             placeholder="e.g., she/her, they/them"
             maxLength={50}
             error={err.pronouns?.message}
@@ -120,6 +145,6 @@ export function ProfileTab() {
           </Button>
         </div>
       </form>
-    </Card>
+    </Panel>
   );
 }

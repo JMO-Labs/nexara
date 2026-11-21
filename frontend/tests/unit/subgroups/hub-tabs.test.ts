@@ -10,9 +10,9 @@ describe("GROUP_TABS", () => {
     const tabIds = [
       "overview",
       "events",
-      "galleries",
-      "media",
+      "photos",
       "posts",
+      "lists",
       "members",
       "settings",
     ];
@@ -25,24 +25,18 @@ describe("GROUP_TABS", () => {
     });
   });
 
-  it("has icons assigned to all tabs", () => {
-    const expectedIcons = {
-      overview: "HomeIcon",
-      events: "CalendarDaysIcon",
-      galleries: "PhotoIcon",
-      media: "FilmIcon",
-      posts: "NewspaperIcon",
-      members: "UsersIcon",
-      settings: "Cog6ToothIcon",
-    };
+  it("merges Galleries and Media into a single Photos tab", () => {
+    const ids = GROUP_TABS.map((t) => t.id);
+    expect(ids).not.toContain("galleries");
+    expect(ids).not.toContain("media");
+    const photos = GROUP_TABS.find((t) => t.id === "photos");
+    expect(photos?.label).toBe("Photos");
+    expect(photos?.Component).toBeDefined();
+  });
 
-    Object.entries(expectedIcons).forEach(([tabId, expectedIconName]) => {
-      const tab = GROUP_TABS.find((t) => t.id === tabId);
-      expect(tab).toBeDefined();
-      expect(tab?.Icon).toBeDefined();
-      // Verify Icon is callable (React component)
-      expect(typeof tab?.Icon).not.toBe("undefined");
-    });
+  it("places lists right after posts", () => {
+    const ids = GROUP_TABS.map((t) => t.id);
+    expect(ids[ids.indexOf("posts") + 1]).toBe("lists");
   });
 
   it("settings tab has visible() predicate for role check", () => {

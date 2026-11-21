@@ -4,6 +4,7 @@
  */
 "use client";
 
+import { useSession } from "@/stores/session";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/query-keys";
 import {
@@ -18,6 +19,7 @@ import {
   type UserSettings,
   type UserSettingsUpdate,
 } from "@/lib/api/settings";
+import { getMe } from "@/lib/api/users";
 import { useMutationWithToast } from "./useMutationWithToast";
 
 /**
@@ -25,10 +27,26 @@ import { useMutationWithToast } from "./useMutationWithToast";
  * @return Query result with UserSettings data.
  */
 export function useUserSettings() {
+  const authed = useSession((s) => s.status === "authenticated");
   return useQuery({
     queryKey: qk.settings.profile(),
     queryFn: getSettings,
     staleTime: 60_000,
+    enabled: authed,
+  });
+}
+
+/**
+ * @brief Fetch the current user's profile (display name, bio, ...).
+ * @return Query result with CurrentUser data.
+ */
+export function useMyProfile() {
+  const authed = useSession((s) => s.status === "authenticated");
+  return useQuery({
+    queryKey: qk.auth.me(),
+    queryFn: getMe,
+    staleTime: 60_000,
+    enabled: authed,
   });
 }
 
@@ -83,6 +101,7 @@ export function useUpdateProfile() {
     successKey: "toasts.settings.saved",
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings.profile() });
+      qc.invalidateQueries({ queryKey: qk.auth.me() });
     },
   });
 }

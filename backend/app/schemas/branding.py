@@ -22,6 +22,8 @@ _ACCENT_TEXT = "#14301E"
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 """@brief Regex for validating 6-digit hex color strings."""
 
+_HOME_PATTERN_RE = r"^(none|dots|topo|contour|waves|grain)$"
+
 _COLOR_FIELDS = (
     "color_primary",
     "color_primary_dark",
@@ -51,12 +53,12 @@ class BrandingResponse(BaseModel):
     logo_light_url: str | None = None
     logo_dark_url: str | None = None
     # Full palette
-    color_accent: str = "#C6B4F5"
-    color_surface_light: str = "#ffffff"
-    color_surface_dark: str = "#1f2937"
-    color_text_light: str = "#111827"
-    color_text_dark: str = "#f9fafb"
-    font_family: str = "Inter"
+    color_accent: str = "#3B5E9E"
+    color_surface_light: str = "#F5F6F9"
+    color_surface_dark: str = "#1A202A"
+    color_text_light: str = "#10141A"
+    color_text_dark: str = "#E9ECF2"
+    font_family: str = "Outfit"
     font_family_mono: str = "JetBrains Mono"
     email_logo_media_id: UUID | None = None
     email_footer_text: str | None = None
@@ -68,6 +70,7 @@ class BrandingResponse(BaseModel):
     about_short: str | None = None
     custom_css: str | None = None
     custom_css_enabled: bool = False
+    home_pattern: str = "contour"
 
     model_config = {"from_attributes": True}
 
@@ -103,6 +106,7 @@ class BrandingUpdate(BaseModel):
     about_short: str | None = None
     custom_css: str | None = None
     custom_css_enabled: bool | None = None
+    home_pattern: str | None = Field(default=None, pattern=_HOME_PATTERN_RE)
 
     @field_validator(*_COLOR_FIELDS, mode="before")
     @classmethod

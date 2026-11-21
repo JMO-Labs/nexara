@@ -41,7 +41,10 @@ export function BrandingPreview({
           const hello = &quot;world&quot;;
         </code>
         <span
-          style={{ backgroundColor: colors.color_accent, color: "#14301E" }}
+          style={{
+            backgroundColor: colors.color_accent,
+            color: "var(--nx-bg)",
+          }}
           className="w-fit rounded-full px-3 py-1 text-sm font-medium"
         >
           Accent badge

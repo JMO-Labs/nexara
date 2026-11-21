@@ -22,6 +22,22 @@ const post = {
 } as unknown as Post;
 
 describe("PostHeader", () => {
+  it("shows edited only when edited_at is set", () => {
+    const later = {
+      ...post,
+      updated_at: new Date(Date.now() + 60_000).toISOString(),
+    };
+    const { rerender } = render(<PostHeader post={later} isAuthor={false} />);
+    expect(screen.queryByText(/edited/)).toBeNull();
+    rerender(
+      <PostHeader
+        post={{ ...later, edited_at: later.updated_at }}
+        isAuthor={false}
+      />,
+    );
+    expect(screen.getByText(/edited/)).toBeInTheDocument();
+  });
+
   it("shows author and a Report-only menu for non-owners", async () => {
     const user = userEvent.setup();
     render(<PostHeader post={post} isAuthor={false} />);

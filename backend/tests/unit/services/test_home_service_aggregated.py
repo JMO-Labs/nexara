@@ -70,7 +70,7 @@ class TestListMediaAggregated:
         }
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([item_a], None)
@@ -97,7 +97,7 @@ class TestListMediaAggregated:
         }
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([item_community], None)
@@ -123,7 +123,7 @@ class TestListMediaAggregated:
         }
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = [target_sg_id]
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([item_sg], None)
@@ -151,7 +151,7 @@ class TestListMediaAggregated:
         sg_obj_2.id = sg2
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = [sg_obj_1, sg_obj_2]
+        subgroup_repo.member_subgroup_ids.return_value = [sg1, sg2]
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([], None)
@@ -168,7 +168,7 @@ class TestListMediaAggregated:
         user = _make_user()
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([], None)
@@ -185,7 +185,7 @@ class TestListMediaAggregated:
         user = _make_user()
 
         subgroup_repo = AsyncMock(spec=SubgroupRepository)
-        subgroup_repo.list_visible_for_user.return_value = []
+        subgroup_repo.member_subgroup_ids.return_value = []
 
         media_repo = AsyncMock(spec=SubgroupMediaRepository)
         media_repo.list_aggregated.return_value = ([], None)

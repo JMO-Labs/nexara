@@ -3,7 +3,8 @@
  * @file components/settings/NudgePreferences.tsx
  * @brief Engagement settings: opt in/out of nudges and gentle reminders.
  */
-import { Card, SettingsRow, Skeleton, Switch } from "@/components/ui";
+import { SettingsRow, Skeleton, Switch } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
 /**
@@ -17,8 +18,7 @@ export function NudgePreferences() {
   if (isLoading) return <Skeleton height={160} rounded="lg" />;
 
   return (
-    <Card className="max-w-3xl p-4 md:p-6">
-      <h2 className="mb-2 text-lg font-semibold">Engagement</h2>
+    <Panel title="Engagement">
       <SettingsRow
         label="Receive nudges"
         description="Let others nudge you as a friendly reminder"
@@ -39,6 +39,6 @@ export function NudgePreferences() {
           onCheckedChange={(v) => mutate({ receive_gentle_nudges: v })}
         />
       </SettingsRow>
-    </Card>
+    </Panel>
   );
 }

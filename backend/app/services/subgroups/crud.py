@@ -22,7 +22,6 @@ from app.models.subgroup import ChatChannel, Subgroup
 from app.models.user import User
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.services.activity_publish import record_activity
-from app.services.branding.contrast import accent_passes_aa
 from app.services.subgroups.helpers import is_admin, require_role
 
 if TYPE_CHECKING:
@@ -276,6 +275,26 @@ class SubgroupCrudMixin:
         roles = await self._member_repo.list_my_roles(user.id)
         return [(s, roles.get(s.id)) for s in subgroups]
 
+    async def list_subgroup_cards(
+        self,
+        user: User,
+    ) -> list[tuple[Subgroup, str | None, list[dict[str, Any]], int]]:
+        """
+        @brief Visible subgroups with viewer role, member preview and member count.
+
+        Two batched lookups cover the whole page (no per-subgroup queries).
+
+        @param user Requesting user.
+        @return List of (Subgroup, role-or-None, preview members, member count) tuples.
+        """
+        rows = await self.list_subgroups_with_membership(user)
+        if not rows:
+            return []
+        ids = [s.id for s, _ in rows]
+        previews = await self._member_repo.list_member_previews(self._community_id, ids, limit=4)
+        counts = await self._member_repo.count_members_bulk(self._community_id, ids)
+        return [(s, role, previews.get(s.id, []), counts.get(s.id, 0)) for s, role in rows]
+
     async def update_subgroup(
         self,
         slug: str,
@@ -309,10 +328,6 @@ class SubgroupCrudMixin:
         if accent is not None:
             if not _ACCENT_HEX_RE.match(accent):
                 raise ValidationError(message=_("Accent color must be a #RRGGBB hex value"))
-            if not accent_passes_aa(accent):
-                raise ValidationError(
-                    message=_("Accent color lacks sufficient contrast (WCAG AA 4.5:1)")
-                )
 
         if "cover_media_id" in updates and updates["cover_media_id"] is not None:
             media = await self._subgroup_repo.get_media_by_id(updates["cover_media_id"])

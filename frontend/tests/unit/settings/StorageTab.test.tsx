@@ -99,7 +99,7 @@ describe("StorageTab", () => {
     render(<StorageTab />);
     expect(screen.getByRole("link", { name: "Manage media" })).toHaveAttribute(
       "href",
-      "/app/media",
+      "/app/photos?view=all",
     );
   });
 
@@ -120,6 +120,11 @@ describe("StorageTab", () => {
     unmount();
     mockHook(undefined, { isError: true });
     render(<StorageTab />);
-    expect(screen.getByText(/could not load storage/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/couldn't load your storage usage/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
   });
 });

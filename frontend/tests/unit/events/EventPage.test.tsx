@@ -23,10 +23,18 @@ vi.mock("@/components/events/EventCountdown", () => ({
 
 const future = new Date(Date.now() + 86400_000 * 2).toISOString();
 const past = new Date(Date.now() - 86400_000 * 2).toISOString();
-const ev = (starts_at: string) => ({ id: "e1", title: "Picnic", starts_at });
+const ev = (starts_at: string) => ({
+  id: "e1",
+  title: "Picnic",
+  starts_at,
+  ends_at: starts_at,
+  is_all_day: false,
+});
 
 describe("EventPage", () => {
-  beforeEach(() => useEventDetail.mockReset());
+  beforeEach(() => {
+    useEventDetail.mockReset();
+  });
 
   it("shows skeleton while loading", () => {
     useEventDetail.mockReturnValue({ isLoading: true });
@@ -43,6 +51,15 @@ describe("EventPage", () => {
     expect(
       screen.getByRole("link", { name: /back/i }).getAttribute("href"),
     ).toBe("/app/events");
+  });
+
+  it("uses PageHeader (h1 title) and a glass Panel", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    expect(
+      screen.getByRole("heading", { name: "Picnic", level: 1 }),
+    ).toBeTruthy();
+    expect(screen.getByTestId("body").closest(".glass")).not.toBeNull();
   });
 
   it("omits countdown for past events", () => {
@@ -64,5 +81,25 @@ describe("EventPage", () => {
     useEventDetail.mockReturnValue({ data: ev(future) });
     render(<EventPage id="e1" />);
     expect(screen.queryByRole("main")).toBeNull();
+  });
+
+  it("uses the full shell frame (no narrow max-width column)", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    const { container } = render(<EventPage id="e1" />);
+    expect(container.firstElementChild!.className).not.toContain("max-w-5xl");
+  });
+
+  it("caps the details column so it does not stretch across the frame", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    const details = screen.getByTestId("body").closest(".max-w-3xl");
+    expect(details).not.toBeNull();
+  });
+
+  it("puts the details before the countdown on phones", () => {
+    useEventDetail.mockReturnValue({ data: ev(future) });
+    render(<EventPage id="e1" />);
+    const countdown = screen.getByTestId("countdown");
+    expect(countdown.closest(".max-md\\:order-first")).toBeNull();
   });
 });

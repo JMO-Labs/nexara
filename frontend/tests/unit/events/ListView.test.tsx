@@ -50,8 +50,8 @@ describe("ListView", () => {
     setup(events);
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.map((h) => h.textContent)).toEqual([
-      "Wednesday, April 15",
-      "Thursday, April 16",
+      "Wed, Apr 15",
+      "Thu, Apr 16",
     ]);
     const titles = screen.getAllByRole("button").map((b) => b.textContent);
     expect(titles[0]).toContain("Morning");

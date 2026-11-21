@@ -1,11 +1,10 @@
 "use client";
 /**
  * @file components/lists/listFormFields.tsx
- * @brief Shared form controls for list modals: native select and color input.
+ * @brief Shared form controls for list forms: color input.
  */
 import * as React from "react";
-import { Field, controlClass, type FieldProps } from "@/components/ui/Field";
-import { cn } from "@/lib/utils";
+import { Field, type FieldProps } from "@/components/ui/Field";
 
 export const LIST_COLORS = [
   "#3366ff",
@@ -17,29 +16,7 @@ export const LIST_COLORS = [
 ] as const;
 
 /**
- * @brief Labelled native select (testable, keyboard friendly).
- * @return select element
- */
-export const NativeSelect = React.forwardRef<
-  HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement> & FieldProps
->(function NativeSelect({ label, error, hint, className, ...rest }, ref) {
-  return (
-    <Field label={label} error={error} hint={hint}>
-      {(a) => (
-        <select
-          ref={ref}
-          className={cn(controlClass, "h-10", className)}
-          {...a}
-          {...rest}
-        />
-      )}
-    </Field>
-  );
-});
-
-/**
- * @brief Labelled color input with preset swatches via datalist.
+ * @brief Labelled color input (glass circle) with preset swatches via datalist.
  * @return color input
  */
 export const ColorInput = React.forwardRef<
@@ -55,7 +32,7 @@ export const ColorInput = React.forwardRef<
             ref={ref}
             type="color"
             list={listId}
-            className="h-10 w-16 cursor-pointer rounded-xl border border-current/30 bg-surface p-1"
+            className="glass-item size-10 cursor-pointer appearance-none overflow-hidden rounded-full border-0 p-1 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0"
             {...a}
             {...rest}
           />

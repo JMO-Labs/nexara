@@ -9,11 +9,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Panel } from "@/components/ui/page";
 import { useCommunityId } from "@/hooks/useCommunityId";
 import { useList } from "@/hooks/useListDetail";
 import type { List } from "@/lib/api/listTypes";
 import { ListDetailPanel } from "../ListDetailPanel";
-import { ListEditModal } from "../ListEditModal";
+import { ListEditForm } from "../ListEditForm";
 import { ErrorCard, LISTS_CRUMB, PageHeader, PageSkeleton } from "./PageChrome";
 
 /**
@@ -21,7 +22,7 @@ import { ErrorCard, LISTS_CRUMB, PageHeader, PageSkeleton } from "./PageChrome";
  * @param props list id and render function
  * @return state UI or children(list)
  */
-function WithList({
+export function WithList({
   id,
   children,
 }: {
@@ -45,13 +46,13 @@ export function ListDetailView({ id }: { id: string }) {
   return (
     <WithList id={id}>
       {(list, communityId) => (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <PageHeader
             crumbs={[LISTS_CRUMB, { label: list.title }]}
             title={list.title}
-            hideTitle
+            description={list.description ?? undefined}
             actions={
-              <Button asChild variant="outline">
+              <Button asChild variant="secondary">
                 <Link href={`/app/lists/${list.id}/edit`}>
                   <Pencil aria-hidden className="size-4" />
                   Edit
@@ -73,10 +74,11 @@ export function ListDetailView({ id }: { id: string }) {
  */
 export function ListEditView({ id }: { id: string }) {
   const router = useRouter();
+  const back = () => router.push(`/app/lists/${id}`);
   return (
     <WithList id={id}>
       {(list, communityId) => (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <PageHeader
             crumbs={[
               LISTS_CRUMB,
@@ -85,12 +87,14 @@ export function ListEditView({ id }: { id: string }) {
             ]}
             title="Edit list"
           />
-          <ListEditModal
-            open
-            list={list}
-            communityId={communityId}
-            onClose={() => router.push(`/app/lists/${list.id}`)}
-          />
+          <Panel>
+            <ListEditForm
+              list={list}
+              communityId={communityId}
+              onDone={back}
+              onCancel={back}
+            />
+          </Panel>
         </div>
       )}
     </WithList>

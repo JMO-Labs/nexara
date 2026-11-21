@@ -4,7 +4,7 @@
  * @brief OAuth provider management tab for SSO configuration.
  */
 import { useState } from "react";
-import { AlertCircle, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   useOauthProviders,
   useCreateOauthProvider,
@@ -15,7 +15,8 @@ import {
   useSsoOnly,
   useSetSsoOnly,
 } from "@/hooks/useAdminOauth";
-import { Button, IconButton, Modal, Switch } from "@/components/ui";
+import { Button, EmptyState, IconButton, Modal, Switch } from "@/components/ui";
+import { AdminNotice } from "./AdminState";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import type {
   OAuthProviderCreate,
@@ -71,6 +72,7 @@ export function SsoTab() {
   };
 
   const noneActive = !providers?.some((p) => p.enabled);
+  const hasProviders = !!providers && providers.length > 0;
 
   if (isLoading) {
     return (
@@ -86,12 +88,7 @@ export function SsoTab() {
 
   if (error) {
     return (
-      <div
-        role="alert"
-        className="rounded-2xl border-l-4 border-danger bg-surface p-3"
-      >
-        Failed to load OAuth providers
-      </div>
+      <AdminNotice tone="error">Failed to load OAuth providers</AdminNotice>
     );
   }
 
@@ -107,34 +104,30 @@ export function SsoTab() {
             />
             SSO only
           </label>
-          {ssoOnly && (
-            <p className="text-sm text-muted">
-              Require all users to log in via SSO
-            </p>
-          )}
+          <p className="text-sm text-muted">
+            Require all users to log in via SSO
+          </p>
         </div>
-        <Button onClick={() => setOpenModal(true)}>
-          <Plus className="size-4" aria-hidden="true" />
-          Add OIDC Provider
-        </Button>
+        {hasProviders && (
+          <Button onClick={() => setOpenModal(true)}>
+            <Plus className="size-4" aria-hidden="true" />
+            Add OIDC provider
+          </Button>
+        )}
       </div>
       {ssoOnly && noneActive && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-2xl border-l-4 border-danger bg-surface p-3"
-        >
-          <AlertCircle className="size-4" aria-hidden="true" />
+        <AdminNotice tone="error">
           SSO-only is enabled but no providers are active. Users can&apos;t log
           in!
-        </div>
+        </AdminNotice>
       )}
 
-      {providers && providers.length > 0 ? (
+      {hasProviders ? (
         <ul className="grid gap-4 md:grid-cols-2">
           {providers.map((provider) => (
             <li
               key={provider.id}
-              className="flex flex-col gap-3 rounded-2xl bg-surface p-4"
+              className="glass-item flex flex-col gap-3 rounded-[22px] p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -160,14 +153,14 @@ export function SsoTab() {
                 </label>
                 <div className="flex gap-1">
                   <IconButton
-                    variant="ghost"
+                    variant="glass"
                     aria-label={`Edit ${provider.display_name}`}
                     onClick={() => setEditing(provider)}
                   >
                     <Pencil className="size-4" aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    variant="ghost"
+                    variant="glass"
                     aria-label={`Delete ${provider.display_name}`}
                     onClick={() => handleDelete(provider)}
                   >
@@ -179,8 +172,19 @@ export function SsoTab() {
           ))}
         </ul>
       ) : (
-        <div role="status" className="rounded-2xl bg-surface p-3">
-          No OAuth providers configured yet
+        <div role="status">
+          <EmptyState
+            compact
+            icon={KeyRound}
+            title="No providers yet"
+            description="Connect an OIDC provider to let members sign in with SSO."
+            action={
+              <Button onClick={() => setOpenModal(true)}>
+                <Plus className="size-4" aria-hidden="true" />
+                Add OIDC provider
+              </Button>
+            }
+          />
         </div>
       )}
 

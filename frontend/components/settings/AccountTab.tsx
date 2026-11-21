@@ -3,12 +3,14 @@
  * @file components/settings/AccountTab.tsx
  * @brief Account settings tab: email change form.
  */
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, SettingsRow, Input, Button } from "@/components/ui";
+import { SettingsRow, Input, Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import { useUpdateEmail } from "@/hooks/useSettings";
+import { useSession } from "@/stores/session";
 import { DataExportSection } from "./DataExportSection";
 
 const Schema = z.object({
@@ -21,17 +23,19 @@ type FormData = z.infer<typeof Schema>;
  * @return account tab content
  */
 export function AccountTab() {
-  const [initialEmail] = useState("");
+  const currentEmail = useSession((s) => s.user?.email ?? "");
   const { mutate, isPending } = useUpdateEmail();
-  const { register, handleSubmit, formState } = useForm<FormData>({
+  const { register, handleSubmit, formState, reset } = useForm<FormData>({
     resolver: zodResolver(Schema),
-    defaultValues: { email: initialEmail },
+    defaultValues: { email: currentEmail },
   });
+  useEffect(() => {
+    if (currentEmail) reset({ email: currentEmail });
+  }, [currentEmail, reset]);
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="max-w-3xl p-4 md:p-6">
-        <h2 className="mb-2 text-lg font-semibold">Email address</h2>
+      <Panel title="Email address">
         <form onSubmit={handleSubmit((d) => mutate(d.email))} noValidate>
           <SettingsRow
             label="Email"
@@ -39,7 +43,7 @@ export function AccountTab() {
           >
             <Input
               type="email"
-              label="Email address"
+              aria-label="Email address"
               placeholder="name@example.com"
               autoComplete="email"
               error={formState.errors.email?.message}
@@ -47,12 +51,16 @@ export function AccountTab() {
             />
           </SettingsRow>
           <div className="mt-4">
-            <Button type="submit" loading={isPending} disabled={isPending}>
+            <Button
+              type="submit"
+              loading={isPending}
+              disabled={isPending || !formState.isDirty}
+            >
               Update email
             </Button>
           </div>
         </form>
-      </Card>
+      </Panel>
       <DataExportSection />
     </div>
   );

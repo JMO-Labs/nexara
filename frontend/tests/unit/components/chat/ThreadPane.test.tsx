@@ -73,16 +73,34 @@ describe("ThreadPane", () => {
 describe("gridClass (pane collapse)", () => {
   it("stacks below md, 2 panes at md, 3 panes only at lg", () => {
     expect(gridClass(false)).toContain("grid-cols-1");
-    expect(gridClass(false)).toContain("md:grid-cols-[280px_1fr]");
+    expect(gridClass(false)).toContain("md:grid-cols-[300px_minmax(0,1fr)]");
     expect(gridClass(false)).not.toContain("_320px]");
-    expect(gridClass(true)).toContain("md:grid-cols-[280px_1fr]");
-    expect(gridClass(true)).not.toContain("md:grid-cols-[280px_1fr_320px]");
-    expect(gridClass(true)).toContain("lg:grid-cols-[280px_1fr_320px]");
+    expect(gridClass(true)).toContain("md:grid-cols-[300px_minmax(0,1fr)]");
+    expect(gridClass(true)).not.toContain(
+      "md:grid-cols-[300px_minmax(0,1fr)_320px]",
+    );
+    expect(gridClass(true)).toContain(
+      "lg:grid-cols-[300px_minmax(0,1fr)_320px]",
+    );
   });
   it("details pane shows only at lg", () => {
     render(<DetailsPane />);
     const aside = screen.getByRole("complementary", { name: "Details" });
     expect(aside.className).toContain("lg:flex");
     expect(aside.className).not.toContain("md:flex");
+  });
+});
+
+describe("ThreadPane brand styling", () => {
+  it("has no hard header divider and glass header buttons", () => {
+    render(<ThreadPane {...props} />);
+    const header = screen
+      .getByRole("heading", { name: "General" })
+      .closest("header") as HTMLElement;
+    expect(header.className).not.toContain("border-b");
+    const density = screen.getByRole("button", { name: /compact density/i });
+    expect(density).toHaveClass("glass-btn", "rounded-full");
+    const details = screen.getByRole("button", { name: /open thread panel/i });
+    expect(details).toHaveClass("glass-btn", "rounded-full");
   });
 });

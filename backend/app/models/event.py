@@ -155,6 +155,7 @@ class EventAttendance(Base):
     __table_args__ = (
         UniqueConstraint("event_id", "user_id"),
         Index("attendance_event_idx", "event_id"),
+        Index("attendance_user_idx", "user_id"),
     )
 
 

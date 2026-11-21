@@ -21,7 +21,10 @@ function OptionHints({ field }: { field: TemplateField }) {
       className="flex flex-wrap gap-1 text-xs text-muted-foreground"
     >
       {opts.map((o, i) => (
-        <li key={`${o.value}-${i}`} className="rounded border px-1.5 py-0.5">
+        <li
+          key={`${o.value}-${i}`}
+          className="glass-item rounded-full px-2 py-0.5"
+        >
           {o.label || o.value}
         </li>
       ))}

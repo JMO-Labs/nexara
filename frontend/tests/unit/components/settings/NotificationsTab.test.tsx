@@ -179,7 +179,7 @@ describe("NotificationsTab", () => {
     const user = userEvent.setup();
     renderTab();
     await user.click(
-      await screen.findByRole("button", { name: "Add window Mon" }),
+      await screen.findByRole("button", { name: "Add hours for Mon" }),
     );
     expect(api.patchPreferences).not.toHaveBeenCalled();
     await waitFor(() => expect(api.patchPreferences).toHaveBeenCalledTimes(1));

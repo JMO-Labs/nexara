@@ -14,6 +14,9 @@ vi.mock("next-intl", () => ({
 
 import { DnDScheduleEditor } from "@/components/settings/DnDScheduleEditor";
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.scrollIntoView ??= () => {};
+
 describe("DnDScheduleEditor", () => {
   it("renders seven day rows", () => {
     render(
@@ -29,7 +32,7 @@ describe("DnDScheduleEditor", () => {
     );
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Add window Mon" }));
+      .click(screen.getByRole("button", { name: "Add hours for Mon" }));
     expect(onChange).toHaveBeenCalledWith(
       { mon: [{ start: "22:00", end: "07:00" }] },
       "UTC",
@@ -79,14 +82,15 @@ describe("DnDScheduleEditor", () => {
     );
   });
 
-  it("changes timezone", () => {
+  it("changes timezone", async () => {
     const onChange = vi.fn();
     render(
       <DnDScheduleEditor schedule={null} timezone="UTC" onChange={onChange} />,
     );
-    fireEvent.change(screen.getByLabelText("Timezone"), {
-      target: { value: "Europe/Paris" },
-    });
+    fireEvent.click(screen.getByLabelText("Timezone"));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Europe/Paris" }),
+    );
     expect(onChange).toHaveBeenCalledWith(null, "Europe/Paris");
   });
 });

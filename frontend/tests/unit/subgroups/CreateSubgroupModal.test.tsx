@@ -135,7 +135,7 @@ describe("CreateSubgroupModal", () => {
   it("can upload and show cover image", async () => {
     renderWithProviders(<CreateSubgroupModal open={true} onClose={() => {}} />);
 
-    const uploadButton = screen.getByRole("button", { name: /Upload cover/i });
+    const uploadButton = screen.getByRole("button", { name: /Upload image/i });
     expect(uploadButton).toBeInTheDocument();
 
     // Verify file input exists

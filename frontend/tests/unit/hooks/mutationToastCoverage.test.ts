@@ -12,7 +12,6 @@ const HOOKS = [
   "useChat",
   "useEvents",
   "useGalleries",
-  "useMedia",
   "useSubgroups",
   "useSettings",
   "useInvites",

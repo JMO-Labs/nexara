@@ -22,9 +22,12 @@ import {
 } from "date-fns";
 import type { EventItem } from "@/lib/api/events";
 import { assignLanes } from "@/lib/events/lanes";
+import { EmptyState } from "@/components/ui";
+import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
-import { chipStyle } from "./toneStyle";
+import { formatTime } from "./formatTime";
+import { chipStyle, TODAY_PILL } from "./toneStyle";
 
 const LANE_HEIGHT = 22;
 const HEADER_OFFSET = 34;
@@ -121,9 +124,12 @@ export function MonthCalendarLarge({
 
   return (
     <div className="w-full">
-      <div className="mb-2 grid grid-cols-7 px-1" aria-hidden="true">
+      <div className="mb-1 grid grid-cols-7 gap-1" aria-hidden="true">
         {DAY_NAMES.map((d) => (
-          <span key={d} className="py-1 text-xs font-semibold text-muted">
+          <span
+            key={d}
+            className="py-1 text-center text-xs font-medium text-muted"
+          >
             {d}
           </span>
         ))}
@@ -133,7 +139,7 @@ export function MonthCalendarLarge({
         ref={gridRef}
         role="grid"
         aria-label={format(month, "MMMM yyyy")}
-        className="overflow-hidden rounded-2xl bg-surface"
+        className="flex flex-col gap-1"
       >
         {weeks.map((week, wi) => {
           const segs = weekSegments[wi];
@@ -150,10 +156,7 @@ export function MonthCalendarLarge({
             <div
               key={wi}
               role="row"
-              className={cn(
-                "relative grid grid-cols-7 sm:min-h-[104px]",
-                wi > 0 && "border-t border-ink/15",
-              )}
+              className={cn("relative grid grid-cols-7 gap-1 sm:min-h-[104px]")}
             >
               {week.map((day, di) => {
                 const inMonth = isSameMonth(day, month);
@@ -172,27 +175,24 @@ export function MonthCalendarLarge({
                     onClick={() => onSelectDay(day)}
                     onKeyDown={(e) => onCellKey(e, day)}
                     className={cn(
-                      "relative min-h-14 cursor-pointer px-1 pt-1 sm:px-2 sm:pt-1.5",
+                      "glass-item relative min-h-14 cursor-pointer rounded-[18px] px-1 pt-1 sm:px-2 sm:pt-1.5",
                       "outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
-                      di > 0 && "border-l border-ink/15",
-                      selected || !inMonth ? "bg-bg" : "bg-transparent",
+                      selected && "ring-2 ring-ink",
                       !inMonth && "opacity-60",
-                      "hover:bg-bg motion-safe:transition-colors",
+                      "motion-safe:transition-colors hover:ring-1 hover:ring-ink/30",
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <span
                         className={cn(
                           "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm tabular-nums",
-                          today
-                            ? "bg-accent font-black text-surface-strong"
-                            : "font-semibold text-ink",
+                          today ? TODAY_PILL : "font-semibold text-ink",
                         )}
                       >
                         {format(day, "d")}
                       </span>
-                      {wi === 0 || day.getDate() === 1 ? (
-                        <span className="hidden text-xs font-semibold text-muted sm:inline">
+                      {day.getDate() === 1 ? (
+                        <span className="hidden text-xs font-medium text-muted sm:inline">
                           {format(day, "MMM")}
                         </span>
                       ) : null}
@@ -204,10 +204,8 @@ export function MonthCalendarLarge({
                           aria-hidden="true"
                           className="size-1.5 rounded-full"
                           style={{
-                            backgroundColor: chipStyle(
-                              toneForEvent(ev, subgroupNames),
-                              true,
-                            ).backgroundColor,
+                            backgroundColor: toneForEvent(ev, subgroupNames)
+                              .solid,
                           }}
                         />
                       ))}
@@ -223,7 +221,7 @@ export function MonthCalendarLarge({
 
               {/* Event bar overlay (tablet and up) */}
               <div
-                className="pointer-events-none absolute inset-x-0 hidden grid-cols-7 sm:grid"
+                className="pointer-events-none absolute inset-x-0 hidden grid-cols-7 gap-1 sm:grid"
                 style={{ top: HEADER_OFFSET }}
               >
                 {segs
@@ -248,7 +246,7 @@ export function MonthCalendarLarge({
                             onSelectEvent(s.event);
                           }
                         }}
-                        className="pointer-events-auto mx-0.5 cursor-pointer truncate rounded border-l-[3px] px-1.5 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+                        className="pointer-events-auto flex cursor-pointer items-center gap-1.5 rounded-full px-2 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
                         style={{
                           gridColumn: `${s.col + 1} / span ${s.span}`,
                           gridRow: 1,
@@ -258,9 +256,18 @@ export function MonthCalendarLarge({
                           ...chipStyle(s.tone, solid),
                         }}
                       >
-                        {s.startsHere
-                          ? `${s.event.is_all_day ? "" : `${format(parseISO(s.event.starts_at), "h:mma").toLowerCase()} · `}${s.event.title}`
-                          : " "}
+                        {s.startsHere && (
+                          <span
+                            aria-hidden="true"
+                            className="size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: s.tone.solid }}
+                          />
+                        )}
+                        <span className="min-w-0 truncate">
+                          {s.startsHere
+                            ? `${s.event.is_all_day ? "" : `${formatTime(parseISO(s.event.starts_at))} · `}${s.event.title}`
+                            : " "}
+                        </span>
                       </div>
                     );
                   })}
@@ -273,11 +280,15 @@ export function MonthCalendarLarge({
       {/* Phone: events for the selected day */}
       {selectedDay && (
         <div className="mt-3 sm:hidden" aria-live="polite">
-          <h3 className="mb-2 text-sm font-semibold">
-            {format(selectedDay, "EEEE, MMM d")}
+          <h3 className="mb-2 text-sm font-medium text-muted">
+            {format(selectedDay, "EEE, MMM d")}
           </h3>
           {dayEvents.length === 0 ? (
-            <p className="text-sm text-muted">No events</p>
+            <EmptyState
+              compact
+              icon={CalendarDays}
+              title="No events this day"
+            />
           ) : (
             <ul className="flex flex-col gap-2">
               {dayEvents.map((ev) => {
@@ -287,15 +298,12 @@ export function MonthCalendarLarge({
                     <button
                       type="button"
                       onClick={() => onSelectEvent(ev)}
-                      className="flex min-h-11 w-full items-center gap-3 rounded-2xl bg-surface px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      className="glass-item flex min-h-11 w-full items-center gap-3 rounded-[22px] px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
                       <span
                         aria-hidden="true"
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: chipStyle(tone, true)
-                            .backgroundColor,
-                        }}
+                        style={{ backgroundColor: tone.solid }}
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
@@ -304,7 +312,7 @@ export function MonthCalendarLarge({
                         <span className="block text-xs text-muted">
                           {ev.is_all_day
                             ? "All day"
-                            : format(parseISO(ev.starts_at), "p")}
+                            : formatTime(parseISO(ev.starts_at))}
                         </span>
                       </span>
                     </button>

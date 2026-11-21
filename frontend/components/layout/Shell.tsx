@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/layout/Shell.tsx
- * @brief Authenticated app shell. Composes SideNav + TopBar + main pane +
+ * @brief Authenticated app shell. Composes backdrop + TopBar + main pane +
  *        BottomTabBar. Bootstraps the session and gates rendering on it.
  *        Global ? listener opens keyboard shortcuts modal.
  */
@@ -13,14 +13,14 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
 import { useSessionBootstrap } from "@/hooks/useSession";
 import { useUI } from "@/stores/ui";
+import { useUserSettings } from "@/hooks/useSettings";
 import { useModals } from "@/stores/modals";
 import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
-import { SideNav } from "./SideNav";
+import { AppBackdrop } from "./AppBackdrop";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
-import { HelpButton } from "@/components/help/HelpButton";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
@@ -32,6 +32,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const status = useSession((s) => s.status);
   const density = useUI((s) => s.density);
+  const { data: settings } = useUserSettings();
+  const reduced = (settings as { reduce_transparency?: boolean } | undefined)
+    ?.reduce_transparency;
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   useEffect(() => {
@@ -72,22 +75,42 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const isBooting = status === "idle" || status === "loading";
 
+  // Mount nothing that fetches until the session (and its token) is restored;
+  // otherwise every page query fires unauthenticated on a hard reload.
+  if (isBooting)
+    return (
+      <div className="text-ink flex min-h-dvh items-center justify-center">
+        <AppBackdrop />
+        <Loader2
+          aria-label="Loading"
+          className="size-6 motion-safe:animate-spin"
+        />
+      </div>
+    );
+
   return (
     <TooltipProvider>
-      <div className="bg-bg text-ink min-h-dvh" data-density={density}>
+      <div
+        className="text-ink min-h-dvh"
+        data-density={density}
+        data-transparency={reduced ? "reduced" : undefined}
+      >
+        <AppBackdrop />
         <a
           href="#main"
-          className="bg-surface-strong text-accent focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
+          className="bg-surface-strong text-bg focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
         >
           Skip to content
         </a>
         <BrandingStyle />
-        <SideNav />
-        <div className="flex min-h-dvh min-w-0 flex-col md:pl-16">
+        <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />
           <main
             id="main"
-            className={cn("relative flex-1 px-4 md:px-8", TAB_BAR_CLEARANCE)}
+            className={cn(
+              "relative mx-auto w-full max-w-[2400px] flex-1 px-4 md:px-8",
+              TAB_BAR_CLEARANCE,
+            )}
             aria-busy={isBooting || undefined}
           >
             {children}
@@ -106,7 +129,6 @@ export function Shell({ children }: { children: ReactNode }) {
           <>
             <ModalRoot />
             <KeyboardShortcutsModal />
-            <HelpButton />
             <WelcomeModal />
             <OnboardingTour />
             <div className="hidden md:block">

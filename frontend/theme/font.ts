@@ -1,12 +1,12 @@
 /**
  * @file theme/font.ts
- * @brief Hanken Grotesk, the only typeface (weights 400/600/900).
+ * @brief Outfit, the only typeface (weights 300/400/500/600).
  */
-import { Hanken_Grotesk } from "next/font/google";
+import { Outfit } from "next/font/google";
 
-export const hanken = Hanken_Grotesk({
-  weight: ["400", "600", "900"],
-  variable: "--font-hanken",
+export const outfit = Outfit({
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-outfit",
   display: "swap",
   subsets: ["latin"],
 });

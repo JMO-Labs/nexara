@@ -1,16 +1,11 @@
 /**
  * @file tests/unit/components/events/EventsSidePanel.test.tsx
- * @brief Side panel hosts the mini calendar driven by page month state.
+ * @brief Side panel: "Up next" rail plus the selected-day list; no mini month.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EventsSidePanel } from "@/components/events/events-page/EventsSidePanel";
-
-vi.mock("@/components/events/EventRail", () => ({ EventRail: () => <div /> }));
-vi.mock("@/components/events/EventCountdown", () => ({
-  EventCountdown: () => <div />,
-}));
 
 const picnic: any = {
   id: "1",
@@ -18,36 +13,94 @@ const picnic: any = {
   starts_at: "2025-01-10T12:00:00",
   ends_at: "2025-01-10T13:00:00",
 };
+const concert: any = {
+  id: "2",
+  title: "Concert",
+  starts_at: "2025-01-12T19:00:00",
+  ends_at: "2025-01-12T21:00:00",
+};
 
-function setup() {
+function setup(over: Record<string, unknown> = {}) {
   const props = {
-    nextEvent: null,
-    events: [picnic],
-    railEvents: [],
-    month: new Date(2025, 0, 1),
-    onMonthChange: vi.fn(),
-    selectedDay: null,
+    upcoming: [picnic, concert],
+    railEvents: [picnic],
+    selectedDay: new Date(2025, 0, 10),
     selectedEventId: null,
     subgroupNames: new Map<string, string>(),
     onSelectEvent: vi.fn(),
     onClearDay: vi.fn(),
+    ...over,
   };
-  render(<EventsSidePanel {...props} />);
+  render(<EventsSidePanel {...(props as any)} />);
   return props;
 }
 
-describe("EventsSidePanel calendar", () => {
-  it("shows the page month and day click expands that day inline", async () => {
+describe("EventsSidePanel", () => {
+  it("has an Up next panel listing upcoming events", async () => {
     const p = setup();
-    expect(screen.getByText("January 2025")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: /January 10/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Picnic" }));
-    expect(p.onSelectEvent).toHaveBeenCalledWith(picnic);
+    expect(
+      screen.getByRole("heading", { name: "Up next", level: 2 }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Concert/ }));
+    expect(p.onSelectEvent).toHaveBeenCalledWith(concert);
   });
 
-  it("prev/next month buttons drive onMonthChange", async () => {
+  it("has no mini month or countdown", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: /next month/i })).toBeNull();
+    expect(screen.queryByText("January 2025")).toBeNull();
+  });
+
+  it("titles the day panel with the selected day and can clear it", async () => {
     const p = setup();
-    await userEvent.click(screen.getByRole("button", { name: /next month/i }));
-    expect(p.onMonthChange).toHaveBeenCalledWith(new Date(2025, 1, 1));
+    expect(
+      screen.getByRole("heading", { name: "Fri, Jan 10", level: 2 }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(p.onClearDay).toHaveBeenCalled();
+  });
+
+  it("falls back to This month when no day is selected", () => {
+    setup({ selectedDay: null });
+    expect(
+      screen.getByRole("heading", { name: "This month", level: 2 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+
+  it("Clear is a glass pill", () => {
+    setup();
+    expect(screen.getByRole("button", { name: "Clear" }).className).toContain(
+      "glass-btn",
+    );
+  });
+
+  it("hides the selected-day panel in list view", () => {
+    setup({ showDayPanel: false });
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Fri, Jan 10", level: 2 }),
+    ).toBeNull();
+  });
+
+  it("empty day offers a New event pill wired to onCreate", async () => {
+    const onCreate = vi.fn();
+    setup({ railEvents: [], onCreate });
+    await userEvent.click(screen.getByRole("button", { name: "New event" }));
+    expect(onCreate).toHaveBeenCalled();
+  });
+
+  it("shows an empty line when nothing is upcoming", () => {
+    setup({ upcoming: [] });
+    expect(screen.getByText("Nothing coming up")).toBeInTheDocument();
+  });
+
+  it("Up next scrolls with a fade mask so no row is cut flat", () => {
+    setup();
+    const list = screen
+      .getByRole("button", { name: /Concert/ })
+      .closest(".max-h-72")!;
+    expect(list.className).toContain("mask-image");
+    expect(list.className).toContain("pb-");
   });
 });

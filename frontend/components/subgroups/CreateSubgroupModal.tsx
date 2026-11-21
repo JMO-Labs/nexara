@@ -13,7 +13,7 @@ import {
   Select,
   Option,
 } from "@/components/ui";
-import { CoverField } from "./create-subgroup/CoverField";
+import { CoverPicker } from "@/components/media/CoverPicker";
 import { OwnerPicker } from "./create-subgroup/OwnerPicker";
 import {
   useCreateSubgroupForm,
@@ -79,11 +79,10 @@ export function CreateSubgroupModal({
           <Option value="invite_only">Invite only</Option>
           <Option value="admin_approval">Admin approval</Option>
         </Select>
-        <CoverField
+        <CoverPicker
+          label="Cover image (optional)"
           mediaId={f.coverMediaId}
-          uploading={f.uploading}
-          onUpload={f.uploadCover}
-          onRemove={() => f.setCoverMediaId(null)}
+          onChange={f.setCoverMediaId}
         />
         <OwnerPicker
           enabled={f.assignOwner}

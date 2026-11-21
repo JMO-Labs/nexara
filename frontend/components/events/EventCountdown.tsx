@@ -1,8 +1,8 @@
 "use client";
 /**
  * @file components/events/EventCountdown.tsx
- * @brief Live countdown widget: time until event, large numerals with unit
- * labels below. Updates every 30s via useEventCountdown.
+ * @brief Live countdown: large numerals with unit labels below. Title is
+ * omitted; the host page/panel already names the event. Updates every 30s.
  */
 import * as React from "react";
 import { useEventCountdown } from "@/hooks/useEventCountdown";
@@ -22,18 +22,18 @@ export function EventCountdown({ event }: { event: EventItem }) {
   parts.push({ value: minutes, unit: "min" });
 
   return (
-    <div className="border-y border-current/15 px-4 py-4 text-center">
-      <p className="mb-3 text-sm font-semibold">{event.title}</p>
-      <div className="flex items-end justify-center gap-3">
-        {parts.map((part, idx) => (
-          <div key={`${part.unit}-${idx}`} className="text-center">
-            <div className="text-5xl leading-none font-black tabular-nums">
-              {part.value}
-            </div>
-            <div className="mt-1 text-xs text-muted">{part.unit}</div>
+    <div
+      className="flex items-end gap-5"
+      aria-label={`Starts in ${parts.map((p) => `${p.value} ${p.unit}`).join(", ")}`}
+    >
+      {parts.map((part, idx) => (
+        <div key={`${part.unit}-${idx}`}>
+          <div className="text-4xl leading-none font-medium tracking-tight tabular-nums">
+            {part.value}
           </div>
-        ))}
-      </div>
+          <div className="mt-1 text-xs text-muted">{part.unit}</div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -264,3 +264,10 @@ def test_get_plugin_service_wires_community_scope():
     s = get_settings()
     svc = build(db=None, settings=s)  # type: ignore[arg-type]
     assert svc._cid == uuid.UUID(s.COMMUNITY_ID)
+
+
+async def test_list_plugins_empty_manifest_200(env):
+    async with env.client("member") as c:
+        r = await c.get("/api/v1/plugins")
+    assert r.status_code == 200
+    assert r.json() == []

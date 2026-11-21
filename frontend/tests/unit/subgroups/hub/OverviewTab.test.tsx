@@ -70,4 +70,20 @@ describe("OverviewTab", () => {
     );
     expect(screen.getByText(/Quiet here/i)).toBeInTheDocument();
   });
+
+  it("wraps each section in a named panel with no exclamation copy", () => {
+    const qc = new QueryClient();
+    render(
+      <QueryClientProvider client={qc}>
+        <OverviewTab subgroup={mockSubgroup} />
+      </QueryClientProvider>,
+    );
+    expect(
+      screen.getByRole("region", { name: "Upcoming events" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Recent posts" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/!/)).toBeNull();
+  });
 });

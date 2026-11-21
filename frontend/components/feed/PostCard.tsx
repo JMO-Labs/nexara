@@ -13,6 +13,7 @@ import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
 import { PostHeader } from "./PostHeader";
 import { PostBody } from "./PostBody";
 import { PostMedia } from "./PostMedia";
+import { PollCard } from "./PollCard";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
 import { BookmarkButton } from "./BookmarkButton";
@@ -73,9 +74,9 @@ export function PostCard({
     <Card
       role="article"
       aria-label={cardLabel}
-      className="flex flex-col gap-3 p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-surface))] md:p-4"
+      className="flex flex-col gap-3 rounded-[22px] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--nx-ink)_4%,var(--nx-item))] md:p-4"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-1">
         <PostHeader
           post={post}
           isAuthor={isAuthor}
@@ -115,6 +116,7 @@ export function PostCard({
           )}
         </div>
       ) : null}
+      {post.poll ? <PollCard poll={post.poll} /> : null}
       {post.media.length > 0 ? (
         <PostMedia
           media={post.media}

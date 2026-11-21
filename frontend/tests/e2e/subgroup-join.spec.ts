@@ -1,3 +1,7 @@
+/**
+ * @file tests/e2e/subgroup-join.spec.ts
+ * @brief API-seeded open group: admin joins and leaves from /app/subgroups.
+ */
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { login } from "./fixtures/auth";
 import { apiContext, uniqueId } from "./fixtures/api";
@@ -34,12 +38,12 @@ test("user joins an open subgroup and leaves it again", async ({ page }) => {
   await api.post(`/api/v1/subgroups/${slug}/leave`);
 
   await login(page);
-  await page.goto("/app/subgroups");
+  await page.goto("/app/community?view=groups");
   await page.getByRole("searchbox", { name: "Search groups" }).fill(name);
 
   const card = page
-    .getByRole("heading", { name })
-    .locator("xpath=ancestor::*[@role='button'][1]");
+    .getByRole("article")
+    .filter({ has: page.getByRole("heading", { name }) });
   await card.getByRole("button", { name: "Join", exact: true }).click();
   await expect(card.getByRole("button", { name: "Leave" })).toBeVisible();
 

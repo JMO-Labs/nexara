@@ -1,26 +1,23 @@
 "use client";
 /**
  * @file components/events/events-page/EventsPage.tsx
- * @brief Events page composition: masthead, filters, view switcher, active
- *        view, side rail, detail panel and create/edit modals.
+ * @brief Calendar page: PageHeader, toolbar, glass calendar panel, aside
+ *        panels, detail drawer and create/edit modals.
  */
 import * as React from "react";
+import { addDays, addMonths, startOfWeek } from "date-fns";
+import { cn } from "@/lib/utils";
 import { EventCreateModal } from "@/components/events/EventCreateModal";
 import { EventDetailPanel } from "@/components/events/EventDetailPanel";
-import { CalendarViewSwitcher } from "@/components/events/CalendarViewSwitcher";
 import { CalendarFilterBar } from "@/components/events/CalendarFilterBar";
-import { PageMasthead } from "@/components/layout/PageMasthead";
+import { Button } from "@/components/ui";
+import { Panel } from "@/components/ui/page/Panel";
+import { PageHeader } from "@/components/ui/page/PageHeader";
 import type { EventItem } from "@/lib/api/events";
 import { useEventsPageState } from "./useEventsPageState";
 import { EventsViewPane } from "./EventsViewPane";
 import { EventsSidePanel } from "./EventsSidePanel";
-
-const PERIOD: Record<string, string> = {
-  month: "this month",
-  week: "this week",
-  day: "this day",
-  list: "in view",
-};
+import { periodTitle } from "./calendarNav";
 
 /**
  * @brief The /app/events screen.
@@ -32,18 +29,34 @@ export function EventsPage() {
   const [editEvent, setEditEvent] = React.useState<EventItem | null>(null);
   const wrapperRef = React.useRef<HTMLDivElement | null>(null);
   const drawerReserve = s.selectedEvent ? 296 : 0;
-  const n = s.filtered.length;
+  const unit = s.view === "week" ? "week" : s.view === "day" ? "day" : "month";
+
+  /** Prev/next step by the active view's period. */
+  const step = (dir: -1 | 1) => {
+    if (s.view === "week") s.setWeekStart(addDays(s.weekStart, 7 * dir));
+    else if (s.view === "day")
+      s.setSelectedDay(addDays(s.selectedDay ?? new Date(), dir));
+    else s.setMonth(addMonths(s.month, dir));
+  };
+  /** Jump to today within the active view's period. */
+  const goToday = () => {
+    const now = new Date();
+    if (s.view === "week")
+      s.setWeekStart(startOfWeek(now, { weekStartsOn: 0 }));
+    else if (s.view === "day") s.setSelectedDay(now);
+    else s.setMonth(now);
+  };
 
   return (
     <div
       ref={wrapperRef}
-      className="relative flex min-h-full w-full flex-col px-3 py-4 md:px-4 md:py-5"
-      style={{ paddingBottom: drawerReserve + 24 }}
+      className="relative"
+      style={{ paddingBottom: drawerReserve }}
     >
-      <PageMasthead
-        title="Events"
-        meta={`${n} ${n === 1 ? "event" : "events"} ${PERIOD[s.view]}`}
-        size="md"
+      <PageHeader
+        title="Calendar"
+        description="Everything coming up across your groups"
+        actions={<Button onClick={() => setCreateOpen(true)}>New event</Button>}
       />
 
       <CalendarFilterBar
@@ -55,13 +68,21 @@ export function EventsPage() {
           s.setSelectedEventId(null);
         }}
         calendars={s.calendarList}
-        onCreate={() => setCreateOpen(true)}
+        view={s.view}
+        onViewChange={s.setView}
+        title={periodTitle(s.view, s.month, s.weekStart, s.selectedDay)}
+        unit={unit}
+        onStep={step}
+        onToday={goToday}
       />
 
-      <CalendarViewSwitcher value={s.view} onChange={s.setView} />
-
-      <div className="grid min-h-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0">
+      <div
+        className={cn(
+          "grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-[18px]",
+          s.view === "list" ? "lg:items-start" : "items-stretch",
+        )}
+      >
+        <Panel as="div" className={cn("min-w-0 p-3 md:p-5")}>
           <EventsViewPane
             view={s.view}
             events={s.filtered}
@@ -78,18 +99,17 @@ export function EventsPage() {
             onSelectDay={s.onSelectDay}
             onSelectEvent={s.onSelectEvent}
           />
-        </div>
+        </Panel>
         <EventsSidePanel
-          nextEvent={s.nextEvent}
-          events={s.filtered}
-          month={s.month}
-          onMonthChange={s.setMonth}
+          upcoming={s.upcoming}
           railEvents={s.railEvents}
           selectedDay={s.selectedDay}
           selectedEventId={s.selectedEventId}
           subgroupNames={s.subgroupNames}
           onSelectEvent={s.onSelectEvent}
           onClearDay={() => s.setSelectedDay(null)}
+          onCreate={() => setCreateOpen(true)}
+          showDayPanel={s.view !== "list"}
         />
       </div>
 

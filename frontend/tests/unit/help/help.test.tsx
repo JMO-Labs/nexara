@@ -1,11 +1,10 @@
 /**
  * @file tests/unit/help/help.test.tsx
- * @brief HelpButton, KeyboardShortcutsModal and WelcomeModal behavior.
+ * @brief KeyboardShortcutsModal and WelcomeModal behavior.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HelpButton } from "@/components/help/HelpButton";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { useModals } from "@/stores/modals";
@@ -20,23 +19,6 @@ beforeEach(() => {
   complete.mockClear();
   useModals.setState({ keyboardShortcutsOpen: false });
   useSession.setState({ user: null } as never);
-});
-
-describe("HelpButton", () => {
-  it("opens menu and triggers shortcuts modal", async () => {
-    render(<HelpButton />);
-    await userEvent.click(screen.getByRole("button", { name: "Help menu" }));
-    expect(
-      screen.getByRole("menuitem", { name: "Documentation" }),
-    ).toHaveAttribute("href", "/docs");
-    expect(
-      screen.getByRole("menuitem", { name: "Contact support" }),
-    ).toHaveAttribute("href", "/contact");
-    await userEvent.click(
-      screen.getByRole("menuitem", { name: "Keyboard shortcuts" }),
-    );
-    expect(useModals.getState().keyboardShortcutsOpen).toBe(true);
-  });
 });
 
 describe("KeyboardShortcutsModal", () => {

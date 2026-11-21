@@ -99,7 +99,7 @@ export type PluginImporter = (
 
 /** @brief Fetch installed plugins. */
 export function fetchPluginManifests(): Promise<PluginManifest[]> {
-  return apiGet<PluginManifest[]>("/plugins");
+  return apiGet<PluginManifest[]>("/api/v1/plugins");
 }
 
 // Template-literal import lets the bundler code-split every plugins/<id>.

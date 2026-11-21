@@ -8,62 +8,70 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Option, Select } from "@/components/ui/Select";
+import { Segmented, Toolbar } from "@/components/ui/page";
 import { useCommunityId } from "@/hooks/useCommunityId";
 import { ListCardGrid, type ListSort } from "../ListCardGrid";
 import { PageHeader } from "./PageChrome";
 
 const ALL = "all";
+const VISIBILITY = [
+  { value: ALL, label: "All lists" },
+  { value: "community", label: "Community" },
+  { value: "subgroup", label: "Group" },
+  { value: "private", label: "Private" },
+];
+const SORTS: { value: ListSort; label: string }[] = [
+  { value: "updated", label: "Recently updated" },
+  { value: "created", label: "Newest" },
+  { value: "title", label: "Title" },
+];
 
 /** @brief Lists overview page body. */
-export function ListsBrowseView() {
+export function ListsBrowseView({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const communityId = useCommunityId();
   const [visibility, setVisibility] = useState(ALL);
   const [sortBy, setSortBy] = useState<ListSort>("updated");
+  const actions = (
+    <>
+      <Button asChild variant="outline">
+        <Link href="/app/lists/templates">
+          <LayoutTemplate aria-hidden className="size-4" />
+          Templates
+        </Link>
+      </Button>
+      <Button asChild>
+        <Link href="/app/lists/new">
+          <Plus aria-hidden className="size-4" />
+          New list
+        </Link>
+      </Button>
+    </>
+  );
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        crumbs={[{ label: "Lists" }]}
-        title="Lists"
-        actions={
-          <>
-            <Button asChild variant="outline">
-              <Link href="/app/lists/templates">
-                <LayoutTemplate aria-hidden className="size-4" />
-                Templates
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/app/lists/new">
-                <Plus aria-hidden className="size-4" />
-                New list
-              </Link>
-            </Button>
-          </>
-        }
-      />
-      <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
-        <Select
+    <div className="flex flex-col">
+      {!embedded && (
+        <PageHeader
+          crumbs={[{ label: "Lists" }]}
+          title="Lists"
+          actions={actions}
+        />
+      )}
+      <Toolbar>
+        <Segmented
           label="Visibility"
           value={visibility}
-          onValueChange={setVisibility}
-        >
-          <Option value={ALL}>All lists</Option>
-          <Option value="community">Community</Option>
-          <Option value="subgroup">Group</Option>
-          <Option value="private">Private</Option>
-        </Select>
-        <Select
+          onChange={setVisibility}
+          options={VISIBILITY}
+        />
+        <Segmented
           label="Sort by"
           value={sortBy}
-          onValueChange={(v) => setSortBy(v as ListSort)}
-        >
-          <Option value="updated">Recently updated</Option>
-          <Option value="created">Newest</Option>
-          <Option value="title">Title</Option>
-        </Select>
-      </div>
+          onChange={setSortBy}
+          options={SORTS}
+        />
+        {embedded && actions}
+      </Toolbar>
       <ListCardGrid
         communityId={communityId}
         visibility={visibility === ALL ? undefined : visibility}

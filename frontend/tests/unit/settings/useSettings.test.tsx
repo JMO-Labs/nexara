@@ -16,6 +16,7 @@ import {
 import * as settingsApi from "@/lib/api/settings";
 import type { NotificationPreferences } from "@/lib/api/settings";
 import { useToasts } from "@/stores/toasts";
+import { useSession } from "@/stores/session";
 import { qk } from "@/lib/query-keys";
 
 vi.mock("next-intl", () => ({
@@ -54,9 +55,20 @@ describe("Settings hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useToasts.getState().clear();
+    useSession.setState({ status: "authenticated" });
   });
 
   describe("useUserSettings", () => {
+    it("does not fetch until the session is authenticated", async () => {
+      useSession.setState({ status: "loading" });
+      vi.spyOn(settingsApi, "getSettings");
+      const { result } = renderHook(() => useUserSettings(), {
+        wrapper: createWrapper(),
+      });
+      expect(result.current.fetchStatus).toBe("idle");
+      expect(settingsApi.getSettings).not.toHaveBeenCalled();
+    });
+
     it("fetches settings on mount", async () => {
       const mockSettings = {
         ...PRIVACY,

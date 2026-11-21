@@ -67,6 +67,7 @@ class PostResponse(BaseModel):
     source_prompt_post_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
+    edited_at: datetime | None = None
 
 
 class PostCreate(BaseModel):

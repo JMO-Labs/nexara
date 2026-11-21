@@ -77,6 +77,8 @@ export interface Post {
   comment_count: number;
   created_at: string;
   updated_at: string;
+  /** Set only when the author changed the content. */
+  edited_at?: string | null;
   subgroup_id: string | null;
   subgroup_name: string | null;
   subgroup_slug: string | null;

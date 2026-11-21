@@ -2,6 +2,8 @@
  * @file components/admin/StorageChart.tsx
  * @brief Dependency-free SVG line chart of total storage over time.
  */
+import { Database } from "lucide-react";
+import { EmptyState } from "@/components/ui";
 import { formatBytes } from "@/lib/formatBytes";
 import type { StorageSnapshot } from "@/lib/api/adminStorage";
 
@@ -15,7 +17,14 @@ const PAD = { l: 8, r: 8, t: 12, b: 24 };
  */
 export function StorageChart({ data }: { data: StorageSnapshot[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-muted">No snapshots yet.</p>;
+    return (
+      <EmptyState
+        compact
+        icon={Database}
+        title="No snapshots yet"
+        description="The storage trend appears here after the first snapshot is taken."
+      />
+    );
   }
   const max = Math.max(...data.map((d) => d.total_bytes), 1);
   const x = (i: number) =>

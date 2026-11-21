@@ -61,7 +61,7 @@ describe("loadPlugins", () => {
   it("fetchPluginManifests calls GET /plugins", async () => {
     vi.mocked(apiGet).mockResolvedValue([manifest("a")]);
     expect(await fetchPluginManifests()).toHaveLength(1);
-    expect(apiGet).toHaveBeenCalledWith("/plugins");
+    expect(apiGet).toHaveBeenCalledWith("/api/v1/plugins");
   });
 
   it("imports enabled plugins and calls registerPlugin", async () => {

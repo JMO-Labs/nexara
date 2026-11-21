@@ -4,7 +4,8 @@
  * @brief Plugin detail: manifest, settings, API keys, lifecycle controls.
  */
 import { useRouter } from "next/navigation";
-import { Button, Card, Switch } from "@/components/ui";
+import { Button, Switch } from "@/components/ui";
+import { Panel } from "@/components/ui/page";
 import {
   useGetPlugins,
   useGetPluginManifest,
@@ -54,7 +55,7 @@ export function PluginDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col gap-2 p-4">
+      <Panel as="div" className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">
           {m.name}{" "}
           <span className="text-xs font-normal text-muted">v{m.version}</span>
@@ -70,32 +71,29 @@ export function PluginDetail({ id }: { id: string }) {
           />
           <span className="text-sm">{enabled ? "Enabled" : "Disabled"}</span>
           <Button
-            variant="destructive"
+            variant="glass"
             size="sm"
-            className="ml-auto"
+            className="ml-auto text-danger"
             loading={uninstall.isPending}
             onClick={onUninstall}
           >
             Uninstall
           </Button>
         </div>
-      </Card>
-      <Card className="flex flex-col gap-2 p-4">
-        <h3 className="text-lg font-semibold">Permissions</h3>
+      </Panel>
+      <Panel as="div" title="Permissions">
         <PluginPermissionList permissions={m.permissions} />
-      </Card>
-      <Card className="flex flex-col gap-3 p-4">
-        <h3 className="text-lg font-semibold">Settings</h3>
+      </Panel>
+      <Panel as="div" title="Settings">
         <PluginSettingsForm
           pluginId={id}
           schema={m.settings ?? {}}
           values={settings.data?.settings ?? {}}
         />
-      </Card>
-      <Card className="flex flex-col gap-3 p-4">
-        <h3 className="text-lg font-semibold">API keys</h3>
+      </Panel>
+      <Panel as="div" title="API keys">
         <PluginApiKeys pluginId={id} />
-      </Card>
+      </Panel>
     </div>
   );
 }

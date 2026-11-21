@@ -33,17 +33,12 @@ export function PluginPermissionList({
             key={p}
             data-testid={`perm-${p}`}
             data-sensitive={sensitive ? "true" : undefined}
-            className={
-              "flex flex-col gap-0.5 rounded-xl border p-2 " +
-              (sensitive
-                ? "border-destructive/60 bg-destructive/10"
-                : "border-ink/10")
-            }
+            className={"glass-item flex flex-col gap-0.5 rounded-[20px] p-3"}
           >
             <span className="flex flex-wrap items-center gap-2 font-mono text-sm font-semibold">
               {sensitive && (
                 <AlertTriangle
-                  className="size-4 text-destructive"
+                  className="size-4 text-danger"
                   aria-label="Sensitive permission"
                 />
               )}

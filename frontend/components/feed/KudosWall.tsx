@@ -2,24 +2,34 @@
 /**
  * @file components/feed/KudosWall.tsx
  * @brief Kudos Wall: grid of kudos with group filter, sort and load-more.
+ *        Embedded mode (Home feed tile) drops the page header and uses a
+ *        single-column list.
  */
 import * as React from "react";
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button, EmptyState } from "@/components/ui";
+import { Button, EmptyState, Option, Select } from "@/components/ui";
+import { PageHeader, Segmented, Toolbar } from "@/components/ui/page";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useKudosWall } from "@/hooks/useKudos";
 import { KudosCard } from "./KudosCard";
 import { KudosComposer } from "./KudosComposer";
 
+const ALL_GROUPS = "__all__";
 const selectCls =
-  "h-10 rounded-xl border border-current/30 bg-surface px-3 text-sm";
+  "h-9 w-auto min-w-40 rounded-full border-0 bg-[var(--nx-item)] px-4 text-sm text-ink shadow-none";
+
+export interface KudosWallProps {
+  /** Home feed tile: no page header, compact toolbar, single column. */
+  embedded?: boolean;
+}
 
 /**
  * @brief Kudos wall page body.
+ * @param embedded compact in-tile layout
  * @return wall element
  */
-export function KudosWall() {
+export function KudosWall({ embedded = false }: KudosWallProps = {}) {
   const t = useTranslations("kudos");
   const [group, setGroup] = React.useState("");
   const [sort, setSort] = React.useState<"newest" | "oldest">("newest");
@@ -37,49 +47,63 @@ export function KudosWall() {
     );
   }, [wall.data, group, sort]);
 
+  const isEmpty = !wall.isLoading && !wall.isError && items.length === 0;
+  const sendButton = (
+    <Button className="rounded-full" onClick={() => setComposing(true)}>
+      {t("sendButton")}
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <h1 className="mr-auto text-2xl font-black">{t("wallTitle")}</h1>
-        <label className="flex flex-col gap-1 text-xs font-semibold">
-          {t("filterGroup")}
-          <select
-            className={selectCls}
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-          >
-            <option value="">{t("allGroups")}</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-semibold">
-          {t("sort")}
-          <select
-            className={selectCls}
+    <>
+      {!embedded && <PageHeader title={t("wallTitle")} actions={sendButton} />}
+      <Toolbar>
+        {/* Tile is narrow: embedded keeps newest-first, no sort control. */}
+        {!embedded && (
+          <Segmented
+            label={t("sort")}
             value={sort}
-            onChange={(e) => setSort(e.target.value as "newest" | "oldest")}
-          >
-            <option value="newest">{t("newest")}</option>
-            <option value="oldest">{t("oldest")}</option>
-          </select>
-        </label>
-        <Button onClick={() => setComposing(true)}>{t("sendButton")}</Button>
-      </div>
+            onChange={setSort}
+            options={[
+              { value: "newest", label: t("newest") },
+              { value: "oldest", label: t("oldest") },
+            ]}
+          />
+        )}
+        <Select
+          label={t("filterGroup")}
+          className={selectCls}
+          value={group || ALL_GROUPS}
+          onValueChange={(v) => setGroup(v === ALL_GROUPS ? "" : v)}
+        >
+          <Option value={ALL_GROUPS}>{t("allGroups")}</Option>
+          {groups.map((g) => (
+            <Option key={g.id} value={g.id}>
+              {g.name}
+            </Option>
+          ))}
+        </Select>
+        {embedded && !isEmpty && sendButton}
+      </Toolbar>
 
       {wall.isError ? (
         <p role="alert">{t("error")}</p>
-      ) : !wall.isLoading && items.length === 0 ? (
+      ) : isEmpty ? (
         <EmptyState
+          compact={embedded}
           icon={Trophy}
           title={t("emptyTitle")}
           description={t("emptyDesc")}
+          action={embedded ? sendButton : undefined}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className={
+            embedded
+              ? "flex flex-col gap-3"
+              : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          }
+        >
           {items.map((k) => (
             <KudosCard
               key={k.id}
@@ -96,6 +120,7 @@ export function KudosWall() {
       {wall.hasNextPage && (
         <Button
           variant="secondary"
+          className="mx-auto mt-4"
           onClick={() => wall.fetchNextPage()}
           disabled={wall.isFetchingNextPage}
         >
@@ -103,7 +128,7 @@ export function KudosWall() {
         </Button>
       )}
       <KudosComposer open={composing} onClose={() => setComposing(false)} />
-    </div>
+    </>
   );
 }
 

@@ -94,14 +94,18 @@ export function MessageItem({
             density === "compact" ? "py-1 text-xs" : "py-2",
             isSelf
               ? "rounded-tr-sm bg-surface-strong text-bg"
-              : "rounded-tl-sm bg-surface",
+              : "rounded-tl-sm bg-[var(--nx-bubble)]",
             deleted && "italic opacity-80",
           )}
         >
           {deleted ? (
             message.content
           ) : (
-            <Markdown content={message.content} size="sm" />
+            <Markdown
+              content={message.content}
+              size="sm"
+              className={isSelf ? "text-inherit [&_a]:text-inherit" : undefined}
+            />
           )}
         </div>
       </div>

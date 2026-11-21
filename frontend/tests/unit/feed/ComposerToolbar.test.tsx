@@ -8,12 +8,25 @@ import { ComposerToolbar } from "@/components/feed/ComposerToolbar";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 
 describe("ComposerToolbar", () => {
-  it("exposes labelled buttons; attach and poll are disabled", () => {
-    renderWithProviders(
+  it("enables photos and poll only when handlers are given", () => {
+    const onPoll = vi.fn();
+    const { rerender } = renderWithProviders(
       <ComposerToolbar posting={false} onSubmit={vi.fn()} onCancel={vi.fn()} />,
     );
-    expect(screen.getByRole("button", { name: "Attach media" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add photos" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add poll" })).toBeDisabled();
+    rerender(
+      <ComposerToolbar
+        posting={false}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        onPhotos={vi.fn()}
+        onPoll={onPoll}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add poll" }));
+    expect(onPoll).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Add photos" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument();
   });
@@ -41,5 +54,19 @@ describe("ComposerToolbar", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /post/i }));
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("fires onKudos from the Send kudos icon button", () => {
+    const onKudos = vi.fn();
+    renderWithProviders(
+      <ComposerToolbar
+        posting={false}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        onKudos={onKudos}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send kudos" }));
+    expect(onKudos).toHaveBeenCalledTimes(1);
   });
 });

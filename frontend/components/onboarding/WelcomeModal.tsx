@@ -32,7 +32,7 @@ const ACTIONS: ActionLink[] = [
   {
     icon: Users,
     label: "Find friends",
-    href: "/app/members",
+    href: "/app/community",
     description: "Connect with community members",
   },
   {
@@ -90,7 +90,7 @@ export function WelcomeModal() {
               <li key={action.href}>
                 <Link
                   href={action.href}
-                  className="hover:bg-surface focus-visible:outline-accent flex items-center gap-3 rounded-xl border border-current/20 p-3 no-underline outline-none transition-colors focus-visible:outline-2"
+                  className="glass-item hover:bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)] focus-visible:outline-accent flex items-center gap-3 rounded-[20px] p-3 no-underline outline-none transition-colors focus-visible:outline-2"
                 >
                   <Icon size={24} aria-hidden="true" className="shrink-0" />
                   <span className="flex flex-col">

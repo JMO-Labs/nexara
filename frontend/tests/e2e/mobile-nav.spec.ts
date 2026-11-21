@@ -10,7 +10,7 @@ test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 test("tab bar navigates the main sections", async ({ page }) => {
   await login(page);
   const nav = page.getByRole("navigation", { name: "Primary" });
-  for (const name of ["Chat", "Calendar", "Groups", "Home"]) {
+  for (const name of ["Chat", "Calendar", "Photos", "Home"]) {
     await nav.getByRole("link", { name }).tap();
     await expect(nav.getByRole("link", { name })).toHaveAttribute(
       "aria-current",
@@ -19,11 +19,11 @@ test("tab bar navigates the main sections", async ({ page }) => {
   }
 });
 
-test("More sheet opens and closes by tap and Escape", async ({ page }) => {
+test("More sheet opens from the avatar and closes by Escape and button", async ({
+  page,
+}) => {
   await login(page);
-  const more = page
-    .getByRole("navigation", { name: "Primary" })
-    .getByRole("button", { name: "More" });
+  const more = page.getByRole("button", { name: "More" });
   const sheet = page.getByRole("dialog", { name: "More" });
 
   await more.tap();

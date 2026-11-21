@@ -45,16 +45,17 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
-          "bg-bg flex min-h-48 flex-col items-center justify-center gap-2 rounded-[1.25rem] border-2 border-dashed p-6 text-center transition-colors",
-          dragOver ? "border-accent" : "border-current/30",
+          "glass-item flex min-h-48 flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center transition-colors",
+          dragOver && "ring-2 ring-ink",
         )}
       >
-        <ImageIcon className="size-10 opacity-70" aria-hidden="true" />
+        <span className="glass-item flex size-14 items-center justify-center rounded-full">
+          <ImageIcon className="size-6" aria-hidden="true" />
+        </span>
         <h3 className="text-base font-semibold">Drop photos to upload</h3>
         <p className="text-sm text-ink/70">or choose files from your device</p>
         <Button
           size="md"
-          variant="outline"
           type="button"
           onClick={() => inputRef.current?.click()}
         >

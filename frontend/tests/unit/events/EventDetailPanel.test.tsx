@@ -105,6 +105,25 @@ function wrap(ui: React.ReactNode) {
 }
 
 describe("EventDetailPanel", () => {
+  it("drawer surface uses the glass-solid token", async () => {
+    const containerRef = React.createRef<HTMLDivElement>();
+    wrap(
+      <div ref={containerRef} style={{ width: 400 }}>
+        <EventDetailPanel
+          containerRef={containerRef}
+          event={baseEvent}
+          subgroupNames={new Map()}
+          onClose={vi.fn()}
+        />
+      </div>,
+    );
+    const region = await screen.findByRole("region", {
+      name: "Event details",
+    });
+    expect(region.className).toContain("--nx-glass-solid");
+    expect(region.className).not.toContain("bg-surface");
+  });
+
   it("renders EventMiniMap when event has latitude and longitude", async () => {
     const containerRef = React.createRef<HTMLDivElement>();
     const event: EventItem = {

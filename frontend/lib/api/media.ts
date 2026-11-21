@@ -47,6 +47,10 @@ export const mediaThumbUrl = (id: string) =>
   `${API_BASE}${BASE}/${seg(id)}/thumbnail`;
 
 export const getMedia = (id: string) => apiGet<MediaItem>(`${BASE}/${seg(id)}`);
+
+/** @brief Server downloads a public image link and stores it as media. */
+export const importMediaUrl = (url: string) =>
+  apiPost<MediaItem>(`${BASE}/import-url`, { url });
 export const deleteMedia = (id: string) =>
   apiDelete<void>(`${BASE}/${seg(id)}`);
 

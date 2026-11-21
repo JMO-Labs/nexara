@@ -5,6 +5,7 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import type { Gallery } from "@/lib/api/galleries";
@@ -13,11 +14,9 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    refresh: vi.fn(),
-  }),
+  useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
 vi.mock("@/hooks/useGalleries", () => ({
@@ -84,14 +83,20 @@ describe("MemberGalleriesTab", () => {
     expect(screen.getByText("Family Events")).toBeInTheDocument();
   });
 
-  it("displays gallery item counts", () => {
+  it("shows item count when an album card is expanded", async () => {
     wrap(<MemberGalleriesTab userId="user1" />);
-    expect(screen.getByText("5 items")).toBeInTheDocument();
-    expect(screen.getByText("12 items")).toBeInTheDocument();
+    await userEvent.hover(
+      screen.getByRole("button", { name: "Vacation 2025" }),
+    );
+    expect(screen.getByText("5 photos")).toBeInTheDocument();
   });
 
-  it("shows featured badge on featured galleries", () => {
+  it("opens the album in /app/photos", async () => {
+    push.mockClear();
     wrap(<MemberGalleriesTab userId="user1" />);
-    expect(screen.getByText("Featured")).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Family Events" }),
+    );
+    expect(push).toHaveBeenCalledWith("/app/photos?gallery=g2");
   });
 });

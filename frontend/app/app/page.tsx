@@ -1,13 +1,26 @@
 "use client";
 /**
  * @file app/app/page.tsx
- * @brief Home: greeting, next-up card, live feed, desktop widget column.
+ * @brief Home: glass bento (feed, chats, up next, photos) with scope + accordion.
  */
+import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { homeStagger, homeTile } from "@/components/ui/motion";
 import { useSession } from "@/stores/session";
-import { WelcomeBanner } from "@/components/home/WelcomeBanner";
-import { NextUpCard } from "@/components/home/NextUpCard";
-import { HomeFeed } from "@/components/home/HomeFeed";
-import { WidgetColumn } from "@/components/home/WidgetColumn";
+import { useHomeChats } from "@/hooks/useHomeChats";
+import { useHomeAccordion } from "@/hooks/useHomeAccordion";
+import { Greeting } from "@/components/home/Greeting";
+import { ScopeBar } from "@/components/home/ScopeBar";
+import { PeopleStrip } from "@/components/home/PeopleStrip";
+import { NeedsChips } from "@/components/home/NeedsChips";
+import { HomeSideColumn } from "@/components/home/HomeSideColumn";
+import { FeedTile } from "@/components/home/tiles/FeedTile";
+import { ChatsTile } from "@/components/home/tiles/ChatsTile";
+import { UpNextTile } from "@/components/home/tiles/UpNextTile";
+import { PhotosTile } from "@/components/home/tiles/PhotosTile";
+
+/** Entrance plays once per session (module-level). */
+let entrancePlayed = false;
 
 /**
  * @brief Home page.
@@ -16,16 +29,41 @@ import { WidgetColumn } from "@/components/home/WidgetColumn";
 export default function AppHome() {
   const user = useSession((s) => s.user);
   const name = user?.display_name ?? user?.username ?? "there";
+  const { data } = useHomeChats();
+  const mention = (data?.items ?? []).some((t) => t.mentions_me);
+  const reduced = useReducedMotion();
+  // Captured on first render so a re-render mid-entrance keeps animating.
+  const [animateIn] = React.useState(() => !entrancePlayed && !reduced);
+  React.useEffect(() => {
+    entrancePlayed = true;
+  }, []);
+  const rootProps = animateIn
+    ? ({ variants: homeStagger, initial: "hidden", animate: "show" } as const)
+    : {};
+  const sectionProps = animateIn ? { variants: homeTile } : {};
+  const { open, toggle } = useHomeAccordion(mention ? "chat" : "next");
   return (
-    <main className="px-4 md:px-6 py-6 max-w-[1100px] mx-auto w-full">
-      <WelcomeBanner userName={name} />
-      <div className="md:flex md:gap-6 md:items-start">
-        <div className="min-w-0 w-full md:max-w-2xl">
-          <NextUpCard />
-          <HomeFeed />
-        </div>
-        <WidgetColumn />
-      </div>
-    </main>
+    <motion.div className="py-6" {...rootProps}>
+      <motion.div
+        {...sectionProps}
+        className="relative z-30 mb-4 flex flex-col gap-3.5 md:flex-row md:items-end md:justify-between md:gap-6"
+      >
+        <Greeting name={name} />
+        <PeopleStrip />
+      </motion.div>
+      <motion.div {...sectionProps}>
+        <ScopeBar needs={<NeedsChips />} />
+      </motion.div>
+      <motion.div
+        {...sectionProps}
+        className="flex flex-col gap-2.5 md:grid md:h-[1158px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr_340px] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_lists_lists'] lg:h-[max(800px,calc(100dvh-260px))] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,.85fr)_auto] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:'feed_chat_next_side''feed_chat_photos_side']"
+      >
+        <UpNextTile open={open === "next"} onToggle={toggle} />
+        <ChatsTile open={open === "chat"} onToggle={toggle} />
+        <PhotosTile open={open === "photos"} onToggle={toggle} />
+        <FeedTile open={open === "feed"} onToggle={toggle} />
+        <HomeSideColumn open={open} onToggle={toggle} />
+      </motion.div>
+    </motion.div>
   );
 }

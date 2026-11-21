@@ -29,12 +29,12 @@ const k = (id: string, name: string, at: string, sg: string | null = null) => ({
   recipient: { id, username: id, display_name: name, avatar_url: null },
 });
 
-function wrap() {
+function wrap(embedded = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <NextIntlClientProvider locale="en-US" messages={messages}>
       <QueryClientProvider client={qc}>
-        <KudosWall />
+        <KudosWall embedded={embedded} />
       </QueryClientProvider>
     </NextIntlClientProvider>,
   );
@@ -47,6 +47,17 @@ describe("KudosWall", () => {
     listKudos.mockResolvedValue({ kudos: [], pagination: { has_more: false } });
     wrap();
     expect(await screen.findByText("No kudos yet")).toBeInTheDocument();
+  });
+
+  it("shows the Kudos page title and a Send Kudos action", async () => {
+    listKudos.mockResolvedValue({ kudos: [], pagination: { has_more: false } });
+    wrap();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kudos" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send Kudos" }),
+    ).toBeInTheDocument();
   });
 
   it("renders newest first, oldest on sort change, and paginates", async () => {
@@ -70,9 +81,53 @@ describe("KudosWall", () => {
     expect(await screen.findByText("Cy")).toBeInTheDocument();
     expect(listKudos).toHaveBeenLastCalledWith("c2");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    await userEvent.selectOptions(screen.getByLabelText("Sort"), "oldest");
+    await userEvent.click(screen.getByRole("radio", { name: "Oldest" }));
     expect((await names())[0]).toMatch(/Cy/);
-    await userEvent.selectOptions(screen.getByLabelText("Group"), "g1");
+    await userEvent.click(screen.getByRole("combobox", { name: "Group" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Chess" }));
     expect(await screen.findAllByRole("article")).toHaveLength(1);
+  });
+
+  it("embedded: no page header, single-column list, compact toolbar", async () => {
+    listKudos.mockResolvedValue({
+      kudos: [k("a", "Ana", "2026-01-02T00:00:00Z")],
+      pagination: { has_more: false },
+    });
+    wrap(true);
+    const article = await screen.findByRole("article");
+    expect(
+      screen.queryByRole("heading", { level: 1, name: "Kudos" }),
+    ).toBeNull();
+    const list = article.parentElement as HTMLElement;
+    expect(list.className).toContain("flex-col");
+    expect(list.className).not.toContain("grid");
+    expect(
+      screen.getByRole("button", { name: "Send Kudos" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Group")).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Oldest" })).toBeNull();
+  });
+
+  it("non-embedded keeps the multi-column grid", async () => {
+    listKudos.mockResolvedValue({
+      kudos: [k("a", "Ana", "2026-01-02T00:00:00Z")],
+      pagination: { has_more: false },
+    });
+    wrap();
+    const article = await screen.findByRole("article");
+    expect((article.parentElement as HTMLElement).className).toContain("grid");
+  });
+
+  it("uses a styled group select (no native select) and an empty-state action", async () => {
+    listKudos.mockResolvedValue({ kudos: [], pagination: { has_more: false } });
+    const { container } = wrap(true);
+    await screen.findByText("No kudos yet");
+    expect(container.querySelector("select")).toBeNull();
+    expect(screen.getByRole("combobox", { name: "Group" })).toHaveClass(
+      "rounded-full",
+    );
+    expect(screen.getAllByRole("button", { name: "Send Kudos" })).toHaveLength(
+      1,
+    );
   });
 });

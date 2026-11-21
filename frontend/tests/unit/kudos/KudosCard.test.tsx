@@ -27,7 +27,12 @@ describe("KudosCard", () => {
     expect(screen.getByText("Great job!")).toBeInTheDocument();
     expect(screen.getByText(/Bob/)).toBeInTheDocument();
     expect(screen.getByTestId("kudos-trophy")).toBeInTheDocument();
-    expect(screen.getByRole("article").className).toMatch(/purple/);
+    const cls = screen.getByRole("article").className;
+    expect(cls).toMatch(/glass-item/);
+    expect(cls).not.toMatch(/purple/);
+    expect(screen.getByTestId("kudos-bar").getAttribute("style")).toContain(
+      "--nx-sun",
+    );
   });
 
   it("omits message when absent", () => {

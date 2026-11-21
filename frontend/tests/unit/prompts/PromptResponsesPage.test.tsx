@@ -55,7 +55,13 @@ describe("PromptResponsesPage", () => {
       fetchNextPage: st.fetchNext,
     };
     await setup();
-    expect(screen.getByText("Favorite tradition?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Favorite tradition?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to feed/i })).toHaveAttribute(
+      "href",
+      "/app",
+    );
     expect(screen.getAllByTestId("post-card")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /load more/i })).toBeNull();
   });

@@ -20,14 +20,14 @@ import { CSSPreview } from "./CSSPreview";
 
 /** @brief Theme-aware colours for the stable `tok-*` classes from classHighlighter. */
 const TOKEN_STYLES =
-  "[&_.tok-comment]:italic [&_.tok-comment]:text-muted-foreground " +
-  "[&_.tok-string]:text-emerald-700 dark:[&_.tok-string]:text-emerald-300 " +
-  "[&_.tok-keyword]:text-fuchsia-700 dark:[&_.tok-keyword]:text-fuchsia-300 " +
-  "[&_.tok-typeName]:text-sky-700 dark:[&_.tok-typeName]:text-sky-300 " +
-  "[&_.tok-className]:text-sky-700 dark:[&_.tok-className]:text-sky-300 " +
-  "[&_.tok-propertyName]:text-violet-700 dark:[&_.tok-propertyName]:text-violet-300 " +
-  "[&_.tok-number]:text-amber-800 dark:[&_.tok-number]:text-amber-300 " +
-  "[&_.tok-atom]:text-amber-800 dark:[&_.tok-atom]:text-amber-300";
+  "[&_.tok-comment]:italic [&_.tok-comment]:text-muted " +
+  "[&_.tok-string]:text-[var(--nx-blue)] " +
+  "[&_.tok-keyword]:text-[var(--nx-red)] " +
+  "[&_.tok-typeName]:text-[var(--nx-blue)] " +
+  "[&_.tok-className]:text-[var(--nx-blue)] " +
+  "[&_.tok-propertyName]:text-ink " +
+  "[&_.tok-number]:text-[var(--nx-red)] " +
+  "[&_.tok-atom]:text-[var(--nx-red)]";
 
 const EDITOR_THEME = EditorView.theme({
   "&": { height: "100%", fontSize: "0.875rem" },
@@ -129,7 +129,7 @@ export function CSSEditor({ initial }: { initial: string }) {
         <div
           ref={host}
           data-testid="css-editor"
-          className={`h-72 overflow-hidden rounded-md border bg-surface focus-within:ring-2 focus-within:ring-accent ${TOKEN_STYLES}`}
+          className={`h-72 overflow-hidden rounded-[22px] glass-item focus-within:ring-2 focus-within:ring-accent ${TOKEN_STYLES}`}
         />
         <p
           id="custom-css-count"
@@ -157,7 +157,7 @@ export function CSSEditor({ initial }: { initial: string }) {
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="glass"
             onClick={() => setDoc(saved)}
             disabled={!dirty || update.isPending}
           >
