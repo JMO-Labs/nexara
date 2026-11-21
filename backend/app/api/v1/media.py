@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.rate_limit import limiter
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
@@ -147,7 +148,9 @@ class ImportUrlRequest(BaseModel):
 
 
 @router.post("/import-url", response_model=MediaResponse, status_code=201)
+@limiter.limit("10/minute")
 async def import_media_url(
+    request: Request,
     body: ImportUrlRequest,
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
