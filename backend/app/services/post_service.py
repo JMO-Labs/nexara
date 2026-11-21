@@ -55,8 +55,10 @@ class PostService(CommentsMixin, ReactionsMixin):
         viewer_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         """@brief Fetch a single post with full enrichment.
-        @raises NotFoundError If post does not exist.
+        @raises NotFoundError If post does not exist or the viewer may not read it.
         """
+        if viewer_id is not None and not await self._post_repo.is_visible(post_id, viewer_id):
+            raise NotFoundError(_("Post not found"))
         post = await self._post_repo.get_post_detail(
             post_id,
             self._community_id,
@@ -139,7 +141,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             user.id,
         )
 
-        await self._notify_mentions(content, user, post.id)
+        await self._sync_tags("post", post.id, content, user, post)
 
         if self._activity_repo is not None:
             await record_activity(
@@ -203,6 +205,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             raise AuthorizationError(_("You can only edit your own posts"))
 
         await self._post_repo.update_content(post, content)
+        await self._sync_tags("post", post.id, content, user, post, fresh=False)
         await invalidate_search_cache_for_community(
             self._community_id, service="post", action="update", user_id=user.id
         )

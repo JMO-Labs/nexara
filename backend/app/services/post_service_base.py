@@ -10,7 +10,6 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import structlog
-from sqlalchemy import select
 
 from app.core.i18n import _
 from app.models.post import Post
@@ -19,6 +18,7 @@ from app.repositories.activity_repo import ActivityRepository
 from app.repositories.comment_repo import CommentRepository, ReactionRepository
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
+from app.repositories.tag_repo import TagRepository
 from app.services import mentions
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.notification_service import NotificationService
@@ -48,6 +48,7 @@ class PostServiceBase:
         prompt_repo: PromptRepository | None = None,
         interest_service: Any | None = None,
         activity_repo: ActivityRepository | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         self._post_repo = post_repo
         self._comment_repo = comment_repo
@@ -60,6 +61,12 @@ class PostServiceBase:
         self._prompt_repo = prompt_repo
         self._interest_service = interest_service
         self._activity_repo = activity_repo
+        self._tags_override = tag_repo
+
+    @property
+    def _tags(self) -> TagRepository:
+        """@brief Tag repository (injected in tests, else bound to the post session)."""
+        return self._tags_override or TagRepository(self._post_repo._session)
 
     def _enqueue_sassybot(self, post_id: uuid.UUID, content: str) -> None:
         """@brief Enqueue the Sassybot task (forced on @sassybot); never fails the request."""
@@ -110,28 +117,48 @@ class PostServiceBase:
             post,
         )
 
-    async def _notify_mentions(self, content: str, actor: User, post_id: uuid.UUID) -> None:
-        """@brief Notify @mentioned users in this community (never the actor)."""
+    async def _sync_tags(
+        self,
+        target_type: str,
+        target_id: uuid.UUID,
+        content: str,
+        actor: User,
+        post: Any,
+        *,
+        fresh: bool = True,
+    ) -> None:
+        """
+        @brief Store @mentions as tags on the post/comment and notify people
+               newly tagged. Only people who can read the post and have no
+               block with the author are tagged.
+        @param fresh target was just created (nothing to clear when no mentions)
+        """
         usernames = mentions.extract(content)
-        if not usernames:
+        if not usernames and fresh:
             return
-        stmt = select(User).where(
-            User.username.in_(usernames),
-            User.community_id == self._community_id,
-            User.deleted_at.is_(None),
+        users = await self._tags.users_by_username(self._community_id, usernames)
+        ids = [u.id for u in users if u.id != actor.id]
+        if post.visibility == "private":
+            ids = []
+        elif post.subgroup_id is not None:
+            members = await self._tags.subgroup_member_ids(post.subgroup_id, ids)
+            ids = [i for i in ids if i in members]
+        blocked = await self._tags.blocked_with(actor.id, ids)
+        ids = [i for i in ids if i not in blocked]
+        new = await self._tags.replace_user_tags(
+            self._community_id, target_type, target_id, ids, actor.id
         )
-        result = await self._post_repo._session.execute(stmt)
-        for mentioned in result.scalars().all():
-            if mentioned.id == actor.id:
-                continue
+        where = _("a comment") if target_type == "comment" else _("a post")
+        for uid in new:
             await self._notification.notify(
-                user_id=mentioned.id,
+                user_id=uid,
                 type="mention",
                 payload={
-                    "post_id": str(post_id),
+                    "post_id": str(post.id),
                     "actor_name": actor.display_name,
-                    "message": _("%(user)s mentioned you in a post") % {"user": actor.display_name},
-                    "link": f"/app/post/{post_id}",
+                    "message": _("%(user)s tagged you in %(where)s")
+                    % {"user": actor.display_name, "where": where},
+                    "link": f"/app/post/{post.id}",
                 },
                 actor_id=actor.id,
             )

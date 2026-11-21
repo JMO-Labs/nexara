@@ -25,6 +25,23 @@ from tests.unit.services.conftest import (
 AUDIENCE = [AUTHOR_ID, VIEWER_ID]
 
 
+def _fake_tags(service, users, new=None):
+    """@brief Inject a fake TagRepository resolving ``users`` and tagging ``new``."""
+    from app.repositories.tag_repo import TagRepository
+
+    tags = AsyncMock(spec=TagRepository)
+    tags.users_by_username.return_value = users
+    tags.subgroup_member_ids.return_value = {u.id for u in users}
+    tags.blocked_with.return_value = set()
+
+    async def _replace(_c, _t, _i, ids, _a):
+        return list(ids) if new is None else new
+
+    tags.replace_user_tags.side_effect = _replace
+    service._tags_override = tags
+    return tags
+
+
 @pytest.fixture(autouse=True)
 def _audience():
     """@brief Stub audience resolution; assert it is the only source of targets."""
@@ -165,12 +182,9 @@ class TestCreatePost:
         post = _make_post()
         post_repo.create_post.return_value = post
         post_repo.get_post_detail.return_value = {}
-        scalars = MagicMock()
-        scalars.all.return_value = [bob, user]
-        result = MagicMock()
-        result.scalars.return_value = scalars
-        post_repo._session.execute = AsyncMock(return_value=result)
+        tags = _fake_tags(service, [bob, user])
         await service.create_post(user, "Hey @bob!")
+        assert tags.replace_user_tags.await_args.args[1:4] == ("post", post.id, [bob.id])
         service._notification.notify.assert_awaited_once()
         kwargs = service._notification.notify.await_args.kwargs
         assert kwargs["user_id"] == bob.id
@@ -300,29 +314,48 @@ class TestAddComment:
         comment.created_at.isoformat.return_value = "2025-01-01T00:00:00"
         post_repo.get_by_id.return_value = post
         comment_repo.create_comment.return_value = comment
-        scalars = MagicMock()
-        scalars.all.return_value = [bob]
-        result = MagicMock()
-        result.scalars.return_value = scalars
-        post_repo._session.execute = AsyncMock(return_value=result)
+        tags = _fake_tags(service, [bob])
         await service.add_comment(POST_ID, user, "hi @bob")
+        assert tags.replace_user_tags.await_args.args[1:3] == ("comment", comment.id)
         service._notification.notify.assert_awaited_once()
         kwargs = service._notification.notify.await_args.kwargs
         assert kwargs["user_id"] == bob.id
         assert kwargs["type"] == "mention"
 
     @pytest.mark.asyncio
-    async def test_mention_lookup_scoped_to_community(self, service, post_repo):
-        """Mention user lookup filters on the service's community_id."""
-        user = _make_user()
-        result = MagicMock()
-        result.scalars.return_value.all.return_value = []
-        post_repo._session.execute = AsyncMock(return_value=result)
-        await service._notify_mentions("hey @bob", user, POST_ID)
-        stmt = post_repo._session.execute.await_args.args[0]
-        compiled = stmt.compile()
-        assert "community_id" in str(compiled)
-        assert COMMUNITY_ID in compiled.params.values()
+    async def test_mention_lookup_scoped_to_community(self, service):
+        """Mention user lookup is scoped to the service's community_id."""
+        tags = _fake_tags(service, [])
+        await service._sync_tags("post", POST_ID, "hey @bob", _make_user(), _make_post())
+        tags.users_by_username.assert_awaited_once_with(COMMUNITY_ID, ["bob"])
+
+    @pytest.mark.asyncio
+    async def test_private_post_tags_nobody_and_blocks_are_skipped(self, service):
+        """Private posts tag no one; people in a block relation are dropped."""
+        bob = _make_user(user_id=uuid.uuid4(), username="bob")
+        eve = _make_user(user_id=uuid.uuid4(), username="eve")
+        tags = _fake_tags(service, [bob, eve])
+        private = _make_post()
+        private.visibility, private.subgroup_id = "private", None
+        await service._sync_tags("post", POST_ID, "@bob @eve", _make_user(), private)
+        assert tags.replace_user_tags.await_args.args[3] == []
+        tags.blocked_with.return_value = {eve.id}
+        public = _make_post()
+        public.visibility, public.subgroup_id = "community", None
+        await service._sync_tags("post", POST_ID, "@bob @eve", _make_user(), public)
+        assert tags.replace_user_tags.await_args.args[3] == [bob.id]
+
+    @pytest.mark.asyncio
+    async def test_group_post_tags_only_members(self, service):
+        """Only members of the post's group are tagged."""
+        bob = _make_user(user_id=uuid.uuid4(), username="bob")
+        eve = _make_user(user_id=uuid.uuid4(), username="eve")
+        tags = _fake_tags(service, [bob, eve])
+        tags.subgroup_member_ids.return_value = {bob.id}
+        post = _make_post()
+        post.visibility, post.subgroup_id = "subgroup", uuid.uuid4()
+        await service._sync_tags("post", POST_ID, "@bob @eve", _make_user(), post)
+        assert tags.replace_user_tags.await_args.args[3] == [bob.id]
 
     @pytest.mark.asyncio
     async def test_add_comment_to_missing_post(self, service, post_repo):
@@ -558,7 +591,27 @@ class TestSassybotMentionOnComment:
         post_repo.get_by_id.return_value = _make_post(author_id=AUTHOR_ID)
         comment_repo.create_comment.return_value = comment
 
-        with patch.object(service, "_notify_mentions", new=AsyncMock()):
+        with patch.object(service, "_sync_tags", new=AsyncMock()):
             await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "hey @sassybot")
 
         assert sassybot_delay.call_args.kwargs["args"] == (str(POST_ID), str(COMMUNITY_ID), True)
+
+
+class TestPostVisibilityEnforced:
+    """@brief Reading/commenting on a post the viewer can't see is a 404."""
+
+    @pytest.mark.asyncio
+    async def test_get_post_hidden(self, service, post_repo):
+        post_repo.is_visible.return_value = False
+        with pytest.raises(NotFoundError):
+            await service.get_post(POST_ID, viewer_id=VIEWER_ID)
+        post_repo.get_post_detail.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_comments_hidden(self, service, post_repo):
+        post_repo.get_by_id.return_value = _make_post()
+        post_repo.is_visible.return_value = False
+        with pytest.raises(NotFoundError):
+            await service.list_comments(POST_ID, viewer_id=VIEWER_ID)
+        with pytest.raises(NotFoundError):
+            await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "hi")

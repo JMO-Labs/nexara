@@ -16,12 +16,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, exists, func, or_, select
 
 from app.models.media import Media
 from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.post_enrichment import enrich_posts
+from app.repositories.visibility_preds import my_subgroup_ids, post_visible
 
 logger = structlog.get_logger(__name__)
 
@@ -211,6 +212,13 @@ class PostRepository(BaseRepository[Post]):
         stmt = self.apply_block_filter(stmt, viewer_id)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
+
+    async def is_visible(self, post_id: uuid.UUID, viewer_id: uuid.UUID) -> bool:
+        """@brief Can ``viewer_id`` read this post (visibility, group, blocks)?"""
+        stmt = select(
+            exists().where(Post.id == post_id, post_visible(viewer_id, my_subgroup_ids(viewer_id)))
+        )
+        return bool((await self._session.execute(stmt)).scalar())
 
     async def get_post_detail(
         self,
