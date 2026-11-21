@@ -23,7 +23,8 @@ export function PollCard({ poll }: { poll: Poll }) {
   const [picked, setPicked] = React.useState<string[]>([]);
   const [changing, setChanging] = React.useState(false);
   const voted = (poll.user_vote?.length ?? 0) > 0;
-  const expired = !!poll.expires_at && Date.parse(poll.expires_at) < Date.now();
+  const [now] = React.useState(() => Date.now());
+  const expired = !!poll.expires_at && Date.parse(poll.expires_at) < now;
   const ended = poll.closed || expired;
   const multi = poll.poll_type === "multiple";
   const showResults =
