@@ -57,7 +57,9 @@ class PostService(CommentsMixin, ReactionsMixin):
         """@brief Fetch a single post with full enrichment.
         @raises NotFoundError If post does not exist or the viewer may not read it.
         """
-        if viewer_id is not None and not await self._post_repo.is_visible(post_id, viewer_id):
+        if viewer_id is not None and not await self._post_repo.is_visible(
+            post_id, viewer_id, self._community_id
+        ):
             raise NotFoundError(_("Post not found"))
         post = await self._post_repo.get_post_detail(
             post_id,
@@ -77,6 +79,7 @@ class PostService(CommentsMixin, ReactionsMixin):
         *,
         reply_to_prompt_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
+        private: bool = False,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
         await HookRegistry.emit(
@@ -93,6 +96,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             community_id=self._community_id,
             reply_to_prompt_id=reply_to_prompt_id,
             subgroup_id=subgroup_id,
+            private=private,
         )
 
         if media_ids and self._media_attacher:

@@ -38,12 +38,14 @@ class TagService:
 
     async def _can_view(self, target_type: str, target_id: uuid.UUID, viewer: User) -> bool:
         if target_type == "post":
-            return await self._posts.is_visible(target_id, viewer.id)
+            return await self._posts.is_visible(target_id, viewer.id, self._community_id)
         if target_type == "comment":
-            post_id = await self._repo.comment_post_id(target_id)
-            return post_id is not None and await self._posts.is_visible(post_id, viewer.id)
+            post_id = await self._repo.comment_post_id(target_id, self._community_id)
+            return post_id is not None and await self._posts.is_visible(
+                post_id, viewer.id, self._community_id
+            )
         if target_type == "media":
-            return await self._repo.media_viewable(target_id, viewer.id)
+            return await self._repo.media_viewable(target_id, viewer.id, self._community_id)
         return False
 
     async def list_for(
@@ -52,7 +54,7 @@ class TagService:
         """@raises NotFoundError when the viewer can't see the target."""
         if not await self._can_view(target_type, target_id, viewer):
             raise NotFoundError(message=_("Not found"))
-        tags = await self._repo.list_for_target(target_type, target_id)
+        tags = await self._repo.list_for_target(target_type, target_id, self._community_id)
         hidden = await self._repo.blocked_with(viewer.id, [t["user"]["id"] for t in tags])
         return [t for t in tags if t["user"]["id"] not in hidden]
 
@@ -64,14 +66,14 @@ class TagService:
                must also be able to see it and have no block with the actor.
         """
         if await self._repo.media_uploader(media_id, self._community_id) is None or not (
-            await self._repo.media_viewable(media_id, actor.id)
+            await self._repo.media_viewable(media_id, actor.id, self._community_id)
         ):
             raise NotFoundError(message=_("Photo not found"))
         users = await self._repo.users_by_ids(self._community_id, [user_id])
         if not users:
             raise NotFoundError(message=_("Member not found"))
         if await self._repo.blocked_with(actor.id, [user_id]) or not (
-            await self._repo.media_viewable(media_id, user_id)
+            await self._repo.media_viewable(media_id, user_id, self._community_id)
         ):
             raise ValidationError(message=_("They can't see this photo"))
         if await self._repo.add(self._community_id, "media", media_id, user_id, actor.id) and (
@@ -88,7 +90,7 @@ class TagService:
                 },
                 actor_id=actor.id,
             )
-        return await self._repo.list_for_target("media", media_id)
+        return await self._repo.list_for_target("media", media_id, self._community_id)
 
     async def remove(self, tag_id: uuid.UUID, actor: User) -> None:
         """
@@ -111,16 +113,23 @@ class TagService:
         self, subject_id: uuid.UUID, viewer: User, kind: str, before: datetime | None
     ) -> dict[str, Any]:
         """@brief Posts or photos the person is tagged in, as the viewer may see them."""
-        if subject_id != viewer.id and await self._repo.blocked_with(viewer.id, [subject_id]):
+        if subject_id != viewer.id and (
+            not await self._repo.users_by_ids(self._community_id, [subject_id])
+            or await self._repo.blocked_with(viewer.id, [subject_id])
+        ):
             raise NotFoundError(message=_("User not found"))
         if kind == "photos":
-            rows = await self._repo.tagged_media(subject_id, viewer.id, before, PAGE)
+            rows = await self._repo.tagged_media(
+                self._community_id, subject_id, viewer.id, before, PAGE
+            )
             return {
                 "kind": "photos",
                 "media_ids": [m for m, _at in rows],
                 "next_before": rows[-1][1] if len(rows) == PAGE else None,
             }
-        prows = await self._repo.tagged_post_ids(subject_id, viewer.id, before, PAGE)
+        prows = await self._repo.tagged_post_ids(
+            self._community_id, subject_id, viewer.id, before, PAGE
+        )
         enriched = await enrich_posts(self._posts._session, [p for p, _at in prows], viewer.id)
         return {
             "kind": "posts",

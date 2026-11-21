@@ -36,46 +36,55 @@ def my_subgroup_ids(viewer_id: uuid.UUID) -> Any:
     return select(SubgroupMember.subgroup_id).where(SubgroupMember.user_id == viewer_id)
 
 
-def post_visible(viewer_id: uuid.UUID, subgroup_ids: Any) -> Any:
+def post_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID) -> Any:
     """
     @brief Live post the viewer may read (community, own private, or their group).
     @param subgroup_ids list of ids, or a subquery such as ``my_subgroup_ids``
     """
-    in_group = _in(Post.subgroup_id, subgroup_ids)
+    # The group decides the audience: group posts are stored with
+    # visibility "community" or "subgroup", so only "private" is special.
     return and_(
+        Post.community_id == community_id,
         Post.deleted_at.is_(None),
         or_(
-            and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
-            and_(Post.visibility == "subgroup", in_group),
             and_(Post.visibility == "private", Post.author_id == viewer_id),
+            and_(
+                Post.visibility != "private",
+                or_(Post.subgroup_id.is_(None), _in(Post.subgroup_id, subgroup_ids)),
+            ),
         ),
         not_blocked(Post.author_id, viewer_id),
     )
 
 
-def gallery_visible(viewer_id: uuid.UUID, subgroup_ids: Any) -> Any:
+def gallery_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID) -> Any:
     """@brief Gallery the viewer may open."""
     in_group = _in(Gallery.subgroup_id, subgroup_ids)
     collaborator = exists().where(
         GalleryCollaborator.gallery_id == Gallery.id, GalleryCollaborator.user_id == viewer_id
     )
-    return or_(
-        Gallery.visibility == "community",
-        and_(Gallery.visibility == "subgroup", in_group),
-        and_(Gallery.visibility == "private", or_(Gallery.owner_id == viewer_id, collaborator)),
+    return and_(
+        Gallery.community_id == community_id,
+        or_(
+            Gallery.visibility == "community",
+            and_(Gallery.visibility == "subgroup", in_group),
+            and_(Gallery.visibility == "private", or_(Gallery.owner_id == viewer_id, collaborator)),
+        ),
     )
 
 
-def media_visible(media_col: Any, viewer_id: uuid.UUID, subgroup_ids: Any) -> Any:
+def media_visible(
+    media_col: Any, viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID
+) -> Any:
     """@brief Photo appears in a post or gallery the viewer can see."""
     via_post = exists().where(
         PostMedia.media_id == media_col,
         Post.id == PostMedia.post_id,
-        post_visible(viewer_id, subgroup_ids),
+        post_visible(viewer_id, subgroup_ids, community_id),
     )
     via_gallery = exists().where(
         GalleryItem.media_id == media_col,
         Gallery.id == GalleryItem.gallery_id,
-        gallery_visible(viewer_id, subgroup_ids),
+        gallery_visible(viewer_id, subgroup_ids, community_id),
     )
     return or_(via_post, via_gallery)

@@ -62,7 +62,7 @@ async def test_cannot_tag_in_photo_you_cannot_see():
 async def test_cannot_tag_someone_who_cannot_see_it_or_is_blocked():
     svc, repo, _, _ = _svc()
     actor = _user()
-    repo.media_viewable.side_effect = lambda _m, who: who == actor.id
+    repo.media_viewable.side_effect = lambda _m, who, _c: who == actor.id
     with pytest.raises(ValidationError):
         await svc.tag_media(uuid.uuid4(), uuid.uuid4(), actor)
     repo.media_viewable.side_effect = None

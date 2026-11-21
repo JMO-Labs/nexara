@@ -110,7 +110,9 @@ class TagRepository:
 
     # -- reads --------------------------------------------------------------
 
-    async def list_for_target(self, target_type: str, target_id: uuid.UUID) -> list[dict[str, Any]]:
+    async def list_for_target(
+        self, target_type: str, target_id: uuid.UUID, community_id: uuid.UUID
+    ) -> list[dict[str, Any]]:
         """@brief Tags on one target with the tagged person's name/avatar."""
         stmt = (
             select(
@@ -118,6 +120,7 @@ class TagRepository:
             )
             .join(User, User.id == Tag.subject_id)
             .where(
+                Tag.community_id == community_id,
                 Tag.target_type == target_type,
                 Tag.target_id == target_id,
                 Tag.subject_type == "user",
@@ -180,14 +183,17 @@ class TagRepository:
         rows = (await self._session.execute(stmt)).all()
         return {b if a == user_id else a for a, b in rows}
 
-    async def media_viewable(self, media_id: uuid.UUID, viewer_id: uuid.UUID) -> bool:
+    async def media_viewable(
+        self, media_id: uuid.UUID, viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
         """@brief Uploader, or the photo is in a post/gallery the viewer can see."""
         stmt = select(
             exists().where(
                 Media.id == media_id,
+                Media.community_id == community_id,
                 or_(
                     Media.uploader_id == viewer_id,
-                    media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id)),
+                    media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id), community_id),
                 ),
             )
         )
@@ -202,13 +208,18 @@ class TagRepository:
         )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def comment_post_id(self, comment_id: uuid.UUID) -> uuid.UUID | None:
-        """@brief Post a comment belongs to."""
-        stmt = select(Comment.post_id).where(Comment.id == comment_id)
+    async def comment_post_id(
+        self, comment_id: uuid.UUID, community_id: uuid.UUID
+    ) -> uuid.UUID | None:
+        """@brief Post a comment in the community belongs to."""
+        stmt = select(Comment.post_id).where(
+            Comment.id == comment_id, Comment.community_id == community_id
+        )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def tagged_post_ids(
         self,
+        community_id: uuid.UUID,
         subject_id: uuid.UUID,
         viewer_id: uuid.UUID,
         before: datetime | None,
@@ -229,9 +240,10 @@ class TagRepository:
             select(Post.id, tagged_at)
             .join(Tag, or_(on_post, on_comment))
             .where(
+                Tag.community_id == community_id,
                 Tag.subject_type == "user",
                 Tag.subject_id == subject_id,
-                post_visible(viewer_id, my_subgroup_ids(viewer_id)),
+                post_visible(viewer_id, my_subgroup_ids(viewer_id), community_id),
             )
             .group_by(Post.id)
             .order_by(tagged_at.desc(), Post.id.desc())
@@ -243,6 +255,7 @@ class TagRepository:
 
     async def tagged_media(
         self,
+        community_id: uuid.UUID,
         subject_id: uuid.UUID,
         viewer_id: uuid.UUID,
         before: datetime | None,
@@ -253,11 +266,13 @@ class TagRepository:
             select(Media.id, Tag.created_at)
             .join(Tag, and_(Tag.target_type == "media", Tag.target_id == Media.id))
             .where(
+                Tag.community_id == community_id,
+                Media.community_id == community_id,
                 Tag.subject_type == "user",
                 Tag.subject_id == subject_id,
                 or_(
                     Media.uploader_id == viewer_id,
-                    media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id)),
+                    media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id), community_id),
                 ),
                 not_blocked(Media.uploader_id, viewer_id),
             )

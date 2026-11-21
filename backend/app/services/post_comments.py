@@ -37,7 +37,8 @@ class CommentsMixin(PostServiceBase):
             community_id=self._community_id,
         )
         if not post or (
-            viewer_id is not None and not await self._post_repo.is_visible(post_id, viewer_id)
+            viewer_id is not None
+            and not await self._post_repo.is_visible(post_id, viewer_id, self._community_id)
         ):
             raise NotFoundError(_("Post not found"))
         items, next_cursor = await self._comment_repo.list_for_post(
@@ -66,7 +67,7 @@ class CommentsMixin(PostServiceBase):
             post_id,
             community_id=self._community_id,
         )
-        if not post or not await self._post_repo.is_visible(post_id, user.id):
+        if not post or not await self._post_repo.is_visible(post_id, user.id, self._community_id):
             raise NotFoundError(_("Post not found"))
 
         if parent_id:

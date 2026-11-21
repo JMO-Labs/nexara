@@ -129,6 +129,7 @@ async def create_post(
         poll=body.poll,
         reply_to_prompt_id=body.reply_to_prompt_id,
         subgroup_id=body.subgroup_id,
+        private=body.visibility == "private",
     )
 
 
