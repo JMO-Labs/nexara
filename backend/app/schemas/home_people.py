@@ -32,9 +32,16 @@ class HomePerson(BaseModel):
     shared_groups: list[SharedGroup] = []
     primary_group_id: UUID | None = None
     shared_events_30d: int = 0
+    favorite: bool = False
 
 
 class HomePeopleResponse(BaseModel):
     """@brief People strip payload."""
 
     items: list[HomePerson]
+
+
+class FavoritesResponse(BaseModel):
+    """@brief The viewer's pinned people, in pin order."""
+
+    favorites: list[UUID]

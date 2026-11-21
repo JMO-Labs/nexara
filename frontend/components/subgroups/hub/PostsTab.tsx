@@ -47,7 +47,7 @@ export function PostsTab({ subgroup }: PostsTabProps) {
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
       {subgroup.my_role && (
         <PostComposer defaultSubgroupId={subgroup.id} onPosted={() => {}} />
       )}

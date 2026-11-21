@@ -4,7 +4,8 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders as render } from "../../utils/renderWithProviders";
 import { ConnectionCard } from "@/components/home/ConnectionCard";
 import type { HomePerson } from "@/lib/api/home";
 

@@ -118,6 +118,53 @@ class HomePeopleRepository(BaseRepository[User]):
                 rows[user.id] = PersonRow(user, online, last_seen, bday)
         return list(rows.values())
 
+    async def rows_for(
+        self, viewer_id: uuid.UUID, community_id: uuid.UUID, ids: list[uuid.UUID]
+    ) -> list[PersonRow]:
+        """
+        @brief Eligible users by id (favorites missing from the candidate pool).
+        @return PersonRows without shared-group detail.
+        """
+        if not ids:
+            return []
+        stmt = self._eligible(viewer_id, community_id).where(User.id.in_(ids))
+        return [
+            PersonRow(user, online, last_seen, bday)
+            for user, online, last_seen, bday in (await self._session.execute(stmt)).all()
+        ]
+
+    async def favorites(self, viewer_id: uuid.UUID) -> list[uuid.UUID]:
+        """@brief Viewer's pinned user ids from settings.home_layout.favorites."""
+        layout = (
+            await self._session.execute(
+                select(UserSettings.home_layout).where(UserSettings.user_id == viewer_id)
+            )
+        ).scalar_one_or_none() or {}
+        out: list[uuid.UUID] = []
+        for raw in layout.get("favorites", []) if isinstance(layout, dict) else []:
+            try:
+                out.append(uuid.UUID(str(raw)))
+            except ValueError:
+                continue
+        return out
+
+    async def set_favorites(
+        self, viewer_id: uuid.UUID, community_id: uuid.UUID, ids: list[uuid.UUID]
+    ) -> None:
+        """@brief Store pinned ids, keeping any other home_layout keys."""
+        row = (
+            await self._session.execute(
+                select(UserSettings).where(UserSettings.user_id == viewer_id)
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            row = UserSettings(user_id=viewer_id, community_id=community_id)
+            self._session.add(row)
+        layout = dict(row.home_layout or {})
+        layout["favorites"] = [str(i) for i in ids]
+        row.home_layout = layout
+        await self._session.flush()
+
     async def shared_event_counts(
         self,
         viewer_id: uuid.UUID,

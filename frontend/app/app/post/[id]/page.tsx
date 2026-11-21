@@ -20,7 +20,7 @@ export default function PostPage({
   const { data: post, isLoading, isError, refetch } = usePost(id);
 
   return (
-    <div className="mx-auto flex w-full flex-col pt-4 md:pt-6">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col pt-4 md:pt-6">
       <PageHeader title="Post" back={{ href: "/app", label: "Back to feed" }} />
       {isLoading ? (
         <div

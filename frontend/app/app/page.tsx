@@ -13,8 +13,7 @@ import { Greeting } from "@/components/home/Greeting";
 import { ScopeBar } from "@/components/home/ScopeBar";
 import { PeopleStrip } from "@/components/home/PeopleStrip";
 import { NeedsChips } from "@/components/home/NeedsChips";
-import { PeopleTile } from "@/components/home/tiles/PeopleTile";
-import { ListsTile } from "@/components/home/tiles/ListsTile";
+import { HomeSideColumn } from "@/components/home/HomeSideColumn";
 import { FeedTile } from "@/components/home/tiles/FeedTile";
 import { ChatsTile } from "@/components/home/tiles/ChatsTile";
 import { UpNextTile } from "@/components/home/tiles/UpNextTile";
@@ -57,14 +56,13 @@ export default function AppHome() {
       </motion.div>
       <motion.div
         {...sectionProps}
-        className="flex flex-col gap-2.5 md:grid md:h-[1158px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr_340px] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_lists_lists'] 3xl:h-[max(800px,calc(100dvh-260px))] 3xl:grid-cols-[1.3fr_1fr_.8fr_.8fr] 3xl:grid-rows-[auto_1fr] 3xl:[grid-template-areas:'feed_chat_next_people''feed_chat_photos_lists']"
+        className="flex flex-col gap-2.5 md:grid md:h-[1158px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr_340px] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_lists_lists'] lg:h-[max(800px,calc(100dvh-260px))] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,.85fr)_auto] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:'feed_chat_next_side''feed_chat_photos_side']"
       >
         <UpNextTile open={open === "next"} onToggle={toggle} />
         <ChatsTile open={open === "chat"} onToggle={toggle} />
         <PhotosTile open={open === "photos"} onToggle={toggle} />
         <FeedTile open={open === "feed"} onToggle={toggle} />
-        <PeopleTile open={open === "people"} onToggle={toggle} />
-        <ListsTile open={open === "lists"} onToggle={toggle} />
+        <HomeSideColumn open={open} onToggle={toggle} />
       </motion.div>
     </motion.div>
   );

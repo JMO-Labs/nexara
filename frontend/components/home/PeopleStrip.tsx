@@ -2,6 +2,8 @@
 /**
  * @file components/home/PeopleStrip.tsx
  * @brief Glass pill of ringed avatars with online dot, birthday badge, hover card.
+ *        Shows only pinned people once the viewer pins anyone (star on the
+ *        hover card or profile); until then, a suggested ranking.
  */
 import { Cake } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -47,12 +49,14 @@ function statusOf(p: HomePerson): string {
 export function PeopleStrip() {
   const router = useRouter();
   const { data } = useHomePeople();
-  const people = data?.items ?? [];
+  const all = data?.items ?? [];
+  const pinned = all.filter((p) => p.favorite);
+  const people = pinned.length ? pinned : all;
   if (people.length === 0) return null;
 
   return (
     <div
-      aria-label="Your people"
+      aria-label={pinned.length ? "Pinned people" : "Your people"}
       className="glass flex gap-3 overflow-x-auto rounded-3xl p-2.5 md:gap-2 md:overflow-visible md:rounded-full md:px-2.5 md:py-2"
     >
       {people.map((p) => {

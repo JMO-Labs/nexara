@@ -17,6 +17,7 @@ import {
 import { NudgeButton } from "@/components/engagement/NudgeButton";
 import { BlockButton } from "@/components/common/BlockButton";
 import { GroupChips } from "@/components/members/GroupChips";
+import { FavoriteButton } from "@/components/home/FavoriteButton";
 import { useCreateDm } from "@/hooks/useChat";
 import type { DirectoryPerson, UserProfile } from "@/lib/api/users";
 import { groupColor } from "@/lib/groupColor";
@@ -99,6 +100,11 @@ export function MemberHeader({
             >
               Message
             </button>
+            <FavoriteButton
+              userId={profile.id}
+              name={profile.display_name}
+              className="size-11"
+            />
             <NudgeButton userId={profile.id} />
             <Popover>
               <PopoverTrigger asChild>

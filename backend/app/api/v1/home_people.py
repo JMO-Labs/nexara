@@ -5,13 +5,15 @@
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.repositories.home_people_repo import HomePeopleRepository
-from app.schemas.home_people import HomePeopleResponse
+from app.schemas.home_people import FavoritesResponse, HomePeopleResponse
 from app.services.home_people_service import HomePeopleService
 
 router = APIRouter(prefix="/people", tags=["home_people"])
@@ -33,3 +35,23 @@ async def get_home_people(
 ) -> HomePeopleResponse:
     """@brief Return the viewer's people strip."""
     return await service.list(user, limit)
+
+
+@router.put("/favorites/{user_id}", response_model=FavoritesResponse)
+async def pin_person(
+    user_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: HomePeopleService = Depends(_build_service),
+) -> FavoritesResponse:
+    """@brief Pin a person to the viewer's people strip."""
+    return FavoritesResponse(favorites=await service.set_favorite(user, user_id, True))
+
+
+@router.delete("/favorites/{user_id}", response_model=FavoritesResponse)
+async def unpin_person(
+    user_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    service: HomePeopleService = Depends(_build_service),
+) -> FavoritesResponse:
+    """@brief Unpin a person from the viewer's people strip."""
+    return FavoritesResponse(favorites=await service.set_favorite(user, user_id, False))

@@ -29,7 +29,7 @@ export function ListsTile({ open, onToggle }: TileSlotProps) {
       summary={lists[0]?.title ?? "No lists yet"}
       open={open}
       onToggle={onToggle}
-      className="md:[grid-area:lists]"
+      className="md:[grid-area:lists] lg:shrink-0"
     >
       {lists.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-6 text-center">

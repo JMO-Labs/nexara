@@ -36,7 +36,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
       summary={summary}
       open={open}
       onToggle={onToggle}
-      className="md:[grid-area:people]"
+      className="md:[grid-area:people] lg:min-h-0 lg:flex-1"
     >
       <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
         {bdays.length > 0 && (

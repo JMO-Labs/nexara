@@ -47,6 +47,8 @@ def _svc(rows: list[PersonRow], online: list[PersonRow] | None = None, today: da
     repo = AsyncMock(spec=HomePeopleRepository)
     repo.candidates.return_value = rows
     repo.shared_event_counts.return_value = {}
+    repo.favorites.return_value = []
+    repo.rows_for.return_value = []
 
     async def online_fn() -> list[str]:
         return [str(r.user.id) for r in (online or [])]
@@ -146,3 +148,38 @@ async def test_shared_events_count_attached():
     repo.shared_event_counts.return_value = {p.user.id: 2}
     r = await svc.list(_viewer(), 10)
     assert r.items[0].shared_events_30d == 2
+
+
+async def test_favorites_first_in_pin_order_and_fetched_if_missing():
+    ruth, kim = _row("Ruth"), _row("Kim")
+    far = _row("Far")
+    svc, repo = _svc([ruth, kim], online=[ruth])
+    repo.favorites.return_value = [far.user.id, kim.user.id]
+    repo.rows_for.return_value = [far]
+    r = await svc.list(_viewer(), 10)
+    assert [(p.display_name, p.favorite) for p in r.items] == [
+        ("Far", True),
+        ("Kim", True),
+        ("Ruth", False),
+    ]
+    repo.rows_for.assert_awaited_once()
+
+
+async def test_set_favorite_pins_unpins_and_rejects_unknown():
+    import pytest
+
+    from app.core.exceptions import AppError, NotFoundError
+
+    a = _row("A")
+    svc, repo = _svc([])
+    repo.rows_for.return_value = [a]
+    assert await svc.set_favorite(_viewer(), a.user.id, True) == [a.user.id]
+    repo.favorites.return_value = [a.user.id]
+    assert await svc.set_favorite(_viewer(), a.user.id, False) == []
+    repo.rows_for.return_value = []
+    with pytest.raises(NotFoundError):
+        await svc.set_favorite(_viewer(), uuid.uuid4(), True)
+    repo.rows_for.return_value = [a]
+    repo.favorites.return_value = [uuid.uuid4() for _ in range(24)]
+    with pytest.raises(AppError):
+        await svc.set_favorite(_viewer(), a.user.id, True)

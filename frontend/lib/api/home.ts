@@ -4,7 +4,7 @@
  *        summary stats and aggregated media feed.
  */
 
-import { apiGet, apiPut } from "./client";
+import { apiDelete, apiGet, apiPut, seg } from "./client";
 import type { Post } from "./posts";
 
 // ---------------------------------------------------------------------------
@@ -229,6 +229,8 @@ export interface HomePerson {
   shared_groups: { id: string; name: string; accent_color: string | null }[];
   primary_group_id: string | null;
   shared_events_30d: number;
+  /** Pinned by the viewer; pinned people come first, in pin order. */
+  favorite?: boolean;
 }
 
 /** @brief Response of GET /home/people. */
@@ -257,6 +259,19 @@ export const getHomeChats = (limit = 4): Promise<HomeChatsResponse> =>
  */
 export const getHomePeople = (limit = 10): Promise<HomePeopleResponse> =>
   apiGet<HomePeopleResponse>(`${HOME}/people?limit=${limit}`);
+
+/**
+ * @brief Pin or unpin a person in the viewer's people strip.
+ * @param userId person to (un)pin
+ * @param on true to pin
+ * @return pinned ids in order
+ */
+export const setFavorite = (userId: string, on: boolean) => {
+  const path = `${HOME}/people/favorites/${seg(userId)}`;
+  return on
+    ? apiPut<{ favorites: string[] }>(path)
+    : apiDelete<{ favorites: string[] }>(path);
+};
 
 /** @brief Fetch "needs you" items for the home page. */
 export const getHomeNeeds = (): Promise<HomeNeeds> =>

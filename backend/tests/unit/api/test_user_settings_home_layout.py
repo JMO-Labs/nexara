@@ -137,7 +137,7 @@ async def test_patch_home_layout_round_trip(test_app):
             )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["home_layout"] == HOME_LAYOUT_PAYLOAD
+        assert data["home_layout"] == {**HOME_LAYOUT_PAYLOAD, "favorites": []}
         # confirm service was called with the layout
         mock_svc.update_settings.assert_called_once()
         call_arg = mock_svc.update_settings.call_args[0][1]

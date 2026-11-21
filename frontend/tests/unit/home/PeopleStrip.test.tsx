@@ -85,13 +85,13 @@ describe("PeopleStrip", () => {
   it("only colour-rings online or birthday people; others get a soft ring", () => {
     items = [person()];
     const { unmount } = renderWithProviders(<PeopleStrip />);
-    const quiet = screen.getByRole("button", { name: /Tomás Reyes/ });
+    const quiet = screen.getByRole("button", { name: /^Tomás Reyes/ });
     expect(quiet.className).not.toContain("var(--rc)");
     expect(quiet.className).toContain("var(--nx-glass-solid)");
     unmount();
     items = [person({ online: true })];
     renderWithProviders(<PeopleStrip />);
-    const live = screen.getByRole("button", { name: /Tomás Reyes/ });
+    const live = screen.getByRole("button", { name: /^Tomás Reyes/ });
     expect(live.className).toContain("var(--rc)");
   });
 
@@ -113,5 +113,21 @@ describe("PeopleStrip", () => {
     items = [person({ shared_events_30d: 0 })];
     renderWithProviders(<PeopleStrip />);
     expect(screen.queryByText(/shared events/)).toBeNull();
+  });
+
+  it("shows only pinned people once any are pinned", () => {
+    items = [
+      person({ user_id: "a", display_name: "Ann Lee", favorite: true }),
+      person({ user_id: "b", display_name: "Bo Kim" }),
+    ];
+    renderWithProviders(<PeopleStrip />);
+    expect(screen.getByLabelText("Pinned people")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Ann Lee/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Bo Kim/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Unpin Ann Lee" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

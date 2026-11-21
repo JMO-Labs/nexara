@@ -9,6 +9,7 @@ and basic profile settings. Privacy and appearance settings ship in Phase 2.
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -22,6 +23,7 @@ class HomeLayoutSchema(BaseModel):
 
     order: list[str] = Field(default_factory=lambda: list(DEFAULT_WIDGET_ORDER), max_length=16)
     hidden: list[str] = Field(default_factory=list, max_length=16)
+    favorites: list[UUID] = Field(default_factory=list, max_length=24)
 
     model_config = {"extra": "forbid"}
 

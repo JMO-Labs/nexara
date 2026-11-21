@@ -6,6 +6,7 @@
 import { useRouter } from "next/navigation";
 import { useCreateDm } from "@/hooks/useChat";
 import type { HomePerson } from "@/lib/api/home";
+import { FavoriteButton } from "./FavoriteButton";
 
 /**
  * @brief Connection card with shared context and Message/Profile actions.
@@ -34,9 +35,16 @@ export function ConnectionCard({
       role="tooltip"
       className="invisible absolute border border-[var(--nx-line)] bg-[var(--nx-glass-solid)] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] top-[calc(100%+12px)] right-[-20px] z-20 w-[260px] translate-y-[-4px] rounded-[22px] p-4 text-left text-[var(--nx-ink)] opacity-0 transition-[opacity,transform] duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 max-md:hidden"
     >
-      <strong className="block text-[15px] font-medium">
-        {person.display_name}
-      </strong>
+      <div className="flex items-start justify-between gap-2">
+        <strong className="block text-[15px] font-medium">
+          {person.display_name}
+        </strong>
+        <FavoriteButton
+          userId={person.user_id}
+          name={person.display_name}
+          className="-mt-1 -mr-1 size-8"
+        />
+      </div>
       <span className="my-1.5 mb-2.5 inline-block rounded-full border border-dashed border-[var(--nx-line)] px-[9px] py-0.5 text-xs text-[var(--nx-faint)]">
         Add how you know {first}
       </span>
