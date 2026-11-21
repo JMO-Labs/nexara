@@ -1,9 +1,9 @@
 /**
  * @file tests/unit/home/HomeSideColumn.test.tsx
- * @brief Side column: auto mode by default, collapse/expand persisted.
+ * @brief Side column: rail opens on hover/focus/tap and closes after leave.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { act, screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 
 vi.mock("@/hooks/useHomePeople", () => ({
@@ -18,27 +18,42 @@ vi.mock("@/components/home/tiles/ListsTile", () => ({
 
 import { HomeSideColumn } from "@/components/home/HomeSideColumn";
 
-const rail = () => screen.getByRole("navigation", { name: "Side column" });
+const side = () => screen.getByTestId("home-side");
 
 describe("HomeSideColumn", () => {
-  beforeEach(() => localStorage.clear());
+  afterEach(() => vi.useRealTimers());
 
-  it("defaults to auto: rail below 3xl, open at 3xl", () => {
+  it("opens on mouse hover and closes shortly after leaving", () => {
+    vi.useFakeTimers();
     renderWithProviders(<HomeSideColumn open={null} onToggle={vi.fn()} />);
-    expect(rail().className).toContain("3xl:hidden");
-    expect(
-      screen.getByLabelText("People, 1 birthday soon"),
-    ).toBeInTheDocument();
+    expect(side()).not.toHaveAttribute("data-expanded");
+    fireEvent.pointerEnter(side(), { pointerType: "mouse" });
+    expect(side()).toHaveAttribute("data-expanded");
+    fireEvent.pointerLeave(side(), { pointerType: "mouse" });
+    expect(side()).toHaveAttribute("data-expanded");
+    act(() => vi.advanceTimersByTime(300));
+    expect(side()).not.toHaveAttribute("data-expanded");
   });
 
-  it("collapses and expands, remembering the choice", () => {
+  it("re-entering before the delay keeps it open", () => {
+    vi.useFakeTimers();
     renderWithProviders(<HomeSideColumn open={null} onToggle={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("Collapse side column"));
-    expect(localStorage.getItem("nx-home-side")).toBe("closed");
-    expect(rail().className).toContain("lg:flex");
-    expect(rail().className).not.toContain("3xl:hidden");
-    fireEvent.click(screen.getByLabelText("Expand side column"));
-    expect(localStorage.getItem("nx-home-side")).toBe("open");
-    expect(rail().className).toContain("lg:hidden");
+    fireEvent.pointerEnter(side(), { pointerType: "mouse" });
+    fireEvent.pointerLeave(side(), { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(100));
+    fireEvent.pointerEnter(side(), { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(500));
+    expect(side()).toHaveAttribute("data-expanded");
+  });
+
+  it("tap toggles and shows birthday count", () => {
+    renderWithProviders(<HomeSideColumn open={null} onToggle={vi.fn()} />);
+    const people = screen.getByRole("button", {
+      name: "People, 1 birthday soon",
+    });
+    fireEvent.click(people);
+    expect(people).toHaveAttribute("aria-expanded", "true");
+    fireEvent.keyDown(people, { key: "Escape" });
+    expect(people).toHaveAttribute("aria-expanded", "false");
   });
 });

@@ -99,7 +99,10 @@ describe("PeopleStrip", () => {
     items = [person()];
     mutateAsync.mockResolvedValue({ id: "ch9" });
     renderWithProviders(<PeopleStrip />);
-    expect(screen.getByText("Add how you know Tomás")).toBeInTheDocument();
+    fireEvent.focus(screen.getByRole("button", { name: /^Tomás Reyes/ }));
+    expect(
+      await screen.findByText("Add how you know Tomás"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Family")).toBeInTheDocument();
     expect(screen.getByText("3 shared events this month")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Message" }));
@@ -109,13 +112,15 @@ describe("PeopleStrip", () => {
     expect(push).toHaveBeenCalledWith("/app/members/u1");
   });
 
-  it("omits shared events line when 0", () => {
+  it("omits shared events line when 0", async () => {
     items = [person({ shared_events_30d: 0 })];
     renderWithProviders(<PeopleStrip />);
+    fireEvent.focus(screen.getByRole("button", { name: /^Tomás Reyes/ }));
+    await screen.findByText("Add how you know Tomás");
     expect(screen.queryByText(/shared events/)).toBeNull();
   });
 
-  it("shows only pinned people once any are pinned", () => {
+  it("shows only pinned people once any are pinned", async () => {
     items = [
       person({ user_id: "a", display_name: "Ann Lee", favorite: true }),
       person({ user_id: "b", display_name: "Bo Kim" }),
@@ -126,8 +131,9 @@ describe("PeopleStrip", () => {
       screen.getByRole("button", { name: /^Ann Lee/ }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Bo Kim/ })).toBeNull();
+    fireEvent.focus(screen.getByRole("button", { name: /^Ann Lee/ }));
     expect(
-      screen.getByRole("button", { name: "Unpin Ann Lee" }),
+      await screen.findByRole("button", { name: "Unpin Ann Lee" }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 });

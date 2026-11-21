@@ -1,39 +1,20 @@
 "use client";
 /**
  * @file components/home/HomeSideColumn.tsx
- * @brief People + Lists side column (lg+) that collapses sideways to an icon
- *        rail so the feed keeps the width. Below lg the wrappers are
+ * @brief People + Lists side column (lg+): a slim icon rail that slides open
+ *        over the grid on hover/focus (or tap) and closes when the pointer
+ *        leaves, so the feed keeps its width. Below lg the wrappers are
  *        `display: contents`, so the tiles sit in the parent grid/accordion.
- *        No saved choice = auto: rail below 3xl, open at 3xl.
  */
 import * as React from "react";
-import { ChevronRight, ListChecks, PanelRightOpen, Users } from "lucide-react";
+import { ListChecks, Users } from "lucide-react";
 import { PeopleTile } from "@/components/home/tiles/PeopleTile";
 import { ListsTile } from "@/components/home/tiles/ListsTile";
 import type { TileSlotProps } from "@/components/home/HomeTile";
 import { useHomePeople } from "@/hooks/useHomePeople";
 import { cn } from "@/lib/utils";
 
-type Mode = "auto" | "open" | "closed";
-const KEY = "nx-home-side";
-
-const read = (): Mode => {
-  try {
-    const v = localStorage.getItem(KEY);
-    return v === "open" || v === "closed" ? v : "auto";
-  } catch {
-    return "auto";
-  }
-};
-
-const subscribe = (cb: () => void) => {
-  window.addEventListener(KEY, cb);
-  window.addEventListener("storage", cb);
-  return () => {
-    window.removeEventListener(KEY, cb);
-    window.removeEventListener("storage", cb);
-  };
-};
+const CLOSE_DELAY = 250;
 
 /**
  * @brief Side column.
@@ -48,81 +29,51 @@ export function HomeSideColumn({
   open: string | null;
   onToggle: TileSlotProps["onToggle"];
 }) {
-  const mode = React.useSyncExternalStore(subscribe, read, () => "auto");
-  const set = (m: Mode) => {
-    try {
-      localStorage.setItem(KEY, m);
-    } catch {
-      /* private mode: choice is not kept */
-    }
-    window.dispatchEvent(new Event(KEY));
+  const [expanded, setExpanded] = React.useState(false);
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const show = () => {
+    clearTimeout(timer.current);
+    setExpanded(true);
   };
+  const hide = () => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setExpanded(false), CLOSE_DELAY);
+  };
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+
   const bdays =
     useHomePeople().data?.items.filter((p) => p.birthday_in_days != null)
       .length ?? 0;
-
-  const tiles =
-    mode === "open"
-      ? "lg:flex"
-      : mode === "closed"
-        ? "lg:hidden"
-        : "lg:hidden 3xl:flex";
-  const rail =
-    mode === "open"
-      ? "lg:hidden"
-      : mode === "closed"
-        ? "lg:flex"
-        : "lg:flex 3xl:hidden";
-
   const railBtn =
     "relative grid size-10 place-items-center rounded-full text-ink outline-none hover:bg-[color-mix(in_srgb,var(--nx-ink)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-accent";
 
   return (
-    <div className="contents lg:relative lg:flex lg:min-h-0 lg:[grid-area:side]">
-      <div
-        className={cn(
-          "contents lg:min-h-0 lg:w-[300px] lg:flex-col lg:gap-[18px] 3xl:w-[340px]",
-          tiles,
-        )}
-      >
-        <PeopleTile open={open === "people"} onToggle={onToggle} />
-        <ListsTile open={open === "lists"} onToggle={onToggle} />
-        <button
-          type="button"
-          aria-label="Collapse side column"
-          title="Collapse"
-          onClick={() => set("closed")}
-          className="glass absolute top-1/2 -left-[14px] z-10 hidden h-14 w-[10px] -translate-y-1/2 place-items-center rounded-full text-muted transition-[width] hover:w-4 hover:text-ink focus-visible:w-4 lg:grid"
-        >
-          <ChevronRight className="size-3" aria-hidden />
-        </button>
-      </div>
+    <div
+      data-testid="home-side"
+      data-expanded={expanded || undefined}
+      onPointerEnter={(e) => e.pointerType === "mouse" && show()}
+      onPointerLeave={(e) => e.pointerType === "mouse" && hide()}
+      onFocus={show}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) hide();
+      }}
+      onKeyDown={(e) => e.key === "Escape" && setExpanded(false)}
+      className="contents lg:relative lg:flex lg:min-h-0 lg:w-16 lg:[grid-area:side]"
+    >
       <nav
-        aria-label="Side column"
-        className={cn(
-          "glass hidden w-16 flex-col items-center gap-2 rounded-[28px] py-3",
-          rail,
-        )}
+        aria-label="People and lists"
+        className="glass hidden w-16 flex-col items-center gap-2 rounded-[28px] py-3 lg:flex"
       >
         <button
           type="button"
-          aria-label="Expand side column"
-          title="Expand"
-          onClick={() => set("open")}
-          className={railBtn}
-        >
-          <PanelRightOpen className="size-4" aria-hidden />
-        </button>
-        <span className="h-px w-8 bg-[var(--nx-line)]" aria-hidden />
-        <button
-          type="button"
+          aria-expanded={expanded}
           aria-label={
             bdays
               ? `People, ${bdays} birthday${bdays === 1 ? "" : "s"} soon`
               : "People"
           }
           title="People"
-          onClick={() => set("open")}
+          onClick={() => setExpanded((v) => !v)}
           className={railBtn}
         >
           <Users className="size-5" aria-hidden />
@@ -134,14 +85,26 @@ export function HomeSideColumn({
         </button>
         <button
           type="button"
+          aria-expanded={expanded}
           aria-label="Lists"
           title="Lists"
-          onClick={() => set("open")}
+          onClick={() => setExpanded((v) => !v)}
           className={railBtn}
         >
           <ListChecks className="size-5" aria-hidden />
         </button>
       </nav>
+      <div
+        className={cn(
+          "contents lg:absolute lg:top-0 lg:right-0 lg:z-30 lg:flex lg:h-full lg:w-[340px] lg:flex-col lg:gap-[18px] lg:transition-[opacity,transform] lg:duration-200 motion-reduce:lg:transition-none",
+          expanded
+            ? "lg:translate-x-0 lg:opacity-100"
+            : "lg:pointer-events-none lg:invisible lg:translate-x-6 lg:opacity-0",
+        )}
+      >
+        <PeopleTile open={open === "people"} onToggle={onToggle} />
+        <ListsTile open={open === "lists"} onToggle={onToggle} />
+      </div>
     </div>
   );
 }

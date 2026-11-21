@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/home/ConnectionCard.tsx
- * @brief Hover/focus card for a person in the home people strip (desktop only).
+ * @brief Card body for a person in the home people strip; PeopleStrip shows it
+ *        in a Radix HoverCard (portaled, with open/close delays).
  */
 import { useRouter } from "next/navigation";
 import { useCreateDm } from "@/hooks/useChat";
@@ -12,7 +13,7 @@ import { FavoriteButton } from "./FavoriteButton";
  * @brief Connection card with shared context and Message/Profile actions.
  * @param person The person shown.
  * @param status Human status line ("" to omit).
- * @return Card element, hidden until the parent group is hovered/focused.
+ * @return Card body.
  */
 export function ConnectionCard({
   person,
@@ -31,10 +32,7 @@ export function ConnectionCard({
   };
 
   return (
-    <div
-      role="tooltip"
-      className="invisible absolute border border-[var(--nx-line)] bg-[var(--nx-glass-solid)] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] top-[calc(100%+12px)] right-[-20px] z-20 w-[260px] translate-y-[-4px] rounded-[22px] p-4 text-left text-[var(--nx-ink)] opacity-0 transition-[opacity,transform] duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 max-md:hidden"
-    >
+    <div className="w-[260px] text-left text-[var(--nx-ink)]">
       <div className="flex items-start justify-between gap-2">
         <strong className="block text-[15px] font-medium">
           {person.display_name}
