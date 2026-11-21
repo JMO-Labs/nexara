@@ -1,11 +1,13 @@
 "use client";
 /**
  * @file components/events/event-form/LocationField.tsx
- * @brief Location input with debounced geocode suggestions (combobox).
+ * @brief Location input with debounced geocode suggestions (combobox) and a
+ *        "Use my address" shortcut when the profile has an address.
  */
 import * as React from "react";
 import { Input } from "@/components/ui";
 import { useUserLocation } from "@/hooks/useUserLocation";
+import { useMyProfile } from "@/hooks/useSettings";
 import { geocodeSearch, type GeocodeResult } from "@/lib/api/geocode";
 
 export interface LocationFieldProps {
@@ -20,6 +22,7 @@ export interface LocationFieldProps {
  */
 export function LocationField({ value, onChange }: LocationFieldProps) {
   const userLoc = useUserLocation();
+  const myAddress = useMyProfile().data?.address?.trim() ?? "";
   const [options, setOptions] = React.useState<GeocodeResult[]>([]);
   const [shown, setShown] = React.useState(false);
   const listId = React.useId();
@@ -67,6 +70,18 @@ export function LocationField({ value, onChange }: LocationFieldProps) {
         }}
         onKeyDown={(e) => e.key === "Escape" && setShown(false)}
       />
+      {myAddress && value.trim() !== myAddress && (
+        <button
+          type="button"
+          onClick={() => {
+            setShown(false);
+            onChange(myAddress, null);
+          }}
+          className="glass-item mt-1.5 rounded-full px-3 py-1 text-xs"
+        >
+          Use my address
+        </button>
+      )}
       {shown && options.length > 0 && (
         <ul
           id={listId}

@@ -47,6 +47,10 @@ def _mock_user(**overrides) -> MagicMock:
     user.location = None
     user.website_url = None
     user.birthday = None
+    user.banner_media_id = None
+    for f in ("phone", "contact_email", "address", "emergency_contact", "availability", "dietary"):
+        setattr(user, f, None)
+    user.links, user.skills = [], []
     user.storage_used = 0
     user.storage_quota = 1073741824
     user.created_at = datetime.now(UTC)
@@ -173,9 +177,17 @@ class TestGetUserById:
         test_app.dependency_overrides[get_current_user] = _override_user
 
         try:
-            with patch("app.api.v1.users.UserService") as mock_svc_cls:
+            with patch("app.api.v1.users.ProfileService") as mock_svc_cls:
+                from app.schemas.profile import ProfileResponse
+
                 mock_svc = AsyncMock()
-                mock_svc.get_user.return_value = target_user
+                mock_svc.view.return_value = ProfileResponse(
+                    id=target_user.id,
+                    username="alice",
+                    display_name="Alice",
+                    role="member",
+                    created_at=target_user.created_at,
+                )
                 mock_svc_cls.return_value = mock_svc
 
                 transport = ASGITransport(app=test_app)

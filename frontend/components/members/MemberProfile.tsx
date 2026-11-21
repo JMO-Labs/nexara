@@ -1,13 +1,15 @@
 "use client";
 /**
  * @file components/members/MemberProfile.tsx
- * @brief Member profile: header plus Photos | Groups tabs.
+ * @brief Member profile: banner hero, About card beside Photos | Groups.
  */
 import * as React from "react";
-import { Users } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Users } from "lucide-react";
 import { PageHeader, Segmented } from "@/components/ui/page";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MemberHeader } from "@/components/members/MemberHeader";
+import { AboutCard } from "@/components/members/AboutCard";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import { useMemberConnection, useMemberProfile } from "@/hooks/useMembers";
@@ -38,9 +40,6 @@ export function MemberProfile({ userId }: { userId: string }) {
     : p?.last_seen_at
       ? statusOf({ online: false, last_seen_at: p.last_seen_at })
       : "";
-  const description = p
-    ? `@${p.username}${status ? ` · ${status}` : ""}`
-    : undefined;
 
   if (profile.isLoading) {
     return (
@@ -62,36 +61,44 @@ export function MemberProfile({ userId }: { userId: string }) {
       </>
     );
   }
+  const isSelf = viewerId === userId;
   return (
-    <>
-      <PageHeader
-        title={p.display_name}
-        description={description}
-        back={back}
-      />
+    <div className="mx-auto w-full max-w-[1400px] pb-8">
+      <Link
+        href={back.href}
+        className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"
+      >
+        <ChevronLeft className="size-4" aria-hidden /> {back.label}
+      </Link>
       <MemberHeader
         profile={p}
         connection={connection.data}
-        isSelf={viewerId === userId}
+        isSelf={isSelf}
+        status={status}
       />
-      <div className="mt-4">
-        <Segmented
-          label="Profile sections"
-          options={TABS}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
-      <div className="mt-4">
-        {tab === "photos" ? (
-          <MemberGalleriesTab userId={userId} />
-        ) : (
-          <MemberGroupsTab
-            groups={connection.data?.shared_groups ?? []}
-            name={p.display_name}
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-24">
+          <AboutCard profile={p} isSelf={isSelf} />
+        </div>
+        <div className="min-w-0">
+          <Segmented
+            label="Profile sections"
+            options={TABS}
+            value={tab}
+            onChange={setTab}
           />
-        )}
+          <div className="mt-4">
+            {tab === "photos" ? (
+              <MemberGalleriesTab userId={userId} />
+            ) : (
+              <MemberGroupsTab
+                groups={connection.data?.shared_groups ?? []}
+                name={p.display_name}
+              />
+            )}
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

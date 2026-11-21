@@ -88,6 +88,17 @@ export interface ProfileUpdate {
   website_url?: string;
   title?: string;
   pronouns?: string;
+  birthday?: string | null;
+  banner_media_id?: string | null;
+  phone?: string;
+  contact_email?: string;
+  address?: string;
+  links?: { label: string; url: string }[];
+  emergency_contact?: { name: string; phone: string; relation: string } | null;
+  skills?: string[];
+  availability?: string;
+  dietary?: string;
+  field_visibility?: Record<string, "private" | "groups" | "community">;
 }
 
 export interface MessageResponse {

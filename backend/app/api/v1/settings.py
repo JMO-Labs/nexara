@@ -23,9 +23,9 @@ from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import SelfHostEmail
 from app.schemas.common import MessageResponse
+from app.schemas.profile import ProfileUpdate
 from app.schemas.settings import (
     NotificationPreferences,
-    ProfileUpdate,
     UserSettingsResponse,
     UserSettingsUpdate,
 )

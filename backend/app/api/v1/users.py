@@ -19,15 +19,17 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.profile_repo import ProfileRepository
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.media import StorageUsageResponse
+from app.schemas.profile import ProfileResponse, UserSummaryResponse
 from app.schemas.user import (
     EmailChangeRequest,
     PasswordChangeRequest,
     UserDetailResponse,
-    UserResponse,
     UserUpdateRequest,
 )
+from app.services.profiles.service import ProfileService
 from app.services.storage.usage_service import StorageUsageService
 from app.services.user_service import UserService
 
@@ -118,7 +120,7 @@ async def deactivate_account(
     return MessageResponse(message=_("Account deactivated"))
 
 
-@router.get("/blocked", response_model=list[UserResponse])
+@router.get("/blocked", response_model=list[UserSummaryResponse])
 async def list_blocked_users(
     user: User = Depends(get_current_user),
     svc: UserService = Depends(_build_service),
@@ -137,19 +139,17 @@ async def get_user_storage(
     return await svc.get_usage(user, user_id)
 
 
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=ProfileResponse)
 async def get_user_profile(
     user_id: uuid.UUID,
-    _user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
 ) -> Any:
-    """@brief Return the public profile of a user by ID."""
-    svc = UserService(db, settings)
-    return await svc.get_user(user_id)
+    """@brief A member's profile, with each field filtered by its privacy level."""
+    return await ProfileService(ProfileRepository(db), user.community_id).view(user_id, user)
 
 
-@router.get("", response_model=PaginatedResponse[UserResponse])
+@router.get("", response_model=PaginatedResponse[UserSummaryResponse])
 async def list_users(
     user: User = Depends(require_role("admin", "member")),
     db: AsyncSession = Depends(get_db),
@@ -165,7 +165,7 @@ async def list_users(
         cursor=cursor,
     )
     return PaginatedResponse(
-        items=[UserResponse.model_validate(u) for u in users],
+        items=[UserSummaryResponse.model_validate(u) for u in users],
         next_cursor=next_cursor,
         has_more=next_cursor is not None,
     )

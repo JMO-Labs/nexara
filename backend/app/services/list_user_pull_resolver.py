@@ -2,12 +2,14 @@
 @file list_user_pull_resolver.py
 @brief Live, batched, privacy-gated resolution of ``user_pull`` list fields.
 
-Sharing-pref mapping (no dedicated ``can_share_*`` columns exist):
-- email / phone / address -> ``UserSettings.profile_visible_to == "community"``
-- birthday               -> ``UserSettings.show_birthday_to == "community"``
-A missing settings row uses the column server defaults (both ``"community"``),
-matching ``birthday_repo``. The data owner must also have
-``list_member.share_personal`` set, unless the viewer is the owner.
+Sharing rules:
+- email / phone / address -> the profile field (``contact_email``, ``phone``,
+  ``address``) must be at "community" level in ``field_visibility`` (new
+  fields default to private, so nothing leaks until the owner opts in).
+  The login email is never pulled.
+- birthday -> ``UserSettings.show_birthday_to == "community"``
+The data owner must also have ``list_member.share_personal`` set, unless the
+viewer is the owner.
 """
 
 from __future__ import annotations
@@ -22,13 +24,14 @@ from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_member_repo import ListMemberRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
+from app.services.profiles.visibility import effective_levels
 
 _DEFAULT_TARGET = "item_user"
-_PREF_FOR: dict[str, str] = {
-    "email": "profile_visible_to",
-    "phone": "profile_visible_to",
-    "address": "profile_visible_to",
-    "birthday": "show_birthday_to",
+_ATTR_FOR: dict[str, str] = {
+    "email": "contact_email",
+    "phone": "phone",
+    "address": "address",
+    "birthday": "birthday",
 }
 _DEFAULT_SCOPE = "community"
 
@@ -60,8 +63,13 @@ class UserPullResolver:
     @staticmethod
     def _allowed(field: str, prefs: UserSettings | None) -> bool:
         """@brief Owner's sharing pref for ``field``; missing row = defaults."""
-        scope = getattr(prefs, _PREF_FOR[field], _DEFAULT_SCOPE) if prefs else _DEFAULT_SCOPE
-        return bool(scope == _DEFAULT_SCOPE)
+        if field == "birthday":
+            return (prefs.show_birthday_to if prefs else _DEFAULT_SCOPE) == _DEFAULT_SCOPE
+        levels = effective_levels(
+            prefs.field_visibility if prefs else None,
+            prefs.profile_visible_to if prefs else _DEFAULT_SCOPE,
+        )
+        return levels[_ATTR_FOR[field]] == "community"
 
     def _cached(self, key: tuple[Any, ...]) -> Result | None:
         """@brief Return a fresh cached result or None (evicting stale)."""
@@ -112,13 +120,13 @@ class UserPullResolver:
                 ok = (
                     user is not None
                     and uid is not None
-                    and src in _PREF_FOR
+                    and src in _ATTR_FOR
                     and (
                         uid == viewer_id
                         or (shared.get(uid, False) and self._allowed(src, prefs.get(uid)))
                     )
                 )
-                res[f["key"]] = getattr(user, src, None) if ok else None
+                res[f["key"]] = getattr(user, _ATTR_FOR[src], None) if ok else None
             out[it.id] = res
         self._cache[ck] = (time.monotonic(), out)
         return out

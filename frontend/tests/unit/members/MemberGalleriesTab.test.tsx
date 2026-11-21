@@ -5,7 +5,6 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import type { Gallery } from "@/lib/api/galleries";
@@ -83,20 +82,16 @@ describe("MemberGalleriesTab", () => {
     expect(screen.getByText("Family Events")).toBeInTheDocument();
   });
 
-  it("shows item count when an album card is expanded", async () => {
+  it("shows each album's photo count", () => {
     wrap(<MemberGalleriesTab userId="user1" />);
-    await userEvent.hover(
-      screen.getByRole("button", { name: "Vacation 2025" }),
-    );
     expect(screen.getByText("5 photos")).toBeInTheDocument();
   });
 
-  it("opens the album in /app/photos", async () => {
-    push.mockClear();
+  it("links each album to /app/photos", () => {
     wrap(<MemberGalleriesTab userId="user1" />);
-    await userEvent.click(
-      screen.getByRole("button", { name: "Family Events" }),
+    expect(screen.getByRole("link", { name: /Family Events/ })).toHaveAttribute(
+      "href",
+      "/app/photos?gallery=g2",
     );
-    expect(push).toHaveBeenCalledWith("/app/photos?gallery=g2");
   });
 });

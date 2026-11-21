@@ -77,16 +77,12 @@ describe("MemberProfilePage", () => {
     expect(screen.queryByText(/u2/)).toBeNull();
   });
 
-  it("header is a compact row: avatar, details and joined date, actions right", () => {
+  it("hero shows joined date and an About card beside the tabs", () => {
     asUser("u1");
     renderWithProviders(<MemberProfilePage />);
     const header = screen.getByRole("region", { name: "Profile" });
     expect(header).toHaveTextContent(/Joined \w+ \d{4}/);
-    expect(header.querySelector(".flex")).toHaveClass(
-      "sm:flex-row",
-      "sm:items-center",
-    );
-    expect(header.className).not.toContain("min-h-");
+    expect(screen.getByRole("region", { name: "About" })).toBeInTheDocument();
   });
 
   it("uses the display name as the page h1, not a generic Profile title", () => {

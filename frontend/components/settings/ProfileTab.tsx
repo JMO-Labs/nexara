@@ -10,6 +10,8 @@ import { z } from "zod";
 import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
+import { ProfileDetailsPanel } from "./ProfileDetailsPanel";
+import { VisibilitySelect } from "./VisibilitySelect";
 
 const Schema = z.object({
   display_name: z.string().optional(),
@@ -71,80 +73,108 @@ export function ProfileTab() {
   };
 
   return (
-    <Panel title="Profile information">
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <SettingsRow
-          label="Display name"
-          description="How you appear to other members."
-        >
-          <Input
-            type="text"
-            aria-label="Display name"
-            error={err.display_name?.message}
-            {...register("display_name")}
-          />
-        </SettingsRow>
+    <div className="flex flex-col gap-5">
+      <Panel title="Profile information">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <SettingsRow
+            label="Display name"
+            description="How you appear to other members."
+          >
+            <Input
+              type="text"
+              aria-label="Display name"
+              error={err.display_name?.message}
+              {...register("display_name")}
+            />
+          </SettingsRow>
 
-        <SettingsRow label="Bio" description="Tell us about yourself.">
-          <Textarea
-            aria-label="Bio"
-            rows={3}
-            placeholder="What's your story?"
-            error={err.bio?.message}
-            {...register("bio")}
-          />
-        </SettingsRow>
+          <SettingsRow label="Bio" description="Tell us about yourself.">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <Textarea
+                  aria-label="Bio"
+                  rows={3}
+                  placeholder="What's your story?"
+                  error={err.bio?.message}
+                  {...register("bio")}
+                />
+              </div>
+              <VisibilitySelect field="bio" label="bio" />
+            </div>
+          </SettingsRow>
 
-        <SettingsRow label="Location" description="Your location (optional).">
-          <Input
-            type="text"
-            aria-label="Location"
-            placeholder="City, State"
-            error={err.location?.message}
-            {...register("location")}
-          />
-        </SettingsRow>
+          <SettingsRow label="Location" description="Your location (optional).">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  type="text"
+                  aria-label="Location"
+                  placeholder="City, State"
+                  error={err.location?.message}
+                  {...register("location")}
+                />
+              </div>
+              <VisibilitySelect field="location" label="location" />
+            </div>
+          </SettingsRow>
 
-        <SettingsRow label="Website" description="Link to your website.">
-          <Input
-            type="url"
-            aria-label="Website"
-            placeholder="https://example.com"
-            error={err.website_url?.message}
-            {...register("website_url")}
-          />
-        </SettingsRow>
+          <SettingsRow label="Website" description="Link to your website.">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  type="url"
+                  aria-label="Website"
+                  placeholder="https://example.com"
+                  error={err.website_url?.message}
+                  {...register("website_url")}
+                />
+              </div>
+              <VisibilitySelect field="website_url" label="website" />
+            </div>
+          </SettingsRow>
 
-        <SettingsRow label="Title" description="Your professional title.">
-          <Input
-            type="text"
-            aria-label="Title"
-            placeholder="e.g., Designer"
-            error={err.title?.message}
-            {...register("title")}
-          />
-        </SettingsRow>
+          <SettingsRow label="Title" description="Your professional title.">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  type="text"
+                  aria-label="Title"
+                  placeholder="e.g., Designer"
+                  error={err.title?.message}
+                  {...register("title")}
+                />
+              </div>
+              <VisibilitySelect field="title" label="title" />
+            </div>
+          </SettingsRow>
 
-        <SettingsRow
-          label="Pronouns (optional)"
-          description={`Shown next to your name. ${pronounsLen}/50`}
-        >
-          <Input
-            type="text"
-            aria-label="Pronouns (optional)"
-            placeholder="e.g., she/her, they/them"
-            maxLength={50}
-            error={err.pronouns?.message}
-            {...register("pronouns")}
-          />
-        </SettingsRow>
+          <SettingsRow
+            label="Pronouns (optional)"
+            description={`Shown next to your name. ${pronounsLen}/50`}
+          >
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  type="text"
+                  aria-label="Pronouns (optional)"
+                  placeholder="e.g., she/her, they/them"
+                  maxLength={50}
+                  error={err.pronouns?.message}
+                  {...register("pronouns")}
+                />
+              </div>
+              <VisibilitySelect field="pronouns" label="pronouns" />
+            </div>
+          </SettingsRow>
 
-        <div className="mt-4">
-          <Button type="submit" loading={isPending} disabled={isPending}>
-            Save profile
-          </Button>
-        </div>
-      </form>
-    </Panel>
+          <div className="mt-4">
+            <Button type="submit" loading={isPending} disabled={isPending}>
+              Save profile
+            </Button>
+          </div>
+        </form>
+      </Panel>
+      <ProfileDetailsPanel />
+    </div>
   );
 }
