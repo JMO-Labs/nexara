@@ -205,17 +205,8 @@ export function ProfileDetailsPanel() {
           {d.links.map((l, i) => (
             <div
               key={i}
-              className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,6.5rem)_auto] gap-2"
             >
-              <div className="col-span-2 sm:col-span-1">
-                <Input
-                  aria-label={`Link ${i + 1} label`}
-                  placeholder="Label (optional)"
-                  value={l.label}
-                  maxLength={40}
-                  onChange={(e) => setLink(i, { label: e.target.value })}
-                />
-              </div>
               <Input
                 type="url"
                 aria-label={`Link ${i + 1} URL`}
@@ -223,6 +214,15 @@ export function ProfileDetailsPanel() {
                 value={l.url}
                 onChange={(e) => setLink(i, { url: e.target.value })}
               />
+              <div>
+                <Input
+                  aria-label={`Link ${i + 1} label`}
+                  placeholder="Label"
+                  value={l.label}
+                  maxLength={40}
+                  onChange={(e) => setLink(i, { label: e.target.value })}
+                />
+              </div>
               <IconButton
                 aria-label={`Remove link ${i + 1}`}
                 variant="ghost"
@@ -292,6 +292,12 @@ export function ProfileDetailsPanel() {
             value={d.ec_name}
             onChange={(e) => set({ ec_name: e.target.value })}
           />
+          <Input
+            aria-label="Emergency contact relation"
+            placeholder="Relation"
+            value={d.ec_relation}
+            onChange={(e) => set({ ec_relation: e.target.value })}
+          />
           <div className="sm:col-span-2">
             <Input
               type="tel"
@@ -301,12 +307,6 @@ export function ProfileDetailsPanel() {
               onChange={(e) => set({ ec_phone: e.target.value })}
             />
           </div>
-          <Input
-            aria-label="Emergency contact relation"
-            placeholder="Relation"
-            value={d.ec_relation}
-            onChange={(e) => set({ ec_relation: e.target.value })}
-          />
         </div>
       </Field>
       {error && (
