@@ -9,7 +9,7 @@ test.each([
   "prefers-reduced-transparency",
   '[data-transparency="reduced"]',
   ".glass-btn",
-  ".glass-sheen",
+  ".glass-lift",
 ])("globals.css contains %s", (needle) => {
   expect(css).toContain(needle);
 });
