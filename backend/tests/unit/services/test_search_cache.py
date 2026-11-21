@@ -207,7 +207,14 @@ def _post_service():
     repo = AsyncMock()
     repo.create_post.return_value = MagicMock(subgroup_id=None)
     repo.get_post_detail.return_value = {"id": "p"}
-    return PostService(repo, AsyncMock(), AsyncMock(), AsyncMock(), CID), repo
+    from app.repositories.tag_repo import TagRepository
+
+    tags = AsyncMock(spec=TagRepository)
+    tags.users_by_username.return_value = []
+    tags.blocked_with.return_value = set()
+    tags.replace_user_tags.return_value = []
+    svc = PostService(repo, AsyncMock(), AsyncMock(), AsyncMock(), CID, tag_repo=tags)
+    return svc, repo
 
 
 def _event_service(owner):

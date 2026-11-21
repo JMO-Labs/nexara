@@ -16,12 +16,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, exists, func, select
 
 from app.models.media import Media
 from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.post_enrichment import enrich_posts
+from app.repositories.visibility_preds import my_subgroup_ids, post_visible
 
 logger = structlog.get_logger(__name__)
 
@@ -80,19 +81,7 @@ class PostRepository(BaseRepository[Post]):
         if subgroup_id is not None:
             stmt = stmt.where(Post.subgroup_id == subgroup_id)
         elif viewer_id is not None:
-            allowed = subgroup_ids or []
-            if allowed:
-                visibility_pred = or_(
-                    and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
-                    and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
-                    and_(Post.visibility == "private", Post.author_id == viewer_id),
-                )
-            else:
-                visibility_pred = or_(
-                    and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
-                    and_(Post.visibility == "private", Post.author_id == viewer_id),
-                )
-            stmt = stmt.where(visibility_pred)
+            stmt = stmt.where(post_visible(viewer_id, list(subgroup_ids or []), community_id))
 
         if viewer_id:
             stmt = self.apply_block_filter(stmt, viewer_id)
@@ -194,23 +183,23 @@ class PostRepository(BaseRepository[Post]):
         if isinstance(since, datetime):
             stmt = stmt.where(Post.created_at > since)
 
-        allowed = subgroup_ids or []
-        if allowed:
-            visibility_pred = or_(
-                and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
-                and_(Post.visibility == "subgroup", Post.subgroup_id.in_(allowed)),
-                and_(Post.visibility == "private", Post.author_id == viewer_id),
-            )
-        else:
-            visibility_pred = or_(
-                and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
-                and_(Post.visibility == "private", Post.author_id == viewer_id),
-            )
-        stmt = stmt.where(visibility_pred)
+        stmt = stmt.where(post_visible(viewer_id, list(subgroup_ids or []), community_id))
 
         stmt = self.apply_block_filter(stmt, viewer_id)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
+
+    async def is_visible(
+        self, post_id: uuid.UUID, viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
+        """@brief Can ``viewer_id`` read this community post (visibility, group, blocks)?"""
+        stmt = select(
+            exists().where(
+                Post.id == post_id,
+                post_visible(viewer_id, my_subgroup_ids(viewer_id), community_id),
+            )
+        )
+        return bool((await self._session.execute(stmt)).scalar())
 
     async def get_post_detail(
         self,
@@ -242,6 +231,7 @@ class PostRepository(BaseRepository[Post]):
         community_id: uuid.UUID,
         reply_to_prompt_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
+        private: bool = False,
     ) -> Post:
         """
         @brief Insert a new post row.
@@ -258,7 +248,8 @@ class PostRepository(BaseRepository[Post]):
             content=content,
             community_id=community_id,
             reply_to_prompt_id=reply_to_prompt_id,
-            subgroup_id=subgroup_id,
+            subgroup_id=None if private else subgroup_id,
+            visibility="private" if private else ("subgroup" if subgroup_id else "community"),
         )
         return await self.create(post)
 

@@ -44,6 +44,9 @@ vi.mock("@/components/home/tiles/ChatsTile", () => ({
 vi.mock("@/components/home/tiles/UpNextTile", () => ({
   UpNextTile: () => <div />,
 }));
+vi.mock("@/components/home/HomeSideColumn", () => ({
+  HomeSideColumn: () => <div />,
+}));
 vi.mock("@/components/home/tiles/PhotosTile", () => ({
   PhotosTile: () => <div />,
 }));

@@ -139,6 +139,16 @@ async def get_user_storage(
     return await svc.get_usage(user, user_id)
 
 
+@router.get("/lookup", response_model=UserSummaryResponse)
+async def lookup_user(
+    username: str = Query(..., min_length=1, max_length=64),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """@brief Resolve an @username to a member (for mention links)."""
+    return await ProfileService(ProfileRepository(db), user.community_id).lookup(username, user)
+
+
 @router.get("/{user_id}", response_model=ProfileResponse)
 async def get_user_profile(
     user_id: uuid.UUID,

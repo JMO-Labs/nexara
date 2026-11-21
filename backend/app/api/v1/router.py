@@ -49,6 +49,7 @@ from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
+from app.api.v1.tags import router as tags_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
 from app.api.v1.ws import router as ws_router
@@ -79,6 +80,8 @@ api_v1_router.include_router(home_router)
 api_v1_router.include_router(moderation_router)
 # Before users_router so /users/directory is not captured by /users/{user_id}.
 api_v1_router.include_router(users_directory_router)
+# Before users_router so /users/{id}/tagged resolves here.
+api_v1_router.include_router(tags_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)

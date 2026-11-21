@@ -8,6 +8,7 @@ Defines request/response models used by the posts API endpoints.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -88,6 +89,8 @@ class PostCreate(BaseModel):
     poll: PollCreate | None = None
     reply_to_prompt_id: UUID | None = None
     subgroup_id: UUID | None = None
+    # "private" = only the author sees it; otherwise subgroup_id decides.
+    visibility: Literal["community", "subgroup", "private"] | None = None
 
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:

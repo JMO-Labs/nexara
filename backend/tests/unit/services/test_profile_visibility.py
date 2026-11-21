@@ -125,3 +125,16 @@ async def test_blocked_either_way_404():
     repo.blocked_either_way.return_value = True
     with pytest.raises(NotFoundError):
         await svc.view(t.id, _viewer())
+
+
+async def test_lookup_by_username_and_blocks():
+    t = _target()
+    svc, repo = _svc(t, _settings({}))
+    repo.get_by_username.return_value = t
+    assert await svc.lookup("ruth", _viewer()) is t
+    repo.blocked_either_way.return_value = True
+    with pytest.raises(NotFoundError):
+        await svc.lookup("ruth", _viewer())
+    repo.get_by_username.return_value = None
+    with pytest.raises(NotFoundError):
+        await svc.lookup("nobody", _viewer())

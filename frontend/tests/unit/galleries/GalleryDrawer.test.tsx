@@ -7,6 +7,8 @@ import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { GalleryDrawer } from "@/components/galleries/galleries-page/GalleryDrawer";
 
+vi.mock("@/components/galleries/PhotoTags", () => ({ PhotoTags: () => null }));
+
 const detail = vi.hoisted(() => ({
   current: { id: "g1", title: "Camping" } as Record<string, unknown>,
 }));

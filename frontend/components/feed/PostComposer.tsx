@@ -37,6 +37,8 @@ import {
 } from "./ComposerAttachments";
 import type { CreatePostBody } from "@/lib/api/posts";
 import { X } from "lucide-react";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useComposerMention } from "@/components/mentions/useComposerMention";
 
 export interface PostComposerProps {
   onPosted?: () => void;
@@ -89,8 +91,10 @@ export function PostComposer({
     [calendars],
   );
 
+  const mention = useComposerMention();
   const editor = useEditor({
     extensions: [
+      mention.extension,
       StarterKit.configure({
         heading: false,
         bulletList: false,
@@ -294,6 +298,18 @@ export function PostComposer({
           size="sm"
         />
         <div className="min-w-0 grow">
+          {mention.menu && mention.menu.rect && (
+            <MentionMenu
+              items={mention.menu.items}
+              active={mention.menu.active}
+              onPick={mention.menu.pick}
+              className="fixed"
+              style={{
+                top: mention.menu.rect.bottom + 6,
+                left: mention.menu.rect.left,
+              }}
+            />
+          )}
           <div className="min-h-20 rounded-xl p-2 [&_.tiptap-editor]:min-h-[60px] [&_.tiptap-editor]:outline-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:pointer-events-none [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:float-left [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:h-0 [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:text-muted [&_.tiptap-editor_p.is-editor-empty:first-of-type]:before:content-[attr(data-placeholder)]">
             <EditorContent editor={editor} />
           </div>

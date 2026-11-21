@@ -9,6 +9,8 @@ import type { ReactElement } from "react";
 import { vi } from "vitest";
 import { PhotosPage } from "@/components/photos/PhotosPage";
 
+vi.mock("@/components/galleries/PhotoTags", () => ({ PhotoTags: () => null }));
+
 let qc = new QueryClient();
 const render = (ui: ReactElement) =>
   rtlRender(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);

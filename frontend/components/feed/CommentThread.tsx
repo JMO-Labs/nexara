@@ -4,6 +4,8 @@
  * @brief Threaded comments list with a single inline reply input.
  */
 import * as React from "react";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useMentionInput } from "@/components/mentions/useMentionInput";
 import { formatDistanceToNowStrict } from "date-fns";
 import { MessageCircle } from "lucide-react";
 import {
@@ -49,7 +51,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
       <div className="min-w-0 grow">
         <div className="glass-item rounded-[20px] px-3 py-2">
           <p className="text-sm font-semibold">{comment.author.display_name}</p>
-          <Markdown content={comment.content} size="sm" />
+          <Markdown content={comment.content} size="sm" mentions />
         </div>
         <div className="ml-2 mt-1 flex items-center gap-3 text-xs text-ink/75">
           <span>{time}</span>
@@ -106,6 +108,8 @@ export function CommentThread({
   const [text, setText] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const mention = useMentionInput(text, setText, inputRef);
 
   const flat = React.useMemo(
     () => (data?.pages ?? []).flatMap((p) => p.items),
@@ -135,15 +139,25 @@ export function CommentThread({
 
   return (
     <div className="mt-2 flex flex-col gap-2">
-      <div className="flex items-center gap-2 rounded-full glass-item p-1.5 pl-4">
+      <div className="relative flex items-center gap-2 rounded-full glass-item p-1.5 pl-4">
+        {mention.open && (
+          <MentionMenu
+            {...mention.menu}
+            className="absolute bottom-full left-2 mb-2"
+          />
+        )}
         <textarea
+          ref={inputRef}
           aria-label={replyTo ? "Write a reply" : "Add a comment"}
+          aria-autocomplete="list"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={mention.onTextChange}
+          {...mention.fieldProps}
           placeholder={replyTo ? "Write a reply…" : "Add a comment…"}
           rows={1}
           className="field-sizing-content max-h-32 grow resize-none bg-transparent py-2 text-base text-ink placeholder:text-muted outline-none"
           onKeyDown={(e) => {
+            if (mention.onKeyDown(e)) return;
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               submit();

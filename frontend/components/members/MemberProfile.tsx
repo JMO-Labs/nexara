@@ -10,16 +10,19 @@ import { PageHeader, Segmented } from "@/components/ui/page";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MemberHeader } from "@/components/members/MemberHeader";
 import { AboutCard } from "@/components/members/AboutCard";
+import { MemberTaggedTab } from "@/components/members/MemberTaggedTab";
+import { useSearchParams } from "next/navigation";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import { useMemberConnection, useMemberProfile } from "@/hooks/useMembers";
 import { useSession } from "@/stores/session";
 import { statusOf } from "@/components/members/personStatus";
 
-type Tab = "photos" | "groups";
+type Tab = "photos" | "tagged" | "groups";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "photos", label: "Photos" },
+  { value: "tagged", label: "Tagged" },
   { value: "groups", label: "Groups" },
 ];
 
@@ -29,7 +32,10 @@ const TABS: { value: Tab; label: string }[] = [
  * @return profile UI, skeleton or error state
  */
 export function MemberProfile({ userId }: { userId: string }) {
-  const [tab, setTab] = React.useState<Tab>("photos");
+  const initial = useSearchParams().get("tab");
+  const [tab, setTab] = React.useState<Tab>(
+    TABS.some((t) => t.value === initial) ? (initial as Tab) : "photos",
+  );
   const viewerId = useSession((s) => s.user?.id);
   const profile = useMemberProfile(userId);
   const connection = useMemberConnection(userId, profile.data?.username);
@@ -90,6 +96,11 @@ export function MemberProfile({ userId }: { userId: string }) {
           <div className="mt-4">
             {tab === "photos" ? (
               <MemberGalleriesTab userId={userId} />
+            ) : tab === "tagged" ? (
+              <MemberTaggedTab
+                userId={userId}
+                name={p.display_name.split(" ")[0]}
+              />
             ) : (
               <MemberGroupsTab
                 groups={connection.data?.shared_groups ?? []}

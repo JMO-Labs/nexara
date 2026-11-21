@@ -5,7 +5,9 @@
  *        Headings flatten to body weight to fit chat/post density.
  */
 import * as React from "react";
+import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { linkifyMentions } from "@/lib/mentions";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -19,6 +21,8 @@ export interface MarkdownProps {
   size?: "sm" | "md";
   /** Extra classes; later ones win (e.g. `text-inherit` on ink bubbles). */
   className?: string;
+  /** Render @username as profile links. */
+  mentions?: boolean;
 }
 
 const schema = {
@@ -32,11 +36,20 @@ const schema = {
 };
 
 const components: Components = {
-  a: ({ children, href, ...rest }) => (
-    <a {...rest} href={href} target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
-  ),
+  a: ({ children, href, ...rest }) =>
+    href?.startsWith("/app/u/") ? (
+      <Link
+        href={href}
+        className="font-medium !no-underline hover:!underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </Link>
+    ) : (
+      <a {...rest} href={href} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    ),
   // Flatten headings — chat/posts already have their own heading hierarchy.
   h1: ({ children }) => <strong>{children}</strong>,
   h2: ({ children }) => <strong>{children}</strong>,
@@ -52,6 +65,7 @@ export function Markdown({
   clampLines = 6,
   size = "md",
   className,
+  mentions = false,
 }: MarkdownProps) {
   if (!content?.trim()) return null;
   return (
@@ -77,7 +91,7 @@ export function Markdown({
         rehypePlugins={[[rehypeSanitize, schema]]}
         components={components}
       >
-        {content}
+        {mentions ? linkifyMentions(content) : content}
       </ReactMarkdown>
     </div>
   );

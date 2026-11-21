@@ -12,7 +12,9 @@ export interface PostBodyProps {
 }
 
 export function PostBody({ content, truncate }: PostBodyProps) {
-  return <Markdown content={content} truncate={truncate} clampLines={6} />;
+  return (
+    <Markdown content={content} truncate={truncate} clampLines={6} mentions />
+  );
 }
 
 export default PostBody;

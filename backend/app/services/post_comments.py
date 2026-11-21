@@ -30,13 +30,16 @@ class CommentsMixin(PostServiceBase):
         limit: int = 20,
     ) -> dict[str, Any]:
         """@brief Fetch paginated comments for a post, newest first.
-        @raises NotFoundError If post does not exist.
+        @raises NotFoundError If post does not exist or the viewer may not read it.
         """
         post = await self._post_repo.get_by_id(
             post_id,
             community_id=self._community_id,
         )
-        if not post:
+        if not post or (
+            viewer_id is not None
+            and not await self._post_repo.is_visible(post_id, viewer_id, self._community_id)
+        ):
             raise NotFoundError(_("Post not found"))
         items, next_cursor = await self._comment_repo.list_for_post(
             post_id,
@@ -64,7 +67,7 @@ class CommentsMixin(PostServiceBase):
             post_id,
             community_id=self._community_id,
         )
-        if not post:
+        if not post or not await self._post_repo.is_visible(post_id, user.id, self._community_id):
             raise NotFoundError(_("Post not found"))
 
         if parent_id:
@@ -91,7 +94,7 @@ class CommentsMixin(PostServiceBase):
             parent_id,
         )
 
-        await self._notify_mentions(content, user, post_id)
+        await self._sync_tags("comment", comment.id, content, user, post)
         if wants_sassybot(content):
             self._enqueue_sassybot(post_id, content)
 
