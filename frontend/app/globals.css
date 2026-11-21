@@ -79,6 +79,7 @@
 }
 
 @theme inline {
+  --breakpoint-3xl: 112.5rem;
   --color-bg: var(--nx-bg);
   --color-surface: var(--nx-surface);
   --color-surface-strong: var(--nx-surface-strong);

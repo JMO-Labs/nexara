@@ -103,7 +103,9 @@ export function PollCard({ poll }: { poll: Poll }) {
       })}
       <div className="flex items-center gap-3 text-xs text-muted">
         <span>
-          {poll.total_votes} {poll.total_votes === 1 ? "vote" : "votes"}
+          {showResults
+            ? `${poll.total_votes} ${poll.total_votes === 1 ? "vote" : "votes"}`
+            : "Vote to see results"}
           {ended
             ? " · Final results"
             : poll.expires_at

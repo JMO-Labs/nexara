@@ -32,7 +32,7 @@ export function ConnectionCard({
   return (
     <div
       role="tooltip"
-      className="glass invisible absolute top-[calc(100%+12px)] right-[-20px] z-20 w-[260px] translate-y-[-4px] rounded-[22px] p-4 text-left text-[var(--nx-ink)] opacity-0 transition-[opacity,transform] duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 max-md:hidden"
+      className="invisible absolute border border-[var(--nx-line)] bg-[var(--nx-glass-solid)] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] top-[calc(100%+12px)] right-[-20px] z-20 w-[260px] translate-y-[-4px] rounded-[22px] p-4 text-left text-[var(--nx-ink)] opacity-0 transition-[opacity,transform] duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 max-md:hidden"
     >
       <strong className="block text-[15px] font-medium">
         {person.display_name}
