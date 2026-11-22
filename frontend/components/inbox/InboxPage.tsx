@@ -171,7 +171,7 @@ export function InboxPage() {
             {folder === "lists" && (
               <div className="flex gap-1">
                 <Button asChild size="sm" variant="secondary">
-                  <Link href="/app/lists/templates">Templates</Link>
+                  <Link href="/app/wishlists">Wishlists</Link>
                 </Button>
                 <Button asChild size="sm">
                   <Link href="/app/lists/new">

@@ -17,14 +17,13 @@ import {
   updateWishlist,
   type WishInput,
   type WishlistInput,
+  type WishlistQuery,
 } from "@/lib/api/wishlists";
 
 const KEY = ["wishlists"] as const;
 
 /** @brief Wishlists the viewer may see, optionally one person's or pet's. */
-export const useWishlists = (
-  q: { owner_id?: string; household_id?: string } = {},
-) =>
+export const useWishlists = (q: WishlistQuery = {}) =>
   useQuery({
     queryKey: [...KEY, "list", q],
     queryFn: () => listWishlists(q),
@@ -67,8 +66,17 @@ export function useWishlistActions() {
       m((a: { id: string; itemId: string }) => deleteWish(a.id, a.itemId)),
     ),
     claim: useMutation(
-      m((a: { id: string; itemId: string; qty: number }) =>
-        claimWish(a.id, a.itemId, a.qty),
+      m(
+        (a: {
+          id: string;
+          itemId: string;
+          qty?: number;
+          amount_cents?: number;
+        }) =>
+          claimWish(a.id, a.itemId, {
+            qty: a.qty,
+            amount_cents: a.amount_cents,
+          }),
       ),
     ),
     release: useMutation(

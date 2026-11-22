@@ -30,6 +30,7 @@ describe("navItems", () => {
       "Calendar",
       "Photos",
       "Community",
+      "Wishlists",
       "Inbox",
     ]);
   });
@@ -38,8 +39,12 @@ describe("navItems", () => {
     expect(community.href).toBe("/app/community");
     expect(community.match).toEqual(["/app/members", "/app/subgroups"]);
   });
-  it("phone extra nav is Community and Inbox", () => {
-    expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual(["Community", "Inbox"]);
+  it("phone extra nav is Community, Wishlists and Inbox", () => {
+    expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual([
+      "Community",
+      "Wishlists",
+      "Inbox",
+    ]);
   });
   it("more nav is Settings, Admin; Inbox is top nav", () => {
     expect(MORE_NAV.map((i) => i.label)).toEqual(["Settings", "Admin"]);

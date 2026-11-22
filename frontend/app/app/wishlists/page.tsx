@@ -20,7 +20,7 @@ export default function WishlistsRoute() {
         <h2 className="text-lg font-semibold">
           Yours and your household&apos;s
         </h2>
-        {me && <WishlistCards ownerId={me} canCreate />}
+        {me && <WishlistCards query={{ person_id: me }} canCreate />}
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Family and friends</h2>

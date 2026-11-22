@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   CalendarPlus,
   ImagePlus,
+  Gift,
   ListPlus,
   PenSquare,
   Plus,
@@ -63,6 +64,12 @@ export function CreateMenu({
         <DropdownMenuItem onSelect={() => router.push("/app/lists/new")}>
           <ListPlus aria-hidden className="size-4" />
           New list
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => router.push("/app/lists/new?type=wishlist")}
+        >
+          <Gift aria-hidden className="size-4" />
+          New wishlist
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
