@@ -1,7 +1,6 @@
 /**
  * @file tests/unit/auth/auth-layout.test.tsx
- * @brief The auth layout fits the split card (1080px), renders the shared
- *        backdrop, top-aligns on phones and centres from md up.
+ * @brief The auth layout is a full-page surface for the split AuthCard.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
@@ -14,26 +13,18 @@ vi.mock("@/components/layout/AppBackdrop", () => ({
 import AuthLayout from "@/app/(auth)/layout";
 
 describe("AuthLayout", () => {
-  it("wraps children in the split-card width", () => {
-    const { getByText } = render(
+  it("fills the page with no width cap or backdrop", () => {
+    const { getByText, queryByTestId } = render(
       <AuthLayout>
         <span>child</span>
       </AuthLayout>,
     );
     const wrapper = getByText("child").parentElement as HTMLElement;
-    expect(wrapper.className).toContain("max-w-[1080px]");
-    expect(wrapper.className).not.toContain("max-w-sm");
-  });
-
-  it("renders the backdrop, top-aligned on phones, centred on desktop", () => {
-    const { getByTestId, getByText } = render(
-      <AuthLayout>
-        <span>child</span>
-      </AuthLayout>,
+    expect(wrapper.className).toContain("min-h-dvh");
+    expect(wrapper.className).not.toMatch(/max-w-/);
+    expect(getByText("child").closest("main")?.className).toContain(
+      "min-h-dvh",
     );
-    expect(getByTestId("backdrop")).toBeTruthy();
-    const main = getByText("child").closest("main") as HTMLElement;
-    expect(main.className).toContain("items-start");
-    expect(main.className).toContain("md:items-center");
+    expect(queryByTestId("backdrop")).toBeNull();
   });
 });

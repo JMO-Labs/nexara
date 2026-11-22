@@ -1,7 +1,7 @@
 /**
  * @file components/auth/AuthCard.tsx
- * @brief Split auth card: brand, title and form on the left; the Aegean
- *        mosaic on the right (hidden on small screens).
+ * @brief Full-page split: brand, title and form on the left; the Aegean
+ *        mosaic fills the right half (hidden on small screens).
  */
 import type { ReactNode } from "react";
 import { BrandLockup } from "@/components/brand/Logo";
@@ -29,9 +29,9 @@ export function AuthCard({
   return (
     <div
       data-auth-card-root
-      className="mx-auto grid w-full overflow-hidden rounded-[32px] bg-surface shadow-[0_30px_80px_-30px_rgb(36_50_61/0.35)] md:min-h-[640px] md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
+      className="grid min-h-dvh w-full bg-surface md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
     >
-      <div className="flex flex-col gap-10 p-6 sm:p-10 md:p-14">
+      <div className="flex flex-col gap-10 px-6 py-8 sm:px-10 md:px-14 md:py-12">
         <BrandLockup name="Nexara" size={40} />
         <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center gap-8">
           <div>
@@ -44,7 +44,7 @@ export function AuthCard({
           {footer && <p className="text-center text-sm">{footer}</p>}
         </div>
       </div>
-      <div className="hidden md:block">
+      <div className="hidden md:sticky md:top-0 md:block md:h-dvh">
         <AuthArt />
       </div>
     </div>
