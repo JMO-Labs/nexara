@@ -10,8 +10,7 @@ import { AtSign, Images } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { Segmented } from "@/components/ui/page";
 import { PostCard } from "@/components/feed/PostCard";
-import { MediaThumb } from "@/components/galleries/MediaThumb";
-import { Lightbox } from "@/components/galleries/Lightbox";
+import { PhotoGrid } from "@/components/galleries/PhotoGrid";
 import { getTagged } from "@/lib/api/tags";
 
 type Kind = "posts" | "photos";
@@ -30,7 +29,6 @@ export function MemberTaggedTab({
   name: string;
 }) {
   const [kind, setKind] = React.useState<Kind>("posts");
-  const [open, setOpen] = React.useState<number | null>(null);
   const q = useInfiniteQuery({
     queryKey: ["tagged", userId, kind],
     queryFn: ({ pageParam }) => getTagged(userId, kind, pageParam),
@@ -67,22 +65,7 @@ export function MemberTaggedTab({
           ))}
         </div>
       ) : (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
-          {media.map((id, i) => (
-            <li key={id}>
-              <button
-                type="button"
-                onClick={() => setOpen(i)}
-                aria-label={`Open photo ${i + 1}`}
-                className="relative block aspect-square w-full overflow-hidden rounded-2xl"
-              >
-                <span className="absolute inset-0 block">
-                  <MediaThumb mediaId={id} alt="" zoomOnHover />
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <PhotoGrid mediaIds={media} />
       )}
       {q.hasNextPage && (
         <Button
@@ -94,22 +77,6 @@ export function MemberTaggedTab({
         >
           Load more
         </Button>
-      )}
-      {open !== null && (
-        <Lightbox
-          items={media.map((id, i) => ({
-            id,
-            gallery_id: "",
-            media_id: id,
-            added_by: "",
-            caption: null,
-            position: i,
-            created_at: "",
-          }))}
-          index={open}
-          onIndexChange={setOpen}
-          onClose={() => setOpen(null)}
-        />
       )}
     </div>
   );

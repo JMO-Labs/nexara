@@ -22,13 +22,13 @@ export function useMembersList() {
  * @param limit max results
  * @return matches
  */
-export function matchMembers(
-  list: UserSummary[],
+export function matchMembers<T extends UserSummary>(
+  list: T[],
   q: string,
   limit = 6,
-): UserSummary[] {
+): T[] {
   const n = q.toLowerCase();
-  const rank = (u: UserSummary) =>
+  const rank = (u: T) =>
     u.username.toLowerCase().startsWith(n)
       ? 0
       : u.display_name.toLowerCase().startsWith(n)

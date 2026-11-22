@@ -59,8 +59,10 @@ async def tag_photo(
     user: User = Depends(get_current_user),
     svc: TagService = Depends(_service),
 ) -> Any:
-    """@brief Tag a person in a photo; returns the photo's tags."""
-    return await svc.tag_media(media_id, body.user_id, user)
+    """@brief Tag a member or household member/pet in a photo; returns the photo's tags."""
+    if body.household_id is not None:
+        return await svc.tag_household(media_id, body.household_id, user)
+    return await svc.tag_media(media_id, body.user_id, user)  # type: ignore[arg-type]
 
 
 @router.delete("/tags/{tag_id}", response_model=MessageResponse)
@@ -84,3 +86,14 @@ async def tagged_feed(
 ) -> Any:
     """@brief Posts or photos this person is tagged in that the viewer can see."""
     return await svc.tagged(user_id, user, kind, before)
+
+
+@router.get("/household/{member_id}/tagged", response_model=TaggedPage)
+async def household_tagged(
+    member_id: uuid.UUID,
+    before: datetime | None = Query(None),
+    user: User = Depends(get_current_user),
+    svc: TagService = Depends(_service),
+) -> Any:
+    """@brief Photos a household member/pet is tagged in that the viewer can see."""
+    return await svc.household_photos(member_id, user, before)

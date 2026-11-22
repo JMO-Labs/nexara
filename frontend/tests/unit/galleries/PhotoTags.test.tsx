@@ -30,6 +30,20 @@ vi.mock("@/hooks/useMembersList", async (orig) => ({
     ],
   }),
 }));
+vi.mock("@/hooks/useHousehold", () => ({
+  useVisibleHousehold: () => ({
+    data: [
+      {
+        id: "p1",
+        kind: "pet",
+        name: "Biscuit",
+        species: "Dog",
+        relation: null,
+        can_edit: true,
+      },
+    ],
+  }),
+}));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) => sel({ user: { id: "me" } }),
 }));
@@ -77,10 +91,45 @@ describe("PhotoTags", () => {
     });
     expect(screen.queryByRole("option", { name: /Ruth/ })).toBeNull();
     fireEvent.mouseDown(screen.getByRole("option", { name: /Leo/ }));
-    await waitFor(() => expect(api.tagPhoto).toHaveBeenCalledWith("m1", "u3"));
+    await waitFor(() =>
+      expect(api.tagPhoto).toHaveBeenCalledWith("m1", { user_id: "u3" }),
+    );
     expect(
       await screen.findByRole("link", { name: "Leo" }),
     ).toBeInTheDocument();
+  });
+
+  it("tags a pet by household id; owner may remove the pet tag", async () => {
+    api.listTags.mockResolvedValue([]);
+    api.tagPhoto.mockResolvedValue([
+      {
+        id: "t9",
+        tagged_by: "x",
+        user: null,
+        household: {
+          id: "p1",
+          name: "Biscuit",
+          kind: "pet",
+          photo_media_id: null,
+        },
+      },
+    ]);
+    renderWithProviders(<PhotoTags mediaId="m1" />);
+    fireEvent.click(await screen.findByRole("button", { name: /Tag someone/ }));
+    fireEvent.change(screen.getByLabelText("Tag someone"), {
+      target: { value: "bis" },
+    });
+    expect(screen.getByRole("option", { name: /Biscuit/ })).toHaveTextContent(
+      "Dog",
+    );
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Biscuit/ }));
+    await waitFor(() =>
+      expect(api.tagPhoto).toHaveBeenCalledWith("m1", { household_id: "p1" }),
+    );
+    expect(
+      await screen.findByRole("link", { name: "Biscuit" }),
+    ).toHaveAttribute("href", "/app/household/p1");
+    expect(screen.getByLabelText("Remove tag Biscuit")).toBeInTheDocument();
   });
 
   it("renders nothing when the photo isn't visible", async () => {

@@ -25,9 +25,9 @@ export function MentionMenu({
   className,
   style,
 }: {
-  items: UserSummary[];
+  items: (UserSummary & { hint?: string })[];
   active: number;
-  onPick: (u: UserSummary) => void;
+  onPick: (u: UserSummary & { hint?: string }) => void;
   id?: string;
   className?: string;
   style?: React.CSSProperties;
@@ -72,7 +72,7 @@ export function MentionMenu({
               i === active ? "text-bg/70" : "text-muted",
             )}
           >
-            @{u.username}
+            {u.hint ?? `@${u.username}`}
           </span>
         </li>
       ))}

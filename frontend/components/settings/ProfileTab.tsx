@@ -11,6 +11,7 @@ import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 import { ProfileDetailsPanel } from "./ProfileDetailsPanel";
+import { HouseholdPanel } from "./HouseholdPanel";
 import { VisibilitySelect } from "./VisibilitySelect";
 
 const Schema = z.object({
@@ -175,6 +176,7 @@ export function ProfileTab() {
         </form>
       </Panel>
       <ProfileDetailsPanel />
+      <HouseholdPanel />
     </div>
   );
 }

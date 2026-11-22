@@ -14,12 +14,14 @@ from sqlalchemy import and_, delete, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.household import HouseholdMember
 from app.models.media import Media
 from app.models.moderation import UserBlock
 from app.models.post import Comment, Post
 from app.models.subgroup import SubgroupMember
 from app.models.tag import Tag
 from app.models.user import User
+from app.repositories.household_repo import household_visible
 from app.repositories.visibility_preds import (
     media_visible,
     my_subgroup_ids,
@@ -81,15 +83,16 @@ class TagRepository:
         target_id: uuid.UUID,
         user_id: uuid.UUID,
         tagged_by: uuid.UUID,
+        subject_type: str = "user",
     ) -> bool:
-        """@brief Insert one user tag; False when it already existed."""
+        """@brief Insert one tag (user or household); False when it already existed."""
         stmt = (
             insert(Tag)
             .values(
                 community_id=community_id,
                 target_type=target_type,
                 target_id=target_id,
-                subject_type="user",
+                subject_type=subject_type,
                 subject_id=user_id,
                 tagged_by=tagged_by,
             )
@@ -136,6 +139,56 @@ class TagRepository:
             }
             for tid, by, uid, un, dn, av in (await self._session.execute(stmt)).all()
         ]
+
+    async def household_for_target(
+        self, target_type: str, target_id: uuid.UUID, viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> list[dict[str, Any]]:
+        """@brief Household members/pets tagged on a target that the viewer may see."""
+        stmt = (
+            select(
+                Tag.id,
+                Tag.tagged_by,
+                HouseholdMember.id,
+                HouseholdMember.name,
+                HouseholdMember.kind,
+                HouseholdMember.photo_media_id,
+            )
+            .join(HouseholdMember, HouseholdMember.id == Tag.subject_id)
+            .where(
+                Tag.community_id == community_id,
+                Tag.target_type == target_type,
+                Tag.target_id == target_id,
+                Tag.subject_type == "household",
+                household_visible(viewer_id, community_id),
+            )
+            .order_by(Tag.created_at)
+        )
+        return [
+            {
+                "id": tid,
+                "tagged_by": by,
+                "household": {"id": hid, "name": n, "kind": k, "photo_media_id": ph},
+            }
+            for tid, by, hid, n, k, ph in (await self._session.execute(stmt)).all()
+        ]
+
+    async def household_owner(self, member_id: uuid.UUID, community_id: uuid.UUID) -> Any:
+        """@brief Owner id of a household member, or None."""
+        stmt = select(HouseholdMember.owner_id).where(
+            HouseholdMember.id == member_id, HouseholdMember.community_id == community_id
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def household_viewable(
+        self, member_id: uuid.UUID, viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
+        """@brief Viewer may see this household member."""
+        stmt = select(
+            exists().where(
+                HouseholdMember.id == member_id, household_visible(viewer_id, community_id)
+            )
+        )
+        return bool((await self._session.execute(stmt)).scalar())
 
     async def users_by_username(self, community_id: uuid.UUID, usernames: list[str]) -> list[User]:
         """@brief Active users with these usernames in the community."""
@@ -260,15 +313,16 @@ class TagRepository:
         viewer_id: uuid.UUID,
         before: datetime | None,
         limit: int,
+        subject_type: str = "user",
     ) -> list[tuple[uuid.UUID, datetime]]:
-        """@brief Photos the person is tagged in that the viewer can see."""
+        """@brief Photos the person (or household member) is tagged in that the viewer can see."""
         stmt = (
             select(Media.id, Tag.created_at)
             .join(Tag, and_(Tag.target_type == "media", Tag.target_id == Media.id))
             .where(
                 Tag.community_id == community_id,
                 Media.community_id == community_id,
-                Tag.subject_type == "user",
+                Tag.subject_type == subject_type,
                 Tag.subject_id == subject_id,
                 or_(
                     Media.uploader_id == viewer_id,

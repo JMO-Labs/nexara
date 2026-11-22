@@ -38,6 +38,9 @@ def _svc():
     repo.blocked_with.return_value = set()
     repo.add.return_value = True
     repo.list_for_target.return_value = []
+    repo.household_for_target.return_value = []
+    repo.household_viewable.return_value = True
+    repo.household_owner.return_value = uuid.uuid4()
     return TagService(repo, posts, notify, CID), repo, posts, notify
 
 
@@ -121,3 +124,32 @@ async def test_tagged_feed_blocked_404_and_paging():
     with patch("app.services.tag_service.enrich_posts", AsyncMock(return_value={pid: {"id": pid}})):
         page = await svc.tagged(uuid.uuid4(), viewer, "posts", None)
     assert page["posts"] == [{"id": pid}] and page["next_before"] is None
+
+
+async def test_tag_household_requires_visibility_for_actor_and_owner():
+    svc, repo, _, notify = _svc()
+    repo.household_viewable.return_value = False
+    with pytest.raises(NotFoundError):
+        await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
+    repo.household_viewable.return_value = True
+    repo.media_viewable.side_effect = [True, False]  # actor sees it, owner doesn't
+    with pytest.raises(ValidationError):
+        await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
+    repo.media_viewable.side_effect = None
+    await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
+    assert repo.add.await_args.kwargs["subject_type"] == "household"
+    assert notify.notify.await_args.kwargs["user_id"] == repo.household_owner.return_value
+
+
+async def test_household_owner_may_remove_pet_tag():
+    svc, repo, _, _n = _svc()
+    owner = _user()
+    tag = MagicMock(spec=Tag)
+    tag.subject_type, tag.subject_id, tag.tagged_by = "household", uuid.uuid4(), uuid.uuid4()
+    tag.target_type, tag.target_id = "media", uuid.uuid4()
+    repo.get.return_value = tag
+    repo.household_owner.return_value = owner.id
+    await svc.remove(tag.id, owner)
+    repo.remove.assert_awaited_once()
+    with pytest.raises(AuthorizationError):
+        await svc.remove(tag.id, _user())
