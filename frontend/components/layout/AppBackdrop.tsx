@@ -31,7 +31,7 @@ export function AppBackdrop() {
         style={{
           filter: "blur(46px)",
           background:
-            "radial-gradient(38% 40% at 12% 18%, var(--nx-blue), transparent 70%), radial-gradient(30% 34% at 88% 82%, var(--nx-red), transparent 70%), radial-gradient(30% 30% at 70% 15%, color-mix(in srgb, var(--nx-blue) 50%, var(--nx-bg)), transparent 70%)",
+            "radial-gradient(38% 40% at 12% 18%, var(--nx-glow-a), transparent 70%), radial-gradient(30% 34% at 88% 82%, var(--nx-glow-b), transparent 70%), radial-gradient(30% 30% at 70% 15%, var(--nx-glow-c), transparent 70%)",
         }}
       />
       {url && (
