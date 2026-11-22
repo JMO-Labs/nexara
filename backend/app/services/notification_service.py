@@ -57,6 +57,7 @@ NOTIFICATION_TYPES = (
     "capsule_opened",
     "expense_added",
     "album_reminder",
+    "ride_update",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -79,6 +80,7 @@ PREF_MAP = {
     "capsule_opened": ("notif_mention_inapp", "notif_mention_email"),
     "expense_added": ("notif_mention_inapp", "notif_mention_email"),
     "album_reminder": ("notif_gallery_activity_inapp", "notif_gallery_activity_email"),
+    "ride_update": ("notif_event_rsvp_inapp", "notif_event_rsvp_email"),
     "group_tag": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),

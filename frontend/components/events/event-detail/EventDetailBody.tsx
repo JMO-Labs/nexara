@@ -13,6 +13,7 @@ import type { EventItem } from "@/lib/api/events";
 import { mapsUrlForCoords } from "@/lib/geo/openInMaps";
 import { EventGalleryLink } from "./EventGalleryLink";
 import { ContributionSlots } from "./ContributionSlots";
+import { RidesSection } from "../rides/RidesSection";
 import { formatRange } from "./formatRange";
 import { ExportIcalButton } from "./ExportIcalButton";
 import { EventForecast } from "./EventForecast";
@@ -102,6 +103,7 @@ export function EventDetailBody({
       <EventGalleryLink galleryId={event.gallery_id} />
       <EventSharedCosts eventId={event.id} title={event.title} />
       <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
+      <RidesSection eventId={event.id} />
     </div>
   );
 }

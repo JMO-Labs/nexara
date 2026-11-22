@@ -19,6 +19,7 @@ from app.models.chat_read import ChatRead  # noqa: F401
 from app.models.community import Community  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401
+from app.models.event_ride import EventRide, RidePassenger  # noqa: F401
 from app.models.expense import (  # noqa: F401
     Expense,
     ExpenseLedger,

@@ -1036,6 +1036,9 @@
     "expense_added": {
       "label": "Shared cost added"
     },
+    "ride_update": {
+      "label": "Ride update"
+    },
     "kudos_received": {
       "label": "You got kudos"
     },
