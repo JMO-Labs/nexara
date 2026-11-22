@@ -31,6 +31,7 @@ async def test_dispatch_drains_due_types_and_spawns():
     )
     srepo = MagicMock()
     srepo.get_by_user_id = AsyncMock(return_value=st)
+    srepo.user_timezones = AsyncMock(return_value={})
     with (
         patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
         patch.object(nt, "DigestRepository", return_value=repo),
@@ -51,6 +52,7 @@ async def test_dispatch_skips_user_without_settings():
     repo.list_users_with_pending = AsyncMock(return_value=[uuid4()])
     srepo = MagicMock()
     srepo.get_by_user_id = AsyncMock(return_value=None)
+    srepo.user_timezones = AsyncMock(return_value={})
     with (
         patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
         patch.object(nt, "DigestRepository", return_value=repo),
@@ -101,6 +103,7 @@ async def test_send_digest_no_notifications_skipped():
 def _dispatch_patches(session, repo, st):
     srepo = MagicMock()
     srepo.get_by_user_id = AsyncMock(return_value=st)
+    srepo.user_timezones = AsyncMock(return_value={})
     return (
         patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
         patch.object(nt, "DigestRepository", return_value=repo),
@@ -213,3 +216,11 @@ def test_send_digest_email_retries_on_failure():
     ):
         nt.send_digest_email.run(str(uuid4()), "comment", [str(uuid4())])
     retry.assert_called_once_with(exc=boom)
+
+
+def test_effective_tz_prefers_user_timezone():
+    from app.services.notifications.dnd import effective_tz
+
+    assert effective_tz("America/Phoenix", "Europe/Paris") == "America/Phoenix"
+    assert effective_tz(None, "Europe/Paris") == "Europe/Paris"
+    assert effective_tz(None, None) == "UTC"

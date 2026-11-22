@@ -27,6 +27,7 @@ from app.api.v1.communities import router as communities_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.export import router as export_router
+from app.api.v1.features import router as features_router
 from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
 from app.api.v1.household import router as household_router
@@ -70,6 +71,7 @@ api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
+api_v1_router.include_router(features_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(admin_retention_router)
 api_v1_router.include_router(plugins_router)

@@ -44,6 +44,7 @@ def _mock_user(**overrides) -> MagicMock:
     user.bio = None
     user.title = None
     user.pronouns = None
+    user.timezone = None
     user.location = None
     user.website_url = None
     user.birthday = None

@@ -33,6 +33,7 @@ from app.services.email.templates import EmailTemplateRenderer
 from app.services.notifications import registry
 from app.services.notifications import types as _notification_types  # noqa: F401
 from app.services.notifications.digest import should_send_now
+from app.services.notifications.dnd import effective_tz
 from app.services.notifications.webhook_delivery import deliver_webhook
 from app.services.push_service import PushService
 from app.tasks.celery_app import celery_app
@@ -260,7 +261,9 @@ async def _digest_dispatch_async(now: datetime) -> int:
     async with async_session_factory() as session:
         repo = DigestRepository(session)
         settings_repo = SettingsRepository(session)
-        for user_id in await repo.list_users_with_pending():
+        pending = await repo.list_users_with_pending()
+        tzs = await settings_repo.user_timezones(list(pending))
+        for user_id in pending:
             st = await settings_repo.get_by_user_id(user_id)
             if st is None:
                 continue
@@ -271,7 +274,7 @@ async def _digest_dispatch_async(now: datetime) -> int:
                 mode = cadence.get(type_key, "instant")
                 # instant rows are always due; off rows are drained and dropped
                 due = mode in ("instant", "off") or should_send_now(
-                    mode, last, now, st.dnd_timezone or "UTC"
+                    mode, last, now, effective_tz(tzs.get(user_id), st.dnd_timezone)
                 )
                 if not due:
                     continue

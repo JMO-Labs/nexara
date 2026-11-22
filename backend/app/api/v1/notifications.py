@@ -172,7 +172,8 @@ async def snooze(
 ) -> MessageResponse:
     """@brief Snooze email/push/toast; 400 NOTIF_PREF_INVALID on bad duration."""
     prefs = await service.get_preferences(user.id)
-    until = resolve_snooze(body.duration, prefs.dnd_timezone, datetime.now(UTC))
+    tz = await service.effective_timezone(user.id, prefs.dnd_timezone)
+    until = resolve_snooze(body.duration, tz, datetime.now(UTC))
     await service.snooze(user.id, until)
     return MessageResponse(message=_("Notifications snoozed"))
 

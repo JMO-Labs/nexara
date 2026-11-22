@@ -19,6 +19,11 @@ MORNING = time(7, 0)
 """@brief Local time that ``until_morning`` snoozes resolve to."""
 
 
+def effective_tz(user_tz: str | None, dnd_tz: str | None) -> str:
+    """@brief ``users.timezone``, else the legacy DND zone, else UTC."""
+    return user_tz or dnd_tz or "UTC"
+
+
 def _parse(value: Any) -> time | None:
     try:
         return time.fromisoformat(str(value))

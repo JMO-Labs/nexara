@@ -123,6 +123,7 @@ class User(Base):
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     tour_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    timezone: Mapped[str | None] = mapped_column(Text)  # IANA zone; None -> UTC
 
     __table_args__ = (
         Index("users_email_idx", "email"),

@@ -17,6 +17,7 @@ import { useUserSettings } from "@/hooks/useSettings";
 import { useModals } from "@/stores/modals";
 import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
+import { TimezoneSync } from "@/components/settings/TimezoneSync";
 import { AppBackdrop } from "./AppBackdrop";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
@@ -103,6 +104,7 @@ export function Shell({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <BrandingStyle />
+        <TimezoneSync />
         <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />
           <main

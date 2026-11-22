@@ -67,6 +67,7 @@ async def test_snooze_1h(client, service, user):
 
 async def test_snooze_until_morning_uses_user_tz(client, service):
     service.get_preferences.return_value = _prefs("Asia/Tokyo")
+    service.effective_timezone.return_value = "Asia/Tokyo"
     async with client as c:
         r = await c.post(f"{BASE}/snooze", json={"duration": "until_morning"})
     assert r.status_code == 200
