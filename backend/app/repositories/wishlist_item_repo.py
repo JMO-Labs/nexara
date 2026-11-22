@@ -9,12 +9,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.link_preview import LinkPreview
 from app.models.user import User
-from app.models.wishlist import WishlistClaim, WishlistItem
+from app.models.wishlist import Wishlist, WishlistClaim, WishlistItem
 
 C = WishlistClaim
 
@@ -75,12 +75,44 @@ class WishlistItemRepository:
         item.deleted_at = datetime.now(UTC)
         await self._session.flush()
 
-    async def set_preview(self, item_id: uuid.UUID, preview_id: uuid.UUID) -> None:
-        """@brief Attach a fetched link preview to an item."""
-        item = await self._session.get(WishlistItem, item_id)
-        if item is not None:
-            item.preview_id = preview_id
-            await self._session.flush()
+    async def linked_for_refresh(
+        self,
+        *,
+        ids: list[uuid.UUID] | None = None,
+        amazon_before: datetime | None = None,
+        other_before: datetime | None = None,
+        limit: int = 50,
+    ) -> list[tuple[WishlistItem, str]]:
+        """
+        @brief Live gift items with a link, with their list's currency.
+        @param ids exactly these items; otherwise items whose shop data is
+               missing or older than the cutoffs (Amazon vs other shops)
+        """
+        amazon = WishlistItem.url.ilike("%amazon.%")
+        stmt = (
+            select(WishlistItem, Wishlist.currency)
+            .join(Wishlist, Wishlist.id == WishlistItem.wishlist_id)
+            .outerjoin(LinkPreview, LinkPreview.id == WishlistItem.preview_id)
+            .where(
+                WishlistItem.url.is_not(None),
+                WishlistItem.deleted_at.is_(None),
+                WishlistItem.kind == "gift",
+                Wishlist.deleted_at.is_(None),
+            )
+            .order_by(LinkPreview.fetched_at.asc().nulls_first())
+            .limit(limit)
+        )
+        if ids is not None:
+            stmt = stmt.where(WishlistItem.id.in_(ids))
+        else:
+            stmt = stmt.where(
+                or_(
+                    LinkPreview.id.is_(None),
+                    and_(amazon, LinkPreview.fetched_at < amazon_before),
+                    and_(~amazon, LinkPreview.fetched_at < other_before),
+                )
+            )
+        return [(i, c) for i, c in (await self._session.execute(stmt)).all()]
 
     async def previews(self, ids: list[uuid.UUID]) -> dict[uuid.UUID, LinkPreview]:
         """@brief Link previews by id."""

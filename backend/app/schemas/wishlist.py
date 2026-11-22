@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -225,6 +225,10 @@ class Preview(BaseModel):
     title: str | None = None
     site_name: str | None = None
     has_image: bool = False
+    price_cents: int | None = None
+    currency: str | None = None
+    buy_url: str | None = None
+    checked_at: datetime | None = None
 
 
 class ItemOut(BaseModel):
@@ -242,6 +246,7 @@ class ItemOut(BaseModel):
     mine: int | None = None
     claimers: list[Claimer] | None = None
     preview: Preview | None = None
+    price_auto: bool = False
 
 
 class WishlistOut(BaseModel):

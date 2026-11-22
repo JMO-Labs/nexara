@@ -6,7 +6,15 @@
  *        list's people; claim, pledge, undo for givers).
  */
 import * as React from "react";
-import { ExternalLink, Info, Pencil, PiggyBank, Trash2 } from "lucide-react";
+import {
+  ExternalLink,
+  Info,
+  Pencil,
+  PiggyBank,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
 import { Button, IconButton } from "@/components/ui";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useWishlistActions } from "@/hooks/useWishlists";
@@ -174,6 +182,19 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
       ? Math.min(100, Math.round((item.claimed / item.goal_cents) * 100))
       : null;
   const img = item.preview?.has_image && !imgFailed;
+  // Amazon's API links must be used unchanged (partner tag); else the wish link.
+  const link = item.preview?.buy_url || item.url;
+  const checked = item.preview?.checked_at
+    ? formatDistanceToNowStrict(new Date(item.preview.checked_at), {
+        addSuffix: true,
+      })
+    : null;
+  const liveNote =
+    item.price_auto && checked
+      ? `Price from ${item.preview?.site_name ?? "the shop"}, checked ${checked}.${
+          item.preview?.site_name === "Amazon" ? " It may differ for you." : ""
+        }`
+      : null;
   return (
     <li className="glass-item flex flex-col gap-3 rounded-[22px] p-4 sm:flex-row sm:items-center">
       <span
@@ -199,9 +220,9 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
       </span>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-baseline gap-x-2 font-medium">
-          {item.url && isHttpUrl(item.url) ? (
+          {link && isHttpUrl(link) ? (
             <a
-              href={item.url}
+              href={link}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
@@ -216,6 +237,17 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
           {item.price_cents != null && (
             <span className="inline-flex items-center gap-1 text-sm text-muted">
               {formatMoney(item.price_cents, w.currency)}
+              {liveNote && (
+                <Tooltip content={liveNote}>
+                  <button
+                    type="button"
+                    aria-label={liveNote}
+                    className="grid size-5 place-items-center rounded-full text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    <RefreshCw className="size-3" aria-hidden />
+                  </button>
+                </Tooltip>
+              )}
               {outsideBudget(w, item) && (
                 <Tooltip content="Outside the suggested spend">
                   <button

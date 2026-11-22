@@ -85,6 +85,9 @@ class WishlistItem(Base):
     url: Mapped[str | None] = mapped_column(Text)
     price_cents: Mapped[int | None] = mapped_column(Integer)
     goal_cents: Mapped[int | None] = mapped_column(Integer)
+    # The price follows the shop (filled from the link and refreshed) until
+    # someone types their own.
+    price_auto: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     preview_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("link_previews.id", ondelete="SET NULL")
     )

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -140,3 +141,17 @@ class LinkPreviewRepository(BaseRepository[LinkPreview]):
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def upsert_shop(self, url: str, values: dict[str, Any]) -> LinkPreview:
+        """
+        @brief Create or refresh the preview for a shop link with product facts.
+        @param values title, image_url, site_name, price_cents, currency, buy_url
+        """
+        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        preview, _created = await self.find_or_create(url, url_hash, values)
+        for k, v in values.items():
+            setattr(preview, k, v)
+        preview.fetched_at = datetime.now(UTC)
+        preview.expires_at = datetime.now(UTC) + timedelta(days=DEFAULT_EXPIRY_DAYS)
+        await self._session.flush()
+        return preview

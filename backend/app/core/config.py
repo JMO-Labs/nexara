@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     # --- AI ('anthropic' | 'openai' | 'ollama'; empty disables AI) ---
     AI_PROVIDER: str = ""
     ANTHROPIC_API_KEY: str = ""
+    # Amazon Creators API (official product data; optional). Credentials come
+    # from Associates Central > Creators API. Token URL depends on the region
+    # the credentials were issued for (NA: api.amazon.com, EU: api.amazon.co.uk,
+    # FE: api.amazon.co.jp).
+    AMAZON_CREATORS_CLIENT_ID: str = ""
+    AMAZON_CREATORS_CLIENT_SECRET: str = ""
+    AMAZON_PARTNER_TAG: str = ""
+    AMAZON_TOKEN_URL: str = "https://api.amazon.com/auth/o2/token"
+    AMAZON_MARKETPLACE: str = "www.amazon.com"
     OPENAI_API_KEY: str = ""
     OLLAMA_BASE_URL: str = ""
     OLLAMA_MODEL: str = "llama2"

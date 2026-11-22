@@ -58,7 +58,14 @@ export interface Wish {
     title: string | null;
     site_name: string | null;
     has_image: boolean;
+    price_cents: number | null;
+    currency: string | null;
+    /** Link to buy through (Amazon's partner-tagged page); use as-is. */
+    buy_url: string | null;
+    checked_at: string | null;
   } | null;
+  /** Price follows the shop until someone types their own. */
+  price_auto: boolean;
 }
 
 export interface Wishlist {

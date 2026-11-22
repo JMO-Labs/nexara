@@ -59,6 +59,7 @@ def _item(**kw):
         notes=None,
         qty=2,
         preview_id=None,
+        price_auto=False,
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -236,3 +237,12 @@ def test_validation_rules() -> None:
         WishlistCreate(title="x", event_date=dt.date(2026, 12, 1), due_by=dt.date(2026, 12, 5))
     with pytest.raises(PydanticError):
         RecipientIn(kind="name", name="  ")
+
+
+async def test_typing_a_price_stops_following_the_shop() -> None:
+    from app.schemas.wishlist import ItemUpdate
+
+    w, it = _list(), _item(price_auto=True)
+    _, gifts, _, irepo = _svcs(w, [it])
+    await gifts.update_item(w.id, it.id, ItemUpdate(price_cents=1200), OWNER)  # type: ignore[arg-type]
+    assert irepo.update.await_args.args[1] == {"price_cents": 1200, "price_auto": False}

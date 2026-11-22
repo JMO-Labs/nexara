@@ -56,11 +56,9 @@ class WishlistGiftService:
         if not item.url:
             return
         try:
-            from app.tasks.link_preview_tasks import scrape_link_preview
+            from app.tasks.shop_tasks import fetch_shop_item
 
-            scrape_link_preview.apply_async(
-                args=(item.url,), kwargs={"wishlist_item_id": str(item.id)}, countdown=2
-            )
+            fetch_shop_item.apply_async(args=(str(item.id),), countdown=2)
         except Exception:
             logger.warning("wishlist_preview_enqueue_failed", item_id=str(item.id))
 
@@ -91,6 +89,8 @@ class WishlistGiftService:
         relink = "url" in values and values["url"] != item.url
         if relink:
             values["preview_id"] = None
+        if "price_cents" in values:
+            values["price_auto"] = False  # a typed price stops following the shop
         await self._items.update(item, values)
         if relink:
             self._preview(item)

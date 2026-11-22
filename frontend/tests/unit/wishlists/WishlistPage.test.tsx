@@ -65,6 +65,7 @@ const base = (isOwner: boolean): WishlistDetail => ({
     {
       id: "a",
       kind: "gift",
+      price_auto: false,
       goal_cents: null,
       claimers: null,
       preview: null,
@@ -79,12 +80,22 @@ const base = (isOwner: boolean): WishlistDetail => ({
     {
       id: "b",
       kind: "gift",
+      price_auto: true,
       goal_cents: null,
       claimers: null,
-      preview: null,
+      preview: {
+        id: "p1",
+        title: "Orthopedic bed",
+        site_name: "Amazon",
+        has_image: false,
+        price_cents: 5999,
+        currency: "USD",
+        buy_url: "https://www.amazon.com/dp/B07FZ8S74R?tag=nx-20",
+        checked_at: new Date().toISOString(),
+      },
       name: "Orthopedic bed",
-      url: "https://example.com/bed",
-      price_cents: null,
+      url: "https://www.amazon.com/dp/B07FZ8S74R",
+      price_cents: 5999,
       notes: null,
       qty: 1,
       claimed: isOwner ? null : 1,
@@ -93,6 +104,7 @@ const base = (isOwner: boolean): WishlistDetail => ({
     {
       id: "c",
       kind: "gift",
+      price_auto: false,
       goal_cents: null,
       claimers: null,
       preview: null,
@@ -146,6 +158,11 @@ describe("WishlistPage", () => {
     expect(screen.queryByRole("form", { name: "Add a wish" })).toBeNull();
     expect(
       screen.getByRole("link", { name: /Orthopedic bed/ }),
-    ).toHaveAttribute("href", "https://example.com/bed");
+    ).toHaveAttribute("href", "https://www.amazon.com/dp/B07FZ8S74R?tag=nx-20");
+    expect(
+      screen.getByRole("button", {
+        name: /Price from Amazon, checked .* It may differ for you/,
+      }),
+    ).toBeInTheDocument();
   });
 });

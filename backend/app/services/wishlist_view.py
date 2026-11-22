@@ -75,6 +75,7 @@ def build_items(
                 goal_cents=i.goal_cents,
                 notes=i.notes,
                 qty=i.qty,
+                price_auto=i.price_auto,
                 claimed=total if sees_claims else None,
                 mine=mine if sees_claims else None,
                 claimers=[
@@ -88,6 +89,10 @@ def build_items(
                     title=p.title or None,
                     site_name=p.site_name,
                     has_image=bool(p.image_url),
+                    price_cents=p.price_cents,
+                    currency=p.currency,
+                    buy_url=p.buy_url,
+                    checked_at=p.fetched_at,
                 )
                 if p is not None and not p.fetch_error
                 else None,

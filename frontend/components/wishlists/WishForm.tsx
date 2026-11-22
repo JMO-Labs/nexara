@@ -151,7 +151,7 @@ export function WishForm({
               currency={currency}
               cents={price}
               onChange={setPrice}
-              placeholder="Price"
+              placeholder={f.url.trim() ? "From the shop" : "Price"}
             />
             <Input
               type="number"
