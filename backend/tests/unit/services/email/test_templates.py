@@ -52,3 +52,18 @@ class TestFooterText:
     def test_default_footer_when_unset(self):
         html, _ = EmailTemplateRenderer().render("base.html", {}, community_name="Acme")
         assert "You received this email because you have an account on Acme." in html
+
+
+def test_html_to_text_drops_style_and_keeps_breaks() -> None:
+    from app.services.email.templates import html_to_text
+
+    html = (
+        "<html><head><style>body { color: #333; }</style></head>"
+        "<body><h1>Your recap</h1><p>Ruth &amp; Maya</p>"
+        "<ul><li>One</li><li>Two</li></ul></body></html>"
+    )
+    text = html_to_text(html)
+    assert "color" not in text
+    assert text.splitlines()[0] == "Your recap"
+    assert "Ruth & Maya" in text
+    assert "One\nTwo" in text
