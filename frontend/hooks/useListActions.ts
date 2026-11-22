@@ -22,8 +22,15 @@ export function useListArchive(communityId: string) {
 export function useListItemUpdate(listId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { itemId: string; values: Record<string, unknown> }) =>
-      listApi.updateItem(listId, v.itemId, { values: v.values }),
+    mutationFn: (v: {
+      itemId: string;
+      values: Record<string, unknown>;
+      recipeId?: string | null;
+    }) =>
+      listApi.updateItem(listId, v.itemId, {
+        values: v.values,
+        ...("recipeId" in v ? { recipeId: v.recipeId } : {}),
+      }),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: qk.lists.itemsAll(listId) }),
   });

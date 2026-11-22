@@ -51,6 +51,8 @@ export interface PostComposerProps {
   promptType?: "standard" | "interest_capture";
   interestCategorySlug?: string;
   defaultSubgroupId?: string | null;
+  /** Text to start with, e.g. "@ruth " for a memory (expands the composer). */
+  initialText?: string;
 }
 
 export function PostComposer({
@@ -61,6 +63,7 @@ export function PostComposer({
   promptType = "standard",
   interestCategorySlug,
   defaultSubgroupId,
+  initialText,
 }: PostComposerProps) {
   const me = useSession((s) => s.user);
   const createMut = useCreatePost();
@@ -132,6 +135,13 @@ export function PostComposer({
       },
     },
   });
+
+  React.useEffect(() => {
+    if (!editor || !initialText) return;
+    editor.commands.setContent(`<p>${initialText}</p>`);
+    editor.commands.focus("end");
+    setExpanded(true);
+  }, [editor, initialText]);
 
   const submit = React.useCallback(async () => {
     if (!editor) return;

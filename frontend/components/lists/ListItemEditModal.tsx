@@ -8,6 +8,7 @@ import { useId, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { DialogFooter } from "@/components/ui/shadcn/dialog";
+import { RecipePicker } from "@/components/recipes/RecipePicker";
 import { useListItemCreate } from "@/hooks/useLists";
 import { useListItemUpdate } from "@/hooks/useListActions";
 import { fieldRegistry } from "@/lib/lists/fieldRegistry";
@@ -66,6 +67,9 @@ export function ListItemEditModal({
   const [values, setValues] = useState<Record<string, unknown>>(
     () => item?.values ?? {},
   );
+  const [recipeId, setRecipeId] = useState<string | null>(
+    item?.recipeId ?? null,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const pending = create.isPending || update.isPending;
 
@@ -75,7 +79,7 @@ export function ListItemEditModal({
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     const done = { onSuccess: onClose };
-    if (item) update.mutate({ itemId: item.id, values }, done);
+    if (item) update.mutate({ itemId: item.id, values, recipeId }, done);
     else create.mutate({ position: nextPosition, values }, done);
   };
 
@@ -115,6 +119,7 @@ export function ListItemEditModal({
             </div>
           );
         })}
+        {item && <RecipePicker value={recipeId} onChange={setRecipeId} />}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel

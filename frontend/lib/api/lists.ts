@@ -114,7 +114,10 @@ export const listApi = {
     data: ListItemUpdateInput,
   ): Promise<ListItem> {
     return one(
-      await apiPut(`${BASE}/${seg(listId)}/items/${seg(itemId)}`, data),
+      await apiPut(`${BASE}/${seg(listId)}/items/${seg(itemId)}`, {
+        values: data.values,
+        ...("recipeId" in data ? { recipe_id: data.recipeId } : {}),
+      }),
     );
   },
   deleteItem(listId: string, itemId: string): Promise<void> {

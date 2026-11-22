@@ -200,6 +200,7 @@ class TagRepository:
             User.username.in_(usernames),
             User.deleted_at.is_(None),
             User.is_active.is_(True),
+            User.memorialized_at.is_(None),
         )
         return list((await self._session.execute(stmt)).scalars())
 
@@ -210,6 +211,7 @@ class TagRepository:
             User.id.in_(ids),
             User.deleted_at.is_(None),
             User.is_active.is_(True),
+            User.memorialized_at.is_(None),
         )
         return list((await self._session.execute(stmt)).scalars())
 

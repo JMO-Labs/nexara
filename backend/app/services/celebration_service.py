@@ -36,6 +36,22 @@ def occurrences(day: date, start: date, end: date) -> list[date]:
     return out
 
 
+def _remembrance(
+    d: date, subject_type: str, subject_id: uuid.UUID, name: str, pet: bool, link: str
+) -> CalendarCelebration:
+    """@brief A gentle "Remembering <name>" entry (no celebrate button)."""
+    return CalendarCelebration(
+        date=d,
+        occasion="remembrance",
+        subject_type=subject_type,
+        subject_id=subject_id,
+        name=name,
+        is_pet=pet,
+        link=link,
+        title=_("Remembering {name}").format(name=name),
+    )
+
+
 class CelebrationService:
     """@brief Builds calendar celebrations for one viewer."""
 
@@ -66,8 +82,27 @@ class CelebrationService:
                 )
                 for d in occurrences(bday, start, end)
             ]
+        for uid, username, name, mb, passed in await self._repo.memorialized_users(
+            self._cid, viewer.id
+        ):
+            for mday in (mb, passed):
+                if mday is not None:
+                    out += [
+                        _remembrance(d, "user", uid, name, False, f"/app/u/{username}")
+                        for d in occurrences(mday, start, end)
+                    ]
         for m in await self._household.visible(viewer.id, self._cid):
             pet = m.kind == "pet"
+            if getattr(m, "passed_on", None) is not None:
+                for day in (m.birthday, m.passed_on):
+                    if day is not None:
+                        out += [
+                            _remembrance(
+                                d, "household", m.id, m.name, pet, f"/app/household/{m.id}"
+                            )
+                            for d in occurrences(day, start, end)
+                        ]
+                continue
             for occasion, day in (("birthday", m.birthday), ("gotcha_day", m.gotcha_day)):
                 if day is None or (occasion == "gotcha_day" and not pet):
                     continue

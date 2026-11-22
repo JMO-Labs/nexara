@@ -14,6 +14,9 @@ const h = vi.hoisted(() => ({
   remove: { mutate: vi.fn(), isPending: false },
   confirm: vi.fn(),
 }));
+vi.mock("@/components/recipes/RecipePicker", () => ({
+  RecipePicker: () => null,
+}));
 vi.mock("@/hooks/useLists", () => ({
   useListItems: h.items,
   useListItemComplete: () => h.complete,

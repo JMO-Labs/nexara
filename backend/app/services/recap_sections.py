@@ -19,12 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.features import is_enabled
 from app.models.community import Community
 from app.models.user import User
+from app.repositories.album_repo import AlbumRepository
 from app.repositories.celebration_repo import CelebrationRepository
 from app.repositories.community_repo import CommunityRepository
 from app.repositories.household_repo import HouseholdRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_memories_repo import PostMemoriesRepository
 from app.repositories.recap_repo import RecapRepository
+from app.repositories.recipe_repo import RecipeRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
@@ -143,5 +145,34 @@ async def capsules_opened(ctx: RecapContext) -> RecapSection | None:
     return {"key": "capsules", "title": "Time capsules opened", "items": items}
 
 
-SECTIONS: list[SectionBuilder] = [on_this_day, daily_question, birthdays, capsules_opened]
+async def new_albums(ctx: RecapContext) -> RecapSection | None:
+    """@brief Event albums with photos created in the last 7 days (viewer-visible only)."""
+    if not is_enabled(ctx.community, "event_albums"):
+        return None
+    found = await AlbumRepository(ctx.session).new_event_galleries(
+        ctx.community.id, ctx.user.id, ctx.now - timedelta(days=7)
+    )
+    items = [{"text": g.title, "link": f"/app/photos?gallery={g.id}"} for g in found]
+    return {"key": "new_albums", "title": "New photo albums", "items": items}
+
+
+async def new_recipes(ctx: RecapContext) -> RecapSection | None:
+    """@brief Recipes added by others in the last 7 days that the viewer may open."""
+    if not is_enabled(ctx.community, "recipes"):
+        return None
+    found = await RecipeRepository(ctx.session).recent_visible(
+        ctx.user.id, ctx.community.id, ctx.now - timedelta(days=7)
+    )
+    items = [{"text": r.title, "link": f"/app/recipes/{r.id}"} for r in found]
+    return {"key": "recipes", "title": "New recipes", "items": items}
+
+
+SECTIONS: list[SectionBuilder] = [
+    on_this_day,
+    daily_question,
+    birthdays,
+    capsules_opened,
+    new_albums,
+    new_recipes,
+]
 """@brief Ordered section builders; append new ones here."""

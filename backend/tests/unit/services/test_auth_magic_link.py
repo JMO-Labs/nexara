@@ -25,6 +25,7 @@ def _make_user(user_id=USER_ID, email=USER_EMAIL):
     u.id = user_id
     u.email = email
     u.is_active = True
+    u.memorialized_at = None
     u.two_factor_enabled = False
     return u
 

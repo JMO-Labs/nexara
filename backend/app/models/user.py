@@ -80,6 +80,9 @@ class User(Base):
 
     # Security
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    # Set by an admin when the person has passed away (migration 0056).
+    memorialized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    passed_on: Mapped[date | None] = mapped_column(Date)
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     totp_secret: Mapped[str | None] = mapped_column(Text)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")

@@ -15,6 +15,9 @@ const h = vi.hoisted(() => ({
   add: { mutate: vi.fn(), isPending: false },
   remove: { mutate: vi.fn(), isPending: false },
 }));
+vi.mock("@/components/recipes/RecipePicker", () => ({
+  RecipePicker: () => null,
+}));
 vi.mock("@/hooks/useLists", () => ({ useListItemCreate: () => h.create }));
 vi.mock("@/hooks/useListActions", () => ({
   useListItemUpdate: () => h.update,
@@ -73,7 +76,7 @@ describe("ListItemEditModal", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "s");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(h.update.mutate).toHaveBeenCalledWith(
-      { itemId: "i1", values: { name: "Tents", done: true } },
+      { itemId: "i1", values: { name: "Tents", done: true }, recipeId: null },
       expect.anything(),
     );
   });

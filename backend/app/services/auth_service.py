@@ -38,6 +38,7 @@ from app.repositories.user_repo import UserRepository
 from app.services.auth import sso_only as _sso_only
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
+from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth.registration import register_user
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.notification_service import NotificationService
@@ -130,6 +131,7 @@ class AuthService:
             raise AuthenticationError(message=_("Invalid email or password"))
         if not verify_password(password, user.password_hash):
             raise AuthenticationError(message=_("Invalid email or password"))
+        reject_memorialized(user)
         if not user.is_active:
             raise AuthenticationError(message=_("Account is deactivated"))
 
@@ -213,6 +215,7 @@ class AuthService:
         await self._token_repo.revoke(stored.id)
 
         user = await self._user_repo.get_by_id(stored.user_id)
+        reject_memorialized(user)
         if not user or not user.is_active:
             raise AuthenticationError(message=_("User not found or deactivated"))
 

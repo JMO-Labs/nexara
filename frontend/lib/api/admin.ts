@@ -63,6 +63,8 @@ export interface AdminUserListItem {
   created_at: Date;
   last_seen_at: Date | null;
   status: string;
+  memorialized_at?: string | null;
+  passed_on?: string | null;
 }
 
 /**

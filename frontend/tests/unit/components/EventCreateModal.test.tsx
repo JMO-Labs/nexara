@@ -22,6 +22,7 @@ function wrap(ui: React.ReactNode) {
   );
 }
 
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
 vi.mock("@/hooks/useEvents", () => ({
   useCreateEvent: () => ({ mutateAsync, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync, isPending: false }),
@@ -75,24 +76,26 @@ describe("EventCreateModal", () => {
     });
   });
 
-  it("sends auto_create_gallery when checkbox is checked", async () => {
+  it("sends auto_create_gallery false when unchecked", async () => {
     wrap(<EventCreateModal open onClose={vi.fn()} />);
     await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
-    await userEvent.click(screen.getByLabelText(/create gallery for photos/i));
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
-    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
-    expect(mutateAsync.mock.calls[0][0]).toMatchObject({
-      auto_create_gallery: true,
-    });
-  });
-
-  it("defaults auto_create_gallery to false", async () => {
-    wrap(<EventCreateModal open onClose={vi.fn()} />);
-    await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
+    await userEvent.click(
+      screen.getByLabelText(/create a shared photo album/i),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     expect(mutateAsync.mock.calls[0][0]).toMatchObject({
       auto_create_gallery: false,
+    });
+  });
+
+  it("defaults auto_create_gallery to true", async () => {
+    wrap(<EventCreateModal open onClose={vi.fn()} />);
+    await userEvent.type(await screen.findByLabelText(/^title/i), "Picnic");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({
+      auto_create_gallery: true,
     });
   });
 

@@ -44,6 +44,7 @@ def _member(owner: uuid.UUID, **kw: object) -> MagicMock:
         species="Dog",
         breed=None,
         gotcha_day=None,
+        passed_on=None,
         likes=["walks"],
         dislikes=[],
         care_card="2 cups kibble",

@@ -56,6 +56,7 @@ class HouseholdService:
             "species": m.species,
             "breed": m.breed,
             "gotcha_day": m.gotcha_day,
+            "passed_on": m.passed_on,
             "likes": m.likes or [],
             "dislikes": m.dislikes or [],
             "care_card": care,
@@ -143,6 +144,8 @@ class HouseholdService:
         """@brief Visible birthdays and gotcha days in the next 14 days, soonest first."""
         out: list[dict[str, Any]] = []
         for m in await self._repo.visible(viewer.id, self._community_id):
+            if m.passed_on is not None:
+                continue  # remembered on the calendar, not celebrated
             for occasion, day in (("birthday", m.birthday), ("gotcha_day", m.gotcha_day)):
                 n = birthday_in_days(day, today)
                 if n is not None:

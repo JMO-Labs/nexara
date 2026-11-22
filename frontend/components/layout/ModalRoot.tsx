@@ -34,6 +34,7 @@ const GalleryCreateModal = dynamic(
 export function ModalRoot() {
   const open = useModals((s) => s.open);
   const close = useModals((s) => s.close);
+  const payload = useModals((s) => s.payload) as { text?: string } | undefined;
 
   return (
     <>
@@ -42,7 +43,7 @@ export function ModalRoot() {
 
       {/* create-post */}
       <Modal open={open === "create-post"} onClose={close} title="New post">
-        <PostComposer onPosted={close} />
+        <PostComposer onPosted={close} initialText={payload?.text} />
       </Modal>
 
       {/* create-event */}

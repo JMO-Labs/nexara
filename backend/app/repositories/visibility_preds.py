@@ -16,6 +16,7 @@ from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.models.moderation import UserBlock
 from app.models.post import Post, PostMedia
 from app.models.prompt import Prompt, PromptPost
+from app.models.recipe import Recipe
 from app.models.subgroup import SubgroupMember
 
 
@@ -111,3 +112,21 @@ def media_visible(
         gallery_visible(viewer_id, subgroup_ids, community_id),
     )
     return or_(via_post, via_gallery)
+
+
+def recipe_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID) -> Any:
+    """@brief Live recipe the viewer may read (own, community, or their group)."""
+    return and_(
+        Recipe.community_id == community_id,
+        Recipe.deleted_at.is_(None),
+        or_(
+            Recipe.author_id == viewer_id,
+            and_(
+                not_blocked(Recipe.author_id, viewer_id),
+                or_(
+                    Recipe.visibility == "community",
+                    and_(Recipe.visibility == "subgroup", _in(Recipe.subgroup_id, subgroup_ids)),
+                ),
+            ),
+        ),
+    )

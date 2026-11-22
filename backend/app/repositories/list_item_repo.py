@@ -12,8 +12,10 @@ from sqlalchemy import func, literal, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.list import List, ListItem, ListItemCompletion
+from app.models.recipe import Recipe
 from app.repositories.base import BaseRepository
 from app.repositories.list_keyset import decode_cursor, encode_cursor, parse_dt
+from app.repositories.visibility_preds import my_subgroup_ids, recipe_visible
 
 _SORTS: dict[str, tuple[Any, Any]] = {
     "position": (ListItem.position, int),
@@ -117,3 +119,13 @@ class ListItemRepository(BaseRepository[ListItem]):
             )
         )
         return list((await self._session.execute(stmt)).scalars().all())
+
+    async def recipe_visible(
+        self, recipe_id: uuid.UUID, viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
+        """@brief Whether the viewer may read (and so link) the recipe."""
+        stmt = select(Recipe.id).where(
+            Recipe.id == recipe_id,
+            recipe_visible(viewer_id, my_subgroup_ids(viewer_id), community_id),
+        )
+        return (await self._session.execute(stmt)).first() is not None

@@ -40,6 +40,7 @@ from app.api.v1.list_assignments import router as list_assignments_router
 from app.api.v1.list_templates import router as list_templates_router
 from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
+from app.api.v1.memorials import router as memorials_router
 from app.api.v1.memories import router as memories_router
 from app.api.v1.moderation import router as moderation_router
 from app.api.v1.notifications import router as notifications_router
@@ -52,6 +53,7 @@ from app.api.v1.posts import router as posts_router
 from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
 from app.api.v1.recap import router as recap_router
+from app.api.v1.recipes import router as recipes_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
@@ -98,6 +100,7 @@ api_v1_router.include_router(users_directory_router)
 api_v1_router.include_router(tags_router)
 api_v1_router.include_router(wishlists_router)
 api_v1_router.include_router(household_router)
+api_v1_router.include_router(memorials_router)
 api_v1_router.include_router(memories_router)
 api_v1_router.include_router(weather_router)
 api_v1_router.include_router(users_router)
@@ -109,6 +112,7 @@ api_v1_router.include_router(list_assignments_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(time_capsules_router)
+api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(suggestions_router)

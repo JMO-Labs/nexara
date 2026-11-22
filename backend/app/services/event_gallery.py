@@ -10,8 +10,10 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.features import is_enabled
 from app.models.event import Event
 from app.models.gallery import Gallery
+from app.repositories.community_repo import CommunityRepository
 
 
 async def create_event_gallery(
@@ -54,3 +56,9 @@ async def find_event_gallery_id(
         .limit(1)
     )
     return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def albums_enabled(session: AsyncSession, community_id: uuid.UUID) -> bool:
+    """@brief Whether the event_albums feature flag is on (missing row = defaults)."""
+    community = await CommunityRepository(session).get(community_id)
+    return community is None or is_enabled(community, "event_albums")

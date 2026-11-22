@@ -88,6 +88,7 @@ class Event(Base):
         nullable=False,
         server_default="[60]",
     )
+    album_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     locally_modified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     search_fts = mapped_column(
         TSVECTOR,

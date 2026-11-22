@@ -6,12 +6,14 @@ import { apiGet } from "./client";
 
 export interface CalendarCelebration {
   date: string; // YYYY-MM-DD
-  occasion: "birthday" | "gotcha_day";
+  occasion: "birthday" | "gotcha_day" | "remembrance";
   subject_type: "user" | "household";
   subject_id: string;
   name: string;
   is_pet: boolean;
   link: string;
+  /** Set for remembrance: "Remembering <name>". */
+  title?: string | null;
 }
 
 /** @brief Celebrations from start to end (inclusive, YYYY-MM-DD). */

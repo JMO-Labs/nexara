@@ -9,6 +9,11 @@ import { UsersTab } from "@/components/admin/UsersTab";
 import { useUI } from "@/stores/ui";
 
 vi.mock("@/hooks/useAdmin");
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
+vi.mock("@/hooks/useMemorials", () => ({
+  useMemorializeUser: () => ({ mutate: vi.fn(), isPending: false }),
+  useUnmemorializeUser: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
 const mut = { mutate: vi.fn(), isPending: false } as any;
 const mkUsers = (n: number) => ({

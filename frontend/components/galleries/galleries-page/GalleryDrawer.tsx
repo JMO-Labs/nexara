@@ -5,7 +5,8 @@
  *        upload, items.
  */
 import * as React from "react";
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Play, Trash2 } from "lucide-react";
 import {
   Avatar,
   Drawer,
@@ -275,6 +276,15 @@ export function GalleryDrawer({
 
           <div>
             <Label>Items</Label>
+            {count > 0 && (
+              <Link
+                href={`/app/galleries/${gallery.id}/slideshow`}
+                className="focus-visible:outline-accent glass-item mb-3 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <Play className="size-4" aria-hidden="true" />
+                Slideshow
+              </Link>
+            )}
             {isLoading && <Skeleton height={200} />}
             {!isLoading && count === 0 && (
               <EmptyState

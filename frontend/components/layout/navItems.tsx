@@ -4,6 +4,7 @@
  */
 import {
   CalendarDays,
+  ChefHat,
   Gift,
   Hourglass,
   House,
@@ -105,6 +106,7 @@ export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
 /** @brief Phone More sheet extras (desktop uses the avatar menu). */
 export const MORE_NAV: NavItem[] = [
   { label: "Time capsules", href: "/app/capsules", Icon: Hourglass },
+  { label: "Recipes", href: "/app/recipes", Icon: ChefHat },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },
 ];
