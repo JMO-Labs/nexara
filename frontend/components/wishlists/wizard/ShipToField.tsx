@@ -33,6 +33,7 @@ export function ShipToField({
   ];
   return (
     <section className="flex flex-col gap-3" aria-label="Shipping">
+      <span className="text-sm font-medium">Ship gifts to</span>
       <Segmented
         label="Ship gifts to"
         value={d.ship_mode}
