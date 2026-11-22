@@ -83,6 +83,9 @@ export interface UserProfile {
   last_seen_at: string | null;
   /** Fields below are null/empty when the viewer may not see them. */
   banner_media_id?: string | null;
+  /** Set when the person has passed away (account is a memorial). */
+  memorialized_at?: string | null;
+  passed_on?: string | null;
   /** ISO date, or "--MM-DD" when the year is hidden. */
   birthday?: string | null;
   phone?: string | null;

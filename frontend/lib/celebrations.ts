@@ -29,9 +29,11 @@ export type CelebrationEvent = EventItem & {
 
 /** @brief Title as shown on the calendar. */
 export const celebrationTitle = (c: CalendarCelebration) =>
-  c.occasion === "gotcha_day"
-    ? `${c.name}'s gotcha day`
-    : `${c.name}'s birthday`;
+  c.occasion === "remembrance"
+    ? (c.title ?? `Remembering ${c.name}`)
+    : c.occasion === "gotcha_day"
+      ? `${c.name}'s gotcha day`
+      : `${c.name}'s birthday`;
 
 /** @brief Map celebrations to all-day calendar entries (local dates). */
 export function celebrationEvents(

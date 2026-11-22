@@ -18,6 +18,7 @@ import {
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { NudgeButton } from "@/components/engagement/NudgeButton";
 import { BlockButton } from "@/components/common/BlockButton";
+import { MemorialHeader } from "@/components/memorials/MemorialHeader";
 import { GroupChips } from "@/components/members/GroupChips";
 import { FavoriteButton } from "@/components/home/FavoriteButton";
 import { useCreateDm } from "@/hooks/useChat";
@@ -96,6 +97,16 @@ export function MemberHeader({
         />
       </div>
 
+      {profile.memorialized_at && (
+        <div className="px-5 pt-4 md:px-8">
+          <MemorialHeader
+            name={profile.display_name}
+            handle={profile.username}
+            born={profile.birthday}
+            passedOn={profile.passed_on}
+          />
+        </div>
+      )}
       <div className="relative px-5 pb-5 md:px-8 md:pb-7">
         <div className="-mt-12 flex flex-wrap items-end justify-between gap-3 md:-mt-14">
           <span className="relative block rounded-full ring-4 ring-[var(--nx-glass-solid)]">
@@ -113,7 +124,7 @@ export function MemberHeader({
             )}
           </span>
           <div className="flex flex-wrap items-center gap-2">
-            {isSelf ? (
+            {profile.memorialized_at ? null : isSelf ? (
               <Link
                 href="/app/settings?tab=profile"
                 className="glass-item flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-medium"

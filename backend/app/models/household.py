@@ -49,6 +49,7 @@ class HouseholdMember(Base):
     species: Mapped[str | None] = mapped_column(Text)
     breed: Mapped[str | None] = mapped_column(Text)
     gotcha_day: Mapped[date | None] = mapped_column(Date)
+    passed_on: Mapped[date | None] = mapped_column(Date)
     likes: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
     dislikes: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
     care_card: Mapped[str | None] = mapped_column(Text)

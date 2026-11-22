@@ -53,6 +53,7 @@ def _target() -> MagicMock:
     u = MagicMock(spec=User)
     u.id, u.username, u.display_name, u.role = uuid.uuid4(), "ruth", "Ruth", "member"
     u.avatar_url = u.banner_media_id = None
+    u.memorialized_at = u.passed_on = None
     u.created_at = datetime.now(UTC)
     u.last_seen_at = None
     u.birthday = date(1948, 11, 24)

@@ -154,6 +154,7 @@ class WishlistRepository:
                 User.id == user_id,
                 User.community_id == community_id,
                 User.deleted_at.is_(None),
+                User.memorialized_at.is_(None),
                 not_blocked(User.id, viewer_id),
             )
         )
@@ -171,6 +172,7 @@ class WishlistRepository:
                 User.community_id == community_id,
                 User.deleted_at.is_(None),
                 User.is_active.is_(True),
+                User.memorialized_at.is_(None),
                 not_blocked(User.id, viewer_id),
             )
             .order_by(func.lower(User.display_name))

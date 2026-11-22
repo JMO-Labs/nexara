@@ -84,6 +84,8 @@ class ProfileResponse(BaseModel):
     created_at: datetime
     last_seen_at: datetime | None = None
     banner_media_id: UUID | None = None
+    memorialized_at: datetime | None = None
+    passed_on: date | None = None
     bio: str | None = None
     title: str | None = None
     pronouns: str | None = None

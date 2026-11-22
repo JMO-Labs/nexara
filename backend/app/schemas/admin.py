@@ -7,7 +7,7 @@ Defines metrics, audit log, settings, and user management payloads.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -120,3 +120,5 @@ class AdminUserListItem(BaseModel):
     created_at: datetime
     last_seen_at: datetime | None = None
     status: str = "active"
+    memorialized_at: datetime | None = None
+    passed_on: date | None = None
