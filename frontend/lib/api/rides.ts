@@ -7,6 +7,7 @@ import { apiDelete, apiGet, apiPost, seg } from "./client";
 export interface RidePassenger {
   user_id: string;
   display_name: string;
+  seats: number;
 }
 
 export interface Ride {
@@ -40,7 +41,8 @@ export const offerRide = (eventId: string, body: RideCreate) =>
   apiPost<Ride>(`${ev(eventId)}/offers`, body);
 export const requestRide = (eventId: string, body: RideCreate) =>
   apiPost<Ride>(`${ev(eventId)}/requests`, body);
-export const joinRide = (rideId: string) => apiPost<Ride>(`${rd(rideId)}/join`);
+export const joinRide = (rideId: string, seats = 1) =>
+  apiPost<Ride>(`${rd(rideId)}/join`, { seats });
 export const leaveRide = (rideId: string) =>
   apiPost<void>(`${rd(rideId)}/leave`);
 export const answerRequest = (requestId: string, offerId: string) =>

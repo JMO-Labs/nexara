@@ -20,7 +20,7 @@ from app.repositories.notification_repo import NotificationRepository
 from app.repositories.ride_repo import RideRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.tag_repo import TagRepository
-from app.schemas.ride import RideAnswer, RideCreate, RideOut
+from app.schemas.ride import RideAnswer, RideCreate, RideJoin, RideOut
 from app.services.event_service import EventService
 from app.services.notification_service import NotificationService
 from app.services.ride_service import RideService
@@ -80,11 +80,12 @@ async def request_ride(
 @router.post("/rides/{ride_id}/join", response_model=RideOut)
 async def join_ride(
     ride_id: uuid.UUID,
+    body: RideJoin | None = None,
     user: User = Depends(get_current_user),
     service: RideService = Depends(_build_service),
 ) -> Any:
     """@brief Take a seat (409 RIDE_FULL / ALREADY_RIDING)."""
-    return await service.join(ride_id, user.id)
+    return await service.join(ride_id, user.id, body.seats if body else 1)
 
 
 @router.post("/rides/{ride_id}/leave", status_code=204)

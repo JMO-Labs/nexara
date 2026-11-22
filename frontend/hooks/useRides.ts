@@ -34,7 +34,7 @@ export function useRideActions(eventId: string) {
   return {
     offer: useMk((b: RideCreate) => offerRide(eventId, b)),
     request: useMk((b: RideCreate) => requestRide(eventId, b)),
-    join: useMk((id: string) => joinRide(id)),
+    join: useMk((v: { id: string; seats: number }) => joinRide(v.id, v.seats)),
     leave: useMk((id: string) => leaveRide(id)),
     cancel: useMk((id: string) => cancelRide(id)),
     answer: useMk((v: { requestId: string; offerId: string }) =>

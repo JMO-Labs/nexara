@@ -55,6 +55,7 @@ class RidePassenger(Base):
     """@brief A user holding a seat on an offer (one row per user per ride)."""
 
     __tablename__ = "ride_passengers"
+    __table_args__ = (CheckConstraint("seats BETWEEN 1 AND 8", name="ride_passengers_seats_ck"),)
 
     ride_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("event_rides.id", ondelete="CASCADE"), primary_key=True
@@ -62,6 +63,7 @@ class RidePassenger(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
+    seats: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

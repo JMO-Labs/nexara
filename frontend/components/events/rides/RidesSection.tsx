@@ -36,7 +36,7 @@ export function RidesSection({ eventId }: { eventId: string }) {
       userId={userId}
       myOpenOffers={myOpen}
       busy={busy}
-      onJoin={(id) => act.join.mutate(id)}
+      onJoin={(id, seats) => act.join.mutate({ id, seats })}
       onLeave={(id) => act.leave.mutate(id)}
       onCancel={(id) => act.cancel.mutate(id)}
       onAnswer={(requestId, offerId) =>

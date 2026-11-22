@@ -56,6 +56,7 @@ def svc():
     repo.memorialized.return_value = False
     repo.riding.return_value = False
     repo.passenger_ids.return_value = []
+    repo.seats_taken.return_value = 0
     repo.passengers_for.return_value = []
     repo.names.return_value = {DRIVER: "Dee", MAYA: "Maya", RUTH: "Ruth"}
     notif = strict_notify()
@@ -100,7 +101,7 @@ async def test_memorialized_cannot_offer_or_join(svc) -> None:
 async def test_join_full_is_409(svc) -> None:
     s, repo, *_ = svc
     repo.get.return_value = _ride(seats=1)
-    repo.passenger_ids.return_value = [RUTH]
+    repo.seats_taken.return_value = 1
     with pytest.raises(AppError) as e:
         await s.join(uuid.uuid4(), MAYA)
     assert (e.value.status_code, e.value.code) == (409, "RIDE_FULL")
@@ -171,7 +172,7 @@ async def test_answer_request_adds_requester_and_closes(svc) -> None:
     offer, req = _ride(), _ride("request", MAYA, 1)
     repo.get.side_effect = [offer, req]
     await s.answer_request(req.id, offer.id, DRIVER)
-    repo.add_passenger.assert_awaited_once_with(offer.id, MAYA)
+    repo.add_passenger.assert_awaited_once_with(offer.id, MAYA, 1)
     repo.soft_delete.assert_awaited_once_with(req)
     assert notif.notify.await_args.args[0] == MAYA
 
@@ -190,6 +191,7 @@ async def test_list_hides_blocked_passengers_and_computes_seats(svc) -> None:
     p1, p2 = MagicMock(), MagicMock()
     p1.ride_id = p2.ride_id = ride.id
     p1.user_id, p2.user_id = MAYA, RUTH
+    p1.seats = p2.seats = 1
     repo.list_for_event.return_value = [ride]
     repo.passengers_for.return_value = [p1, p2]
     repo.blocked_with.return_value = {RUTH}
@@ -203,3 +205,39 @@ def test_depart_at_normalised_to_utc() -> None:
     assert naive.depart_at is not None and naive.depart_at.tzinfo is UTC
     with pytest.raises(ValueError):
         RideCreate(seats=9)
+
+
+async def test_join_multiple_seats_checks_capacity(svc) -> None:
+    s, repo, *_ = svc
+    repo.get.return_value = _ride(seats=3)
+    repo.seats_taken.return_value = 2
+    with pytest.raises(AppError) as e:
+        await s.join(uuid.uuid4(), MAYA, 2)
+    assert (e.value.status_code, e.value.code) == (409, "RIDE_FULL")
+    await s.join(uuid.uuid4(), MAYA, 1)
+    repo.add_passenger.assert_awaited_once_with(repo.get.return_value.id, MAYA, 1)
+
+
+async def test_answer_three_seat_request_into_two_seat_offer_is_409(svc) -> None:
+    s, repo, *_ = svc
+    offer, req = _ride(seats=2), _ride("request", MAYA, 3)
+    repo.get.side_effect = [offer, req]
+    repo.seats_taken.return_value = 0
+    with pytest.raises(AppError) as e:
+        await s.answer_request(req.id, offer.id, DRIVER)
+    assert (e.value.status_code, e.value.code) == (409, "RIDE_FULL")
+    repo.add_passenger.assert_not_awaited()
+    repo.soft_delete.assert_not_awaited()
+
+
+async def test_answer_three_seat_request_into_four_seat_offer_leaves_one(svc) -> None:
+    s, repo, *_ = svc
+    offer, req = _ride(seats=4), _ride("request", MAYA, 3)
+    repo.get.side_effect = [offer, req]
+    p = MagicMock()
+    p.ride_id, p.user_id, p.seats = offer.id, MAYA, 3
+    repo.passengers_for.return_value = [p]
+    out = await s.answer_request(req.id, offer.id, DRIVER)
+    repo.add_passenger.assert_awaited_once_with(offer.id, MAYA, 3)
+    assert out.seats_left == 1
+    assert out.passengers[0].seats == 3

@@ -123,12 +123,16 @@ class RideService:
                     user_id=r.user_id,
                     driver_name=names.get(r.user_id, ""),
                     seats=r.seats,
-                    seats_left=max(r.seats - len(mine), 0) if r.kind == "offer" else 0,
+                    seats_left=max(r.seats - sum(p.seats for p in mine), 0)
+                    if r.kind == "offer"
+                    else 0,
                     origin=r.origin,
                     depart_at=r.depart_at,
                     note=r.note,
                     passengers=[
-                        RidePassengerOut(user_id=p.user_id, display_name=names.get(p.user_id, ""))
+                        RidePassengerOut(
+                            user_id=p.user_id, display_name=names.get(p.user_id, ""), seats=p.seats
+                        )
                         for p in mine
                         if p.user_id not in hidden
                     ],
@@ -177,18 +181,18 @@ class RideService:
         """@brief Ask for a ride to an event."""
         return await self._create("request", event_id, user_id, body)
 
-    async def _seat(self, offer: EventRide, user_id: uuid.UUID) -> None:
+    async def _seat(self, offer: EventRide, user_id: uuid.UUID, seats: int) -> None:
         """@brief Take a seat on a locked offer. @raises AppError RIDE_FULL / ALREADY_RIDING."""
         await self._repo.lock_rider(offer.event_id, user_id)
         if await self._repo.riding(offer.event_id, user_id):
             raise _conflict("ALREADY_RIDING", _("You already have a seat for this event"))
-        if len(await self._repo.passenger_ids(offer.id)) >= offer.seats:
+        if await self._repo.seats_taken(offer.id) + seats > offer.seats:
             raise _conflict("RIDE_FULL", _("This ride is full"))
-        await self._repo.add_passenger(offer.id, user_id)
+        await self._repo.add_passenger(offer.id, user_id, seats)
 
-    async def join(self, ride_id: uuid.UUID, user_id: uuid.UUID) -> RideOut:
+    async def join(self, ride_id: uuid.UUID, user_id: uuid.UUID, seats: int = 1) -> RideOut:
         """
-        @brief Take a seat (locks the ride row so the last seat cannot be double-booked).
+        @brief Take ``seats`` seats (locks the ride row so the last seat cannot be double-booked).
         @raises AppError RIDE_FULL, ALREADY_RIDING (409); 422 for own/request rides.
         """
         await self._require_feature()
@@ -199,7 +203,7 @@ class RideService:
             raise AppError("VALIDATION_ERROR", _("You cannot join your own ride"), 422)
         if await self._repo.memorialized(user_id):
             raise AuthorizationError(_("This account cannot take part in rides"))
-        await self._seat(ride, user_id)
+        await self._seat(ride, user_id, seats)
         name = await self._name(user_id)
         await self._notify_users(
             event, ride, "joined", _("%(name)s joined your ride") % {"name": name},
@@ -235,7 +239,7 @@ class RideService:
             raise AppError("VALIDATION_ERROR", _("That request cannot be answered"), 422)
         if await self._repo.memorialized(req.user_id):
             raise AppError("VALIDATION_ERROR", _("That request cannot be answered"), 422)
-        await self._seat(offer, req.user_id)
+        await self._seat(offer, req.user_id, req.seats)
         await self._repo.soft_delete(req)
         name = await self._name(driver_id)
         await self._notify_users(

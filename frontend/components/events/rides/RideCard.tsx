@@ -3,6 +3,7 @@
  * @file components/events/rides/RideCard.tsx
  * @brief One ride offer or request with its action buttons.
  */
+import { useState } from "react";
 import { Button } from "@/components/ui";
 import type { Ride } from "@/lib/api/rides";
 
@@ -24,7 +25,7 @@ export interface RideCardProps {
   /** the viewer's own offers that still have a seat (for "I can take them") */
   myOpenOffers: Ride[];
   busy: boolean;
-  onJoin: (id: string) => void;
+  onJoin: (id: string, seats: number) => void;
   onLeave: (id: string) => void;
   onCancel: (id: string) => void;
   onAnswer: (requestId: string, offerId: string) => void;
@@ -45,6 +46,7 @@ export function RideCard({
   onCancel,
   onAnswer,
 }: RideCardProps) {
+  const [seats, setSeats] = useState(1);
   const mine = ride.user_id === userId;
   const isOffer = ride.kind === "offer";
   const when = formatDepart(ride.depart_at);
@@ -73,17 +75,46 @@ export function RideCard({
       {ride.note && <p>{ride.note}</p>}
       {ride.passengers.length > 0 && (
         <p className="text-muted">
-          Riding: {ride.passengers.map((p) => p.display_name).join(", ")}
+          Riding:{" "}
+          {ride.passengers
+            .map(
+              (p) =>
+                `${p.display_name}${p.seats > 1 ? ` (${p.seats} seats)` : ""}`,
+            )
+            .join(", ")}
         </p>
       )}
       <div className="flex flex-wrap gap-2">
-        {isOffer && !mine && !ride.joined && (
-          <Button
-            size="sm"
-            disabled={busy || ride.seats_left === 0}
-            onClick={() => onJoin(ride.id)}
-          >
-            {ride.seats_left === 0 ? "Full" : "Join ride"}
+        {isOffer && !mine && !ride.joined && ride.seats_left > 0 && (
+          <>
+            <label className="flex items-center gap-1.5">
+              <span>Seats</span>
+              <select
+                className="h-8 rounded-md border border-ink/20 bg-bg px-2 text-sm"
+                value={Math.min(seats, ride.seats_left)}
+                onChange={(e) => setSeats(Number(e.target.value))}
+              >
+                {Array.from({ length: ride.seats_left }, (_, i) => i + 1).map(
+                  (n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => onJoin(ride.id, Math.min(seats, ride.seats_left))}
+            >
+              Join ride
+            </Button>
+          </>
+        )}
+        {isOffer && !mine && !ride.joined && ride.seats_left === 0 && (
+          <Button size="sm" disabled>
+            Full
           </Button>
         )}
         {isOffer && ride.joined && (

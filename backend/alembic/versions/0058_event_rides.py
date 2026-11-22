@@ -81,9 +81,11 @@ def upgrade() -> None:
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             primary_key=True,
         ),
+        sa.Column("seats", sa.Integer(), nullable=False, server_default="1"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
         ),
+        sa.CheckConstraint("seats BETWEEN 1 AND 8", name="ride_passengers_seats_ck"),
     )
     op.create_index("ix_ride_passengers_user", "ride_passengers", ["user_id"])
 

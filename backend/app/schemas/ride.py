@@ -35,11 +35,18 @@ class RideAnswer(BaseModel):
     offer_id: uuid.UUID
 
 
+class RideJoin(BaseModel):
+    """@brief Optional body for joining an offer."""
+
+    seats: int = Field(default=1, ge=1, le=8)
+
+
 class RidePassengerOut(BaseModel):
     """@brief A passenger visible to the viewer."""
 
     user_id: uuid.UUID
     display_name: str
+    seats: int = 1
 
 
 class RideOut(BaseModel):

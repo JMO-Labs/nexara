@@ -54,7 +54,7 @@ describe("rides api", () => {
     await api.listRides("e1");
     await api.offerRide("e1", b);
     await api.requestRide("e1", b);
-    await api.joinRide("r1");
+    await api.joinRide("r1", 2);
     await api.leaveRide("r1");
     await api.answerRequest("q1", "r1");
     await api.cancelRide("r1");
@@ -63,6 +63,9 @@ describe("rides api", () => {
       ...client.apiPost.mock.calls,
       ...client.apiDelete.mock.calls,
     ].map((c) => c[0] as string);
+    expect(client.apiPost).toHaveBeenCalledWith("/api/v1/rides/r1/join", {
+      seats: 2,
+    });
     expect(paths).toEqual([
       "/api/v1/events/e1/rides",
       "/api/v1/events/e1/rides/offers",
@@ -96,7 +99,7 @@ describe("RideCard", () => {
     );
     expect(screen.getByText("2 of 3 seats left")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Join ride" }));
-    expect(p.onJoin).toHaveBeenCalledWith("r1");
+    expect(p.onJoin).toHaveBeenCalledWith("r1", 1);
   });
   it("full offer disables join", () => {
     render(
@@ -145,6 +148,33 @@ describe("RideCard", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Cancel offer" }));
     expect(p.onCancel).toHaveBeenCalledWith("r1");
+  });
+});
+
+describe("RideCard seats", () => {
+  it("picker is bounded by seats left and passes the choice", () => {
+    const onJoin = vi.fn();
+    render(
+      <RideCard
+        ride={ride({
+          seats_left: 2,
+          passengers: [{ user_id: "x", display_name: "Ruth", seats: 3 }],
+        })}
+        userId="me"
+        myOpenOffers={[]}
+        busy={false}
+        onJoin={onJoin}
+        onLeave={vi.fn()}
+        onCancel={vi.fn()}
+        onAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Riding: Ruth (3 seats)")).toBeTruthy();
+    const sel = screen.getByLabelText("Seats") as HTMLSelectElement;
+    expect(sel.options.length).toBe(2);
+    fireEvent.change(sel, { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Join ride" }));
+    expect(onJoin).toHaveBeenCalledWith("r1", 2);
   });
 });
 

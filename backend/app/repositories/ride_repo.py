@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event_ride import EventRide, RidePassenger
@@ -90,6 +90,13 @@ class RideRepository:
         stmt = select(RidePassenger.user_id).where(RidePassenger.ride_id == ride_id)
         return list((await self._session.execute(stmt)).scalars().all())
 
+    async def seats_taken(self, ride_id: uuid.UUID) -> int:
+        """@return Sum of seats held by passengers on the ride."""
+        stmt = select(func.coalesce(func.sum(RidePassenger.seats), 0)).where(
+            RidePassenger.ride_id == ride_id
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
     async def passengers_for(self, ride_ids: list[uuid.UUID]) -> list[RidePassenger]:
         """@return Passenger rows for the rides, oldest first."""
         if not ride_ids:
@@ -101,9 +108,9 @@ class RideRepository:
         )
         return list((await self._session.execute(stmt)).scalars().all())
 
-    async def add_passenger(self, ride_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        """@brief Seat the user on the ride."""
-        self._session.add(RidePassenger(ride_id=ride_id, user_id=user_id))
+    async def add_passenger(self, ride_id: uuid.UUID, user_id: uuid.UUID, seats: int = 1) -> None:
+        """@brief Seat the user on the ride, holding ``seats`` seats."""
+        self._session.add(RidePassenger(ride_id=ride_id, user_id=user_id, seats=seats))
         await self._session.flush()
 
     async def remove_passenger(self, ride_id: uuid.UUID, user_id: uuid.UUID) -> bool:
