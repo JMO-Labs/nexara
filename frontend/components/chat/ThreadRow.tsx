@@ -4,6 +4,7 @@
  * @brief Shared glass thread row: group dot/peer avatar, name, preview,
  *        unread/mention badge or time. Used by chat sidebar and Home tile.
  */
+import { GroupDoor } from "@/components/ui/GroupDoor";
 import * as React from "react";
 import { Users, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui";
@@ -89,11 +90,7 @@ export function ThreadRow({
         )}
         <span className="min-w-0 flex-1">
           <strong className="flex items-center gap-1.5 font-medium">
-            <i
-              aria-hidden
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: color }}
-            />
+            <GroupDoor color={color} />
             <span className="truncate">{name}</span>
           </strong>
           <small className="mt-0.5 block truncate text-[13px] text-[var(--nx-muted)]">

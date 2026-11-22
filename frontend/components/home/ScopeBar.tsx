@@ -3,6 +3,7 @@
  * @file components/home/ScopeBar.tsx
  * @brief Scope pills (Everything + member groups) beside a "needs you" slot.
  */
+import { GroupDoor } from "@/components/ui/GroupDoor";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { groupColor } from "@/lib/groupColor";
@@ -47,11 +48,7 @@ export function ScopeBar({ needs }: { needs: React.ReactNode }) {
             onClick={() => setScope(g.id)}
             className={pill(scope === g.id)}
           >
-            <span
-              aria-hidden
-              className="h-2 w-2 rounded-full"
-              style={{ background: groupColor(g.id, g.accent_color) }}
-            />
+            <GroupDoor color={groupColor(g.id, g.accent_color)} />
             {g.name}
           </button>
         ))}

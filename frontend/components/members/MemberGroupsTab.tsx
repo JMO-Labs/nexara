@@ -2,6 +2,7 @@
  * @file components/members/MemberGroupsTab.tsx
  * @brief Groups shared between the viewer and a member.
  */
+import { GroupDoor } from "@/components/ui/GroupDoor";
 import { Users } from "lucide-react";
 import { ListRow } from "@/components/ui/page";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -36,11 +37,7 @@ export function MemberGroupsTab({
         <li key={g.id}>
           <ListRow>
             <span className="flex items-center gap-3 p-3 text-sm text-ink">
-              <i
-                aria-hidden
-                className="size-3 rounded-full"
-                style={{ background: groupColor(g.id, g.accent_color) }}
-              />
+              <GroupDoor size="md" color={groupColor(g.id, g.accent_color)} />
               {g.name}
             </span>
           </ListRow>
