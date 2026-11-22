@@ -36,7 +36,7 @@ async def check_ship_user(
     repo: WishlistRepository, user_id: uuid.UUID, creator_id: uuid.UUID, cid: uuid.UUID
 ) -> None:
     """@throws ValidationError when that person's address can't be used."""
-    row = await repo.ship_user(user_id, cid)
+    row = await repo.ship_user(user_id, cid, creator_id)  # blocked either way: refused
     if row is None or not shares_address(row[0], row[1], creator_id):
         raise ValidationError(
             message=_("That person doesn't share their address. Ask them to share it.")
@@ -66,9 +66,9 @@ async def ship_to(
         )
     if not w.ship_to_user_id:
         return None
-    row = await repo.ship_user(w.ship_to_user_id, cid)
-    if row is None:
-        return None
+    row = await repo.ship_user(w.ship_to_user_id, cid, viewer_id)
+    if row is None:  # blocked (either way), left, or gone: reveal nothing
+        return ShipTo(name="the recipient")
     user, prefs = row
     shared = shares_address(user, prefs, w.owner_id)  # re-checked: they may stop sharing
     return ShipTo(

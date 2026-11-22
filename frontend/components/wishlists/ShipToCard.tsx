@@ -2,22 +2,29 @@
 /**
  * @file components/wishlists/ShipToCard.tsx
  * @brief Shipping address on a wishlist, with a copy button for checkout.
+ *        Event addresses link to the event.
  */
 import { Copy, MapPin } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { useToasts } from "@/stores/toasts";
 import type { ShipTo } from "@/lib/api/wishlists";
 
-/** @brief "Ship to" block; explains when the person stopped sharing. */
+/** @brief Why there is no address to show. */
+function missing(ship: ShipTo): string {
+  if (ship.event_id) return `${ship.name} has no location yet.`;
+  if (ship.user_id)
+    return `${ship.name}'s address isn't shared, so ask them where to send gifts.`;
+  return "Ask the list owner where to send gifts.";
+}
+
+/** @brief "Ship to" block. */
 export function ShipToCard({ ship }: { ship: ShipTo }) {
   const push = useToasts((s) => s.push);
-  const who = ship.name ? `Ship to ${ship.name}` : "Ship to";
   if (!ship.address)
     return (
       <p className="flex items-center gap-2 text-sm text-muted">
-        <MapPin className="size-4" aria-hidden />
-        {ship.name}&apos;s address isn&apos;t shared, so ask them where to send
-        gifts.
+        <MapPin className="size-4 shrink-0" aria-hidden />
+        {missing(ship)}
       </p>
     );
   const copy = () =>
@@ -32,13 +39,15 @@ export function ShipToCard({ ship }: { ship: ShipTo }) {
         <p className="font-medium">
           {ship.event_id ? (
             <a
-              className="underline-offset-2 hover:underline"
+              className="underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
               href={`/app/events?event=${encodeURIComponent(ship.event_id)}`}
             >
               {ship.name}
             </a>
+          ) : ship.name ? (
+            `Ship to ${ship.name}`
           ) : (
-            who
+            "Ship to"
           )}
         </p>
         <p className="whitespace-pre-line text-muted">{ship.address}</p>

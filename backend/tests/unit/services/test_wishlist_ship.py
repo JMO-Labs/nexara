@@ -56,9 +56,13 @@ async def test_live_address_hidden_after_they_stop_sharing():
     repo.ship_user.return_value = (user, prefs)
     w = _list(ship_to_user_id=user.id)
     assert (await ship_to(repo, w, CID, VIEWER)).address == "1 Elm St"
+    repo.ship_user.assert_awaited_with(user.id, CID, VIEWER)  # block filter is per viewer
     prefs.field_visibility = {"address": "private"}
     out = await ship_to(repo, w, CID, VIEWER)
     assert out.name == "Grandma" and out.address is None
+    repo.ship_user.return_value = None  # blocked either way
+    blocked = await ship_to(repo, w, CID, VIEWER)
+    assert blocked.address is None and blocked.user_id is None and blocked.name != "Grandma"
     assert (await ship_to(repo, _list(ship_to_text="PO Box 9"), CID, VIEWER)).address == "PO Box 9"
     assert await ship_to(repo, _list(), CID, VIEWER) is None
 

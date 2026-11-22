@@ -141,9 +141,12 @@ class WishlistRepository:
         return bool((await self._session.execute(stmt)).scalar())
 
     async def ship_user(
-        self, user_id: uuid.UUID, community_id: uuid.UUID
+        self, user_id: uuid.UUID, community_id: uuid.UUID, viewer_id: uuid.UUID
     ) -> tuple[User, UserSettings | None] | None:
-        """@brief A live member and their privacy settings (for a shipping address)."""
+        """
+        @brief A live member and their privacy settings (for a shipping address);
+               None when either has blocked the other.
+        """
         stmt = (
             select(User, UserSettings)
             .outerjoin(UserSettings, UserSettings.user_id == User.id)
@@ -151,6 +154,7 @@ class WishlistRepository:
                 User.id == user_id,
                 User.community_id == community_id,
                 User.deleted_at.is_(None),
+                not_blocked(User.id, viewer_id),
             )
         )
         row = (await self._session.execute(stmt)).first()
