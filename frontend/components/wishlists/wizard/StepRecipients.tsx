@@ -43,7 +43,7 @@ export function StepRecipients({
 
   const key = (r: PickedRecipient) => `${r.kind}:${r.ref_id ?? r.name}`;
   const add = (r: PickedRecipient) => {
-    if (r.kind === "everyone") return set({ recipients: [r] });
+    if (r.kind === "everyone") return set({ recipients: [r], visibility: "community" });
     const rest = d.recipients.filter(
       (x) => x.kind !== "everyone" && key(x) !== key(r),
     );
