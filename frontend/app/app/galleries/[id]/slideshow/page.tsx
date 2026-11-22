@@ -16,12 +16,19 @@ import { useGalleryItems } from "@/hooks/useGalleries";
 export default function SlideshowPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: items, isLoading } = useGalleryItems(id);
+  const { data: items, isLoading, isError } = useGalleryItems(id);
   const exit = React.useCallback(
     () => router.push(`/app/photos?gallery=${encodeURIComponent(id)}`),
     [router, id],
   );
   if (isLoading) return <Skeleton height={300} />;
+  if (isError)
+    return (
+      <EmptyState
+        title="This album isn't available"
+        description="It may be private, or it was removed."
+      />
+    );
   if (!items?.length)
     return (
       <EmptyState title="Nothing to show" description="Add photos first." />

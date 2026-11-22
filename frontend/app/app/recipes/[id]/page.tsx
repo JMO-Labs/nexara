@@ -5,7 +5,9 @@
 "use client";
 
 import { use, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui";
 import { RecipeForm } from "@/components/recipes/RecipeForm";
@@ -52,6 +54,13 @@ export default function RecipeRoute({
   const canEdit = data.author.id === user?.id || user?.role === "admin";
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4 pb-8">
+      <Link
+        href="/app/recipes"
+        className="text-muted hover:text-ink focus-visible:outline-accent inline-flex items-center gap-1 self-start rounded-full text-sm focus-visible:outline-2"
+      >
+        <ChevronLeft aria-hidden className="size-4" />
+        All recipes
+      </Link>
       {editing ? (
         <RecipeForm
           initial={data}

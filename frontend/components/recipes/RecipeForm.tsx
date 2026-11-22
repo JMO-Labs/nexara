@@ -183,14 +183,16 @@ export function RecipeForm({
         <legend className="text-sm font-medium">Steps</legend>
         {steps.map((s, i) => (
           <div key={i} className="flex items-start gap-2">
-            <Textarea
-              aria-label={`Step ${i + 1}`}
-              rows={2}
-              value={s}
-              onChange={(e) =>
-                setSteps(steps.map((x, j) => (j === i ? e.target.value : x)))
-              }
-            />
+            <div className="min-w-0 flex-1">
+              <Textarea
+                aria-label={`Step ${i + 1}`}
+                rows={2}
+                value={s}
+                onChange={(e) =>
+                  setSteps(steps.map((x, j) => (j === i ? e.target.value : x)))
+                }
+              />
+            </div>
             <button
               type="button"
               aria-label={`Remove step ${i + 1}`}
