@@ -136,7 +136,7 @@ export function HomeFeed({
         className={cn(
           "flex flex-col gap-4",
           embedded &&
-            "md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1 md:[mask-image:linear-gradient(#000_92%,transparent)]",
+            "md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain md:pr-1 md:[mask-image:linear-gradient(#000_92%,transparent)]",
         )}
       >
         <div ref={composerRef}>

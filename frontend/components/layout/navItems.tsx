@@ -3,14 +3,15 @@
  * @brief Single source of truth for side nav, bottom tab bar and More sheet.
  */
 import {
-  House,
-  MessageCircle,
   CalendarDays,
-  Users,
+  Gift,
+  House,
   Images,
   Inbox,
+  MessageCircle,
   Settings,
   ShieldCheck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -81,6 +82,11 @@ export const TOP_NAV: NavItem[] = [
     href: "/app/community",
     Icon: Users,
     match: ["/app/members", "/app/subgroups"],
+  },
+  {
+    label: "Wishlists",
+    href: "/app/wishlists",
+    Icon: Gift,
   },
   {
     label: "Inbox",

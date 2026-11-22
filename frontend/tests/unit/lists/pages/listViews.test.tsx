@@ -9,9 +9,11 @@ import userEvent from "@testing-library/user-event";
 import { list } from "../listFixtures";
 
 const push = vi.fn();
+const replace = vi.fn();
+let search = new URLSearchParams("type=list");
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push, replace }),
+  useSearchParams: () => search,
 }));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
@@ -112,9 +114,20 @@ describe("list page views", () => {
   });
 
   it("new view renders the create form inline and returns on cancel", async () => {
+    search = new URLSearchParams("type=list");
     render(<ListNewView />);
     await userEvent.click(screen.getByText("close create"));
     expect(push).toHaveBeenCalledWith("/app/inbox?view=lists");
+  });
+
+  it("new view without a type offers list, wishlist and template", async () => {
+    search = new URLSearchParams();
+    render(<ListNewView />);
+    expect(
+      screen.getByRole("link", { name: /From a template/ }),
+    ).toHaveAttribute("href", "/app/lists/templates");
+    await userEvent.click(screen.getByRole("button", { name: /Wishlist/ }));
+    expect(replace).toHaveBeenCalledWith("/app/lists/new?type=wishlist");
   });
 
   it("detail view renders loading, error and panel states", () => {

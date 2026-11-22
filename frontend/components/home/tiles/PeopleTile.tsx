@@ -66,7 +66,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
       onToggle={onToggle}
       className="md:[grid-area:people] lg:max-h-[60%] lg:min-h-0 lg:shrink"
     >
-      <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+      <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain">
         {bdays.length > 0 && (
           <ul
             aria-label="Upcoming birthdays and gotcha days"

@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/layout/TopBar.tsx
- * @brief Sticky top bar. Desktop: lockup, pill nav, create, search, bell,
+ * @brief Sticky top bar (glass backdrop once scrolled). Desktop: lockup, pill nav, create, search, bell,
  *        avatar. Phone: lockup, create, bell, avatar button (More sheet).
  */
 import { useState } from "react";
@@ -18,6 +18,8 @@ import { MoreSheet } from "./MoreSheet";
 import { useUI } from "@/stores/ui";
 import { useSession } from "@/stores/session";
 import { useBrandingStore } from "@/stores/branding";
+import { useScrolled } from "@/hooks/useScrolled";
+import { cn } from "@/lib/utils";
 
 /**
  * @brief Top bar.
@@ -28,8 +30,18 @@ export function TopBar() {
   const { name, logoUrl } = useBrandingStore();
   const user = useSession((s) => s.user);
   const [moreOpen, setMoreOpen] = useState(false);
+  const scrolled = useScrolled();
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-2 px-4 py-2 md:px-8">
+    <header
+      data-scrolled={scrolled || undefined}
+      className={cn(
+        "sticky top-0 z-20 flex items-center gap-2 px-4 py-2 transition-[background-color,box-shadow,backdrop-filter] duration-200 motion-reduce:transition-none md:px-8",
+        // Once content scrolls beneath, give the bar a glass backdrop so the
+        // logo and nav never sit on top of posts.
+        scrolled &&
+          "bg-[color-mix(in_srgb,var(--nx-bg)_72%,transparent)] shadow-[0_1px_0_var(--nx-glass-edge),0_12px_30px_-20px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+      )}
+    >
       <Link
         href="/app"
         aria-label={`${name} home`}
