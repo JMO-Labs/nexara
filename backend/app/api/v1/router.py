@@ -55,6 +55,7 @@ from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.tags import router as tags_router
+from app.api.v1.time_capsules import router as time_capsules_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
 from app.api.v1.weather import router as weather_router
@@ -103,6 +104,7 @@ api_v1_router.include_router(lists_router)
 api_v1_router.include_router(list_assignments_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
+api_v1_router.include_router(time_capsules_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(suggestions_router)

@@ -38,6 +38,7 @@ vi.mock("@/stores/session", () => ({
 
 vi.mock("@/lib/api/users", () => ({ addInterest: vi.fn(async () => {}) }));
 
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
 vi.mock("@/hooks/useCalendars", () => ({
   useCalendars: () => ({
     data: [

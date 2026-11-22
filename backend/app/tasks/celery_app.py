@@ -27,6 +27,7 @@ celery_app = Celery(
     include=[
         "app.tasks.ai_tasks",
         "app.tasks.birthday_tasks",
+        "app.tasks.capsule_tasks",
         "app.tasks.email_tasks",
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
@@ -214,6 +215,10 @@ celery_app.conf.update(
         "dispatch-list-expiry-reminders": {
             "task": "app.tasks.list_tasks.dispatch_list_expiry_reminders",
             "schedule": crontab(hour=8, minute=0),
+        },
+        "capsules-open-due": {
+            "task": "capsules.open_due",
+            "schedule": crontab(minute="*/10"),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",

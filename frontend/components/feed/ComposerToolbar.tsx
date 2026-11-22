@@ -6,6 +6,7 @@
 import {
   Image as ImageIcon,
   BarChart3,
+  Hourglass,
   PartyPopper,
   Trophy,
   X,
@@ -18,6 +19,7 @@ export interface ComposerToolbarProps {
   onCancel: () => void;
   onKudos?: () => void;
   onCelebrate?: () => void;
+  onCapsule?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
   postDisabled?: boolean;
@@ -33,11 +35,13 @@ export interface ComposerToolbarProps {
 export function ComposerIcons({
   onKudos,
   onCelebrate,
+  onCapsule,
   onPhotos,
   onPoll,
 }: {
   onKudos?: () => void;
   onCelebrate?: () => void;
+  onCapsule?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
 }) {
@@ -71,6 +75,16 @@ export function ComposerIcons({
           <PartyPopper className="size-[18px]" aria-hidden />
         </IconButton>
       ) : null}
+      {onCapsule ? (
+        <IconButton
+          aria-label="Seal a time capsule"
+          variant="ghost"
+          size="sm"
+          onClick={onCapsule}
+        >
+          <Hourglass className="size-[18px]" aria-hidden />
+        </IconButton>
+      ) : null}
       {onKudos ? (
         <IconButton
           aria-label="Send kudos"
@@ -99,6 +113,7 @@ export function ComposerToolbar({
   onCancel,
   onKudos,
   onCelebrate,
+  onCapsule,
   onPhotos,
   onPoll,
   postDisabled,
@@ -108,6 +123,7 @@ export function ComposerToolbar({
       <ComposerIcons
         onKudos={onKudos}
         onCelebrate={onCelebrate}
+        onCapsule={onCapsule}
         onPhotos={onPhotos}
         onPoll={onPoll}
       />

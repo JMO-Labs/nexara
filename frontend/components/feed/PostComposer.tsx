@@ -28,6 +28,8 @@ import { AudiencePicker } from "./AudiencePicker";
 import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
 import { KudosComposer } from "./KudosComposer";
 import { CelebrateComposer } from "./CelebrateComposer";
+import { CapsuleComposer } from "@/components/capsules/CapsuleComposer";
+import { useFeature } from "@/hooks/useFeature";
 import {
   MediaTray,
   PollEditor,
@@ -67,6 +69,10 @@ export function PostComposer({
   const [error, setError] = React.useState<string | null>(null);
   const [kudosOpen, setKudosOpen] = React.useState(false);
   const [celebrateOpen, setCelebrateOpen] = React.useState(false);
+  const [capsuleOpen, setCapsuleOpen] = React.useState(false);
+  const openCapsule = useFeature("time_capsules")
+    ? () => setCapsuleOpen(true)
+    : undefined;
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
   const [poll, setPoll] = React.useState<PollDraft | null>(null);
@@ -246,6 +252,8 @@ export function PostComposer({
     <KudosComposer open onClose={() => setKudosOpen(false)} />
   ) : celebrateOpen ? (
     <CelebrateComposer open onClose={() => setCelebrateOpen(false)} />
+  ) : capsuleOpen ? (
+    <CapsuleComposer open onClose={() => setCapsuleOpen(false)} />
   ) : null;
 
   if (!expanded) {
@@ -267,6 +275,7 @@ export function PostComposer({
           <ComposerIcons
             onKudos={() => setKudosOpen(true)}
             onCelebrate={() => setCelebrateOpen(true)}
+            onCapsule={openCapsule}
             onPhotos={openPhotos}
             onPoll={togglePoll}
           />
@@ -345,6 +354,7 @@ export function PostComposer({
             posting={createMut.isPending}
             onKudos={() => setKudosOpen(true)}
             onCelebrate={() => setCelebrateOpen(true)}
+            onCapsule={openCapsule}
             onPhotos={() => fileRef.current?.click()}
             onPoll={togglePoll}
             postDisabled={uploads.busy}
