@@ -44,8 +44,6 @@ def wishlist_visible(viewer_id: uuid.UUID, community_id: uuid.UUID) -> Any:
             level_visible(Wishlist.visibility, Wishlist.owner_id, viewer_id),
             _recipient("user", viewer_id),
             in_group,
-            # A list "for everyone" (reunion, BBQ) is open to the whole community.
-            exists().where(R.wishlist_id == Wishlist.id, R.kind == "everyone"),
         ),
     )
 

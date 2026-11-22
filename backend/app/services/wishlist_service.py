@@ -45,6 +45,11 @@ LIST_FIELDS = (
 )
 
 
+def _for_everyone(recipients: list[dict[str, Any]]) -> bool:
+    """@brief The list is for everyone (reunion, BBQ)."""
+    return any(r["kind"] == "everyone" for r in recipients)
+
+
 class WishlistService:
     """@brief Wishlist rules, scoped to one community."""
 
@@ -209,6 +214,8 @@ class WishlistService:
             raise ValidationError(message=_("You have reached the wishlist limit"))
         values = body.model_dump(exclude={"recipients"}, exclude_none=True)
         values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
+        if _for_everyone(recipients):
+            values["visibility"] = "community"
         w = await self._repo.create(community_id=self._cid, owner_id=owner.id, **values)
         await self._repo.replace_recipients(w, recipients)
         return await self.get(w.id, owner)
@@ -224,12 +231,17 @@ class WishlistService:
                 values.pop(k, None)
         if "registry_links" in values:
             values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
+        recipients = (
+            await self._clean_recipients(body.recipients, owner)
+            if body.recipients is not None
+            else [{"kind": r.kind} for r in await self._repo.recipients([w.id])]
+        )
+        if _for_everyone(recipients):
+            values["visibility"] = "community"  # a list for everyone is seen by everyone
         if values:
             await self._repo.update(w, values)
         if body.recipients is not None:
-            await self._repo.replace_recipients(
-                w, await self._clean_recipients(body.recipients, owner)
-            )
+            await self._repo.replace_recipients(w, recipients)
         return await self.get(w.id, owner)
 
     async def delete(self, wishlist_id: uuid.UUID, owner: User) -> None:
