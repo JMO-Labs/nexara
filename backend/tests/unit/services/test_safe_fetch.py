@@ -53,9 +53,12 @@ def mock(handler):
         ("64:ff9b::a9fe:a9fe", False),  # NAT64 -> 169.254.169.254
         ("64:ff9b::5db8:d822", True),  # NAT64 -> public
         ("2002:7f00:1::1", False),  # 6to4 -> 127.0.0.1
-        ("2002:5db8:d822::1", True),  # 6to4 -> public
+        ("2002:5db8:d822::1", False),  # 6to4 refused outright
         ("2001:0:4136:e378:8000:63bf:f5ff:fffe", False),  # Teredo -> 10.0.0.1 client
         ("::7f00:1", False),  # IPv4-compatible 127.0.0.1
+        ("::5db8:d822", False),  # IPv4-compatible public: still refused
+        ("64:ff9b:1::5db8:d822", False),  # local-use NAT64 refused
+        ("2001:0:5db8:d822::1", False),  # Teredo refused
         ("not-an-ip", False),
     ],
 )

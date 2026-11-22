@@ -37,41 +37,36 @@ class UnsafeURLError(Exception):
     """@brief The URL or one of its addresses is not allowed."""
 
 
-_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
-_V4_COMPAT = ipaddress.ip_network("::/96")
-
-
-def _embedded_v4(ip: ipaddress.IPv6Address) -> list[ipaddress.IPv4Address]:
-    """@brief IPv4 addresses an IPv6 address can tunnel or translate to."""
-    out: list[ipaddress.IPv4Address] = []
-    if ip.ipv4_mapped is not None:
-        out.append(ip.ipv4_mapped)
-    if ip.sixtofour is not None:
-        out.append(ip.sixtofour)
-    if ip.teredo is not None:
-        out.extend(ip.teredo)
-    if any(ip in net for net in _NAT64) or ip in _V4_COMPAT:
-        out.append(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
-    return out
+_NAT64_WKP = ipaddress.ip_network("64:ff9b::/96")
+_REFUSED_V6 = tuple(
+    ipaddress.ip_network(n)
+    for n in (
+        "2002::/16",  # 6to4
+        "2001::/32",  # Teredo
+        "64:ff9b:1::/48",  # local-use NAT64
+        "::/96",  # IPv4-compatible (deprecated)
+    )
+)
 
 
 def is_public_ip(ip_str: str) -> bool:
     """
-    @brief Globally routable unicast address. IPv6 forms that embed an IPv4
-           address (mapped, 6to4, Teredo, NAT64, IPv4-compatible) count only
-           if the embedded IPv4 address is public too.
+    @brief Globally routable unicast address.
+    @details IPv4-mapped and well-known NAT64 (64:ff9b::/96) addresses are
+             judged by their embedded IPv4 address (the last 32 bits).
+             Tunnelling/translation forms whose target is ambiguous (6to4,
+             Teredo, local NAT64, IPv4-compatible) are refused outright.
     """
     try:
         ip = ipaddress.ip_address(ip_str.split("%", 1)[0])
     except ValueError:
         return False
-    if ip.is_multicast or ip.is_unspecified:
-        return False
     if isinstance(ip, ipaddress.IPv6Address):
-        inner = _embedded_v4(ip)
-        if inner:
-            return all(v4.is_global and not v4.is_multicast for v4 in inner)
-    return ip.is_global
+        if ip.ipv4_mapped is not None or ip in _NAT64_WKP:
+            ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+        elif any(ip in net for net in _REFUSED_V6):
+            return False
+    return ip.is_global and not ip.is_multicast and not ip.is_unspecified
 
 
 def resolve(host: str) -> list[str]:
