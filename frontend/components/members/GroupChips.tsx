@@ -2,6 +2,7 @@
  * @file components/members/GroupChips.tsx
  * @brief Small colored chips for shared groups.
  */
+import { GroupDoor } from "@/components/ui/GroupDoor";
 import type { SharedGroup } from "@/lib/api/users";
 import { groupColor } from "@/lib/groupColor";
 
@@ -28,11 +29,7 @@ export function GroupChips({
           key={g.id}
           className="glass-item inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs text-ink"
         >
-          <i
-            aria-hidden
-            className="size-2 rounded-full"
-            style={{ background: groupColor(g.id, g.accent_color) }}
-          />
+          <GroupDoor color={groupColor(g.id, g.accent_color)} />
           {g.name}
         </li>
       ))}
