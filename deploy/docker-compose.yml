@@ -58,6 +58,11 @@ services:
       OIDC_SCOPES: "${OIDC_SCOPES:-openid profile email groups}"
       ENABLE_REGISTRATION: "${ENABLE_REGISTRATION:-true}"
       REQUIRE_INVITE: "${REQUIRE_INVITE:-false}"
+      AMAZON_CREATORS_CLIENT_ID: "${AMAZON_CREATORS_CLIENT_ID:-}"
+      AMAZON_CREATORS_CLIENT_SECRET: "${AMAZON_CREATORS_CLIENT_SECRET:-}"
+      AMAZON_PARTNER_TAG: "${AMAZON_PARTNER_TAG:-}"
+      AMAZON_MARKETPLACE: "${AMAZON_MARKETPLACE:-www.amazon.com}"
+      AMAZON_TOKEN_URL: "${AMAZON_TOKEN_URL:-https://api.amazon.com/auth/o2/token}"
       TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
     volumes:
       - media:/data/media
