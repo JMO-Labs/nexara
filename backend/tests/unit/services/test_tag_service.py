@@ -126,15 +126,19 @@ async def test_tagged_feed_blocked_404_and_paging():
     assert page["posts"] == [{"id": pid}] and page["next_before"] is None
 
 
-async def test_tag_household_checks_member_visibility_and_never_notifies():
+async def test_tag_household_requires_visibility_for_actor_and_owner():
     svc, repo, _, notify = _svc()
     repo.household_viewable.return_value = False
     with pytest.raises(NotFoundError):
         await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
     repo.household_viewable.return_value = True
+    repo.media_viewable.side_effect = [True, False]  # actor sees it, owner doesn't
+    with pytest.raises(ValidationError):
+        await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
+    repo.media_viewable.side_effect = None
     await svc.tag_household(uuid.uuid4(), uuid.uuid4(), _user())
     assert repo.add.await_args.kwargs["subject_type"] == "household"
-    notify.notify.assert_not_awaited()
+    assert notify.notify.await_args.kwargs["user_id"] == repo.household_owner.return_value
 
 
 async def test_household_owner_may_remove_pet_tag():

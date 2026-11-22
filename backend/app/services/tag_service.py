@@ -70,11 +70,30 @@ class TagService:
         """@brief Tag a household member/pet the actor can see in a photo they can see."""
         if not await self._repo.media_viewable(media_id, actor.id, self._community_id):
             raise NotFoundError(message=_("Photo not found"))
+        # household_viewable already excludes members whose owner has a block with the actor.
         if not await self._repo.household_viewable(member_id, actor.id, self._community_id):
             raise NotFoundError(message=_("Not found"))
-        await self._repo.add(
+        owner = await self._repo.household_owner(member_id, self._community_id)
+        if owner is None or not await self._repo.media_viewable(
+            media_id, owner, self._community_id
+        ):
+            raise ValidationError(message=_("Their family can't see this photo"))
+        added = await self._repo.add(
             self._community_id, "media", media_id, member_id, actor.id, subject_type="household"
         )
+        if added and owner != actor.id:
+            await self._notify.notify(
+                user_id=owner,
+                type="mention",
+                payload={
+                    "media_id": str(media_id),
+                    "actor_name": actor.display_name,
+                    "message": _("%(user)s tagged your family in a photo")
+                    % {"user": actor.display_name},
+                    "link": f"/app/household/{member_id}",
+                },
+                actor_id=actor.id,
+            )
         return await self._media_tags(media_id, actor)
 
     async def tag_media(
