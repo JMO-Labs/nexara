@@ -171,6 +171,7 @@ class TestOAuthExchange:
         mock_user = MagicMock()
         mock_user.id = user_id
         mock_user.is_active = True
+        mock_user.memorialized_at = None
 
         with (
             patch("app.api.v1.oauth.get_pool", return_value=mock_valkey),
