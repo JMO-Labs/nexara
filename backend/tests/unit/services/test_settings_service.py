@@ -169,6 +169,29 @@ class TestUpdateProfileFields:
             await svc.update_profile(USER_ID, ProfileUpdate(banner_media_id=uuid.uuid4()))
         users.update.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    async def test_avatar_upload_own_image_only_and_remove(self):
+        from app.core.exceptions import NotFoundError
+
+        svc, _, users = self._svc()
+        user = users.get_by_id.return_value
+        mid = uuid.uuid4()
+        media = MagicMock(
+            community_id=user.community_id, uploader_id=user.id, content_type="image/jpeg"
+        )
+        users.get_media.return_value = media
+        await svc.update_profile(USER_ID, ProfileUpdate(avatar_media_id=mid))
+        assert users.update.await_args.args[1] == {"avatar_url": f"/api/v1/media/{mid}/thumbnail"}
+        await svc.update_profile(USER_ID, ProfileUpdate(avatar_media_id=None))
+        assert users.update.await_args.args[1] == {"avatar_url": None}
+        for bad in ({"uploader_id": uuid.uuid4()}, {"content_type": "video/mp4"}):
+            users.get_media.return_value = MagicMock(**{**media.__dict__, **bad})
+            users.get_media.return_value.community_id = user.community_id
+            users.get_media.return_value.uploader_id = bad.get("uploader_id", user.id)
+            users.get_media.return_value.content_type = bad.get("content_type", "image/jpeg")
+            with pytest.raises(NotFoundError):
+                await svc.update_profile(USER_ID, ProfileUpdate(avatar_media_id=mid))
+
     def test_rejects_bad_links_and_dedupes_skills(self):
         from pydantic import ValidationError
 

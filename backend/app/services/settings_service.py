@@ -119,6 +119,9 @@ class SettingsService:
         raw = data.model_dump(mode="json", exclude_unset=True)
         visibility = raw.pop("field_visibility", None)
         gravatar = raw.pop("use_gravatar", None)
+        if "avatar_media_id" in raw:
+            raw.pop("avatar_media_id")
+            raw["avatar_url"] = await self._avatar_url(user, data.avatar_media_id)
         if gravatar is not None:
             # Only touch Gravatar-managed avatars; an uploaded photo always wins.
             if gravatar and not user.avatar_url:
@@ -151,6 +154,24 @@ class SettingsService:
             fields=list(update_dict.keys()) + (["field_visibility"] if visibility else []),
         )
         return update_dict
+
+    async def _avatar_url(self, user: Any, media_id: uuid.UUID | None) -> str | None:
+        """
+        @brief Avatar URL for an uploaded photo (your own image in this
+               community), or None to remove it.
+        @throws NotFoundError when the media can't be used
+        """
+        if media_id is None:
+            return None
+        media = await self._user_repo.get_media(media_id)
+        if (
+            media is None
+            or media.community_id != user.community_id
+            or media.uploader_id != user.id
+            or not media.content_type.startswith("image/")
+        ):
+            raise NotFoundError(message=_("Photo not found"))
+        return f"/api/v1/media/{media_id}/thumbnail"
 
     async def update_email(
         self,
