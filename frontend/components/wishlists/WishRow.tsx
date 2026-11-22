@@ -6,8 +6,9 @@
  *        list's people; claim, pledge, undo for givers).
  */
 import * as React from "react";
-import { ExternalLink, Pencil, PiggyBank, Trash2 } from "lucide-react";
+import { ExternalLink, Info, Pencil, PiggyBank, Trash2 } from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useWishlistActions } from "@/hooks/useWishlists";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { API_BASE } from "@/lib/auth/session";
@@ -213,16 +214,18 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
             item.name
           )}
           {item.price_cents != null && (
-            <span
-              className={
-                outsideBudget(w, item)
-                  ? "text-sm text-[var(--nx-red)]"
-                  : "text-sm text-muted"
-              }
-            >
+            <span className="inline-flex items-center gap-1 text-sm text-muted">
               {formatMoney(item.price_cents, w.currency)}
               {outsideBudget(w, item) && (
-                <span> (outside the suggested spend)</span>
+                <Tooltip content="Outside the suggested spend">
+                  <button
+                    type="button"
+                    aria-label="Outside the suggested spend"
+                    className="grid size-5 place-items-center rounded-full text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    <Info className="size-3.5" aria-hidden />
+                  </button>
+                </Tooltip>
               )}
             </span>
           )}
