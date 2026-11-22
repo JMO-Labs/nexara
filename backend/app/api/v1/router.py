@@ -14,6 +14,7 @@ from app.api.v1.admin_ai import router as admin_ai_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
+from app.api.v1.admin_shop import router as admin_shop_router
 from app.api.v1.admin_sso import router as admin_sso_router
 from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.auth import router as auth_router
@@ -67,6 +68,7 @@ api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
+api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(admin_retention_router)
 api_v1_router.include_router(plugins_router)

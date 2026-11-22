@@ -15,9 +15,11 @@ import structlog
 
 from app.core.config import Settings
 from app.models.wishlist import WishlistItem
+from app.repositories.community_repo import CommunityRepository
 from app.repositories.link_preview_repo import LinkPreviewRepository
 from app.repositories.wishlist_item_repo import WishlistItemRepository
 from app.services.shop import amazon
+from app.services.shop.creds import creds_for
 from app.services.shop.lookup import lookup_product
 from app.services.shop.product import Product
 
@@ -47,10 +49,15 @@ class ShopRefreshService:
     """@brief Look up and store shop facts for wishlist links."""
 
     def __init__(
-        self, items: WishlistItemRepository, previews: LinkPreviewRepository, settings: Settings
+        self,
+        items: WishlistItemRepository,
+        previews: LinkPreviewRepository,
+        communities: CommunityRepository,
+        settings: Settings,
     ) -> None:
         self._items = items
         self._previews = previews
+        self._communities = communities
         self._settings = settings
 
     async def refresh(self, ids: list[uuid.UUID] | None = None, limit: int = 50) -> int:
@@ -63,18 +70,24 @@ class ShopRefreshService:
             ids=ids, amazon_before=now - AMAZON_TTL, other_before=now - OTHER_TTL, limit=limit
         )
         asins = {i.id: amazon.asin_from_url(i.url or "") for i, _c in rows}
-        found: dict[str, Product] = {}
-        wanted = sorted({a for a in asins.values() if a})
-        for k in range(0, len(wanted), 10):
-            found |= await amazon.lookup(wanted[k : k + 10], self._settings)
+        creds = {
+            cid: await creds_for(self._communities, cid, self._settings)
+            for cid in {i.community_id for i, _c in rows}
+        }
+        found: dict[tuple[uuid.UUID, str], Product] = {}
+        for cid, c in creds.items():  # each community uses its own Amazon account
+            wanted = sorted({a for i, _c in rows if i.community_id == cid and (a := asins[i.id])})
+            for k in range(0, len(wanted), 10):
+                got = await amazon.lookup(wanted[k : k + 10], c)
+                found |= {(cid, a): p for a, p in got.items()}
         done = 0
         for item, currency in rows:
             asin = asins[item.id]
             try:
                 product = (
-                    found.get(asin)
+                    found.get((item.community_id, asin))
                     if asin
-                    else await lookup_product(item.url or "", self._settings)
+                    else await lookup_product(item.url or "", creds[item.community_id])
                 )
             except Exception:  # one bad shop must not sink the batch
                 logger.warning("shop_lookup_failed", item_id=str(item.id), exc_info=True)

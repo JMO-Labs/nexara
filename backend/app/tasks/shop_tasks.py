@@ -11,6 +11,7 @@ import uuid
 
 from app.core.config import get_settings
 from app.db.session import async_session_factory
+from app.repositories.community_repo import CommunityRepository
 from app.repositories.link_preview_repo import LinkPreviewRepository
 from app.repositories.wishlist_item_repo import WishlistItemRepository
 from app.services.shop.refresh import ShopRefreshService
@@ -20,7 +21,10 @@ from app.tasks.celery_app import celery_app
 async def _run(ids: list[uuid.UUID] | None) -> int:
     async with async_session_factory() as session:
         svc = ShopRefreshService(
-            WishlistItemRepository(session), LinkPreviewRepository(session), get_settings()
+            WishlistItemRepository(session),
+            LinkPreviewRepository(session),
+            CommunityRepository(session),
+            get_settings(),
         )
         n = await svc.refresh(ids)
         await session.commit()

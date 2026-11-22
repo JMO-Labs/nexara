@@ -15,6 +15,7 @@ import {
   Puzzle,
   Settings,
   ShieldAlert,
+  ShoppingBag,
   Timer,
   Users,
   type LucideIcon,
@@ -49,7 +50,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (10 tabs + 4 route links). */
+/** @brief Grouped admin sections (11 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -115,6 +116,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         Database,
       ),
       tab("ai", "AI", "AI providers and usage.", Bot),
+      tab(
+        "shopping",
+        "Shopping",
+        "Amazon keys for live wishlist prices.",
+        ShoppingBag,
+      ),
       route(
         "plugins",
         "Plugins",

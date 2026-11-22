@@ -118,10 +118,18 @@ def test_parse_items_either_root_and_image_fallback(root):
 
 
 async def test_amazon_links_never_scraped_and_skipped_without_keys():
-    s = Settings()
     with patch("app.services.shop.lookup.safe_get", AsyncMock()) as get:
-        assert await lookup_product("https://www.amazon.com/dp/B07FZ8S74R", s) is None
+        assert await lookup_product("https://www.amazon.com/dp/B07FZ8S74R", amazon.Creds()) is None
     get.assert_not_awaited()
+
+
+CID = uuid.uuid4()
+
+
+def _communities():
+    repo = AsyncMock()
+    repo.get.return_value = None  # nothing saved: server environment applies
+    return repo
 
 
 def _item(**kw):
@@ -132,6 +140,7 @@ def _item(**kw):
         price_auto=False,
         url="https://shop.example/p",
         preview_id=None,
+        community_id=CID,
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -157,7 +166,7 @@ async def test_refresh_batches_amazon_and_stores_preview():
     items.linked_for_refresh.return_value = [(a, "USD"), (b, "USD")]
     previews = AsyncMock()
     previews.upsert_shop.side_effect = lambda url, v: SimpleNamespace(id=uuid.uuid4())
-    svc = ShopRefreshService(items, previews, Settings())
+    svc = ShopRefreshService(items, previews, _communities(), Settings())
     with (
         patch(
             "app.services.shop.refresh.amazon.lookup",
@@ -194,10 +203,23 @@ async def test_failed_lookup_is_stamped_and_batch_continues():
     items.linked_for_refresh.return_value = [(bad, "USD"), (good, "USD")]
     previews = AsyncMock()
     previews.upsert_shop.side_effect = lambda url, v: SimpleNamespace(id=uuid.uuid4())
-    svc = ShopRefreshService(items, previews, Settings())
+    svc = ShopRefreshService(items, previews, _communities(), Settings())
     lookup = AsyncMock(side_effect=[RuntimeError("boom"), Product(title="C", price_cents=499)])
     with patch("app.services.shop.refresh.lookup_product", lookup):
         assert await svc.refresh() == 1
     first = previews.upsert_shop.await_args_list[0].args
     assert first == ("https://broken.example/x", {"title": "", "fetch_error": True})
     assert bad.preview_id and good.price_cents == 499
+
+
+def test_creds_prefer_complete_admin_values():
+    env = Settings(
+        AMAZON_CREATORS_CLIENT_ID="env",
+        AMAZON_CREATORS_CLIENT_SECRET="s",
+        AMAZON_PARTNER_TAG="e-20",
+    )
+    full = {"client_id": "adm", "client_secret": "x", "partner_tag": "a-20", "marketplace": None}
+    assert amazon.creds_from(env, full).client_id == "adm"
+    assert amazon.creds_from(env, full).marketplace == "www.amazon.com"
+    assert amazon.creds_from(env, {**full, "client_secret": ""}).client_id == "env"
+    assert not amazon.configured(amazon.creds_from(Settings(), {}))
