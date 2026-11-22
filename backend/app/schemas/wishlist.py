@@ -112,10 +112,17 @@ class _ListFields(BaseModel):
     hide_claims: bool | None = None
     registry_links: list[RegistryLink] | None = Field(default=None, max_length=10)
     recipients: list[RecipientIn] | None = Field(default=None, max_length=50)
+    ship_to_text: str | None = Field(default=None, max_length=500)
+    ship_to_user_id: uuid.UUID | None = None
+    ship_to_event_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def _ranges(self) -> _ListFields:
         self.occasion_label = _blank_none(self.occasion_label)
+        if self.ship_to_text is not None:
+            self.ship_to_text = self.ship_to_text.strip() or None
+        if sum(map(bool, (self.ship_to_text, self.ship_to_user_id, self.ship_to_event_id))) > 1:
+            raise ValueError("Ship to one place: an address, a person or an event")
         lo, hi = self.budget_min_cents, self.budget_max_cents
         if lo is not None and hi is not None and lo > hi:
             raise ValueError("Budget minimum is above the maximum")
@@ -250,6 +257,16 @@ class ItemOut(BaseModel):
     price_auto: bool = False
 
 
+class ShipTo(BaseModel):
+    """@brief Where gifts go. ``address`` None = not shared / not visible to you."""
+
+    user_id: uuid.UUID | None = None
+    event_id: uuid.UUID | None = None
+    starts_at: datetime | None = None
+    name: str | None = None
+    address: str | None = None
+
+
 class WishlistOut(BaseModel):
     """@brief Wishlist summary (cards)."""
 
@@ -281,5 +298,6 @@ class WishlistDetail(WishlistOut):
     """@brief Wishlist with items, plus planning totals for managers."""
 
     items: list[ItemOut] = Field(default_factory=list)
+    ship_to: ShipTo | None = None
     planned_cents: int | None = None
     my_total_cents: int = 0

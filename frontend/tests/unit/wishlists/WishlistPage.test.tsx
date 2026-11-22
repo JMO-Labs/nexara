@@ -61,6 +61,13 @@ const base = (isOwner: boolean): WishlistDetail => ({
   sees_claims: !isOwner,
   planned_cents: isOwner ? 2400 : null,
   my_total_cents: isOwner ? 0 : 800,
+  ship_to: {
+    user_id: null,
+    event_id: null,
+    starts_at: null,
+    name: null,
+    address: "1 Elm St\nSpringfield",
+  },
   items: [
     {
       id: "a",
@@ -144,6 +151,10 @@ describe("WishlistPage", () => {
     expect(
       screen.getByRole("link", { name: /Amazon registry/ }),
     ).toHaveAttribute("href", "https://www.amazon.com/registry/x");
+    expect(screen.getByText(/1 Elm St/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy shipping address" }),
+    ).toBeInTheDocument();
   });
 
   it("gift-giver sees what is left and can claim or undo", () => {

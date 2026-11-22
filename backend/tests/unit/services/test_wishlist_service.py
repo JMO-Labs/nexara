@@ -44,6 +44,9 @@ def _list(**kw):
         giver_cap_cents=None,
         hide_claims=True,
         registry_links=[],
+        ship_to_text=None,
+        ship_to_user_id=None,
+        ship_to_event_id=None,
     )
     return SimpleNamespace(**{**base, **kw})
 

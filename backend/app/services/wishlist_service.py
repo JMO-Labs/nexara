@@ -25,6 +25,7 @@ from app.schemas.wishlist import (
     WishlistOut,
     WishlistUpdate,
 )
+from app.services.wishlist_ship import check_ship_event, check_ship_user, ship_to
 from app.services.wishlist_view import Access, build_items, planned_cents
 
 MAX_LISTS = 50
@@ -201,6 +202,7 @@ class WishlistService:
         return WishlistDetail(
             **summary.model_dump(),
             items=views,
+            ship_to=await ship_to(self._repo, w, self._cid, viewer.id),
             planned_cents=planned_cents(items) if summary.can_edit_items else None,
             my_total_cents=mine,
         )
@@ -215,6 +217,10 @@ class WishlistService:
         if len(await self._repo.visible(owner.id, self._cid, owner_id=owner.id)) >= MAX_LISTS:
             raise ValidationError(message=_("You have reached the wishlist limit"))
         values = body.model_dump(exclude={"recipients"}, exclude_none=True)
+        if body.ship_to_user_id:
+            await check_ship_user(self._repo, body.ship_to_user_id, owner.id, self._cid)
+        if body.ship_to_event_id:
+            await check_ship_event(self._repo, body.ship_to_event_id, owner.id, self._cid)
         values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
         if _for_everyone(recipients):
             values["visibility"] = "community"
@@ -233,6 +239,7 @@ class WishlistService:
                 values.pop(k, None)
         if "registry_links" in values:
             values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
+        await self._ship_values(values, owner)
         recipients = (
             await self._clean_recipients(body.recipients, owner)
             if body.recipients is not None
@@ -245,6 +252,17 @@ class WishlistService:
         if body.recipients is not None:
             await self._repo.replace_recipients(w, recipients)
         return await self.get(w.id, owner)
+
+    async def _ship_values(self, values: dict[str, Any], owner: User) -> None:
+        """@brief Validate a new ship-to and clear the other two kinds."""
+        kinds = ("ship_to_text", "ship_to_user_id", "ship_to_event_id")
+        chosen = next((k for k in kinds if values.get(k)), None)
+        if chosen == "ship_to_user_id":
+            await check_ship_user(self._repo, values[chosen], owner.id, self._cid)
+        elif chosen == "ship_to_event_id":
+            await check_ship_event(self._repo, values[chosen], owner.id, self._cid)
+        if chosen:
+            values.update({k: None for k in kinds if k != chosen})
 
     async def delete(self, wishlist_id: uuid.UUID, owner: User) -> None:
         """@brief Remove a list (creator only)."""

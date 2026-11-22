@@ -5,6 +5,7 @@
  *        event countdown and buy-by date, spend guidance, registries, and
  *        a planning bar (event budget) or the giver's own spend.
  */
+import { ShipToCard } from "./ShipToCard";
 import { CalendarClock, PackageCheck, ShoppingBag, Wallet } from "lucide-react";
 import { OCCASIONS, occasionName } from "@/lib/occasions";
 import { formatMoney } from "@/lib/money";
@@ -107,6 +108,7 @@ export function WishlistHero({
               <Chip>Limit {money(w.giver_cap_cents)} per person</Chip>
             )}
           </div>
+          {w.ship_to && <ShipToCard ship={w.ship_to} />}
           {w.note && (
             <p className="max-w-[65ch] text-base whitespace-pre-line">
               {w.note}

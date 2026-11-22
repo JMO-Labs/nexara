@@ -95,8 +95,18 @@ export interface Wishlist {
   sees_claims: boolean;
 }
 
+/** @brief Where gifts go; address null = that person stopped sharing it. */
+export interface ShipTo {
+  user_id: string | null;
+  event_id: string | null;
+  starts_at: string | null;
+  name: string | null;
+  address: string | null;
+}
+
 export interface WishlistDetail extends Wishlist {
   items: Wish[];
+  ship_to: ShipTo | null;
   planned_cents: number | null;
   my_total_cents: number;
 }
@@ -117,6 +127,9 @@ export interface WishlistInput {
   hide_claims?: boolean;
   registry_links?: RegistryLink[];
   recipients?: RecipientIn[];
+  ship_to_text?: string | null;
+  ship_to_user_id?: string | null;
+  ship_to_event_id?: string | null;
 }
 
 export type WishInput = Partial<
