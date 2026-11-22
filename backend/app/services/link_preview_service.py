@@ -1,21 +1,17 @@
 """
 @file link_preview_service.py
-@brief OG link preview scraping with SSRF protection.
+@brief OG link preview scraping; all fetching goes through safe_fetch (SSRF-safe).
 """
 
 from __future__ import annotations
 
 import hashlib
-import ipaddress
+import html
 import re
-import socket
 import uuid
-from typing import TypedDict
-from urllib.parse import urlparse
-
-import httpx
 
 from app.repositories.link_preview_repo import LinkPreviewRepository
+from app.services.safe_fetch import UnsafeURLError, check_url, is_public_ip, resolve, safe_get
 
 URL_PATTERN = re.compile(
     r"https?://[^\s<>\"')\]]+",
@@ -102,48 +98,30 @@ def detect_video_provider(url: str) -> tuple[str, str] | None:
     return None
 
 
-def _is_private_or_reserved(ip_str: str) -> bool:
-    """Check if IP is private, loopback, or reserved."""
-    try:
-        ip = ipaddress.ip_address(ip_str)
-        return ip.is_private or ip.is_loopback or ip.is_reserved
-    except ValueError:
-        return True
-
-
 def is_safe_url(url: str) -> bool:
     """
-    @brief SSRF protection: resolve DNS, reject private/loopback/reserved IPs.
+    @brief Cheap pre-check: http(s) on 80/443 and every resolved address public.
+
+    The fetch itself re-checks at connect time and on every redirect
+    (see safe_fetch), so this only avoids queueing obviously bad URLs.
 
     @param url The URL to validate.
-    @return True if URL resolves to a public IP, False otherwise.
+    @return True if the URL may be fetched.
     """
     try:
-        parsed = urlparse(url)
-        hostname = parsed.hostname
-        if not hostname:
-            return False
-
-        # Skip DNS for localhost-like hostnames
-        if hostname.lower() in ("localhost", "127.0.0.1", "::1"):
-            return False
-
-        addrinfos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        for info in addrinfos:
-            # info is (family, type, proto, canonname, sockaddr)
-            sockaddr = info[4]
-            raw = sockaddr[0] if isinstance(sockaddr, (list, tuple)) else sockaddr
-            ip_str = str(raw)
-            if _is_private_or_reserved(ip_str):
-                return False
-        return True
-    except (OSError, socket.gaierror, ValueError):
+        host = check_url(url)
+        addrs = resolve(host)
+    except (UnsafeURLError, OSError, UnicodeError, ValueError):
         return False
+    return bool(addrs) and all(is_public_ip(a) for a in addrs)
+
+
+_OG = re.compile(r'<meta\s+property="og:(\w+)"\s+content="([^"]*)"', re.IGNORECASE)
 
 
 async def scrape_og_metadata(url: str) -> dict[str, str | None]:
     """
-    @brief Fetch URL via httpx (5s timeout, 1MB limit), parse og:* meta tags.
+    @brief Fetch an HTML page safely (5s, 1MB, SSRF-checked) and parse og:* tags.
 
     @param url The URL to fetch.
     @return Dict with title, description, image_url, site_name (None on error).
@@ -154,103 +132,38 @@ async def scrape_og_metadata(url: str) -> dict[str, str | None]:
         "image_url": None,
         "site_name": None,
     }
-    try:
-        async with httpx.AsyncClient(
-            timeout=HTTP_TIMEOUT,
-            follow_redirects=True,
-        ) as client:
-            response = await client.get(
-                url,
-                headers={"User-Agent": "NexaraLinkPreview/1.0"},
-            )
-            response.raise_for_status()
-
-            content_type = response.headers.get("content-type", "")
-            if "text/html" not in content_type and "application/xhtml" not in content_type:
-                return result
-
-            # Limit body size
-            content = response.text
-            if len(content.encode("utf-8")) > HTTP_MAX_BYTES:
-                return result
-
-            # Parse og: meta tags with a simple regex (avoid heavy deps)
-            og_pattern = re.compile(
-                r'<meta\s+property="og:(\w+)"\s+content="([^"]*)"',
-                re.IGNORECASE,
-            )
-            for match in og_pattern.finditer(content):
-                key = match.group(1).lower()
-                value = match.group(2).strip()
-                if key == "title":
-                    result["title"] = value or None
-                elif key == "description":
-                    result["description"] = value or None
-                elif key == "image":
-                    result["image_url"] = value or None
-                elif key == "site_name":
-                    result["site_name"] = value or None
-
-            return result
-    except Exception:
+    page = await safe_get(
+        url,
+        max_bytes=HTTP_MAX_BYTES,
+        accept=lambda ct: ct in ("text/html", "application/xhtml+xml"),
+    )
+    if page is None:
         return result
-
-
-class _ClientKwargs(TypedDict):
-    """@brief Typed httpx.AsyncClient options."""
-
-    timeout: float
-    follow_redirects: bool
-
-
-def _client_kwargs() -> _ClientKwargs:
-    """@brief httpx client options for image fetches (no redirects: SSRF)."""
-    return {"timeout": HTTP_TIMEOUT, "follow_redirects": False}
-
-
-async def _read_capped(response: httpx.Response) -> tuple[bytes, str] | None:
-    """
-    @brief Read a streamed body, aborting once it exceeds IMAGE_MAX_BYTES.
-
-    @param response Open streaming response with a validated image content-type.
-    @return (body, content_type) or None if the body is too large.
-    """
-    ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
-    buf = bytearray()
-    async for chunk in response.aiter_bytes():
-        buf.extend(chunk)
-        if len(buf) > IMAGE_MAX_BYTES:
-            return None
-    return (bytes(buf), ctype)
+    text = page.body.decode("utf-8", errors="replace")
+    keys = {"title": "title", "description": "description", "image": "image_url"}
+    keys["site_name"] = "site_name"
+    for match in _OG.finditer(text):
+        key = keys.get(match.group(1).lower())
+        if key:
+            result[key] = html.unescape(match.group(2).strip()) or None
+    return result
 
 
 async def fetch_image(url: str) -> tuple[bytes, str] | None:
     """
-    @brief Fetch a preview image for the proxy (SSRF-checked, 5s, size-capped).
+    @brief Fetch a preview image for the proxy (SSRF-checked, 5s, 5MB cap).
 
-    The body is streamed and reading stops as soon as the cap is exceeded.
-
-    Redirects are not followed so a public host cannot bounce to a private IP.
+    SVG is refused (it can carry script). Redirects are re-checked per hop.
 
     @param url Remote image URL.
     @return (body, content_type) or None if unsafe, non-image, oversize, or failed.
     """
-    if not is_safe_url(url):
-        return None
-    try:
-        async with httpx.AsyncClient(**_client_kwargs()) as client:
-            headers = {"User-Agent": "NexaraLinkPreview/1.0"}
-            async with client.stream("GET", url, headers=headers) as response:
-                response.raise_for_status()
-                ctype = response.headers.get("content-type", "").split(";")[0].strip().lower()
-                if not ctype.startswith("image/") or ctype == "image/svg+xml":
-                    return None
-                declared = response.headers.get("content-length")
-                if declared is not None and int(declared) > IMAGE_MAX_BYTES:
-                    return None
-                return await _read_capped(response)
-    except Exception:
-        return None
+    img = await safe_get(
+        url,
+        max_bytes=IMAGE_MAX_BYTES,
+        accept=lambda ct: ct.startswith("image/") and ct != "image/svg+xml",
+    )
+    return (img.body, img.content_type) if img else None
 
 
 async def process_urls_for_post(

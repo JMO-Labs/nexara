@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -69,64 +69,51 @@ class TestDetectVideoProvider:
 
 
 class TestIsSafeUrl:
-    def test_public_url_allowed(self):
-        with patch("app.services.link_preview_service.socket.getaddrinfo") as mock_dns:
-            mock_dns.return_value = [(None, None, None, None, ("93.184.216.34", 0))]
-            assert is_safe_url("https://example.com") is True
+    """@brief Pre-check: scheme, port and public addresses."""
 
-    def test_private_ip_rejected(self):
-        with patch("app.services.link_preview_service.socket.getaddrinfo") as mock_dns:
-            mock_dns.return_value = [(None, None, None, None, ("10.0.0.1", 0))]
-            assert is_safe_url("https://internal.corp") is False
-
-    def test_loopback_rejected(self):
-        with patch("app.services.link_preview_service.socket.getaddrinfo") as mock_dns:
-            mock_dns.return_value = [(None, None, None, None, ("127.0.0.1", 0))]
-            assert is_safe_url("https://localhost") is False
-
-    def test_reserved_ip_rejected(self):
-        with patch("app.services.link_preview_service.socket.getaddrinfo") as mock_dns:
-            mock_dns.return_value = [(None, None, None, None, ("192.168.1.1", 0))]
-            assert is_safe_url("https://router.local") is False
+    @pytest.mark.parametrize(
+        ("url", "addrs", "ok"),
+        [
+            ("https://example.com/a", ["93.184.216.34"], True),
+            ("https://intranet.example", ["10.0.0.5"], False),
+            ("http://localhost/", ["127.0.0.1"], False),
+            ("http://metadata.example", ["169.254.169.254"], False),
+            ("http://cgnat.example", ["100.64.0.1"], False),
+            ("http://mapped.example", ["::ffff:127.0.0.1"], False),
+            ("http://mixed.example", ["93.184.216.34", "192.168.1.1"], False),
+            ("ftp://example.com/", ["93.184.216.34"], False),
+            ("https://example.com:8443/", ["93.184.216.34"], False),
+            ("https://user:pw@example.com/", ["93.184.216.34"], False),
+        ],
+    )
+    def test_rules(self, url, addrs, ok):
+        with patch("app.services.link_preview_service.resolve", return_value=addrs):
+            assert is_safe_url(url) is ok
 
 
 class TestScrapeOgMetadata:
-    @pytest.mark.asyncio
+    """@brief OG parsing on top of safe_get."""
+
     async def test_parses_og_tags(self):
-        html = """
-        <html><head>
-        <meta property="og:title" content="Test Page">
-        <meta property="og:description" content="A test description">
-        <meta property="og:image" content="https://example.com/img.jpg">
-        <meta property="og:site_name" content="Example">
-        </head></html>
-        """
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.text = html
-        mock_response.headers = {"content-type": "text/html"}
+        from app.services.safe_fetch import Fetched
 
-        with patch("app.services.link_preview_service.httpx.AsyncClient") as mock_client_cls:
-            mock_client = AsyncMock()
-            mock_client.get = AsyncMock(return_value=mock_response)
-            mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+        html_doc = (
+            '<meta property="og:title" content="Duck &amp; Co">'
+            '<meta property="og:image" content="https://cdn.example/d.png">'
+            '<meta property="og:site_name" content="Shop">'
+        )
+        page = Fetched(url="https://shop.example", content_type="text/html", body=html_doc.encode())
+        with patch("app.services.link_preview_service.safe_get", AsyncMock(return_value=page)) as g:
+            meta = await scrape_og_metadata("https://shop.example")
+        assert meta == {
+            "title": "Duck & Co",
+            "description": None,
+            "image_url": "https://cdn.example/d.png",
+            "site_name": "Shop",
+        }
+        assert g.await_args.kwargs["max_bytes"] == 1_048_576
 
-            result = await scrape_og_metadata("https://example.com")
-
-        assert result["title"] == "Test Page"
-        assert result["description"] == "A test description"
-        assert result["image_url"] == "https://example.com/img.jpg"
-        assert result["site_name"] == "Example"
-
-    @pytest.mark.asyncio
-    async def test_returns_empty_on_error(self):
-        with patch("app.services.link_preview_service.httpx.AsyncClient") as mock_client_cls:
-            mock_client = AsyncMock()
-            mock_client.get = AsyncMock(side_effect=Exception("timeout"))
-            mock_client_cls.return_value.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
-
-            result = await scrape_og_metadata("https://example.com")
-
-        assert result.get("title") is None or result == {}
+    async def test_returns_empty_when_fetch_refused(self):
+        with patch("app.services.link_preview_service.safe_get", AsyncMock(return_value=None)):
+            meta = await scrape_og_metadata("https://shop.example")
+        assert set(meta.values()) == {None}
