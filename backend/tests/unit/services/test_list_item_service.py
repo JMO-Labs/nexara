@@ -289,3 +289,35 @@ async def test_ensure_in_list_ok_and_mismatch(svc, lst):
     await s.ensure_in_list(CID, lst.id, uuid.uuid4())
     with pytest.raises(NotFoundError):
         await s.ensure_in_list(CID, uuid.uuid4(), uuid.uuid4())
+
+
+async def test_update_links_visible_recipe_and_unlinks(svc, lst):
+    s, items, _, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.id, item.list_id, item.values, item.recipe_id = uuid.uuid4(), lst.id, {}, None
+    items.get_by_id.return_value = item
+    items.recipe_visible.return_value = True
+    rid = uuid.uuid4()
+    await s.update(CID, item.id, lst.owner_id, {}, recipe_id=rid)
+    assert item.recipe_id == rid
+    await s.update(CID, item.id, lst.owner_id, {}, recipe_id=None)
+    assert item.recipe_id is None
+
+
+async def test_update_rejects_invisible_recipe(svc, lst):
+    s, items, _, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.id, item.list_id, item.values = uuid.uuid4(), lst.id, {}
+    items.get_by_id.return_value = item
+    items.recipe_visible.return_value = False
+    with pytest.raises(ValidationError):
+        await s.update(CID, item.id, lst.owner_id, {}, recipe_id=uuid.uuid4())
+
+
+async def test_update_without_recipe_leaves_link(svc, lst):
+    s, items, _, _ = svc
+    item = MagicMock(spec=ListItem)
+    item.id, item.list_id, item.values, item.recipe_id = uuid.uuid4(), lst.id, {}, "keep"
+    items.get_by_id.return_value = item
+    await s.update(CID, item.id, lst.owner_id, {})
+    assert item.recipe_id == "keep"

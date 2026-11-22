@@ -15,6 +15,13 @@ from app.repositories.list_repo import ListRepository
 from app.services.list_field_registry import FieldTypeNotFoundError, ListFieldRegistry
 from app.services.notifications.types.list_payloads import item_title
 
+
+class UnsetType:
+    """@brief Sentinel type: argument not supplied (distinct from None)."""
+
+
+UNSET = UnsetType()
+
 HOT_COLUMNS = ("due_at", "lat", "lon", "signup_quantity_needed")
 
 
@@ -193,16 +200,26 @@ class ListItemService:
         item_id: uuid.UUID,
         user_id: uuid.UUID,
         values: dict[str, Any],
+        recipe_id: uuid.UUID | None | UnsetType = UNSET,
     ) -> ListItem:
-        """@brief Merge, re-validate and re-project item values."""
+        """@brief Merge, re-validate and re-project item values; optionally link a recipe.
+
+        @param recipe_id Recipe to link, None to unlink, UNSET to leave as is.
+        @raises ValidationError when the recipe is not visible to the user.
+        """
         item, lst = await self._get_item(community_id, item_id)
         if lst.owner_id != user_id:
             raise AuthorizationError("Only the owner can edit items")
         merged = {k: v for k, v in {**item.values, **values}.items() if v is not None}
         item.values = self._validate_values(lst, merged)
-        updated = await self._items.update(
-            item, {"values": item.values, **self._project_item(lst, item)}
-        )
+        changes: dict[str, Any] = {"values": item.values, **self._project_item(lst, item)}
+        if not isinstance(recipe_id, UnsetType):
+            if recipe_id is not None and not await self._items.recipe_visible(
+                recipe_id, user_id, community_id
+            ):
+                raise ValidationError("Unknown recipe")
+            changes["recipe_id"] = recipe_id
+        updated = await self._items.update(item, changes)
         await self._log(updated, user_id, "item_edited")
         return updated
 

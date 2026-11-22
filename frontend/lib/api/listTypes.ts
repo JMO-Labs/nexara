@@ -74,6 +74,7 @@ export interface ListItem {
   lat?: number | null;
   lon?: number | null;
   signupQuantityNeeded?: number | null;
+  recipeId?: string | null;
   assignee?: ListUser | null;
   assignmentStatus?: AssignmentStatus | null;
 }
@@ -152,6 +153,8 @@ export interface ListItemCreateInput {
 }
 export interface ListItemUpdateInput {
   values: Record<string, unknown>;
+  /** Link (id) or unlink (null) a recipe; omit to leave unchanged. */
+  recipeId?: string | null;
 }
 export interface SignupClaimInput {
   quantity?: number;

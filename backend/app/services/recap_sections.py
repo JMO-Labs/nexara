@@ -26,6 +26,7 @@ from app.repositories.household_repo import HouseholdRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_memories_repo import PostMemoriesRepository
 from app.repositories.recap_repo import RecapRepository
+from app.repositories.recipe_repo import RecipeRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
@@ -155,11 +156,23 @@ async def new_albums(ctx: RecapContext) -> RecapSection | None:
     return {"key": "new_albums", "title": "New photo albums", "items": items}
 
 
+async def new_recipes(ctx: RecapContext) -> RecapSection | None:
+    """@brief Recipes added by others in the last 7 days that the viewer may open."""
+    if not is_enabled(ctx.community, "recipes"):
+        return None
+    found = await RecipeRepository(ctx.session).recent_visible(
+        ctx.user.id, ctx.community.id, ctx.now - timedelta(days=7)
+    )
+    items = [{"text": r.title, "link": f"/app/recipes/{r.id}"} for r in found]
+    return {"key": "recipes", "title": "New recipes", "items": items}
+
+
 SECTIONS: list[SectionBuilder] = [
     on_this_day,
     daily_question,
     birthdays,
     capsules_opened,
     new_albums,
+    new_recipes,
 ]
 """@brief Ordered section builders; append new ones here."""
