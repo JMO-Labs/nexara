@@ -37,6 +37,7 @@ from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.link_previews import router as link_previews_router
 from app.api.v1.list_assignments import router as list_assignments_router
+from app.api.v1.list_chores import router as list_chores_router
 from app.api.v1.list_templates import router as list_templates_router
 from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
@@ -109,6 +110,7 @@ api_v1_router.include_router(invites_router)
 api_v1_router.include_router(link_previews_router)
 api_v1_router.include_router(lists_router)
 api_v1_router.include_router(list_assignments_router)
+api_v1_router.include_router(list_chores_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(time_capsules_router)

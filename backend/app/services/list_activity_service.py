@@ -28,6 +28,7 @@ ACTIONS = (
     "unassigned",
     "signup_claimed",
     "signup_released",
+    "missed",
 )
 
 

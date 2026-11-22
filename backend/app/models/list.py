@@ -21,7 +21,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -141,6 +141,12 @@ class ListItem(Base):
     recipe_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="SET NULL")
     )
+    repeat: Mapped[str | None] = mapped_column(Text)
+    rotation: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)), nullable=False, server_default=text("'{}'::uuid[]")
+    )
+    rotation_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    next_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = _now()
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

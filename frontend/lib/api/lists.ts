@@ -12,6 +12,7 @@ import {
   type ListActivityPage,
   type ListCreateInput,
   type ListItem,
+  type ChoreScheduleInput,
   type ListUser,
   type ListItemCreateInput,
   type ListItemPage,
@@ -54,7 +55,12 @@ const user = (raw: unknown) => (raw ? one<ListUser>(raw) : null);
 /** Camelize an item and its nested assignee. */
 const item = (raw: unknown): ListItem => {
   const i = one<ListItem>(raw);
-  return { ...i, assignee: user((raw as { assignee?: unknown }).assignee) };
+  const r = raw as { assignee?: unknown; next_assignee?: unknown };
+  return {
+    ...i,
+    assignee: user(r.assignee),
+    nextAssignee: user(r.next_assignee),
+  };
 };
 
 /** Camelize an activity row and its nested users. */
@@ -118,6 +124,19 @@ export const listApi = {
         values: data.values,
         ...("recipeId" in data ? { recipe_id: data.recipeId } : {}),
       }),
+    );
+  },
+  /** @brief Set or clear an item's repeat and ordered rotation. */
+  async setChore(
+    listId: string,
+    itemId: string,
+    data: ChoreScheduleInput,
+  ): Promise<ListItem> {
+    return item(
+      await apiPut(
+        `${BASE}/${seg(listId)}/items/${seg(itemId)}/chore`,
+        snakeize(data),
+      ),
     );
   },
   deleteItem(listId: string, itemId: string): Promise<void> {

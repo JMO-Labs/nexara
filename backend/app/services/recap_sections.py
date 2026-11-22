@@ -21,8 +21,10 @@ from app.models.community import Community
 from app.models.user import User
 from app.repositories.album_repo import AlbumRepository
 from app.repositories.celebration_repo import CelebrationRepository
+from app.repositories.chore_repo import ChoreRepository
 from app.repositories.community_repo import CommunityRepository
 from app.repositories.household_repo import HouseholdRepository
+from app.repositories.list_repo import ListRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.post_memories_repo import PostMemoriesRepository
 from app.repositories.recap_repo import RecapRepository
@@ -33,6 +35,7 @@ from app.repositories.user_repo import UserRepository
 from app.services.celebration_service import CelebrationService
 from app.services.memories_service import MemoriesService
 from app.services.notification_service import NotificationService
+from app.services.notifications.types.list_payloads import item_title
 from app.services.time_capsule_service import TimeCapsuleService
 
 SNIPPET = 140
@@ -167,6 +170,26 @@ async def new_recipes(ctx: RecapContext) -> RecapSection | None:
     return {"key": "recipes", "title": "New recipes", "items": items}
 
 
+async def my_chores(ctx: RecapContext) -> RecapSection | None:
+    """@brief Open chores assigned to the viewer that fall due within 7 days."""
+    if not is_enabled(ctx.community, "chores"):
+        return None
+    lists = ListRepository(ctx.session)
+    found = await ChoreRepository(ctx.session).assigned_chores(
+        ctx.community.id, ctx.user.id, ctx.now + timedelta(days=7)
+    )
+    items = [
+        {
+            "text": f"{item_title(i.values) or 'Chore'} ({lst.title}), due "
+            f"{i.next_due_at.strftime('%A') if i.next_due_at else 'soon'}",
+            "link": f"/app/lists/{lst.id}",
+        }
+        for i, lst in found
+        if await lists.can_view(lst, ctx.user.id)
+    ]
+    return {"key": "chores", "title": "Your chores this week", "items": items}
+
+
 SECTIONS: list[SectionBuilder] = [
     on_this_day,
     daily_question,
@@ -174,5 +197,6 @@ SECTIONS: list[SectionBuilder] = [
     capsules_opened,
     new_albums,
     new_recipes,
+    my_chores,
 ]
 """@brief Ordered section builders; append new ones here."""

@@ -10,7 +10,13 @@ import { Modal } from "@/components/ui/Modal";
 import { DialogFooter } from "@/components/ui/shadcn/dialog";
 import { RecipePicker } from "@/components/recipes/RecipePicker";
 import { useListItemCreate } from "@/hooks/useLists";
-import { useListItemUpdate } from "@/hooks/useListActions";
+import { useFeature } from "@/hooks/useFeature";
+import { useMembersList } from "@/hooks/useMembersList";
+import { useListChoreSet, useListItemUpdate } from "@/hooks/useListActions";
+import {
+  RepeatRotationField,
+  type RepeatRotationValue,
+} from "./RepeatRotationField";
 import { fieldRegistry } from "@/lib/lists/fieldRegistry";
 import type { ListField } from "@/lib/lists/listFields";
 import type { ListItem } from "@/lib/api/listTypes";
@@ -70,8 +76,16 @@ export function ListItemEditModal({
   const [recipeId, setRecipeId] = useState<string | null>(
     item?.recipeId ?? null,
   );
+  const chores = useFeature("chores");
+  const choreSet = useListChoreSet(listId);
+  const members = useMembersList().data ?? [];
+  const initial: RepeatRotationValue = {
+    repeat: item?.repeat ?? null,
+    rotation: item?.rotation ?? [],
+  };
+  const [sched, setSched] = useState<RepeatRotationValue>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const pending = create.isPending || update.isPending;
+  const pending = create.isPending || update.isPending || choreSet.isPending;
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -79,8 +93,18 @@ export function ListItemEditModal({
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
     const done = { onSuccess: onClose };
-    if (item) update.mutate({ itemId: item.id, values, recipeId }, done);
-    else create.mutate({ position: nextPosition, values }, done);
+    const schedChanged =
+      chores &&
+      (sched.repeat !== initial.repeat ||
+        sched.rotation.join() !== initial.rotation.join());
+    if (item) {
+      const saveSched = () =>
+        choreSet.mutate({ itemId: item.id, ...sched }, done);
+      update.mutate(
+        { itemId: item.id, values, recipeId },
+        schedChanged ? { onSuccess: saveSched } : done,
+      );
+    } else create.mutate({ position: nextPosition, values }, done);
   };
 
   return (
@@ -120,6 +144,19 @@ export function ListItemEditModal({
           );
         })}
         {item && <RecipePicker value={recipeId} onChange={setRecipeId} />}
+        {item && chores && (
+          <RepeatRotationField
+            value={sched}
+            onChange={setSched}
+            people={members.map((u) => ({ id: u.id, name: u.display_name }))}
+          />
+        )}
+        {choreSet.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            Could not save the repeat schedule. Rotation people must be members
+            of this list.
+          </p>
+        )}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
