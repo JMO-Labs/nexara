@@ -202,14 +202,12 @@ export function HouseholdEditor({
           />
           Show birth year to others
         </label>
-        <div className="sm:col-span-2">
-          <Row label="Photo">
-            <CoverPicker
-              label="Photo"
-              mediaId={f.photo_media_id}
-              onChange={(id) => set({ photo_media_id: id })}
-            />
-          </Row>
+        <div className="text-sm sm:col-span-2">
+          <CoverPicker
+            label="Photo"
+            mediaId={f.photo_media_id}
+            onChange={(id) => set({ photo_media_id: id })}
+          />
         </div>
         <div className="sm:col-span-2">
           <Row label={isPet ? "About" : "Bio"}>
