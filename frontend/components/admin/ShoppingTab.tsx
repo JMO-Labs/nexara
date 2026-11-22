@@ -54,7 +54,10 @@ function SetupSteps() {
           In Associates Central, open Tools, then Creators API, and create
           credentials. Copy the client ID and secret; the secret is shown once.
         </li>
-        <li>Paste all three below, pick your Amazon store, save, then test.</li>
+        <li>
+          Paste all three into the fields above, pick your Amazon store, save,
+          then test.
+        </li>
       </ol>
       <p className="text-sm text-muted">
         Amazon may only grant API access after your account has a few qualifying
