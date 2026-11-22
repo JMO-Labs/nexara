@@ -140,3 +140,17 @@ async def test_story_mention_tags_user(session: AsyncSession) -> None:
         .all()
     )
     assert [t.subject_id for t in tags] == [b.id]
+
+
+async def test_private_household_name_hidden(session: AsyncSession) -> None:
+    from app.models.household import HouseholdMember
+
+    ruth, maya = await _user(session, "ruth"), await _user(session, "maya")
+    pet = HouseholdMember(
+        community_id=CID, owner_id=ruth.id, kind="pet", name="Secret Cat", visibility="private"
+    )
+    session.add(pet)
+    await session.flush()
+    repo = RecipeRepository(session)
+    assert await repo.household_names([pet.id], ruth.id, CID) == {pet.id: "Secret Cat"}
+    assert await repo.household_names([pet.id], maya.id, CID) == {}

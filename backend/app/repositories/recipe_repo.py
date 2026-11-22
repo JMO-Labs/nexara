@@ -184,9 +184,13 @@ class RecipeRepository:
         stmt = select(User.id, User.display_name).where(User.id.in_(ids))
         return {i: n for i, n in (await self._session.execute(stmt)).all()}
 
-    async def household_names(self, ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
-        """@brief Household member names keyed by id."""
+    async def household_names(
+        self, ids: list[uuid.UUID], viewer_id: uuid.UUID, community_id: uuid.UUID
+    ) -> dict[uuid.UUID, str]:
+        """@brief Names of the household members in ``ids`` that the viewer may see."""
         if not ids:
             return {}
-        stmt = select(HouseholdMember.id, HouseholdMember.name).where(HouseholdMember.id.in_(ids))
+        stmt = select(HouseholdMember.id, HouseholdMember.name).where(
+            HouseholdMember.id.in_(ids), household_visible(viewer_id, community_id)
+        )
         return {i: n for i, n in (await self._session.execute(stmt)).all()}

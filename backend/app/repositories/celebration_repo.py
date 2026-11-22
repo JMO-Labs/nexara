@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.household import HouseholdMember
@@ -49,13 +49,18 @@ class CelebrationRepository:
         self, community_id: uuid.UUID, viewer_id: uuid.UUID
     ) -> list[tuple[uuid.UUID, str, str, date | None, date | None]]:
         """@return (id, username, display_name, birthday, passed_on) of memorialized members"""
-        stmt = select(
-            User.id, User.username, User.display_name, User.birthday, User.passed_on
-        ).where(
-            User.community_id == community_id,
-            User.deleted_at.is_(None),
-            User.memorialized_at.is_not(None),
-            not_blocked(User.id, viewer_id),
+        # Birthday only when it was shared with the community; passed_on always.
+        shown = func.coalesce(UserSettings.show_birthday_to, "community")
+        birthday = case((shown == "community", User.birthday), else_=None)
+        stmt = (
+            select(User.id, User.username, User.display_name, birthday, User.passed_on)
+            .outerjoin(UserSettings, UserSettings.user_id == User.id)
+            .where(
+                User.community_id == community_id,
+                User.deleted_at.is_(None),
+                User.memorialized_at.is_not(None),
+                not_blocked(User.id, viewer_id),
+            )
         )
         return [(r[0], r[1], r[2], r[3], r[4]) for r in (await self._session.execute(stmt)).all()]
 

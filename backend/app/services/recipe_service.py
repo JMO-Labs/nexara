@@ -102,13 +102,16 @@ class RecipeService:
     async def _can_see(self, recipe_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         return await self._repo.get_visible(recipe_id, user_id, self._community_id) is not None
 
-    async def _out(self, rows: list[Recipe]) -> list[RecipeOut]:
+    async def _out(self, rows: list[Recipe], viewer_id: uuid.UUID) -> list[RecipeOut]:
         users = {r.author_id for r in rows} | {
             r.best_maker_user_id for r in rows if r.best_maker_user_id
         }
         names = await self._repo.author_names(list(users))
+        # Hidden household members (private pets/family) never leak a name.
         hh = await self._repo.household_names(
-            [r.best_maker_household_id for r in rows if r.best_maker_household_id]
+            [r.best_maker_household_id for r in rows if r.best_maker_household_id],
+            viewer_id,
+            self._community_id,
         )
         out: list[RecipeOut] = []
         for r in rows:
@@ -140,7 +143,7 @@ class RecipeService:
         await self._require_feature()
         row = await self._repo.create(self._community_id, user_id, await self._clean(body, user_id))
         await self._sync(row, user_id, fresh=True)
-        return (await self._out([row]))[0]
+        return (await self._out([row], user_id))[0]
 
     async def update(
         self, recipe_id: uuid.UUID, user_id: uuid.UUID, body: RecipeBase, *, is_admin: bool
@@ -151,7 +154,7 @@ class RecipeService:
         data = await self._clean(body, row.author_id)
         row = await self._repo.apply(row, data, datetime.now(UTC))
         await self._sync(row, user_id, fresh=False)
-        return (await self._out([row]))[0]
+        return (await self._out([row], user_id))[0]
 
     async def _owned(self, recipe_id: uuid.UUID, user_id: uuid.UUID, is_admin: bool) -> Recipe:
         row = await self._repo.get(recipe_id, self._community_id)
@@ -173,7 +176,7 @@ class RecipeService:
         row = await self._repo.get_visible(recipe_id, viewer_id, self._community_id)
         if row is None:
             raise NotFoundError(_("Recipe not found"))
-        return (await self._out([row]))[0]
+        return (await self._out([row], viewer_id))[0]
 
     async def tags(self, viewer_id: uuid.UUID) -> list[TagCount]:
         """@return Distinct tags on visible recipes with counts."""
@@ -196,6 +199,6 @@ class RecipeService:
         more = len(rows) > PAGE
         rows = rows[:PAGE]
         return RecipePage(
-            recipes=await self._out(rows),
+            recipes=await self._out(rows, viewer_id),
             next_cursor=self._repo.cursor_for(rows[-1]) if more else None,
         )
