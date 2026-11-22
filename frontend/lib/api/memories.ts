@@ -12,4 +12,5 @@ export interface OnThisDay {
 }
 
 /** @return memories for the viewer's local date */
-export const getOnThisDay = () => apiGet<OnThisDay>("/memories/on-this-day");
+export const getOnThisDay = () =>
+  apiGet<OnThisDay>("/api/v1/memories/on-this-day");

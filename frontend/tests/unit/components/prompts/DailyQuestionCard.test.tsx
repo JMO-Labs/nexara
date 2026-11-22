@@ -57,6 +57,13 @@ describe("DailyQuestionCard", () => {
     expect(screen.queryByText(/Answer to see/)).toBeNull();
   });
 
+  it("answered: hides the composer and says so", () => {
+    st.page = { items: [{ id: "a" }], answered: true };
+    render(<DailyQuestionCard post={post} />);
+    expect(screen.getByText(/You answered/)).toBeTruthy();
+    expect(screen.queryByLabelText("Your answer")).toBeNull();
+  });
+
   it("renders nothing when the feature is off", () => {
     st.feature = false;
     st.page = {};

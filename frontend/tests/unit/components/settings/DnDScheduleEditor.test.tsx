@@ -1,12 +1,15 @@
 /**
  * @file tests/unit/components/settings/DnDScheduleEditor.test.tsx
- * @brief DnDScheduleEditor: weekly grid, windows add/remove, timezone.
+ * @brief DnDScheduleEditor: weekly grid, windows add/remove, profile time zone.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import en from "@/i18n/en-US.json";
 
+vi.mock("@/components/settings/TimezoneSelect", () => ({
+  TimezoneSelect: () => <div>TZ SELECT</div>,
+}));
 vi.mock("next-intl", () => ({
   useTranslations: () => (k: string) =>
     (en.settings.notif as Record<string, string>)[k] ?? k,
@@ -82,15 +85,10 @@ describe("DnDScheduleEditor", () => {
     );
   });
 
-  it("changes timezone", async () => {
-    const onChange = vi.fn();
+  it("uses the profile time zone control", () => {
     render(
-      <DnDScheduleEditor schedule={null} timezone="UTC" onChange={onChange} />,
+      <DnDScheduleEditor schedule={null} timezone="UTC" onChange={vi.fn()} />,
     );
-    fireEvent.click(screen.getByLabelText("Timezone"));
-    fireEvent.click(
-      await screen.findByRole("option", { name: "Europe/Paris" }),
-    );
-    expect(onChange).toHaveBeenCalledWith(null, "Europe/Paris");
+    expect(screen.getByText("TZ SELECT")).toBeTruthy();
   });
 });

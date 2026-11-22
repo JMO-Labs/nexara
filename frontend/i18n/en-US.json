@@ -344,6 +344,7 @@
       "ch_push": "Push",
       "ch_toast": "Toast",
       "ch_webhook": "Webhook",
+      "ch_apprise": "Other apps (Apprise)",
       "digest": "Digest",
       "cad_instant": "Instant",
       "cad_hourly": "Hourly",

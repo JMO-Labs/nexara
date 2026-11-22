@@ -372,4 +372,10 @@ class PromptService:
         items, next_cursor = await self._post_repo.list_responses(
             self._community_id, prompt_post_id, viewer_id=viewer_id, cursor=cursor, limit=limit
         )
-        return {"items": items, "next_cursor": next_cursor, "has_more": next_cursor is not None}
+        answered = await self._dq.answered(pp, viewer_id)
+        return {
+            "items": items,
+            "next_cursor": next_cursor,
+            "has_more": next_cursor is not None,
+            "answered": answered,
+        }

@@ -21,12 +21,12 @@ export interface DataExport {
 
 /** @brief Request a new export. @return the new export id */
 export const requestExport = () =>
-  apiPost<{ export_id: string }>("/export/request");
+  apiPost<{ export_id: string }>("/api/v1/export/request");
 
 /** @brief Fetch status of one export. @param id export id */
 export const getExportStatus = (id: string) =>
-  apiGet<DataExport>(`/export/${seg(id)}/status`);
+  apiGet<DataExport>(`/api/v1/export/${seg(id)}/status`);
 
 /** @brief List recent exports. @param limit max rows */
 export const listExports = (limit = 5) =>
-  apiGet<DataExport[]>(`/export?limit=${limit}`);
+  apiGet<DataExport[]>(`/api/v1/export?limit=${limit}`);

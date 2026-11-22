@@ -93,6 +93,10 @@ class DailyQuestionService:
         count = await self._repo.count_responses(self._community_id, pp.id)
         return {"locked": True, "count": count, "items": []}
 
+    async def answered(self, pp: PromptPost, viewer_id: uuid.UUID) -> bool:
+        """@brief Whether the viewer has posted an answer to this prompt post."""
+        return await self._repo.has_responded(self._community_id, pp.id, viewer_id)
+
     async def can_create(self, user: Any, data: Any) -> bool:
         """@brief Group admins may create subgroup-scoped daily_question prompts."""
         if user.role in ("admin", "owner"):

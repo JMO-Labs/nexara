@@ -180,6 +180,8 @@ export interface PromptResponsesPage {
   response_count: number;
   /** True when answers are hidden until the viewer answers. */
   locked?: boolean;
+  /** Viewer has answered this prompt post. */
+  answered?: boolean;
   /** Answer count while locked. */
   count?: number;
   items: Post[];
