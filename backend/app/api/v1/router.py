@@ -27,6 +27,7 @@ from app.api.v1.communities import router as communities_router
 from app.api.v1.daily_questions import router as daily_questions_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
+from app.api.v1.expenses import router as expenses_router
 from app.api.v1.export import router as export_router
 from app.api.v1.features import router as features_router
 from app.api.v1.galleries import router as galleries_router
@@ -112,6 +113,7 @@ api_v1_router.include_router(list_assignments_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(time_capsules_router)
+api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)

@@ -16,6 +16,7 @@ import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
 import { ExportIcalButton } from "./ExportIcalButton";
 import { EventForecast } from "./EventForecast";
+import { EventSharedCosts } from "../../expenses/EventSharedCosts";
 
 const EventMiniMap = dynamic(
   () => import("../EventMiniMap").then((m) => m.EventMiniMap),
@@ -99,6 +100,7 @@ export function EventDetailBody({
         counts={event.rsvp_counts}
       />
       <EventGalleryLink galleryId={event.gallery_id} />
+      <EventSharedCosts eventId={event.id} title={event.title} />
       <ContributionSlots eventId={event.id} slots={event.contribution_slots} />
     </div>
   );
