@@ -17,6 +17,7 @@ from app.models.prompt import Prompt, PromptPost
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
 from app.schemas.prompt import PromptCreate
+from app.services.daily_question_service import DailyQuestionService
 from app.services.prompt_service import (
     MAX_PINNED_PROMPTS,
     PromptService,
@@ -98,12 +99,23 @@ def session() -> AsyncMock:
 
 
 @pytest.fixture
-def service(prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock) -> PromptService:
+def dq() -> AsyncMock:
+    d = AsyncMock(spec=DailyQuestionService)
+    d.prepare_fire.return_value = True
+    d.gate_responses.return_value = None
+    return d
+
+
+@pytest.fixture
+def service(
+    prompt_repo: AsyncMock, post_repo: AsyncMock, session: AsyncMock, dq: AsyncMock
+) -> PromptService:
     return PromptService(
         prompt_repo=prompt_repo,
         post_repo=post_repo,
         community_id=COMMUNITY_ID,
         session=session,
+        daily_questions=dq,
     )
 
 
@@ -471,4 +483,59 @@ class TestPromptPostDetail:
         prompt_repo.get_prompt_post.return_value = None
         with pytest.raises(NotFoundError):
             await service.list_responses(uuid.uuid4(), uuid.uuid4())
+        post_repo.list_responses.assert_not_awaited()
+
+
+class TestDailyQuestion:
+    @pytest.mark.asyncio
+    async def test_daily_fires_once_per_day(
+        self,
+        service: PromptService,
+        prompt_repo: AsyncMock,
+        post_repo: AsyncMock,
+        dq: AsyncMock,
+    ) -> None:
+        today = date(2026, 4, 25)
+        p = _make_prompt(frequency_type="daily")
+        p.prompt_type = "daily_question"
+        prompt_repo.list_enabled.return_value = [p]
+        created: list[PromptPost] = []
+
+        def _fill_pp(pp: PromptPost) -> PromptPost:
+            pp.id = uuid.uuid4()
+            created.append(pp)
+            return pp
+
+        prompt_repo.create_prompt_post.side_effect = _fill_pp
+        assert await service.fire_due_prompts(today) == 1
+        dq.prepare_fire.assert_awaited_once_with(p)
+
+        prompt_repo.get_post_for_today.return_value = created[0]
+        assert await service.fire_due_prompts(today) == 0
+        post_repo.create.assert_awaited_once()
+        assert len(created) == 1
+
+    @pytest.mark.asyncio
+    async def test_skipped_when_prepare_fails(
+        self, service: PromptService, prompt_repo: AsyncMock, post_repo: AsyncMock, dq: AsyncMock
+    ) -> None:
+        p = _make_prompt(frequency_type="daily")
+        p.prompt_type = "daily_question"
+        prompt_repo.list_enabled.return_value = [p]
+        dq.prepare_fire.return_value = False
+        assert await service.fire_due_prompts(date(2026, 4, 25)) == 0
+        post_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_list_responses_returns_locked_payload(
+        self, service: PromptService, prompt_repo: AsyncMock, post_repo: AsyncMock, dq: AsyncMock
+    ) -> None:
+        pp = MagicMock(spec=PromptPost)
+        pp.community_id = COMMUNITY_ID
+        prompt_repo.get_prompt_post.return_value = pp
+        prompt_repo.get_by_id.return_value = _make_prompt(frequency_type="daily")
+        locked = {"locked": True, "count": 2, "items": []}
+        dq.gate_responses.return_value = locked
+        out = await service.list_responses(uuid.uuid4(), uuid.uuid4())
+        assert out == locked
         post_repo.list_responses.assert_not_awaited()
