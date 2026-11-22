@@ -23,6 +23,7 @@ from app.repositories.list_signup_repo import ListSignupRepository
 from app.repositories.list_template_repo import ListTemplateRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.tag_repo import TagRepository
 from app.services.list_activity_service import ListActivityService
 from app.services.list_assignment_service import ListAssignmentService
 from app.services.list_completion_service import ListCompletionService
@@ -85,6 +86,7 @@ def get_list_service(
         community_id,
         db,
         _notifier(db, community_id),
+        TagRepository(db),
     )
 
 

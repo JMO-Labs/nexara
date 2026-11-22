@@ -19,10 +19,13 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import Event
 from app.models.subgroup import SubgroupMember
+from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.subgroup_repo import SubgroupRepository
+from app.repositories.tag_repo import TagRepository
+from app.services.mention_tags import MentionTagsService
 from app.schemas.event import (
     ContributionSlot,
     EventCreate,
@@ -62,6 +65,7 @@ class EventService(
         token_repo: Any | None = None,
         activity_repo: ActivityRepository | None = None,
         subgroup_repo: SubgroupRepository | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         self._repo = event_repo
         self._subgroups = subgroup_repo or SubgroupRepository(session)
@@ -80,6 +84,7 @@ class EventService(
             token_repo = CalendarTokenRepository(session)
         self._token_repo = token_repo
         self._activity_repo = activity_repo
+        self._mention_tags = MentionTagsService(tag_repo or TagRepository(session))
 
     # ── Internal helpers ──────────────────────────────────────────────
 
@@ -273,6 +278,25 @@ class EventService(
         await invalidate_search_cache_for_community(
             self._community_id, service="event", action="create", user_id=user_id
         )
+
+        # Sync mentions in description
+        if event.description:
+            user_result = await self._session.execute(select(User).where(User.id == user_id))
+            user_obj = user_result.scalar_one_or_none()
+            if user_obj:
+                await self._mention_tags.sync_mentions(
+                    self._community_id,
+                    "event",
+                    event.id,
+                    event.description,
+                    user_id,
+                    user_obj.display_name,
+                    notify_callable=self._notifications.notify if self._notifications else None,
+                    can_see=lambda uid: self._can_view(event, uid),
+                    link=f"/app/events?event={event.id}",
+                    label=_("an event"),
+                )
+
         gallery_id = None
         if data.auto_create_gallery:
             gallery_id = await create_event_gallery(
@@ -318,6 +342,26 @@ class EventService(
         await invalidate_search_cache_for_community(
             self._community_id, service="event", action="update", user_id=user_id
         )
+
+        # Sync mentions in description if changed
+        if "description" in update_data and update_data["description"]:
+            user_result = await self._session.execute(select(User).where(User.id == user_id))
+            user_obj = user_result.scalar_one_or_none()
+            if user_obj:
+                await self._mention_tags.sync_mentions(
+                    self._community_id,
+                    "event",
+                    event.id,
+                    update_data["description"],
+                    user_id,
+                    user_obj.display_name,
+                    notify_callable=self._notifications.notify if self._notifications else None,
+                    can_see=lambda uid: self._can_view(event, uid),
+                    link=f"/app/events?event={event.id}",
+                    label=_("an event"),
+                    fresh=False,
+                )
+
         return await self._build_response(event, user_id=user_id)
 
     async def delete_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:

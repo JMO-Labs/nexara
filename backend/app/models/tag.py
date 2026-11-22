@@ -15,7 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from app.models.user import COMMUNITY_DEFAULT
 
-TARGET_TYPES = ("post", "comment", "media")
+TARGET_TYPES = ("post", "comment", "media", "list", "event", "chat_message")
 
 
 class Tag(Base):

@@ -24,6 +24,7 @@ from app.repositories.event_repo import EventRepository
 from app.repositories.gallery_repo import GalleryRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.tag_repo import TagRepository
 from app.schemas.common import MessageResponse
 from app.schemas.event import (
     CalendarSubscriptionCreate,
@@ -72,6 +73,7 @@ def _build_service(
         community_id=community_id,
         session=db,
         notification_service=notif,
+        tag_repo=TagRepository(db),
     )
 
 
