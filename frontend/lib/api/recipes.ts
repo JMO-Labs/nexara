@@ -67,3 +67,17 @@ export const createRecipe = (body: RecipeInput) => apiPost<Recipe>(BASE, body);
 export const updateRecipe = (id: string, body: RecipeInput) =>
   apiPut<Recipe>(`${BASE}/${seg(id)}`, body);
 export const deleteRecipe = (id: string) => apiDelete(`${BASE}/${seg(id)}`);
+
+/** @brief Request body for adding ingredients to a shopping list. */
+export interface ToListInput {
+  list_id?: string | null;
+  /** Ingredient indexes; omitted = all. */
+  ingredients?: number[];
+}
+
+/** @brief Add recipe ingredients to a new (no list_id) or existing list. */
+export const addToShoppingList = (id: string, body: ToListInput) =>
+  apiPost<{ list_id: string; added: number }>(
+    `${BASE}/${seg(id)}/shopping-list`,
+    body,
+  );

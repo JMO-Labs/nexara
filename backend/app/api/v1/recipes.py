@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, get_dispatcher
+from app.core.list_dependencies import get_list_item_service, get_list_service
 from app.models.user import User
 from app.repositories.community_repo import CommunityRepository
 from app.repositories.notification_repo import NotificationRepository
@@ -20,9 +21,13 @@ from app.repositories.recipe_repo import RecipeRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.tag_repo import TagRepository
 from app.schemas.recipe import RecipeCreate, RecipeOut, RecipePage, RecipeUpdate, TagCount
+from app.schemas.recipe_shopping import ToListIn, ToListOut
+from app.services.list_items_service import ListItemService
+from app.services.list_service import ListService
 from app.services.mention_tags import MentionTagsService
 from app.services.notification_service import NotificationService
 from app.services.recipe_service import RecipeService
+from app.services.recipe_shopping_service import RecipeShoppingService
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 
@@ -42,6 +47,15 @@ def _build_service(
         notif,
         cid,
     )
+
+
+def _build_shopping(
+    recipes: RecipeService = Depends(_build_service),
+    lists: ListService = Depends(get_list_service),
+    items: ListItemService = Depends(get_list_item_service),
+) -> RecipeShoppingService:
+    """@brief Build RecipeShoppingService from the recipe and list services."""
+    return RecipeShoppingService(recipes, lists, items)
 
 
 @router.post("", status_code=201, response_model=RecipeOut)
@@ -83,6 +97,18 @@ async def get_recipe(
 ) -> Any:
     """@brief One recipe."""
     return await service.get(recipe_id, user.id)
+
+
+@router.post("/{recipe_id}/shopping-list", status_code=201, response_model=ToListOut)
+async def recipe_to_shopping_list(
+    recipe_id: uuid.UUID,
+    body: ToListIn,
+    user: User = Depends(get_current_user),
+    service: RecipeShoppingService = Depends(_build_shopping),
+    settings: Settings = Depends(get_settings),
+) -> Any:
+    """@brief Add recipe ingredients to a new or existing shopping list."""
+    return await service.add(recipe_id, user.id, uuid.UUID(settings.COMMUNITY_ID), body)
 
 
 @router.put("/{recipe_id}", response_model=RecipeOut)
