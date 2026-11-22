@@ -265,9 +265,16 @@ export function MonthCalendarLarge({
                           />
                         )}
                         <span className="min-w-0 truncate">
-                          {s.startsHere
-                            ? `${s.event.is_all_day ? "" : `${formatTime(parseISO(s.event.starts_at))} · `}${s.event.title}`
-                            : " "}
+                          {s.startsHere ? (
+                            <>
+                              {s.event.is_all_day
+                                ? ""
+                                : `${formatTime(parseISO(s.event.starts_at))} · `}
+                              <EventTitle ev={s.event} />
+                            </>
+                          ) : (
+                            " "
+                          )}
                         </span>
                       </div>
                     );

@@ -6,6 +6,7 @@
  */
 import type { EventItem } from "@/lib/api/events";
 import { groupColor } from "@/lib/groupColor";
+import { CELEBRATIONS_CALENDAR_ID } from "@/lib/celebrations";
 
 export interface EventTone {
   /** Solid bar / dot / accent color. */
@@ -55,13 +56,18 @@ export function toneFromHex(hex: string, label = "Custom"): EventTone {
  * @return tone
  */
 export function toneForEvent(
-  ev: Pick<EventItem, "visibility" | "subgroup_id" | "color">,
+  ev: Pick<EventItem, "visibility" | "subgroup_id" | "color"> & {
+    calendar_id?: string | null;
+  },
   subgroupNames?: Map<string, string>,
 ): EventTone {
   const isGroup = ev.visibility === "subgroup" && !!ev.subgroup_id;
-  const label = isGroup
-    ? (subgroupNames?.get(ev.subgroup_id as string) ?? "Subgroup")
-    : "Community";
+  const label =
+    ev.calendar_id === CELEBRATIONS_CALENDAR_ID
+      ? "Birthdays"
+      : isGroup
+        ? (subgroupNames?.get(ev.subgroup_id as string) ?? "Subgroup")
+        : "Community";
   if (ev.color && /^#[0-9A-Fa-f]{6}$/.test(ev.color)) {
     return toneFromColor(ev.color, label);
   }
