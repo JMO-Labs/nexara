@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Lock, MessageCircleQuestion } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 import { PromptResponsesList } from "@/components/prompts/PromptResponsesList";
+import { SuggestQuestionDialog } from "@/components/prompts/SuggestQuestionDialog";
 import { useFeature } from "@/hooks/useFeature";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useInfinitePromptResponses } from "@/hooks/usePromptResponses";
@@ -76,6 +77,7 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
       >
         Answer
       </Button>
+      <SuggestQuestionDialog />
       {first && !locked && <PromptResponsesList promptPostId={post.id} />}
     </Card>
   );

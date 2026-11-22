@@ -14,6 +14,9 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 vi.mock("@/hooks/useFeature", () => ({ useFeature: () => st.feature }));
+vi.mock("@/components/prompts/SuggestQuestionDialog", () => ({
+  SuggestQuestionDialog: () => null,
+}));
 vi.mock("@/hooks/usePosts", () => ({
   useCreatePost: () => ({ mutate: vi.fn(), isPending: false }),
 }));
