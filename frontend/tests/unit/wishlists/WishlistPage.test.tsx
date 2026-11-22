@@ -10,9 +10,6 @@ import type { WishlistDetail } from "@/lib/api/wishlists";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
-vi.mock("@/hooks/useMembers", () => ({
-  useMemberProfile: () => ({ data: { display_name: "Ruth Alvarez" } }),
-}));
 const claim = vi.fn();
 const release = vi.fn();
 let list: WishlistDetail;
@@ -40,18 +37,40 @@ const base = (isOwner: boolean): WishlistDetail => ({
   owner_id: "u1",
   title: "Biscuit turns 5",
   occasion: "birthday",
-  occasion_date: "2026-12-12",
+  owner_name: "Ruth Alvarez",
+  occasion_label: null,
+  event_date: "2026-12-12",
+  due_by: null,
   note: null,
   visibility: "community",
-  household: { id: "h1", name: "Biscuit", kind: "pet" },
+  currency: "USD",
+  budget_min_cents: null,
+  budget_max_cents: null,
+  event_budget_cents: null,
+  giver_cap_cents: null,
+  hide_claims: true,
+  registry_links: [
+    { label: "Amazon registry", url: "https://www.amazon.com/registry/x" },
+  ],
+  recipients: [
+    { kind: "household", ref_id: "h1", name: "Biscuit", extra: "pet" },
+  ],
   item_count: 3,
   is_owner: isOwner,
+  can_edit_items: isOwner,
+  sees_claims: !isOwner,
+  planned_cents: isOwner ? 2400 : null,
+  my_total_cents: isOwner ? 0 : 800,
   items: [
     {
       id: "a",
+      kind: "gift",
+      goal_cents: null,
+      claimers: null,
+      preview: null,
       name: "Squeaky duck",
       url: null,
-      price: "$8",
+      price_cents: 800,
       notes: null,
       qty: 2,
       claimed: isOwner ? null : 1,
@@ -59,9 +78,13 @@ const base = (isOwner: boolean): WishlistDetail => ({
     },
     {
       id: "b",
+      kind: "gift",
+      goal_cents: null,
+      claimers: null,
+      preview: null,
       name: "Orthopedic bed",
       url: "https://example.com/bed",
-      price: null,
+      price_cents: null,
       notes: null,
       qty: 1,
       claimed: isOwner ? null : 1,
@@ -69,9 +92,13 @@ const base = (isOwner: boolean): WishlistDetail => ({
     },
     {
       id: "c",
+      kind: "gift",
+      goal_cents: null,
+      claimers: null,
+      preview: null,
       name: "Bandana",
       url: null,
-      price: null,
+      price_cents: null,
       notes: null,
       qty: 1,
       claimed: isOwner ? null : 1,
@@ -99,6 +126,12 @@ describe("WishlistPage", () => {
       screen.queryByText(/I'll get this|Someone has this|You're getting/),
     ).toBeNull();
     expect(screen.getByText("× 2")).toBeInTheDocument();
+    expect(
+      screen.getByText(/won't see who is getting what/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Amazon registry/ }),
+    ).toHaveAttribute("href", "https://www.amazon.com/registry/x");
   });
 
   it("gift-giver sees what is left and can claim or undo", () => {
@@ -107,7 +140,7 @@ describe("WishlistPage", () => {
     expect(screen.getByText("1 of 2 left")).toBeInTheDocument();
     expect(screen.getByText("Someone has this")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "I'll get this" }));
-    expect(claim).toHaveBeenCalledWith({ id: "w1", itemId: "a", qty: 1 });
+    expect(claim.mock.calls[0][0]).toEqual({ id: "w1", itemId: "a", qty: 1 });
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(release).toHaveBeenCalledWith({ id: "w1", itemId: "c" });
     expect(screen.queryByRole("form", { name: "Add a wish" })).toBeNull();

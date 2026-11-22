@@ -129,7 +129,7 @@ export function HouseholdPage({ id }: { id: string }) {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Wishlists</h2>
         <WishlistCards
-          householdId={m.id}
+          query={{ household_id: m.id }}
           canCreate={m.can_edit}
           emptyText={`No wishlists for ${m.name} yet`}
         />

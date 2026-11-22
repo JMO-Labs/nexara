@@ -195,6 +195,19 @@ async def test_recipients_validated_and_everyone_wins() -> None:
         OWNER,  # type: ignore[arg-type]
     )
     assert repo.replace_recipients.await_args.args[1] == [{"kind": "everyone"}]
+    assert repo.create.await_args.kwargs["visibility"] == "community"
+
+
+async def test_update_keeps_everyone_lists_public() -> None:
+    w = _list()
+    lists, _, repo, _ = _svcs(w, [])
+    repo.recipients.return_value = [
+        SimpleNamespace(kind="everyone", ref_id=None, name=None, wishlist_id=w.id)
+    ]
+    from app.schemas.wishlist import WishlistUpdate
+
+    await lists.update(w.id, WishlistUpdate(visibility="private"), OWNER)  # type: ignore[arg-type]
+    assert repo.update.await_args.args[1]["visibility"] == "community"
 
 
 async def test_default_recipient_is_creator() -> None:

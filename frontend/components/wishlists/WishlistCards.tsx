@@ -1,47 +1,55 @@
 "use client";
 /**
  * @file components/wishlists/WishlistCards.tsx
- * @brief Grid of wishlist cards with an optional "New wishlist" action,
- *        used on profiles, household pages and /app/wishlists.
+ * @brief Grid of wishlist hero cards (occasion disc, title, who it's for,
+ *        countdown) with an optional "New wishlist" action.
  */
-import * as React from "react";
 import Link from "next/link";
-import { Gift, PawPrint, Plus } from "lucide-react";
+import { CalendarClock, Gift, Plus } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { useWishlists } from "@/hooks/useWishlists";
-import { OCCASION_LABEL, type Wishlist } from "@/lib/api/wishlists";
-import { WishlistEditor } from "./WishlistEditor";
-
-/** @brief "December 12" style date (no year). */
-export const occasionDay = (d: string | null) =>
-  d
-    ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined, {
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+import { OCCASIONS, occasionName } from "@/lib/occasions";
+import type { Wishlist, WishlistQuery } from "@/lib/api/wishlists";
+import { countdown, dayLabel, recipientsText } from "./wishlistText";
 
 function Card({ w }: { w: Wishlist }) {
-  const when = occasionDay(w.occasion_date);
+  const { Icon, tint } = OCCASIONS[w.occasion];
   return (
     <li>
       <Link
         href={`/app/wishlists/${w.id}`}
-        className="glass glass-lift flex h-full flex-col gap-2 rounded-[24px] p-4 outline-none focus-visible:outline-2 focus-visible:outline-accent"
+        className="glass glass-lift relative flex h-full flex-col gap-3 overflow-hidden rounded-[26px] p-5 outline-none focus-visible:outline-2 focus-visible:outline-accent"
       >
-        <span className="flex items-center gap-2 text-xs text-muted">
-          <Gift className="size-3.5 text-[var(--nx-red)]" aria-hidden />
-          {OCCASION_LABEL[w.occasion]}
-          {when && <span>{when}</span>}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-10 -right-10 size-36 rounded-full opacity-25 blur-2xl"
+          style={{ background: tint }}
+        />
+        <span className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="grid size-11 shrink-0 place-items-center rounded-full text-white shadow-[0_8px_18px_-8px_rgba(0,0,0,0.45)]"
+            style={{ background: tint }}
+          >
+            <Icon className="size-5" />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="text-xs text-muted">
+              {occasionName(w.occasion, w.occasion_label)}
+            </span>
+            <span className="truncate text-lg leading-tight font-semibold">
+              {w.title}
+            </span>
+          </span>
         </span>
-        <span className="text-base font-semibold">{w.title}</span>
-        <span className="mt-auto flex items-center gap-2 text-sm text-muted">
-          {w.household && (
+        <span className="text-sm">
+          For {recipientsText(w.recipients) || w.owner_name}
+        </span>
+        <span className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+          {w.event_date && (
             <span className="inline-flex items-center gap-1">
-              {w.household.kind === "pet" && (
-                <PawPrint className="size-3.5" aria-hidden />
-              )}
-              For {w.household.name}
+              <CalendarClock className="size-3.5" aria-hidden />
+              {dayLabel(w.event_date)}, {countdown(w.event_date).toLowerCase()}
             </span>
           )}
           <span>
@@ -55,48 +63,36 @@ function Card({ w }: { w: Wishlist }) {
 
 /**
  * @brief Wishlist grid.
- * @param ownerId only this person's lists
- * @param householdId only lists for this household member/pet
- * @param othersOnly hide the viewer's own lists
+ * @param query filter (person, household member or creator)
  * @param canCreate show "New wishlist"
+ * @param othersOnly hide lists the viewer created
  * @param emptyText text when there are none
  * @return section
  */
 export function WishlistCards({
-  ownerId,
-  householdId,
+  query = {},
   canCreate = false,
   othersOnly = false,
   emptyText = "No wishlists yet",
 }: {
-  ownerId?: string;
-  householdId?: string;
+  query?: WishlistQuery;
   canCreate?: boolean;
-  /** Hide the viewer's own lists. */
   othersOnly?: boolean;
   emptyText?: string;
 }) {
-  const q = {
-    ...(ownerId && { owner_id: ownerId }),
-    ...(householdId && { household_id: householdId }),
-  };
-  const { data, isLoading } = useWishlists(q);
-  const [editing, setEditing] = React.useState(false);
+  const { data, isLoading } = useWishlists(query);
   const lists = (data ?? []).filter((w) => !othersOnly || !w.is_owner);
   return (
     <div className="flex flex-col gap-3">
       {canCreate && (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="self-start"
-          onClick={() => setEditing(true)}
-        >
-          <Plus className="size-4" aria-hidden /> New wishlist
+        <Button asChild size="sm" variant="ghost" className="self-start">
+          <Link href="/app/lists/new?type=wishlist">
+            <Plus className="size-4" aria-hidden /> New wishlist
+          </Link>
         </Button>
       )}
       {isLoading ? (
-        <Skeleton height={120} rounded="lg" />
+        <Skeleton height={140} rounded="lg" />
       ) : lists.length === 0 ? (
         <EmptyState compact icon={Gift} title={emptyText} />
       ) : (
@@ -108,13 +104,6 @@ export function WishlistCards({
             <Card key={w.id} w={w} />
           ))}
         </ul>
-      )}
-      {editing && (
-        <WishlistEditor
-          list={null}
-          householdId={householdId}
-          onClose={() => setEditing(false)}
-        />
       )}
     </div>
   );

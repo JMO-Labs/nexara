@@ -102,7 +102,7 @@ export function MemberProfile({ userId }: { userId: string }) {
               <MemberGalleriesTab userId={userId} />
             ) : tab === "wishlists" ? (
               <WishlistCards
-                ownerId={userId}
+                query={{ person_id: userId }}
                 canCreate={isSelf}
                 emptyText={`${p.display_name.split(" ")[0]} has no wishlists you can see`}
               />
