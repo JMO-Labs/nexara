@@ -62,3 +62,8 @@ export const householdPhotos = (id: string, before?: string | null) =>
   apiGet<TaggedPage>(
     `${base}/${seg(id)}/tagged${before ? `?${new URLSearchParams({ before })}` : ""}`,
   );
+/** @brief Posts that @mention a household member/pet (viewer-readable). */
+export const householdPosts = (id: string, before?: string | null) =>
+  apiGet<TaggedPage>(
+    `${base}/${seg(id)}/tagged?${new URLSearchParams({ kind: "posts", ...(before ? { before } : {}) })}`,
+  );
