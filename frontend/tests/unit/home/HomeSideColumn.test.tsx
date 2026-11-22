@@ -7,7 +7,26 @@ import { act, screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../utils/renderWithProviders";
 
 vi.mock("@/hooks/useHomePeople", () => ({
-  useHomePeople: () => ({ data: { items: [{ birthday_in_days: 2 }] } }),
+  useHomePeople: () => ({
+    data: {
+      items: [
+        { user_id: "u1", display_name: "Ruth A", birthday_in_days: 2 },
+        { user_id: "u2", display_name: "Leo S", favorite: true },
+      ],
+    },
+  }),
+}));
+vi.mock("@/hooks/useCommunityId", () => ({ useCommunityId: () => "c1" }));
+vi.mock("@/hooks/useLists", () => ({
+  useLists: () => ({ data: { lists: [{ itemCount: 5, completedCount: 2 }] } }),
+}));
+vi.mock("@/hooks/useWeather", () => ({
+  useTempUnit: () => ["F", vi.fn()],
+  useWeatherBoard: () => ({
+    data: [
+      { kind: "self", label: "Mesa", forecast: { current: { temp_c: 22 } } },
+    ],
+  }),
 }));
 vi.mock("@/components/home/tiles/PeopleTile", () => ({
   PeopleTile: () => <section>people</section>,
@@ -58,5 +77,15 @@ describe("HomeSideColumn", () => {
     expect(people).toHaveAttribute("aria-expanded", "true");
     fireEvent.keyDown(people, { key: "Escape" });
     expect(people).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows live glances in the pill", () => {
+    renderWithProviders(<HomeSideColumn open={null} onToggle={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "Weather, 72° Mesa" }),
+    ).toHaveTextContent("72°");
+    expect(
+      screen.getByRole("button", { name: "Lists, 3 open items" }),
+    ).toHaveTextContent("3");
   });
 });
