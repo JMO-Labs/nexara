@@ -12,6 +12,7 @@ import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { PromptPostCard } from "@/components/feed/PromptPostCard";
+import { DailyQuestionCard } from "@/components/prompts/DailyQuestionCard";
 import { useActivePrompts } from "@/hooks/useActivePrompts";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import type { FeedItem } from "@/lib/api/home";
@@ -149,16 +150,20 @@ export function HomeFeed({
         </div>
         {prompts && prompts.length > 0 && (
           <section aria-label="Active prompts" className="flex flex-col gap-2">
-            {prompts.map((p) => (
-              <PromptPostCard
-                key={p.id}
-                post={p}
-                onReply={(id, title) => {
-                  setReplyTo({ id, title });
-                  focusComposer();
-                }}
-              />
-            ))}
+            {prompts.map((p) =>
+              p.prompt.prompt_type === "daily_question" ? (
+                <DailyQuestionCard key={p.id} post={p} />
+              ) : (
+                <PromptPostCard
+                  key={p.id}
+                  post={p}
+                  onReply={(id, title) => {
+                    setReplyTo({ id, title });
+                    focusComposer();
+                  }}
+                />
+              ),
+            )}
           </section>
         )}
         <AnimatePresence mode="wait" initial={false}>

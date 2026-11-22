@@ -77,10 +77,11 @@ async def list_prompts(
 @router.post("", response_model=PromptResponse, status_code=201)
 async def create_prompt(
     body: PromptCreate,
-    user: User = Depends(require_role("admin")),
+    user: User = Depends(get_current_user),
     service: PromptService = Depends(_build_service),
 ) -> PromptResponse:
-    """@brief Create a custom prompt (admin)."""
+    """@brief Create a custom prompt (admin; group admins for group daily questions)."""
+    await service.authorize_create(user, body)
     return await service.create_prompt(user.id, body)
 
 

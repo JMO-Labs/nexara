@@ -24,6 +24,7 @@ from app.api.v1.calendars import router as calendars_router
 from app.api.v1.celebrations import router as celebrations_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.communities import router as communities_router
+from app.api.v1.daily_questions import router as daily_questions_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.export import router as export_router
@@ -114,6 +115,7 @@ api_v1_router.include_router(communities_router)
 api_v1_router.include_router(polls_router)
 api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
+api_v1_router.include_router(daily_questions_router)
 api_v1_router.include_router(push_router)
 api_v1_router.include_router(search_router)
 api_v1_router.include_router(settings_router)

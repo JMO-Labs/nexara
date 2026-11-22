@@ -12,7 +12,8 @@ export interface PromptDetail {
   id: string;
   title: string;
   body: string;
-  prompt_type: "standard" | "interest_capture";
+  prompt_type: PromptType;
+  reveal_after_answer?: boolean;
   interest_category_slug: string | null;
   interest_capture_hint: string | null;
 }
@@ -34,6 +35,7 @@ export interface PromptPost {
 
 /** @brief Prompt schedule frequency (mirrors backend FrequencyType). */
 export type FrequencyType =
+  | "daily"
   | "annual_date"
   | "weekly"
   | "monthly"
@@ -41,7 +43,7 @@ export type FrequencyType =
   | "custom";
 
 /** @brief Prompt kind. */
-export type PromptType = "standard" | "interest_capture";
+export type PromptType = "standard" | "interest_capture" | "daily_question";
 
 /**
  * @brief Prompt response model (admin); mirrors backend PromptResponse.
@@ -176,6 +178,10 @@ export const getPromptResponseCount = (promptPostId: string) =>
  */
 export interface PromptResponsesPage {
   response_count: number;
+  /** True when answers are hidden until the viewer answers. */
+  locked?: boolean;
+  /** Answer count while locked. */
+  count?: number;
   items: Post[];
   next_cursor: string | null;
 }

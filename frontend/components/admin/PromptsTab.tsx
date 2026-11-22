@@ -18,12 +18,24 @@ import { PromptList } from "./prompts-tab/PromptList";
 import { PromptEditor } from "./prompts-tab/PromptEditor";
 import { NewPromptModal } from "./prompts-tab/NewPromptModal";
 import { AdminNotice } from "./AdminState";
+import { QuestionBankSection } from "./QuestionBankSection";
+import { useFeature } from "@/hooks/useFeature";
 
 /**
- * @brief Prompts admin tab.
+ * @brief Prompts admin tab (prompt list plus the daily question bank).
  * @return tab content
  */
 export function PromptsTab() {
+  const daily = useFeature("daily_question");
+  return (
+    <>
+      <PromptsMasterDetail />
+      {daily && <QuestionBankSection />}
+    </>
+  );
+}
+
+function PromptsMasterDetail() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
