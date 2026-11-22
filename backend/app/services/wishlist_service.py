@@ -1,8 +1,8 @@
 """
 @file wishlist_service.py
-@brief Wishlists: owners (or the parent managing a household member/pet)
-       edit lists and items; everyone else who can see a list claims items.
-       Owners never see claims, so gifts stay a surprise.
+@brief Wishlists for anyone (members, household members/pets, groups, typed
+       names or everyone): browse, create, edit, delete, and the detail view.
+       Items and claims live in WishlistGiftService.
 """
 
 from __future__ import annotations
@@ -13,189 +13,225 @@ from typing import Any
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.i18n import _
 from app.models.user import User
-from app.models.wishlist import Wishlist, WishlistItem
+from app.models.wishlist import Wishlist, WishlistRecipient
+from app.repositories.wishlist_item_repo import WishlistItemRepository
 from app.repositories.wishlist_repo import WishlistRepository
 from app.schemas.wishlist import (
-    HouseholdBrief,
-    ItemIn,
-    ItemOut,
-    ItemUpdate,
+    RecipientIn,
+    RecipientOut,
     WishlistCreate,
     WishlistDetail,
     WishlistOut,
     WishlistUpdate,
 )
+from app.services.wishlist_view import Access, build_items, planned_cents
 
 MAX_LISTS = 50
-MAX_ITEMS = 100
+LIST_FIELDS = (
+    "title",
+    "occasion",
+    "occasion_label",
+    "event_date",
+    "due_by",
+    "note",
+    "visibility",
+    "currency",
+    "budget_min_cents",
+    "budget_max_cents",
+    "event_budget_cents",
+    "giver_cap_cents",
+    "hide_claims",
+    "registry_links",
+)
 
 
 class WishlistService:
     """@brief Wishlist rules, scoped to one community."""
 
-    def __init__(self, repo: WishlistRepository, community_id: uuid.UUID) -> None:
+    def __init__(
+        self, repo: WishlistRepository, items: WishlistItemRepository, community_id: uuid.UUID
+    ) -> None:
         self._repo = repo
+        self._items = items
         self._cid = community_id
 
+    # -- helpers ---------------------------------------------------------------
+
+    async def _recipients_out(
+        self, rows: list[WishlistRecipient], viewer: User
+    ) -> dict[uuid.UUID, list[RecipientOut]]:
+        ids = {
+            k: [r.ref_id for r in rows if r.kind == k and r.ref_id]
+            for k in ("user", "household", "subgroup")
+        }
+        users = await self._repo.user_names(ids["user"], self._cid)
+        homes = await self._repo.household_names(ids["household"], viewer.id, self._cid)
+        groups = await self._repo.group_names(ids["subgroup"], self._cid)
+        out: dict[uuid.UUID, list[RecipientOut]] = {}
+        for r in rows:
+            name, extra = r.name or "", None
+            if r.kind == "everyone":
+                name = _("Everyone")
+            elif r.kind == "user" and r.ref_id in users:
+                name = users[r.ref_id]
+            elif r.kind == "household" and r.ref_id in homes:
+                name, extra = homes[r.ref_id]
+            elif r.kind == "subgroup" and r.ref_id in groups:
+                name, extra = groups[r.ref_id]
+            if not name:
+                continue  # deleted or hidden from this viewer
+            out.setdefault(r.wishlist_id, []).append(
+                RecipientOut(kind=r.kind, ref_id=r.ref_id, name=name, extra=extra)
+            )
+        return out
+
     async def _summaries(self, rows: list[tuple[Wishlist, int]], viewer: User) -> list[WishlistOut]:
-        names = await self._repo.household_names(
-            [w.household_id for w, _n in rows if w.household_id]
+        recips = await self._recipients_out(
+            await self._repo.recipients([w.id for w, _n in rows]), viewer
         )
+        owners = await self._repo.user_names(list({w.owner_id for w, _n in rows}), self._cid)
         out = []
         for w, n in rows:
-            hh = names.get(w.household_id) if w.household_id else None
+            rs = recips.get(w.id, [])
+            access = Access(
+                is_owner=w.owner_id == viewer.id,
+                is_recipient=any(r.kind == "user" and r.ref_id == viewer.id for r in rs),
+            )
             out.append(
                 WishlistOut(
                     id=w.id,
                     owner_id=w.owner_id,
-                    title=w.title,
-                    occasion=w.occasion,
-                    occasion_date=w.occasion_date,
-                    note=w.note,
-                    visibility=w.visibility,
-                    household=HouseholdBrief(id=w.household_id, name=hh[0], kind=hh[1])
-                    if hh and w.household_id
-                    else None,
+                    owner_name=owners.get(w.owner_id, ""),
+                    **{f: getattr(w, f) for f in LIST_FIELDS},
+                    recipients=rs,
                     item_count=n,
-                    is_owner=w.owner_id == viewer.id,
+                    is_owner=access.is_owner,
+                    can_edit_items=access.can_edit_items,
+                    sees_claims=access.sees_claims(w),
                 )
             )
         return out
 
-    async def _visible(self, wishlist_id: uuid.UUID, viewer: User) -> Wishlist:
+    async def visible(self, wishlist_id: uuid.UUID, viewer: User) -> Wishlist:
+        """@brief A list the viewer may see, else 404."""
         row = await self._repo.get_visible(wishlist_id, viewer.id, self._cid)
         if row is None:
             raise NotFoundError(message=_("Wishlist not found"))
         return row
 
+    async def access(self, w: Wishlist, viewer: User) -> Access:
+        """@brief The viewer's rights on ``w``."""
+        return Access(
+            is_owner=w.owner_id == viewer.id,
+            is_recipient=await self._repo.is_recipient(w.id, viewer.id),
+        )
+
     async def _owned(self, wishlist_id: uuid.UUID, viewer: User) -> Wishlist:
-        row = await self._visible(wishlist_id, viewer)
+        row = await self.visible(wishlist_id, viewer)
         if row.owner_id != viewer.id:
-            raise AuthorizationError(message=_("Only the list's owner can change it"))
+            raise AuthorizationError(message=_("Only the list's creator can change it"))
         return row
 
-    async def _item(self, w: Wishlist, item_id: uuid.UUID, *, lock: bool = False) -> WishlistItem:
-        item = await self._repo.item(w.id, item_id, lock=lock)
-        if item is None:
-            raise NotFoundError(message=_("Item not found"))
-        return item
+    async def _clean_recipients(
+        self, items: list[RecipientIn], actor: User
+    ) -> list[dict[str, Any]]:
+        """@brief Validate recipients; "everyone" replaces all others."""
+        if any(r.kind == "everyone" for r in items):
+            return [{"kind": "everyone"}]
+        ids = {
+            k: [r.ref_id for r in items if r.kind == k and r.ref_id]
+            for k in ("user", "household", "subgroup")
+        }
+        users = await self._repo.user_names(ids["user"], self._cid)
+        homes = await self._repo.household_names(ids["household"], actor.id, self._cid)
+        groups = await self._repo.my_group_ids(actor.id, ids["subgroup"])
+        seen: set[tuple[str, Any]] = set()
+        out: list[dict[str, Any]] = []
+        for r in items:
+            ok = {
+                "user": r.ref_id in users,
+                "household": r.ref_id in homes,
+                "subgroup": r.ref_id in groups,
+                "name": True,
+            }[r.kind]
+            if not ok:
+                raise NotFoundError(message=_("One of the recipients wasn't found"))
+            key = (r.kind, r.ref_id or (r.name or "").lower())
+            if key not in seen:
+                seen.add(key)
+                out.append(
+                    {
+                        "kind": r.kind,
+                        "ref_id": r.ref_id,
+                        "name": r.name if r.kind == "name" else None,
+                    }
+                )
+        return out
 
     # -- reads -----------------------------------------------------------------
 
     async def list(
         self,
         viewer: User,
-        owner_id: uuid.UUID | None = None,
+        person_id: uuid.UUID | None = None,
         household_id: uuid.UUID | None = None,
+        owner_id: uuid.UUID | None = None,
     ) -> list[WishlistOut]:
-        """@brief Wishlists the viewer may see, optionally one person's or pet's."""
+        """@brief Lists the viewer may see; filter by person, household member or creator."""
         rows = await self._repo.visible(
-            viewer.id, self._cid, owner_id=owner_id, household_id=household_id
+            viewer.id, self._cid, person_id=person_id, household_id=household_id, owner_id=owner_id
         )
         return await self._summaries(rows, viewer)
 
     async def get(self, wishlist_id: uuid.UUID, viewer: User) -> WishlistDetail:
-        """@brief One wishlist with items; claim counts hidden from the owner."""
-        w = await self._visible(wishlist_id, viewer)
-        items = await self._repo.items(w.id)
-        owner = w.owner_id == viewer.id
-        totals = {} if owner else await self._repo.claim_totals([i.id for i in items], viewer.id)
+        """@brief A list with items; claims only for viewers allowed to see them."""
+        w = await self.visible(wishlist_id, viewer)
+        items = await self._items.items(w.id)
         (summary,) = await self._summaries([(w, len(items))], viewer)
+        claims = await self._items.claims([i.id for i in items])
+        previews = await self._items.previews([i.preview_id for i in items if i.preview_id])
+        views, mine = build_items(items, claims, previews, viewer.id, summary.sees_claims)
         return WishlistDetail(
             **summary.model_dump(),
-            items=[
-                ItemOut(
-                    id=i.id,
-                    name=i.name,
-                    url=i.url,
-                    price=i.price,
-                    notes=i.notes,
-                    qty=i.qty,
-                    claimed=None if owner else totals.get(i.id, (0, 0))[0],
-                    mine=None if owner else totals.get(i.id, (0, 0))[1],
-                )
-                for i in items
-            ],
+            items=views,
+            planned_cents=planned_cents(items) if summary.can_edit_items else None,
+            my_total_cents=mine,
         )
 
-    # -- owner writes ------------------------------------------------------------
+    # -- writes ----------------------------------------------------------------
 
     async def create(self, body: WishlistCreate, owner: User) -> WishlistDetail:
-        """@brief New list; a household list must be for someone you manage."""
-        if body.household_id and not await self._repo.owned_household(
-            body.household_id, owner.id, self._cid
-        ):
-            raise NotFoundError(message=_("Household member not found"))
+        """@brief New list; with no recipients it's for the creator."""
+        recipients = await self._clean_recipients(
+            body.recipients or [RecipientIn(kind="user", ref_id=owner.id)], owner
+        )
         if len(await self._repo.visible(owner.id, self._cid, owner_id=owner.id)) >= MAX_LISTS:
             raise ValidationError(message=_("You have reached the wishlist limit"))
-        w = await self._repo.create(community_id=self._cid, owner_id=owner.id, **body.model_dump())
+        values = body.model_dump(exclude={"recipients"}, exclude_none=True)
+        values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
+        w = await self._repo.create(community_id=self._cid, owner_id=owner.id, **values)
+        await self._repo.replace_recipients(w, recipients)
         return await self.get(w.id, owner)
 
     async def update(
         self, wishlist_id: uuid.UUID, body: WishlistUpdate, owner: User
     ) -> WishlistDetail:
-        """@brief Edit title, occasion, date, note or visibility."""
+        """@brief Edit list settings and recipients (creator only)."""
         w = await self._owned(wishlist_id, owner)
-        values: dict[str, Any] = body.model_dump(exclude_unset=True)
-        if values.get("title") is None:
-            values.pop("title", None)
+        values: dict[str, Any] = body.model_dump(exclude_unset=True, exclude={"recipients"})
+        for k in ("title", "occasion", "visibility", "currency", "hide_claims"):
+            if values.get(k) is None:
+                values.pop(k, None)
+        if "registry_links" in values:
+            values["registry_links"] = [r.model_dump() for r in body.registry_links or []]
         if values:
             await self._repo.update(w, values)
+        if body.recipients is not None:
+            await self._repo.replace_recipients(
+                w, await self._clean_recipients(body.recipients, owner)
+            )
         return await self.get(w.id, owner)
 
     async def delete(self, wishlist_id: uuid.UUID, owner: User) -> None:
-        """@brief Remove a list."""
+        """@brief Remove a list (creator only)."""
         await self._repo.soft_delete(await self._owned(wishlist_id, owner))
-
-    async def add_item(self, wishlist_id: uuid.UUID, body: ItemIn, owner: User) -> WishlistDetail:
-        """@brief Add a wish."""
-        w = await self._owned(wishlist_id, owner)
-        if len(await self._repo.items(w.id)) >= MAX_ITEMS:
-            raise ValidationError(message=_("This list is full"))
-        await self._repo.add_item(community_id=self._cid, wishlist_id=w.id, **body.model_dump())
-        return await self.get(w.id, owner)
-
-    async def update_item(
-        self, wishlist_id: uuid.UUID, item_id: uuid.UUID, body: ItemUpdate, owner: User
-    ) -> WishlistDetail:
-        """@brief Edit a wish."""
-        w = await self._owned(wishlist_id, owner)
-        values = body.model_dump(exclude_unset=True)
-        for k in ("name", "qty"):
-            if values.get(k) is None:
-                values.pop(k, None)
-        await self._repo.update(await self._item(w, item_id), values)
-        return await self.get(w.id, owner)
-
-    async def delete_item(self, wishlist_id: uuid.UUID, item_id: uuid.UUID, owner: User) -> None:
-        """@brief Remove a wish."""
-        w = await self._owned(wishlist_id, owner)
-        await self._repo.soft_delete(await self._item(w, item_id))
-
-    # -- gift-giver writes -------------------------------------------------------
-
-    async def claim(
-        self, wishlist_id: uuid.UUID, item_id: uuid.UUID, qty: int, viewer: User
-    ) -> WishlistDetail:
-        """@brief Say you will give ``qty`` of an item (replaces your earlier claim)."""
-        w = await self._visible(wishlist_id, viewer)
-        if w.owner_id == viewer.id:
-            raise ValidationError(message=_("You can't claim gifts on your own list"))
-        item = await self._item(w, item_id, lock=True)
-        total, mine = (await self._repo.claim_totals([item.id], viewer.id)).get(item.id, (0, 0))
-        left = item.qty - (total - mine)
-        if qty > left:
-            raise ValidationError(
-                message=_("Only %(n)s left to claim") % {"n": max(left, 0)},
-                details={"remaining": max(left, 0)},
-            )
-        await self._repo.set_claim(item, viewer.id, qty, self._cid)
-        return await self.get(w.id, viewer)
-
-    async def release(
-        self, wishlist_id: uuid.UUID, item_id: uuid.UUID, viewer: User
-    ) -> WishlistDetail:
-        """@brief Take back your claim."""
-        w = await self._visible(wishlist_id, viewer)
-        await self._repo.release((await self._item(w, item_id)).id, viewer.id)
-        return await self.get(w.id, viewer)

@@ -1,15 +1,17 @@
 """
 @file wishlist.py
-@brief Wishlists (gift lists) for a member or one of their household
-       members/pets, their items and the claims gift-givers make. Claims are
-       never shown to the list's owner (keeps the surprise).
+@brief Wishlists (gift and event lists) for anyone: members, household
+       members/pets, groups, typed names or everyone; their items (gifts or
+       cash funds) and the claims givers make. With ``hide_claims`` the owner
+       and member recipients never see claims (keeps the surprise).
 """
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -45,12 +47,20 @@ class Wishlist(Base):
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    household_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("household_members.id", ondelete="CASCADE")
-    )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     occasion: Mapped[str] = mapped_column(Text, nullable=False, server_default="custom")
-    occasion_date: Mapped[date | None] = mapped_column(Date)
+    occasion_label: Mapped[str | None] = mapped_column(Text)
+    event_date: Mapped[date | None] = mapped_column(Date)
+    due_by: Mapped[date | None] = mapped_column(Date)
+    currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="USD")
+    budget_min_cents: Mapped[int | None] = mapped_column(Integer)
+    budget_max_cents: Mapped[int | None] = mapped_column(Integer)
+    event_budget_cents: Mapped[int | None] = mapped_column(Integer)
+    giver_cap_cents: Mapped[int | None] = mapped_column(Integer)
+    hide_claims: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    registry_links: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
+    )
     note: Mapped[str | None] = mapped_column(Text)
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="groups")
     created_at: Mapped[datetime] = _created()
@@ -70,9 +80,14 @@ class WishlistItem(Base):
     wishlist_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("wishlists.id", ondelete="CASCADE"), nullable=False
     )
+    kind: Mapped[str] = mapped_column(Text, nullable=False, server_default="gift")
     name: Mapped[str] = mapped_column(Text, nullable=False)
     url: Mapped[str | None] = mapped_column(Text)
-    price: Mapped[str | None] = mapped_column(Text)
+    price_cents: Mapped[int | None] = mapped_column(Integer)
+    goal_cents: Mapped[int | None] = mapped_column(Integer)
+    preview_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("link_previews.id", ondelete="SET NULL")
+    )
     notes: Mapped[str | None] = mapped_column(Text)
     qty: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     position: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
@@ -94,4 +109,20 @@ class WishlistClaim(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     qty: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    amount_cents: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = _created()
+
+
+class WishlistRecipient(Base):
+    """@brief Who a wishlist is for: user, household, subgroup, a typed name, or everyone."""
+
+    __tablename__ = "wishlist_recipients"
+
+    id: Mapped[uuid.UUID] = _id()
+    community_id: Mapped[uuid.UUID] = _community()
+    wishlist_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("wishlists.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    ref_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    name: Mapped[str | None] = mapped_column(Text)

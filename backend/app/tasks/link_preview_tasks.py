@@ -14,6 +14,7 @@ import structlog
 
 from app.db.session import async_session_factory
 from app.repositories.link_preview_repo import LinkPreviewRepository
+from app.repositories.wishlist_item_repo import WishlistItemRepository
 from app.services.link_preview_service import (
     detect_video_provider,
     is_safe_url,
@@ -28,6 +29,7 @@ async def _scrape_link_preview_async(
     url: str,
     post_id: uuid.UUID | None,
     message_id: uuid.UUID | None,
+    wishlist_item_id: uuid.UUID | None = None,
 ) -> dict[str, str | int | bool]:
     """
     @brief Async implementation: scrape URL, store preview, link to post/message.
@@ -67,6 +69,8 @@ async def _scrape_link_preview_async(
             position += 1
         if message_id is not None:
             await repo.create_message_link(message_id, preview.id, position)
+        if wishlist_item_id is not None:
+            await WishlistItemRepository(session).set_preview(wishlist_item_id, preview.id)
 
         await session.commit()
 
@@ -91,6 +95,7 @@ def scrape_link_preview(
     url: str,
     post_id: str | None = None,
     message_id: str | None = None,
+    wishlist_item_id: str | None = None,
 ) -> dict[str, str | int | bool]:
     """
     @brief Scrape a URL for OG metadata and store the link preview.
@@ -121,7 +126,8 @@ def scrape_link_preview(
             return {"status": "error", "reason": "invalid_message_id"}
 
     try:
-        return asyncio.run(_scrape_link_preview_async(url, pid, mid))
+        wid = uuid.UUID(wishlist_item_id) if wishlist_item_id else None
+        return asyncio.run(_scrape_link_preview_async(url, pid, mid, wid))
     except Exception as exc:
         logger.error("scrape_link_preview_failed", url=url, error=str(exc))
         raise

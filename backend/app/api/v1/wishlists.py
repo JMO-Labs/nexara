@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
+from app.repositories.wishlist_item_repo import WishlistItemRepository
 from app.repositories.wishlist_repo import WishlistRepository
 from app.schemas.common import MessageResponse
 from app.schemas.wishlist import (
@@ -24,6 +25,7 @@ from app.schemas.wishlist import (
     WishlistOut,
     WishlistUpdate,
 )
+from app.services.wishlist_gift_service import WishlistGiftService
 from app.services.wishlist_service import WishlistService
 
 router = APIRouter(prefix="/wishlists", tags=["wishlists"])
@@ -33,18 +35,28 @@ def _service(
     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ) -> WishlistService:
     """@brief WishlistService bound to the request session."""
-    return WishlistService(WishlistRepository(db), user.community_id)
+    return WishlistService(WishlistRepository(db), WishlistItemRepository(db), user.community_id)
+
+
+def _gifts(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    lists: WishlistService = Depends(_service),
+) -> WishlistGiftService:
+    """@brief WishlistGiftService bound to the request session."""
+    return WishlistGiftService(lists, WishlistItemRepository(db), user.community_id)
 
 
 @router.get("", response_model=list[WishlistOut])
 async def list_wishlists(
-    owner_id: uuid.UUID | None = Query(None),
+    person_id: uuid.UUID | None = Query(None),
     household_id: uuid.UUID | None = Query(None),
+    owner_id: uuid.UUID | None = Query(None),
     user: User = Depends(get_current_user),
     svc: WishlistService = Depends(_service),
 ) -> list[WishlistOut]:
-    """@brief Wishlists you can see; filter by person or household member."""
-    return await svc.list(user, owner_id, household_id)
+    """@brief Wishlists you can see; filter by person (by or for), household member or creator."""
+    return await svc.list(user, person_id, household_id, owner_id)
 
 
 @router.post("", response_model=WishlistDetail, status_code=201)
@@ -94,9 +106,9 @@ async def add_item(
     wishlist_id: uuid.UUID,
     body: ItemIn,
     user: User = Depends(get_current_user),
-    svc: WishlistService = Depends(_service),
+    svc: WishlistGiftService = Depends(_gifts),
 ) -> WishlistDetail:
-    """@brief Add a wish (owner)."""
+    """@brief Add a gift or cash fund (creator or member recipients)."""
     return await svc.add_item(wishlist_id, body, user)
 
 
@@ -106,9 +118,9 @@ async def update_item(
     item_id: uuid.UUID,
     body: ItemUpdate,
     user: User = Depends(get_current_user),
-    svc: WishlistService = Depends(_service),
+    svc: WishlistGiftService = Depends(_gifts),
 ) -> WishlistDetail:
-    """@brief Edit a wish (owner)."""
+    """@brief Edit a wish (creator or member recipients)."""
     return await svc.update_item(wishlist_id, item_id, body, user)
 
 
@@ -117,9 +129,9 @@ async def delete_item(
     wishlist_id: uuid.UUID,
     item_id: uuid.UUID,
     user: User = Depends(get_current_user),
-    svc: WishlistService = Depends(_service),
+    svc: WishlistGiftService = Depends(_gifts),
 ) -> MessageResponse:
-    """@brief Remove a wish (owner)."""
+    """@brief Remove a wish (creator or member recipients)."""
     await svc.delete_item(wishlist_id, item_id, user)
     return MessageResponse(message="Item removed")
 
@@ -130,10 +142,10 @@ async def claim_item(
     item_id: uuid.UUID,
     body: ClaimIn,
     user: User = Depends(get_current_user),
-    svc: WishlistService = Depends(_service),
+    svc: WishlistGiftService = Depends(_gifts),
 ) -> WishlistDetail:
-    """@brief Say you'll give this (not shown to the list's owner)."""
-    return await svc.claim(wishlist_id, item_id, body.qty, user)
+    """@brief Claim a gift or pledge to a fund (hidden from the list's people on surprise lists)."""
+    return await svc.claim(wishlist_id, item_id, body, user)
 
 
 @router.delete("/{wishlist_id}/items/{item_id}/claim", response_model=WishlistDetail)
@@ -141,7 +153,7 @@ async def release_item(
     wishlist_id: uuid.UUID,
     item_id: uuid.UUID,
     user: User = Depends(get_current_user),
-    svc: WishlistService = Depends(_service),
+    svc: WishlistGiftService = Depends(_gifts),
 ) -> WishlistDetail:
     """@brief Take back your claim."""
     return await svc.release(wishlist_id, item_id, user)
