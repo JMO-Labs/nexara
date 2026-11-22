@@ -97,10 +97,16 @@ class DailyQuestionService:
         """@brief Group admins may create subgroup-scoped daily_question prompts."""
         if user.role in ("admin", "owner"):
             return True
+        # Group admins get a locked-down shape: daily, group-only, no
+        # member broadcast, no event link, short-lived posts.
         return bool(
             data.prompt_type == "daily_question"
             and data.scope == "subgroup"
             and data.subgroup_id is not None
+            and data.frequency_type == "daily"
+            and not data.notify_members
+            and data.linked_event_id is None
+            and data.active_days <= 2
             and await self._repo.is_group_admin(self._community_id, data.subgroup_id, user.id)
         )
 

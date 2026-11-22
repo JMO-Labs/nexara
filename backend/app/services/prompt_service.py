@@ -161,7 +161,9 @@ class PromptService:
             existing = await self._repo.get_post_for_today(prompt.id, today)
             if existing is not None:
                 continue
-            if active >= MAX_PINNED_PROMPTS:
+            group = prompt.scope == "subgroup" and prompt.subgroup_id is not None
+            # Group prompts post only to their group and don't use the community pin budget.
+            if not group and active >= MAX_PINNED_PROMPTS:
                 logger.warning(
                     "prompt_skipped_max_pinned",
                     prompt_id=str(prompt.id),
@@ -176,6 +178,8 @@ class PromptService:
                 author_id=prompt.created_by,
                 content=f"**{prompt.title}**\n\n{prompt.body}",
                 is_pinned=True,
+                visibility="subgroup" if group else "community",
+                subgroup_id=prompt.subgroup_id if group else None,
             )
             post = await self._post_repo.create(post)
 
@@ -188,7 +192,7 @@ class PromptService:
                 expires_at=expires_at,
             )
             await self._repo.create_prompt_post(tracker)
-            active += 1
+            active += 0 if group else 1
             fired += 1
 
             if prompt.notify_members and self._notifications:

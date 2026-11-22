@@ -184,6 +184,28 @@ class TestFireDuePrompts:
         prompt_repo.create_prompt_post.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_group_prompt_posts_to_group_only(
+        self,
+        service: PromptService,
+        prompt_repo: AsyncMock,
+        post_repo: AsyncMock,
+    ) -> None:
+        today = date(2026, 4, 25)
+        p = _make_prompt(frequency_type="weekly", trigger_weekday=today.weekday())
+        p.scope = "subgroup"
+        p.subgroup_id = uuid.uuid4()
+        prompt_repo.list_enabled.return_value = [p]
+        prompt_repo.count_active_pinned.return_value = 99  # community budget full
+        prompt_repo.get_post_for_today.return_value = None
+        prompt_repo.create_prompt_post.side_effect = lambda pp: pp
+        post_repo.create.side_effect = lambda post: post
+
+        assert await service.fire_due_prompts(today) == 1
+        post = post_repo.create.await_args.args[0]
+        assert post.visibility == "subgroup"
+        assert post.subgroup_id == p.subgroup_id
+
+    @pytest.mark.asyncio
     async def test_disabled_does_not_fire(
         self,
         service: PromptService,

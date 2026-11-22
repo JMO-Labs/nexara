@@ -52,10 +52,12 @@ class PromptRepository(BaseRepository[Prompt]):
         stmt = (
             select(func.count())
             .select_from(PromptPost)
+            .join(Prompt, Prompt.id == PromptPost.prompt_id)
             .where(
                 PromptPost.community_id == community_id,
                 PromptPost.is_finalised.is_(False),
                 PromptPost.expires_at > now,
+                Prompt.scope != "subgroup",
             )
         )
         result = await self._session.execute(stmt)

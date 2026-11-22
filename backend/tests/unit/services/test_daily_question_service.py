@@ -144,12 +144,41 @@ class TestSuggest:
         assert exc.value.status_code == 404
 
 
+def _group_data(**kw: object) -> MagicMock:
+    base: dict[str, object] = {
+        "prompt_type": "daily_question",
+        "scope": "subgroup",
+        "subgroup_id": uuid.uuid4(),
+        "frequency_type": "daily",
+        "notify_members": False,
+        "linked_event_id": None,
+        "active_days": 1,
+    }
+    base.update(kw)
+    return MagicMock(**base)
+
+
 class TestCanCreate:
     async def test_group_admin_may_create_group_daily(self) -> None:
         svc, repo = _svc()
         repo.is_group_admin.return_value = True
-        data = MagicMock(prompt_type="daily_question", scope="subgroup", subgroup_id=uuid.uuid4())
+        data = _group_data()
         assert await svc.can_create(MagicMock(role="member", id=uuid.uuid4()), data)
+
+    @pytest.mark.parametrize(
+        "override",
+        [
+            {"notify_members": True},
+            {"linked_event_id": uuid.uuid4()},
+            {"frequency_type": "weekly"},
+            {"active_days": 30},
+        ],
+    )
+    async def test_group_admin_locked_down(self, override: dict[str, object]) -> None:
+        svc, repo = _svc()
+        repo.is_group_admin.return_value = True
+        data = _group_data(**override)
+        assert not await svc.can_create(MagicMock(role="member", id=uuid.uuid4()), data)
 
     async def test_member_cannot_create_standard(self) -> None:
         svc, repo = _svc()
