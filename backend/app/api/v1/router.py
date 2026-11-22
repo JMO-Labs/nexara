@@ -54,6 +54,7 @@ from app.api.v1.tags import router as tags_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
 from app.api.v1.weather import router as weather_router
+from app.api.v1.wishlists import router as wishlists_router
 from app.api.v1.ws import router as ws_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -84,6 +85,7 @@ api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(users_directory_router)
 # Before users_router so /users/{id}/tagged resolves here.
 api_v1_router.include_router(tags_router)
+api_v1_router.include_router(wishlists_router)
 api_v1_router.include_router(household_router)
 api_v1_router.include_router(weather_router)
 api_v1_router.include_router(users_router)

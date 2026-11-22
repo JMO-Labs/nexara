@@ -61,3 +61,4 @@ from app.models.user_oauth_link import UserOAuthLink  # noqa: F401
 from app.models.user_settings import UserSettings  # noqa: F401
 from app.models.weather import WeatherPlace  # noqa: F401
 from app.models.webhook import WebhookSubscription  # noqa: F401
+from app.models.wishlist import Wishlist, WishlistClaim, WishlistItem  # noqa: F401
