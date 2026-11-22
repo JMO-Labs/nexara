@@ -1,6 +1,7 @@
 """
 @file tests/unit/migrations/test_branding_defaults_migration.py
-@brief Branding glass defaults migration chains after 0032; model and schema defaults match.
+@brief Branding default migrations chain to head; model and schema defaults match
+       the current (Aegean, 0040) palette.
 """
 
 from pathlib import Path
@@ -15,13 +16,13 @@ BACKEND = Path(__file__).resolve().parents[3]
 REV = "0033_branding_glass_defaults"
 
 NEW_DEFAULTS = {
-    "color_primary": "#10141A",
-    "color_primary_dark": "#E9ECF2",
-    "color_accent": "#3B5E9E",
-    "color_surface_light": "#F5F6F9",
-    "color_surface_dark": "#1A202A",
-    "color_text_light": "#10141A",
-    "color_text_dark": "#E9ECF2",
+    "color_primary": "#24323D",
+    "color_primary_dark": "#F1EBE4",
+    "color_accent": "#2F5873",
+    "color_surface_light": "#FBF9F6",
+    "color_surface_dark": "#1C2834",
+    "color_text_light": "#24323D",
+    "color_text_dark": "#F1EBE4",
     "font_family": "Outfit",
 }
 
@@ -37,6 +38,19 @@ def test_migration_parent_and_head() -> None:
     heads = script.get_heads()
     assert len(heads) == 1
     assert REV in {r.revision for r in script.iterate_revisions(heads[0], "base")}
+
+
+def test_aegean_defaults_migration_is_head_chain() -> None:
+    """@brief 0040 revises 0039 and lies on the head's chain."""
+    cfg = Config(str(BACKEND / "alembic.ini"))
+    cfg.set_main_option("script_location", str(BACKEND / "alembic"))
+    script = ScriptDirectory.from_config(cfg)
+    rev = script.get_revision("0040_aegean_branding_defaults")
+    assert rev is not None and rev.down_revision == "0039_group_tags"
+    heads = script.get_heads()
+    assert "0040_aegean_branding_defaults" in {
+        r.revision for r in script.iterate_revisions(heads[0], "base")
+    }
 
 
 def test_model_server_defaults_are_new_palette() -> None:

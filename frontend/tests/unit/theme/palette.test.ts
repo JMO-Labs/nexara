@@ -26,9 +26,9 @@ test.each(["light", "dark"] as const)("%s palette meets AA", (mode) => {
 });
 
 test("glass bento palette values", () => {
-  expect(palette.light.bg).toBe("#E4E4E4");
-  expect(palette.dark.bg).toBe("#0D1117");
-  expect(palette.light.blue).toBe("#83A2DB");
+  expect(palette.light.bg).toBe("#F6F1EB");
+  expect(palette.dark.bg).toBe("#111A22");
+  expect(palette.light.blue).toBe("#A9BCC4");
   expect(palette.dark.ok).toBe("#5CC08A");
 });
 

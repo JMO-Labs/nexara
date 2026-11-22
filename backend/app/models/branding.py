@@ -65,13 +65,13 @@ class CommunityBranding(Base):
         UUID(as_uuid=True),
         ForeignKey("media.id", ondelete="SET NULL"),
     )
-    color_primary: Mapped[str] = mapped_column(Text, nullable=False, server_default="#10141A")
-    color_primary_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#E9ECF2")
-    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#3B5E9E")
-    color_surface_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#F5F6F9")
-    color_surface_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#1A202A")
-    color_text_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#10141A")
-    color_text_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#E9ECF2")
+    color_primary: Mapped[str] = mapped_column(Text, nullable=False, server_default="#24323D")
+    color_primary_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#F1EBE4")
+    color_accent: Mapped[str] = mapped_column(Text, nullable=False, server_default="#2F5873")
+    color_surface_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#FBF9F6")
+    color_surface_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#1C2834")
+    color_text_light: Mapped[str] = mapped_column(Text, nullable=False, server_default="#24323D")
+    color_text_dark: Mapped[str] = mapped_column(Text, nullable=False, server_default="#F1EBE4")
     font_family: Mapped[str] = mapped_column(Text, nullable=False, server_default="Outfit")
     font_family_mono: Mapped[str] = mapped_column(
         Text,

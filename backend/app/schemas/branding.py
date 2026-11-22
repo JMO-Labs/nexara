@@ -53,11 +53,11 @@ class BrandingResponse(BaseModel):
     logo_light_url: str | None = None
     logo_dark_url: str | None = None
     # Full palette
-    color_accent: str = "#3B5E9E"
-    color_surface_light: str = "#F5F6F9"
-    color_surface_dark: str = "#1A202A"
-    color_text_light: str = "#10141A"
-    color_text_dark: str = "#E9ECF2"
+    color_accent: str = "#2F5873"
+    color_surface_light: str = "#FBF9F6"
+    color_surface_dark: str = "#1C2834"
+    color_text_light: str = "#24323D"
+    color_text_dark: str = "#F1EBE4"
     font_family: str = "Outfit"
     font_family_mono: str = "JetBrains Mono"
     email_logo_media_id: UUID | None = None

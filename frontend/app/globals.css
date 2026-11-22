@@ -7,30 +7,34 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --nx-bg: #e4e4e4;
-  --nx-surface: #f5f6f9;
-  --nx-surface-strong: #10141a;
-  --nx-ink: #10141a;
-  --nx-scrim: rgba(16, 20, 26, 0.55);
+  --nx-bg: #f6f1eb;
+  --nx-surface: #fbf9f6;
+  --nx-surface-strong: #24323d;
+  --nx-ink: #24323d;
+  --nx-scrim: rgba(36, 50, 61, 0.55);
   --nx-on-scrim: #ffffff;
-  --nx-accent: #3b5e9e;
-  --nx-sun: #e9c27a;
-  --nx-leaf: #45a29c;
-  --nx-muted: #4c5361;
-  --nx-nav-muted: #4c5361;
+  --nx-accent: #2f5873;
+  --nx-sun: #c9973f;
+  --nx-leaf: #6b7d4a;
+  --nx-muted: #55636d;
+  --nx-nav-muted: #55636d;
   --nx-danger: #a94242;
   --nx-danger-fg: #ffffff;
-  --nx-blue: #83a2db;
-  --nx-red: #ce6969;
+  --nx-blue: #a9bcc4;
+  --nx-red: #a8505f;
   --nx-ok: #3e9e68;
   --nx-glass: rgba(255, 255, 255, 0.55);
-  --nx-glass-edge: rgba(255, 255, 255, 0.72);
+  --nx-glass-edge: rgba(255, 255, 255, 0.78);
   --nx-glass-hi: rgba(255, 255, 255, 0.9);
-  --nx-glass-solid: #f1f3f6;
+  --nx-glass-solid: #f7f2ec;
   --nx-item: rgba(255, 255, 255, 0.58);
   --nx-item-edge: rgba(255, 255, 255, 0.85);
-  --nx-pattern: rgba(16, 20, 26, 0.09);
-  --nx-bubble: #e6e9ef;
+  --nx-pattern: rgba(36, 50, 61, 0.08);
+  --nx-bubble: #e7edef;
+  /* Backdrop glows: sea glass, blush, bougainvillea (Aegean palette). */
+  --nx-glow-a: #a9bcc4;
+  --nx-glow-b: #e9b9b0;
+  --nx-glow-c: #f3ddd3;
 
   --background: var(--nx-bg);
   --foreground: var(--nx-ink);
@@ -52,30 +56,33 @@
 }
 
 .dark {
-  --nx-bg: #0d1117;
-  --nx-surface: #1a202a;
-  --nx-surface-strong: #e9ecf2;
-  --nx-ink: #e9ecf2;
-  --nx-scrim: rgba(16, 20, 26, 0.55);
+  --nx-bg: #111a22;
+  --nx-surface: #1c2834;
+  --nx-surface-strong: #f1ebe4;
+  --nx-ink: #f1ebe4;
+  --nx-scrim: rgba(10, 16, 22, 0.6);
   --nx-on-scrim: #ffffff;
-  --nx-accent: #a9c1ee;
-  --nx-sun: #e4bc72;
-  --nx-leaf: #5bb8b1;
-  --nx-muted: #a9b0bd;
-  --nx-nav-muted: #a9b0bd;
+  --nx-accent: #a9c9db;
+  --nx-sun: #e6c07a;
+  --nx-leaf: #b4c58e;
+  --nx-muted: #a9b5bd;
+  --nx-nav-muted: #a9b5bd;
   --nx-danger: #db7b7b;
-  --nx-danger-fg: #10141a;
-  --nx-blue: #8faee6;
-  --nx-red: #db7b7b;
+  --nx-danger-fg: #111a22;
+  --nx-blue: #8fb6cf;
+  --nx-red: #e7a3ae;
   --nx-ok: #5cc08a;
-  --nx-glass: rgba(22, 28, 40, 0.52);
+  --nx-glass: rgba(28, 40, 52, 0.55);
   --nx-glass-edge: rgba(255, 255, 255, 0.09);
   --nx-glass-hi: rgba(255, 255, 255, 0.12);
-  --nx-glass-solid: #1a202a;
+  --nx-glass-solid: #1c2834;
   --nx-item: rgba(255, 255, 255, 0.06);
   --nx-item-edge: rgba(255, 255, 255, 0.07);
-  --nx-pattern: rgba(233, 236, 242, 0.07);
-  --nx-bubble: rgba(255, 255, 255, 0.08);
+  --nx-pattern: rgba(241, 235, 228, 0.07);
+  --nx-bubble: rgba(169, 201, 219, 0.1);
+  --nx-glow-a: #2f5873;
+  --nx-glow-b: #7a4250;
+  --nx-glow-c: #24384a;
 }
 
 @theme inline {

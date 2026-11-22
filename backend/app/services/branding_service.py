@@ -76,11 +76,11 @@ def _row_to_response(row: CommunityBranding) -> BrandingResponse:
         color_primary_dark=row.color_primary_dark,
         logo_light_url=None,
         logo_dark_url=None,
-        color_accent=getattr(row, "color_accent", "#3B5E9E"),
-        color_surface_light=getattr(row, "color_surface_light", "#F5F6F9"),
-        color_surface_dark=getattr(row, "color_surface_dark", "#1A202A"),
-        color_text_light=getattr(row, "color_text_light", "#10141A"),
-        color_text_dark=getattr(row, "color_text_dark", "#E9ECF2"),
+        color_accent=getattr(row, "color_accent", "#2F5873"),
+        color_surface_light=getattr(row, "color_surface_light", "#FBF9F6"),
+        color_surface_dark=getattr(row, "color_surface_dark", "#1C2834"),
+        color_text_light=getattr(row, "color_text_light", "#24323D"),
+        color_text_dark=getattr(row, "color_text_dark", "#F1EBE4"),
         font_family=getattr(row, "font_family", "Outfit"),
         font_family_mono=getattr(row, "font_family_mono", "JetBrains Mono"),
         email_logo_media_id=getattr(row, "email_logo_media_id", None),
@@ -139,8 +139,8 @@ class BrandingService:
         if row is None:
             response = BrandingResponse(
                 community_name="Nexara",
-                color_primary="#10141A",
-                color_primary_dark="#E9ECF2",
+                color_primary="#24323D",
+                color_primary_dark="#F1EBE4",
             )
         else:
             response = _row_to_response(row)
@@ -290,8 +290,8 @@ class BrandingService:
         """
         name = getattr(branding, "community_name", "Nexara")
         short_name = name[:12] if len(name) > 12 else name
-        theme_color = getattr(branding, "color_primary", "#10141A")
-        bg_color = getattr(branding, "color_surface_light", "#F5F6F9")
+        theme_color = getattr(branding, "color_primary", "#24323D")
+        bg_color = getattr(branding, "color_surface_light", "#FBF9F6")
         start_url = f"{base_url.rstrip('/')}/" if base_url else "/"
 
         icons: list[dict[str, Any]] = []
