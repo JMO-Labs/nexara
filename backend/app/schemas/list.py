@@ -62,6 +62,15 @@ class ListItemCreate(BaseModel):
     values: dict[str, Any] = Field(default_factory=dict)
 
 
+class AssigneeOut(BaseModel):
+    """@brief Compact user reference for assignees and activity actors."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    display_name: str = ""
+    avatar_url: str | None = None
+
+
 class ListItemOut(BaseModel):
     """@brief List item response."""
 
@@ -76,6 +85,8 @@ class ListItemOut(BaseModel):
     lat: float | None = None
     lon: float | None = None
     signup_quantity_needed: int | None = None
+    assignee: AssigneeOut | None = None
+    assignment_status: str | None = None
 
 
 class SignupClaim(BaseModel):

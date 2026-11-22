@@ -33,6 +33,7 @@ class ListSignupService:
         field_registry: Any,
         event_bus: Any,
         notification_service: Any,
+        activity: Any | None = None,
     ) -> None:
         """
         @param repo_item ListItemRepository.
@@ -41,6 +42,7 @@ class ListSignupService:
         @param field_registry ListFieldRegistry.
         @param event_bus EventBus.
         @param notification_service NotificationService.
+        @param activity Optional ListActivityService (activity log).
         """
         self._items = repo_item
         self._signups = repo_signup
@@ -48,12 +50,19 @@ class ListSignupService:
         self._registry = field_registry
         self._bus = event_bus
         self._notify = notification_service
+        self._activity = activity
 
     async def _locked_item(self, item_id: uuid.UUID, session: AsyncSession) -> ListItem:
         item: ListItem | None = await self._items.lock_item_for_update(item_id, session)
         if item is None:
             raise NotFoundError("List item not found")
         return item
+
+    async def _log(self, item: ListItem, user_id: uuid.UUID, action: str) -> None:
+        if self._activity is not None:
+            await self._activity.record(
+                item.list_id, user_id, action, item.id, item_title(item.values)
+            )
 
     async def _emit(self, user_id: uuid.UUID, action: str, item: ListItem, qty: int) -> None:
         await self._bus.emit(
@@ -106,6 +115,7 @@ class ListSignupService:
         lst = await self._lists.get_by_id(item.list_id)
         await self._lists.increment_counters(item.list_id, {"signup_count": 1})
         await self._emit(user_id, "claimed", item, quantity)
+        await self._log(item, user_id, "signup_claimed")
         if lst is not None and lst.owner_id != user_id:
             claimer = await session.get(User, user_id)
             name = claimer.display_name if claimer is not None else ""
@@ -147,6 +157,7 @@ class ListSignupService:
         await session.flush()
         await self._lists.increment_counters(item.list_id, {"signup_count": -1})
         await self._emit(user_id, "released", item, qty)
+        await self._log(item, user_id, "signup_released")
 
     async def get_signups_for_item(self, item_id: uuid.UUID) -> list[ListItemSignup]:
         """@brief All claims on an item, oldest first."""

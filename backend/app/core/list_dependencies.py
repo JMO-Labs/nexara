@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import app.services.list_field_types  # noqa: F401  (registers builtin field types)
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, get_dispatcher
+from app.repositories.list_activity_repo import ListActivityRepository
+from app.repositories.list_assignment_repo import ListAssignmentRepository
 from app.repositories.list_completion_repo import ListCompletionRepository
 from app.repositories.list_item_repo import ListItemRepository
 from app.repositories.list_member_repo import ListMemberRepository
@@ -21,6 +23,8 @@ from app.repositories.list_signup_repo import ListSignupRepository
 from app.repositories.list_template_repo import ListTemplateRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.services.list_activity_service import ListActivityService
+from app.services.list_assignment_service import ListAssignmentService
 from app.services.list_completion_service import ListCompletionService
 from app.services.list_field_registry import ListFieldRegistry
 from app.services.list_items_service import ListItemService
@@ -42,6 +46,30 @@ def _notifier(db: AsyncSession, community_id: uuid.UUID) -> NotificationService:
         settings_repo=SettingsRepository(db),
         community_id=community_id,
         dispatcher=get_dispatcher(),
+    )
+
+
+def get_list_activity_service(
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(get_community_id),
+) -> ListActivityService:
+    """@brief Build ListActivityService."""
+    return ListActivityService(ListActivityRepository(db), ListRepository(db), community_id)
+
+
+def get_list_assignment_service(
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(get_community_id),
+) -> ListAssignmentService:
+    """@brief Build ListAssignmentService."""
+    return ListAssignmentService(
+        ListAssignmentRepository(db),
+        ListItemRepository(db),
+        ListRepository(db),
+        ListMemberRepository(db),
+        get_list_activity_service(db, community_id),
+        community_id,
+        _notifier(db, community_id),
     )
 
 
@@ -70,6 +98,7 @@ def get_list_item_service(
         ListRepository(db),
         ListFieldRegistry(),
         _notifier(db, community_id),
+        get_list_activity_service(db, community_id),
     )
 
 
@@ -86,6 +115,7 @@ def get_list_completion_service(
         event_bus,
         _notifier(db, community_id),
         community_id,
+        get_list_activity_service(db, community_id),
     )
 
 
@@ -101,6 +131,7 @@ def get_list_signup_service(
         ListFieldRegistry(),
         event_bus,
         _notifier(db, community_id),
+        get_list_activity_service(db, community_id),
     )
 
 

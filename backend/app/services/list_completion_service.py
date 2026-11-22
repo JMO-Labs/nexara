@@ -37,6 +37,7 @@ class ListCompletionService:
         event_bus: EventBus,
         notification_service: Any,
         community_id: uuid.UUID,
+        activity: Any | None = None,
     ) -> None:
         """@brief Wire repos, registry, event bus and notifier."""
         self._items = item_repo
@@ -46,6 +47,7 @@ class ListCompletionService:
         self._bus = event_bus
         self._notify = notification_service
         self._community_id = community_id
+        self._activity = activity
 
     def _get_completion_mode(self, schema: list[dict[str, Any]], field_key: str | None) -> str:
         """
@@ -110,6 +112,7 @@ class ListCompletionService:
         if not was_completed:
             await self._lists.increment_counters(lst.id, {"completed_count": 1})
         await self._emit("list.completed", lst, item, user_id, mode)
+        await self._log(lst, item, user_id, "completed")
         if lst.owner_id != user_id:
             await self._notify.notify(
                 lst.owner_id,
@@ -149,11 +152,18 @@ class ListCompletionService:
                 return item
             if await self._completions.count_for_item(item.id) > 0:
                 await self._emit("list.uncompleted", lst, item, user_id, mode)
+                await self._log(lst, item, user_id, "uncompleted")
                 return item
             await self._items.update(item, {"completed": False})
         await self._lists.increment_counters(lst.id, {"completed_count": -1})
         await self._emit("list.uncompleted", lst, item, user_id, mode)
+        await self._log(lst, item, user_id, "uncompleted")
         return item
+
+    async def _log(self, lst: List, item: ListItem, user_id: uuid.UUID, action: str) -> None:
+        """@brief Append an activity entry when a recorder is wired."""
+        if self._activity is not None:
+            await self._activity.record(lst.id, user_id, action, item.id, item_title(item.values))
 
     async def _emit(
         self, name: str, lst: List, item: ListItem, user_id: uuid.UUID, mode: str
