@@ -181,6 +181,7 @@ def test_hostile_page_parses_in_linear_time():
     import time
 
     page = '<script type="application/ld+json">' * 50_000 + "<meta content=" * 100_000
+    page += "</script>"  # one far close tag must not be rescanned per open tag
     t = time.perf_counter()
     assert extract_product(page).title is None
     assert time.perf_counter() - t < 2

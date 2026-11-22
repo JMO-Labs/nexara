@@ -19,6 +19,7 @@ from typing import Any
 _LD_OPEN = re.compile(
     r"<script[^>]{0,1000}?type=[\"']application/ld\+json[\"'][^>]{0,1000}>", re.IGNORECASE
 )
+_CLOSE = re.compile(r"</script", re.IGNORECASE)
 _META = re.compile(r"<meta\b[^>]{0,2000}>", re.IGNORECASE)
 _ATTR = re.compile(r"""([a-zA-Z:_-]+)\s*=\s*("([^"]*)"|'([^']*)')""")
 
@@ -51,12 +52,13 @@ def to_cents(value: Any) -> int | None:
 def _ld_blocks(page: str) -> list[str]:
     """@brief Bodies of ``application/ld+json`` script tags."""
     out: list[str] = []
-    lower = page.lower()
-    for m in _LD_OPEN.finditer(page):
-        end = lower.find("</script", m.end())
-        if end < 0:
+    pos = 0
+    while len(out) < 20 and (m := _LD_OPEN.search(page, pos)):
+        close = _CLOSE.search(page, m.end())
+        if close is None:
             break
-        out.append(page[m.end() : end])
+        out.append(page[m.end() : close.start()])
+        pos = close.end()  # resume past the close: each byte scanned once
     return out
 
 
