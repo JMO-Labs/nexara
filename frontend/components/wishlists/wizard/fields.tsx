@@ -57,7 +57,7 @@ export function MoneyInput({
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-4 text-xs text-muted"
+        className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-muted"
       >
         {currency}
       </span>
