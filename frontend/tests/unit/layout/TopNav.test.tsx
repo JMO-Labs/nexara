@@ -11,9 +11,6 @@ const state = vi.hoisted(() => ({
   path: "/app/events",
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.path }));
-vi.mock("@/hooks/useScrollDirection", () => ({
-  useScrollDirection: () => state.dir,
-}));
 vi.mock("framer-motion", async (orig) => ({
   ...(await orig<typeof import("framer-motion")>()),
   useReducedMotion: () => state.reduced,
@@ -48,8 +45,7 @@ describe("TopNav", () => {
     );
   });
 
-  it("keeps every item visible while scrolling", () => {
-    state.dir = "down";
+  it("keeps every item visible", () => {
     render(<TopNav />);
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Inbox" })).toBeInTheDocument();
