@@ -96,7 +96,7 @@ class TestBulkAndDelete:
         repo.mark_all_read.return_value = 2
         assert await svc.mark_all_read(USER_ID, category="gallery") == 2
         types = repo.mark_all_read.await_args.kwargs["types"]
-        assert set(types) == {"gallery_activity", "gallery_reminder"}
+        assert set(types) == {"album_reminder", "gallery_activity", "gallery_reminder"}
 
     async def test_clear_all_with_type_and_before(self) -> None:
         svc, repo, _, _ = _build()

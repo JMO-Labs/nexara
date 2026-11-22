@@ -26,6 +26,7 @@ celery_app = Celery(
     # Explicit so worker/beat register every core task (nothing else imports them).
     include=[
         "app.tasks.ai_tasks",
+        "app.tasks.album_tasks",
         "app.tasks.birthday_tasks",
         "app.tasks.capsule_tasks",
         "app.tasks.email_tasks",
@@ -182,9 +183,9 @@ celery_app.conf.update(
             "task": "app.tasks.retention_tasks.age_posts",
             "schedule": crontab(day_of_week="sat", hour="4", minute="30"),
         },
-        "gallery-post-event-reminders": {
-            "task": "app.tasks.gallery_tasks.gallery_post_event_reminders",
-            "schedule": crontab(hour="9", minute="0"),
+        "album-reminders": {
+            "task": "albums.remind",
+            "schedule": crontab(minute="5"),
         },
         "gallery-batch-notifications": {
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",

@@ -4,6 +4,7 @@
  * @brief Form modal for creating or editing an event. Pass `event` to switch
  *        into edit mode (prefills fields, calls updateEvent on submit).
  */
+import { useFeature } from "@/hooks/useFeature";
 import * as React from "react";
 import {
   Modal,
@@ -79,7 +80,8 @@ export function EventCreateModal({
     subgroup_id: null,
   });
   const [color, setColor] = React.useState<string | null>(null);
-  const [autoGallery, setAutoGallery] = React.useState(false);
+  const albums = useFeature("event_albums");
+  const [autoGallery, setAutoGallery] = React.useState(true);
   const [slots, setSlots] = React.useState<ContributionSlot[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const descRef = React.useRef<HTMLTextAreaElement | null>(null);
@@ -139,7 +141,7 @@ export function EventCreateModal({
         subgroup_id: defaultSubgroupId ?? null,
       });
       setColor(null);
-      setAutoGallery(false);
+      setAutoGallery(true);
       setSlots([]);
     }
   }, [open, event, defaultSubgroupId]);
@@ -176,7 +178,10 @@ export function EventCreateModal({
     };
     if (isEdit) await update.mutateAsync(body);
     else
-      await create.mutateAsync({ ...body, auto_create_gallery: autoGallery });
+      await create.mutateAsync({
+        ...body,
+        auto_create_gallery: albums && autoGallery,
+      });
     onClose();
   };
 
@@ -226,7 +231,7 @@ export function EventCreateModal({
           <ScopeSelect value={scope} onChange={setScope} subgroups={myGroups} />
         )}
         <ColorField value={color} onChange={setColor} />
-        {!isEdit && (
+        {!isEdit && albums && (
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -234,7 +239,7 @@ export function EventCreateModal({
               onChange={(e) => setAutoGallery(e.target.checked)}
               className="size-4 accent-[var(--accent)]"
             />
-            Create gallery for photos
+            Create a shared photo album
           </label>
         )}
         <ContributionSlotsField value={slots} onChange={setSlots} />

@@ -204,7 +204,7 @@ class TestCreateEvent:
         assert result.gallery_id == gid
 
     @pytest.mark.asyncio
-    async def test_no_gallery_by_default(self, service: EventService, repo: AsyncMock) -> None:
+    async def test_no_gallery_when_opted_out(self, service: EventService, repo: AsyncMock) -> None:
         def _fill(e: Event) -> Event:
             e.id = uuid.uuid4()
             e.created_at = datetime.now(UTC)
@@ -216,9 +216,18 @@ class TestCreateEvent:
             title="Picnic",
             starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
             ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+            auto_create_gallery=False,
         )
         result = await service.create_event(uuid.uuid4(), data)
         assert result.gallery_id is None
+
+    def test_auto_create_gallery_defaults_true(self) -> None:
+        data = EventCreate(
+            title="Picnic",
+            starts_at=datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            ends_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
+        )
+        assert data.auto_create_gallery is True
 
     @pytest.mark.asyncio
     async def test_invalid_rrule_rejected(self, service: EventService) -> None:

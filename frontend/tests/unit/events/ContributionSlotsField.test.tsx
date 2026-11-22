@@ -11,6 +11,7 @@ import type { ContributionSlot, EventItem } from "@/lib/api/events";
 
 const createMutate = vi.fn().mockResolvedValue({});
 const updateMutate = vi.fn().mockResolvedValue({});
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
 vi.mock("@/hooks/useEvents", () => ({
   useCreateEvent: () => ({ mutateAsync: createMutate, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync: updateMutate, isPending: false }),

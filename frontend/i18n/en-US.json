@@ -1014,6 +1014,9 @@
     "gallery_activity": {
       "label": "New photos"
     },
+    "album_reminder": {
+      "label": "Share your event photos"
+    },
     "gallery_reminder": {
       "label": "Add your photos"
     },
