@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/layout/TopNav.test.tsx
- * @brief Top pill nav: active state, compaction on scroll, reduced motion.
+ * @brief Top pill nav: active state; every item stays visible on scroll.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -48,26 +48,10 @@ describe("TopNav", () => {
     );
   });
 
-  it("compacts on scroll down and restores on scroll up", () => {
+  it("keeps every item visible while scrolling", () => {
     state.dir = "down";
-    const { rerender } = render(<TopNav />);
-    expect(screen.getByRole("navigation", { name: "Main" })).toHaveAttribute(
-      "data-compact",
-      "true",
-    );
-    state.dir = "up";
-    rerender(<TopNav />);
-    expect(
-      screen.getByRole("navigation", { name: "Main" }),
-    ).not.toHaveAttribute("data-compact");
-  });
-
-  it("never compacts with reduced motion", () => {
-    state.dir = "down";
-    state.reduced = true;
     render(<TopNav />);
-    expect(
-      screen.getByRole("navigation", { name: "Main" }),
-    ).not.toHaveAttribute("data-compact");
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Inbox" })).toBeInTheDocument();
   });
 });

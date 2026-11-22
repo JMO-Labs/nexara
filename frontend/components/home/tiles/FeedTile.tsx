@@ -86,7 +86,7 @@ export function FeedTile({ open, onToggle }: TileSlotProps) {
         />
       </div>
       {view === "kudos" ? (
-        <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
+        <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain">
           <KudosWall embedded />
         </div>
       ) : view === "prompts" ? (

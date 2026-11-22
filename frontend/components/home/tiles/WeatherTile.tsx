@@ -206,7 +206,7 @@ export function WeatherTile({ open, onToggle }: TileSlotProps) {
       onToggle={onToggle}
       className="md:[grid-area:weather] lg:min-h-0 lg:shrink"
     >
-      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
+      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain">
         <div
           className="flex items-center justify-end gap-1 text-xs"
           role="group"

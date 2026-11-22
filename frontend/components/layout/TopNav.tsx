@@ -7,7 +7,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { TOP_NAV, isItemActive } from "./navItems";
 
 const LINK =
@@ -20,20 +19,16 @@ const LINK =
 export function TopNav() {
   const pathname = usePathname();
   const reduced = useReducedMotion();
-  const dir = useScrollDirection(80);
-  const compact = dir === "down" && !reduced;
   return (
     <motion.nav
       layout={!reduced}
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
       aria-label="Main"
-      data-compact={compact ? "true" : undefined}
       className="glass flex items-center gap-0.5 rounded-full p-1"
     >
       {TOP_NAV.map((item) => {
         const { label, href } = item;
         const active = isItemActive(pathname, item);
-        if (compact && !active) return null;
         return (
           <Link
             key={href}
