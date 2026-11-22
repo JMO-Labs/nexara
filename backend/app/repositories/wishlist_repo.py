@@ -160,6 +160,24 @@ class WishlistRepository:
         row = (await self._session.execute(stmt)).first()
         return (row[0], row[1]) if row else None
 
+    async def ship_people(
+        self, community_id: uuid.UUID, viewer_id: uuid.UUID
+    ) -> list[tuple[User, UserSettings | None]]:
+        """@brief Live members (block-filtered) with privacy settings, by name."""
+        stmt = (
+            select(User, UserSettings)
+            .outerjoin(UserSettings, UserSettings.user_id == User.id)
+            .where(
+                User.community_id == community_id,
+                User.deleted_at.is_(None),
+                User.is_active.is_(True),
+                not_blocked(User.id, viewer_id),
+            )
+            .order_by(func.lower(User.display_name))
+            .limit(500)  # ponytail: family scale; search endpoint if communities grow
+        )
+        return [(u, st) for u, st in (await self._session.execute(stmt)).all()]
+
     async def ship_event(
         self, event_id: uuid.UUID, community_id: uuid.UUID, viewer_id: uuid.UUID
     ) -> Event | None:

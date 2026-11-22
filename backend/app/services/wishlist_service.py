@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from typing import Any
 
@@ -20,12 +21,13 @@ from app.repositories.wishlist_repo import WishlistRepository
 from app.schemas.wishlist import (
     RecipientIn,
     RecipientOut,
+    ShipPerson,
     WishlistCreate,
     WishlistDetail,
     WishlistOut,
     WishlistUpdate,
 )
-from app.services.wishlist_ship import check_ship_event, check_ship_user, ship_to
+from app.services.wishlist_ship import check_ship_event, check_ship_user, ship_people, ship_to
 from app.services.wishlist_view import Access, build_items, planned_cents
 
 MAX_LISTS = 50
@@ -252,6 +254,10 @@ class WishlistService:
         if body.recipients is not None:
             await self._repo.replace_recipients(w, recipients)
         return await self.get(w.id, owner)
+
+    async def ship_people(self, viewer: User) -> builtins.list[ShipPerson]:
+        """@brief Who gifts can ship to, and whether their address is usable."""
+        return await ship_people(self._repo, self._cid, viewer.id)
 
     async def _ship_values(self, values: dict[str, Any], owner: User) -> None:
         """@brief Validate a new ship-to and clear the other two kinds."""

@@ -20,6 +20,7 @@ from app.schemas.wishlist import (
     ClaimIn,
     ItemIn,
     ItemUpdate,
+    ShipPerson,
     WishlistCreate,
     WishlistDetail,
     WishlistOut,
@@ -67,6 +68,15 @@ async def create_wishlist(
 ) -> WishlistDetail:
     """@brief Start a wishlist."""
     return await svc.create(body, user)
+
+
+@router.get("/ship-people", response_model=list[ShipPerson])
+async def ship_people(
+    user: User = Depends(get_current_user),
+    svc: WishlistService = Depends(_service),
+) -> list[ShipPerson]:
+    """@brief Members for the ship-to picker, flagged when their address is usable."""
+    return await svc.ship_people(user)
 
 
 @router.get("/{wishlist_id}", response_model=WishlistDetail)

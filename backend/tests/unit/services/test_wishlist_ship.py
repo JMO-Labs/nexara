@@ -92,3 +92,18 @@ def test_text_and_person_are_exclusive():
     with pytest.raises(ValueError):
         WishlistUpdate(ship_to_user_id=uuid.uuid4(), ship_to_event_id=uuid.uuid4())
     assert WishlistUpdate(ship_to_text="  ").ship_to_text is None
+
+
+async def test_picker_flags_usable_addresses():
+    from app.services.wishlist_ship import ship_people
+
+    shared, _ = _person("community"), None
+    private = _person("private")
+    blank = _person("community")
+    blank[0].address = ""
+    me = _person(None, VIEWER)  # own address, even if private
+    repo = AsyncMock()
+    repo.ship_people.return_value = [shared, private, blank, me]
+    got = [p.available for p in await ship_people(repo, CID, VIEWER)]
+    assert got == [True, False, False, True]
+    repo.ship_people.assert_awaited_with(CID, VIEWER)

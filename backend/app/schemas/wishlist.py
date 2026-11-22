@@ -267,6 +267,14 @@ class ShipTo(BaseModel):
     address: str | None = None
 
 
+class ShipPerson(BaseModel):
+    """@brief A member for the ship-to picker; ``available`` = usable address."""
+
+    id: uuid.UUID
+    display_name: str
+    available: bool
+
+
 class WishlistOut(BaseModel):
     """@brief Wishlist summary (cards)."""
 

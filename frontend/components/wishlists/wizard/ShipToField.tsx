@@ -7,7 +7,8 @@
 import { CalendarDays, MapPin, PenLine, User } from "lucide-react";
 import { Textarea } from "@/components/ui";
 import { Segmented } from "@/components/ui/page";
-import { useMembersList } from "@/hooks/useMembersList";
+import { useQuery } from "@tanstack/react-query";
+import { listShipPeople } from "@/lib/api/wishlists";
 import { useUpcomingEvents } from "@/hooks/useEvents";
 import { useSession } from "@/stores/session";
 import { Field, selectCls } from "./fields";
@@ -22,15 +23,24 @@ export function ShipToField({
   set: (p: Partial<Draft>) => void;
 }) {
   const me = useSession((s) => s.user);
-  const { data: members = [] } = useMembersList();
+  const { data: members = [] } = useQuery({
+    queryKey: ["wishlists", "ship-people"],
+    queryFn: listShipPeople,
+    staleTime: 60_000,
+  });
   const { data: upcoming } = useUpcomingEvents(365);
   const events = upcoming?.items ?? [];
-  const people = [
-    ...(me ? [{ id: me.id, label: "Me" }] : []),
-    ...members
-      .filter((m) => m.id !== me?.id)
-      .map((m) => ({ id: m.id, label: m.display_name })),
-  ];
+  // Usable addresses first; the rest stay visible but can't be picked.
+  const people = [...members]
+    .map((m) => ({
+      ...m,
+      label: m.id === me?.id ? "Me" : m.display_name,
+      why:
+        m.id === me?.id
+          ? "add your address to your profile"
+          : "doesn't share their address",
+    }))
+    .sort((a, b) => Number(b.available) - Number(a.available));
   return (
     <section className="flex flex-col gap-3" aria-label="Shipping">
       <span className="text-sm font-medium">Ship gifts to</span>
@@ -48,7 +58,7 @@ export function ShipToField({
       {d.ship_mode === "user" && (
         <Field
           label="Person"
-          hint="Uses the address on their profile and follows it if they move. Works only if they share their address with the community."
+          hint="Uses the address on their profile and follows it if they move. Greyed-out people haven't shared their address with the community."
         >
           <select
             className={selectCls}
@@ -57,8 +67,12 @@ export function ShipToField({
           >
             <option value="">Choose someone</option>
             {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
+              <option
+                key={p.id}
+                value={p.id}
+                disabled={!p.available && p.id !== d.ship_to_user_id}
+              >
+                {p.available ? p.label : `${p.label} (${p.why})`}
               </option>
             ))}
           </select>

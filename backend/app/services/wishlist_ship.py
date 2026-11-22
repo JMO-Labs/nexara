@@ -17,7 +17,7 @@ from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.models.wishlist import Wishlist
 from app.repositories.wishlist_repo import WishlistRepository
-from app.schemas.wishlist import ShipTo
+from app.schemas.wishlist import ShipPerson, ShipTo
 from app.services.profiles.visibility import effective_levels
 
 
@@ -76,3 +76,17 @@ async def ship_to(
         name=user.display_name,
         address=(user.address or None) if shared else None,
     )
+
+
+async def ship_people(
+    repo: WishlistRepository, cid: uuid.UUID, viewer_id: uuid.UUID
+) -> list[ShipPerson]:
+    """@brief Members for the picker: available = has an address the viewer may use."""
+    return [
+        ShipPerson(
+            id=u.id,
+            display_name=u.display_name,
+            available=bool(u.address) and shares_address(u, st, viewer_id),
+        )
+        for u, st in await repo.ship_people(cid, viewer_id)
+    ]

@@ -153,6 +153,17 @@ export const listWishlists = (q: WishlistQuery = {}) =>
   );
 export const getWishlist = (id: string) =>
   apiGet<WishlistDetail>(`${B}/${seg(id)}`);
+/** @brief Member for the ship-to picker; available = usable address. */
+export interface ShipPerson {
+  id: string;
+  display_name: string;
+  available: boolean;
+}
+
+/** @brief Who gifts can ship to. */
+export const listShipPeople = () =>
+  apiGet<ShipPerson[]>("/api/v1/wishlists/ship-people");
+
 export const createWishlist = (body: WishlistInput) =>
   apiPost<WishlistDetail>(B, body);
 export const updateWishlist = (id: string, body: WishlistInput) =>
