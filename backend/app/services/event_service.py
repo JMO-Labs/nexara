@@ -19,13 +19,11 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.event import Event
 from app.models.subgroup import SubgroupMember
-from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.subgroup_repo import SubgroupRepository
 from app.repositories.tag_repo import TagRepository
-from app.services.mention_tags import MentionTagsService
 from app.schemas.event import (
     ContributionSlot,
     EventCreate,
@@ -41,6 +39,7 @@ from app.services.event_ical import EventIcalMixin
 from app.services.event_recurrence import MAX_OCCURRENCES, EventRecurrenceMixin
 from app.services.event_rsvp import DEFAULT_RSVP_LABELS, EventRsvpMixin
 from app.services.event_subscriptions import EventSubscriptionsMixin
+from app.services.mention_tags import MentionTagsService
 
 __all__ = ["DEFAULT_RSVP_LABELS", "MAX_OCCURRENCES", "EventService"]
 
@@ -280,22 +279,19 @@ class EventService(
         )
 
         # Sync mentions in description
-        if event.description:
-            user_result = await self._session.execute(select(User).where(User.id == user_id))
-            user_obj = user_result.scalar_one_or_none()
-            if user_obj:
-                await self._mention_tags.sync_mentions(
-                    self._community_id,
-                    "event",
-                    event.id,
-                    event.description,
-                    user_id,
-                    user_obj.display_name,
-                    notify_callable=self._notifications.notify if self._notifications else None,
-                    can_see=lambda uid: self._can_view(event, uid),
-                    link=f"/app/events?event={event.id}",
-                    label=_("an event"),
-                )
+        if data.description:
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "event",
+                event.id,
+                data.description,
+                user_id,
+                None,
+                notify_callable=self._notifications.notify if self._notifications else None,
+                can_see=lambda uid: self._can_view(event, uid),
+                link=f"/app/events?event={event.id}",
+                label=_("an event"),
+            )
 
         gallery_id = None
         if data.auto_create_gallery:
@@ -344,23 +340,20 @@ class EventService(
         )
 
         # Sync mentions in description if changed
-        if "description" in update_data and update_data["description"]:
-            user_result = await self._session.execute(select(User).where(User.id == user_id))
-            user_obj = user_result.scalar_one_or_none()
-            if user_obj:
-                await self._mention_tags.sync_mentions(
-                    self._community_id,
-                    "event",
-                    event.id,
-                    update_data["description"],
-                    user_id,
-                    user_obj.display_name,
-                    notify_callable=self._notifications.notify if self._notifications else None,
-                    can_see=lambda uid: self._can_view(event, uid),
-                    link=f"/app/events?event={event.id}",
-                    label=_("an event"),
-                    fresh=False,
-                )
+        if "description" in update_data:  # empty clears tags
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "event",
+                event.id,
+                update_data["description"] or "",
+                user_id,
+                None,
+                notify_callable=self._notifications.notify if self._notifications else None,
+                can_see=lambda uid: self._can_view(event, uid),
+                link=f"/app/events?event={event.id}",
+                label=_("an event"),
+                fresh=False,
+            )
 
         return await self._build_response(event, user_id=user_id)
 

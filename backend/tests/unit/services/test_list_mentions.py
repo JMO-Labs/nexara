@@ -6,12 +6,11 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.models.list import List
-from app.models.user import User
 from app.services.list_service import ListService
 
 COMMUNITY_ID = uuid.uuid4()
@@ -43,9 +42,7 @@ def session():
     session = AsyncMock()
     # Make execute() return a mock that supports async iteration
     exec_result = AsyncMock()
-    exec_result.scalar_one_or_none.return_value = MagicMock(
-        id=OWNER_ID, display_name="List Owner"
-    )
+    exec_result.scalar_one_or_none.return_value = MagicMock(id=OWNER_ID, display_name="List Owner")
     session.execute.return_value = exec_result
     return session
 
@@ -101,7 +98,9 @@ class TestListMentionTagging:
         assert args[0] == COMMUNITY_ID
 
     @pytest.mark.asyncio
-    async def test_update_list_syncs_mentions_in_description(self, service, repo_list, tag_repo):
+    async def test_update_list_syncs_mentions_in_description(
+        self, service, repo_list, repo_member, tag_repo
+    ):
         """update() syncs mentions when description is changed."""
         lst = List(
             id=LIST_ID,
@@ -120,9 +119,7 @@ class TestListMentionTagging:
         repo_member.get_member.return_value = None
         repo_list.update.return_value = lst
 
-        result = await service.update(
-            LIST_ID, OWNER_ID, {"description": "Updated @charlie"}
-        )
+        result = await service.update(LIST_ID, OWNER_ID, {"description": "Updated @charlie"})
 
         assert result.id == LIST_ID
         tag_repo.users_by_username.assert_called_once()

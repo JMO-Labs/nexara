@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import structlog
 
@@ -33,8 +34,8 @@ class MentionTagsService:
         target_id: uuid.UUID,
         content: str,
         actor_id: uuid.UUID,
-        actor_name: str,
-        notify_callable: Callable[[uuid.UUID, str, dict[str, Any]], Any] | None = None,
+        actor_name: str | None,
+        notify_callable: Callable[..., Any] | None = None,
         *,
         can_see: Callable[[uuid.UUID], Any] | None = None,
         link: str = "",
@@ -49,8 +50,8 @@ class MentionTagsService:
         @param target_id UUID of the target object (post, event, list, etc).
         @param content Plain text or markdown to extract mentions from.
         @param actor_id User ID of who is creating/editing (never tagged themselves).
-        @param actor_name Display name of actor for notifications.
-        @param notify_callable Optional async callable(user_id, type, payload) to send notifications.
+        @param actor_name Display name of actor; None looks it up.
+        @param notify_callable Optional async notify(user_id, type, payload, actor_id).
         @param can_see Optional async callable(user_id) -> bool to filter visible users;
                        if None, all users are assumed visible.
         @param link Notification link (e.g. "/app/events?event=<id>").
@@ -82,8 +83,10 @@ class MentionTagsService:
         )
 
         # Notify newly tagged users (only if notify_callable provided)
-        if notify_callable is None:
+        if notify_callable is None or not new_ids:
             return
+        if actor_name is None:
+            actor_name = await self._tags.display_name(actor_id)
 
         for uid in new_ids:
             await notify_callable(
@@ -95,4 +98,5 @@ class MentionTagsService:
                     % {"user": actor_name, "where": label},
                     "link": link,
                 },
+                actor_id,
             )

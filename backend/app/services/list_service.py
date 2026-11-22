@@ -15,7 +15,6 @@ from app.core.exceptions import AppError, AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.list import List
 from app.models.subgroup import SubgroupMember
-from app.models.user import User
 from app.repositories.list_member_repo import ListMemberRepository
 from app.repositories.list_repo import ListRepository
 from app.repositories.tag_repo import TagRepository
@@ -153,21 +152,18 @@ class ListService:
 
         # Sync mentions in description
         if description:
-            owner = await self._session.execute(select(User).where(User.id == owner_id))
-            owner_user = owner.scalar_one_or_none()
-            if owner_user:
-                await self._mention_tags.sync_mentions(
-                    self._community_id,
-                    "list",
-                    lst.id,
-                    description,
-                    owner_id,
-                    owner_user.display_name,
-                    notify_callable=self._notify.notify if self._notify else None,
-                    can_see=lambda uid: self._can_view_target(lst, uid),
-                    link=f"/app/lists/{lst.id}",
-                    label=_("a list"),
-                )
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "list",
+                lst.id,
+                description,
+                owner_id,
+                None,
+                notify_callable=self._notify.notify if self._notify else None,
+                can_see=lambda uid: self._can_view_target(lst, uid),
+                link=f"/app/lists/{lst.id}",
+                label=_("a list"),
+            )
 
         return lst
 
@@ -204,23 +200,20 @@ class ListService:
         lst = await self._lists.update(lst, changes)
 
         # Sync mentions in description if changed
-        if "description" in changes and changes["description"]:
-            user = await self._session.execute(select(User).where(User.id == user_id))
-            user_obj = user.scalar_one_or_none()
-            if user_obj:
-                await self._mention_tags.sync_mentions(
-                    self._community_id,
-                    "list",
-                    lst.id,
-                    changes["description"],
-                    user_id,
-                    user_obj.display_name,
-                    notify_callable=self._notify.notify if self._notify else None,
-                    can_see=lambda uid: self._can_view_target(lst, uid),
-                    link=f"/app/lists/{lst.id}",
-                    label=_("a list"),
-                    fresh=False,
-                )
+        if "description" in changes:  # empty clears tags
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "list",
+                lst.id,
+                changes["description"] or "",
+                user_id,
+                None,
+                notify_callable=self._notify.notify if self._notify else None,
+                can_see=lambda uid: self._can_view_target(lst, uid),
+                link=f"/app/lists/{lst.id}",
+                label=_("a list"),
+                fresh=False,
+            )
 
         return lst
 

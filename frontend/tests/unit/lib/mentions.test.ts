@@ -36,7 +36,12 @@ describe("matchMembers", () => {
       display_name: "Ruth Alvarez",
       avatar_url: null,
     },
-    { id: "3", username: "jordan", display_name: "Jordan Lee", avatar_url: null },
+    {
+      id: "3",
+      username: "jordan",
+      display_name: "Jordan Lee",
+      avatar_url: null,
+    },
     { id: "2", username: "leo", display_name: "Leo Soto", avatar_url: null },
   ];
   it("matches username or any name word", () => {

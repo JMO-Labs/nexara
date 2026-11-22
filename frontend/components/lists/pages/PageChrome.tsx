@@ -55,7 +55,7 @@ export function PageHeader({
 }: {
   crumbs: Crumb[];
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   actions?: ReactNode;
 }) {
   return (

@@ -6,6 +6,7 @@
  */
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Markdown } from "@/components/ui/Markdown";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -50,7 +51,11 @@ export function ListDetailView({ id }: { id: string }) {
           <PageHeader
             crumbs={[LISTS_CRUMB, { label: list.title }]}
             title={list.title}
-            description={list.description ?? undefined}
+            description={
+              list.description ? (
+                <Markdown content={list.description} size="sm" mentions />
+              ) : undefined
+            }
             actions={
               <Button asChild variant="secondary">
                 <Link href={`/app/lists/${list.id}/edit`}>

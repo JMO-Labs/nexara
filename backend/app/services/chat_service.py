@@ -321,7 +321,8 @@ class ChatService(ChatInternalsMixin):
 
     async def _can_see_in_channel(self, user_id: uuid.UUID, channel: ChatChannel) -> bool:
         """@brief Check if user can see the channel (is a participant)."""
-        return await self._channel_repo.get_for_user(channel.id, user_id, self._community_id) is not None
+        found = await self._channel_repo.get_for_user(channel.id, user_id, self._community_id)
+        return found is not None
 
     async def get_history(
         self,
