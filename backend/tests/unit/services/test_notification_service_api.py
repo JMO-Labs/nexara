@@ -31,6 +31,7 @@ def _settings_row() -> MagicMock:
     row.dnd_until = None
     row.dnd_timezone = "UTC"
     row.digest_cadence = {}
+    row.recap_cadence = "weekly"
     return row
 
 

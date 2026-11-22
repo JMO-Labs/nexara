@@ -51,6 +51,7 @@ from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
 from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
+from app.api.v1.recap import router as recap_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
@@ -117,6 +118,7 @@ api_v1_router.include_router(communities_router)
 api_v1_router.include_router(polls_router)
 api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
+api_v1_router.include_router(recap_router)
 api_v1_router.include_router(daily_questions_router)
 api_v1_router.include_router(push_router)
 api_v1_router.include_router(search_router)

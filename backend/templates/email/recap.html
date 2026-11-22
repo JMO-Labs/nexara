@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Your family recap - {{ community_name }}{% endblock %}
+{% block content %}
+<h1 style="font-size: 24px; line-height: 1.3; margin: 0 0 8px; color: {{ color_primary }};">Your family recap</h1>
+<p style="font-size: 16px; margin: 0 0 24px;">Here is what is happening in {{ community_name }}.</p>
+{% for section in sections %}
+<h2 style="font-size: 20px; line-height: 1.3; margin: 24px 0 8px; color: {{ color_primary }};">{{ section.title }}</h2>
+<ul style="font-size: 16px; margin: 0; padding-left: 20px;">
+{% for item in section["items"] %}
+  <li style="margin-bottom: 8px;">{% if item.link %}<a href="{{ item.link }}" style="color: {{ color_primary }}; text-decoration: underline;">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}</li>
+{% endfor %}
+</ul>
+{% endfor %}
+{% endblock %}
+{% block footer %}
+<p style="font-size: 14px; color: #555555;">You get this recap because you have an account on {{ community_name }}.
+{% if unsubscribe_url %}<a href="{{ unsubscribe_url }}" style="color: {{ color_primary }}; text-decoration: underline;">Stop these emails</a>{% endif %}
+{% if settings_url %} or <a href="{{ settings_url }}" style="color: {{ color_primary }}; text-decoration: underline;">change how often you get them</a>{% endif %}.</p>
+{% endblock %}

@@ -38,6 +38,7 @@ celery_app = Celery(
         "app.tasks.maintenance_tasks",
         "app.tasks.media_tasks",
         "app.tasks.memories_tasks",
+        "app.tasks.recap_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -196,6 +197,10 @@ celery_app.conf.update(
         "memories-on-this-day": {
             "task": "app.tasks.memories_tasks.notify_on_this_day",
             "schedule": crontab(minute=5),
+        },
+        "recap-dispatch": {
+            "task": "app.tasks.recap_tasks.recap_dispatch",
+            "schedule": crontab(minute=10),
         },
         "send-birthday-reminders": {
             "task": "app.tasks.birthday_tasks.send_birthday_reminders",
