@@ -10,6 +10,7 @@ import { Panel, Segmented } from "@/components/ui/page";
 import { formatBytes } from "@/lib/formatBytes";
 import type { AdminSettingsResponse } from "@/lib/api/admin";
 import { AdminLoading, AdminNotice } from "./AdminState";
+import { CurrencySetting } from "./CurrencySetting";
 
 const MB = 1024 ** 2;
 const GB = 1024 ** 3;
@@ -169,6 +170,8 @@ export function AdminSettingsTab() {
           {formatBytes(storageQuota)} per user
         </p>
       </Panel>
+
+      <CurrencySetting />
 
       <Panel as="div" title="Security">
         <Row

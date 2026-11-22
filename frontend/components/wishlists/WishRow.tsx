@@ -23,6 +23,7 @@ import { API_BASE } from "@/lib/auth/session";
 import { formatMoney } from "@/lib/money";
 import { isHttpUrl } from "@/lib/profile";
 import type { Wish, WishlistDetail } from "@/lib/api/wishlists";
+import { SplitGiftButton } from "@/components/expenses/SplitGiftButton";
 import { WishForm } from "./WishForm";
 import { MoneyInput } from "./wizard/fields";
 
@@ -346,7 +347,10 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
         (fund ? (
           <FundPledge w={w} item={item} />
         ) : (
-          <GiftClaim w={w} item={item} />
+          <>
+            <GiftClaim w={w} item={item} />
+            <SplitGiftButton itemId={item.id} name={item.name} />
+          </>
         ))}
     </li>
   );

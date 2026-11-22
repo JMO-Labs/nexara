@@ -1033,6 +1033,9 @@
     "capsule_opened": {
       "label": "Time capsule opened"
     },
+    "expense_added": {
+      "label": "Shared cost added"
+    },
     "kudos_received": {
       "label": "You got kudos"
     },
