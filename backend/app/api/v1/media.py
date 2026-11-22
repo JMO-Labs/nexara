@@ -210,7 +210,8 @@ async def get_media_thumbnail(
         iter([content]),
         media_type="image/webp",
         headers={
-            "Cache-Control": "public, max-age=604800",
+            "Cache-Control": "private, max-age=604800",
+            "Vary": "Authorization, Cookie",
             "Content-Disposition": "inline",
         },
     )
