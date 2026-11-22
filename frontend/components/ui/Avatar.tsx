@@ -1,6 +1,6 @@
 /**
  * @file components/ui/Avatar.tsx
- * @brief Avatar with initials fallback, plus overlapping AvatarGroup.
+ * @brief Avatar with colored-initials fallback, plus overlapping AvatarGroup.
  */
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,31 @@ export interface AvatarProps {
   name?: string;
   size?: keyof typeof sizes;
   className?: string;
+}
+
+/**
+ * Initials fills: the Aegean door palette, darkened where needed so white
+ * initials pass AA (4.5:1) in both themes.
+ */
+export const AVATAR_COLORS = [
+  "#2F5873",
+  "#A8505F",
+  "#5A6B3A",
+  "#8F6A26",
+  "#3F6A86",
+  "#7D5A7A",
+  "#55636D",
+] as const;
+
+/**
+ * @brief Stable "random" color for a person: same name, same color everywhere.
+ * @param seed name (or id)
+ * @return hex fill
+ */
+export function avatarColor(seed: string | undefined): string {
+  let h = 0;
+  for (const ch of seed ?? "") h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
 /**
@@ -44,10 +69,11 @@ export function Avatar({ src, name, size = "md", className }: AvatarProps) {
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-semibold text-bg",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
         sizes[size],
         className,
       )}
+      style={{ background: avatarColor(name) }}
     >
       {src && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image

@@ -208,6 +208,21 @@ class UserService:
         return updated
 
     @staticmethod
+    def gravatar_url(email: str) -> str:
+        """
+        @brief Gravatar URL for an email (SHA-256 per Gravatar's current scheme).
+        @details ``d=404`` makes a missing Gravatar fail to load, so the client
+                 falls back to colored initials instead of a silhouette.
+        """
+        digest = hashlib.sha256(email.strip().lower().encode()).hexdigest()
+        return f"{GRAVATAR_BASE}/{digest}?s=160&d=404"
+
+    @staticmethod
+    def is_gravatar(url: str | None) -> bool:
+        """@brief Avatar URL points at Gravatar (set by the opt-in)."""
+        return bool(url and url.startswith(GRAVATAR_BASE + "/"))
+
+    @staticmethod
     def get_avatar_url(user: User, size: int = 80) -> str:
         """
         @brief Return the user's avatar URL, falling back to Gravatar.

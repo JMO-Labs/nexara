@@ -20,6 +20,7 @@ from app.schemas.settings import (
     UserSettingsResponse,
     UserSettingsUpdate,
 )
+from app.services.user_service import UserService
 
 logger = structlog.get_logger(__name__)
 
@@ -117,6 +118,13 @@ class SettingsService:
 
         raw = data.model_dump(mode="json", exclude_unset=True)
         visibility = raw.pop("field_visibility", None)
+        gravatar = raw.pop("use_gravatar", None)
+        if gravatar is not None:
+            # Only touch Gravatar-managed avatars; an uploaded photo always wins.
+            if gravatar and not user.avatar_url:
+                raw["avatar_url"] = UserService.gravatar_url(user.email)
+            elif not gravatar and UserService.is_gravatar(user.avatar_url):
+                raw["avatar_url"] = None
         if raw.get("display_name") is None:
             raw.pop("display_name", None)  # required; never cleared
         update_dict = {k: (None if v == "" else v) for k, v in raw.items()}
