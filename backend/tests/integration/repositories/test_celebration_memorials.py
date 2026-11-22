@@ -52,7 +52,7 @@ async def _user(s: AsyncSession, name: str, *, shown: str | None = None) -> User
 
 async def test_unshared_birthday_hidden(session: AsyncSession) -> None:
     viewer = await _user(session, "viewer")
-    private = await _user(session, "private", shown="only_me")
+    private = await _user(session, "private", shown="nobody")
     public = await _user(session, "public", shown="community")
     rows = {
         r[0]: r for r in await CelebrationRepository(session).memorialized_users(CID, viewer.id)
