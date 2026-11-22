@@ -15,14 +15,16 @@ import { useSearchParams } from "next/navigation";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
 import { MemberFamilyTab } from "@/components/members/MemberFamilyTab";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
+import { WishlistCards } from "@/components/wishlists/WishlistCards";
 import { useMemberConnection, useMemberProfile } from "@/hooks/useMembers";
 import { useSession } from "@/stores/session";
 import { statusOf } from "@/components/members/personStatus";
 
-type Tab = "photos" | "tagged" | "family" | "groups";
+type Tab = "photos" | "wishlists" | "tagged" | "family" | "groups";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "photos", label: "Photos" },
+  { value: "wishlists", label: "Wishlists" },
   { value: "tagged", label: "Tagged" },
   { value: "family", label: "Family" },
   { value: "groups", label: "Groups" },
@@ -98,6 +100,12 @@ export function MemberProfile({ userId }: { userId: string }) {
           <div className="mt-4">
             {tab === "photos" ? (
               <MemberGalleriesTab userId={userId} />
+            ) : tab === "wishlists" ? (
+              <WishlistCards
+                ownerId={userId}
+                canCreate={isSelf}
+                emptyText={`${p.display_name.split(" ")[0]} has no wishlists you can see`}
+              />
             ) : tab === "tagged" ? (
               <MemberTaggedTab
                 userId={userId}

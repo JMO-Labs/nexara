@@ -4,7 +4,7 @@
  * @brief Lists tile: three most recently updated lists with progress bars.
  */
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import { Gift, ListChecks } from "lucide-react";
 import { HomeTile, type TileSlotProps } from "@/components/home/HomeTile";
 import { useCommunityId } from "@/hooks/useCommunityId";
 import { useLists } from "@/hooks/useLists";
@@ -85,6 +85,12 @@ export function ListsTile({ open, onToggle }: TileSlotProps) {
           })}
         </ul>
       )}
+      <Link
+        href="/app/wishlists"
+        className="mt-3 inline-flex items-center gap-1.5 text-sm text-[var(--nx-muted)] hover:text-ink"
+      >
+        <Gift className="size-4" aria-hidden /> Wishlists
+      </Link>
     </HomeTile>
   );
 }

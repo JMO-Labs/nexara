@@ -17,6 +17,7 @@ import { householdPhotos } from "@/lib/api/household";
 import { birthdayText } from "@/lib/profile";
 import { HouseholdAvatar, householdSubtitle } from "./HouseholdCards";
 import { HouseholdEditor } from "./HouseholdEditor";
+import { WishlistCards } from "@/components/wishlists/WishlistCards";
 
 function Chips({
   items,
@@ -125,6 +126,14 @@ export function HouseholdPage({ id }: { id: string }) {
           )}
         </section>
       )}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">Wishlists</h2>
+        <WishlistCards
+          householdId={m.id}
+          canCreate={m.can_edit}
+          emptyText={`No wishlists for ${m.name} yet`}
+        />
+      </section>
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Photos</h2>
         {photos.isLoading ? (
