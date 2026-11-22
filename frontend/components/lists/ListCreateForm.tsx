@@ -4,6 +4,7 @@
  * @brief Create-list form body (custom or from template). Rendered inline on
  *        /app/lists/new and inside ListCreateModal for quick create.
  */
+import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +13,8 @@ import { Input } from "@/components/ui/Input";
 import { Option, Select } from "@/components/ui/Select";
 import { Segmented } from "@/components/ui/page/Segmented";
 import { Textarea } from "@/components/ui/Textarea";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useMentionInput } from "@/components/mentions/useMentionInput";
 import {
   useListCreate,
   useListTemplateClone,
@@ -57,7 +60,7 @@ export function ListCreateForm({
   const create = useListCreate(communityId);
   const clone = useListTemplateClone(communityId);
   const templates = useListTemplates();
-  const { register, handleSubmit, watch, control, formState } =
+  const { register, handleSubmit, watch, control, formState, setValue } =
     useForm<FormData>({
       resolver: zodResolver(Schema),
       defaultValues: {
@@ -70,6 +73,13 @@ export function ListCreateForm({
     });
   const errors = formState.errors;
   const isTemplate = watch("mode") === "template";
+  const descriptionValue = watch("description") || "";
+  const descriptionRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const mention = useMentionInput(
+    descriptionValue,
+    (v) => setValue("description", v),
+    descriptionRef,
+  );
 
   const onSubmit = (d: FormData) => {
     if (d.mode === "template" && d.templateId) {
@@ -142,11 +152,27 @@ export function ListCreateForm({
         {...register("title")}
       />
       {!isTemplate && (
-        <Textarea
-          label="Description"
-          error={errors.description?.message}
-          {...register("description")}
-        />
+        <div className="relative">
+          {mention.open && (
+            <MentionMenu
+              {...mention.menu}
+              className="absolute bottom-full left-0 mb-2 z-50"
+            />
+          )}
+          <Textarea
+            ref={(el) => {
+              descriptionRef.current = el;
+              const { ref: hookRef } = register("description");
+              if (typeof hookRef === "function") hookRef(el);
+            }}
+            label="Description"
+            error={errors.description?.message}
+            value={descriptionValue}
+            onChange={mention.onTextChange}
+            onKeyDown={mention.onKeyDown}
+            {...mention.fieldProps}
+          />
+        </div>
       )}
       {subgroupId ? (
         <p className="text-sm text-muted">Visible to members of this group.</p>

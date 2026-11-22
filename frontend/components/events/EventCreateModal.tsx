@@ -13,6 +13,8 @@ import {
   ScopeSelect,
   type ScopeValue,
 } from "@/components/ui";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useMentionInput } from "@/components/mentions/useMentionInput";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/useEvents";
 import { useCalendars } from "@/hooks/useCalendars";
 import type { ContributionSlot, EventItem } from "@/lib/api/events";
@@ -80,6 +82,8 @@ export function EventCreateModal({
   const [autoGallery, setAutoGallery] = React.useState(false);
   const [slots, setSlots] = React.useState<ContributionSlot[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const descRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const mention = useMentionInput(description, setDescription, descRef);
 
   const { data: calendars } = useCalendars();
   const myGroups = React.useMemo(
@@ -191,12 +195,25 @@ export function EventCreateModal({
           onChange={(e) => setTitle(e.target.value)}
           required
         />
-        <Textarea
-          label="Description"
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <div className="relative">
+          {mention.open && (
+            <MentionMenu
+              {...mention.menu}
+              className="absolute bottom-full left-0 mb-2 z-50"
+            />
+          )}
+          <Textarea
+            ref={(el) => {
+              descRef.current = el;
+            }}
+            label="Description"
+            rows={3}
+            value={description}
+            onChange={mention.onTextChange}
+            onKeyDown={mention.onKeyDown}
+            {...mention.fieldProps}
+          />
+        </div>
         <LocationField
           value={location}
           onChange={(label, c) => {

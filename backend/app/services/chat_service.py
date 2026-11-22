@@ -34,6 +34,7 @@ from app.repositories.chat_repo import (
     ChatMessageRepository,
 )
 from app.repositories.moderation_repo import ModerationRepository
+from app.repositories.tag_repo import TagRepository
 from app.services.activity_publish import record_activity
 from app.services.chat_helpers import (
     CHAT_PUBSUB_CHANNEL_PREFIX,
@@ -42,6 +43,7 @@ from app.services.chat_helpers import (
     serialize_message,
 )
 from app.services.chat_internals import ChatInternalsMixin
+from app.services.mention_tags import MentionTagsService
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -83,6 +85,7 @@ class ChatService(ChatInternalsMixin):
         activity_repo: ActivityRepository | None = None,
         moderation_repo: ModerationRepository | None = None,
         read_repo: ChatReadRepository | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         self._channel_repo = channel_repo
         self._message_repo = message_repo
@@ -93,6 +96,9 @@ class ChatService(ChatInternalsMixin):
         self._activity_repo = activity_repo
         self._moderation_repo = moderation_repo
         self._read_repo = read_repo
+        # ponytail: tag_repo injected for testing; session-scoped else
+        tag_repo_inst = tag_repo or TagRepository(channel_repo.session)
+        self._mention_tags = MentionTagsService(tag_repo_inst)
 
     # ── Channel management ───────────────────────────────────────────
 
@@ -297,7 +303,26 @@ class ChatService(ChatInternalsMixin):
         await self._broadcast(channel.id, "chat.message", payload, channel=channel)
         await self._enqueue_link_previews(content, message.id)
 
+        # Sync mentions in message (only channel participants)
+        await self._mention_tags.sync_mentions(
+            self._community_id,
+            "chat_message",
+            message.id,
+            content,
+            user.id,
+            user.display_name,
+            notify_callable=None,  # ponytail: in-channel only, no external notif
+            can_see=lambda uid: self._can_see_in_channel(uid, channel),
+            link=f"/app/chat/{channel.id}",
+            label=_("a chat message"),
+        )
+
         return payload
+
+    async def _can_see_in_channel(self, user_id: uuid.UUID, channel: ChatChannel) -> bool:
+        """@brief Check if user can see the channel (is a participant)."""
+        found = await self._channel_repo.get_for_user(channel.id, user_id, self._community_id)
+        return found is not None
 
     async def get_history(
         self,

@@ -23,6 +23,7 @@ from app.repositories.activity_repo import ActivityRepository
 from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.event_repo import EventRepository
 from app.repositories.subgroup_repo import SubgroupRepository
+from app.repositories.tag_repo import TagRepository
 from app.schemas.event import (
     ContributionSlot,
     EventCreate,
@@ -38,6 +39,7 @@ from app.services.event_ical import EventIcalMixin
 from app.services.event_recurrence import MAX_OCCURRENCES, EventRecurrenceMixin
 from app.services.event_rsvp import DEFAULT_RSVP_LABELS, EventRsvpMixin
 from app.services.event_subscriptions import EventSubscriptionsMixin
+from app.services.mention_tags import MentionTagsService
 
 __all__ = ["DEFAULT_RSVP_LABELS", "MAX_OCCURRENCES", "EventService"]
 
@@ -62,6 +64,7 @@ class EventService(
         token_repo: Any | None = None,
         activity_repo: ActivityRepository | None = None,
         subgroup_repo: SubgroupRepository | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         self._repo = event_repo
         self._subgroups = subgroup_repo or SubgroupRepository(session)
@@ -80,6 +83,7 @@ class EventService(
             token_repo = CalendarTokenRepository(session)
         self._token_repo = token_repo
         self._activity_repo = activity_repo
+        self._mention_tags = MentionTagsService(tag_repo or TagRepository(session))
 
     # ── Internal helpers ──────────────────────────────────────────────
 
@@ -273,6 +277,22 @@ class EventService(
         await invalidate_search_cache_for_community(
             self._community_id, service="event", action="create", user_id=user_id
         )
+
+        # Sync mentions in description
+        if data.description:
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "event",
+                event.id,
+                data.description,
+                user_id,
+                None,
+                notify_callable=self._notifications.notify if self._notifications else None,
+                can_see=lambda uid: self._can_view(event, uid),
+                link=f"/app/events?event={event.id}",
+                label=_("an event"),
+            )
+
         gallery_id = None
         if data.auto_create_gallery:
             gallery_id = await create_event_gallery(
@@ -318,6 +338,23 @@ class EventService(
         await invalidate_search_cache_for_community(
             self._community_id, service="event", action="update", user_id=user_id
         )
+
+        # Sync mentions in description if changed
+        if "description" in update_data:  # empty clears tags
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "event",
+                event.id,
+                update_data["description"] or "",
+                user_id,
+                None,
+                notify_callable=self._notifications.notify if self._notifications else None,
+                can_see=lambda uid: self._can_view(event, uid),
+                link=f"/app/events?event={event.id}",
+                label=_("an event"),
+                fresh=False,
+            )
+
         return await self._build_response(event, user_id=user_id)
 
     async def delete_event(self, event_id: uuid.UUID, user_id: uuid.UUID) -> None:

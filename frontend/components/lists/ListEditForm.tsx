@@ -4,12 +4,15 @@
  * @brief Edit-list form body (title, description, expiry, color). Rendered
  *        inline on /app/lists/[id]/edit and inside ListEditModal.
  */
+import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useMentionInput } from "@/components/mentions/useMentionInput";
 import { useListUpdate } from "@/hooks/useLists";
 import type { List } from "@/lib/api/listTypes";
 import { ColorInput, LIST_COLORS } from "./listFormFields";
@@ -42,16 +45,24 @@ export function ListEditForm({
   onCancel,
 }: ListEditFormProps) {
   const update = useListUpdate(communityId);
-  const { register, handleSubmit, formState } = useForm<FormData>({
-    resolver: zodResolver(Schema),
-    defaultValues: {
-      title: list.title,
-      description: list.description ?? "",
-      expiresAt: list.expiresAt?.slice(0, 10) ?? "",
-      color: list.color ?? LIST_COLORS[0],
-    },
-  });
+  const { register, handleSubmit, formState, watch, setValue } =
+    useForm<FormData>({
+      resolver: zodResolver(Schema),
+      defaultValues: {
+        title: list.title,
+        description: list.description ?? "",
+        expiresAt: list.expiresAt?.slice(0, 10) ?? "",
+        color: list.color ?? LIST_COLORS[0],
+      },
+    });
   const errors = formState.errors;
+  const descriptionValue = watch("description") || "";
+  const descriptionRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const mention = useMentionInput(
+    descriptionValue,
+    (v) => setValue("description", v),
+    descriptionRef,
+  );
 
   const onSubmit = (d: FormData) =>
     update.mutate(
@@ -78,11 +89,27 @@ export function ListEditForm({
         error={errors.title?.message}
         {...register("title")}
       />
-      <Textarea
-        label="Description"
-        error={errors.description?.message}
-        {...register("description")}
-      />
+      <div className="relative">
+        {mention.open && (
+          <MentionMenu
+            {...mention.menu}
+            className="absolute bottom-full left-0 mb-2 z-50"
+          />
+        )}
+        <Textarea
+          ref={(el) => {
+            descriptionRef.current = el;
+            const { ref: hookRef } = register("description");
+            if (typeof hookRef === "function") hookRef(el);
+          }}
+          label="Description"
+          error={errors.description?.message}
+          value={descriptionValue}
+          onChange={mention.onTextChange}
+          onKeyDown={mention.onKeyDown}
+          {...mention.fieldProps}
+        />
+      </div>
       <Input type="date" label="Expires" {...register("expiresAt")} />
       <ColorInput label="Color" {...register("color")} />
       <div className="flex flex-wrap justify-end gap-2">

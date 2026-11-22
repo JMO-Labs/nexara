@@ -271,7 +271,9 @@ class TestInvocationPoints:
     async def test_create_event_invalidates(self):
         uid = uuid.uuid4()
         svc = _event_service(uid)
-        data = MagicMock(recurrence_rule=None, visibility="community", contribution_slots=[])
+        data = MagicMock(
+            recurrence_rule=None, visibility="community", contribution_slots=[], description=None
+        )
         with _inv("event_service") as inv:
             await svc.create_event(uid, data)
         _assert_inv(inv, "event", "create")

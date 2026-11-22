@@ -17,7 +17,9 @@ from app.models.list import List
 from app.models.subgroup import SubgroupMember
 from app.repositories.list_member_repo import ListMemberRepository
 from app.repositories.list_repo import ListRepository
+from app.repositories.tag_repo import TagRepository
 from app.services.list_field_registry import ListFieldRegistry
+from app.services.mention_tags import MentionTagsService
 
 WRITABLE_FIELDS = ("title", "description", "color", "expires_at")
 VISIBILITIES = ("community", "subgroup", "private", "members")
@@ -34,6 +36,7 @@ class ListService:
         community_id: uuid.UUID,
         session: AsyncSession,
         notification_service: Any | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         """
         @param repo_list List repository.
@@ -42,6 +45,7 @@ class ListService:
         @param community_id Tenant scope.
         @param session Request-scoped async session.
         @param notification_service Optional NotificationService for list_member.
+        @param tag_repo Optional TagRepository for mention syncing.
         """
         self._lists = repo_list
         self._members = repo_member
@@ -49,6 +53,7 @@ class ListService:
         self._community_id = community_id
         self._session = session
         self._notify = notification_service
+        self._mention_tags = MentionTagsService(tag_repo or TagRepository(session))
 
     async def _subgroup_ids(self, user_id: uuid.UUID) -> list[uuid.UUID]:
         """@brief Subgroups the user belongs to (descendants included)."""
@@ -143,7 +148,28 @@ class ListService:
             completed_count=0,
             signup_count=0,
         )
-        return await self._lists.create(lst)
+        lst = await self._lists.create(lst)
+
+        # Sync mentions in description
+        if description:
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "list",
+                lst.id,
+                description,
+                owner_id,
+                None,
+                notify_callable=self._notify.notify if self._notify else None,
+                can_see=lambda uid: self._can_view_target(lst, uid),
+                link=f"/app/lists/{lst.id}",
+                label=_("a list"),
+            )
+
+        return lst
+
+    async def _can_view_target(self, lst: List, user_id: uuid.UUID) -> bool:
+        """@brief Check if user can view a list (used for mention visibility filtering)."""
+        return await self._can_view(lst, user_id)
 
     async def list_visible(
         self, viewer_id: uuid.UUID, cursor: str | None = None, limit: int = 20
@@ -171,7 +197,25 @@ class ListService:
         """@brief Update writable fields (title/description/color/expires_at)."""
         lst = await self._load_editable(list_id, user_id, is_admin)
         changes = {k: v for k, v in data.items() if k in WRITABLE_FIELDS}
-        return await self._lists.update(lst, changes)
+        lst = await self._lists.update(lst, changes)
+
+        # Sync mentions in description if changed
+        if "description" in changes:  # empty clears tags
+            await self._mention_tags.sync_mentions(
+                self._community_id,
+                "list",
+                lst.id,
+                changes["description"] or "",
+                user_id,
+                None,
+                notify_callable=self._notify.notify if self._notify else None,
+                can_see=lambda uid: self._can_view_target(lst, uid),
+                link=f"/app/lists/{lst.id}",
+                label=_("a list"),
+                fresh=False,
+            )
+
+        return lst
 
     async def delete(self, list_id: uuid.UUID, user_id: uuid.UUID, is_admin: bool = False) -> None:
         """@brief Soft-delete; owner only (is_admin accepted but not sufficient)."""

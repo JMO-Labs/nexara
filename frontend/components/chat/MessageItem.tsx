@@ -104,6 +104,7 @@ export function MessageItem({
             <Markdown
               content={message.content}
               size="sm"
+              mentions
               className={isSelf ? "text-inherit [&_a]:text-inherit" : undefined}
             />
           )}

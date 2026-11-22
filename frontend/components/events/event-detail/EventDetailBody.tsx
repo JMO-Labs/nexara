@@ -86,7 +86,7 @@ export function EventDetailBody({
       )}
       {event.description && (
         <div className="mb-4 max-w-[72ch] text-sm text-muted">
-          <Markdown content={event.description} size="sm" />
+          <Markdown content={event.description} size="sm" mentions />
         </div>
       )}
       <div className="mb-4">

@@ -350,3 +350,8 @@ class TagRepository:
             household_visible(viewer_id, community_id),
         )
         return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]
+
+    async def display_name(self, user_id: uuid.UUID) -> str:
+        """@brief A user's display name ('' if missing), for tag notifications."""
+        stmt = select(User.display_name).where(User.id == user_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none() or ""

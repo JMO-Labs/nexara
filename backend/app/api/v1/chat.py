@@ -25,6 +25,7 @@ from app.models.user import User
 from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
 from app.repositories.moderation_repo import ModerationRepository
+from app.repositories.tag_repo import TagRepository
 from app.schemas.chat import (
     ChannelResponse,
     ChatMessageResponse,
@@ -55,6 +56,7 @@ def _build_service(
         community_id=community_id,
         moderation_repo=ModerationRepository(db),
         read_repo=ChatReadRepository(db),
+        tag_repo=TagRepository(db),
     )
 
 
@@ -84,6 +86,7 @@ async def post_message(
         rate_limiter=chat_rate_limiter(),
         moderation_repo=ModerationRepository(db),
         read_repo=ChatReadRepository(db),
+        tag_repo=TagRepository(db),
     )
     content = body.content.strip()
     if not content:

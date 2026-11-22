@@ -45,3 +45,27 @@ describe("Composer", () => {
     expect(onTyping).toHaveBeenCalledTimes(1);
   });
 });
+
+vi.mock("@/hooks/useMembersList", async (orig) => ({
+  ...(await orig<object>()),
+  useMembersList: () => ({
+    data: [
+      { id: "u1", username: "ruth", display_name: "Ruth", avatar_url: null },
+    ],
+  }),
+}));
+
+describe("Composer mentions", () => {
+  it("opens the @ picker and Enter picks a person instead of sending", () => {
+    const onSend = vi.fn();
+    wrap(<Composer onSend={onSend} />);
+    const ta = screen.getByPlaceholderText(
+      /write a message/i,
+    ) as HTMLTextAreaElement;
+    fireEvent.change(ta, { target: { value: "hey @ru", selectionStart: 7 } });
+    expect(screen.getByRole("option", { name: /Ruth/ })).toBeInTheDocument();
+    fireEvent.keyDown(ta, { key: "Enter" });
+    expect(onSend).not.toHaveBeenCalled();
+    expect(ta.value).toBe("hey @ruth ");
+  });
+});
