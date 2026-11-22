@@ -20,6 +20,7 @@ from app.models.community import Community  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem  # noqa: F401
+from app.models.household import HouseholdMember  # noqa: F401
 from app.models.interest import InterestCategory, UserInterest  # noqa: F401
 from app.models.invite import Invite  # noqa: F401
 from app.models.link_preview import (  # noqa: F401

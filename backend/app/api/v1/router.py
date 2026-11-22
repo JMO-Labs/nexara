@@ -27,6 +27,7 @@ from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.export import router as export_router
 from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
+from app.api.v1.household import router as household_router
 from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
@@ -82,6 +83,7 @@ api_v1_router.include_router(moderation_router)
 api_v1_router.include_router(users_directory_router)
 # Before users_router so /users/{id}/tagged resolves here.
 api_v1_router.include_router(tags_router)
+api_v1_router.include_router(household_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)

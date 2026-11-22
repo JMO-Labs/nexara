@@ -56,7 +56,26 @@ class TagService:
             raise NotFoundError(message=_("Not found"))
         tags = await self._repo.list_for_target(target_type, target_id, self._community_id)
         hidden = await self._repo.blocked_with(viewer.id, [t["user"]["id"] for t in tags])
-        return [t for t in tags if t["user"]["id"] not in hidden]
+        household = await self._repo.household_for_target(
+            target_type, target_id, viewer.id, self._community_id
+        )
+        return [t for t in tags if t["user"]["id"] not in hidden] + household
+
+    async def _media_tags(self, media_id: uuid.UUID, viewer: User) -> list[dict[str, Any]]:
+        return await self.list_for("media", media_id, viewer)
+
+    async def tag_household(
+        self, media_id: uuid.UUID, member_id: uuid.UUID, actor: User
+    ) -> list[dict[str, Any]]:
+        """@brief Tag a household member/pet the actor can see in a photo they can see."""
+        if not await self._repo.media_viewable(media_id, actor.id, self._community_id):
+            raise NotFoundError(message=_("Photo not found"))
+        if not await self._repo.household_viewable(member_id, actor.id, self._community_id):
+            raise NotFoundError(message=_("Not found"))
+        await self._repo.add(
+            self._community_id, "media", media_id, member_id, actor.id, subject_type="household"
+        )
+        return await self._media_tags(media_id, actor)
 
     async def tag_media(
         self, media_id: uuid.UUID, user_id: uuid.UUID, actor: User
@@ -90,7 +109,7 @@ class TagService:
                 },
                 actor_id=actor.id,
             )
-        return await self._repo.list_for_target("media", media_id, self._community_id)
+        return await self._media_tags(media_id, actor)
 
     async def remove(self, tag_id: uuid.UUID, actor: User) -> None:
         """
@@ -105,9 +124,29 @@ class TagService:
             if tag.target_type == "media"
             else None
         )
-        if actor.id not in (tag.subject_id, tag.tagged_by, owner) and actor.role != "admin":
+        keeper = (
+            await self._repo.household_owner(tag.subject_id, self._community_id)
+            if tag.subject_type == "household"
+            else tag.subject_id
+        )
+        if actor.id not in (keeper, tag.tagged_by, owner) and actor.role != "admin":
             raise AuthorizationError(message=_("You can't remove this tag"))
         await self._repo.remove(tag)
+
+    async def household_photos(
+        self, member_id: uuid.UUID, viewer: User, before: datetime | None
+    ) -> dict[str, Any]:
+        """@brief Photos a household member/pet is tagged in, as the viewer may see them."""
+        if not await self._repo.household_viewable(member_id, viewer.id, self._community_id):
+            raise NotFoundError(message=_("Not found"))
+        rows = await self._repo.tagged_media(
+            self._community_id, member_id, viewer.id, before, PAGE, subject_type="household"
+        )
+        return {
+            "kind": "photos",
+            "media_ids": [m for m, _at in rows],
+            "next_before": rows[-1][1] if len(rows) == PAGE else None,
+        }
 
     async def tagged(
         self, subject_id: uuid.UUID, viewer: User, kind: str, before: datetime | None
