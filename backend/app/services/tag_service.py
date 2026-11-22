@@ -185,8 +185,19 @@ class TagService:
                 "media_ids": [m for m, _at in rows],
                 "next_before": rows[-1][1] if len(rows) == PAGE else None,
             }
+        return await self._posts_page(subject_id, viewer, before, "user")
+
+    async def group_posts(
+        self, subgroup_id: uuid.UUID, viewer: User, before: datetime | None
+    ) -> dict[str, Any]:
+        """@brief Posts that @-tag a group, as the viewer may see them."""
+        return await self._posts_page(subgroup_id, viewer, before, "subgroup")
+
+    async def _posts_page(
+        self, subject_id: uuid.UUID, viewer: User, before: datetime | None, subject_type: str
+    ) -> dict[str, Any]:
         prows = await self._repo.tagged_post_ids(
-            self._community_id, subject_id, viewer.id, before, PAGE
+            self._community_id, subject_id, viewer.id, before, PAGE, subject_type
         )
         enriched = await enrich_posts(self._posts._session, [p for p, _at in prows], viewer.id)
         return {

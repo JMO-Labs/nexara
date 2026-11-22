@@ -45,9 +45,10 @@ class TagRepository:
         target_id: uuid.UUID,
         user_ids: list[uuid.UUID],
         tagged_by: uuid.UUID,
+        subject_type: str = "user",
     ) -> list[uuid.UUID]:
         """
-        @brief Make the target's user tags exactly ``user_ids``.
+        @brief Make the target's tags of ``subject_type`` exactly ``user_ids``.
         @return ids that were newly tagged (callers notify these only).
         """
         current = set(
@@ -56,7 +57,7 @@ class TagRepository:
                     select(Tag.subject_id).where(
                         Tag.target_type == target_type,
                         Tag.target_id == target_id,
-                        Tag.subject_type == "user",
+                        Tag.subject_type == subject_type,
                     )
                 )
             ).scalars()
@@ -67,13 +68,13 @@ class TagRepository:
                 delete(Tag).where(
                     Tag.target_type == target_type,
                     Tag.target_id == target_id,
-                    Tag.subject_type == "user",
+                    Tag.subject_type == subject_type,
                     Tag.subject_id.in_(current - wanted),
                 )
             )
         new = [u for u in user_ids if u not in current]
         for uid in new:
-            await self.add(community_id, target_type, target_id, uid, tagged_by)
+            await self.add(community_id, target_type, target_id, uid, tagged_by, subject_type)
         return new
 
     async def add(
@@ -277,9 +278,10 @@ class TagRepository:
         viewer_id: uuid.UUID,
         before: datetime | None,
         limit: int,
+        subject_type: str = "user",
     ) -> list[tuple[uuid.UUID, datetime]]:
         """
-        @brief Posts the person is tagged in (directly or in a comment) that the
+        @brief Posts the person (or group) is tagged in (directly or in a comment) that the
                viewer can read, newest tag first.
         @return (post_id, tagged_at) pairs.
         """
@@ -294,7 +296,7 @@ class TagRepository:
             .join(Tag, or_(on_post, on_comment))
             .where(
                 Tag.community_id == community_id,
-                Tag.subject_type == "user",
+                Tag.subject_type == subject_type,
                 Tag.subject_id == subject_id,
                 post_visible(viewer_id, my_subgroup_ids(viewer_id), community_id),
             )

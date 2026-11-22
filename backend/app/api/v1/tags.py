@@ -97,3 +97,14 @@ async def household_tagged(
 ) -> Any:
     """@brief Photos a household member/pet is tagged in that the viewer can see."""
     return await svc.household_photos(member_id, user, before)
+
+
+@router.get("/subgroups/{subgroup_id}/tagged", response_model=TaggedPage)
+async def group_tagged(
+    subgroup_id: uuid.UUID,
+    before: datetime | None = Query(None),
+    user: User = Depends(get_current_user),
+    svc: TagService = Depends(_service),
+) -> Any:
+    """@brief Posts that @-tag this group that the viewer can read."""
+    return await svc.group_posts(subgroup_id, user, before)

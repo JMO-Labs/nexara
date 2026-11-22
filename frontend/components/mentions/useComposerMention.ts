@@ -3,18 +3,22 @@
  * @file components/mentions/useComposerMention.ts
  * @brief Tiptap Mention extension wired to the member list; exposes the
  *        open menu state so the composer renders <MentionMenu/>.
- *        Text output stays "@username" (editor.getText()).
+ *        Groups the viewer may @-tag follow people ("@slug" notifies the
+ *        group). Text output stays "@username" (editor.getText()).
  */
 import * as React from "react";
 import Mention from "@tiptap/extension-mention";
 import { matchMembers, useMembersList } from "@/hooks/useMembersList";
+import { useTaggableGroups, type MentionItem } from "@/hooks/useTaggableGroups";
 import type { UserSummary } from "@/lib/api/users";
 
+type Item = MentionItem;
+
 interface MenuState {
-  items: UserSummary[];
+  items: Item[];
   active: number;
   rect: DOMRect | null;
-  pick: (u: UserSummary) => void;
+  pick: (u: Item) => void;
 }
 
 /**
@@ -23,10 +27,17 @@ interface MenuState {
  */
 export function useComposerMention() {
   const { data: members = [] } = useMembersList();
-  const membersRef = React.useRef(members);
+  const groups = useTaggableGroups();
+  const membersRef = React.useRef<{ people: UserSummary[]; groups: Item[] }>({
+    people: members,
+    groups: [],
+  });
   React.useEffect(() => {
-    membersRef.current = members;
-  }, [members]);
+    membersRef.current = {
+      people: members,
+      groups,
+    };
+  }, [members, groups]);
   const [menu, setMenu] = React.useState<MenuState | null>(null);
 
   // Built once; the suggestion callbacks only touch refs/setters at event time.
@@ -47,10 +58,13 @@ export function useComposerMention() {
       ],
       suggestion: {
         char: "@",
-        items: ({ query }) => matchMembers(membersRef.current, query),
+        items: ({ query }): Item[] => [
+          ...matchMembers(membersRef.current.people, query),
+          ...matchMembers(membersRef.current.groups, query, 3),
+        ],
         render: () => {
           const show = (p: {
-            items: UserSummary[];
+            items: Item[];
             command: (a: { id: string; label: string }) => void;
             clientRect?: (() => DOMRect | null) | null;
           }) =>

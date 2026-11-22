@@ -71,6 +71,7 @@ PREF_MAP = {
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
+    "group_tag": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
     "list.item": ("notif_list_item_inapp", "notif_list_item_email"),

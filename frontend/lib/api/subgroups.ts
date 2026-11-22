@@ -14,6 +14,8 @@ export interface Subgroup {
   accent_color?: string | null;
   is_private: boolean;
   join_policy: "open" | "invite_only" | "admin_approval";
+  /** Who may @-tag the whole group. */
+  tag_policy?: "members" | "admins";
   created_by: string | null;
   parent_id: string | null;
   archived_at: string | null;
@@ -70,6 +72,7 @@ export interface UpdateSubgroupBody {
   accent_color?: string | null;
   is_private?: boolean;
   join_policy?: "open" | "invite_only" | "admin_approval";
+  tag_policy?: "members" | "admins";
 }
 
 const BASE = "/api/v1/subgroups";

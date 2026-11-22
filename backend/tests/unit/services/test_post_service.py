@@ -34,11 +34,17 @@ def _fake_tags(service, users, new=None):
     tags.subgroup_member_ids.return_value = {u.id for u in users}
     tags.blocked_with.return_value = set()
 
-    async def _replace(_c, _t, _i, ids, _a):
+    async def _replace(_c, _t, _i, ids, _a, subject_type="user"):
+        if subject_type != "user":
+            return list(ids)
         return list(ids) if new is None else new
 
     tags.replace_user_tags.side_effect = _replace
     service._tags_override = tags
+    from app.services.group_tag_service import GroupTagService
+
+    service._group_tags_override = AsyncMock(spec=GroupTagService)
+    service._group_tags_override.taggable.return_value = []
     return tags
 
 
@@ -190,6 +196,23 @@ class TestCreatePost:
         kwargs = service._notification.notify.await_args.kwargs
         assert kwargs["user_id"] == bob.id
         assert kwargs["type"] == "mention"
+
+    @pytest.mark.asyncio
+    async def test_create_post_tags_group_and_enqueues_fanout(self, service, post_repo):
+        """Unknown @names resolve as group slugs; new group tags enqueue the fan-out."""
+        user = _make_user()
+        post = _make_post()
+        post_repo.create_post.return_value = post
+        post_repo.get_post_detail.return_value = {}
+        tags = _fake_tags(service, [])
+        group = MagicMock(id=uuid.uuid4())
+        service._group_tags_override.taggable.return_value = [group]
+        with patch.object(service, "_enqueue_group_tag") as enq:
+            await service.create_post(user, "Hey @book-club!")
+        assert service._group_tags_override.taggable.await_args.args[0] == ["book-club"]
+        calls = [c for c in tags.replace_user_tags.await_args_list if c.kwargs]
+        assert calls[0].kwargs == {"subject_type": "subgroup"}
+        enq.assert_called_once_with(group.id, post.id, user, False)
 
     @pytest.mark.asyncio
     async def test_reply_to_prompt_increments_count(self, service, post_repo, prompt_repo):

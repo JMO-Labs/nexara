@@ -5,6 +5,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
 import {
+  AtSign,
   Home,
   CalendarDays,
   Image as ImageIcon,
@@ -18,6 +19,7 @@ import { EventsTab } from "./EventsTab";
 import { PhotosTab } from "./PhotosTab";
 import { PostsTab } from "./PostsTab";
 import { ListsTab } from "./ListsTab";
+import { TaggedTab } from "./TaggedTab";
 import { MembersTab } from "./MembersTab";
 import { SettingsTab } from "./SettingsTab";
 
@@ -42,6 +44,7 @@ export const GROUP_TABS: GroupTab[] = [
   { id: "photos", label: "Photos", Icon: ImageIcon, Component: PhotosTab },
   { id: "posts", label: "Posts", Icon: Newspaper, Component: PostsTab },
   { id: "lists", label: "Lists", Icon: List, Component: ListsTab },
+  { id: "tagged", label: "Tagged", Icon: AtSign, Component: TaggedTab },
   { id: "members", label: "Members", Icon: Users, Component: MembersTab },
   {
     id: "settings",

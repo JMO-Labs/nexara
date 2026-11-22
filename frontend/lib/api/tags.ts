@@ -49,6 +49,13 @@ export const getTagged = (
   return apiGet<TaggedPage>(`/api/v1/users/${seg(userId)}/tagged?${qs}`);
 };
 
+export const getGroupTagged = (subgroupId: string, before?: string | null) =>
+  apiGet<TaggedPage>(
+    `/api/v1/subgroups/${seg(subgroupId)}/tagged${
+      before ? `?${new URLSearchParams({ before })}` : ""
+    }`,
+  );
+
 export const lookupUsername = (username: string) =>
   apiGet<UserSummary>(
     `/api/v1/users/lookup?${new URLSearchParams({ username })}`,

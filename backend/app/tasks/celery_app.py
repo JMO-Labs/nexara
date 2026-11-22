@@ -31,6 +31,7 @@ celery_app = Celery(
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
         "app.tasks.gallery_tasks",
+        "app.tasks.group_tag_tasks",
         "app.tasks.link_preview_tasks",
         "app.tasks.list_tasks",
         "app.tasks.maintenance_tasks",

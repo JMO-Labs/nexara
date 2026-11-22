@@ -83,6 +83,10 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 
 // Mention/tag pickers read the member list; default to empty so components
 // render without a QueryClient. Tests that need members mock it themselves.
+vi.mock("@/hooks/useTaggableGroups", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/useTaggableGroups")>()),
+  useTaggableGroups: () => [],
+}));
 vi.mock("@/hooks/useMembersList", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/useMembersList")>()),
   useMembersList: () => ({ data: [] }),
