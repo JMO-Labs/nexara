@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { requestPasswordReset, confirmPasswordReset } from "@/lib/api/auth";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
@@ -125,9 +126,8 @@ function ConfirmForm({ token }: { token: string }) {
         noValidate
         className="flex flex-col gap-4"
       >
-        <Input
+        <PasswordInput
           label="New password"
-          type="password"
           autoFocus
           autoComplete="new-password"
           hint="At least 12 characters."

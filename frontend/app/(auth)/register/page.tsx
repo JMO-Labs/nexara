@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { register as apiRegister } from "@/lib/api/auth";
 import { completeLogin } from "@/lib/auth/flow";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
@@ -48,12 +49,13 @@ export default function RegisterPage() {
   return (
     <AuthCard
       title="Create your account"
-      subtitle={
+      subtitle="Join your family's space on Nexara."
+      footer={
         <>
           Already a member?{" "}
           <Link
             href="/login"
-            className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+            className="inline-flex min-h-11 items-center font-medium text-accent underline underline-offset-4"
           >
             Sign in
           </Link>
@@ -87,9 +89,8 @@ export default function RegisterPage() {
           disabled={signUp.isPending}
           {...register("email")}
         />
-        <Input
+        <PasswordInput
           label="Password"
-          type="password"
           autoComplete="new-password"
           hint="At least 12 characters."
           error={formState.errors.password?.message}
