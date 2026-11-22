@@ -14,6 +14,7 @@ import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import {
   getAuthConfig,
   login as apiLogin,
@@ -73,12 +74,13 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Welcome back"
-      subtitle={
+      subtitle="Sign in to catch up with your people."
+      footer={
         <>
           New here?{" "}
           <Link
             href="/register"
-            className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+            className="inline-flex min-h-11 items-center font-medium text-accent underline underline-offset-4"
           >
             Create an account
           </Link>
@@ -100,18 +102,14 @@ export default function LoginPage() {
             disabled={login.isPending}
             {...register("email")}
           />
-          <Input
+          <PasswordInput
             label="Password"
-            type="password"
             autoComplete="current-password"
             error={formState.errors.password?.message}
             disabled={login.isPending}
             {...register("password")}
           />
-          <Button type="submit" size="lg" loading={login.isPending}>
-            Sign in
-          </Button>
-          <div className="flex justify-between text-sm">
+          <div className="-my-2 flex justify-between text-sm">
             <Link
               href="/magic-link"
               className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
@@ -125,6 +123,9 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
+          <Button type="submit" size="lg" loading={login.isPending}>
+            Sign in
+          </Button>
         </form>
       )}
       <OAuthButtons providers={providers} showDivider={localAuth} />
