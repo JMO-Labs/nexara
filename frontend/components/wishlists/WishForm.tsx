@@ -97,15 +97,17 @@ export function WishForm({
       className="flex flex-col gap-3"
     >
       {!wish && (
-        <Segmented
-          label="Kind of wish"
-          value={kind}
-          onChange={setKind}
-          options={[
-            { value: "gift", label: "Gift", icon: Gift },
-            { value: "fund", label: "Cash fund", icon: PiggyBank },
-          ]}
-        />
+        <div className="self-start">
+          <Segmented
+            label="Kind of wish"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: "gift", label: "Gift", icon: Gift },
+              { value: "fund", label: "Cash fund", icon: PiggyBank },
+            ]}
+          />
+        </div>
       )}
       <div
         key={resetKey}
@@ -162,16 +164,15 @@ export function WishForm({
           </>
         )}
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
         <Input
           aria-label="Notes"
           placeholder={fund ? "What it's for" : "Size, color, details"}
           maxLength={500}
           value={f.notes}
           onChange={(e) => set({ notes: e.target.value })}
-          className="flex-1"
         />
-        <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
           {onCancel && (
             <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
