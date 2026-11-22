@@ -7,9 +7,10 @@
  *        `display: contents`, so the tiles sit in the parent grid/accordion.
  */
 import * as React from "react";
-import { ListChecks, Users } from "lucide-react";
+import { CloudSun, ListChecks, Users } from "lucide-react";
 import { PeopleTile } from "@/components/home/tiles/PeopleTile";
 import { ListsTile } from "@/components/home/tiles/ListsTile";
+import { WeatherTile } from "@/components/home/tiles/WeatherTile";
 import type { TileSlotProps } from "@/components/home/HomeTile";
 import { useHomePeople } from "@/hooks/useHomePeople";
 import { cn } from "@/lib/utils";
@@ -61,7 +62,7 @@ export function HomeSideColumn({
       className="contents lg:relative lg:flex lg:min-h-0 lg:w-16 lg:[grid-area:side]"
     >
       <nav
-        aria-label="People and lists"
+        aria-label="People, weather and lists"
         className="glass hidden w-16 flex-col items-center gap-2 rounded-[28px] py-3 lg:flex"
       >
         <button
@@ -86,6 +87,16 @@ export function HomeSideColumn({
         <button
           type="button"
           aria-expanded={expanded}
+          aria-label="Weather"
+          title="Weather"
+          onClick={() => setExpanded((v) => !v)}
+          className={railBtn}
+        >
+          <CloudSun className="size-5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          aria-expanded={expanded}
           aria-label="Lists"
           title="Lists"
           onClick={() => setExpanded((v) => !v)}
@@ -103,6 +114,7 @@ export function HomeSideColumn({
         )}
       >
         <PeopleTile open={open === "people"} onToggle={onToggle} />
+        <WeatherTile open={open === "weather"} onToggle={onToggle} />
         <ListsTile open={open === "lists"} onToggle={onToggle} />
       </div>
     </div>

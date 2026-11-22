@@ -19,17 +19,12 @@ interface EventMiniMapProps {
   ariaLabel?: string;
 }
 
+// CARTO basemaps now need an API key; OSM standard tiles don't. Dark mode
+// inverts the light tiles (.nx-tiles-dark in globals.css).
 const TILES = {
-  light: {
-    url: "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution:
-      '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  },
-  dark: {
-    url: "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution:
-      '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  },
+  url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution:
+    '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
 
 /**
@@ -64,8 +59,7 @@ export function EventMiniMap({
   ariaLabel = "Event location map",
 }: EventMiniMapProps) {
   const { resolvedTheme } = useTheme();
-  const effective = resolvedTheme === "dark" ? "dark" : "light";
-  const tiles = effective === "dark" ? TILES.dark : TILES.light;
+  const dark = resolvedTheme === "dark";
 
   return (
     <div
@@ -88,10 +82,15 @@ export function EventMiniMap({
         zoomControl={false}
         attributionControl
         style={{ width: "100%", height: "100%" }}
-        key={effective}
+        key={dark ? "dark" : "light"}
       >
         <InvalidateOnMount />
-        <TileLayer url={tiles.url} attribution={tiles.attribution} />
+        <TileLayer
+          key={dark ? "dark" : "light"}
+          url={TILES.url}
+          attribution={TILES.attribution}
+          className={dark ? "nx-tiles-dark" : undefined}
+        />
         <CircleMarker
           center={[lat, lon]}
           radius={8}
