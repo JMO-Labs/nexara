@@ -12,7 +12,8 @@ export type TileId =
   | "feed"
   | "people"
   | "weather"
-  | "lists";
+  | "lists"
+  | "memories";
 
 /**
  * @brief Track which home tile is open.

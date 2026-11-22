@@ -1023,6 +1023,9 @@
     "kudos_received": {
       "label": "You got kudos"
     },
+    "on_this_day": {
+      "label": "On this day"
+    },
     "list_assigned": {
       "label": "List task assigned"
     },

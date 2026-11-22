@@ -36,6 +36,7 @@ celery_app = Celery(
         "app.tasks.list_tasks",
         "app.tasks.maintenance_tasks",
         "app.tasks.media_tasks",
+        "app.tasks.memories_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -190,6 +191,10 @@ celery_app.conf.update(
         "refresh-shop-prices": {
             "task": "app.tasks.shop_tasks.refresh_shop_prices",
             "schedule": 60.0 * 60,
+        },
+        "memories-on-this-day": {
+            "task": "app.tasks.memories_tasks.notify_on_this_day",
+            "schedule": crontab(minute=5),
         },
         "send-birthday-reminders": {
             "task": "app.tasks.birthday_tasks.send_birthday_reminders",
