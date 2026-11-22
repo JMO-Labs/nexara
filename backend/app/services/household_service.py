@@ -17,6 +17,7 @@ from app.models.user import User
 from app.repositories.household_repo import HouseholdRepository
 from app.schemas.household import HouseholdCreate, HouseholdUpdate
 from app.services.home_people_service import birthday_in_days
+from app.services.household_handles import unique_handle
 
 PET_ONLY = ("species", "breed", "gotcha_day", "likes", "dislikes", "care_card")
 MAX_PER_OWNER = 30
@@ -45,6 +46,7 @@ class HouseholdService:
             "owner_id": m.owner_id,
             "kind": m.kind,
             "name": m.name,
+            "handle": m.handle,
             "relation": m.relation,
             "birthday": bday,
             "show_birth_year": m.show_birth_year,
@@ -113,6 +115,9 @@ class HouseholdService:
             raise ValidationError(message=_("Household is full"))
         fields = await self._clean(data, data.kind)
         fields["name"] = data.name.strip()
+        fields["handle"] = await unique_handle(
+            fields["name"], data.kind, lambda h: self._repo.handle_taken(self._community_id, h)
+        )
         m = await self._repo.create(
             community_id=self._community_id, owner_id=user.id, kind=data.kind, **fields
         )

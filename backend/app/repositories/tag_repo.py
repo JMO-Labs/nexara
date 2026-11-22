@@ -338,3 +338,15 @@ class TagRepository:
         if before is not None:
             stmt = stmt.where(Tag.created_at < before)
         return [(mid, at) for mid, at in (await self._session.execute(stmt)).all()]
+
+    async def household_by_handles(
+        self, community_id: uuid.UUID, viewer_id: uuid.UUID, handles: list[str]
+    ) -> list[tuple[uuid.UUID, uuid.UUID]]:
+        """@brief (member id, owner id) for handles the viewer may see."""
+        if not handles:
+            return []
+        stmt = select(HouseholdMember.id, HouseholdMember.owner_id).where(
+            HouseholdMember.handle.in_([h.lower() for h in handles]),
+            household_visible(viewer_id, community_id),
+        )
+        return [(r[0], r[1]) for r in (await self._session.execute(stmt)).all()]

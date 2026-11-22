@@ -57,6 +57,7 @@ def _member(owner: uuid.UUID, **kw: object) -> MagicMock:
 
 def _svc() -> tuple[HouseholdService, AsyncMock]:
     repo = AsyncMock(spec=HouseholdRepository)
+    repo.handle_taken.return_value = False
     repo.care_visible.return_value = False
     repo.media_in_community.return_value = True
     repo.visible.return_value = []

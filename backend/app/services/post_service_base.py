@@ -23,6 +23,7 @@ from app.repositories.tag_repo import TagRepository
 from app.services import mentions
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.group_tag_service import GroupTagService
+from app.services.household_mentions import sync_household_tags
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -170,10 +171,15 @@ class PostServiceBase:
         if not usernames and fresh:
             return
         users = await self._tags.users_by_username(self._community_id, usernames)
-        await self._sync_group_tags(
+        leftover = [n for n in usernames if n not in {u.username for u in users}]
+        await self._sync_group_tags(target_type, target_id, leftover, actor, post)
+        await sync_household_tags(
+            self._tags,
+            self._notification,
+            self._community_id,
             target_type,
             target_id,
-            [n for n in usernames if n not in {u.username for u in users}],
+            leftover,
             actor,
             post,
         )
