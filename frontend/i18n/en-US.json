@@ -1033,6 +1033,9 @@
     "capsule_opened": {
       "label": "Time capsule opened"
     },
+    "ride_update": {
+      "label": "Ride update"
+    },
     "kudos_received": {
       "label": "You got kudos"
     },
