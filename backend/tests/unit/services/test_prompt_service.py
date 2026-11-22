@@ -489,10 +489,13 @@ class TestPromptPostDetail:
         pp.community_id = COMMUNITY_ID
         prompt_repo.get_prompt_post.return_value = pp
         post_repo.list_responses.return_value = ([{"id": "x"}], "cur")
+        service._dq.answered = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
         out = await service.list_responses(pid, viewer, limit=5, cursor=None)
 
-        assert out == {"items": [{"id": "x"}], "next_cursor": "cur", "has_more": True}
+        assert out["items"] == [{"id": "x"}]
+        assert out["next_cursor"] == "cur" and out["has_more"] is True
+        assert out["answered"] is True
         prompt_repo.get_prompt_post.assert_awaited_once_with(pid)
         post_repo.list_responses.assert_awaited_once_with(
             COMMUNITY_ID, pid, viewer_id=viewer, cursor=None, limit=5
