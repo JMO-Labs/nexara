@@ -274,3 +274,8 @@
   --nx-logo-fo: 0.72;
   --nx-logo-blend: normal;
 }
+
+/* Dark map tiles: invert OSM light tiles (EventMiniMap). */
+.nx-tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
