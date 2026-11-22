@@ -32,6 +32,7 @@ def _subgroup(accent: str | None) -> MagicMock:
     sg.accent_color = accent
     sg.is_private = False
     sg.join_policy = "open"
+    sg.tag_policy = "members"
     sg.created_by = None
     sg.archived_at = None
     sg.created_at = now

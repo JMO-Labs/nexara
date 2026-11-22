@@ -43,6 +43,8 @@ class Subgroup(Base):
     accent_color: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_private: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     join_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="open")
+    # Who may @-tag the whole group: "members" or "admins" (owner/moderator).
+    tag_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="members")
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

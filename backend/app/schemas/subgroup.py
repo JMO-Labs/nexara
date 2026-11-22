@@ -58,6 +58,7 @@ class SubgroupUpdate(BaseModel):
     avatar_url: str | None = Field(default=None, max_length=500)
     is_private: bool | None = None
     join_policy: str | None = Field(default=None, pattern=r"^(open|invite_only|admin_approval)$")
+    tag_policy: str | None = Field(default=None, pattern=r"^(members|admins)$")
     parent_id: UUID | None = None
     cover_media_id: UUID | None = None
     accent_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
@@ -94,6 +95,7 @@ class SubgroupResponse(BaseModel):
     accent_color: str | None = None
     is_private: bool
     join_policy: str
+    tag_policy: str = "members"
     created_by: UUID | None = None
     parent_id: UUID | None = None
     archived_at: datetime | None = None
