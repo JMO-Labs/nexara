@@ -13,6 +13,7 @@ import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 import { ProfileDetailsPanel } from "./ProfileDetailsPanel";
 import { HouseholdPanel } from "./HouseholdPanel";
 import { VisibilitySelect } from "./VisibilitySelect";
+import { AvatarPicker } from "./AvatarPicker";
 
 const GRAVATAR = "https://www.gravatar.com/avatar/";
 
@@ -79,8 +80,19 @@ export function ProfileTab() {
     <div className="flex flex-col gap-5">
       <Panel title="Profile information">
         <SettingsRow
+          label="Profile photo"
+          description="Shown next to your name everywhere. Without one, your initials show on a color."
+        >
+          <AvatarPicker
+            name={profile?.display_name ?? ""}
+            src={profile?.avatar_url}
+            disabled={isPending}
+            onChange={(id) => mutate({ avatar_media_id: id })}
+          />
+        </SettingsRow>
+        <SettingsRow
           label="Use my Gravatar"
-          description="Show the photo linked to your email on gravatar.com. This shares a hash of your email with Gravatar. Without one, your initials show on a color."
+          description="Show the photo linked to your email on gravatar.com when you haven't uploaded one. This shares a hash of your email with Gravatar."
         >
           <Switch
             aria-label="Use my Gravatar"

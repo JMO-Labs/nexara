@@ -46,6 +46,7 @@ class ProfileUpdate(BaseModel):
     website_url: str | None = Field(default=None, max_length=300, pattern=r"^(https?://\S+)?$")
     birthday: date | None = None
     banner_media_id: UUID | None = None
+    avatar_media_id: UUID | None = None  # uploaded photo; null removes it
     phone: str | None = Field(default=None, max_length=40)
     contact_email: EmailStr | Literal[""] | None = None
     address: str | None = Field(default=None, max_length=300)

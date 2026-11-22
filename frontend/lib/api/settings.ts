@@ -84,6 +84,8 @@ export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
 export interface ProfileUpdate {
   /** Opt in/out of showing your Gravatar (server stores the URL). */
   use_gravatar?: boolean;
+  /** Uploaded photo; null removes it. */
+  avatar_media_id?: string | null;
   display_name?: string;
   bio?: string;
   location?: string;
