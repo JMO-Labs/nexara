@@ -16,7 +16,7 @@ import re
 import time
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import httpx
 import structlog
@@ -86,6 +86,19 @@ def asin_from_url(url: str) -> str | None:
         return None
     m = _ASIN.search(urlparse(url).path + "/")
     return m.group(1).upper() if m else None
+
+
+def tagged_url(url: str, tag: str) -> str | None:
+    """
+    @brief Clean ``/dp/ASIN?tag=`` link for an Amazon product URL, so sales
+           through it count for the community's Associates account. Drops
+           pasted search clutter and anyone else's tag.
+    @return None when not an Amazon product link or no tag
+    """
+    asin = asin_from_url(url)
+    if not asin or not tag:
+        return None
+    return f"https://{urlparse(url).hostname}/dp/{asin}?{urlencode({'tag': tag})}"
 
 
 def configured(c: Creds) -> bool:

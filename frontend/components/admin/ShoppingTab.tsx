@@ -30,39 +30,58 @@ const MARKETS = [
 const STATUS = {
   admin: "On, using the keys saved here.",
   server: "On, using keys from the server environment.",
+  tag: "Tracking ID saved: Amazon links earn for you. Live prices need API keys.",
   none: "Off. Amazon links show as plain links; people type the price.",
 };
 
 function SetupSteps() {
+  const a = (href: string, text: string) => (
+    <a
+      className="text-accent underline"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {text}
+    </a>
+  );
   return (
     <Panel title="How to get your keys" className="flex flex-col gap-2">
       <ol className="ml-5 list-decimal space-y-1.5 text-sm text-muted">
         <li>
           Join Amazon Associates (free) at{" "}
-          <a
-            className="text-accent underline"
-            href="https://affiliate-program.amazon.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            affiliate-program.amazon.com
-          </a>
-          . Your tracking ID (like <code>yourname-20</code>) is shown at the top
-          right of Associates Central.
+          {a(
+            "https://affiliate-program.amazon.com/",
+            "affiliate-program.amazon.com",
+          )}
+          . Your tracking ID (like <code>yourname-20</code>) is at the top right
+          of Associates Central.
         </li>
         <li>
-          In Associates Central, open Tools, then Creators API, and create
-          credentials. Copy the client ID and secret; the secret is shown once.
+          Save just the tracking ID here now. Amazon links on wishlists then
+          carry it, so gifts bought through them count as your sales.
         </li>
         <li>
-          Paste all three into the fields above, pick your Amazon store, save,
-          then test.
+          Reach 10 qualifying sales within 30 days. Amazon won&apos;t issue API
+          keys before that. Your own purchases don&apos;t count.
+        </li>
+        <li>
+          Apply for API access at{" "}
+          {a(
+            "https://affiliate-program.amazon.com/assoc_credentials/home",
+            "affiliate-program.amazon.com/assoc_credentials/home",
+          )}{" "}
+          and accept the API license agreement. Approval shows under Tools, then
+          Product Advertising API.
+        </li>
+        <li>
+          Create credentials, paste the client ID and secret into the fields
+          above, save, then test. The secret is shown once.
         </li>
       </ol>
       <p className="text-sm text-muted">
-        Amazon may only grant API access after your account has a few qualifying
-        sales, and can pause it if none come through your links for a while.
-        Links on wishlists carry your tracking ID, as Amazon requires.
+        Amazon can withdraw API access if sales through your links stop, so
+        prices may switch off later. Typed prices keep working either way.
       </p>
     </Panel>
   );
@@ -102,7 +121,7 @@ function AmazonForm({ data }: { data: api.AmazonSettings }) {
           and picture, refreshed hourly. Other shops work without keys.
         </p>
         <p role="status" className="text-sm font-medium">
-          {STATUS[data.source ?? "none"]}
+          {STATUS[data.source ?? (data.partner_tag ? "tag" : "none")]}
         </p>
         <form
           className="flex flex-col gap-4"

@@ -246,6 +246,7 @@ class ItemOut(BaseModel):
     mine: int | None = None
     claimers: list[Claimer] | None = None
     preview: Preview | None = None
+    link: str | None = None  # where "buy" goes: shop's link, tagged Amazon link, or url
     price_auto: bool = False
 
 

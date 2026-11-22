@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import and_, delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.community import Community
 from app.models.household import HouseholdMember
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.models.user import User
@@ -136,6 +137,11 @@ class WishlistRepository:
             exists().where(R.wishlist_id == wishlist_id, R.kind == "user", R.ref_id == user_id)
         )
         return bool((await self._session.execute(stmt)).scalar())
+
+    async def amazon_tag(self, community_id: uuid.UUID) -> str | None:
+        """@brief The community's saved Amazon Associates tracking ID."""
+        stmt = select(Community.amazon_partner_tag).where(Community.id == community_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def user_names(
         self, ids: list[uuid.UUID], community_id: uuid.UUID

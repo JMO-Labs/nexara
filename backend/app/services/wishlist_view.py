@@ -12,6 +12,7 @@ from typing import Any
 
 from app.models.wishlist import Wishlist, WishlistClaim, WishlistItem
 from app.schemas.wishlist import Claimer, ItemOut, Preview
+from app.services.shop import amazon
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,7 @@ def build_items(
     previews: dict[uuid.UUID, Any],
     viewer_id: uuid.UUID,
     sees_claims: bool,
+    amazon_tag: str = "",
 ) -> tuple[list[ItemOut], int]:
     """
     @brief Items as the viewer sees them, plus the viewer's own claimed total.
@@ -96,6 +98,9 @@ def build_items(
                 )
                 if p is not None and not p.fetch_error
                 else None,
+                link=(p.buy_url if p is not None else None)
+                or (amazon.tagged_url(i.url, amazon_tag) if i.url else None)
+                or i.url,
             )
         )
     return out, mine_total

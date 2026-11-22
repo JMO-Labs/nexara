@@ -183,7 +183,7 @@ export function WishRow({ w, item }: { w: WishlistDetail; item: Wish }) {
       : null;
   const img = item.preview?.has_image && !imgFailed;
   // Amazon's API links must be used unchanged (partner tag); else the wish link.
-  const link = item.preview?.buy_url || item.url;
+  const link = item.link || item.preview?.buy_url || item.url;
   const checked = item.preview?.checked_at
     ? formatDistanceToNowStrict(new Date(item.preview.checked_at), {
         addSuffix: true,

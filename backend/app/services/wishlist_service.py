@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from app.core.config import get_settings
 from app.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.core.i18n import _
 from app.models.user import User
@@ -195,7 +196,8 @@ class WishlistService:
         (summary,) = await self._summaries([(w, len(items))], viewer)
         claims = await self._items.claims([i.id for i in items])
         previews = await self._items.previews([i.preview_id for i in items if i.preview_id])
-        views, mine = build_items(items, claims, previews, viewer.id, summary.sees_claims)
+        tag = await self._repo.amazon_tag(self._cid) or get_settings().AMAZON_PARTNER_TAG
+        views, mine = build_items(items, claims, previews, viewer.id, summary.sees_claims, tag)
         return WishlistDetail(
             **summary.model_dump(),
             items=views,

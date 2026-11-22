@@ -223,3 +223,13 @@ def test_creds_prefer_complete_admin_values():
     assert amazon.creds_from(env, full).marketplace == "www.amazon.com"
     assert amazon.creds_from(env, {**full, "client_secret": ""}).client_id == "env"
     assert not amazon.configured(amazon.creds_from(Settings(), {}))
+
+
+def test_tagged_url_cleans_and_tags_amazon_only():
+    long = "https://www.amazon.com/Pencils/dp/B071JM699B?keywords=pencils&tag=other-20"
+    assert amazon.tagged_url(long, "fam-20") == "https://www.amazon.com/dp/B071JM699B?tag=fam-20"
+    assert amazon.tagged_url("https://www.amazon.co.uk/dp/B003O2RXUQ", "uk-21").startswith(
+        "https://www.amazon.co.uk/dp/B003O2RXUQ?tag=uk-21"
+    )
+    assert amazon.tagged_url("https://shop.example/dp/B071JM699B", "fam-20") is None
+    assert amazon.tagged_url(long, "") is None

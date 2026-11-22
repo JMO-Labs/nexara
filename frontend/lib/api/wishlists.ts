@@ -53,6 +53,8 @@ export interface Wish {
         amount_cents: number | null;
       }[]
     | null;
+  /** Buy link: shop's own, tagged Amazon link, or the url. */
+  link?: string | null;
   preview: {
     id: string;
     title: string | null;
