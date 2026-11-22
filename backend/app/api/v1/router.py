@@ -21,6 +21,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
 from app.api.v1.calendars import router as calendars_router
+from app.api.v1.celebrations import router as celebrations_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.communities import router as communities_router
 from app.api.v1.events import router as events_router
@@ -76,6 +77,7 @@ api_v1_router.include_router(auth_router)
 api_v1_router.include_router(oauth_router)
 api_v1_router.include_router(branding_router)
 api_v1_router.include_router(calendars_router)
+api_v1_router.include_router(celebrations_router)
 api_v1_router.include_router(chat_router)
 api_v1_router.include_router(events_router)
 api_v1_router.include_router(export_router)

@@ -62,6 +62,7 @@ class HouseholdResponse(BaseModel):
     owner_id: UUID
     kind: Kind
     name: str
+    handle: str | None = None
     relation: str | None = None
     birthday: str | None = None
     show_birth_year: bool = False

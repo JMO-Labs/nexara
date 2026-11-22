@@ -19,6 +19,7 @@ import { assignTimeLanes, type TimeLane } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
 import { formatTime } from "./formatTime";
 import { chipStyle, HAIRLINE, TODAY_PILL } from "./toneStyle";
+import { EventTitle } from "./EventTitle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
@@ -184,7 +185,9 @@ export function WeekView({
                       className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: seg.tone.solid }}
                     />
-                    <span className="min-w-0 truncate">{seg.event.title}</span>
+                    <span className="min-w-0 truncate">
+                      <EventTitle ev={seg.event} />
+                    </span>
                   </div>
                 );
               });

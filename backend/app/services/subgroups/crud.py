@@ -123,7 +123,9 @@ class SubgroupCrudMixin:
         @raises NotFoundError If cover_media_id or initial_owner_id invalid.
         """
         existing = await self._subgroup_repo.get_by_slug(slug, self._community_id)
-        if existing is not None:
+        if existing is not None or await self._subgroup_repo.slug_is_handle(
+            slug, self._community_id
+        ):
             raise ConflictError(message=_("A subgroup with this slug already exists"))
 
         await self._validate_parent(parent_id)

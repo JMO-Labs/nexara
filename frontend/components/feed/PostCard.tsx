@@ -12,6 +12,7 @@ import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
 import { PostHeader } from "./PostHeader";
 import { PostBody } from "./PostBody";
+import { CelebrateHero } from "./CelebrateHero";
 import { PostMedia } from "./PostMedia";
 import { PollCard } from "./PollCard";
 import { ReactionRow } from "./ReactionRow";
@@ -101,6 +102,7 @@ export function PostCard({
         isPromptSummary={post.is_prompt_summary}
         replyToPromptId={post.reply_to_prompt_id}
       />
+      {post.celebration ? <CelebrateHero c={post.celebration} /> : null}
       <PostBody content={post.content} truncate={truncateBody} />
       {post.link_previews && post.link_previews.length > 0 ? (
         <div

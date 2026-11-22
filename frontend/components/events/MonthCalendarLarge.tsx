@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
 import { formatTime } from "./formatTime";
 import { chipStyle, TODAY_PILL } from "./toneStyle";
+import { EventTitle } from "./EventTitle";
 
 const LANE_HEIGHT = 22;
 const HEADER_OFFSET = 34;
@@ -307,7 +308,7 @@ export function MonthCalendarLarge({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
-                          {ev.title}
+                          <EventTitle ev={ev} />
                         </span>
                         <span className="block text-xs text-muted">
                           {ev.is_all_day

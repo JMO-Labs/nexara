@@ -11,6 +11,7 @@ import { assignTimeLanes } from "@/lib/events/lanes";
 import { cn } from "@/lib/utils";
 import { toneForEvent } from "./eventColors";
 import { chipStyle, HAIRLINE } from "./toneStyle";
+import { EventTitle } from "./EventTitle";
 
 const HOUR_HEIGHT = 48;
 const LANE_HEIGHT = 20;
@@ -99,7 +100,7 @@ export function DayView({
                   className="min-h-8 cursor-pointer rounded-md border-l-[3px] px-2 py-1 text-xs font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   style={chipStyle(tone, selectedEventId === ev.id)}
                 >
-                  {ev.title}
+                  <EventTitle ev={ev} />
                 </button>
               );
             })}
@@ -186,7 +187,9 @@ export function DayView({
                   ...chipStyle(seg.tone, isSelected),
                 }}
               >
-                <p className="truncate font-black">{seg.event.title}</p>
+                <p className="truncate font-black">
+                  <EventTitle ev={seg.event} />
+                </p>
                 {seg.height >= 32 && (
                   <p className="mt-px text-[11px] opacity-90">
                     {format(parseISO(seg.event.starts_at), "h:mm a")}

@@ -25,6 +25,12 @@ class GroupTagService:
         self._repo = repo
         self._community_id = community_id
 
+    async def existing_slugs(self, slugs: list[str]) -> set[str]:
+        """@brief Which names are group slugs in this community (taggable or not)."""
+        if not slugs:
+            return set()
+        return {g.slug for g in await self._repo.by_slugs(self._community_id, slugs)}
+
     async def taggable(self, slugs: list[str], actor: User, post: Any) -> list[Subgroup]:
         """
         @brief Groups among ``slugs`` the actor may tag on ``post``.

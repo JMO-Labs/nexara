@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   addDays,
   endOfMonth,
+  format,
   isSameDay,
   parseISO,
   startOfDay,
@@ -23,6 +24,13 @@ import { useEventsInRange } from "@/hooks/useEvents";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useCalendars } from "@/hooks/useCalendars";
 import type { EventItem } from "@/lib/api/events";
+import { useQuery } from "@tanstack/react-query";
+import { listCelebrations } from "@/lib/api/celebrations";
+import {
+  CELEBRATIONS_CALENDAR,
+  celebrationEvents,
+  celebrationOf,
+} from "@/lib/celebrations";
 
 /**
  * @brief All state and derived data for the events page.
@@ -80,7 +88,17 @@ export function useEventsPageState() {
   );
   const { data: subgroups } = useSubgroupList();
   const { data: calendars } = useCalendars();
-  const calendarList = React.useMemo(() => calendars ?? [], [calendars]);
+  const calendarList = React.useMemo(
+    () => [...(calendars ?? []), CELEBRATIONS_CALENDAR],
+    [calendars],
+  );
+  const celebStart = format(fetchStart, "yyyy-MM-dd");
+  const celebEnd = format(fetchEnd, "yyyy-MM-dd");
+  const { data: celebrations } = useQuery({
+    queryKey: ["calendar", "celebrations", celebStart, celebEnd],
+    queryFn: () => listCelebrations(celebStart, celebEnd),
+    staleTime: 10 * 60_000,
+  });
 
   const [selectedSources, setSelectedSources] = React.useState<
     CalendarSourceId[]
@@ -105,10 +123,14 @@ export function useEventsPageState() {
 
   const filtered = React.useMemo(() => {
     const set = new Set(selectedSources);
-    return (data?.items ?? []).filter((ev) =>
+    const all = [
+      ...(data?.items ?? []),
+      ...celebrationEvents(celebrations ?? []),
+    ];
+    return all.filter((ev) =>
       ev.calendar_id ? set.has(ev.calendar_id) : true,
     );
-  }, [data?.items, selectedSources]);
+  }, [data?.items, celebrations, selectedSources]);
 
   const subgroupNames = React.useMemo(() => {
     const m = new Map<string, string>();
@@ -160,6 +182,8 @@ export function useEventsPageState() {
     setSelectedDay((prev) => (prev && isSameDay(prev, d) ? null : d));
 
   const onSelectEvent = (ev: EventItem) => {
+    const c = celebrationOf(ev);
+    if (c) return router.push(c.link); // birthdays open the person or pet
     setSelectedEventId(ev.id);
     setSelectedDay(startOfDay(parseISO(ev.starts_at)));
   };

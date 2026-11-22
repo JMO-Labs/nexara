@@ -23,6 +23,7 @@ from app.repositories.tag_repo import TagRepository
 from app.services import mentions
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.group_tag_service import GroupTagService
+from app.services.household_mentions import sync_household_tags
 from app.services.notification_service import NotificationService
 from app.services.poll_service import PollService
 from app.services.realtime import events
@@ -170,10 +171,16 @@ class PostServiceBase:
         if not usernames and fresh:
             return
         users = await self._tags.users_by_username(self._community_id, usernames)
-        await self._sync_group_tags(
+        leftover = [n for n in usernames if n not in {u.username for u in users}]
+        group_slugs = await self._sync_group_tags(target_type, target_id, leftover, actor, post)
+        # One namespace, fixed order: people, then groups, then pet/family handles.
+        await sync_household_tags(
+            self._tags,
+            self._notification,
+            self._community_id,
             target_type,
             target_id,
-            [n for n in usernames if n not in {u.username for u in users}],
+            [n for n in leftover if n not in group_slugs],
             actor,
             post,
         )
@@ -247,8 +254,12 @@ class PostServiceBase:
 
     async def _sync_group_tags(
         self, target_type: str, target_id: uuid.UUID, slugs: list[str], actor: User, post: Any
-    ) -> None:
-        """@brief Store @group tags and fan out notifications for newly tagged groups."""
+    ) -> set[str]:
+        """
+        @brief Store @group tags and fan out notifications for newly tagged groups.
+        @return names that are group slugs (tagged or not), so they aren't
+                retried as household handles
+        """
         groups = await self._group_tags.taggable(slugs, actor, post)
         new = await self._tags.replace_user_tags(
             self._community_id,
@@ -260,3 +271,4 @@ class PostServiceBase:
         )
         for gid in new:
             self._enqueue_group_tag(gid, post.id, actor, target_type == "comment")
+        return await self._group_tags.existing_slugs(slugs)

@@ -74,6 +74,11 @@ export function HouseholdPage({ id }: { id: string }) {
         <HouseholdAvatar m={m} className="size-28" />
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold">{m.name}</h1>
+          {m.handle && (
+            <p className="text-sm text-muted">
+              Mention with <span className="font-medium">@{m.handle}</span>
+            </p>
+          )}
           {householdSubtitle(m) && (
             <p className="text-muted">{householdSubtitle(m)}</p>
           )}

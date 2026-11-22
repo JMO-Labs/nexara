@@ -14,6 +14,8 @@ export interface HouseholdMember {
   owner_id: string;
   kind: HouseholdKind;
   name: string;
+  /** @handle for mentions (stable across renames). */
+  handle: string | null;
   relation: string | null;
   /** ISO date, or "--MM-DD" when the year is hidden. */
   birthday: string | null;

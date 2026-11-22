@@ -130,6 +130,7 @@ async def create_post(
         reply_to_prompt_id=body.reply_to_prompt_id,
         subgroup_id=body.subgroup_id,
         private=body.visibility == "private",
+        celebrate=body.celebrate,
     )
 
 

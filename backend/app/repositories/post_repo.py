@@ -224,6 +224,14 @@ class PostRepository(BaseRepository[Post]):
         enriched = await self._enrich_posts([post_id], viewer_id)
         return enriched.get(post_id)
 
+    async def set_celebration(
+        self, post: Post, subject_type: str, subject_id: uuid.UUID, occasion: str
+    ) -> None:
+        """@brief Mark a post as celebrating a person or pet's occasion."""
+        post.celebrate_type, post.celebrate_id = subject_type, subject_id
+        post.celebrate_occasion = occasion
+        await self._session.flush()
+
     async def create_post(
         self,
         author_id: uuid.UUID,

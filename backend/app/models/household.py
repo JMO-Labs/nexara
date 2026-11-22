@@ -36,6 +36,8 @@ class HouseholdMember(Base):
     )
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    # @handle for mentions; stable across renames (see household_handles.py).
+    handle: Mapped[str | None] = mapped_column(Text)
     relation: Mapped[str | None] = mapped_column(Text)
     birthday: Mapped[date | None] = mapped_column(Date)
     show_birth_year: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")

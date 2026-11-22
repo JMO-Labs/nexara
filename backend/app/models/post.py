@@ -75,6 +75,10 @@ class Post(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # Celebrate post: whose occasion ('user' or 'household' member/pet).
+    celebrate_type: Mapped[str | None] = mapped_column(Text)
+    celebrate_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    celebrate_occasion: Mapped[str | None] = mapped_column(Text)
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
