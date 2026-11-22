@@ -146,5 +146,3 @@ async def test_place_limit():
     svc._repo.list.return_value = [MagicMock()] * 8  # type: ignore[attr-defined]
     with pytest.raises(ValidationError):
         await svc.add_place(_viewer(), "X", 1, 2)
-
-

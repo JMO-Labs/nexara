@@ -31,7 +31,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column(
-            "owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"),
+            "owner_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
             nullable=False,
         ),
         sa.Column("kind", sa.Text(), nullable=False),
