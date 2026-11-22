@@ -15,6 +15,8 @@ import {
   CornerUpLeft,
 } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import { MentionMenu } from "@/components/mentions/MentionMenu";
+import { useMentionInput } from "@/components/mentions/useMentionInput";
 
 export interface ReplyContext {
   authorName: string;
@@ -62,6 +64,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
     const [emojiOpen, setEmojiOpen] = React.useState(false);
     const lastTyping = React.useRef(0);
     const taRef = React.useRef<HTMLTextAreaElement | null>(null);
+    const mention = useMentionInput(value, setValue, taRef);
 
     React.useImperativeHandle(
       ref,
@@ -77,7 +80,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setValue(e.target.value);
+      mention.onTextChange(e);
       if (!onTyping) return;
       const now = Date.now();
       if (now - lastTyping.current > TYPING_DEBOUNCE_MS) {
@@ -86,7 +89,8 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
       }
     };
 
-    const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (mention.onKeyDown(e)) return;
       // Enter, Ctrl+Enter and Cmd+Enter send; Shift+Enter inserts a newline.
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -137,7 +141,13 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
           </div>
         )}
 
-        <div className="flex items-end gap-2 rounded-[26px] bg-[var(--nx-glass-solid)] py-1.5 pl-2 pr-1.5">
+        <div className="relative flex items-end gap-2 rounded-[26px] bg-[var(--nx-glass-solid)] py-1.5 pl-2 pr-1.5">
+          {mention.open && (
+            <MentionMenu
+              {...mention.menu}
+              className="absolute bottom-full left-2 mb-2"
+            />
+          )}
           <div className="flex gap-0.5">
             <IconButton
               aria-label="Add emoji"
@@ -176,10 +186,12 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
             rows={1}
             value={value}
             onChange={handleChange}
-            onKeyDown={onKeyDown}
+            onKeyDown={handleKeyDown}
             disabled={disabled}
             aria-label="Message"
+            aria-autocomplete="list"
             placeholder={placeholder ?? "Write a message…"}
+            {...mention.fieldProps}
             className="max-h-36 min-h-9 flex-1 resize-none bg-transparent px-2 py-2 text-[13.5px] outline-none placeholder:text-muted disabled:opacity-50"
           />
 
