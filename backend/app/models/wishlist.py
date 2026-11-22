@@ -62,6 +62,15 @@ class Wishlist(Base):
         JSONB, nullable=False, server_default="[]"
     )
     note: Mapped[str | None] = mapped_column(Text)
+    # Shipping: free text, a person's shared profile address, or an event's
+    # location (both used live).
+    ship_to_text: Mapped[str | None] = mapped_column(Text)
+    ship_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    ship_to_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("events.id", ondelete="SET NULL")
+    )
     visibility: Mapped[str] = mapped_column(Text, nullable=False, server_default="groups")
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(
@@ -85,6 +94,9 @@ class WishlistItem(Base):
     url: Mapped[str | None] = mapped_column(Text)
     price_cents: Mapped[int | None] = mapped_column(Integer)
     goal_cents: Mapped[int | None] = mapped_column(Integer)
+    # The price follows the shop (filled from the link and refreshed) until
+    # someone types their own.
+    price_auto: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     preview_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("link_previews.id", ondelete="SET NULL")
     )

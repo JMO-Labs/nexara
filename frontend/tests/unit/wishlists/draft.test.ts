@@ -62,4 +62,22 @@ describe("wishlist draft", () => {
     expect(parseMoney("")).toBeNull();
     expect(formatMoney(2500, "USD")).toMatch(/25/);
   });
+
+  it("ships to a person or a typed address, never both", () => {
+    const d = { ...initialDraft(null, me), title: "Bday" };
+    expect(draftError({ ...d, ship_mode: "user" }, 2)).toMatch(/ship/);
+    expect(draftError({ ...d, ship_mode: "text" }, 2)).toMatch(/address/);
+    const byUser = toInput({
+      ...d,
+      ship_mode: "user",
+      ship_to_user_id: "u9",
+      ship_to_text: "x",
+    });
+    expect([byUser.ship_to_user_id, byUser.ship_to_text]).toEqual(["u9", null]);
+    const none = toInput({ ...d, ship_mode: "none", ship_to_user_id: "u9" });
+    expect([none.ship_to_user_id, none.ship_to_text]).toEqual([null, null]);
+    expect(draftError({ ...d, ship_mode: "event" }, 2)).toMatch(/event/);
+    const ev = toInput({ ...d, ship_mode: "event", ship_to_event_id: "e1" });
+    expect([ev.ship_to_event_id, ev.ship_to_user_id]).toEqual(["e1", null]);
+  });
 });

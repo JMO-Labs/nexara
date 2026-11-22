@@ -12,6 +12,8 @@ import { fieldRegistry } from "@/lib/lists/fieldRegistry";
 import { itemTitle, type ListField } from "@/lib/lists/listFields";
 import type { ListItem } from "@/lib/api/listTypes";
 import { cn } from "@/lib/utils";
+import type { ItemAssignContext } from "@/hooks/useListAssignments";
+import { ItemAssignment } from "./ItemAssignment";
 
 export interface ListItemRowProps {
   item: ListItem;
@@ -19,6 +21,8 @@ export interface ListItemRowProps {
   onToggle: (completed: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Take/assign controls; omitted = no assignment UI. */
+  assign?: ItemAssignContext;
 }
 
 /**
@@ -46,13 +50,14 @@ export function ListItemRow({
   onToggle,
   onEdit,
   onDelete,
+  assign,
 }: ListItemRowProps) {
   const title = itemTitle(item.values, `Item ${item.position + 1}`);
   const [first, ...secondary] = fields;
   return (
     <li
       className={cn(
-        "glass-item flex items-center gap-3 rounded-[20px] px-4 py-3",
+        "glass-item flex items-start gap-3 rounded-[20px] px-4 py-3",
         item.completed && "opacity-70",
       )}
     >
@@ -92,6 +97,11 @@ export function ListItemRow({
               </div>
             )}
           </dl>
+        )}
+        {assign && (
+          <div className="mt-2">
+            <ItemAssignment item={item} title={title} ctx={assign} />
+          </div>
         )}
       </div>
       <div className="flex shrink-0 gap-1">

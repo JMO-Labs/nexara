@@ -27,17 +27,20 @@ class ListItemService:
         repo_list: ListRepository,
         field_registry: ListFieldRegistry,
         notification_service: Any | None = None,
+        activity: Any | None = None,
     ) -> None:
         """
         @param repo_item Item repository.
         @param repo_list List repository.
         @param field_registry Field type registry.
         @param notification_service Optional NotificationService for list_item.
+        @param activity Optional ListActivityService (activity log).
         """
         self._items = repo_item
         self._lists = repo_list
         self._registry = field_registry
         self._notify = notification_service
+        self._activity = activity
 
     async def _notify_item_added(self, lst: List, item: ListItem, adder_id: uuid.UUID) -> None:
         """@brief Send ``list_item`` to the owner and list audience, minus the adder."""
@@ -55,6 +58,13 @@ class ListItemService:
         }
         for uid in sorted(recipients, key=str):
             await self._notify.notify(uid, "list_item", payload, actor_id=adder_id)
+
+    async def _log(self, item: ListItem, actor_id: uuid.UUID, action: str) -> None:
+        """@brief Append an activity entry when a recorder is wired."""
+        if self._activity is not None:
+            await self._activity.record(
+                item.list_id, actor_id, action, item.id, item_title(item.values)
+            )
 
     async def _get_list(self, community_id: uuid.UUID, list_id: uuid.UUID) -> List:
         lst = await self._lists.get_by_id(list_id, community_id)
@@ -174,6 +184,7 @@ class ListItemService:
         item = await self._items.create(item)
         await self._lists.increment_counters(list_id, {"item_count": 1})
         await self._notify_item_added(lst, item, user_id)
+        await self._log(item, user_id, "item_added")
         return item
 
     async def update(
@@ -189,9 +200,11 @@ class ListItemService:
             raise AuthorizationError("Only the owner can edit items")
         merged = {k: v for k, v in {**item.values, **values}.items() if v is not None}
         item.values = self._validate_values(lst, merged)
-        return await self._items.update(
+        updated = await self._items.update(
             item, {"values": item.values, **self._project_item(lst, item)}
         )
+        await self._log(updated, user_id, "item_edited")
+        return updated
 
     async def delete(self, community_id: uuid.UUID, item_id: uuid.UUID, user_id: uuid.UUID) -> None:
         """@brief Soft-delete an item and decrement counters."""
@@ -199,6 +212,7 @@ class ListItemService:
         if lst.owner_id != user_id:
             raise AuthorizationError("Only the owner can delete items")
         await self._items.soft_delete(item)
+        await self._log(item, user_id, "item_removed")
         delta = {"item_count": -1}
         if item.completed:
             delta["completed_count"] = -1

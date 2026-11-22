@@ -7,6 +7,7 @@ import type { Occasion } from "@/lib/occasions";
 import type {
   RecipientIn,
   RegistryLink,
+  ShipTo,
   WishlistDetail,
   WishlistInput,
 } from "@/lib/api/wishlists";
@@ -30,6 +31,17 @@ export interface Draft {
   visibility: ProfileLevel;
   note: string;
   registry_links: RegistryLink[];
+  ship_mode: "none" | "user" | "event" | "text";
+  ship_to_text: string;
+  ship_to_user_id: string;
+  ship_to_event_id: string;
+}
+
+/** @brief Which ship-to kind a saved list uses. */
+function shipMode(s?: ShipTo | null): Draft["ship_mode"] {
+  if (s?.user_id) return "user";
+  if (s?.event_id) return "event";
+  return s?.address ? "text" : "none";
 }
 
 /** @brief Fresh draft (or one prefilled from an existing list). */
@@ -62,6 +74,11 @@ export function initialDraft(
     visibility: w?.visibility ?? "groups",
     note: w?.note ?? "",
     registry_links: w?.registry_links ?? [],
+    ship_mode: shipMode(w?.ship_to),
+    ship_to_text:
+      shipMode(w?.ship_to) === "text" ? (w?.ship_to?.address ?? "") : "",
+    ship_to_user_id: w?.ship_to?.user_id ?? "",
+    ship_to_event_id: w?.ship_to?.event_id ?? "",
   };
 }
 
@@ -79,6 +96,12 @@ export function draftError(d: Draft, step: number): string | null {
       return "The budget minimum is above the maximum.";
     if (d.registry_links.some((r) => r.url && !/^https?:\/\//i.test(r.url)))
       return "Registry links must start with http:// or https://";
+    if (d.ship_mode === "user" && !d.ship_to_user_id)
+      return "Pick who gifts ship to.";
+    if (d.ship_mode === "event" && !d.ship_to_event_id)
+      return "Pick the event.";
+    if (d.ship_mode === "text" && !d.ship_to_text.trim())
+      return "Add the shipping address.";
   }
   return null;
 }
@@ -102,6 +125,9 @@ export function toInput(d: Draft): WishlistInput {
     registry_links: d.registry_links
       .filter((r) => r.url.trim())
       .map((r) => ({ label: r.label.trim() || "Registry", url: r.url.trim() })),
+    ship_to_text: d.ship_mode === "text" ? d.ship_to_text.trim() : null,
+    ship_to_user_id: d.ship_mode === "user" ? d.ship_to_user_id : null,
+    ship_to_event_id: d.ship_mode === "event" ? d.ship_to_event_id : null,
     recipients: d.recipients.map(({ kind, ref_id, name }) => ({
       kind,
       ref_id,

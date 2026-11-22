@@ -1023,6 +1023,9 @@
     "kudos_received": {
       "label": "You got kudos"
     },
+    "list_assigned": {
+      "label": "List task assigned"
+    },
     "list_completed": {
       "label": "List completed"
     },

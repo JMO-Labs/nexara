@@ -35,6 +35,7 @@ from app.models.list import (  # noqa: F401
     ListItemSignup,
     ListMember,
 )
+from app.models.list_assignment import ListActivity, ListItemAssignment  # noqa: F401
 from app.models.list_template import (  # noqa: F401
     ListTemplate,
     ListTemplateField,

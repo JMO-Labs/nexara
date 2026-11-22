@@ -14,6 +14,7 @@ from app.api.v1.admin_ai import router as admin_ai_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
+from app.api.v1.admin_shop import router as admin_shop_router
 from app.api.v1.admin_sso import router as admin_sso_router
 from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.auth import router as auth_router
@@ -32,6 +33,7 @@ from app.api.v1.interests import router as interests_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.link_previews import router as link_previews_router
+from app.api.v1.list_assignments import router as list_assignments_router
 from app.api.v1.list_templates import router as list_templates_router
 from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
@@ -66,6 +68,7 @@ api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
+api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(admin_retention_router)
 api_v1_router.include_router(plugins_router)
@@ -93,6 +96,7 @@ api_v1_router.include_router(interests_router)
 api_v1_router.include_router(invites_router)
 api_v1_router.include_router(link_previews_router)
 api_v1_router.include_router(lists_router)
+api_v1_router.include_router(list_assignments_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(bookmarks_router)

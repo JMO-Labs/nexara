@@ -53,12 +53,21 @@ export interface Wish {
         amount_cents: number | null;
       }[]
     | null;
+  /** Buy link: shop's own, tagged Amazon link, or the url. */
+  link?: string | null;
   preview: {
     id: string;
     title: string | null;
     site_name: string | null;
     has_image: boolean;
+    price_cents: number | null;
+    currency: string | null;
+    /** Link to buy through (Amazon's partner-tagged page); use as-is. */
+    buy_url: string | null;
+    checked_at: string | null;
   } | null;
+  /** Price follows the shop until someone types their own. */
+  price_auto: boolean;
 }
 
 export interface Wishlist {
@@ -86,8 +95,18 @@ export interface Wishlist {
   sees_claims: boolean;
 }
 
+/** @brief Where gifts go; address null = that person stopped sharing it. */
+export interface ShipTo {
+  user_id: string | null;
+  event_id: string | null;
+  starts_at: string | null;
+  name: string | null;
+  address: string | null;
+}
+
 export interface WishlistDetail extends Wishlist {
   items: Wish[];
+  ship_to: ShipTo | null;
   planned_cents: number | null;
   my_total_cents: number;
 }
@@ -108,6 +127,9 @@ export interface WishlistInput {
   hide_claims?: boolean;
   registry_links?: RegistryLink[];
   recipients?: RecipientIn[];
+  ship_to_text?: string | null;
+  ship_to_user_id?: string | null;
+  ship_to_event_id?: string | null;
 }
 
 export type WishInput = Partial<
@@ -131,6 +153,17 @@ export const listWishlists = (q: WishlistQuery = {}) =>
   );
 export const getWishlist = (id: string) =>
   apiGet<WishlistDetail>(`${B}/${seg(id)}`);
+/** @brief Member for the ship-to picker; available = usable address. */
+export interface ShipPerson {
+  id: string;
+  display_name: string;
+  available: boolean;
+}
+
+/** @brief Who gifts can ship to. */
+export const listShipPeople = () =>
+  apiGet<ShipPerson[]>("/api/v1/wishlists/ship-people");
+
 export const createWishlist = (body: WishlistInput) =>
   apiPost<WishlistDetail>(B, body);
 export const updateWishlist = (id: string, body: WishlistInput) =>

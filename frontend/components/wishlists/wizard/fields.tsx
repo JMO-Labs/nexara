@@ -43,7 +43,7 @@ export function MoneyInput({
 }) {
   const [text, setText] = React.useState(centsToInput(cents));
   return (
-    <span className="relative flex items-center">
+    <span className="relative block w-full">
       <Input
         aria-label={label}
         inputMode="decimal"
@@ -57,7 +57,7 @@ export function MoneyInput({
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-4 text-xs text-muted"
+        className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-muted"
       >
         {currency}
       </span>
@@ -66,4 +66,4 @@ export function MoneyInput({
 }
 
 export const selectCls =
-  "glass-item h-10 rounded-full px-3 text-sm focus-visible:outline-2 focus-visible:outline-accent";
+  "glass-item h-11 w-full rounded-full px-4 text-sm focus-visible:outline-2 focus-visible:outline-accent";

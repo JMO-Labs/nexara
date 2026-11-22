@@ -10,6 +10,7 @@ import { CURRENCIES } from "@/lib/money";
 import { LEVEL_LABEL, type ProfileLevel } from "@/lib/profile";
 import { Field, MoneyInput, selectCls } from "./fields";
 import type { Draft } from "./draft";
+import { ShipToField } from "./ShipToField";
 
 const REGISTRY_PRESETS = ["Amazon registry", "Target registry", "Zola", "Etsy"];
 
@@ -182,11 +183,13 @@ export function StepDetails({
         )}
       </section>
 
+      <ShipToField d={d} set={set} />
+
       <Field label="Note for gift-givers">
         <Textarea
           rows={3}
           maxLength={1000}
-          placeholder="Sizes, favorite colors, the address to ship to, things to avoid"
+          placeholder="Sizes, favorite colors, things to avoid"
           value={d.note}
           onChange={(e) => set({ note: e.target.value })}
         />

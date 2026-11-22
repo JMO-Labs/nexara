@@ -14,9 +14,12 @@ from typing import Any
 from sqlalchemy import and_, delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.community import Community
+from app.models.event import Event
 from app.models.household import HouseholdMember
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.models.user import User
+from app.models.user_settings import UserSettings
 from app.models.wishlist import Wishlist, WishlistItem, WishlistRecipient
 from app.repositories.household_repo import household_visible, level_visible
 from app.repositories.visibility_preds import not_blocked
@@ -136,6 +139,67 @@ class WishlistRepository:
             exists().where(R.wishlist_id == wishlist_id, R.kind == "user", R.ref_id == user_id)
         )
         return bool((await self._session.execute(stmt)).scalar())
+
+    async def ship_user(
+        self, user_id: uuid.UUID, community_id: uuid.UUID, viewer_id: uuid.UUID
+    ) -> tuple[User, UserSettings | None] | None:
+        """
+        @brief A live member and their privacy settings (for a shipping address);
+               None when either has blocked the other.
+        """
+        stmt = (
+            select(User, UserSettings)
+            .outerjoin(UserSettings, UserSettings.user_id == User.id)
+            .where(
+                User.id == user_id,
+                User.community_id == community_id,
+                User.deleted_at.is_(None),
+                not_blocked(User.id, viewer_id),
+            )
+        )
+        row = (await self._session.execute(stmt)).first()
+        return (row[0], row[1]) if row else None
+
+    async def ship_people(
+        self, community_id: uuid.UUID, viewer_id: uuid.UUID
+    ) -> list[tuple[User, UserSettings | None]]:
+        """@brief Live members (block-filtered) with privacy settings, by name."""
+        stmt = (
+            select(User, UserSettings)
+            .outerjoin(UserSettings, UserSettings.user_id == User.id)
+            .where(
+                User.community_id == community_id,
+                User.deleted_at.is_(None),
+                User.is_active.is_(True),
+                not_blocked(User.id, viewer_id),
+            )
+            .order_by(func.lower(User.display_name))
+            .limit(500)  # ponytail: family scale; search endpoint if communities grow
+        )
+        return [(u, st) for u, st in (await self._session.execute(stmt)).all()]
+
+    async def ship_event(
+        self, event_id: uuid.UUID, community_id: uuid.UUID, viewer_id: uuid.UUID
+    ) -> Event | None:
+        """@brief The event, if this viewer may see it (same rules as the calendar)."""
+        in_group = exists().where(
+            SubgroupMember.subgroup_id == Event.subgroup_id, SubgroupMember.user_id == viewer_id
+        )
+        stmt = select(Event).where(
+            Event.id == event_id,
+            Event.community_id == community_id,
+            or_(
+                Event.visibility == "community",
+                and_(Event.visibility == "private", Event.author_id == viewer_id),
+                and_(Event.visibility == "subgroup", in_group),
+            ),
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def amazon_tag(self, community_id: uuid.UUID) -> str | None:
+        """@brief The community's saved Amazon Associates tracking ID."""
+        stmt = select(Community.amazon_partner_tag).where(Community.id == community_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def user_names(
         self, ids: list[uuid.UUID], community_id: uuid.UUID

@@ -6,7 +6,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, SmallInteger, Text, func
+from sqlalchemy import Boolean, DateTime, Index, Integer, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,11 @@ class LinkPreview(Base):
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     fetch_error: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Shop facts (wishlist links): product price and the link to buy through
+    # (Amazon's partner-tagged detail page when looked up via its API).
+    price_cents: Mapped[int | None] = mapped_column(Integer)
+    currency: Mapped[str | None] = mapped_column(Text)
+    buy_url: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         Index("link_previews_url_hash_idx", "url_hash"),

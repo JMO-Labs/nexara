@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useListItemComplete, useListItems } from "@/hooks/useLists";
 import { useListItemDelete } from "@/hooks/useListActions";
+import { useItemAssignments } from "@/hooks/useListAssignments";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { fieldsOf } from "@/lib/lists/listFields";
 import type { FieldSchema, ListItem } from "@/lib/api/listTypes";
@@ -20,6 +21,8 @@ import { ListItemEditModal } from "./ListItemEditModal";
 export interface ListGridProps {
   listId: string;
   fieldSchema: FieldSchema;
+  /** Owner id: owners and admins may assign items. */
+  ownerId?: string;
 }
 
 /** Modal state: closed, creating (null) or editing an item. */
@@ -30,7 +33,8 @@ type Editing = { item: ListItem | null } | undefined;
  * @param props see ListGridProps
  * @return items section
  */
-export function ListGrid({ listId, fieldSchema }: ListGridProps) {
+export function ListGrid({ listId, fieldSchema, ownerId }: ListGridProps) {
+  const assign = useItemAssignments(listId, ownerId ?? "");
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useListItems(listId);
   const complete = useListItemComplete(listId);
@@ -110,6 +114,7 @@ export function ListGrid({ listId, fieldSchema }: ListGridProps) {
             }
             onEdit={() => setEditing({ item: it })}
             onDelete={() => void onDelete(it)}
+            assign={assign}
           />
         ))}
       </ul>

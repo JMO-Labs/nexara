@@ -16,6 +16,7 @@ import { BrandingTab } from "./BrandingTab";
 import { AIConfigTab } from "./AIConfigTab";
 import { AuditLogTab } from "./AuditLogTab";
 import { AdminSettingsTab } from "./AdminSettingsTab";
+import { ShoppingTab } from "./ShoppingTab";
 
 const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   metrics: MetricsTab,
@@ -26,6 +27,7 @@ const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   prompts: PromptsTab,
   branding: BrandingTab,
   ai: AIConfigTab,
+  shopping: ShoppingTab,
   "audit-log": AuditLogTab,
   settings: AdminSettingsTab,
 };

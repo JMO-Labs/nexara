@@ -48,3 +48,8 @@ class Community(Base):
     sassybot_invoke_only: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
+    # Amazon Creators API (wishlist prices); secret is Fernet-encrypted.
+    amazon_client_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amazon_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amazon_partner_tag: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amazon_marketplace: Mapped[str | None] = mapped_column(Text, nullable=True)

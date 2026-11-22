@@ -53,3 +53,21 @@ class CommunityRepository:
         await self._session.flush()
         await self._session.refresh(community)
         return community
+
+    async def update_amazon(
+        self, community_id: uuid.UUID, values: dict[str, str | None]
+    ) -> Community | None:
+        """
+        @brief Update Amazon Creators API columns (secret already encrypted).
+        @param values column -> value; keys must start with ``amazon_``
+        @throws ValueError on any other column
+        """
+        if any(not k.startswith("amazon_") for k in values):
+            raise ValueError("Only amazon_* columns")
+        community = await self.get(community_id)
+        if community is None:
+            return None
+        for key, value in values.items():
+            setattr(community, key, value)
+        await self._session.flush()
+        return community

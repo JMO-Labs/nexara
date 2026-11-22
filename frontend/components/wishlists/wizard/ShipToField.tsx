@@ -1,0 +1,119 @@
+"use client";
+/**
+ * @file components/wishlists/wizard/ShipToField.tsx
+ * @brief "Ship gifts to": nobody, a person (their shared profile address),
+ *        an event's location (both kept up to date) or a typed address.
+ */
+import { CalendarDays, MapPin, PenLine, User } from "lucide-react";
+import { Textarea } from "@/components/ui";
+import { Segmented } from "@/components/ui/page";
+import { useQuery } from "@tanstack/react-query";
+import { listShipPeople } from "@/lib/api/wishlists";
+import { useUpcomingEvents } from "@/hooks/useEvents";
+import { useSession } from "@/stores/session";
+import { Field, selectCls } from "./fields";
+import type { Draft } from "./draft";
+
+/** @brief Shipping address picker for the details step. */
+export function ShipToField({
+  d,
+  set,
+}: {
+  d: Draft;
+  set: (p: Partial<Draft>) => void;
+}) {
+  const me = useSession((s) => s.user);
+  const { data: members = [] } = useQuery({
+    queryKey: ["wishlists", "ship-people"],
+    queryFn: listShipPeople,
+    staleTime: 60_000,
+  });
+  const { data: upcoming } = useUpcomingEvents(365);
+  const events = upcoming?.items ?? [];
+  // Usable addresses first; the rest stay visible but can't be picked.
+  const people = [...members]
+    .map((m) => ({
+      ...m,
+      label: m.id === me?.id ? "Me" : m.display_name,
+      why:
+        m.id === me?.id
+          ? "add your address to your profile"
+          : "doesn't share their address",
+    }))
+    .sort((a, b) => Number(b.available) - Number(a.available));
+  return (
+    <section className="flex flex-col gap-3" aria-label="Shipping">
+      <span className="text-sm font-medium">Ship gifts to</span>
+      <Segmented
+        label="Ship gifts to"
+        value={d.ship_mode}
+        onChange={(ship_mode) => set({ ship_mode })}
+        options={[
+          { value: "none", label: "No address", icon: MapPin },
+          { value: "user", label: "A person", icon: User },
+          { value: "event", label: "An event", icon: CalendarDays },
+          { value: "text", label: "Type it", icon: PenLine },
+        ]}
+      />
+      {d.ship_mode === "user" && (
+        <Field
+          label="Person"
+          hint="Uses the address on their profile and follows it if they move. Greyed-out people haven't shared their address with the community."
+        >
+          <select
+            className={selectCls}
+            value={d.ship_to_user_id}
+            onChange={(e) => set({ ship_to_user_id: e.target.value })}
+          >
+            <option value="">Choose someone</option>
+            {people.map((p) => (
+              <option
+                key={p.id}
+                value={p.id}
+                disabled={!p.available && p.id !== d.ship_to_user_id}
+              >
+                {p.available ? p.label : `${p.label} (${p.why})`}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+      {d.ship_mode === "event" && (
+        <Field
+          label="Event"
+          hint="Uses the event's location and follows it if it changes. People who can't see the event won't see the address."
+        >
+          <select
+            className={selectCls}
+            value={d.ship_to_event_id}
+            onChange={(e) => set({ ship_to_event_id: e.target.value })}
+          >
+            <option value="">Choose an event</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.title}
+                {ev.location ? ` (${ev.location})` : " (no location yet)"}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+      {d.ship_mode === "text" && (
+        <Field label="Address">
+          <Textarea
+            rows={3}
+            maxLength={500}
+            placeholder={"Name\nStreet\nCity, State ZIP"}
+            value={d.ship_to_text}
+            onChange={(e) => set({ ship_to_text: e.target.value })}
+          />
+        </Field>
+      )}
+      {d.ship_mode !== "none" && (
+        <span className="text-xs text-muted">
+          Everyone who can see this list sees the address.
+        </span>
+      )}
+    </section>
+  );
+}

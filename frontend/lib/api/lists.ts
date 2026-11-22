@@ -8,8 +8,11 @@ import {
   camelize,
   snakeize,
   type List,
+  type ListActivity,
+  type ListActivityPage,
   type ListCreateInput,
   type ListItem,
+  type ListUser,
   type ListItemCreateInput,
   type ListItemPage,
   type ListItemSignup,
@@ -46,6 +49,23 @@ const qs = (p: PageParams = {}) => {
 const next = (p?: Pagination) =>
   p?.has_more && p.cursor ? p.cursor : undefined;
 const one = <T>(raw: unknown) => camelize<T>(raw);
+const user = (raw: unknown) => (raw ? one<ListUser>(raw) : null);
+
+/** Camelize an item and its nested assignee. */
+const item = (raw: unknown): ListItem => {
+  const i = one<ListItem>(raw);
+  return { ...i, assignee: user((raw as { assignee?: unknown }).assignee) };
+};
+
+/** Camelize an activity row and its nested users. */
+const activity = (raw: unknown): ListActivity => {
+  const a = one<ListActivity & { target_user?: unknown }>(raw);
+  const r = raw as { actor?: unknown; target_user?: unknown };
+  return { ...a, actor: user(r.actor), targetUser: user(r.target_user) };
+};
+
+const itemUrl = (listId: string, itemId: string, tail: string) =>
+  `${BASE}/${seg(listId)}/items/${seg(itemId)}/${tail}`;
 
 export const listApi = {
   async getLists(p?: PageParams): Promise<ListPage> {
@@ -78,7 +98,7 @@ export const listApi = {
       `${BASE}/${seg(listId)}/items${qs(p)}`,
     );
     return {
-      items: r.items.map((i) => one<ListItem>(i)),
+      items: r.items.map(item),
       nextCursor: next(r.pagination),
     };
   },
@@ -124,6 +144,43 @@ export const listApi = {
   },
   releaseSignup(listId: string, itemId: string): Promise<void> {
     return apiDelete(`${BASE}/${seg(listId)}/items/${seg(itemId)}/signups`);
+  },
+  async takeItem(listId: string, itemId: string): Promise<ListItem> {
+    return item(await apiPost(itemUrl(listId, itemId, "take")));
+  },
+  async assignItem(
+    listId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<ListItem> {
+    return item(
+      await apiPost(itemUrl(listId, itemId, "assign"), { user_id: userId }),
+    );
+  },
+  async respondAssignment(
+    listId: string,
+    itemId: string,
+    accept: boolean,
+  ): Promise<ListItem> {
+    const tail = `assignment/${accept ? "accept" : "decline"}`;
+    return item(await apiPost(itemUrl(listId, itemId, tail)));
+  },
+  async releaseItem(listId: string, itemId: string): Promise<ListItem> {
+    return item(await apiPost(itemUrl(listId, itemId, "release")));
+  },
+  async unassignItem(listId: string, itemId: string): Promise<ListItem> {
+    return item(
+      await apiDelete<unknown>(itemUrl(listId, itemId, "assignment")),
+    );
+  },
+  async getActivity(listId: string, p?: PageParams): Promise<ListActivityPage> {
+    const r = await apiGet<{ activity: unknown[]; pagination?: Pagination }>(
+      `${BASE}/${seg(listId)}/activity${qs(p)}`,
+    );
+    return {
+      entries: r.activity.map(activity),
+      nextCursor: next(r.pagination),
+    };
   },
   async getMembers(listId: string): Promise<ListMember[]> {
     const r = await apiGet<unknown[]>(`${BASE}/${seg(listId)}/members`);

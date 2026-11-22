@@ -42,6 +42,7 @@ celery_app = Celery(
         "app.tasks.poll_tasks",
         "app.tasks.prompt_tasks",
         "app.tasks.retention_tasks",
+        "app.tasks.shop_tasks",
     ],
 )
 """@brief The Celery application instance."""
@@ -184,6 +185,10 @@ celery_app.conf.update(
         },
         "gallery-batch-notifications": {
             "task": "app.tasks.gallery_tasks.gallery_batch_notifications",
+            "schedule": 60.0 * 60,
+        },
+        "refresh-shop-prices": {
+            "task": "app.tasks.shop_tasks.refresh_shop_prices",
             "schedule": 60.0 * 60,
         },
         "send-birthday-reminders": {

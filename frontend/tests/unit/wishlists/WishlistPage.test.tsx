@@ -61,10 +61,18 @@ const base = (isOwner: boolean): WishlistDetail => ({
   sees_claims: !isOwner,
   planned_cents: isOwner ? 2400 : null,
   my_total_cents: isOwner ? 0 : 800,
+  ship_to: {
+    user_id: null,
+    event_id: null,
+    starts_at: null,
+    name: null,
+    address: "1 Elm St\nSpringfield",
+  },
   items: [
     {
       id: "a",
       kind: "gift",
+      price_auto: false,
       goal_cents: null,
       claimers: null,
       preview: null,
@@ -79,12 +87,22 @@ const base = (isOwner: boolean): WishlistDetail => ({
     {
       id: "b",
       kind: "gift",
+      price_auto: true,
       goal_cents: null,
       claimers: null,
-      preview: null,
+      preview: {
+        id: "p1",
+        title: "Orthopedic bed",
+        site_name: "Amazon",
+        has_image: false,
+        price_cents: 5999,
+        currency: "USD",
+        buy_url: "https://www.amazon.com/dp/B07FZ8S74R?tag=nx-20",
+        checked_at: new Date().toISOString(),
+      },
       name: "Orthopedic bed",
-      url: "https://example.com/bed",
-      price_cents: null,
+      url: "https://www.amazon.com/dp/B07FZ8S74R",
+      price_cents: 5999,
       notes: null,
       qty: 1,
       claimed: isOwner ? null : 1,
@@ -93,6 +111,7 @@ const base = (isOwner: boolean): WishlistDetail => ({
     {
       id: "c",
       kind: "gift",
+      price_auto: false,
       goal_cents: null,
       claimers: null,
       preview: null,
@@ -132,6 +151,10 @@ describe("WishlistPage", () => {
     expect(
       screen.getByRole("link", { name: /Amazon registry/ }),
     ).toHaveAttribute("href", "https://www.amazon.com/registry/x");
+    expect(screen.getByText(/1 Elm St/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Copy shipping address" }),
+    ).toBeInTheDocument();
   });
 
   it("gift-giver sees what is left and can claim or undo", () => {
@@ -146,6 +169,11 @@ describe("WishlistPage", () => {
     expect(screen.queryByRole("form", { name: "Add a wish" })).toBeNull();
     expect(
       screen.getByRole("link", { name: /Orthopedic bed/ }),
-    ).toHaveAttribute("href", "https://example.com/bed");
+    ).toHaveAttribute("href", "https://www.amazon.com/dp/B07FZ8S74R?tag=nx-20");
+    expect(
+      screen.getByRole("button", {
+        name: /Price from Amazon, checked .* It may differ for you/,
+      }),
+    ).toBeInTheDocument();
   });
 });
