@@ -5,6 +5,7 @@
 import { Chip } from "@/components/ui";
 import { mediaFileUrl } from "@/lib/api/media";
 import type { Recipe } from "@/lib/api/recipes";
+import { AddToListDialog } from "./AddToListDialog";
 import { IngredientList } from "./IngredientList";
 
 const mins = (n: number | null, label: string) =>
@@ -55,6 +56,7 @@ export function RecipeView({ recipe }: { recipe: Recipe }) {
             Ingredients
           </h2>
           <IngredientList ingredients={recipe.ingredients} />
+          <AddToListDialog recipe={recipe} />
         </section>
       )}
       {recipe.steps.length > 0 && (

@@ -16,6 +16,7 @@ vi.mock("@/lib/api/client", async (orig) => ({
 }));
 
 import {
+  addToShoppingList,
   createRecipe,
   deleteRecipe,
   getRecipe,
@@ -36,6 +37,7 @@ describe("recipes api", () => {
     createRecipe(body);
     updateRecipe("r1", body);
     deleteRecipe("r1");
+    addToShoppingList("r1", { ingredients: [0] });
     expect(m.apiGet.mock.calls.map((c) => c[0])).toEqual([
       "/api/v1/recipes",
       "/api/v1/recipes?q=corn+bread&tag=dinner",
@@ -43,6 +45,9 @@ describe("recipes api", () => {
       "/api/v1/recipes/r1",
     ]);
     expect(m.apiPost).toHaveBeenCalledWith("/api/v1/recipes", body);
+    expect(m.apiPost).toHaveBeenCalledWith("/api/v1/recipes/r1/shopping-list", {
+      ingredients: [0],
+    });
     expect(m.apiPut).toHaveBeenCalledWith("/api/v1/recipes/r1", body);
     expect(m.apiDelete).toHaveBeenCalledWith("/api/v1/recipes/r1");
   });
