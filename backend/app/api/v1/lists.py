@@ -191,7 +191,8 @@ async def update_item(
 ) -> ListItemOut:
     """@brief Update an item's values (owner only)."""
     await service.ensure_in_list(community_id, list_id, item_id)
-    item = await service.update(community_id, item_id, user.id, body.values)
+    link = {"recipe_id": body.recipe_id} if "recipe_id" in body.model_fields_set else {}
+    item = await service.update(community_id, item_id, user.id, body.values, **link)
     return ListItemOut.model_validate(item)
 
 

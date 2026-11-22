@@ -49,6 +49,7 @@ describe("navItems", () => {
   it("more nav is Settings, Admin; Inbox is top nav", () => {
     expect(MORE_NAV.map((i) => i.label)).toEqual([
       "Time capsules",
+      "Recipes",
       "Settings",
       "Admin",
     ]);

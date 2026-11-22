@@ -88,6 +88,7 @@ EXPECTED = {
             "lat",
             "lon",
             "signup_quantity_needed",
+            "recipe_id",
         }
         | TS,
         ["id"],

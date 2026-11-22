@@ -85,6 +85,7 @@ class ListItemOut(BaseModel):
     lat: float | None = None
     lon: float | None = None
     signup_quantity_needed: int | None = None
+    recipe_id: uuid.UUID | None = None
     assignee: AssigneeOut | None = None
     assignment_status: str | None = None
 
@@ -119,9 +120,13 @@ class ListMemberOut(BaseModel):
 
 
 class ListItemUpdate(BaseModel):
-    """@brief Request body for updating an item's values."""
+    """@brief Request body for updating an item's values and/or linked recipe.
+
+    ``recipe_id`` is applied only when present in the body (null unlinks).
+    """
 
     values: dict[str, Any] = Field(default_factory=dict)
+    recipe_id: uuid.UUID | None = None
 
 
 class ListMemberAdd(BaseModel):
