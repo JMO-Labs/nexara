@@ -64,13 +64,14 @@ class GroupTagService:
         if group is None:
             return 0
         where = _("a comment") if on_comment else _("a post")
-        ids = await self._repo.recipients(subgroup_id, self._community_id, actor_id)
+        ids = await self._repo.recipients(subgroup_id, self._community_id, actor_id, post_id)
         for uid in ids:
             await notifier.notify(
                 user_id=uid,
                 type="group_tag",
                 payload={
                     "post_id": str(post_id),
+                    "group_id": str(subgroup_id),
                     "actor_name": actor_name,
                     "group_name": group.name,
                     "message": _("%(user)s tagged %(group)s in %(where)s")

@@ -3,18 +3,47 @@
  * @file components/mentions/useComposerMention.ts
  * @brief Tiptap Mention extension wired to the member list; exposes the
  *        open menu state so the composer renders <MentionMenu/>.
- *        Text output stays "@username" (editor.getText()).
+ *        Groups the viewer may @-tag follow people ("@slug" notifies the
+ *        group). Text output stays "@username" (editor.getText()).
  */
 import * as React from "react";
 import Mention from "@tiptap/extension-mention";
 import { matchMembers, useMembersList } from "@/hooks/useMembersList";
+import { useSubgroupList } from "@/hooks/useSubgroups";
+import type { Subgroup } from "@/lib/api/subgroups";
 import type { UserSummary } from "@/lib/api/users";
 
+type Item = UserSummary & { hint?: string };
+
 interface MenuState {
-  items: UserSummary[];
+  items: Item[];
   active: number;
   rect: DOMRect | null;
-  pick: (u: UserSummary) => void;
+  pick: (u: Item) => void;
+}
+
+/**
+ * @brief Groups the viewer may @-tag, shaped as picker entries.
+ * @param groups subgroup list
+ * @return entries (username = slug)
+ */
+export function taggableGroups(groups: Subgroup[]): Item[] {
+  return groups
+    .filter(
+      (g) =>
+        g.is_member &&
+        !g.archived_at &&
+        (g.tag_policy !== "admins" ||
+          g.my_role === "owner" ||
+          g.my_role === "moderator"),
+    )
+    .map((g) => ({
+      id: `g:${g.id}`,
+      username: g.slug,
+      display_name: g.name,
+      avatar_url: g.avatar_url,
+      hint: "Group",
+    }));
 }
 
 /**
@@ -23,10 +52,17 @@ interface MenuState {
  */
 export function useComposerMention() {
   const { data: members = [] } = useMembersList();
-  const membersRef = React.useRef(members);
+  const { data: groups } = useSubgroupList();
+  const membersRef = React.useRef<{ people: UserSummary[]; groups: Item[] }>({
+    people: members,
+    groups: [],
+  });
   React.useEffect(() => {
-    membersRef.current = members;
-  }, [members]);
+    membersRef.current = {
+      people: members,
+      groups: taggableGroups(groups ?? []),
+    };
+  }, [members, groups]);
   const [menu, setMenu] = React.useState<MenuState | null>(null);
 
   // Built once; the suggestion callbacks only touch refs/setters at event time.
@@ -47,10 +83,13 @@ export function useComposerMention() {
       ],
       suggestion: {
         char: "@",
-        items: ({ query }) => matchMembers(membersRef.current, query),
+        items: ({ query }): Item[] => [
+          ...matchMembers(membersRef.current.people, query),
+          ...matchMembers(membersRef.current.groups, query, 3),
+        ],
         render: () => {
           const show = (p: {
-            items: UserSummary[];
+            items: Item[];
             command: (a: { id: string; label: string }) => void;
             clientRect?: (() => DOMRect | null) | null;
           }) =>

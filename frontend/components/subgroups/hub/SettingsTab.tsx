@@ -28,6 +28,9 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
   const [joinPolicy, setJoinPolicy] = React.useState<
     UpdateSubgroupBody["join_policy"]
   >(subgroup.join_policy);
+  const [tagPolicy, setTagPolicy] = React.useState(
+    subgroup.tag_policy ?? "members",
+  );
   const [isPrivate, setIsPrivate] = React.useState(subgroup.is_private);
   const [avatarUrl, setAvatarUrl] = React.useState(subgroup.avatar_url ?? "");
   const [coverMediaId, setCoverMediaId] = React.useState<string | null>(
@@ -55,6 +58,7 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
       name,
       description,
       join_policy: joinPolicy,
+      tag_policy: tagPolicy,
       is_private: isPrivate,
       avatar_url: avatarUrl.trim() || null,
     });
@@ -89,6 +93,21 @@ export function SettingsTab({ subgroup }: SettingsTabProps) {
           <Option value="invite_only">Invite only</Option>
           <Option value="admin_approval">Admin approval required</Option>
         </Select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">Who can @{subgroup.slug}</span>
+        <Select
+          label="Who can tag the group"
+          value={tagPolicy}
+          onValueChange={(v) => setTagPolicy(v as "members" | "admins")}
+        >
+          <Option value="members">Any member</Option>
+          <Option value="admins">Owners and moderators</Option>
+        </Select>
+        <p className="text-sm text-muted">
+          Tagging the group notifies every member.
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">

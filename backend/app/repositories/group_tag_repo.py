@@ -12,6 +12,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.moderation import UserBlock
+from app.models.notification import Notification
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.models.user import User
 
@@ -52,9 +53,23 @@ class GroupTagRepository:
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def recipients(
-        self, subgroup_id: uuid.UUID, community_id: uuid.UUID, actor_id: uuid.UUID
+        self,
+        subgroup_id: uuid.UUID,
+        community_id: uuid.UUID,
+        actor_id: uuid.UUID,
+        post_id: uuid.UUID,
     ) -> list[uuid.UUID]:
-        """@brief Active members except the actor and anyone blocking/blocked by them."""
+        """
+        @brief Active members except the actor, anyone blocking/blocked by them
+               and anyone already told about this group tag on this post (so
+               removing and re-adding the tag in edits never re-notifies).
+        """
+        told = select(Notification.id).where(
+            Notification.user_id == User.id,
+            Notification.type == "group_tag",
+            Notification.payload["post_id"].astext == str(post_id),
+            Notification.payload["group_id"].astext == str(subgroup_id),
+        )
         blocked = select(UserBlock.id).where(
             or_(
                 and_(UserBlock.blocker_id == actor_id, UserBlock.blocked_id == User.id),
@@ -71,6 +86,7 @@ class GroupTagRepository:
                 User.deleted_at.is_(None),
                 User.is_active.is_(True),
                 ~blocked.exists(),
+                ~told.exists(),
             )
             .order_by(User.id)
         )

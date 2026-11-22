@@ -5,9 +5,9 @@
  *        Headings flatten to body weight to fit chat/post density.
  */
 import * as React from "react";
-import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { linkifyMentions } from "@/lib/mentions";
+import { MentionLink } from "@/components/mentions/MentionLink";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -38,13 +38,7 @@ const schema = {
 const components: Components = {
   a: ({ children, href, ...rest }) =>
     href?.startsWith("/app/u/") ? (
-      <Link
-        href={href}
-        className="font-medium !no-underline hover:!underline"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </Link>
+      <MentionLink name={href.slice(7)}>{children}</MentionLink>
     ) : (
       <a {...rest} href={href} target="_blank" rel="noopener noreferrer">
         {children}

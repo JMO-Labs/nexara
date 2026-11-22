@@ -91,7 +91,8 @@ async def test_fan_out_notifies_each_recipient() -> None:
     assert all(s["type"] == "group_tag" for s in sent)
     assert sent[0]["payload"]["link"] == f"/app/post/{post_id}"
     assert sent[0]["payload"]["message"] == "Ruth tagged Book club in a post"
-    repo.recipients.assert_awaited_once_with(g.id, CID, ACTOR.id)
+    repo.recipients.assert_awaited_once_with(g.id, CID, ACTOR.id, post_id)
+    assert sent[0]["payload"]["group_id"] == str(g.id)
 
 
 async def test_fan_out_missing_group_is_noop() -> None:

@@ -1014,6 +1014,9 @@
     "gentle_nudge": {
       "label": "Someone's thinking of you"
     },
+    "group_tag": {
+      "label": "Your group was tagged"
+    },
     "invite_accepted": {
       "label": "Invite accepted"
     },

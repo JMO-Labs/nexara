@@ -6,6 +6,8 @@
  */
 import * as React from "react";
 import { matchMembers, useMembersList } from "@/hooks/useMembersList";
+import { useSubgroupList } from "@/hooks/useSubgroups";
+import { taggableGroups } from "./useComposerMention";
 import { activeMention } from "@/lib/mentions";
 import type { UserSummary } from "@/lib/api/users";
 
@@ -24,11 +26,18 @@ export function useMentionInput(
   ref: React.RefObject<Field | null>,
 ) {
   const { data: members = [] } = useMembersList();
+  const { data: groups } = useSubgroupList();
   const [caret, setCaret] = React.useState(0);
   const [active, setActive] = React.useState(0);
   const [closedAt, setClosedAt] = React.useState<number | null>(null);
   const m = activeMention(value, caret);
-  const items = m && closedAt !== m.start ? matchMembers(members, m.query) : [];
+  const items =
+    m && closedAt !== m.start
+      ? [
+          ...matchMembers(members, m.query),
+          ...matchMembers(taggableGroups(groups ?? []), m.query, 3),
+        ]
+      : [];
   const idx = Math.min(active, Math.max(items.length - 1, 0));
 
   const pick = (u: UserSummary) => {
