@@ -20,6 +20,7 @@ def _rows() -> tuple[MagicMock, MagicMock]:
     """@brief Build mock (post, author) row."""
     post = MagicMock(spec=Post)
     post.id, post.content, post.subgroup_id = POST_ID, "hi", None
+    post.recipient_id = None
     post.created_at = post.updated_at = datetime.now(UTC)
     user = MagicMock(spec=User)
     user.id, user.username, user.display_name, user.avatar_url = AUTHOR_ID, "a", "A", None
