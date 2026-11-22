@@ -8,11 +8,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event, EventAttendance
 from app.models.gallery import Gallery
+from app.models.moderation import UserBlock
+from app.models.subgroup import SubgroupMember
 from app.models.user import User
 from app.repositories.visibility_preds import gallery_visible, my_subgroup_ids, not_blocked
 
@@ -49,14 +51,38 @@ class AlbumRepository:
         return [(e, g) for e, g in (await self._session.execute(stmt)).all()]
 
     async def going_user_ids(self, event_id: uuid.UUID) -> list[uuid.UUID]:
-        """@return Active users whose RSVP is "attending"."""
+        """
+        @return Active "attending" users who can still see the event right now:
+                group members for group events, the author for private ones,
+                and never anyone in a block relation with the author.
+        """
+        member = exists().where(
+            SubgroupMember.subgroup_id == Event.subgroup_id,
+            SubgroupMember.user_id == User.id,
+        )
+        blocked = exists().where(
+            or_(
+                and_(UserBlock.blocker_id == User.id, UserBlock.blocked_id == Event.author_id),
+                and_(UserBlock.blocker_id == Event.author_id, UserBlock.blocked_id == User.id),
+            )
+        )
         stmt = (
             select(EventAttendance.user_id)
             .join(User, User.id == EventAttendance.user_id)
+            .join(Event, Event.id == EventAttendance.event_id)
             .where(
                 EventAttendance.event_id == event_id,
                 EventAttendance.status == "attending",
                 User.deleted_at.is_(None),
+                User.is_active.is_(True),
+                or_(
+                    and_(Event.visibility == "private", User.id == Event.author_id),
+                    and_(
+                        Event.visibility != "private",
+                        or_(Event.subgroup_id.is_(None), member),
+                    ),
+                ),
+                ~blocked,
             )
         )
         return list((await self._session.execute(stmt)).scalars())

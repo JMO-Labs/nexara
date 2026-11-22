@@ -34,7 +34,7 @@ from app.schemas.event import (
 )
 from app.services.activity_publish import record_activity
 from app.services.calendar_service import CalendarService
-from app.services.event_gallery import create_event_gallery, find_event_gallery_id
+from app.services.event_gallery import albums_enabled, create_event_gallery, find_event_gallery_id
 from app.services.event_ical import EventIcalMixin
 from app.services.event_recurrence import MAX_OCCURRENCES, EventRecurrenceMixin
 from app.services.event_rsvp import DEFAULT_RSVP_LABELS, EventRsvpMixin
@@ -294,7 +294,7 @@ class EventService(
             )
 
         gallery_id = None
-        if data.auto_create_gallery:
+        if data.auto_create_gallery and await albums_enabled(self._session, self._community_id):
             gallery_id = await create_event_gallery(
                 self._session, self._community_id, user_id, event
             )
