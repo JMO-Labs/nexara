@@ -70,3 +70,20 @@
 - [ ] Eval: ledger for BBQ event, 3 expenses, balances + settle; ride offer 2 seats, Maya + Ruth join, third → full; weekly chore rotation advanced by running task.
 - [ ] Screenshots, copy, focus, phone; `/simplify`.
 - [ ] Push; PR "feat: engagement wave 3 — practical" on wave-2 PR.
+
+---
+
+### Task 5 (added 2026-11-22, user request): Recipe → shopping list
+
+**Files:**
+- Create: `backend/app/services/recipe_shopping_service.py`, `backend/app/schemas/recipe_shopping.py`, `frontend/components/recipes/AddToListDialog.tsx`
+- Modify: `backend/app/api/v1/recipes.py` (route), `backend/app/core/dependencies.py` (DI), `frontend/lib/api/recipes.ts`, `frontend/components/recipes/RecipeView.tsx` (button)
+- Test: `backend/tests/unit/services/test_recipe_shopping_service.py`, one real-Postgres test, `frontend/tests/unit/recipes/AddToListDialog.test.tsx`
+
+**Interfaces:**
+- `POST /api/v1/recipes/{recipe_id}/shopping-list` body `ToListIn{list_id: UUID | None = None, ingredients: list[int] | None = None (indexes; None = all), servings_note: bool = False}` → `ToListOut{list_id, added: int}` (201).
+- Recipe must be visible to the actor (404 otherwise); `recipes` flag on.
+- `list_id` given: the actor must be able to add items (reuse `ListItemService.create`, which enforces owner); target field = first `type_key == "text"` field with `required`, else first text field; none → 422 `LIST_HAS_NO_TEXT_FIELD`.
+- `list_id` omitted: create a list via the existing list service: title `"Shopping: <recipe title>"` (≤ title max), `visibility="private"`, `field_schema=[{"key":"item","label":"Item","position":0,"required":true,"type_key":"text"}]`.
+- Each selected ingredient → one item `values={field_key: "<qty> <item>".strip()}`, `recipe_id=recipe.id`, positions appended after existing items; blank ingredients skipped; out-of-range index → 422.
+- Frontend: "Add to shopping list" button (icon ShoppingCart) on RecipeView when the recipe has ingredients → dialog: ingredient checkboxes (all checked), radio "New shopping list" / "Add to an existing list" + select of the viewer's own active lists, submit → toast "Added N items" with a link to the list.
