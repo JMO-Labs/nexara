@@ -161,6 +161,17 @@ describe("NotificationsTab", () => {
     });
   });
 
+  it("patches recap_cadence when Off is selected", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(await screen.findByRole("radio", { name: "Off" }));
+    await waitFor(() =>
+      expect(api.patchPreferences).toHaveBeenCalledWith({
+        recap_cadence: "off",
+      }),
+    );
+  });
+
   it("debounces a cadence change into one patch", async () => {
     const user = userEvent.setup();
     renderTab();

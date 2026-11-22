@@ -185,6 +185,29 @@ def create_2fa_pending_token(
     return str(jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM))
 
 
+def create_purpose_token(
+    subject: UUID | str,
+    purpose: str,
+    ttl: timedelta,
+    settings: Settings | None = None,
+) -> str:
+    """
+    @brief Create a signed single-purpose token (e.g. email unsubscribe links).
+
+    Decode with ``decode_token(token, expected_type=purpose)``.
+
+    @param subject Subject (user id).
+    @param purpose Stored in the ``type`` claim; tokens only verify for this purpose.
+    @param ttl Lifetime.
+    @param settings Override settings for testing.
+    @return Encoded JWT string.
+    """
+    s = settings or get_settings()
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {"sub": str(subject), "exp": now + ttl, "iat": now, "type": purpose}
+    return str(jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM))
+
+
 def decode_token(
     token: str,
     expected_type: str = "access",

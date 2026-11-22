@@ -18,6 +18,7 @@ import type {
 } from "@/lib/notifications/types";
 import { DnDScheduleEditor } from "./DnDScheduleEditor";
 import { NotificationMatrix } from "./NotificationMatrix";
+import { RecapSetting } from "./RecapSetting";
 import { PushSubscriptionRow } from "./PushSubscriptionRow";
 import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
 import { WebhookList } from "./WebhookList";
@@ -101,6 +102,12 @@ export function NotificationsTab() {
           schedule={prefs.dnd_schedule}
           timezone={prefs.dnd_timezone}
           onChange={(s, tz) => change({ dnd_schedule: s, dnd_timezone: tz })}
+        />
+      </Panel>
+      <Panel title={t("recap_title")}>
+        <RecapSetting
+          value={prefs.recap_cadence ?? "weekly"}
+          onChange={(c) => change({ recap_cadence: c })}
         />
       </Panel>
       <PushSubscriptionRow />

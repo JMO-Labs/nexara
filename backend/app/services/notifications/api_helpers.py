@@ -132,6 +132,8 @@ def build_prefs_update(
         except (ZoneInfoNotFoundError, ValueError, OSError):
             raise pref_invalid(f"Unknown timezone: {tz}", "dnd_timezone") from None
         data["dnd_timezone"] = tz
+    if "recap_cadence" in fields and patch.recap_cadence is not None:
+        data["recap_cadence"] = patch.recap_cadence
     if "digest_cadence" in fields:
         cadence = patch.digest_cadence or {}
         for key, value in cadence.items():

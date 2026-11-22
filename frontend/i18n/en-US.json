@@ -312,6 +312,11 @@
     "storageUsed": "{used} of {quota} used",
     "storageWarning": "You are using over 80% of your storage quota.",
     "notif": {
+      "recap_title": "Family recap email",
+      "recap_hint": "A short email of memories, birthdays and more. Sent on Sunday mornings, only when there is something to share.",
+      "recap_weekly": "Weekly",
+      "recap_monthly": "Monthly",
+      "recap_off": "Off",
       "snooze_title": "Snooze",
       "snooze_1h": "1 hour",
       "snooze_morning": "Until morning",
