@@ -81,7 +81,7 @@
 - Test: `backend/tests/unit/services/test_recipe_shopping_service.py`, one real-Postgres test, `frontend/tests/unit/recipes/AddToListDialog.test.tsx`
 
 **Interfaces:**
-- `POST /api/v1/recipes/{recipe_id}/shopping-list` body `ToListIn{list_id: UUID | None = None, ingredients: list[int] | None = None (indexes; None = all), servings_note: bool = False}` → `ToListOut{list_id, added: int}` (201).
+- `POST /api/v1/recipes/{recipe_id}/shopping-list` body `ToListIn{list_id: UUID | None = None, ingredients: list[int] | None = None (indexes; None = all)}` → `ToListOut{list_id, added: int}` (201).
 - Recipe must be visible to the actor (404 otherwise); `recipes` flag on.
 - `list_id` given: the actor must be able to add items (reuse `ListItemService.create`, which enforces owner); target field = first `type_key == "text"` field with `required`, else first text field; none → 422 `LIST_HAS_NO_TEXT_FIELD`.
 - `list_id` omitted: create a list via the existing list service: title `"Shopping: <recipe title>"` (≤ title max), `visibility="private"`, `field_schema=[{"key":"item","label":"Item","position":0,"required":true,"type_key":"text"}]`.

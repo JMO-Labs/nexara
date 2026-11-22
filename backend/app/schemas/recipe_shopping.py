@@ -15,7 +15,6 @@ class ToListIn(BaseModel):
 
     list_id: uuid.UUID | None = None
     ingredients: list[int] | None = Field(default=None, max_length=100)
-    servings_note: bool = False
 
 
 class ToListOut(BaseModel):
