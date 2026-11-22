@@ -122,7 +122,6 @@ class HouseholdRepository:
 
     async def handle_taken(self, community_id: uuid.UUID, handle: str) -> bool:
         """@brief Handle used by a live household member, a username or a group slug."""
-        from app.models.subgroup import Subgroup
         from app.models.user import User
 
         stmt = select(

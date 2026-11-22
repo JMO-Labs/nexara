@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.household import HouseholdMember
 from app.models.media import Media
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -113,13 +114,18 @@ class UserRepository(BaseRepository[User]):
 
     async def username_exists(self, username: str) -> bool:
         """
-        @brief Check whether a username is already taken.
+        @brief Check whether a username is already taken, by a user or by a
+               household member's @handle (one mention namespace).
 
         @param username Username to check.
-        @return True if a non-deleted user with this username exists.
+        @return True if a non-deleted user or live household handle has it.
         """
-        user = await self.find_by_username(username)
-        return user is not None
+        if await self.find_by_username(username) is not None:
+            return True
+        stmt = select(HouseholdMember.id).where(
+            HouseholdMember.handle == username.lower(), HouseholdMember.deleted_at.is_(None)
+        )
+        return (await self._session.execute(stmt.limit(1))).first() is not None
 
     async def list_by_community(
         self,

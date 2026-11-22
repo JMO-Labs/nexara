@@ -71,7 +71,9 @@ def _make_subgroup(
 
 @pytest.fixture
 def subgroup_repo() -> AsyncMock:
-    return AsyncMock(spec=SubgroupRepository)
+    repo = AsyncMock(spec=SubgroupRepository)
+    repo.slug_is_handle.return_value = False
+    return repo
 
 
 @pytest.fixture

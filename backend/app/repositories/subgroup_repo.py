@@ -133,6 +133,17 @@ class SubgroupRepository(BaseRepository[Subgroup]):
             current = parent_id
         return ids
 
+    async def slug_is_handle(self, slug: str, community_id: uuid.UUID) -> bool:
+        """@brief A live household member already uses this as their @handle."""
+        from app.models.household import HouseholdMember
+
+        stmt = select(HouseholdMember.id).where(
+            HouseholdMember.community_id == community_id,
+            HouseholdMember.handle == slug.lower(),
+            HouseholdMember.deleted_at.is_(None),
+        )
+        return (await self._session.execute(stmt.limit(1))).first() is not None
+
     async def get_by_slug(
         self,
         slug: str,

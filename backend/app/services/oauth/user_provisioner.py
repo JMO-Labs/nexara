@@ -187,6 +187,8 @@ class UserProvisioner:
             return user
 
         username = _derive_username(auth_result.display_name, auth_result.email)
+        if await self._user_repo.username_exists(username):  # incl. pet @handles
+            username = f"{username[:21]}_{uuid.uuid4().hex[:8]}"
         user = User(
             community_id=self._community_id,
             email=email,

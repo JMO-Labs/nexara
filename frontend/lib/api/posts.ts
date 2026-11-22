@@ -82,6 +82,8 @@ export interface Post {
   subgroup_id: string | null;
   subgroup_name: string | null;
   subgroup_slug: string | null;
+  /** Set when the post celebrates someone; name/link null when hidden. */
+  celebration?: Celebration | null;
   /** Set when the post is a kudos. */
   recipient_id?: string | null;
   recipient?: {
@@ -112,6 +114,25 @@ export interface Cursor<T> {
   has_more: boolean;
 }
 
+export type CelebrateOccasion = "birthday" | "gotcha_day" | "milestone";
+
+export interface CelebrateIn {
+  subject_type: "user" | "household";
+  subject_id: string;
+  occasion: CelebrateOccasion;
+}
+
+export interface Celebration {
+  subject_type: "user" | "household";
+  subject_id: string | null;
+  occasion: CelebrateOccasion;
+  name: string | null;
+  is_pet: boolean;
+  avatar_url: string | null;
+  photo_media_id: string | null;
+  link: string | null;
+}
+
 export interface CreatePostBody {
   content: string;
   media_ids?: string[];
@@ -125,6 +146,8 @@ export interface CreatePostBody {
   };
   reply_to_prompt_id?: string;
   subgroup_id?: string | null;
+  /** Make it a Celebrate post for a person or pet's occasion. */
+  celebrate?: CelebrateIn;
 }
 
 export interface ReactionResponse {
