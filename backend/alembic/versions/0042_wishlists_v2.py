@@ -96,7 +96,7 @@ def upgrade() -> None:
     )
     op.execute(
         "UPDATE wishlist_items SET price_cents = round(100 * "
-        "substring(replace(price, ',', '') from '[0-9]+(\\.[0-9]+)?')::numeric) "
+        "substring(replace(price, ',', '') from '[0-9]+(?:\\.[0-9]+)?')::numeric) "
         "WHERE price ~ '[0-9]'"
     )
     op.drop_column("wishlist_items", "price")
