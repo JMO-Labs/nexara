@@ -5,6 +5,7 @@
 
 from app.services.notifications.types import (  # noqa: F401
     birthday_reminder,
+    capsule_opened,
     comment,
     event_reminder,
     event_rsvp,
@@ -31,6 +32,7 @@ from app.services.notifications.types import (  # noqa: F401
 
 __all__ = [
     "birthday_reminder",
+    "capsule_opened",
     "comment",
     "event_reminder",
     "event_rsvp",

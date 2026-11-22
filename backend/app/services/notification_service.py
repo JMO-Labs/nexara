@@ -54,6 +54,7 @@ NOTIFICATION_TYPES = (
     "prompt_summary",
     "kudos_received",
     "on_this_day",
+    "capsule_opened",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -73,6 +74,7 @@ PREF_MAP = {
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
     "on_this_day": ("notif_mention_inapp", "notif_mention_email"),
+    "capsule_opened": ("notif_mention_inapp", "notif_mention_email"),
     "group_tag": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),

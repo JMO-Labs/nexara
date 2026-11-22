@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const logout = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/app/chat",
   useRouter: () => ({ replace: vi.fn() }),
