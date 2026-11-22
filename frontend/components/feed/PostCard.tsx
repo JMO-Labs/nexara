@@ -55,6 +55,32 @@ export function PostCard({
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
 
+  const headline = post.content.split("\n")[0].trim().slice(0, 80);
+  const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);
+  const cardLabel = `Post by ${post.author.display_name}${headline ? `: ${headline}` : ""}. ${reactionTotal} ${reactionTotal === 1 ? "reaction" : "reactions"}, ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}.`;
+
+  const reactions = (
+    <ReactionRow
+      reactions={post.reactions}
+      commentCount={post.comment_count}
+      onReact={(e) => reactMut.mutate(e)}
+      onCommentClick={() => setCommentsOpen((v) => !v)}
+      extra={
+        <BookmarkButton
+          postId={post.id}
+          isBookmarked={post.is_bookmarked ?? false}
+        />
+      }
+    />
+  );
+  const thread = commentsOpen ? (
+    <CommentThread
+      postId={post.id}
+      expanded={commentsExpanded}
+      onOverflowChange={setCommentsOverflowing}
+    />
+  ) : null;
+
   if (post.recipient_id && post.recipient) {
     return (
       <KudosCard
@@ -62,13 +88,12 @@ export function PostCard({
         message={post.content}
         authorName={post.author.display_name}
         createdAt={post.created_at}
-      />
+      >
+        {reactions}
+        {thread}
+      </KudosCard>
     );
   }
-
-  const headline = post.content.split("\n")[0].trim().slice(0, 80);
-  const reactionTotal = post.reactions.reduce((n, r) => n + r.count, 0);
-  const cardLabel = `Post by ${post.author.display_name}${headline ? `: ${headline}` : ""}. ${reactionTotal} ${reactionTotal === 1 ? "reaction" : "reactions"}, ${post.comment_count} ${post.comment_count === 1 ? "comment" : "comments"}.`;
 
   return (
     <Card
@@ -101,7 +126,9 @@ export function PostCard({
         isPromptSummary={post.is_prompt_summary}
         replyToPromptId={post.reply_to_prompt_id}
       />
-      <PostBody content={post.content} truncate={truncateBody} />
+      {post.poll && post.content.trim() === post.poll.question.trim() ? null : (
+        <PostBody content={post.content} truncate={truncateBody} />
+      )}
       {post.link_previews && post.link_previews.length > 0 ? (
         <div
           data-testid="post-previews"
@@ -124,25 +151,8 @@ export function PostCard({
           onClick={() => onOpen?.(post.id)}
         />
       ) : null}
-      <ReactionRow
-        reactions={post.reactions}
-        commentCount={post.comment_count}
-        onReact={(e) => reactMut.mutate(e)}
-        onCommentClick={() => setCommentsOpen((v) => !v)}
-        extra={
-          <BookmarkButton
-            postId={post.id}
-            isBookmarked={post.is_bookmarked ?? false}
-          />
-        }
-      />
-      {commentsOpen ? (
-        <CommentThread
-          postId={post.id}
-          expanded={commentsExpanded}
-          onOverflowChange={setCommentsOverflowing}
-        />
-      ) : null}
+      {reactions}
+      {thread}
       {commentsOpen &&
       post.comment_count > 0 &&
       (commentsOverflowing || commentsExpanded) ? (

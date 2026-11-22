@@ -79,6 +79,16 @@ describe("PollCard", () => {
     );
   });
 
+  it("shows lettered options and an animated bar per option", async () => {
+    renderWithProviders(<PollCard poll={poll({ user_vote: ["a"] })} />);
+    expect(screen.getByRole("group", { name: /Poll: Pizza/ })).toBeTruthy();
+    expect(screen.getByText("A")).toBeInTheDocument();
+    expect(screen.getByText("B")).toBeInTheDocument();
+    const bars = screen.getAllByTestId("poll-bar");
+    expect(bars[0].className).toMatch(/motion-reduce:transition-none/);
+    await waitFor(() => expect(bars[0]).toHaveStyle({ width: "75%" }));
+  });
+
   it("closed poll shows final results and disables options", () => {
     renderWithProviders(<PollCard poll={poll({ closed: true })} />);
     expect(screen.getByText(/Final results/)).toBeInTheDocument();

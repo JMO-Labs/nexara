@@ -23,14 +23,18 @@ describe("KudosCard", () => {
         createdAt="2026-01-01T00:00:00Z"
       />,
     );
-    expect(screen.getByText("Ana Lima").className).toMatch(/font-bold/);
+    expect(screen.getByRole("heading").className).toMatch(/font-bold/);
+    expect(screen.getByRole("link", { name: "Ana Lima" })).toHaveAttribute(
+      "href",
+      "/app/members/u2",
+    );
     expect(screen.getByText("Great job!")).toBeInTheDocument();
     expect(screen.getByText(/Bob/)).toBeInTheDocument();
     expect(screen.getByTestId("kudos-trophy")).toBeInTheDocument();
     const cls = screen.getByRole("article").className;
     expect(cls).toMatch(/glass-item/);
     expect(cls).not.toMatch(/purple/);
-    expect(screen.getByTestId("kudos-bar").getAttribute("style")).toContain(
+    expect(screen.getByTestId("kudos-glow").getAttribute("style")).toContain(
       "--nx-sun",
     );
   });

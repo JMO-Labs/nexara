@@ -1,12 +1,13 @@
 "use client";
 /**
  * @file components/feed/PollCard.tsx
- * @brief Inline poll on a post: tap to vote (single/yes-no), tick then Vote
- *        (multiple). Results show as bars once voted, closed, or always-visible.
+ * @brief Hero poll on a post: headline question with chart badge, big lettered
+ *        option rows (tap to vote, or tick then Vote for multiple), animated
+ *        result bars once voted/closed/always-visible. Honors reduced motion.
  */
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { BarChart3, Check } from "lucide-react";
 import { Button } from "@/components/ui";
 import { votePoll } from "@/lib/api/polls";
 import type { Poll } from "@/lib/api/posts";
@@ -50,14 +51,34 @@ export function PollCard({ poll }: { poll: Poll }) {
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   };
 
+  const [grown, setGrown] = React.useState(false);
+  React.useEffect(() => {
+    if (!showResults) return;
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, [showResults]);
+
   const total = Math.max(poll.total_votes, 1);
   const options = [...poll.options].sort((a, b) => a.position - b.position);
 
   return (
-    <fieldset className="glass-item mt-3 flex flex-col gap-2 rounded-[22px] p-3.5">
-      <legend className="sr-only">Poll</legend>
-      <p className="text-[15px] font-medium">{poll.question}</p>
-      {options.map((o) => {
+    <fieldset
+      aria-label={`Poll: ${poll.question}`}
+      className="glass-item relative mt-3 flex flex-col gap-3 overflow-hidden rounded-[28px] p-5 md:p-6"
+    >
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl text-[var(--nx-surface)] dark:text-[var(--nx-surface)]"
+          style={{ background: "var(--nx-accent)" }}
+        >
+          <BarChart3 className="size-5" />
+        </span>
+        <p className="text-xl leading-snug font-bold break-words text-ink">
+          {poll.question}
+        </p>
+      </div>
+      {options.map((o, i) => {
         const mine = poll.user_vote?.includes(o.id) ?? false;
         const on = picked.includes(o.id);
         const pct = Math.round((o.vote_count / total) * 100);
@@ -69,10 +90,10 @@ export function PollCard({ poll }: { poll: Poll }) {
             aria-pressed={multi ? on : undefined}
             onClick={() => onOption(o.id)}
             className={cn(
-              "relative flex items-center gap-2 overflow-hidden rounded-full px-4 py-2 text-left text-sm outline-none transition-colors focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-default",
+              "relative flex min-h-14 items-center gap-3 overflow-hidden rounded-2xl border border-[var(--nx-item-edge)] px-4 py-3 text-left text-base text-ink outline-none transition-colors focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-default",
               canVote &&
                 "bg-[color-mix(in_srgb,var(--nx-ink)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-ink)_12%,transparent)]",
-              on && "ring-2 ring-[var(--nx-blue)]",
+              on && "ring-2 ring-[var(--nx-accent)]",
               showResults &&
                 "bg-[color-mix(in_srgb,var(--nx-ink)_5%,transparent)]",
             )}
@@ -80,21 +101,31 @@ export function PollCard({ poll }: { poll: Poll }) {
             {showResults && (
               <span
                 aria-hidden
+                data-testid="poll-bar"
                 className={cn(
-                  "absolute inset-y-0 left-0 rounded-full transition-[width] duration-500",
+                  "absolute inset-y-0 left-0 transition-[width] duration-700 ease-out motion-reduce:transition-none",
                   mine
-                    ? "bg-[color-mix(in_srgb,var(--nx-blue)_35%,transparent)]"
-                    : "bg-[color-mix(in_srgb,var(--nx-ink)_10%,transparent)]",
+                    ? "bg-[color-mix(in_srgb,var(--nx-accent)_30%,transparent)]"
+                    : "bg-[color-mix(in_srgb,var(--nx-accent)_12%,transparent)]",
                 )}
-                style={{ width: `${pct}%` }}
+                style={{ width: grown ? `${pct}%` : "0%" }}
               />
             )}
-            <span className="relative flex-1">{o.label}</span>
+            <span
+              aria-hidden
+              className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--nx-ink)_10%,transparent)] text-xs font-bold"
+            >
+              {String.fromCharCode(65 + i)}
+            </span>
+            <span className="relative flex-1 font-medium">{o.label}</span>
             {mine && (
-              <Check aria-label="Your vote" className="relative size-4" />
+              <Check
+                aria-label="Your vote"
+                className="relative size-5 text-accent"
+              />
             )}
             {showResults && (
-              <span className="relative text-xs tabular-nums text-muted">
+              <span className="relative text-sm font-semibold tabular-nums">
                 {pct}%
               </span>
             )}
