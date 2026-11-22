@@ -8,9 +8,10 @@ In v1 there is exactly one community per instance.
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Integer, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Integer, Text, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -53,3 +54,8 @@ class Community(Base):
     amazon_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     amazon_partner_tag: Mapped[str | None] = mapped_column(Text, nullable=True)
     amazon_marketplace: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-community feature flags (see app.core.features); unset keys use defaults.
+    features: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="USD")

@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from uuid import UUID
+from zoneinfo import available_timezones
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from app.schemas.auth import SelfHostEmail
 
@@ -54,6 +55,7 @@ class UserDetailResponse(BaseModel):
     location: str | None = None
     website_url: str | None = None
     birthday: date | None = None
+    timezone: str | None = None
     banner_media_id: UUID | None = None
     phone: str | None = None
     contact_email: str | None = None
@@ -85,6 +87,15 @@ class UserUpdateRequest(BaseModel):
     location: str | None = Field(None, max_length=100)
     website_url: HttpUrl | None = None
     birthday: date | None = None
+    timezone: str | None = Field(None, max_length=64, description="IANA timezone")
+
+    @field_validator("timezone")
+    @classmethod
+    def _tz(cls, v: str | None) -> str | None:
+        """@brief Must be a known IANA zone."""
+        if v is not None and v not in available_timezones():
+            raise ValueError("Unknown timezone")
+        return v
 
 
 class PasswordChangeRequest(BaseModel):

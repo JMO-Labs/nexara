@@ -31,6 +31,7 @@ def _build(prefs: dict | None = None, cadence: dict | None = None):
     row = MagicMock()
     row.notification_prefs = prefs or {}
     row.digest_cadence = cadence or {}
+    row.recap_cadence = "weekly"
     row.dnd_schedule = None
     row.dnd_until = None
     row.dnd_timezone = "UTC"
@@ -122,6 +123,7 @@ class TestWrappers:
         row = MagicMock()
         row.notification_prefs = {}
         row.digest_cadence = {}
+        row.recap_cadence = "weekly"
         row.dnd_schedule = None
         row.dnd_until = None
         row.dnd_timezone = "UTC"
@@ -211,6 +213,7 @@ class TestSnoozeMethods:
             dnd_until=None,
             dnd_timezone="UTC",
             digest_cadence={},
+            recap_cadence="weekly",
         )
         await svc.set_dnd(USER_ID, {"mon": []}, "UTC")
         repo.update.assert_awaited_with(

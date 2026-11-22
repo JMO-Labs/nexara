@@ -11,7 +11,6 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import structlog
-from dateutil.rrule import rrulestr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, AuthorizationError, NotFoundError
@@ -20,6 +19,7 @@ from app.models.post import Post
 from app.models.prompt import Prompt, PromptPost
 from app.repositories.post_repo import PostRepository
 from app.repositories.prompt_repo import PromptRepository
+from app.repositories.question_bank_repo import QuestionBankRepository
 from app.schemas.prompt import (
     PromptCreate,
     PromptPostDetail,
@@ -28,52 +28,16 @@ from app.schemas.prompt import (
     PromptSummary,
     PromptUpdate,
 )
+from app.services.daily_question_service import DailyQuestionService
 from app.services.media_service import MAX_POST_MEDIA
+from app.services.prompt_schedule import should_fire
+
+__all__ = ["MAX_PINNED_PROMPTS", "PromptService", "should_fire"]
 
 logger = structlog.get_logger(__name__)
 
 MAX_PINNED_PROMPTS = 2
 """@brief Maximum number of simultaneously-pinned prompt posts per community."""
-
-
-def should_fire(prompt: Prompt, today: date) -> bool:
-    """
-    @brief Decide whether a prompt should fire on ``today``.
-
-    @param prompt The prompt to evaluate.
-    @param today The date to evaluate against (UTC).
-    @return True if the prompt's schedule matches today.
-    """
-    if not prompt.is_enabled:
-        return False
-
-    ftype = prompt.frequency_type
-    if ftype == "annual_date":
-        return prompt.trigger_month == today.month and prompt.trigger_day == today.day
-    if ftype == "weekly":
-        if prompt.trigger_weekday is None:
-            return False
-        return today.weekday() == prompt.trigger_weekday
-    if ftype == "monthly":
-        return prompt.trigger_month_day == today.day
-    if ftype == "one_time":
-        return prompt.trigger_one_time_date == today
-    if ftype == "custom":
-        if not prompt.trigger_custom_rule:
-            return False
-        try:
-            dtstart = datetime.combine(today, datetime.min.time())
-            rule = rrulestr(prompt.trigger_custom_rule, dtstart=dtstart)
-        except Exception:  # noqa: BLE001
-            return False
-        next_run = rule.after(
-            datetime.combine(today - timedelta(days=1), datetime.max.time()),
-            inc=True,
-        )
-        if next_run is None:
-            return False
-        return next_run.date() == today
-    return False
 
 
 class PromptService:
@@ -88,6 +52,7 @@ class PromptService:
         *,
         notification_service: Any | None = None,
         media_attacher: Callable[[uuid.UUID, list[uuid.UUID]], Awaitable[None]] | None = None,
+        daily_questions: DailyQuestionService | None = None,
     ) -> None:
         self._repo = prompt_repo
         self._post_repo = post_repo
@@ -95,6 +60,14 @@ class PromptService:
         self._session = session
         self._notifications = notification_service
         self._media_attacher = media_attacher
+        self._dq = daily_questions or DailyQuestionService(
+            QuestionBankRepository(session), community_id, session
+        )
+
+    async def authorize_create(self, user: Any, data: PromptCreate) -> None:
+        """@brief Admins, or group admins for subgroup daily questions; else 403."""
+        if not await self._dq.can_create(user, data):
+            raise AuthorizationError(_("Insufficient permissions"))
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -127,6 +100,7 @@ class PromptService:
             linked_event_id=data.linked_event_id,
             generate_summary=data.generate_summary,
             prompt_type=data.prompt_type,
+            reveal_after_answer=data.prompt_type == "daily_question",
             interest_category_slug=data.interest_category_slug,
             interest_capture_hint=data.interest_capture_hint,
             created_by=user_id,
@@ -187,7 +161,9 @@ class PromptService:
             existing = await self._repo.get_post_for_today(prompt.id, today)
             if existing is not None:
                 continue
-            if active >= MAX_PINNED_PROMPTS:
+            group = prompt.scope == "subgroup" and prompt.subgroup_id is not None
+            # Group prompts post only to their group and don't use the community pin budget.
+            if not group and active >= MAX_PINNED_PROMPTS:
                 logger.warning(
                     "prompt_skipped_max_pinned",
                     prompt_id=str(prompt.id),
@@ -195,11 +171,15 @@ class PromptService:
                 )
                 continue
 
+            if prompt.prompt_type == "daily_question" and not await self._dq.prepare_fire(prompt):
+                continue
             post = Post(
                 community_id=self._community_id,
                 author_id=prompt.created_by,
                 content=f"**{prompt.title}**\n\n{prompt.body}",
                 is_pinned=True,
+                visibility="subgroup" if group else "community",
+                subgroup_id=prompt.subgroup_id if group else None,
             )
             post = await self._post_repo.create(post)
 
@@ -212,7 +192,7 @@ class PromptService:
                 expires_at=expires_at,
             )
             await self._repo.create_prompt_post(tracker)
-            active += 1
+            active += 0 if group else 1
             fired += 1
 
             if prompt.notify_members and self._notifications:
@@ -386,7 +366,16 @@ class PromptService:
         pp = await self._repo.get_prompt_post(prompt_post_id)
         if pp is None or pp.community_id != self._community_id:
             raise NotFoundError(message=_("Prompt post not found"))
+        prompt = await self._repo.get_by_id(pp.prompt_id, community_id=self._community_id)
+        if prompt is not None and (locked := await self._dq.gate_responses(prompt, pp, viewer_id)):
+            return locked
         items, next_cursor = await self._post_repo.list_responses(
             self._community_id, prompt_post_id, viewer_id=viewer_id, cursor=cursor, limit=limit
         )
-        return {"items": items, "next_cursor": next_cursor, "has_more": next_cursor is not None}
+        answered = await self._dq.answered(pp, viewer_id)
+        return {
+            "items": items,
+            "next_cursor": next_cursor,
+            "has_more": next_cursor is not None,
+            "answered": answered,
+        }

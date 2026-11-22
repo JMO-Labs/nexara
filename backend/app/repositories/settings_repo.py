@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
 from app.models.user_settings import UserSettings
 
 
@@ -91,6 +92,20 @@ class SettingsRepository:
         await self._session.flush()
         await self._session.refresh(settings)
         return settings
+
+    async def user_timezone(self, user_id: uuid.UUID) -> str | None:
+        """
+        @param user_id The user.
+        @return ``users.timezone`` (IANA) or None when unset.
+        """
+        return await self._session.scalar(select(User.timezone).where(User.id == user_id))
+
+    async def user_timezones(self, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, str | None]:
+        """@return ``{user_id: users.timezone}`` for the given users."""
+        rows = await self._session.execute(
+            select(User.id, User.timezone).where(User.id.in_(user_ids))
+        )
+        return {uid: tz for uid, tz in rows.all()}
 
     async def count_sassybot_opt_outs(self, community_id: uuid.UUID) -> int:
         """

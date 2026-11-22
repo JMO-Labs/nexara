@@ -16,8 +16,11 @@ import { useInfinitePromptResponses } from "@/hooks/usePromptResponses";
  */
 export function PromptResponsesList({
   promptPostId,
+  searchable = true,
 }: {
   promptPostId: string;
+  /** Show the search box (off for short daily-question threads). */
+  searchable?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const q = useInfinitePromptResponses(promptPostId);
@@ -62,12 +65,14 @@ export function PromptResponsesList({
     : all;
   return (
     <div className="flex flex-col gap-4">
-      <Input
-        type="search"
-        label="Search responses"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      {searchable && (
+        <Input
+          type="search"
+          label="Search responses"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      )}
       {posts.length === 0 && <EmptyState title="No matching responses." />}
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />

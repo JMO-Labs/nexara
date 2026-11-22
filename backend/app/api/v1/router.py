@@ -24,9 +24,11 @@ from app.api.v1.calendars import router as calendars_router
 from app.api.v1.celebrations import router as celebrations_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.communities import router as communities_router
+from app.api.v1.daily_questions import router as daily_questions_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
 from app.api.v1.export import router as export_router
+from app.api.v1.features import router as features_router
 from app.api.v1.galleries import router as galleries_router
 from app.api.v1.home import router as home_router
 from app.api.v1.household import router as household_router
@@ -38,6 +40,7 @@ from app.api.v1.list_assignments import router as list_assignments_router
 from app.api.v1.list_templates import router as list_templates_router
 from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
+from app.api.v1.memories import router as memories_router
 from app.api.v1.moderation import router as moderation_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.nudges import router as nudges_router
@@ -48,12 +51,14 @@ from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
 from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
+from app.api.v1.recap import router as recap_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.tags import router as tags_router
+from app.api.v1.time_capsules import router as time_capsules_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
 from app.api.v1.weather import router as weather_router
@@ -70,6 +75,7 @@ api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
+api_v1_router.include_router(features_router)
 api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(admin_retention_router)
 api_v1_router.include_router(plugins_router)
@@ -92,6 +98,7 @@ api_v1_router.include_router(users_directory_router)
 api_v1_router.include_router(tags_router)
 api_v1_router.include_router(wishlists_router)
 api_v1_router.include_router(household_router)
+api_v1_router.include_router(memories_router)
 api_v1_router.include_router(weather_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(interests_router)
@@ -101,6 +108,7 @@ api_v1_router.include_router(lists_router)
 api_v1_router.include_router(list_assignments_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
+api_v1_router.include_router(time_capsules_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
 api_v1_router.include_router(suggestions_router)
@@ -110,6 +118,8 @@ api_v1_router.include_router(communities_router)
 api_v1_router.include_router(polls_router)
 api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
+api_v1_router.include_router(recap_router)
+api_v1_router.include_router(daily_questions_router)
 api_v1_router.include_router(push_router)
 api_v1_router.include_router(search_router)
 api_v1_router.include_router(settings_router)

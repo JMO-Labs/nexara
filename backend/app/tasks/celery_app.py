@@ -27,6 +27,7 @@ celery_app = Celery(
     include=[
         "app.tasks.ai_tasks",
         "app.tasks.birthday_tasks",
+        "app.tasks.capsule_tasks",
         "app.tasks.email_tasks",
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
@@ -36,6 +37,8 @@ celery_app = Celery(
         "app.tasks.list_tasks",
         "app.tasks.maintenance_tasks",
         "app.tasks.media_tasks",
+        "app.tasks.memories_tasks",
+        "app.tasks.recap_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -191,6 +194,14 @@ celery_app.conf.update(
             "task": "app.tasks.shop_tasks.refresh_shop_prices",
             "schedule": 60.0 * 60,
         },
+        "memories-on-this-day": {
+            "task": "app.tasks.memories_tasks.notify_on_this_day",
+            "schedule": crontab(minute=5),
+        },
+        "recap-dispatch": {
+            "task": "app.tasks.recap_tasks.recap_dispatch",
+            "schedule": crontab(minute=10),
+        },
         "send-birthday-reminders": {
             "task": "app.tasks.birthday_tasks.send_birthday_reminders",
             "schedule": crontab(hour="6", minute="0"),
@@ -214,6 +225,10 @@ celery_app.conf.update(
         "dispatch-list-expiry-reminders": {
             "task": "app.tasks.list_tasks.dispatch_list_expiry_reminders",
             "schedule": crontab(hour=8, minute=0),
+        },
+        "capsules-open-due": {
+            "task": "capsules.open_due",
+            "schedule": crontab(minute="*/10"),
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",

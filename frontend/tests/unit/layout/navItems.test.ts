@@ -47,7 +47,11 @@ describe("navItems", () => {
     ]);
   });
   it("more nav is Settings, Admin; Inbox is top nav", () => {
-    expect(MORE_NAV.map((i) => i.label)).toEqual(["Settings", "Admin"]);
+    expect(MORE_NAV.map((i) => i.label)).toEqual([
+      "Time capsules",
+      "Settings",
+      "Admin",
+    ]);
     expect(find(TOP_NAV, "Inbox")).toMatchObject({
       href: "/app/inbox",
       match: ["/app/notifications", "/app/bookmarks", "/app/lists"],

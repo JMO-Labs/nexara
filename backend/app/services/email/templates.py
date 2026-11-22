@@ -7,6 +7,8 @@ Loads templates from backend/templates/email/ and injects community branding.
 
 from __future__ import annotations
 
+import re
+from html import unescape
 from pathlib import Path
 from typing import Any
 
@@ -70,8 +72,16 @@ class EmailTemplateRenderer:
         template = self._env.get_template(template_name)
         html = template.render(**merged)
 
-        import re
+        return html, html_to_text(html)
 
-        text = re.sub(r"<[^>]+>", "", html)
-        text = re.sub(r"\s+", " ", text).strip()
-        return html, text
+
+def html_to_text(html: str) -> str:
+    """
+    @brief Plain-text alternative: drop head/style/script, keep block breaks,
+           strip tags, unescape entities, collapse blank runs.
+    """
+    text = re.sub(r"<(head|style|script)\b.*?</\1>", "", html, flags=re.S | re.I)
+    text = re.sub(r"<br\s*/?>|</(p|div|h[1-6]|li|tr|table|ul|ol)>", "\n", text, flags=re.I)
+    text = unescape(re.sub(r"<[^>]+>", "", text))
+    lines = (re.sub(r"[ \t]+", " ", ln).strip() for ln in text.splitlines())
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()

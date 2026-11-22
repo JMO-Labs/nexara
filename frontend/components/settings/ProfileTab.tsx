@@ -14,6 +14,7 @@ import { ProfileDetailsPanel } from "./ProfileDetailsPanel";
 import { HouseholdPanel } from "./HouseholdPanel";
 import { VisibilitySelect } from "./VisibilitySelect";
 import { AvatarPicker } from "./AvatarPicker";
+import { TimezoneSelect } from "./TimezoneSelect";
 
 const GRAVATAR = "https://www.gravatar.com/avatar/";
 
@@ -105,6 +106,7 @@ export function ProfileTab() {
             }
           />
         </SettingsRow>
+        <TimezoneSelect />
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <SettingsRow
             label="Display name"

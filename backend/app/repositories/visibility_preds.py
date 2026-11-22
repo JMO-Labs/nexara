@@ -10,10 +10,12 @@ import uuid
 from typing import Any
 
 from sqlalchemy import and_, exists, literal, or_, select
+from sqlalchemy.orm import aliased
 
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.models.moderation import UserBlock
 from app.models.post import Post, PostMedia
+from app.models.prompt import Prompt, PromptPost
 from app.models.subgroup import SubgroupMember
 
 
@@ -54,7 +56,28 @@ def post_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUI
             ),
         ),
         not_blocked(Post.author_id, viewer_id),
+        answer_revealed(viewer_id),
     )
+
+
+def answer_revealed(viewer_id: uuid.UUID) -> Any:
+    """
+    @brief Answers to an answer-to-reveal prompt (daily question) stay hidden
+           until the viewer has answered that same prompt post themselves.
+    """
+    mine = aliased(Post)
+    gated = exists().where(
+        PromptPost.id == Post.reply_to_prompt_id,
+        Prompt.id == PromptPost.prompt_id,
+        Prompt.reveal_after_answer.is_(True),
+        or_(Prompt.created_by.is_(None), Prompt.created_by != viewer_id),
+    )
+    answered = exists().where(
+        mine.reply_to_prompt_id == Post.reply_to_prompt_id,
+        mine.author_id == viewer_id,
+        mine.deleted_at.is_(None),
+    )
+    return or_(Post.reply_to_prompt_id.is_(None), Post.author_id == viewer_id, ~gated, answered)
 
 
 def gallery_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID) -> Any:

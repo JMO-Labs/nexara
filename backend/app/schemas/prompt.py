@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-FrequencyType = Literal["annual_date", "weekly", "monthly", "one_time", "custom"]
+FrequencyType = Literal["daily", "annual_date", "weekly", "monthly", "one_time", "custom"]
 PromptScope = Literal["community", "subgroup"]
 PromptSource = Literal["builtin", "custom"]
 
@@ -36,7 +36,7 @@ class PromptCreate(BaseModel):
     notification_body: str | None = Field(None, max_length=1000)
     linked_event_id: UUID | None = None
     generate_summary: bool = True
-    prompt_type: Literal["standard", "interest_capture"] = "standard"
+    prompt_type: Literal["standard", "interest_capture", "daily_question"] = "standard"
     interest_category_slug: str | None = None
     interest_capture_hint: str | None = None
 
@@ -91,6 +91,7 @@ class PromptResponse(BaseModel):
     linked_event_id: UUID | None
     generate_summary: bool
     prompt_type: str
+    reveal_after_answer: bool
     interest_category_slug: str | None
     interest_capture_hint: str | None
     created_by: UUID | None
@@ -122,6 +123,7 @@ class PromptSummary(BaseModel):
     title: str
     body: str
     prompt_type: str
+    reveal_after_answer: bool = False
     interest_category_slug: str | None
     interest_capture_hint: str | None
 
@@ -140,3 +142,22 @@ class PromptList(BaseModel):
     items: list[PromptResponse]
     next_cursor: str | None = None
     has_more: bool = False
+
+
+class QuestionText(BaseModel):
+    """@brief Body for suggesting/adding a daily question."""
+
+    text: str = Field(..., min_length=1, max_length=280)
+
+
+class QuestionOut(BaseModel):
+    """@brief A question-bank row."""
+
+    id: UUID
+    text: str
+    source: str
+    status: str
+    suggested_by: UUID | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

@@ -17,12 +17,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, get_optional_user
 from app.core.rate_limit import limiter
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
 from app.repositories.media_repo import MediaRepository
+from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import (
     MediaResponse,
@@ -60,6 +61,7 @@ def _build_service(
         user_repo=UserRepository(db),
         community_id=community_id,
         valkey_client=valkey,
+        capsule_repo=TimeCapsuleRepository(db),
     )
 
 
@@ -173,6 +175,7 @@ async def get_media_metadata(
 async def get_media_file(
     media_id: uuid.UUID,
     service: MediaService = Depends(_build_service),
+    user: User | None = Depends(get_optional_user),
 ) -> StreamingResponse:
     """
     @brief Serve the original file with Cache-Control headers.
@@ -180,7 +183,7 @@ async def get_media_file(
     Public endpoint — auth is enforced at upload/post level, not on serving.
     Consistent with the thumbnail endpoint.
     """
-    content, content_type = await service.get_file_public(media_id)
+    content, content_type = await service.get_file_public(media_id, user.id if user else None)
     return StreamingResponse(
         iter([content]),
         media_type=content_type,
@@ -195,18 +198,20 @@ async def get_media_file(
 async def get_media_thumbnail(
     media_id: uuid.UUID,
     service: MediaService = Depends(_build_service),
+    user: User | None = Depends(get_optional_user),
 ) -> StreamingResponse:
     """
     @brief Serve the thumbnail (public, no auth required).
 
     Returns WebP thumbnail with cache headers for CDN.
     """
-    content, _ = await service.get_thumbnail(media_id)
+    content, _ = await service.get_thumbnail(media_id, user.id if user else None)
     return StreamingResponse(
         iter([content]),
         media_type="image/webp",
         headers={
-            "Cache-Control": "public, max-age=604800",
+            "Cache-Control": "private, max-age=604800",
+            "Vary": "Authorization, Cookie",
             "Content-Disposition": "inline",
         },
     )

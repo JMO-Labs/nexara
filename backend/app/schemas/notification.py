@@ -71,6 +71,9 @@ class UnreadCountResponse(BaseModel):
 DigestCadence = Literal["instant", "hourly", "daily", "off"]
 """@brief Allowed per-type digest cadence values."""
 
+RecapCadence = Literal["weekly", "monthly", "off"]
+"""@brief Allowed family-recap email cadences."""
+
 DIGEST_CADENCES: tuple[str, ...] = get_args(DigestCadence)
 
 
@@ -90,6 +93,7 @@ class NotificationPreferences(BaseModel):
     dnd_until: datetime | None
     dnd_timezone: str
     digest_cadence: dict[str, str]
+    recap_cadence: RecapCadence | None = None
 
     model_config = {"from_attributes": True}
 
@@ -105,3 +109,4 @@ class NotificationPreferencesUpdate(BaseModel):
     dnd_schedule: dict[str, Any] | None = None
     dnd_timezone: str | None = None
     digest_cadence: dict[str, str] | None = None
+    recap_cadence: RecapCadence | None = None

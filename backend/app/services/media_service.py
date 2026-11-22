@@ -22,6 +22,7 @@ from app.core.i18n import _
 from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.media_repo import MediaRepository
+from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
 from app.services.activity_publish import record_activity
@@ -92,6 +93,7 @@ class MediaService:
         *,
         valkey_client: Redis | None = None,
         activity_repo: ActivityRepository | None = None,
+        capsule_repo: TimeCapsuleRepository | None = None,
     ) -> None:
         self._repo = media_repo
         self._storage = storage_backend
@@ -99,6 +101,7 @@ class MediaService:
         self._community_id = community_id
         self._valkey = valkey_client
         self._activity_repo = activity_repo
+        self._capsule_repo = capsule_repo
 
     def _session(self) -> AsyncSession:
         """@brief Get the session from the media repo for quota operations."""
@@ -207,6 +210,13 @@ class MediaService:
             raise NotFoundError(_("Media not found"))
         return MediaResponse.model_validate(media)
 
+    async def _guard_sealed(self, media_id: uuid.UUID, viewer_id: uuid.UUID | None) -> None:
+        """@brief 404 for media in an unopened time capsule (author bypasses)."""
+        if self._capsule_repo and await self._capsule_repo.is_sealed_media(
+            media_id, self._community_id, viewer_id
+        ):
+            raise NotFoundError(_("Media not found"))
+
     async def get_file(
         self,
         media_id: uuid.UUID,
@@ -220,36 +230,34 @@ class MediaService:
         @return Tuple of (content bytes, content_type).
         @raises NotFoundError If media does not exist.
         """
-        return await self.get_file_public(media_id)
+        return await self.get_file_public(media_id, user.id)
 
     async def get_file_public(
-        self,
-        media_id: uuid.UUID,
+        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
     ) -> tuple[bytes, str]:
         """
         @brief Retrieve the original file content without auth.
-
-        Used by img/video tags that cannot send Bearer tokens.
-        Access control is enforced at the post/upload level.
-
         @param media_id UUID of the media.
         @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media does not exist.
+        @raises NotFoundError If media does not exist or is sealed in a capsule.
         """
+        await self._guard_sealed(media_id, viewer_id)
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
         data = await self._storage.get(media.storage_key)
         return data, media.content_type
 
-    async def get_thumbnail(self, media_id: uuid.UUID) -> tuple[bytes, str]:
+    async def get_thumbnail(
+        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
+    ) -> tuple[bytes, str]:
         """
         @brief Retrieve the thumbnail content and content type.
-
         @param media_id UUID of the media.
         @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media or thumbnail does not exist.
+        @raises NotFoundError If media or thumbnail does not exist, or is sealed.
         """
+        await self._guard_sealed(media_id, viewer_id)
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
@@ -343,8 +351,6 @@ class MediaService:
     ) -> dict[str, Any]:
         """
         @brief Initialize a multipart upload session.
-
-        Delegates to :mod:`app.services.media.multipart`.
         """
         return await _init_multipart_upload_impl(
             self._session(),
@@ -366,8 +372,6 @@ class MediaService:
     ) -> dict[str, Any]:
         """
         @brief Store a single part of a multipart upload.
-
-        Delegates to :mod:`app.services.media.multipart`.
         """
         return await _upload_part_impl(
             self._storage,
@@ -384,8 +388,6 @@ class MediaService:
     ) -> MediaResponse:
         """
         @brief Assemble parts, create Media record, enqueue transcode if video.
-
-        Delegates to :mod:`app.services.media.multipart`.
         """
         return await _complete_multipart_upload_impl(
             self._session(),

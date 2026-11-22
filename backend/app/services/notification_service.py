@@ -53,6 +53,8 @@ NOTIFICATION_TYPES = (
     "prompt",
     "prompt_summary",
     "kudos_received",
+    "on_this_day",
+    "capsule_opened",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -71,6 +73,8 @@ PREF_MAP = {
     "prompt": ("notif_prompt_inapp", "notif_prompt_email"),
     "prompt_summary": ("notif_prompt_summary_inapp", "notif_prompt_summary_email"),
     "kudos_received": ("notif_mention_inapp", "notif_mention_email"),
+    "on_this_day": ("notif_mention_inapp", "notif_mention_email"),
+    "capsule_opened": ("notif_mention_inapp", "notif_mention_email"),
     "group_tag": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
@@ -159,9 +163,8 @@ class NotificationService:
 
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
         eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})
-        in_dnd_now = dnd.in_dnd(
-            settings.dnd_schedule, settings.dnd_until, settings.dnd_timezone, datetime.now(UTC)
-        )
+        tz = await self.effective_timezone(user_id, settings.dnd_timezone)
+        in_dnd_now = dnd.in_dnd(settings.dnd_schedule, settings.dnd_until, tz, datetime.now(UTC))
         eff = dnd.gate_channels(eff, type_, in_dnd_now)
         notification = await self._notification_repo.upsert_grouped(
             user_id,
@@ -259,6 +262,10 @@ class NotificationService:
         """
         if not await self._notification_repo.delete_one(user_id, notification_id):
             raise NotFoundError("Notification not found")
+
+    async def effective_timezone(self, user_id: uuid.UUID, dnd_tz: str | None = None) -> str:
+        """@return ``users.timezone`` or the legacy DND zone or UTC."""
+        return dnd.effective_tz(await self._settings_repo.user_timezone(user_id), dnd_tz)
 
     async def get_preferences(self, user_id: uuid.UUID) -> NotificationPreferences:
         """@brief Return v2 notification prefs + DnD + digest settings."""

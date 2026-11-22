@@ -51,12 +51,16 @@ export interface NotificationItem {
   actor_ids: string[];
 }
 
+/** @brief Family recap email cadence. */
+export type RecapCadence = "weekly" | "monthly" | "off";
+
 export interface PreferencesPayload {
   notification_prefs: Record<string, Partial<Record<Channel, boolean>>>;
   dnd_schedule: Record<string, { start: string; end: string }[]> | null;
   dnd_until: string | null;
   dnd_timezone: string;
   digest_cadence: Record<string, DigestCadence>;
+  recap_cadence?: RecapCadence;
 }
 
 export interface WebhookCreateBody {

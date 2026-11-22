@@ -57,6 +57,12 @@ class UserSettings(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Weekly/monthly family recap email ('weekly' | 'monthly' | 'off')
+    recap_cadence: Mapped[str] = mapped_column(Text, nullable=False, server_default="weekly")
+    recap_last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # --- Legacy notification preferences (type x channel) ---
     notif_mention_inapp: Mapped[bool] = _bool_col()
     notif_mention_push: Mapped[bool] = _bool_col()

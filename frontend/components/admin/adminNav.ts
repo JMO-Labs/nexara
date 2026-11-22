@@ -8,6 +8,7 @@ import {
   Brush,
   Database,
   Hash,
+  ToggleRight,
   History,
   KeyRound,
   MailPlus,
@@ -50,7 +51,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (11 tabs + 4 route links). */
+/** @brief Grouped admin sections (12 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -91,6 +92,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Prompts",
         "Community prompts and schedules.",
         MessageSquareQuote,
+      ),
+      tab(
+        "features",
+        "Features",
+        "Turn community features on or off.",
+        ToggleRight,
       ),
       route(
         "moderation",

@@ -71,3 +71,18 @@ class CommunityRepository:
             setattr(community, key, value)
         await self._session.flush()
         return community
+
+    async def update_features(
+        self, community_id: uuid.UUID, patch: dict[str, bool]
+    ) -> dict[str, Any]:
+        """
+        @brief Merge ``patch`` into ``communities.features``.
+        @param patch Partial ``{key: bool}``.
+        @return The stored features dict ({} if the community is missing).
+        """
+        community = await self.get(community_id)
+        if community is None:
+            return {}
+        community.features = {**(community.features or {}), **patch}
+        await self._session.flush()
+        return community.features

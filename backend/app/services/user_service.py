@@ -121,6 +121,7 @@ class UserService:
             "website_url",
             "birthday",
             "pronouns",
+            "timezone",
         }
         filtered = {k: v for k, v in data.items() if k in allowed and v is not None}
         if not filtered:

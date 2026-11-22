@@ -3,11 +3,10 @@
  * @file components/settings/DnDScheduleEditor.tsx
  * @brief Weekly quiet-hours grid with multiple windows per day and a TZ picker.
  */
-import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
-import { Option, Select } from "@/components/ui/Select";
+import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 
 export type DndWindow = { start: string; end: string };
 export type DndSchedule = Record<string, DndWindow[]>;
@@ -23,16 +22,6 @@ export interface DnDScheduleEditorProps {
   onChange: (schedule: DndSchedule | null, timezone: string) => void;
 }
 
-/** @brief IANA zone list (falls back to the current zone). */
-function useZones(current: string): string[] {
-  return useMemo(() => {
-    const fn = (Intl as { supportedValuesOf?: (k: string) => string[] })
-      .supportedValuesOf;
-    const zones = fn ? fn("timeZone") : [];
-    return zones.includes(current) ? zones : [current, ...zones];
-  }, [current]);
-}
-
 /**
  * @brief Quiet-hours editor.
  * @param props schedule, timezone, onChange(schedule, tz)
@@ -44,7 +33,6 @@ export function DnDScheduleEditor({
   onChange,
 }: DnDScheduleEditorProps) {
   const t = useTranslations("settings.notif");
-  const zones = useZones(timezone);
 
   const setDay = (day: string, windows: DndWindow[]) => {
     const next: DndSchedule = { ...(schedule ?? {}) };
@@ -55,20 +43,7 @@ export function DnDScheduleEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-1.5 text-sm sm:max-w-xs">
-        <span className="font-semibold">{t("timezone")}</span>
-        <Select
-          label={t("timezone")}
-          value={timezone}
-          onValueChange={(v) => onChange(schedule, v)}
-        >
-          {zones.map((z) => (
-            <Option key={z} value={z}>
-              {z}
-            </Option>
-          ))}
-        </Select>
-      </div>
+      <TimezoneSelect />
       {DAYS.map((day) => {
         const label = t(`day_${day}`);
         const windows = schedule?.[day] ?? [];

@@ -32,6 +32,7 @@ export interface CurrentUser {
   skills?: string[];
   availability?: string | null;
   dietary?: string | null;
+  timezone?: string | null;
 }
 
 export interface UserSummary {

@@ -312,6 +312,11 @@
     "storageUsed": "{used} of {quota} used",
     "storageWarning": "You are using over 80% of your storage quota.",
     "notif": {
+      "recap_title": "Family recap email",
+      "recap_hint": "A short email of memories, birthdays and more. Sent on Sunday mornings, only when there is something to share.",
+      "recap_weekly": "Weekly",
+      "recap_monthly": "Monthly",
+      "recap_off": "Off",
       "snooze_title": "Snooze",
       "snooze_1h": "1 hour",
       "snooze_morning": "Until morning",
@@ -339,6 +344,7 @@
       "ch_push": "Push",
       "ch_toast": "Toast",
       "ch_webhook": "Webhook",
+      "ch_apprise": "Other apps (Apprise)",
       "digest": "Digest",
       "cad_instant": "Instant",
       "cad_hourly": "Hourly",
@@ -1020,8 +1026,14 @@
     "invite_accepted": {
       "label": "Invite accepted"
     },
+    "capsule_opened": {
+      "label": "Time capsule opened"
+    },
     "kudos_received": {
       "label": "You got kudos"
+    },
+    "on_this_day": {
+      "label": "On this day"
     },
     "list_assigned": {
       "label": "List task assigned"

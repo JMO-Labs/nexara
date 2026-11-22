@@ -67,6 +67,7 @@ COPY backend/app/ ./app/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
 COPY backend/data/ ./data/
+COPY backend/templates/ ./templates/
 COPY backend/pyproject.toml ./
 
 # Configuration files

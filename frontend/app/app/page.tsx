@@ -17,6 +17,7 @@ import { HomeSideColumn } from "@/components/home/HomeSideColumn";
 import { FeedTile } from "@/components/home/tiles/FeedTile";
 import { ChatsTile } from "@/components/home/tiles/ChatsTile";
 import { UpNextTile } from "@/components/home/tiles/UpNextTile";
+import { OnThisDayTile } from "@/components/home/tiles/OnThisDayTile";
 import { PhotosTile } from "@/components/home/tiles/PhotosTile";
 
 /** Entrance plays once per session (module-level). */
@@ -53,6 +54,12 @@ export default function AppHome() {
       </motion.div>
       <motion.div {...sectionProps}>
         <ScopeBar needs={<NeedsChips />} />
+      </motion.div>
+      <motion.div
+        {...sectionProps}
+        className="mb-2.5 empty:hidden md:mb-[18px]"
+      >
+        <OnThisDayTile open={open === "memories"} onToggle={toggle} />
       </motion.div>
       <motion.div
         {...sectionProps}
