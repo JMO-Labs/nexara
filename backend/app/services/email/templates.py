@@ -42,7 +42,7 @@ class EmailTemplateRenderer:
         context: dict[str, Any],
         *,
         community_name: str = "Nexara",
-        color_primary: str = "#10141A",
+        color_primary: str = "#24323D",
         logo_url: str | None = None,
         footer_text: str | None = None,
     ) -> tuple[str, str]:
