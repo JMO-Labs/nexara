@@ -37,6 +37,7 @@ class KudosResponse(BaseModel):
     recipient_id: uuid.UUID
     message: str | None
     author_id: uuid.UUID
+    author_name: str | None = None
     subgroup_id: uuid.UUID | None = None
     created_at: datetime
     recipient: KudosRecipient | None = None

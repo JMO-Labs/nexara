@@ -100,9 +100,6 @@ export function KudosCard({
           </span>
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-widest text-[var(--nx-muted)] uppercase">
-            Kudos
-          </p>
           <h3 className="text-2xl leading-tight font-bold break-words">
             Kudos to {who}
           </h3>
