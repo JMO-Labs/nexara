@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent } from "./eventColors";
 import { formatTime } from "./formatTime";
+import { EventTitle } from "./EventTitle";
 
 export interface EventRailProps {
   events: EventItem[];
@@ -151,7 +152,7 @@ export function EventRail({
                           {ev.location ? `, ${ev.location}` : ""}
                         </span>
                         <span className="text-ink line-clamp-2 text-sm font-semibold">
-                          {ev.title}
+                          <EventTitle ev={ev} />
                         </span>
                         <span className="mt-0.5 block text-xs font-semibold text-muted">
                           {tone.label}
