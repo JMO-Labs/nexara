@@ -14,6 +14,8 @@ export interface HouseholdMember {
   owner_id: string;
   kind: HouseholdKind;
   name: string;
+  /** @handle for mentions (stable across renames). */
+  handle: string | null;
   relation: string | null;
   /** ISO date, or "--MM-DD" when the year is hidden. */
   birthday: string | null;
@@ -59,4 +61,9 @@ export const upcomingCelebrations = () =>
 export const householdPhotos = (id: string, before?: string | null) =>
   apiGet<TaggedPage>(
     `${base}/${seg(id)}/tagged${before ? `?${new URLSearchParams({ before })}` : ""}`,
+  );
+/** @brief Posts that @mention a household member/pet (viewer-readable). */
+export const householdPosts = (id: string, before?: string | null) =>
+  apiGet<TaggedPage>(
+    `${base}/${seg(id)}/tagged?${new URLSearchParams({ kind: "posts", ...(before ? { before } : {}) })}`,
   );

@@ -8,7 +8,7 @@ Defines request/response models used by the posts API endpoints.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -56,6 +56,9 @@ class PostResponse(BaseModel):
     author: PostAuthorResponse
     media: list[PostMediaResponse] = Field(default_factory=list)
     poll: PollResponse | None = None
+    recipient_id: UUID | None = None
+    recipient: dict[str, Any] | None = None
+    celebration: dict[str, Any] | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)
     comment_count: int = 0
     is_bookmarked: bool = False
@@ -69,6 +72,14 @@ class PostResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     edited_at: datetime | None = None
+
+
+class CelebrateIn(BaseModel):
+    """@brief Whose occasion a post celebrates."""
+
+    subject_type: Literal["user", "household"]
+    subject_id: UUID
+    occasion: Literal["birthday", "gotcha_day", "milestone"] = "birthday"
 
 
 class PostCreate(BaseModel):
@@ -87,6 +98,7 @@ class PostCreate(BaseModel):
     content: str = Field("", max_length=10000)
     media_ids: list[UUID] = Field(default_factory=list, max_length=10)
     poll: PollCreate | None = None
+    celebrate: CelebrateIn | None = None
     reply_to_prompt_id: UUID | None = None
     subgroup_id: UUID | None = None
     # "private" = only the author sees it; otherwise subgroup_id decides.
@@ -95,7 +107,7 @@ class PostCreate(BaseModel):
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:
         """@brief Ensure the post has content, media, or a poll."""
-        if not self.content.strip() and not self.media_ids and not self.poll:
+        if not (self.content.strip() or self.media_ids or self.poll or self.celebrate):
             raise ValueError("Post must have content, media, or a poll")
         return self
 

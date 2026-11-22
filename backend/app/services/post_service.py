@@ -16,7 +16,10 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
 from app.plugins.hooks import HookRegistry
+from app.repositories.celebration_repo import CelebrationRepository
 from app.schemas.poll import PollCreate
+from app.schemas.post import CelebrateIn
+from app.services import post_celebrate
 from app.services.activity_publish import record_activity
 from app.services.post_comments import CommentsMixin
 from app.services.post_reactions import ReactionsMixin
@@ -80,8 +83,16 @@ class PostService(CommentsMixin, ReactionsMixin):
         reply_to_prompt_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
         private: bool = False,
+        celebrate: CelebrateIn | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
+        celebrated = (
+            await post_celebrate.resolve(
+                CelebrationRepository(self._post_repo.session), self._community_id, user, celebrate
+            )
+            if celebrate
+            else None
+        )
         await HookRegistry.emit(
             "before_post_created",
             community_id=self._community_id,
@@ -98,6 +109,12 @@ class PostService(CommentsMixin, ReactionsMixin):
             subgroup_id=subgroup_id,
             private=private,
         )
+
+        if celebrated:
+            await self._post_repo.set_celebration(
+                post, celebrated.subject_type, celebrated.subject_id, celebrated.occasion
+            )
+            await post_celebrate.notify(self._notification, user, celebrated, post.id)
 
         if media_ids and self._media_attacher:
             await self._media_attacher(post.id, media_ids, user)

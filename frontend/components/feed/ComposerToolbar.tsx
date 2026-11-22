@@ -3,7 +3,13 @@
  * @file components/feed/ComposerToolbar.tsx
  * @brief Action row for PostComposer: photos, poll, kudos, cancel, post.
  */
-import { Image as ImageIcon, BarChart3, Trophy, X } from "lucide-react";
+import {
+  Image as ImageIcon,
+  BarChart3,
+  PartyPopper,
+  Trophy,
+  X,
+} from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
 
 export interface ComposerToolbarProps {
@@ -11,6 +17,7 @@ export interface ComposerToolbarProps {
   onSubmit: () => void;
   onCancel: () => void;
   onKudos?: () => void;
+  onCelebrate?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
   postDisabled?: boolean;
@@ -25,10 +32,12 @@ export interface ComposerToolbarProps {
  */
 export function ComposerIcons({
   onKudos,
+  onCelebrate,
   onPhotos,
   onPoll,
 }: {
   onKudos?: () => void;
+  onCelebrate?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
 }) {
@@ -52,6 +61,16 @@ export function ComposerIcons({
       >
         <BarChart3 className="size-[18px]" aria-hidden />
       </IconButton>
+      {onCelebrate ? (
+        <IconButton
+          aria-label="Celebrate someone"
+          variant="ghost"
+          size="sm"
+          onClick={onCelebrate}
+        >
+          <PartyPopper className="size-[18px]" aria-hidden />
+        </IconButton>
+      ) : null}
       {onKudos ? (
         <IconButton
           aria-label="Send kudos"
@@ -79,13 +98,19 @@ export function ComposerToolbar({
   onSubmit,
   onCancel,
   onKudos,
+  onCelebrate,
   onPhotos,
   onPoll,
   postDisabled,
 }: ComposerToolbarProps) {
   return (
     <div className="mt-2 flex items-center gap-2">
-      <ComposerIcons onKudos={onKudos} onPhotos={onPhotos} onPoll={onPoll} />
+      <ComposerIcons
+        onKudos={onKudos}
+        onCelebrate={onCelebrate}
+        onPhotos={onPhotos}
+        onPoll={onPoll}
+      />
       <div className="grow" />
       <IconButton
         aria-label="Cancel"

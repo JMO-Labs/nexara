@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import and_, delete, exists, or_, select
+from sqlalchemy import and_, delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -118,4 +118,19 @@ class HouseholdRepository:
     async def media_in_community(self, media_id: uuid.UUID, community_id: uuid.UUID) -> bool:
         """@brief Photo exists in the community."""
         stmt = select(exists().where(Media.id == media_id, Media.community_id == community_id))
+        return bool((await self._session.execute(stmt)).scalar())
+
+    async def handle_taken(self, community_id: uuid.UUID, handle: str) -> bool:
+        """@brief Handle used by a live household member, a username or a group slug."""
+        from app.models.user import User
+
+        stmt = select(
+            exists().where(
+                HouseholdMember.community_id == community_id,
+                HouseholdMember.deleted_at.is_(None),
+                HouseholdMember.handle == handle,
+            )
+            | exists().where(User.community_id == community_id, func.lower(User.username) == handle)
+            | exists().where(func.lower(Subgroup.slug) == handle)
+        )
         return bool((await self._session.execute(stmt)).scalar())

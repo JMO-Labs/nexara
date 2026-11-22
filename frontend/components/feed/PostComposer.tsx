@@ -27,6 +27,7 @@ import { useToasts } from "@/stores/toasts";
 import { AudiencePicker } from "./AudiencePicker";
 import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
 import { KudosComposer } from "./KudosComposer";
+import { CelebrateComposer } from "./CelebrateComposer";
 import {
   MediaTray,
   PollEditor,
@@ -65,6 +66,7 @@ export function PostComposer({
   const [expanded, setExpanded] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [kudosOpen, setKudosOpen] = React.useState(false);
+  const [celebrateOpen, setCelebrateOpen] = React.useState(false);
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
   const [poll, setPoll] = React.useState<PollDraft | null>(null);
@@ -242,6 +244,8 @@ export function PostComposer({
 
   const kudosModal = kudosOpen ? (
     <KudosComposer open onClose={() => setKudosOpen(false)} />
+  ) : celebrateOpen ? (
+    <CelebrateComposer open onClose={() => setCelebrateOpen(false)} />
   ) : null;
 
   if (!expanded) {
@@ -262,6 +266,7 @@ export function PostComposer({
           </button>
           <ComposerIcons
             onKudos={() => setKudosOpen(true)}
+            onCelebrate={() => setCelebrateOpen(true)}
             onPhotos={openPhotos}
             onPoll={togglePoll}
           />
@@ -339,6 +344,7 @@ export function PostComposer({
           <ComposerToolbar
             posting={createMut.isPending}
             onKudos={() => setKudosOpen(true)}
+            onCelebrate={() => setCelebrateOpen(true)}
             onPhotos={() => fileRef.current?.click()}
             onPoll={togglePoll}
             postDisabled={uploads.busy}

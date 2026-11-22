@@ -14,6 +14,7 @@ import { PhotoGrid } from "@/components/galleries/PhotoGrid";
 import { useHouseholdMember } from "@/hooks/useHousehold";
 import { useMemberProfile } from "@/hooks/useMembers";
 import { householdPhotos } from "@/lib/api/household";
+import { HouseholdMentions } from "./HouseholdMentions";
 import { birthdayText } from "@/lib/profile";
 import { HouseholdAvatar, householdSubtitle } from "./HouseholdCards";
 import { HouseholdEditor } from "./HouseholdEditor";
@@ -74,6 +75,11 @@ export function HouseholdPage({ id }: { id: string }) {
         <HouseholdAvatar m={m} className="size-28" />
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold">{m.name}</h1>
+          {m.handle && (
+            <p className="text-sm text-muted">
+              Mention with <span className="font-medium">@{m.handle}</span>
+            </p>
+          )}
           {householdSubtitle(m) && (
             <p className="text-muted">{householdSubtitle(m)}</p>
           )}
@@ -160,6 +166,7 @@ export function HouseholdPage({ id }: { id: string }) {
           </Button>
         )}
       </section>
+      <HouseholdMentions m={m} />
       {editing && (
         <HouseholdEditor
           member={m}

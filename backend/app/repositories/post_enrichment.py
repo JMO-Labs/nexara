@@ -22,6 +22,7 @@ from app.models.poll import Poll, PollOption, PollVote
 from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.subgroup import Subgroup
 from app.models.user import User
+from app.repositories.post_extras import post_extras
 
 
 async def enrich_posts(
@@ -261,4 +262,7 @@ async def enrich_posts(
             "updated_at": post.updated_at.isoformat(),
             "edited_at": post.edited_at.isoformat() if post.edited_at else None,
         }
+    extras = await post_extras(session, [p for p, _a in post_rows], viewer_id)
+    for pid, extra in extras.items():
+        enriched[pid].update(extra)
     return enriched

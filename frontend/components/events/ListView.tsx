@@ -10,6 +10,7 @@ import { ListRow } from "@/components/ui/page";
 import type { EventItem } from "@/lib/api/events";
 import { toneForEvent } from "./eventColors";
 import { formatTime } from "./formatTime";
+import { EventTitle } from "./EventTitle";
 
 export interface ListViewProps {
   events: EventItem[];
@@ -117,7 +118,7 @@ export function ListView({
                           />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold">
-                              {ev.title}
+                              <EventTitle ev={ev} />
                             </span>
                             <span className="block truncate text-xs text-muted">
                               {whenLabel(ev)}
