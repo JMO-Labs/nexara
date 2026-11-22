@@ -34,6 +34,7 @@ export function useMemberProfile(id: string) {
   return useQuery({
     queryKey: qk.people.profile(id),
     queryFn: () => getUserProfile(id),
+    enabled: !!id,
   });
 }
 

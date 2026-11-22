@@ -12,7 +12,13 @@ export type TagTarget = "post" | "comment" | "media";
 export interface Tag {
   id: string;
   tagged_by: string | null;
-  user: UserSummary;
+  user: UserSummary | null;
+  household: {
+    id: string;
+    name: string;
+    kind: "person" | "pet";
+    photo_media_id: string | null;
+  } | null;
 }
 
 export interface TaggedPage {
@@ -25,8 +31,10 @@ export interface TaggedPage {
 export const listTags = (type: TagTarget, id: string) =>
   apiGet<Tag[]>(`/api/v1/tags/${type}/${seg(id)}`);
 
-export const tagPhoto = (mediaId: string, userId: string) =>
-  apiPost<Tag[]>(`/api/v1/media/${seg(mediaId)}/tags`, { user_id: userId });
+export const tagPhoto = (
+  mediaId: string,
+  who: { user_id: string } | { household_id: string },
+) => apiPost<Tag[]>(`/api/v1/media/${seg(mediaId)}/tags`, who);
 
 export const removeTag = (tagId: string) =>
   apiDelete<{ message: string }>(`/api/v1/tags/${seg(tagId)}`);

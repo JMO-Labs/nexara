@@ -13,16 +13,18 @@ import { AboutCard } from "@/components/members/AboutCard";
 import { MemberTaggedTab } from "@/components/members/MemberTaggedTab";
 import { useSearchParams } from "next/navigation";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
+import { MemberFamilyTab } from "@/components/members/MemberFamilyTab";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
 import { useMemberConnection, useMemberProfile } from "@/hooks/useMembers";
 import { useSession } from "@/stores/session";
 import { statusOf } from "@/components/members/personStatus";
 
-type Tab = "photos" | "tagged" | "groups";
+type Tab = "photos" | "tagged" | "family" | "groups";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "photos", label: "Photos" },
   { value: "tagged", label: "Tagged" },
+  { value: "family", label: "Family" },
   { value: "groups", label: "Groups" },
 ];
 
@@ -98,6 +100,11 @@ export function MemberProfile({ userId }: { userId: string }) {
               <MemberGalleriesTab userId={userId} />
             ) : tab === "tagged" ? (
               <MemberTaggedTab
+                userId={userId}
+                name={p.display_name.split(" ")[0]}
+              />
+            ) : tab === "family" ? (
+              <MemberFamilyTab
                 userId={userId}
                 name={p.display_name.split(" ")[0]}
               />
