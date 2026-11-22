@@ -9,11 +9,10 @@
 import * as React from "react";
 import Mention from "@tiptap/extension-mention";
 import { matchMembers, useMembersList } from "@/hooks/useMembersList";
-import { useSubgroupList } from "@/hooks/useSubgroups";
-import type { Subgroup } from "@/lib/api/subgroups";
+import { useTaggableGroups, type MentionItem } from "@/hooks/useTaggableGroups";
 import type { UserSummary } from "@/lib/api/users";
 
-type Item = UserSummary & { hint?: string };
+type Item = MentionItem;
 
 interface MenuState {
   items: Item[];
@@ -23,36 +22,12 @@ interface MenuState {
 }
 
 /**
- * @brief Groups the viewer may @-tag, shaped as picker entries.
- * @param groups subgroup list
- * @return entries (username = slug)
- */
-export function taggableGroups(groups: Subgroup[]): Item[] {
-  return groups
-    .filter(
-      (g) =>
-        g.is_member &&
-        !g.archived_at &&
-        (g.tag_policy !== "admins" ||
-          g.my_role === "owner" ||
-          g.my_role === "moderator"),
-    )
-    .map((g) => ({
-      id: `g:${g.id}`,
-      username: g.slug,
-      display_name: g.name,
-      avatar_url: g.avatar_url,
-      hint: "Group",
-    }));
-}
-
-/**
  * @brief Mention extension + menu state for one editor.
  * @return { extension, menu } (menu is null when closed)
  */
 export function useComposerMention() {
   const { data: members = [] } = useMembersList();
-  const { data: groups } = useSubgroupList();
+  const groups = useTaggableGroups();
   const membersRef = React.useRef<{ people: UserSummary[]; groups: Item[] }>({
     people: members,
     groups: [],
@@ -60,7 +35,7 @@ export function useComposerMention() {
   React.useEffect(() => {
     membersRef.current = {
       people: members,
-      groups: taggableGroups(groups ?? []),
+      groups,
     };
   }, [members, groups]);
   const [menu, setMenu] = React.useState<MenuState | null>(null);

@@ -43,8 +43,8 @@ export const GROUP_TABS: GroupTab[] = [
   },
   { id: "photos", label: "Photos", Icon: ImageIcon, Component: PhotosTab },
   { id: "posts", label: "Posts", Icon: Newspaper, Component: PostsTab },
-  { id: "tagged", label: "Tagged", Icon: AtSign, Component: TaggedTab },
   { id: "lists", label: "Lists", Icon: List, Component: ListsTab },
+  { id: "tagged", label: "Tagged", Icon: AtSign, Component: TaggedTab },
   { id: "members", label: "Members", Icon: Users, Component: MembersTab },
   {
     id: "settings",

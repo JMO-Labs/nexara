@@ -21,7 +21,7 @@ vi.mock("@/hooks/useSubgroups", () => ({
   }),
 }));
 
-import { taggableGroups } from "@/components/mentions/useComposerMention";
+import { taggableGroups } from "@/hooks/useTaggableGroups";
 import { Markdown } from "@/components/ui/Markdown";
 
 const g = (p: Partial<Subgroup>) =>
