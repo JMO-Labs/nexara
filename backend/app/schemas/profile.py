@@ -55,6 +55,8 @@ class ProfileUpdate(BaseModel):
     availability: str | None = Field(default=None, max_length=200)
     dietary: str | None = Field(default=None, max_length=300)
     field_visibility: dict[str, Level] | None = None
+    # Opt in to showing your Gravatar (sends a hash of your email to gravatar.com).
+    use_gravatar: bool | None = None
 
     @field_validator("skills")
     @classmethod

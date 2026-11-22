@@ -7,12 +7,14 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { SettingsRow, Input, Textarea, Button } from "@/components/ui";
+import { SettingsRow, Input, Textarea, Button, Switch } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 import { ProfileDetailsPanel } from "./ProfileDetailsPanel";
 import { HouseholdPanel } from "./HouseholdPanel";
 import { VisibilitySelect } from "./VisibilitySelect";
+
+const GRAVATAR = "https://www.gravatar.com/avatar/";
 
 const Schema = z.object({
   display_name: z.string().optional(),
@@ -76,6 +78,21 @@ export function ProfileTab() {
   return (
     <div className="flex flex-col gap-5">
       <Panel title="Profile information">
+        <SettingsRow
+          label="Use my Gravatar"
+          description="Show the photo linked to your email on gravatar.com. This shares a hash of your email with Gravatar. Without one, your initials show on a color."
+        >
+          <Switch
+            aria-label="Use my Gravatar"
+            checked={!!profile?.avatar_url?.startsWith(GRAVATAR)}
+            onCheckedChange={(v) => mutate({ use_gravatar: v })}
+            disabled={
+              isPending ||
+              (!!profile?.avatar_url &&
+                !profile.avatar_url.startsWith(GRAVATAR))
+            }
+          />
+        </SettingsRow>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <SettingsRow
             label="Display name"

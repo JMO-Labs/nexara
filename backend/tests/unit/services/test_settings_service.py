@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from unittest.mock import AsyncMock, MagicMock
 
@@ -131,6 +132,30 @@ class TestUpdateProfileFields:
         users.update.assert_not_awaited()
         vis = settings.update.await_args.args[1]["field_visibility"]
         assert vis == {"bio": "groups", "phone": "community"}
+
+    @pytest.mark.asyncio
+    async def test_gravatar_opt_in_and_out(self):
+        svc, _, users = self._svc()
+        user = users.get_by_id.return_value
+        user.email = " Ruth@Example.com "
+        user.avatar_url = None
+        await svc.update_profile(USER_ID, ProfileUpdate(use_gravatar=True))
+        url = users.update.await_args.args[1]["avatar_url"]
+        digest = hashlib.sha256(b"ruth@example.com").hexdigest()
+        assert url == f"https://www.gravatar.com/avatar/{digest}?s=160&d=404"
+        user.avatar_url = url
+        await svc.update_profile(USER_ID, ProfileUpdate(use_gravatar=False))
+        assert users.update.await_args.args[1] == {"avatar_url": None}
+
+    @pytest.mark.asyncio
+    async def test_gravatar_never_replaces_uploaded_photo(self):
+        svc, _, users = self._svc()
+        user = users.get_by_id.return_value
+        user.email = "a@b.c"
+        user.avatar_url = "/api/v1/media/x/thumb"
+        await svc.update_profile(USER_ID, ProfileUpdate(use_gravatar=True))
+        await svc.update_profile(USER_ID, ProfileUpdate(use_gravatar=False))
+        users.update.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_rejects_banner_from_other_community(self):
