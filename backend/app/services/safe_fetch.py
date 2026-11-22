@@ -37,15 +37,41 @@ class UnsafeURLError(Exception):
     """@brief The URL or one of its addresses is not allowed."""
 
 
+_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
+_V4_COMPAT = ipaddress.ip_network("::/96")
+
+
+def _embedded_v4(ip: ipaddress.IPv6Address) -> list[ipaddress.IPv4Address]:
+    """@brief IPv4 addresses an IPv6 address can tunnel or translate to."""
+    out: list[ipaddress.IPv4Address] = []
+    if ip.ipv4_mapped is not None:
+        out.append(ip.ipv4_mapped)
+    if ip.sixtofour is not None:
+        out.append(ip.sixtofour)
+    if ip.teredo is not None:
+        out.extend(ip.teredo)
+    if any(ip in net for net in _NAT64) or ip in _V4_COMPAT:
+        out.append(ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF))
+    return out
+
+
 def is_public_ip(ip_str: str) -> bool:
-    """@brief Globally routable unicast address (unwraps IPv4-mapped IPv6)."""
+    """
+    @brief Globally routable unicast address. IPv6 forms that embed an IPv4
+           address (mapped, 6to4, Teredo, NAT64, IPv4-compatible) count only
+           if the embedded IPv4 address is public too.
+    """
     try:
         ip = ipaddress.ip_address(ip_str.split("%", 1)[0])
     except ValueError:
         return False
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
-    return ip.is_global and not ip.is_multicast
+    if ip.is_multicast or ip.is_unspecified:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address):
+        inner = _embedded_v4(ip)
+        if inner:
+            return all(v4.is_global and not v4.is_multicast for v4 in inner)
+    return ip.is_global
 
 
 def resolve(host: str) -> list[str]:
@@ -163,7 +189,9 @@ async def safe_get(
             timeout=TIMEOUT,
             follow_redirects=False,
             trust_env=False,
-            headers={"User-Agent": USER_AGENT},
+            # Ask for uncompressed bodies so the byte cap bounds memory, not just
+            # compressed transfer size (decompression bombs).
+            headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},
         ) as client:
             for _hop in range(MAX_REDIRECTS + 1):
                 await public_addresses(check_url(url), resolver)
@@ -176,6 +204,8 @@ async def safe_get(
                         continue
                     if resp.status_code != 200:
                         return None
+                    if resp.headers.get("content-encoding", "identity").lower() != "identity":
+                        return None  # server compressed anyway: refuse rather than inflate
                     ctype = resp.headers.get("content-type", "").split(";")[0].strip().lower()
                     declared = resp.headers.get("content-length")
                     if not accept(ctype) or (declared and int(declared) > max_bytes):

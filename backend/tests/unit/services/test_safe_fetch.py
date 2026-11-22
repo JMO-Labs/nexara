@@ -49,6 +49,13 @@ def mock(handler):
         ("fe80::1", False),
         ("fd00::1", False),
         ("::ffff:10.0.0.1", False),
+        ("::ffff:93.184.216.34", True),
+        ("64:ff9b::a9fe:a9fe", False),  # NAT64 -> 169.254.169.254
+        ("64:ff9b::5db8:d822", True),  # NAT64 -> public
+        ("2002:7f00:1::1", False),  # 6to4 -> 127.0.0.1
+        ("2002:5db8:d822::1", True),  # 6to4 -> public
+        ("2001:0:4136:e378:8000:63bf:f5ff:fffe", False),  # Teredo -> 10.0.0.1 client
+        ("::7f00:1", False),  # IPv4-compatible 127.0.0.1
         ("not-an-ip", False),
     ],
 )
@@ -150,6 +157,15 @@ async def test_size_and_type_limits():
         transport=svg,
     )
     assert got is None
+    gz = mock(
+        lambda r: httpx.Response(
+            200, headers={"content-type": "text/html", "content-encoding": "gzip"}, content=b"x"
+        )
+    )
+    assert (
+        await safe_get("https://shop.example/", max_bytes=100, resolver=fake_resolve, transport=gz)
+        is None
+    )
     err = mock(lambda r: httpx.Response(500))
     assert (
         await safe_get("https://shop.example/", max_bytes=100, resolver=fake_resolve, transport=err)
