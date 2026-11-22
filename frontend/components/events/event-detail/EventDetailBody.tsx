@@ -15,6 +15,7 @@ import { EventGalleryLink } from "./EventGalleryLink";
 import { ContributionSlots } from "./ContributionSlots";
 import { formatRange } from "./formatRange";
 import { ExportIcalButton } from "./ExportIcalButton";
+import { EventForecast } from "./EventForecast";
 
 const EventMiniMap = dynamic(
   () => import("../EventMiniMap").then((m) => m.EventMiniMap),
@@ -67,6 +68,13 @@ export function EventDetailBody({
           </div>
         )}
       </div>
+      {hasCoords && (
+        <EventForecast
+          lat={event.latitude!}
+          lon={event.longitude!}
+          startsAt={event.starts_at}
+        />
+      )}
       {hasCoords && (
         <div className="mb-4 max-w-[480px]">
           <EventMiniMap

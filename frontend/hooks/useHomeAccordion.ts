@@ -5,7 +5,14 @@
  */
 import * as React from "react";
 
-export type TileId = "next" | "chat" | "photos" | "feed" | "people" | "lists";
+export type TileId =
+  | "next"
+  | "chat"
+  | "photos"
+  | "feed"
+  | "people"
+  | "weather"
+  | "lists";
 
 /**
  * @brief Track which home tile is open.

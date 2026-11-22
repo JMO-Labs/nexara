@@ -107,7 +107,7 @@ export function ConnectionCard({
       </form>
       {sent === "fail" && (
         <p role="alert" className="mb-2 text-xs text-destructive">
-          Couldn't send. Try again.
+          Couldn&apos;t send. Try again.
         </p>
       )}
       {sent === "ok" && (

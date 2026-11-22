@@ -12,6 +12,9 @@ vi.mock("@/hooks/useHomePeople", () => ({
 vi.mock("@/components/home/tiles/PeopleTile", () => ({
   PeopleTile: () => <section>people</section>,
 }));
+vi.mock("@/components/home/tiles/WeatherTile", () => ({
+  WeatherTile: () => <section>weather</section>,
+}));
 vi.mock("@/components/home/tiles/ListsTile", () => ({
   ListsTile: () => <section>lists</section>,
 }));
