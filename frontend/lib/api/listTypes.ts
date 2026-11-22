@@ -27,6 +27,42 @@ export interface List {
   fieldSchema: FieldSchema;
 }
 
+/** Compact user reference (assignee, activity actor/target). */
+export interface ListUser {
+  id: string;
+  displayName: string;
+  avatarUrl?: string | null;
+}
+
+export type AssignmentStatus = "pending" | "accepted";
+
+export type ListActivityAction =
+  | "item_added"
+  | "item_edited"
+  | "item_removed"
+  | "completed"
+  | "uncompleted"
+  | "taken"
+  | "assigned"
+  | "accepted"
+  | "declined"
+  | "released"
+  | "unassigned"
+  | "signup_claimed"
+  | "signup_released";
+
+export interface ListActivity {
+  id: string;
+  action: ListActivityAction;
+  actor?: ListUser | null;
+  itemId?: string | null;
+  itemTitle: string;
+  targetUser?: ListUser | null;
+  createdAt: string;
+}
+
+export type ListActivityPage = { entries: ListActivity[]; nextCursor?: string };
+
 export interface ListItem {
   id: string;
   position: number;
@@ -38,6 +74,8 @@ export interface ListItem {
   lat?: number | null;
   lon?: number | null;
   signupQuantityNeeded?: number | null;
+  assignee?: ListUser | null;
+  assignmentStatus?: AssignmentStatus | null;
 }
 
 export interface ListMember {

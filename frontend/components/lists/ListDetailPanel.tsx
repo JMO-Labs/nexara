@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/lists/ListDetailPanel.tsx
- * @brief One list in detail: Items, Members and Settings tabs. The title is
+ * @brief One list in detail: Items, Members, History and Settings tabs. The title is
  *        rendered by the host (page header or reading pane), so this body
  *        only shows tabs. `embedded` drops the glass Panel wrapper.
  */
@@ -13,6 +13,7 @@ import { Tab, TabList, TabPanel, Tabs } from "@/components/ui/Tabs";
 import { useListMembers } from "@/hooks/useListActions";
 import type { List } from "@/lib/api/listTypes";
 import { ListEditModal } from "./ListEditModal";
+import { ListActivityFeed } from "./ListActivityFeed";
 import { ListGrid } from "./ListGrid";
 import { ListMemberManageModal } from "./ListMemberManageModal";
 
@@ -130,13 +131,21 @@ export function ListDetailPanel({
         <TabList aria-label="List sections">
           <Tab value="items">Items</Tab>
           <Tab value="members">Members</Tab>
+          <Tab value="history">History</Tab>
           <Tab value="settings">Settings</Tab>
         </TabList>
         <TabPanel value="items">
-          <ListGrid listId={list.id} fieldSchema={list.fieldSchema} />
+          <ListGrid
+            listId={list.id}
+            fieldSchema={list.fieldSchema}
+            ownerId={list.ownerId}
+          />
         </TabPanel>
         <TabPanel value="members">
           <MembersTab listId={list.id} />
+        </TabPanel>
+        <TabPanel value="history">
+          <ListActivityFeed listId={list.id} />
         </TabPanel>
         <TabPanel value="settings">
           <SettingsTab list={list} communityId={communityId} />

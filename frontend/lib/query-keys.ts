@@ -113,6 +113,7 @@ export const qk = {
       ["listItems", listId, params ?? {}] as const,
     itemsAll: (listId: string) => ["listItems", listId] as const,
     members: (listId: string) => ["listMembers", listId] as const,
+    activity: (listId: string) => ["listActivity", listId] as const,
     templates: () => ["listTemplates"] as const,
   },
   kudos: {
