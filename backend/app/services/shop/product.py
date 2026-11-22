@@ -14,11 +14,12 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-_LD = re.compile(
-    r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
-    re.IGNORECASE | re.DOTALL,
+# Bounded attribute runs + str.find for the close tag keep scanning linear on
+# hostile pages (unbounded [^>]* / lazy .*? go quadratic on unclosed tags).
+_LD_OPEN = re.compile(
+    r"<script[^>]{0,1000}?type=[\"']application/ld\+json[\"'][^>]{0,1000}>", re.IGNORECASE
 )
-_META = re.compile(r"<meta\b[^>]*>", re.IGNORECASE)
+_META = re.compile(r"<meta\b[^>]{0,2000}>", re.IGNORECASE)
 _ATTR = re.compile(r"""([a-zA-Z:_-]+)\s*=\s*("([^"]*)"|'([^']*)')""")
 
 
@@ -45,6 +46,18 @@ def to_cents(value: Any) -> int | None:
         return None
     cents = int((amount * 100).to_integral_value())
     return cents if 0 < cents < 10_000_000_00 else None
+
+
+def _ld_blocks(page: str) -> list[str]:
+    """@brief Bodies of ``application/ld+json`` script tags."""
+    out: list[str] = []
+    lower = page.lower()
+    for m in _LD_OPEN.finditer(page):
+        end = lower.find("</script", m.end())
+        if end < 0:
+            break
+        out.append(page[m.end() : end])
+    return out
 
 
 def _meta(page: str) -> dict[str, str]:
@@ -106,7 +119,7 @@ def extract_product(page: str) -> Product:
     @return Product (fields None when the page doesn't say)
     """
     p = Product()
-    for block in _LD.findall(page):
+    for block in _ld_blocks(page):
         try:
             doc = json.loads(block.strip())
         except (ValueError, RecursionError):

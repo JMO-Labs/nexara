@@ -131,6 +131,7 @@ def _item(**kw):
         price_cents=None,
         price_auto=False,
         url="https://shop.example/p",
+        preview_id=None,
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -174,3 +175,28 @@ async def test_refresh_batches_amazon_and_stores_preview():
     assert lk.await_args.args[0] == ["B07FZ8S74R"]
     assert (a.price_cents, b.price_cents) == (4999, 499)
     assert a.preview_id and b.preview_id
+
+
+def test_hostile_page_parses_in_linear_time():
+    import time
+
+    page = '<script type="application/ld+json">' * 50_000 + "<meta content=" * 100_000
+    t = time.perf_counter()
+    assert extract_product(page).title is None
+    assert time.perf_counter() - t < 2
+
+
+async def test_failed_lookup_is_stamped_and_batch_continues():
+    bad = _item(url="https://broken.example/x")
+    good = _item(url="https://shop.example/crayons")
+    items = AsyncMock()
+    items.linked_for_refresh.return_value = [(bad, "USD"), (good, "USD")]
+    previews = AsyncMock()
+    previews.upsert_shop.side_effect = lambda url, v: SimpleNamespace(id=uuid.uuid4())
+    svc = ShopRefreshService(items, previews, Settings())
+    lookup = AsyncMock(side_effect=[RuntimeError("boom"), Product(title="C", price_cents=499)])
+    with patch("app.services.shop.refresh.lookup_product", lookup):
+        assert await svc.refresh() == 1
+    first = previews.upsert_shop.await_args_list[0].args
+    assert first == ("https://broken.example/x", {"title": "", "fetch_error": True})
+    assert bad.preview_id and good.price_cents == 499

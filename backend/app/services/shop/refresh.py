@@ -70,10 +70,20 @@ class ShopRefreshService:
         done = 0
         for item, currency in rows:
             asin = asins[item.id]
-            product = (
-                found.get(asin) if asin else await lookup_product(item.url or "", self._settings)
-            )
+            try:
+                product = (
+                    found.get(asin)
+                    if asin
+                    else await lookup_product(item.url or "", self._settings)
+                )
+            except Exception:  # one bad shop must not sink the batch
+                logger.warning("shop_lookup_failed", item_id=str(item.id), exc_info=True)
+                product = None
             if product is None:
+                # Stamp fetched_at so a failing link waits its TTL instead of
+                # staying first in the queue; keep any good data it had.
+                failed = {} if item.preview_id else {"title": "", "fetch_error": True}
+                item.preview_id = (await self._previews.upsert_shop(item.url or "", failed)).id
                 continue
             preview = await self._previews.upsert_shop(
                 item.url or "",
