@@ -13,7 +13,7 @@ from alembic import op
 
 revision = "0056_memorials"
 # ponytail: chained to 0053 in this worktree; orchestrator re-chains at merge.
-down_revision = "0053_recap_settings"
+down_revision = "0055_recipes"
 branch_labels = None
 depends_on = None
 
