@@ -14,6 +14,7 @@ import { PhotoGrid } from "@/components/galleries/PhotoGrid";
 import { useHouseholdMember } from "@/hooks/useHousehold";
 import { useMemberProfile } from "@/hooks/useMembers";
 import { householdPhotos } from "@/lib/api/household";
+import { HouseholdMentions } from "./HouseholdMentions";
 import { birthdayText } from "@/lib/profile";
 import { HouseholdAvatar, householdSubtitle } from "./HouseholdCards";
 import { HouseholdEditor } from "./HouseholdEditor";
@@ -165,6 +166,7 @@ export function HouseholdPage({ id }: { id: string }) {
           </Button>
         )}
       </section>
+      <HouseholdMentions m={m} />
       {editing && (
         <HouseholdEditor
           member={m}

@@ -225,7 +225,7 @@ class PromptService:
                             "prompt_title": prompt.title,
                             "post_id": str(post.id),
                             "message": prompt.notification_body or prompt.title,
-                            "link": f"/app/posts/{post.id}",
+                            "link": f"/app/post/{post.id}",
                         },
                     )
                 except Exception as exc:  # noqa: BLE001
@@ -311,7 +311,7 @@ class PromptService:
                                 "summary_post_id": str(summary.id),
                                 "response_count": tracker.response_count,
                                 "message": _("Prompt summary is ready"),
-                                "link": f"/app/posts/{summary.id}",
+                                "link": f"/app/post/{summary.id}",
                             },
                         )
                     except Exception as exc:  # noqa: BLE001

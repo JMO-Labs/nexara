@@ -153,3 +153,16 @@ async def test_household_owner_may_remove_pet_tag():
     repo.remove.assert_awaited_once()
     with pytest.raises(AuthorizationError):
         await svc.remove(tag.id, _user())
+
+
+async def test_household_mentions_page_uses_household_subject():
+    svc, repo, _posts, _notify = _svc()
+    repo.tagged_post_ids.return_value = []
+    member, viewer = uuid.uuid4(), _user()
+    with patch("app.services.tag_service.enrich_posts", AsyncMock(return_value={})):
+        out = await svc.household_photos(member, viewer, None, "posts")
+    assert out["kind"] == "posts"
+    assert repo.tagged_post_ids.await_args.args[-1] == "household"
+    repo.household_viewable.return_value = False  # hidden pet: nothing at all
+    with pytest.raises(NotFoundError):
+        await svc.household_photos(member, viewer, None, "posts")

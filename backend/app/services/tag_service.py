@@ -153,11 +153,17 @@ class TagService:
         await self._repo.remove(tag)
 
     async def household_photos(
-        self, member_id: uuid.UUID, viewer: User, before: datetime | None
+        self,
+        member_id: uuid.UUID,
+        viewer: User,
+        before: datetime | None,
+        kind: str = "photos",
     ) -> dict[str, Any]:
-        """@brief Photos a household member/pet is tagged in, as the viewer may see them."""
+        """@brief Photos (or posts) a household member/pet is tagged in, as the viewer may see."""
         if not await self._repo.household_viewable(member_id, viewer.id, self._community_id):
             raise NotFoundError(message=_("Not found"))
+        if kind == "posts":
+            return await self._posts_page(member_id, viewer, before, "household")
         rows = await self._repo.tagged_media(
             self._community_id, member_id, viewer.id, before, PAGE, subject_type="household"
         )

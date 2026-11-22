@@ -72,7 +72,7 @@ class KudosService:
         await self._notify.notify(
             body.recipient_id,
             "kudos_received",
-            {"message": _("You received kudos"), "link": f"/app/posts/{post.id}"},
+            {"message": _("You received kudos"), "link": f"/app/post/{post.id}"},
             author.id,
         )
         return _to_response(post, recipient)

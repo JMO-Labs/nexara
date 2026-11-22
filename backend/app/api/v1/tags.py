@@ -91,12 +91,13 @@ async def tagged_feed(
 @router.get("/household/{member_id}/tagged", response_model=TaggedPage)
 async def household_tagged(
     member_id: uuid.UUID,
+    kind: Literal["photos", "posts"] = Query("photos"),
     before: datetime | None = Query(None),
     user: User = Depends(get_current_user),
     svc: TagService = Depends(_service),
 ) -> Any:
-    """@brief Photos a household member/pet is tagged in that the viewer can see."""
-    return await svc.household_photos(member_id, user, before)
+    """@brief Photos or posts a household member/pet is tagged in that the viewer can see."""
+    return await svc.household_photos(member_id, user, before, kind)
 
 
 @router.get("/subgroups/{subgroup_id}/tagged", response_model=TaggedPage)
