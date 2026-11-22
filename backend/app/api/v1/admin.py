@@ -92,7 +92,11 @@ def _user_to_admin_item(u: User) -> AdminUserListItem:
         role=u.role,
         created_at=u.created_at,
         last_seen_at=u.last_seen_at,
-        status="suspended" if not u.is_active else "active",
+        status=(
+            "memorialized" if u.memorialized_at else "suspended" if not u.is_active else "active"
+        ),
+        memorialized_at=u.memorialized_at,
+        passed_on=u.passed_on,
     )
 
 

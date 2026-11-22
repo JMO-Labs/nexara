@@ -8,7 +8,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Cake, Heart, HeartOff, Images, PawPrint, Pencil } from "lucide-react";
+import {
+  Cake,
+  Flower2,
+  Heart,
+  HeartOff,
+  Images,
+  PawPrint,
+  Pencil,
+} from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PhotoGrid } from "@/components/galleries/PhotoGrid";
 import { useHouseholdMember } from "@/hooks/useHousehold";
@@ -18,6 +26,10 @@ import { HouseholdMentions } from "./HouseholdMentions";
 import { birthdayText } from "@/lib/profile";
 import { HouseholdAvatar, householdSubtitle } from "./HouseholdCards";
 import { HouseholdEditor } from "./HouseholdEditor";
+import { MemorialHeader } from "@/components/memorials/MemorialHeader";
+import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
+import { useSetPassedOn } from "@/hooks/useMemorials";
+import { useFeature } from "@/hooks/useFeature";
 import { WishlistCards } from "@/components/wishlists/WishlistCards";
 
 function Chips({
@@ -55,6 +67,9 @@ export function HouseholdPage({ id }: { id: string }) {
   const { data: m, isLoading, isError } = useHouseholdMember(id);
   const owner = useMemberProfile(m?.owner_id ?? "");
   const [editing, setEditing] = React.useState(false);
+  const [remembering, setRemembering] = React.useState(false);
+  const memorialsOn = useFeature("memorials");
+  const setPassed = useSetPassedOn(id);
   const photos = useInfiniteQuery({
     queryKey: ["household", id, "photos"],
     queryFn: ({ pageParam }) => householdPhotos(id, pageParam),
@@ -71,6 +86,14 @@ export function HouseholdPage({ id }: { id: string }) {
   const isPet = m.kind === "pet";
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6">
+      {m.passed_on && (
+        <MemorialHeader
+          name={m.name}
+          handle={m.handle}
+          born={m.birthday}
+          passedOn={m.passed_on}
+        />
+      )}
       <section className="glass flex flex-col items-center gap-4 rounded-[28px] p-6 text-center sm:flex-row sm:text-left">
         <HouseholdAvatar m={m} className="size-28" />
         <div className="min-w-0 flex-1">
@@ -107,9 +130,21 @@ export function HouseholdPage({ id }: { id: string }) {
           </div>
         </div>
         {m.can_edit && (
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            <Pencil className="size-4" aria-hidden /> Edit
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="size-4" aria-hidden /> Edit
+            </Button>
+            {memorialsOn && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRemembering(true)}
+              >
+                <Flower2 className="size-4" aria-hidden />{" "}
+                {m.passed_on ? "Edit memorial date" : "Mark as passed on"}
+              </Button>
+            )}
+          </div>
         )}
       </section>
       {(m.bio ||
@@ -132,14 +167,16 @@ export function HouseholdPage({ id }: { id: string }) {
           )}
         </section>
       )}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Wishlists</h2>
-        <WishlistCards
-          query={{ household_id: m.id }}
-          canCreate={m.can_edit}
-          emptyText={`No wishlists for ${m.name} yet`}
-        />
-      </section>
+      {!m.passed_on && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">Wishlists</h2>
+          <WishlistCards
+            query={{ household_id: m.id }}
+            canCreate={m.can_edit}
+            emptyText={`No wishlists for ${m.name} yet`}
+          />
+        </section>
+      )}
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Photos</h2>
         {photos.isLoading ? (
@@ -167,6 +204,18 @@ export function HouseholdPage({ id }: { id: string }) {
         )}
       </section>
       <HouseholdMentions m={m} />
+      <MemorializeDialog
+        open={remembering}
+        onClose={() => setRemembering(false)}
+        title={`Remembering ${m.name}`}
+        description="Their birthday and this date will show on the calendar as a quiet remembrance. Clear the date to undo."
+        confirmLabel="Save"
+        initial={m.passed_on}
+        loading={setPassed.isPending}
+        onConfirm={(d) =>
+          setPassed.mutate(d, { onSuccess: () => setRemembering(false) })
+        }
+      />
       {editing && (
         <HouseholdEditor
           member={m}

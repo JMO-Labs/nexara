@@ -10,6 +10,11 @@ import * as useAdminModule from "@/hooks/useAdmin";
 import { UsersTab } from "@/components/admin/UsersTab";
 
 vi.mock("@/hooks/useAdmin");
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
+vi.mock("@/hooks/useMemorials", () => ({
+  useMemorializeUser: () => ({ mutate: vi.fn(), isPending: false }),
+  useUnmemorializeUser: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
 describe("UsersTab", () => {
   let queryClient: QueryClient;

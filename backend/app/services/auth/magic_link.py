@@ -21,6 +21,7 @@ from app.core.security import hash_token
 from app.models.auth import MagicLinkToken
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
+from app.services.auth.memorial_guard import reject_memorialized
 from app.services.email.templates import EmailTemplateRenderer
 from app.tasks.email_tasks import send_email
 
@@ -103,6 +104,7 @@ async def verify_magic_link(
     stored.consumed_at = datetime.now(UTC)
     await session.flush()
     user = await user_repo.get_by_id(stored.user_id)
+    reject_memorialized(user)
     if not user or not user.is_active:
         raise AuthenticationError(message=_("User not found or deactivated"))
     return user

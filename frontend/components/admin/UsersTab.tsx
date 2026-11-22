@@ -7,13 +7,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUI } from "@/stores/ui";
-import { Check, Loader2, Trash2, Users, X } from "lucide-react";
+import { Check, Flower2, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   useAdminUsersInfinite,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
 } from "@/hooks/useAdmin";
+import { useMemorializeUser, useUnmemorializeUser } from "@/hooks/useMemorials";
+import { useFeature } from "@/hooks/useFeature";
+import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
 import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
 import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
 import { AdminNotice } from "./AdminState";
@@ -50,6 +53,8 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function UsersTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [memorializingId, setMemorializingId] = useState<string | null>(null);
+  const memorialsOn = useFeature("memorials");
   const density = useUI((s) => s.density);
   const setDensity = useUI((s) => s.setDensity);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -67,6 +72,8 @@ export function UsersTab() {
   const suspendMutation = useSuspendUser();
   const restoreMutation = useRestoreUser();
   const deleteMutation = useDeleteUser();
+  const memorializeMutation = useMemorializeUser();
+  const unmemorializeMutation = useUnmemorializeUser();
 
   const items = usersPage?.items ?? [];
   const virtual = items.length > VIRTUAL_THRESHOLD;
@@ -227,6 +234,15 @@ export function UsersTab() {
                         >
                           <X className="size-4" aria-hidden="true" />
                         </IconButton>
+                      ) : user.status === "memorialized" ? (
+                        <IconButton
+                          variant="glass"
+                          aria-label="Restore from memorial"
+                          tooltip="Restore from memorial"
+                          onClick={() => unmemorializeMutation.mutate(user.id)}
+                        >
+                          <Check className="size-4" aria-hidden="true" />
+                        </IconButton>
                       ) : (
                         <IconButton
                           variant="glass"
@@ -235,6 +251,16 @@ export function UsersTab() {
                           onClick={() => restoreMutation.mutate(user.id)}
                         >
                           <Check className="size-4" aria-hidden="true" />
+                        </IconButton>
+                      )}
+                      {memorialsOn && user.status !== "memorialized" && (
+                        <IconButton
+                          variant="glass"
+                          aria-label="Memorialize user"
+                          tooltip="Memorialize user"
+                          onClick={() => setMemorializingId(user.id)}
+                        >
+                          <Flower2 className="size-4" aria-hidden="true" />
                         </IconButton>
                       )}
                       <IconButton
@@ -267,6 +293,20 @@ export function UsersTab() {
           Load more
         </Button>
       )}
+
+      <MemorializeDialog
+        open={memorializingId !== null}
+        onClose={() => setMemorializingId(null)}
+        title="Memorialize this account"
+        description="They will no longer be able to sign in, and will be removed from mentions, pickers and nudges. Their posts and photos stay. You can restore the account later."
+        confirmLabel="Memorialize"
+        loading={memorializeMutation.isPending}
+        onConfirm={(passedOn) => {
+          if (memorializingId)
+            memorializeMutation.mutate({ userId: memorializingId, passedOn });
+          setMemorializingId(null);
+        }}
+      />
 
       <Modal
         open={deletingUserId !== null}

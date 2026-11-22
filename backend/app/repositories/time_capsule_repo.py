@@ -208,6 +208,7 @@ class TimeCapsuleRepository:
             User.id.in_(users),
             User.deleted_at.is_(None),
             User.is_active.is_(True),
+            User.memorialized_at.is_(None),
             User.id.notin_(blocked),
             User.id.notin_(blockers),
         )

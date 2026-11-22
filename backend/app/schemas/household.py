@@ -72,6 +72,7 @@ class HouseholdResponse(BaseModel):
     species: str | None = None
     breed: str | None = None
     gotcha_day: date | None = None
+    passed_on: date | None = None
     likes: list[str] = []
     dislikes: list[str] = []
     care_card: str | None = None

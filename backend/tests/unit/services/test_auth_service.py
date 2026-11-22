@@ -49,6 +49,7 @@ def _make_user(**overrides):
     user.totp_enabled = overrides.get("totp_enabled", False)
     user.totp_secret = overrides.get("totp_secret", None)
     user.deleted_at = None
+    user.memorialized_at = overrides.get("memorialized_at", None)
     return user
 
 
@@ -221,6 +222,39 @@ class TestLogin:
 
         with pytest.raises(AuthenticationError, match="deactivated"):
             await svc.login(email="test@example.com", password="valid-password1")
+
+
+class TestMemorialized:
+    """@brief Memorialized accounts cannot sign in or refresh (401)."""
+
+    @pytest.mark.asyncio
+    async def test_login_rejected(self):
+        from app.core.exceptions import AppError
+
+        svc = _make_service()
+        svc._user_repo.find_by_email.return_value = _make_user(
+            is_active=False, memorialized_at=datetime.now(UTC)
+        )
+        with pytest.raises(AppError) as exc:
+            await svc.login(email="test@example.com", password="valid-password1")
+        assert exc.value.code == "ACCOUNT_MEMORIALIZED"
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_refresh_rejected(self):
+        from app.core.exceptions import AppError
+
+        svc = _make_service()
+        stored = MagicMock(
+            revoked_at=None, expires_at=datetime.now(UTC) + timedelta(days=1), user_id=uuid.uuid4()
+        )
+        svc._token_repo.find_by_hash.return_value = stored
+        svc._user_repo.get_by_id.return_value = _make_user(
+            is_active=False, memorialized_at=datetime.now(UTC)
+        )
+        with pytest.raises(AppError) as exc:
+            await svc.refresh("raw-refresh-token-hex")
+        assert exc.value.code == "ACCOUNT_MEMORIALIZED"
 
 
 class TestRefresh:

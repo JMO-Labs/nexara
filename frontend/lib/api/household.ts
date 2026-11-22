@@ -26,6 +26,8 @@ export interface HouseholdMember {
   species: string | null;
   breed: string | null;
   gotcha_day: string | null;
+  /** ISO date when the person or pet has passed away. */
+  passed_on: string | null;
   likes: string[];
   dislikes: string[];
   care_card: string | null;

@@ -47,6 +47,7 @@ class BirthdayRepository(BaseRepository[User]):
                 User.community_id == community_id,
                 User.deleted_at.is_(None),
                 User.is_active.is_(True),
+                User.memorialized_at.is_(None),
                 extract("month", User.birthday) == month,
                 extract("day", User.birthday) == day,
             )

@@ -132,6 +132,7 @@ class TestOAuthExchangeEndpoint:
         mock_user.id = user_id
         mock_user.role = "member"
         mock_user.community_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        mock_user.memorialized_at = None
 
         with (
             patch("app.api.v1.oauth._get_valkey_client") as mock_valkey,

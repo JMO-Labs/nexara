@@ -821,6 +821,7 @@
         "updated": "User updated",
         "deactivated": "User deactivated",
         "restored": "User restored",
+        "memorialized": "Account memorialized",
         "deleted": "User deleted"
       },
       "audit": {

@@ -53,6 +53,8 @@ class ProfileService:
                 target.last_seen_at if is_self or not settings or settings.show_last_seen else None
             ),
             "banner_media_id": target.banner_media_id,
+            "memorialized_at": target.memorialized_at,
+            "passed_on": target.passed_on,
             "birthday": birthday_view(
                 target.birthday,
                 is_self=is_self,

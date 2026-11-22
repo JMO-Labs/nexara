@@ -81,6 +81,15 @@ class HouseholdRepository:
         rows = await self.visible(viewer_id, community_id, ids=[member_id])
         return rows[0] if rows else None
 
+    async def get(self, member_id: uuid.UUID, community_id: uuid.UUID) -> HouseholdMember | None:
+        """@brief A live member by id, ignoring viewer visibility (admin/owner checks)."""
+        stmt = select(HouseholdMember).where(
+            HouseholdMember.id == member_id,
+            HouseholdMember.community_id == community_id,
+            HouseholdMember.deleted_at.is_(None),
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
     async def care_visible(self, member: HouseholdMember, viewer_id: uuid.UUID) -> bool:
         """@brief Viewer may read the member's care card."""
         stmt = select(

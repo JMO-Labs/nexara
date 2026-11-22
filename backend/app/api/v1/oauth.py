@@ -28,6 +28,7 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import LoginResponse
 from app.schemas.oauth import OAuthExchangeRequest
+from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth_service import AuthService
 from app.services.oauth.claim_mapper import map_claims
 from app.services.oauth.flow import OAuthFlow
@@ -245,6 +246,7 @@ async def oauth_exchange(
 
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id(uuid.UUID(user_id_str))
+    reject_memorialized(user)
     if not user or not user.is_active:
         raise AuthenticationError(message=_("User not found or deactivated"))
 

@@ -54,3 +54,28 @@ async def test_people_and_pets_in_range():
     house.visible.assert_awaited_with(viewer.id, CID)
     with pytest.raises(ValidationError):
         await svc.in_range(viewer, date(2026, 1, 1), date(2027, 6, 1))
+
+
+async def test_memorialized_and_passed_emit_remembrance():
+    repo, house = AsyncMock(), AsyncMock()
+    repo.user_birthdays.return_value = []
+    repo.memorialized_users.return_value = [
+        (uuid.uuid4(), "ruth", "Ruth", date(1931, 12, 2), date(2026, 6, 1))
+    ]
+    pet = SimpleNamespace(
+        id=uuid.uuid4(),
+        kind="pet",
+        name="Biscuit",
+        birthday=date(2010, 12, 12),
+        gotcha_day=date(2011, 12, 20),
+        passed_on=date(2025, 12, 25),
+    )
+    house.visible.return_value = [pet]
+    out = await CelebrationService(repo, house, CID).in_range(
+        SimpleNamespace(id=uuid.uuid4()), date(2026, 12, 1), date(2026, 12, 31)
+    )
+    assert [(c.date.day, c.occasion, c.title) for c in out] == [
+        (2, "remembrance", "Remembering Ruth"),
+        (12, "remembrance", "Remembering Biscuit"),
+        (25, "remembrance", "Remembering Biscuit"),
+    ]  # passed pet: no gotcha day
