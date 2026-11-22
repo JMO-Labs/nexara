@@ -19,6 +19,13 @@ vi.mock("@/hooks/useLists", () => ({
   useListItemComplete: () => h.complete,
   useListItemCreate: () => mut(),
 }));
+vi.mock("@/hooks/useListAssignments", () => ({
+  useItemAssignments: () => ({
+    viewerId: "u1",
+    canManage: false,
+    actions: { busy: false },
+  }),
+}));
 vi.mock("@/hooks/useListActions", () => ({
   useListItemDelete: () => h.remove,
   useListItemUpdate: () => mut(),

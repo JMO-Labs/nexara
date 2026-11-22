@@ -17,6 +17,8 @@ from app.core import list_dependencies as deps
 from app.core.dependencies import get_current_user
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.user import User
+from app.services.list_activity_service import ListActivityService
+from app.services.list_assignment_service import ListAssignmentService
 from app.services.list_completion_service import ListCompletionService
 from app.services.list_items_service import ListItemService
 from app.services.list_service import ListService
@@ -70,6 +72,8 @@ def mocks() -> dict:
         "comp": AsyncMock(spec=ListCompletionService),
         "signup": AsyncMock(spec=ListSignupService),
         "tpl": AsyncMock(spec=ListTemplateService),
+        "assign": AsyncMock(spec=ListAssignmentService),
+        "activity": AsyncMock(spec=ListActivityService),
     }
 
 
@@ -83,6 +87,9 @@ async def client(test_app, user, mocks):
     o[deps.get_list_completion_service] = lambda: mocks["comp"]
     o[deps.get_list_signup_service] = lambda: mocks["signup"]
     o[deps.get_list_template_service] = lambda: mocks["tpl"]
+    mocks["assign"].describe.return_value = {}
+    o[deps.get_list_assignment_service] = lambda: mocks["assign"]
+    o[deps.get_list_activity_service] = lambda: mocks["activity"]
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
         yield c
     o.clear()
@@ -269,3 +276,55 @@ async def test_get_signups_returns_claims(client, mocks) -> None:
     assert r.status_code == 200
     assert r.json() == []
     mocks["signup"].get_signups_for_item.assert_awaited_once_with(IID)
+
+
+async def test_take_item_returns_assignee(client, mocks) -> None:
+    uid = uuid.uuid4()
+    mocks["assign"].take.return_value = _item()
+    mocks["assign"].describe.return_value = {
+        IID: {
+            "assignee": {"id": uid, "display_name": "Maya", "avatar_url": None},
+            "status": "accepted",
+        }
+    }
+    r = await client.post(f"/api/v1/lists/{LID}/items/{IID}/take")
+    assert r.status_code == 200
+    assert r.json()["assignee"]["display_name"] == "Maya"
+    assert r.json()["assignment_status"] == "accepted"
+
+
+async def test_assign_decline_release_unassign_routes(client, mocks) -> None:
+    for name in ("assign", "respond", "release", "unassign"):
+        getattr(mocks["assign"], name).return_value = _item()
+    base = f"/api/v1/lists/{LID}/items/{IID}"
+    assert (
+        await client.post(f"{base}/assign", json={"user_id": str(uuid.uuid4())})
+    ).status_code == 200
+    assert (await client.post(f"{base}/assignment/accept")).status_code == 200
+    assert (await client.post(f"{base}/assignment/decline")).status_code == 200
+    assert mocks["assign"].respond.await_args_list[1].args[3] is False
+    assert (await client.post(f"{base}/release")).status_code == 200
+    assert (await client.delete(f"{base}/assignment")).status_code == 200
+
+
+async def test_assign_forbidden_maps_to_403(client, mocks) -> None:
+    mocks["assign"].assign.side_effect = AuthorizationError("no")
+    r = await client.post(
+        f"/api/v1/lists/{LID}/items/{IID}/assign", json={"user_id": str(uuid.uuid4())}
+    )
+    assert r.status_code == 403
+
+
+async def test_activity_feed_page(client, mocks) -> None:
+    uid = uuid.uuid4()
+    entry = SimpleNamespace(
+        id=uuid.uuid4(), action="taken", actor_id=uid, item_id=IID, item_title="Chairs",
+        target_user_id=None, created_at=NOW,
+    )  # fmt: skip
+    actor = SimpleNamespace(id=uid, display_name="Maya", avatar_url=None)
+    mocks["activity"].page.return_value = ([entry], {uid: actor}, "cur")
+    r = await client.get(f"/api/v1/lists/{LID}/activity?limit=5")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["activity"][0]["actor"]["display_name"] == "Maya"
+    assert body["pagination"] == {"cursor": "cur", "has_more": True}
