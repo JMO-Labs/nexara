@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app.core.exceptions import AppError, NotFoundError
+from app.core.exceptions import AppError, NotFoundError, RateLimitError
 from app.core.features import require_feature
 from app.core.i18n import _
 from app.models.trip import Trip
@@ -21,6 +21,7 @@ from app.services.notification_service import NotificationService
 
 MIN_LEAD = timedelta(minutes=10)
 MAX_LEAD = timedelta(hours=72)
+TRIPS_PER_HOUR = 5
 
 
 def _invalid(message: str) -> AppError:
@@ -99,7 +100,16 @@ class TripService:
         @raises AppError 422 bad time/watchers, 409 when a trip is already active.
         """
         await self._require_feature()
-        expected = self._check_window(body.expected_at, datetime.now(UTC))
+        now = datetime.now(UTC)
+        # Starting a trip pings every watcher; cap it so it can't be used to spam.
+        if (
+            await self._repo.count_started_since(
+                user_id, self._community_id, now - timedelta(hours=1)
+            )
+            >= TRIPS_PER_HOUR
+        ):
+            raise RateLimitError(_("You can start up to 5 trips an hour"))
+        expected = self._check_window(body.expected_at, now)
         wanted = list(dict.fromkeys(body.watcher_ids))
         ok = await self._repo.eligible_user_ids(wanted, user_id, self._community_id)
         if set(wanted) - ok:

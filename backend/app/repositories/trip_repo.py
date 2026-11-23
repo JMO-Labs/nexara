@@ -68,6 +68,15 @@ class TripRepository:
         await self._session.refresh(trip)
         return trip
 
+    async def count_started_since(
+        self, user_id: uuid.UUID, community_id: uuid.UUID, since: datetime
+    ) -> int:
+        """@brief Trips this user started since ``since`` (rate limiting)."""
+        stmt = select(func.count()).where(
+            Trip.user_id == user_id, Trip.community_id == community_id, Trip.created_at >= since
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
     async def get(
         self, trip_id: uuid.UUID, community_id: uuid.UUID, *, lock: bool = False
     ) -> Trip | None:

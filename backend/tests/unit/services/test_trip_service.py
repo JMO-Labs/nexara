@@ -44,6 +44,7 @@ def svc():
     repo.eligible_user_ids.side_effect = lambda ids, *_: set(ids)
     repo.names.return_value = {ME: "Ruth"}
     repo.watcher_ids.return_value = [W1, W2]
+    repo.count_started_since.return_value = 0
     notif = strict_notify()
     return TripService(repo, comm, notif, CID), repo, community, notif
 
@@ -62,6 +63,16 @@ async def test_start_notifies_watchers(svc) -> None:
     await s.start(ME, _body())
     assert {c.args[0] for c in notif.notify.await_args_list} == {W1, W2}
     assert notif.notify.await_args_list[0].args[1] == "trip_started"
+
+
+async def test_sixth_trip_in_an_hour_is_rate_limited(svc) -> None:
+    s, repo, _, notif = svc
+    repo.count_started_since.return_value = 5
+    with pytest.raises(AppError) as e:
+        await s.start(ME, _body())
+    assert e.value.status_code == 429
+    repo.create.assert_not_awaited()
+    notif.notify.assert_not_awaited()
 
 
 async def test_start_in_five_minutes_is_422(svc) -> None:
