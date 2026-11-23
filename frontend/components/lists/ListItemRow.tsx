@@ -98,6 +98,14 @@ export function ListItemRow({
             )}
           </dl>
         )}
+        {item.repeat && item.nextAssignee && (
+          <p className="mt-0.5 text-sm text-muted">
+            Next: {item.nextAssignee.displayName}
+            {item.nextDueAt && (
+              <> &middot; {format(new Date(item.nextDueAt), "EEE")}</>
+            )}
+          </p>
+        )}
         {assign && (
           <div className="mt-2">
             <ItemAssignment item={item} title={title} ctx={assign} />

@@ -13,10 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.api.v1.list_chores import get_chore_service
 from app.core import list_dependencies as deps
 from app.core.dependencies import get_current_user
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.user import User
+from app.services.chore_service import ChoreService
 from app.services.list_activity_service import ListActivityService
 from app.services.list_assignment_service import ListAssignmentService
 from app.services.list_completion_service import ListCompletionService
@@ -74,6 +76,7 @@ def mocks() -> dict:
         "tpl": AsyncMock(spec=ListTemplateService),
         "assign": AsyncMock(spec=ListAssignmentService),
         "activity": AsyncMock(spec=ListActivityService),
+        "chores": AsyncMock(spec=ChoreService, enabled=MagicMock(return_value=False)),
     }
 
 
@@ -90,6 +93,7 @@ async def client(test_app, user, mocks):
     mocks["assign"].describe.return_value = {}
     o[deps.get_list_assignment_service] = lambda: mocks["assign"]
     o[deps.get_list_activity_service] = lambda: mocks["activity"]
+    o[get_chore_service] = lambda: mocks["chores"]
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
         yield c
     o.clear()
@@ -328,3 +332,20 @@ async def test_activity_feed_page(client, mocks) -> None:
     body = r.json()
     assert body["activity"][0]["actor"]["display_name"] == "Maya"
     assert body["pagination"] == {"cursor": "cur", "has_more": True}
+
+
+async def test_set_chore_route(client, mocks) -> None:
+    item = SimpleNamespace(
+        id=uuid.uuid4(), position=0, values={}, due_at=None, completed=False,
+        completed_by=None, completed_at=None, lat=None, lon=None,
+        signup_quantity_needed=None, recipe_id=None, repeat="weekly",
+        rotation=[], rotation_index=0, next_due_at=None,
+    )  # fmt: skip
+    mocks["chores"].set_schedule.return_value = item
+    mocks["chores"].next_assignees.return_value = {}
+    r = await client.put(
+        f"/api/v1/lists/{LID}/items/{item.id}/chore", json={"repeat": "weekly", "rotation": []}
+    )
+    assert r.status_code == 200 and r.json()["repeat"] == "weekly"
+    r = await client.put(f"/api/v1/lists/{LID}/items/{item.id}/chore", json={"repeat": "hourly"})
+    assert r.status_code == 422

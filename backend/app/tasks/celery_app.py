@@ -29,6 +29,7 @@ celery_app = Celery(
         "app.tasks.album_tasks",
         "app.tasks.birthday_tasks",
         "app.tasks.capsule_tasks",
+        "app.tasks.chore_tasks",
         "app.tasks.email_tasks",
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
@@ -76,6 +77,7 @@ celery_app.conf.update(
         "app.tasks.retention_tasks.*": {"queue": "maintenance"},
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
         "app.tasks.list_tasks.*": {"queue": "maintenance"},
+        "chores.*": {"queue": "maintenance"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
@@ -226,6 +228,10 @@ celery_app.conf.update(
         "dispatch-list-expiry-reminders": {
             "task": "app.tasks.list_tasks.dispatch_list_expiry_reminders",
             "schedule": crontab(hour=8, minute=0),
+        },
+        "chores-advance-due": {
+            "task": "chores.advance_due",
+            "schedule": crontab(minute="*/15"),
         },
         "capsules-open-due": {
             "task": "capsules.open_due",

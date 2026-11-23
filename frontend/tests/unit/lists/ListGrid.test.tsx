@@ -17,6 +17,10 @@ const h = vi.hoisted(() => ({
 vi.mock("@/components/recipes/RecipePicker", () => ({
   RecipePicker: () => null,
 }));
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => false }));
+vi.mock("@/hooks/useMembersList", () => ({
+  useMembersList: () => ({ data: [] }),
+}));
 vi.mock("@/hooks/useLists", () => ({
   useListItems: h.items,
   useListItemComplete: () => h.complete,
@@ -32,6 +36,7 @@ vi.mock("@/hooks/useListAssignments", () => ({
 vi.mock("@/hooks/useListActions", () => ({
   useListItemDelete: () => h.remove,
   useListItemUpdate: () => mut(),
+  useListChoreSet: () => mut(),
 }));
 vi.mock("@/stores/confirmDialog", () => ({
   useConfirmDialog: (sel: (s: unknown) => unknown) =>

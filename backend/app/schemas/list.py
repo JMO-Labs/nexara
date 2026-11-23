@@ -86,6 +86,11 @@ class ListItemOut(BaseModel):
     lon: float | None = None
     signup_quantity_needed: int | None = None
     recipe_id: uuid.UUID | None = None
+    repeat: str | None = None
+    rotation: list[uuid.UUID] = Field(default_factory=list)
+    rotation_index: int = 0
+    next_due_at: datetime | None = None
+    next_assignee: AssigneeOut | None = None
     assignee: AssigneeOut | None = None
     assignment_status: str | None = None
 
@@ -155,3 +160,10 @@ class ListItemPage(BaseModel):
 
     items: list[ListItemOut]
     pagination: Pagination
+
+
+class ChoreScheduleIn(BaseModel):
+    """@brief Request body setting an item's repeat and ordered rotation."""
+
+    repeat: Literal["daily", "weekly", "monthly"] | None = None
+    rotation: list[uuid.UUID] = Field(default_factory=list, max_length=20)

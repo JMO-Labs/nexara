@@ -31,9 +31,13 @@ def _admin(user: User) -> bool:
     return user.role in ("admin", "owner")
 
 
-def item_out(item: ListItem, info: dict[str, Any] | None) -> ListItemOut:
-    """@brief Serialise an item with its (optional) assignment info."""
+def item_out(
+    item: ListItem, info: dict[str, Any] | None, nxt: dict[str, Any] | None = None
+) -> ListItemOut:
+    """@brief Serialise an item with its (optional) assignment and next-in-rotation info."""
     out = ListItemOut.model_validate(item)
+    if nxt:
+        out.next_assignee = AssigneeOut.model_validate(nxt)
     if info:
         out.assignee = AssigneeOut.model_validate(info["assignee"])
         out.assignment_status = info["status"]
