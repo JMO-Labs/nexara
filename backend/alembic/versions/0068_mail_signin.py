@@ -1,7 +1,7 @@
 """Mail settings (SMTP on communities) and sign-in tracking.
 
 @file 0068_mail_signin.py
-@brief Add communities.smtp_* columns and the signin_events table.
+@brief Add communities.smtp_* columns, signin_events, user_settings.gravatar_email.
 
 Revision ID: 0068_mail_signin
 Revises: 0067_prompt_answer_recount
@@ -100,13 +100,25 @@ def _downgrade_signin() -> None:
     op.drop_table("signin_events")
 
 
+def _upgrade_gravatar() -> None:
+    """@brief user_settings.gravatar_email (private Gravatar hash source)."""
+    op.add_column("user_settings", sa.Column("gravatar_email", sa.Text(), nullable=True))
+
+
+def _downgrade_gravatar() -> None:
+    """@brief Drop user_settings.gravatar_email."""
+    op.drop_column("user_settings", "gravatar_email")
+
+
 def upgrade() -> None:
     """@brief Apply all 0068 changes."""
     _upgrade_mail()
     _upgrade_signin()
+    _upgrade_gravatar()
 
 
 def downgrade() -> None:
     """@brief Revert all 0068 changes."""
+    _downgrade_gravatar()
     _downgrade_signin()
     _downgrade_mail()

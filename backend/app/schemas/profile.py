@@ -58,6 +58,8 @@ class ProfileUpdate(BaseModel):
     field_visibility: dict[str, Level] | None = None
     # Opt in to showing your Gravatar (sends a hash of your email to gravatar.com).
     use_gravatar: bool | None = None
+    # Private email used only for the Gravatar hash ("" clears it).
+    gravatar_email: EmailStr | Literal[""] | None = Field(default=None, max_length=254)
 
     @field_validator("skills")
     @classmethod

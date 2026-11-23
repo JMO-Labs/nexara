@@ -15,6 +15,9 @@ vi.mock("@/hooks/useSettings");
 vi.mock("@/components/settings/ProfileDetailsPanel", () => ({
   ProfileDetailsPanel: () => null,
 }));
+vi.mock("@/components/settings/GravatarEmailInput", () => ({
+  GravatarEmailInput: () => null,
+}));
 vi.mock("@/components/settings/VisibilitySelect", () => ({
   VisibilitySelect: () => null,
 }));

@@ -41,6 +41,9 @@ class UserSettings(Base):
         server_default=COMMUNITY_DEFAULT,
     )
 
+    # Private override for the Gravatar hash (falls back to the login email)
+    gravatar_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # --- Notification preferences v2: {type_key: {channel: bool}} ---
     # Legacy notif_* / mute_all_* columns below are still the source of truth for
     # readers; migration b2c3d4e5f6a7 only backfills prefs. Dropped in a follow-up.

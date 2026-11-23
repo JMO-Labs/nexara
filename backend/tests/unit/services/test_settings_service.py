@@ -113,6 +113,7 @@ class TestUpdateProfileFields:
         user_repo.get_by_id.return_value = user
         row = MagicMock()
         row.field_visibility = current_vis or {}
+        row.gravatar_email = None
         settings_repo.get_or_create.return_value = row
         return SettingsService(settings_repo, user_repo, COMMUNITY_ID), settings_repo, user_repo
 
@@ -146,6 +147,42 @@ class TestUpdateProfileFields:
         user.avatar_url = url
         await svc.update_profile(USER_ID, ProfileUpdate(use_gravatar=False))
         assert users.update.await_args.args[1] == {"avatar_url": None}
+
+    @pytest.mark.asyncio
+    async def test_gravatar_email_hash_and_recompute(self):
+        svc, settings, users = self._svc()
+        settings.get_or_create.return_value.gravatar_email = None
+        user = users.get_by_id.return_value
+        user.email = "login@x.io"
+        user.avatar_url = "https://www.gravatar.com/avatar/old?s=160&d=404"
+        await svc.update_profile(USER_ID, ProfileUpdate(gravatar_email=" Pic@Example.com "))
+        assert settings.update.await_args.args[1] == {"gravatar_email": "pic@example.com"}
+        digest = hashlib.sha256(b"pic@example.com").hexdigest()
+        assert digest in users.update.await_args.args[1]["avatar_url"]
+
+    @pytest.mark.asyncio
+    async def test_gravatar_email_cleared_uses_login_email(self):
+        svc, settings, users = self._svc()
+        settings.get_or_create.return_value.gravatar_email = "pic@example.com"
+        user = users.get_by_id.return_value
+        user.email = "login@x.io"
+        user.avatar_url = "https://www.gravatar.com/avatar/old?s=160&d=404"
+        await svc.update_profile(USER_ID, ProfileUpdate(gravatar_email=""))
+        assert settings.update.await_args.args[1] == {"gravatar_email": None}
+        digest = hashlib.sha256(b"login@x.io").hexdigest()
+        assert digest in users.update.await_args.args[1]["avatar_url"]
+
+    @pytest.mark.asyncio
+    async def test_gravatar_email_leaves_uploaded_photo(self):
+        svc, settings, users = self._svc()
+        users.get_by_id.return_value.avatar_url = "/api/v1/media/x/thumb"
+        await svc.update_profile(USER_ID, ProfileUpdate(gravatar_email="a@b.co"))
+        users.update.assert_not_awaited()
+        assert settings.update.await_args.args[1] == {"gravatar_email": "a@b.co"}
+
+    def test_gravatar_email_invalid_rejected(self):
+        with pytest.raises(ValueError):
+            ProfileUpdate(gravatar_email="nope")
 
     @pytest.mark.asyncio
     async def test_gravatar_never_replaces_uploaded_photo(self):
