@@ -19,6 +19,7 @@ import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
 import { TimezoneSync } from "@/components/settings/TimezoneSync";
 import { PresenceSync } from "./PresenceSync";
+import { SimpleModeSync } from "./SimpleModeSync";
 import { AppBackdrop } from "./AppBackdrop";
 import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
@@ -106,6 +107,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </a>
         <BrandingStyle />
         <TimezoneSync />
+        <SimpleModeSync />
         {!isBooting && <PresenceSync />}
         <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />

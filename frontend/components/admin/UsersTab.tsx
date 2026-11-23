@@ -7,15 +7,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUI } from "@/stores/ui";
-import { Check, Flower2, Loader2, Trash2, Users, X } from "lucide-react";
+import {
+  Check,
+  Flower2,
+  Loader2,
+  Trash2,
+  Users,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import {
   useAdminUsersInfinite,
   useSuspendUser,
   useRestoreUser,
   useDeleteUser,
+  useSetUserSimpleMode,
 } from "@/hooks/useAdmin";
 import { useMemorializeUser, useUnmemorializeUser } from "@/hooks/useMemorials";
 import { useFeature } from "@/hooks/useFeature";
+import { useConfirmDialog } from "@/stores/confirmDialog";
 import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
 import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
 import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
@@ -55,6 +66,19 @@ export function UsersTab() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [memorializingId, setMemorializingId] = useState<string | null>(null);
   const memorialsOn = useFeature("memorials");
+  const simpleOn = useFeature("simple_mode");
+  const confirm = useConfirmDialog((s) => s.confirm);
+  const simpleMutation = useSetUserSimpleMode();
+  const toggleSimple = async (userId: string, name: string, on: boolean) => {
+    const ok = await confirm({
+      title: on ? "Turn on simple mode" : "Turn off simple mode",
+      message: on
+        ? `Turn on simple mode for ${name}? They will see larger text and a shorter menu.`
+        : `Turn off simple mode for ${name}?`,
+      confirmLabel: on ? "Turn on" : "Turn off",
+    });
+    if (ok) simpleMutation.mutate({ userId, on });
+  };
   const density = useUI((s) => s.density);
   const setDensity = useUI((s) => s.setDensity);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -262,6 +286,38 @@ export function UsersTab() {
                         >
                           <Flower2 className="size-4" aria-hidden="true" />
                         </IconButton>
+                      )}
+                      {simpleOn && user.status === "active" && (
+                        <>
+                          <IconButton
+                            variant="glass"
+                            aria-label="Turn on simple mode"
+                            tooltip="Turn on simple mode"
+                            onClick={() =>
+                              toggleSimple(
+                                user.id,
+                                user.display_name || user.username,
+                                true,
+                              )
+                            }
+                          >
+                            <ZoomIn className="size-4" aria-hidden="true" />
+                          </IconButton>
+                          <IconButton
+                            variant="glass"
+                            aria-label="Turn off simple mode"
+                            tooltip="Turn off simple mode"
+                            onClick={() =>
+                              toggleSimple(
+                                user.id,
+                                user.display_name || user.username,
+                                false,
+                              )
+                            }
+                          >
+                            <ZoomOut className="size-4" aria-hidden="true" />
+                          </IconButton>
+                        </>
                       )}
                       <IconButton
                         variant="glass"

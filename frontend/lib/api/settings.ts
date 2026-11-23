@@ -34,6 +34,7 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   mute_all_email: boolean;
   home_pattern?: HomePattern | null;
   reduce_transparency?: boolean;
+  simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }
@@ -77,6 +78,7 @@ export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   locale?: string;
   home_pattern?: HomePattern | null;
   reduce_transparency?: boolean;
+  simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
 }

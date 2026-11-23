@@ -122,3 +122,9 @@ class AdminUserListItem(BaseModel):
     status: str = "active"
     memorialized_at: datetime | None = None
     passed_on: date | None = None
+
+
+class UserSimpleModeUpdate(BaseModel):
+    """@brief Admin payload to turn simple mode on or off for one user."""
+
+    simple_mode: bool

@@ -98,6 +98,16 @@ export const useChangeUserRole = () => {
 };
 
 /**
+ * @brief Admin: set simple mode for a user.
+ */
+export const useSetUserSimpleMode = () =>
+  useMutationWithToast({
+    mutationFn: (v: { userId: string; on: boolean }) =>
+      adminApi.setUserSimpleMode(v.userId, v.on),
+    successKey: "toasts.admin.user.simpleMode",
+  });
+
+/**
  * @brief Suspend a user. Invalidates useAdminUsers on success.
  */
 export const useSuspendUser = () => {

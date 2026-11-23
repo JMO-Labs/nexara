@@ -29,6 +29,7 @@ from app.schemas.admin import (
     AuditLogEntry,
     MetricsResponse,
     UserRoleUpdate,
+    UserSimpleModeUpdate,
 )
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.gallery import AdminGalleryUpdate, GalleryResponse
@@ -132,6 +133,19 @@ async def change_user_role(
     """@brief Change a user's role."""
     await service.change_role(user, user_id, body.role, _client_ip(request))
     return {"message": _("Role updated")}
+
+
+@router.patch("/users/{user_id}/settings")
+async def update_user_settings(
+    user_id: uuid.UUID,
+    body: UserSimpleModeUpdate,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    service: AdminService = Depends(_build_service),
+) -> dict[str, Any]:
+    """@brief Turn simple mode on/off for a user (admin only, audited)."""
+    await service.set_simple_mode(user, user_id, body.simple_mode, _client_ip(request))
+    return {"message": _("Settings updated")}
 
 
 @router.post("/users/{user_id}/suspend")

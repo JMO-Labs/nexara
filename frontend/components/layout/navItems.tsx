@@ -101,6 +101,19 @@ export const TOP_NAV: NavItem[] = [
   },
 ];
 
+/** @brief Simple mode nav: Home feed, Photos, Family, Calendar (in order). */
+export const SIMPLE_NAV_HREFS = [
+  "/app",
+  "/app/photos",
+  "/app/family",
+  "/app/events",
+] as const;
+
+/** @brief Simple mode nav items, in SIMPLE_NAV_HREFS order. */
+export const SIMPLE_NAV: NavItem[] = SIMPLE_NAV_HREFS.map(
+  (h) => TOP_NAV.find((t) => t.href === h) as NavItem,
+);
+
 /** @brief Top-nav items that the phone tab bar has no room for (shown first in the More sheet). */
 export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
   (t) => !TAB_NAV.some((x) => x.href === t.href),

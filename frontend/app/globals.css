@@ -261,6 +261,30 @@
   gap: 0.5rem;
 }
 
+/* Simple mode: ~125% text, 48px targets, no hover-only controls. */
+:root[data-simple] {
+  font-size: 125%;
+  --tap-min: 48px;
+}
+[data-simple]
+  :where(button, [role="button"], [role="menuitem"], [role="tab"], select):not(
+    [role="switch"],
+    [role="checkbox"],
+    [role="radio"]
+  ) {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+}
+[data-simple] .hover-only {
+  opacity: 1;
+}
+/* Fixed-px bento heights would clip 125% text: let the grid grow. */
+[data-simple] .home-bento {
+  height: auto;
+  grid-template-rows: none;
+  grid-auto-rows: auto;
+}
+
 /* Signature featured-card shape: one sharp bottom-left corner. */
 .corner-leaf {
   border-radius: 1.75rem 1.75rem 1.75rem 0.375rem;

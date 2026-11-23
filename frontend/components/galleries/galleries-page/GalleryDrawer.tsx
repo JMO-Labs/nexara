@@ -317,7 +317,7 @@ export function GalleryDrawer({
                         variant="glass"
                         onClick={() => handleRemoveItem(it.id)}
                         aria-label="Remove item"
-                        className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                        className="hover-only absolute top-1.5 right-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                       </IconButton>

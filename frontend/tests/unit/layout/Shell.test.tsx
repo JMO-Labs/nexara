@@ -29,6 +29,7 @@ vi.mock("@/hooks/useSettings", () => ({
   useUserSettings: () => ({ data: settings.data }),
 }));
 vi.mock("@/components/layout/BrandingStyle", () => stub("BrandingStyle"));
+vi.mock("@/components/layout/SimpleModeSync", () => stub("SimpleModeSync"));
 vi.mock("@/components/layout/ModalRoot", () => stub("ModalRoot"));
 vi.mock("@/components/help/KeyboardShortcutsModal", () =>
   stub("KeyboardShortcutsModal"),

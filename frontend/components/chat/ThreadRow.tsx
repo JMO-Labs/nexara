@@ -140,7 +140,7 @@ export function ThreadRow({
           aria-label="Delete conversation"
           size="sm"
           variant="ghost"
-          className="absolute right-2 top-1/2 z-10 size-11 -translate-y-1/2 opacity-100 md:size-8 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          className="hover-only absolute right-2 top-1/2 z-10 size-11 -translate-y-1/2 opacity-100 md:size-8 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100 md:focus-visible:opacity-100"
           onClick={onDelete}
         >
           <Trash2 className="size-4" aria-hidden="true" />

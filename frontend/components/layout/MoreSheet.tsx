@@ -9,6 +9,8 @@ import { Drawer } from "@/components/ui/Drawer";
 import { useSession } from "@/stores/session";
 import { useSignOut } from "@/hooks/useSignOut";
 import { useFeature } from "@/hooks/useFeature";
+import { useSimpleMode } from "@/stores/simpleMode";
+import { SimpleModeOffRow } from "./SimpleModeOffRow";
 import { MORE_NAV, PHONE_EXTRA_NAV, isAdmin, visibleNav } from "./navItems";
 
 const ROW =
@@ -32,6 +34,12 @@ export function MoreSheet({
   const recipes = useFeature("recipes");
   const expenses = useFeature("expenses");
   const tree = useFeature("family_tree");
+  const simple = useSimpleMode((s) => s.on);
+  const items = simple
+    ? visibleNav(MORE_NAV, admin).filter(
+        (i) => i.href === "/app/settings" || i.adminOnly,
+      )
+    : [...PHONE_EXTRA_NAV, ...visibleNav(MORE_NAV, admin)];
   const onLogout = async () => {
     onClose();
     await signOut();
@@ -40,7 +48,7 @@ export function MoreSheet({
   return (
     <Drawer open={open} onClose={onClose} title="More" side="bottom">
       <ul className="m-0 list-none p-0">
-        {[...PHONE_EXTRA_NAV, ...visibleNav(MORE_NAV, admin)]
+        {items
           .filter((i) => capsules || i.href !== "/app/capsules")
           .filter((i) => recipes || i.href !== "/app/recipes")
           .filter((i) => expenses || i.href !== "/app/expenses")
@@ -53,6 +61,7 @@ export function MoreSheet({
               </Link>
             </li>
           ))}
+        {simple && <SimpleModeOffRow onClose={onClose} />}
         <li>
           <button type="button" onClick={onLogout} className={ROW}>
             <LogOut aria-hidden className="size-5" />

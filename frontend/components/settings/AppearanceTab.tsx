@@ -11,6 +11,7 @@ import { useUI } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { UserSettings } from "@/lib/api/settings";
 import { PatternPicker } from "./PatternPicker";
+import { useFeature } from "@/hooks/useFeature";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 
 type FontSize = UserSettings["font_size"];
@@ -45,6 +46,7 @@ export function AppearanceTab() {
   const { theme, setTheme } = useTheme();
   const { data: settings } = useUserSettings();
   const { mutate, isPending } = useUpdateSettings();
+  const simpleOn = useFeature("simple_mode");
   const density = useUI((s) => s.density);
   const setDensity = useUI((s) => s.setDensity);
   // SSR-safe mount detection for next-themes: false on server, true on client.
@@ -129,6 +131,20 @@ export function AppearanceTab() {
           disabled={isPending}
         />
       </SettingsRow>
+
+      {simpleOn && (
+        <SettingsRow
+          label="Simple mode"
+          description="Bigger text and buttons, and only Home, Photos, Family and Calendar in the menu."
+        >
+          <Switch
+            aria-label="Simple mode"
+            checked={settings.simple_mode ?? false}
+            onCheckedChange={(v) => mutate({ simple_mode: v })}
+            disabled={isPending}
+          />
+        </SettingsRow>
+      )}
 
       <SettingsRow label="Preview" description="How your choices look.">
         <div

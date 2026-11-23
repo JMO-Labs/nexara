@@ -125,6 +125,7 @@ class UserSettingsResponse(BaseModel):
     home_layout: HomeLayoutSchema | None = None
     home_pattern: str | None = None
     reduce_transparency: bool = False
+    simple_mode: bool = False
     field_visibility: dict[str, str] = Field(default_factory=dict)
 
     model_config = {"from_attributes": True}
@@ -150,3 +151,4 @@ class UserSettingsUpdate(BaseModel):
     home_layout: HomeLayoutSchema | None = None
     home_pattern: str | None = Field(default=None, pattern=HOME_PATTERN_RE)
     reduce_transparency: bool | None = None
+    simple_mode: bool | None = None
