@@ -123,7 +123,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             await self._poll_service.create_poll(user.id, poll, post.id)
 
         if reply_to_prompt_id and self._prompt_repo:
-            await self._prompt_repo.increment_response_count(reply_to_prompt_id)
+            await self._prompt_repo.refresh_response_count(reply_to_prompt_id)
             prompt = await self._prompt_repo.get_by_id(reply_to_prompt_id)
             if prompt:
                 if self._activity_repo is not None:
@@ -254,6 +254,8 @@ class PostService(CommentsMixin, ReactionsMixin):
         if post.author_id != user.id and user.role != "admin":
             raise AuthorizationError(_("You can only delete your own posts"))
         await self._post_repo.soft_delete(post)
+        if post.reply_to_prompt_id and self._prompt_repo:
+            await self._prompt_repo.refresh_response_count(post.reply_to_prompt_id)
         await invalidate_search_cache_for_community(
             self._community_id, service="post", action="delete", user_id=user.id
         )

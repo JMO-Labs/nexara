@@ -9,6 +9,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.prompt import Prompt, PromptPost
 from app.repositories.base import BaseRepository
@@ -99,16 +100,12 @@ class PromptRepository(BaseRepository[Prompt]):
         await self._session.refresh(pp)
         return pp
 
-    async def increment_response_count(self, prompt_post_id: uuid.UUID) -> None:
-        """@brief Bump response_count by one (called when comment is added)."""
-        from sqlalchemy import update
-
-        await self._session.execute(
-            update(PromptPost)
-            .where(PromptPost.id == prompt_post_id)
-            .values(response_count=PromptPost.response_count + 1)
-        )
-        await self._session.flush()
+    async def refresh_response_count(self, prompt_post_id: uuid.UUID) -> None:
+        """
+        @brief Recount live answers to a prompt post. Called after an answer is
+               added or deleted, so the stored count can never drift.
+        """
+        await refresh_response_count(self._session, prompt_post_id)
 
     async def get_by_ids(self, ids: list[uuid.UUID], community_id: uuid.UUID) -> list[Prompt]:
         """@brief Fetch prompts by id list, scoped to a community."""
@@ -138,3 +135,21 @@ class PromptRepository(BaseRepository[Prompt]):
         prompt_post.summary_post_id = summary_post_id
         await self._session.flush()
         return prompt_post
+
+
+async def refresh_response_count(session: AsyncSession, prompt_post_id: uuid.UUID) -> None:
+    """@brief Set ``response_count`` to the number of live posts answering it."""
+    from sqlalchemy import update
+
+    from app.models.post import Post
+
+    live = (
+        select(func.count())
+        .select_from(Post)
+        .where(Post.reply_to_prompt_id == prompt_post_id, Post.deleted_at.is_(None))
+        .scalar_subquery()
+    )
+    await session.execute(
+        update(PromptPost).where(PromptPost.id == prompt_post_id).values(response_count=live)
+    )
+    await session.flush()
