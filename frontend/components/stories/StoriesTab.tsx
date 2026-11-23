@@ -12,6 +12,7 @@ import { Mic } from "lucide-react";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { AskStoryDialog } from "@/components/stories/AskStoryDialog";
+import { StoriesAsked } from "@/components/stories/StoriesAsked";
 import { StoryRequests } from "@/components/stories/StoryRequests";
 import { userStories, type StoryItem } from "@/lib/api/stories";
 
@@ -61,7 +62,10 @@ export function StoriesTab({
   return (
     <div className="flex flex-col gap-4">
       {isSelf ? (
-        <StoryRequests />
+        <>
+          <StoryRequests />
+          <StoriesAsked />
+        </>
       ) : (
         <div>
           <AskStoryDialog userId={userId} name={name} />
