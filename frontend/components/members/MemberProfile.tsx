@@ -16,17 +16,20 @@ import { useSearchParams } from "next/navigation";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
 import { MemberFamilyTab } from "@/components/members/MemberFamilyTab";
 import { MemberGalleriesTab } from "@/components/members/MemberGalleriesTab";
+import { StoriesTab } from "@/components/stories/StoriesTab";
+import { useFeature } from "@/hooks/useFeature";
 import { WishlistCards } from "@/components/wishlists/WishlistCards";
 import { useMemberConnection, useMemberProfile } from "@/hooks/useMembers";
 import { useSession } from "@/stores/session";
 import { statusOf } from "@/components/members/personStatus";
 
-type Tab = "photos" | "wishlists" | "tagged" | "family" | "groups";
+type Tab = "photos" | "wishlists" | "tagged" | "stories" | "family" | "groups";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "photos", label: "Photos" },
   { value: "wishlists", label: "Wishlists" },
   { value: "tagged", label: "Tagged" },
+  { value: "stories", label: "Stories" },
   { value: "family", label: "Family" },
   { value: "groups", label: "Groups" },
 ];
@@ -38,8 +41,10 @@ const TABS: { value: Tab; label: string }[] = [
  */
 export function MemberProfile({ userId }: { userId: string }) {
   const initial = useSearchParams().get("tab");
+  const storiesOn = useFeature("voice_stories");
+  const tabs = TABS.filter((t) => storiesOn || t.value !== "stories");
   const [tab, setTab] = React.useState<Tab>(
-    TABS.some((t) => t.value === initial) ? (initial as Tab) : "photos",
+    tabs.some((t) => t.value === initial) ? (initial as Tab) : "photos",
   );
   const viewerId = useSession((s) => s.user?.id);
   const profile = useMemberProfile(userId);
@@ -97,7 +102,7 @@ export function MemberProfile({ userId }: { userId: string }) {
         <div className="min-w-0">
           <Segmented
             label="Profile sections"
-            options={TABS}
+            options={tabs}
             value={tab}
             onChange={setTab}
           />
@@ -114,6 +119,12 @@ export function MemberProfile({ userId }: { userId: string }) {
               <MemberTaggedTab
                 userId={userId}
                 name={p.display_name.split(" ")[0]}
+              />
+            ) : tab === "stories" && storiesOn ? (
+              <StoriesTab
+                userId={userId}
+                name={p.display_name.split(" ")[0]}
+                isSelf={isSelf}
               />
             ) : tab === "family" ? (
               <MemberFamilyTab

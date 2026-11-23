@@ -62,6 +62,8 @@ NOTIFICATION_TYPES = (
     "trip_started",
     "trip_overdue",
     "trip_arrived",
+    "story_request",
+    "story_answered",
 )
 """@brief Supported notification types for preference lookup."""
 
@@ -89,6 +91,8 @@ PREF_MAP = {
     "trip_started": ("notif_mention_inapp", "notif_mention_email"),
     "trip_overdue": ("notif_mention_inapp", "notif_mention_email"),
     "trip_arrived": ("notif_mention_inapp", "notif_mention_email"),
+    "story_request": ("notif_mention_inapp", "notif_mention_email"),
+    "story_answered": ("notif_mention_inapp", "notif_mention_email"),
     "group_tag": ("notif_mention_inapp", "notif_mention_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),

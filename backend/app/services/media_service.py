@@ -26,6 +26,7 @@ from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
 from app.services.activity_publish import record_activity
+from app.services.media.audio import AUDIO_EXT, audio_base_type, check_audio_upload
 from app.services.media.multipart import (
     complete_multipart_upload as _complete_multipart_upload_impl,
 )
@@ -43,6 +44,7 @@ from app.services.storage.quota import (
     increment_storage_used,
 )
 from app.tasks.ai_tasks import ocr_process_image
+from app.tasks.audio_tasks import transcode_audio
 from app.tasks.media_tasks import generate_thumbnail
 
 logger = structlog.get_logger(__name__)
@@ -116,7 +118,7 @@ class MediaService:
         size: int,
     ) -> MediaResponse:
         """
-        @brief Upload an image, store it, create a media record, and enqueue thumbnail.
+        @brief Upload an image or audio clip, store it, and enqueue processing.
 
         @param user The uploading user.
         @param file_data Raw file bytes.
@@ -127,24 +129,19 @@ class MediaService:
         @raises ValueError If content type or size is invalid.
         @raises QuotaExceededError If upload would exceed user quota.
         """
-        if content_type not in ALLOWED_IMAGE_TYPES:
+        audio = audio_base_type(content_type)
+        if audio:
+            content_type = check_audio_upload(file_data, audio, size)
+        elif content_type not in ALLOWED_IMAGE_TYPES:
             raise AppError(
                 code="INVALID_FILE_TYPE",
                 message=_("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."),
                 status_code=400,
             )
-        if size > MAX_IMAGE_SIZE:
-            raise AppError(
-                code="FILE_TOO_LARGE",
-                message=_("File size exceeds 20 MB limit."),
-                status_code=400,
-            )
-        if len(file_data) != size:
-            raise AppError(
-                code="FILE_SIZE_MISMATCH",
-                message=_("File size mismatch."),
-                status_code=400,
-            )
+        elif size > MAX_IMAGE_SIZE:
+            raise AppError("FILE_TOO_LARGE", _("File size exceeds 20 MB limit."), 400)
+        elif len(file_data) != size:
+            raise AppError("FILE_SIZE_MISMATCH", _("File size mismatch."), 400)
 
         try:
             await check_quota(self._session(), user.id, size)
@@ -156,7 +153,9 @@ class MediaService:
                 details={"quota": exc.quota, "used": exc.used, "upload_size": exc.upload_size},
             ) from exc
 
-        ext = "jpg" if content_type == "image/jpeg" else content_type.split("/")[-1]
+        ext = AUDIO_EXT.get(content_type) or (
+            "jpg" if content_type == "image/jpeg" else content_type.split("/")[-1]
+        )
         storage_key = f"originals/{uuid.uuid4()}.{ext}"
 
         await self._storage.put(storage_key, file_data, content_type)
@@ -189,7 +188,7 @@ class MediaService:
                 },
             )
 
-        generate_thumbnail.delay(str(media.id))
+        (transcode_audio if audio else generate_thumbnail).delay(str(media.id))
         await invalidate_search_cache_for_community(
             self._community_id, service="media", action="create", user_id=user.id
         )

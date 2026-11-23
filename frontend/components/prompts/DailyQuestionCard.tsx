@@ -6,14 +6,17 @@
  */
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Lock, MessageCircleQuestion } from "lucide-react";
+import { Check, Lock, MessageCircleQuestion, Mic } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
+import { AudioPlayer } from "@/components/audio/AudioPlayer";
+import { Recorder } from "@/components/audio/Recorder";
 import { PromptResponsesList } from "@/components/prompts/PromptResponsesList";
 import { SuggestQuestionDialog } from "@/components/prompts/SuggestQuestionDialog";
 import { useFeature } from "@/hooks/useFeature";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useInfinitePromptResponses } from "@/hooks/usePromptResponses";
 import { qk } from "@/lib/query-keys";
+import { mediaFileUrl } from "@/lib/api/media";
 import type { PromptPost } from "@/lib/api/prompts";
 
 /**
@@ -25,6 +28,9 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
   const on = useFeature("daily_question");
   const qc = useQueryClient();
   const [text, setText] = React.useState("");
+  const [voiceId, setVoiceId] = React.useState<string | null>(null);
+  const [recording, setRecording] = React.useState(false);
+  const voice = useFeature("voice_stories");
   const create = useCreatePost();
   const q = useInfinitePromptResponses(post.id);
   if (!on) return null;
@@ -36,10 +42,15 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
   const content = text.trim();
   const submit = () =>
     create.mutate(
-      { content, reply_to_prompt_id: post.id },
+      {
+        content,
+        reply_to_prompt_id: post.id,
+        ...(voiceId ? { media_ids: [voiceId] } : {}),
+      },
       {
         onSuccess: () => {
           setText("");
+          setVoiceId(null);
           qc.invalidateQueries({ queryKey: qk.feed.promptResponses(post.id) });
         },
       },
@@ -80,13 +91,40 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
             onChange={(e) => setText(e.target.value)}
             rows={2}
           />
-          <Button
-            className="min-h-11 self-end"
-            onClick={submit}
-            disabled={!content || create.isPending}
-          >
-            Answer
-          </Button>
+          {voiceId && (
+            <AudioPlayer
+              src={mediaFileUrl(voiceId)}
+              label="Your voice answer"
+            />
+          )}
+          {recording && (
+            <Recorder
+              onReady={(m) => {
+                setVoiceId(m.id);
+                setRecording(false);
+              }}
+              onCancel={() => setRecording(false)}
+            />
+          )}
+          <div className="flex items-center justify-end gap-2">
+            {voice && !recording && (
+              <Button
+                variant="ghost"
+                className="min-h-11"
+                onClick={() => setRecording(true)}
+              >
+                <Mic className="size-4" aria-hidden />
+                {voiceId ? "Re-record" : "Answer by voice"}
+              </Button>
+            )}
+            <Button
+              className="min-h-11"
+              onClick={submit}
+              disabled={(!content && !voiceId) || create.isPending}
+            >
+              Answer
+            </Button>
+          </div>
         </>
       )}
       {first && !locked && (

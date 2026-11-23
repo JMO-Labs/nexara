@@ -30,12 +30,14 @@ from app.repositories.post_memories_repo import PostMemoriesRepository
 from app.repositories.recap_repo import RecapRepository
 from app.repositories.recipe_repo import RecipeRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.story_repo import StoryRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.services.celebration_service import CelebrationService
 from app.services.memories_service import MemoriesService
 from app.services.notification_service import NotificationService
 from app.services.notifications.types.list_payloads import item_title
+from app.services.story_service import StoryService
 from app.services.time_capsule_service import TimeCapsuleService
 
 SNIPPET = 140
@@ -190,6 +192,25 @@ async def my_chores(ctx: RecapContext) -> RecapSection | None:
     return {"key": "chores", "title": "Your chores this week", "items": items}
 
 
+async def story_requests(ctx: RecapContext) -> RecapSection | None:
+    """@brief Open story requests addressed to the viewer (not blocked / memorialized askers)."""
+    if not is_enabled(ctx.community, "voice_stories"):
+        return None
+    cid = ctx.community.id
+    notif = NotificationService(
+        NotificationRepository(ctx.session), SettingsRepository(ctx.session), cid
+    )
+    svc = StoryService(StoryRepository(ctx.session), CommunityRepository(ctx.session), notif, cid)
+    items = [
+        {
+            "text": f"{name} asks: {snippet(r.question)}",
+            "link": f"/app/members/{ctx.user.id}?tab=stories",
+        }
+        for r, name in await svc.pending_for(ctx.user.id, ctx.now)
+    ]
+    return {"key": "stories", "title": "Stories people asked you for", "items": items}
+
+
 SECTIONS: list[SectionBuilder] = [
     on_this_day,
     daily_question,
@@ -198,5 +219,6 @@ SECTIONS: list[SectionBuilder] = [
     new_albums,
     new_recipes,
     my_chores,
+    story_requests,
 ]
 """@brief Ordered section builders; append new ones here."""
