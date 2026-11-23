@@ -4,7 +4,7 @@
  * @brief Admin "Email" tab: outgoing SMTP settings with Gmail/Outlook presets
  *        and a test send. The password is write-only.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Input } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
@@ -12,6 +12,7 @@ import { useToasts } from "@/stores/toasts";
 import { formatApiError } from "@/lib/api/errors";
 import * as api from "@/lib/api/adminEmail";
 import { AdminLoading } from "./AdminState";
+import { GoogleConnect } from "./GoogleConnect";
 
 const KEY = ["admin", "email"];
 
@@ -91,7 +92,10 @@ function EmailForm({ data }: { data: api.EmailSettings }) {
   const save = useMutation({
     mutationFn: () => {
       const body: api.EmailUpdate = { ...form, port: Number(form.port) };
-      if (password) body.password = password;
+      if (password) {
+        body.password = password;
+        body.auth = "password";
+      }
       return api.putEmail(body);
     },
     onSuccess: (d) => {
@@ -141,6 +145,7 @@ function EmailForm({ data }: { data: api.EmailSettings }) {
         ))}
       </div>
       <Help preset={preset} />
+      {preset === "gmail" && <GoogleConnect data={data} />}
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -261,6 +266,23 @@ function EmailForm({ data }: { data: api.EmailSettings }) {
 
 /** @brief Email tab: loads saved settings, then the form. */
 export function EmailTab() {
+  const push = useToasts((s) => s.push);
+  useEffect(() => {
+    // Google redirects back here with ?google=connected|error.
+    const url = new URL(window.location.href);
+    const g = url.searchParams.get("google");
+    if (!g) return;
+    push(
+      g === "connected"
+        ? { variant: "success", message: "Google account connected" }
+        : {
+            variant: "danger",
+            message: "Could not connect the Google account",
+          },
+    );
+    url.searchParams.delete("google");
+    window.history.replaceState(null, "", url);
+  }, [push]);
   const { data } = useQuery({ queryKey: KEY, queryFn: api.getEmail });
   return data ? <EmailForm data={data} /> : <AdminLoading />;
 }

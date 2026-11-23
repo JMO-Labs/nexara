@@ -16,6 +16,9 @@ export interface EmailSettings {
   auth: "password" | "google_oauth";
   has_password: boolean;
   has_google_refresh: boolean;
+  google_client_id: string;
+  has_google_client_secret: boolean;
+  google_env_client: boolean;
   configured: boolean;
   last_ok_at: string | null;
   last_error: string | null;
@@ -30,6 +33,8 @@ export type EmailUpdate = Partial<{
   from_addr: string;
   from_name: string;
   auth: "password" | "google_oauth";
+  google_client_id: string;
+  google_client_secret: string;
 }>;
 
 export const EMAIL_URL = "/api/v1/admin/email";
@@ -42,3 +47,6 @@ export const putEmail = (body: EmailUpdate) =>
 /** @brief Send a test message to `to`. */
 export const testEmail = (to: string) =>
   apiPost<{ ok: boolean; error: string | null }>(`${EMAIL_URL}/test`, { to });
+/** @brief Google consent URL; the browser navigates there to connect the account. */
+export const googleStart = () =>
+  apiGet<{ url: string }>(`${EMAIL_URL}/google/start`);

@@ -26,6 +26,9 @@ const saved: EmailSettings = {
   auth: "password",
   has_password: false,
   has_google_refresh: false,
+  google_client_id: "",
+  has_google_client_secret: false,
+  google_env_client: false,
   configured: false,
   last_ok_at: null,
   last_error: null,
@@ -107,5 +110,34 @@ describe("EmailTab", () => {
     const body = client.apiPut.mock.calls[0][1];
     expect(body.host).toBe("mail.example.com");
     expect("password" in body).toBe(false);
+  });
+
+  it("Connect Google account fetches the consent URL and navigates", async () => {
+    client.apiGet
+      .mockResolvedValueOnce({ ...saved, google_env_client: true })
+      .mockResolvedValueOnce({ url: "https://accounts.google.com/x" });
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "Gmail" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Connect Google account" }),
+    );
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://accounts.google.com/x"),
+    );
+    expect(client.apiGet).toHaveBeenLastCalledWith(
+      "/api/v1/admin/email/google/start",
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("Connect is disabled without a Google client", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "Gmail" }));
+    expect(
+      screen.getByRole("button", { name: "Connect Google account" }),
+    ).toBeDisabled();
+    expect(screen.getByLabelText("Google client secret")).toBeInTheDocument();
   });
 });
