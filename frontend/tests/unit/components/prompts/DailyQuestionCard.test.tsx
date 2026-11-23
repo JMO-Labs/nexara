@@ -64,6 +64,15 @@ describe("DailyQuestionCard", () => {
     expect(screen.queryByLabelText("Your answer")).toBeNull();
   });
 
+  it("prefers the post's own question_text over the shared prompt body", () => {
+    st.page = { items: [] };
+    render(
+      <DailyQuestionCard post={{ ...post, question_text: "Yesterday's Q?" }} />,
+    );
+    expect(screen.getByText("Yesterday's Q?")).toBeTruthy();
+    expect(screen.queryByText("Best meal ever?")).toBeNull();
+  });
+
   it("renders nothing when the feature is off", () => {
     st.feature = false;
     st.page = {};

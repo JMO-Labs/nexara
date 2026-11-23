@@ -190,6 +190,7 @@ class PromptService:
                 post_id=post.id,
                 fired_at=today,
                 expires_at=expires_at,
+                question_text=prompt.body if prompt.prompt_type == "daily_question" else None,
             )
             await self._repo.create_prompt_post(tracker)
             active += 0 if group else 1

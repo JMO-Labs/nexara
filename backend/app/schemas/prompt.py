@@ -112,6 +112,7 @@ class PromptPostResponse(BaseModel):
     response_count: int
     is_finalised: bool
     summary_post_id: UUID | None
+    question_text: str | None = None
 
     model_config = {"from_attributes": True}
 

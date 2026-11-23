@@ -110,15 +110,36 @@ def _downgrade_gravatar() -> None:
     op.drop_column("user_settings", "gravatar_email")
 
 
+def _upgrade_question_text() -> None:
+    """@brief prompt_posts.question_text: per-post daily question text (+backfill)."""
+    op.add_column("prompt_posts", sa.Column("question_text", sa.Text(), nullable=True))
+    op.execute(
+        """
+        UPDATE prompt_posts pp
+        SET question_text = regexp_replace(po.content, '^\\*\\*[^\\n]*\\*\\*\\s*', '')
+        FROM posts po, prompts pr
+        WHERE po.id = pp.post_id AND pr.id = pp.prompt_id
+          AND pr.prompt_type = 'daily_question' AND pp.question_text IS NULL
+        """
+    )
+
+
+def _downgrade_question_text() -> None:
+    """@brief Drop prompt_posts.question_text."""
+    op.drop_column("prompt_posts", "question_text")
+
+
 def upgrade() -> None:
     """@brief Apply all 0068 changes."""
     _upgrade_mail()
     _upgrade_signin()
     _upgrade_gravatar()
+    _upgrade_question_text()
 
 
 def downgrade() -> None:
     """@brief Revert all 0068 changes."""
+    _downgrade_question_text()
     _downgrade_gravatar()
     _downgrade_signin()
     _downgrade_mail()

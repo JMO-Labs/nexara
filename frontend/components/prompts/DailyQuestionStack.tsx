@@ -45,7 +45,7 @@ function Row({ post, open, onToggle, reduced }: RowProps) {
           {post.subgroup_name ?? "Everyone"} · {dayLabel(post.fired_at)}
         </span>
         <span className="min-w-0 flex-1 truncate font-medium">
-          {post.prompt.body}
+          {post.question_text ?? post.prompt.body}
         </span>
         {answered === false && (
           <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">

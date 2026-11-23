@@ -59,14 +59,16 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
   return (
     <Card
       role="article"
-      aria-label={`Daily question: ${post.prompt.body}`}
+      aria-label={`Daily question: ${post.question_text ?? post.prompt.body}`}
       className="flex flex-col gap-3 border-l-4 border-accent p-4"
     >
       <p className="flex items-center gap-2 text-sm font-medium text-muted">
         <MessageCircleQuestion className="size-4" aria-hidden="true" />
         Question of the day
       </p>
-      <h3 className="text-lg leading-snug font-semibold">{post.prompt.body}</h3>
+      <h3 className="text-lg leading-snug font-semibold">
+        {post.question_text ?? post.prompt.body}
+      </h3>
       {locked && (
         <p className="flex items-center gap-2 text-sm text-muted">
           <Lock className="size-4 shrink-0" aria-hidden="true" />
