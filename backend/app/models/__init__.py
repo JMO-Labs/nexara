@@ -64,6 +64,7 @@ from app.models.question_bank import QuestionBank, QuestionBankUse  # noqa: F401
 from app.models.recipe import Recipe  # noqa: F401
 from app.models.reconnect import ReconnectSnooze  # noqa: F401
 from app.models.relation import Relation  # noqa: F401
+from app.models.reply_token import InboundReply, ReplyToken  # noqa: F401
 from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot  # noqa: F401
 from app.models.story_request import StoryRequest  # noqa: F401
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401

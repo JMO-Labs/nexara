@@ -35,6 +35,7 @@ celery_app = Celery(
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
         "app.tasks.gallery_tasks",
+        "app.tasks.inbound_email_tasks",
         "app.tasks.group_tag_tasks",
         "app.tasks.link_preview_tasks",
         "app.tasks.list_tasks",
@@ -83,6 +84,7 @@ celery_app.conf.update(
         "chores.*": {"queue": "maintenance"},
         "trips.*": {"queue": "notifications"},
         "stories.*": {"queue": "notifications"},
+        "inbound_email.*": {"queue": "email"},
         "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
@@ -246,6 +248,10 @@ celery_app.conf.update(
         "trips-sweep": {
             "task": "trips.sweep",
             "schedule": crontab(minute="*/5"),
+        },
+        "inbound-email-poll": {
+            "task": "inbound_email.poll",
+            "schedule": crontab(minute="*"),
         },
         "stories-daily": {
             "task": "stories.daily",

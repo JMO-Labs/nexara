@@ -107,3 +107,21 @@ class TestSenderName:
         with patch("app.services.email.sender.SMTP", return_value=ctx):
             await EmailSender(settings=settings).send("u@example.com", "S", "<p>x</p>")
         assert ctx.send_message.call_args.args[0]["From"] == "noreply@example.com"
+
+
+class TestReplyTo:
+    """@brief Reply-To header is set only when asked."""
+
+    @pytest.mark.asyncio
+    async def test_reply_to_header(self):
+        s = MagicMock(SMTP_HOST="h", SMTP_PORT=465, SMTP_USER="", SMTP_PASSWORD="")
+        s.SMTP_FROM = "n@example.com"
+        ctx = MagicMock(send_message=AsyncMock())
+        ctx.__aenter__ = AsyncMock(return_value=ctx)
+        ctx.__aexit__ = AsyncMock(return_value=None)
+        with patch("app.services.email.sender.SMTP", return_value=ctx):
+            await EmailSender(settings=s).send("u@e.com", "S", "<p>x</p>", reply_to="r+t@e.com")
+            await EmailSender(settings=s).send("u@e.com", "S", "<p>x</p>")
+        first, second = (c.args[0] for c in ctx.send_message.await_args_list)
+        assert first["Reply-To"] == "r+t@e.com"
+        assert second["Reply-To"] is None

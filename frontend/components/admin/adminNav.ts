@@ -11,6 +11,7 @@ import {
   ToggleRight,
   History,
   KeyRound,
+  Mail,
   MailPlus,
   MessageSquareQuote,
   Puzzle,
@@ -51,7 +52,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (12 tabs + 4 route links). */
+/** @brief Grouped admin sections (13 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -128,6 +129,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Shopping",
         "Amazon keys for live wishlist prices.",
         ShoppingBag,
+      ),
+      tab(
+        "email-reply",
+        "Email replies",
+        "Let members reply to emails to comment.",
+        Mail,
       ),
       route(
         "plugins",
