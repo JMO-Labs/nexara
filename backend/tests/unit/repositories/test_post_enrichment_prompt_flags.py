@@ -47,6 +47,7 @@ def _post(**flags: object) -> MagicMock:
     post.is_prompt_summary = flags.get("is_prompt_summary", False)
     post.reply_to_prompt_id = flags.get("reply_to_prompt_id")
     post.source_prompt_post_id = flags.get("source_prompt_post_id")
+    post.recipient_id = None
     return post
 
 

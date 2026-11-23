@@ -61,6 +61,7 @@ class TestPostRepositorySoftDeletePost:
         """soft_delete_post should return True when post exists and is deleted."""
         session = _make_session()
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id = POST_ID
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = post
@@ -112,6 +113,7 @@ class TestPostRepositoryListFeed:
         now = datetime.now(UTC)
 
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id, post.content = POST_ID, "Group post"
         post.created_at = post.updated_at = now
         post.subgroup_id = subgroup_id
@@ -168,6 +170,7 @@ class TestPostRepositoryListFeed:
         now = datetime.now(UTC)
 
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id, post.content = POST_ID, "Community post"
         post.created_at = post.updated_at = now
         post.subgroup_id = None
@@ -207,10 +210,12 @@ class TestPostRepositoryListFeed:
         session = _make_session()
         now = datetime.now(UTC)
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id, post.content = POST_ID, "Test post"
         post.created_at = post.updated_at = now
         post.subgroup_id = None
         post2 = MagicMock(spec=Post)
+        post2.recipient_id = None
         post2.id, post2.content = uuid.uuid4(), "Second"
         post2.created_at = post2.updated_at = now
         post2.subgroup_id = None
@@ -269,6 +274,7 @@ class TestPostRepositoryGetPostDetail:
         """get_post_detail should return enriched post dict when found."""
         session = _make_session()
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id, post.content = POST_ID, "Test content"
         post.subgroup_id = None
         user = MagicMock(spec=User)
@@ -393,6 +399,7 @@ class TestListFeedVisibilityPredicate:
         now = datetime.now(UTC)
 
         post = MagicMock(spec=Post)
+        post.recipient_id = None
         post.id, post.content = POST_ID, "Subgroup post"
         post.created_at = post.updated_at = now
         post.subgroup_id = subgroup_id
@@ -543,6 +550,7 @@ class TestPostRepositoryListResponses:
         rows = []
         for i in range(n):
             row = MagicMock(spec=Post)
+            row.recipient_id = None
             row.id = uuid.uuid4()
             row.created_at = datetime(2026, 1, 10 - i, tzinfo=UTC)
             rows.append(row)

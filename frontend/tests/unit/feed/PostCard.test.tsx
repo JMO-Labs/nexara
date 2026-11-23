@@ -214,18 +214,25 @@ describe("PostCard kudos", () => {
       recipient: { id: "u2", display_name: "Ana Lima", avatar_url: null },
     } as unknown as Post;
     render(<PostCard post={kudos} />);
-    const card = screen.getByRole("article");
-    expect(card.className).toMatch(/glass-item/);
-    expect(screen.getByText("Ana Lima")).toHaveClass("font-bold");
+    const card = screen.getByRole("article", { name: /Kudos to Ana Lima/ });
+    expect(
+      screen.getByRole("heading", { name: /Kudos to Ana Lima/ }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ana Lima" })).toHaveAttribute(
+      "href",
+      "/app/members/u2",
+    );
     expect(screen.getByTestId("kudos-message")).toHaveTextContent(
       "Thanks for the help!",
     );
-    expect(card).toHaveTextContent("Alice");
+    expect(card).toHaveTextContent("from Alice");
+    expect(screen.getByRole("button", { name: "Comments" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add reaction" })).toBeTruthy();
   });
 
   it("renders the normal card without a recipient", () => {
     render(<PostCard post={base} />);
     expect(screen.queryByTestId("kudos-trophy")).toBeNull();
-    expect(screen.queryByTestId("kudos-bar")).toBeNull();
+    expect(screen.queryByTestId("kudos-glow")).toBeNull();
   });
 });

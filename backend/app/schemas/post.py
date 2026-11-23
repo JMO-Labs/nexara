@@ -48,12 +48,22 @@ class ReactionSummary(BaseModel):
     reacted_by_me: bool = False
 
 
+class PostRecipientResponse(BaseModel):
+    """@brief Kudos recipient summary embedded in a post."""
+
+    id: UUID
+    display_name: str
+    avatar_url: str | None = None
+
+
 class PostResponse(BaseModel):
     """@brief Full post object returned by the feed API."""
 
     id: UUID
     content: str
     author: PostAuthorResponse
+    recipient_id: UUID | None = None
+    recipient: PostRecipientResponse | None = None
     media: list[PostMediaResponse] = Field(default_factory=list)
     poll: PollResponse | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)

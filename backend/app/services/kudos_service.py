@@ -19,13 +19,16 @@ from app.schemas.kudos import KudosCreate, KudosRecipient, KudosResponse
 from app.services.notification_service import NotificationService
 
 
-def _to_response(post: Post, recipient: User | None = None) -> KudosResponse:
-    """@brief Map a kudos Post (and optional recipient) to the response schema."""
+def _to_response(
+    post: Post, recipient: User | None = None, author_name: str | None = None
+) -> KudosResponse:
+    """@brief Map a kudos Post (and optional recipient/author name) to the response schema."""
     return KudosResponse(
         id=post.id,
         recipient_id=post.recipient_id,
         message=post.content or None,
         author_id=post.author_id,
+        author_name=author_name,
         subgroup_id=post.subgroup_id,
         created_at=post.created_at,
         recipient=KudosRecipient.model_validate(recipient) if recipient else None,
@@ -75,7 +78,7 @@ class KudosService:
             {"message": _("You received kudos"), "link": f"/app/posts/{post.id}"},
             author.id,
         )
-        return _to_response(post, recipient)
+        return _to_response(post, recipient, author.display_name)
 
     async def _list(
         self, viewer_id: uuid.UUID, recipient_id: uuid.UUID | None, cursor: str | None, limit: int
@@ -83,8 +86,14 @@ class KudosService:
         rows, next_cursor = await self._repo.list_kudos(
             self._community_id, viewer_id, recipient_id=recipient_id, cursor=cursor, limit=limit
         )
+        authors = {
+            u.id: u.display_name
+            for u in await self._users.get_many(
+                {p.author_id for p, _r in rows}, self._community_id, viewer_id=viewer_id
+            )
+        }
         return {
-            "kudos": [_to_response(p, r) for p, r in rows],
+            "kudos": [_to_response(p, r, authors.get(p.author_id)) for p, r in rows],
             "pagination": {"cursor": next_cursor, "has_more": next_cursor is not None},
         }
 

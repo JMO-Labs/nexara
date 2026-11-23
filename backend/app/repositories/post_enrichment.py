@@ -43,6 +43,12 @@ async def enrich_posts(
     posts_result = await session.execute(posts_stmt)
     post_rows = posts_result.all()
 
+    recipient_ids = {p.recipient_id for p, _ in post_rows if p.recipient_id is not None}
+    recipient_map: dict[uuid.UUID, User] = {}
+    if recipient_ids:
+        rec_result = await session.execute(select(User).where(User.id.in_(recipient_ids)))
+        recipient_map = {u.id: u for u in rec_result.scalars().all()}
+
     subgroup_ids = {p.subgroup_id for p, _ in post_rows if p.subgroup_id is not None}
     subgroup_name_map: dict[uuid.UUID, str] = {}
     subgroup_slug_map: dict[uuid.UUID, str] = {}
@@ -237,6 +243,16 @@ async def enrich_posts(
                 "display_name": author.display_name,
                 "avatar_url": author.avatar_url,
             },
+            "recipient_id": str(post.recipient_id) if post.recipient_id else None,
+            "recipient": (
+                {
+                    "id": str(recipient_map[post.recipient_id].id),
+                    "display_name": recipient_map[post.recipient_id].display_name,
+                    "avatar_url": recipient_map[post.recipient_id].avatar_url,
+                }
+                if post.recipient_id in recipient_map
+                else None
+            ),
             "media": media_map.get(post.id, []),
             "poll": poll_map.get(post.id),
             "reactions": reaction_map.get(post.id, []),

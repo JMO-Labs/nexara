@@ -61,6 +61,7 @@ def service(repos):
 def _author():
     u = MagicMock(spec=User)
     u.id = AUTHOR_ID
+    u.display_name = "Richard"
     return u
 
 
