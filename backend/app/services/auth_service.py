@@ -189,11 +189,11 @@ class AuthService:
 
         user_id = uuid.UUID(payload["sub"])
         fail = partial(log_failure, self._settings, request=request)
+        user = await self._user_repo.get_by_id(user_id)
         if not await reserve_attempt(two_factor_token, user_id, self._settings):
-            await fail(None, None, "totp", "bad_2fa_session")
+            await fail(user, user.email if user else None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        user = await self._user_repo.get_by_id(user_id)
         if not user or not user.totp_secret:
             await fail(user, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))

@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 
 from redis.exceptions import RedisError
-from sqlalchemy import select
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -95,15 +95,20 @@ async def clear_user_attempts(user_id: uuid.UUID, settings: Settings) -> None:
 
 
 async def consume_backup_code(session: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
-    """@brief Mark an unused backup code as used.  @return True if one matched."""
-    stmt = select(UserBackupCode).where(
-        UserBackupCode.user_id == user_id,
-        UserBackupCode.code_hash == hash_token(code),
-        UserBackupCode.used_at.is_(None),
+    """
+    @brief Spend an unused backup code with one atomic UPDATE ... RETURNING.
+
+    @return True only if this call flipped the row (concurrent callers lose).
+    """
+    stmt = (
+        update(UserBackupCode)
+        .where(
+            UserBackupCode.user_id == user_id,
+            UserBackupCode.code_hash == hash_token(code),
+            UserBackupCode.used_at.is_(None),
+        )
+        .values(used_at=datetime.now(UTC))
+        .returning(UserBackupCode.id)
+        .execution_options(synchronize_session=False)
     )
-    backup = (await session.execute(stmt)).scalar_one_or_none()
-    if not backup:
-        return False
-    backup.used_at = datetime.now(UTC)
-    await session.flush()
-    return True
+    return (await session.execute(stmt)).first() is not None
