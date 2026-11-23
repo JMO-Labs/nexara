@@ -112,7 +112,7 @@ export function ConversationHeader(p: ConversationHeaderProps) {
               p.onQuery("");
             }
           }}
-          className="h-10 w-28 rounded-full bg-[var(--nx-glass-solid)] pl-9 pr-3 text-sm outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent sm:w-44"
+          className={`h-10 rounded-full bg-[var(--nx-glass-solid)] pl-9 pr-3 text-sm outline-none placeholder:text-transparent focus:w-40 focus-visible:outline-2 focus-visible:outline-accent sm:w-44 sm:placeholder:text-muted motion-safe:transition-[width] ${searching ? "w-40" : "w-10"}`}
         />
         <span role="status" aria-live="polite" className="sr-only">
           {searching

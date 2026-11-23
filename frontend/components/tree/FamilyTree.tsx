@@ -201,6 +201,7 @@ export function FamilyTree({
                   x={lay.positions[n.id].x}
                   y={lay.positions[n.id].y}
                   onFocus={() => keepVisible(lay.positions[n.id])}
+                  isRoot={"root" in data && n.id === data.root}
                 />
               ))}
             </div>

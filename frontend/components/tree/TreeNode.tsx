@@ -28,11 +28,14 @@ export function TreeNode({
   x,
   y,
   onFocus,
+  isRoot = false,
 }: {
   node: Node;
   x: number;
   y: number;
   onFocus?: () => void;
+  /** The person the tree is centred on (you, on the family page). */
+  isRoot?: boolean;
 }) {
   const span = lifespan(node);
   const style = { left: x, top: y, width: NODE_W, height: NODE_H };
@@ -53,6 +56,7 @@ export function TreeNode({
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium">{node.name}</span>
+          {isRoot && <span className="block text-xs text-muted">You</span>}
           {node.memorial && (
             <span className="block truncate text-xs text-muted">
               {span ?? "Remembered"}
@@ -61,7 +65,11 @@ export function TreeNode({
         </span>
       </>
     );
-  const cls = cn(BOX, node.memorial && "border-dashed opacity-80");
+  const cls = cn(
+    BOX,
+    node.memorial && "border-dashed opacity-80",
+    isRoot && "ring-2 ring-accent",
+  );
   if (node.link) {
     return (
       <Link
