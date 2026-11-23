@@ -41,6 +41,7 @@ class EmailSender:
         *,
         list_unsubscribe: str | None = None,
         sender_name: str | None = None,
+        reply_to: str | None = None,
     ) -> bool:
         """
         @brief Send an email via SMTP.
@@ -54,6 +55,7 @@ class EmailSender:
         @param text_body Optional plain-text body.
         @param list_unsubscribe Optional List-Unsubscribe header value.
         @param sender_name Optional display name for the From header.
+        @param reply_to Optional Reply-To address (reply-by-email).
         @return True if sent, False if skipped (SMTP not configured).
         """
         if not self._settings.SMTP_HOST:
@@ -68,6 +70,9 @@ class EmailSender:
         from_addr = self._settings.SMTP_FROM or "noreply@nexara.local"
         msg["From"] = formataddr((sender_name, from_addr)) if sender_name else from_addr
         msg["To"] = to
+
+        if reply_to:
+            msg["Reply-To"] = reply_to
 
         if list_unsubscribe:
             msg["List-Unsubscribe"] = list_unsubscribe
