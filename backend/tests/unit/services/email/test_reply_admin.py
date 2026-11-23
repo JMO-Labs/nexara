@@ -67,4 +67,4 @@ async def test_test_button_outcomes():
         out = await svc.test()
         assert not out["success"] and "hunter2" not in str(out)
         chk.side_effect = OSError("down")
-        assert "reach" in (await svc.test())["message"]
+        assert (await svc.test())["message"] == "Could not connect and sign in."

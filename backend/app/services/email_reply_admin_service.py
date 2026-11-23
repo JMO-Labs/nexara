@@ -100,8 +100,7 @@ class EmailReplyAdminService:
                 c.inbound_imap_user or "",
                 password,
             )
-        except imaplib.IMAP4.error:
-            return {"success": False, "message": "The mail server refused the login."}
-        except OSError:
-            return {"success": False, "message": "Could not reach the mail server."}
+        except (imaplib.IMAP4.error, OSError):
+            # One message for every failure, so the button can't map the network.
+            return {"success": False, "message": "Could not connect and sign in."}
         return {"success": True, "message": "Connected. The inbox can be read."}

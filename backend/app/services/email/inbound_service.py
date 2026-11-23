@@ -82,7 +82,8 @@ class InboundService:
         if row is None or row.expires_at <= now or row.community_id != self._cid:
             return "ignored"
         user = await self._session.get(User, row.user_id)
-        if not self._user_ok(user, reply_parse.sender_address(msg)):
+        sender = reply_parse.sender_address(msg)
+        if not self._user_ok(user, sender) or not reply_parse.authenticated(msg, sender):
             return "ignored"
         assert user is not None
         post = await self._posts.get_by_id(row.post_id, community_id=self._cid)

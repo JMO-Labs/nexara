@@ -20,8 +20,13 @@ CID = uuid.uuid4()
 TOKEN = "T" * 24
 
 
-def _msg(body="Thanks!", sender="ruth@example.com", **headers) -> EmailMessage:
+def _msg(body="Thanks!", sender="ruth@example.com", auth=True, **headers) -> EmailMessage:
     m = EmailMessage()
+    if auth:  # what the receiving mail server adds for a genuine message
+        domain = sender.rsplit("@", 1)[-1].rstrip(">").lower()
+        m["Authentication-Results"] = (
+            f"mx.example.net; dkim=pass header.i=@{domain}; dmarc=pass header.from={domain}"
+        )
     m["From"] = sender
     m["To"] = f"reply+{TOKEN}@mail.example.com"
     for k, v in headers.items():
@@ -166,3 +171,21 @@ async def test_empty_after_cleaning_ignored():
     svc, ps, *_ = _svc()
     assert await svc.process(_msg("> only quoted\n")) == "ignored"
     ps.add_comment.assert_not_awaited()
+
+
+async def test_forged_sender_without_authentication_is_ignored() -> None:
+    svc, ps, *_ = _svc()
+    assert await svc.process(_msg(auth=False)) == "ignored"
+    ps.add_comment.assert_not_awaited()
+
+
+def test_authenticated_requires_aligned_domain() -> None:
+    from app.services.email.reply_parse import authenticated
+
+    good = _msg()
+    assert authenticated(good, "ruth@example.com") is True
+    other = _msg(sender="ruth@example.com")
+    del other["Authentication-Results"]
+    other["Authentication-Results"] = "mx; dkim=pass header.d=evil.com; dmarc=fail"
+    assert authenticated(other, "ruth@example.com") is False
+    assert authenticated(_msg(auth=False), "ruth@example.com") is False

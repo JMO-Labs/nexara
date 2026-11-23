@@ -146,3 +146,30 @@ def clean_body(msg: Message) -> str | None:
         kept.pop()  # trailing blanks and Outlook's "____" divider
     text = "\n".join(kept).strip()
     return text if text and len(text) <= MAX_BODY else None
+
+
+_AUTH_PASS = re.compile(
+    r"\b(?:dkim=pass[^;]*header\.(?:d|i)=@?(?P<d>[\w.-]+)"
+    r"|dmarc=pass[^;]*header\.from=(?P<f>[\w.-]+))",
+    re.I,
+)
+
+
+def authenticated(msg: Message, sender: str | None) -> bool:
+    """
+    @brief The receiving server vouched for the sender's domain: the topmost
+           Authentication-Results header has dkim=pass or dmarc=pass aligned
+           with the From domain. The token alone is a bearer secret; this
+           stops a leaked reply address being used with a forged From.
+    """
+    if not sender or "@" not in sender:
+        return False
+    domain = sender.rsplit("@", 1)[1].lower()
+    results = msg.get_all("Authentication-Results") or []
+    if not results:
+        return False
+    for m in _AUTH_PASS.finditer(str(results[0])):
+        got = (m.group("d") or m.group("f") or "").lower()
+        if got == domain or domain.endswith("." + got):
+            return True
+    return False

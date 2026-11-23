@@ -62,7 +62,7 @@ function ReplyForm({ data }: { data: api.EmailReplySettings }) {
     mutationFn: () => {
       const body: api.EmailReplyUpdate = {
         ...form,
-        imap_port: Number(form.imap_port) || 993,
+        imap_port: 993,
       };
       if (password) body.imap_password = password;
       return api.putEmailReply(body);
@@ -115,12 +115,9 @@ function ReplyForm({ data }: { data: api.EmailReplySettings }) {
           />
           <Input
             label="IMAP port (SSL)"
-            type="number"
-            min={1}
-            max={65535}
-            value={form.imap_port}
-            onChange={set("imap_port")}
-            autoComplete="off"
+            value="993"
+            readOnly
+            hint="Replies are read over IMAP with SSL on port 993."
           />
           <Input
             label="Mailbox user name"

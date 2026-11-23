@@ -24,7 +24,8 @@ class EmailReplyUpdate(BaseModel):
     """@brief Partial update; '' clears a text field, an omitted field is kept."""
 
     imap_host: str | None = Field(None, max_length=253, pattern=r"^$|^[A-Za-z0-9.-]+$")
-    imap_port: int | None = Field(None, ge=1, le=65535)
+    # IMAP over TLS only; a fixed port keeps the Test button from probing others.
+    imap_port: int | None = Field(None, ge=993, le=993)
     imap_user: str | None = Field(None, max_length=254)
     imap_password: str | None = Field(None, max_length=500)
     reply_address: str | None = Field(

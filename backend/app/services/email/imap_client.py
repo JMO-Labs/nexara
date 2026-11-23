@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import imaplib
+import re
+import ssl
 
 TIMEOUT = 20
 """@brief Socket timeout in seconds."""
@@ -14,13 +16,16 @@ TIMEOUT = 20
 MAX_PER_POLL = 50
 """@brief Messages handled per poll."""
 
+MAX_BYTES = 1_000_000
+"""@brief Larger messages are skipped (and deleted) without being downloaded."""
+
 
 def connect(host: str, port: int, user: str, password: str) -> imaplib.IMAP4_SSL:
     """
     @brief Open an SSL connection, log in and select INBOX.
     @throws imaplib.IMAP4.error on refused login; OSError on network trouble.
     """
-    conn = imaplib.IMAP4_SSL(host, port, timeout=TIMEOUT)
+    conn = imaplib.IMAP4_SSL(host, port, ssl_context=ssl.create_default_context(), timeout=TIMEOUT)
     try:
         conn.login(user, password)
         conn.select("INBOX")
@@ -55,6 +60,9 @@ def fetch_unseen(
         nums = (data[0] or b"").split()[:MAX_PER_POLL]
         out: list[tuple[bytes, bytes]] = []
         for num in nums:
+            if _size(conn, num) > MAX_BYTES:
+                out.append((num, b""))  # parses as empty -> ignored, then deleted
+                continue
             _typ, parts = conn.fetch(num.decode(), "(BODY.PEEK[])")
             for part in parts:
                 if isinstance(part, tuple):
@@ -64,6 +72,15 @@ def fetch_unseen(
         _close(conn)
         raise
     return conn, out
+
+
+def _size(conn: imaplib.IMAP4_SSL, num: bytes) -> int:
+    """@brief RFC822.SIZE of one message (0 when the server doesn't say)."""
+    _typ, data = conn.fetch(num.decode(), "(RFC822.SIZE)")
+    head = data[0] if data else b""
+    raw = head[0] if isinstance(head, tuple) else head
+    m = re.search(rb"RFC822\.SIZE (\d+)", raw or b"")
+    return int(m.group(1)) if m else 0
 
 
 def finish(conn: imaplib.IMAP4_SSL, nums: list[bytes]) -> None:
