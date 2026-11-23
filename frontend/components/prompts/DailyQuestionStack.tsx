@@ -41,19 +41,19 @@ function Row({ post, open, onToggle, reduced }: RowProps) {
         onClick={onToggle}
         className="hover:bg-surface flex min-h-11 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
       >
-        <span className="shrink-0 text-xs text-muted">
+        <span className="max-w-[9rem] shrink-0 truncate text-xs text-muted">
           {post.subgroup_name ?? "Everyone"} · {dayLabel(post.fired_at)}
         </span>
         <span className="min-w-0 flex-1 truncate font-medium">
           {post.question_text ?? post.prompt.body}
         </span>
         {answered === false && (
-          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-foreground">
+          <span className="shrink-0 rounded-full bg-surface-strong px-2 py-0.5 text-xs font-semibold text-bg">
             Answer
           </span>
         )}
         {answered === true && (
-          <span className="shrink-0 text-xs text-muted">
+          <span className="shrink-0 text-xs whitespace-nowrap text-muted">
             ✓ Answered · {count} {count === 1 ? "answer" : "answers"}
           </span>
         )}
@@ -67,7 +67,7 @@ function Row({ post, open, onToggle, reduced }: RowProps) {
         />
       </button>
       <div id={panel} hidden={!open} className="pt-2 pb-1">
-        {open && <DailyQuestionCard post={post} />}
+        {open && <DailyQuestionCard post={post} embedded />}
       </div>
     </li>
   );

@@ -26,7 +26,9 @@ export function stackIndex(
  * @return label
  */
 export function dayLabel(iso: string, now: Date = new Date()): string {
-  const d = new Date(iso);
+  // Date-only strings ("2026-11-23") are local calendar days, not UTC.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso);
   const start = (x: Date) =>
     new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((start(now) - start(d)) / 86_400_000);

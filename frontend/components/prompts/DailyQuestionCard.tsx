@@ -15,6 +15,7 @@ import { SuggestQuestionDialog } from "@/components/prompts/SuggestQuestionDialo
 import { useFeature } from "@/hooks/useFeature";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useInfinitePromptResponses } from "@/hooks/usePromptResponses";
+import { cn } from "@/lib/utils";
 import { qk } from "@/lib/query-keys";
 import { mediaFileUrl } from "@/lib/api/media";
 import type { PromptPost } from "@/lib/api/prompts";
@@ -22,9 +23,17 @@ import type { PromptPost } from "@/lib/api/prompts";
 /**
  * @brief Card for a daily_question prompt post.
  * @param post the active prompt post
+ * @param embedded render as a row body inside the stack
  * @return card element, or null when the feature is off
  */
-export function DailyQuestionCard({ post }: { post: PromptPost }) {
+export function DailyQuestionCard({
+  post,
+  embedded = false,
+}: {
+  post: PromptPost;
+  /** Hide header + title (shown by the parent row) and drop the card chrome. */
+  embedded?: boolean;
+}) {
   const on = useFeature("daily_question");
   const qc = useQueryClient();
   const [text, setText] = React.useState("");
@@ -35,6 +44,7 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
   const q = useInfinitePromptResponses(post.id);
   if (!on) return null;
 
+  const question = post.question_text ?? post.prompt.body;
   const first = q.data?.pages[0];
   const locked = first?.locked === true;
   const answered = first?.answered === true;
@@ -59,16 +69,23 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
   return (
     <Card
       role="article"
-      aria-label={`Daily question: ${post.question_text ?? post.prompt.body}`}
-      className="flex flex-col gap-3 border-l-4 border-accent p-4"
+      aria-label={`Daily question: ${question}`}
+      className={cn(
+        "flex flex-col gap-3",
+        embedded
+          ? "border-0 bg-transparent p-2 shadow-none"
+          : "border-l-4 border-accent p-4",
+      )}
     >
-      <p className="flex items-center gap-2 text-sm font-medium text-muted">
-        <MessageCircleQuestion className="size-4" aria-hidden="true" />
-        Question of the day
-      </p>
-      <h3 className="text-lg leading-snug font-semibold">
-        {post.question_text ?? post.prompt.body}
-      </h3>
+      {!embedded && (
+        <>
+          <p className="flex items-center gap-2 text-sm font-medium text-muted">
+            <MessageCircleQuestion className="size-4" aria-hidden="true" />
+            Question of the day
+          </p>
+          <h3 className="text-lg leading-snug font-semibold">{question}</h3>
+        </>
+      )}
       {locked && (
         <p className="flex items-center gap-2 text-sm text-muted">
           <Lock className="size-4 shrink-0" aria-hidden="true" />
@@ -89,6 +106,7 @@ export function DailyQuestionCard({ post }: { post: PromptPost }) {
         <>
           <Textarea
             label="Your answer"
+            aria-label={embedded ? `Your answer to: ${question}` : undefined}
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={2}

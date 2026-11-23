@@ -73,6 +73,16 @@ describe("DailyQuestionCard", () => {
     expect(screen.queryByText("Best meal ever?")).toBeNull();
   });
 
+  it("embedded: hides header and title, keeps a labelled textarea", () => {
+    st.page = { items: [] };
+    render(<DailyQuestionCard post={post} embedded />);
+    expect(screen.queryByText("Question of the day")).toBeNull();
+    expect(screen.queryByText("Best meal ever?")).toBeNull();
+    expect(
+      screen.getByLabelText("Your answer to: Best meal ever?"),
+    ).toBeTruthy();
+  });
+
   it("renders nothing when the feature is off", () => {
     st.feature = false;
     st.page = {};
