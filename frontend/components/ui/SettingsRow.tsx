@@ -1,6 +1,6 @@
 /**
  * @file components/ui/SettingsRow.tsx
- * @brief Two-column settings layout (label left, control right on md+).
+ * @brief Two-column settings layout: fixed label column, control fills the rest (md+).
  */
 import * as React from "react";
 
@@ -22,15 +22,17 @@ export const SettingsRow = React.forwardRef<HTMLDivElement, SettingsRowProps>(
     return (
       <div
         ref={ref}
-        className="grid grid-cols-1 items-start gap-2 py-3 md:grid-cols-12 md:gap-4"
+        className="grid grid-cols-1 gap-2 border-b border-[var(--nx-glass-edge)] py-4 last:border-b-0 md:grid-cols-[15rem_minmax(0,1fr)] md:items-center md:gap-8"
       >
-        <div className="md:col-span-4">
+        <div className="min-w-0">
           <p className="text-sm font-semibold">{label}</p>
           {description && (
-            <p className="mt-0.5 text-xs text-muted">{description}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              {description}
+            </p>
           )}
         </div>
-        <div className="md:col-span-8">{children}</div>
+        <div className="min-w-0">{children}</div>
       </div>
     );
   },
