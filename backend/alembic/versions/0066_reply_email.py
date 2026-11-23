@@ -14,7 +14,7 @@ from alembic import op
 
 revision = "0066_reply_email"
 # ponytail: chained to 0063 in this worktree; orchestrator re-chains at merge.
-down_revision = "0063_stories"
+down_revision = "0065_newsletter"
 branch_labels = None
 depends_on = None
 

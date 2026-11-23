@@ -35,7 +35,7 @@ logger = structlog.get_logger(__name__)
 
 async def _handle(session: Any, cid: uuid.UUID, raw: bytes) -> str:
     """@brief Process one raw message in its own transaction; never raises."""
-    from app.api.v1.posts import _build_service  # same wiring as the comment route
+    from app.services.post_factory import build_post_service
 
     try:
         service = InboundService(
@@ -43,7 +43,7 @@ async def _handle(session: Any, cid: uuid.UUID, raw: bytes) -> str:
             CommunityRepository(session),
             ModerationRepository(session),
             PostRepository(session),
-            _build_service(session, cid, get_settings()),
+            build_post_service(session, cid, get_settings()),
             session,
             cid,
         )
