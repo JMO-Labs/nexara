@@ -14,7 +14,6 @@ TRIP_OVERDUE_TYPE = NotificationType(
     group_window_seconds=None,
     toast_on_arrival=True,
     digestable=False,
-    bypass_dnd=True,  # safety alert: someone may be in trouble
     label_i18n="notif.trip_overdue.label",
     icon="siren",
 )
