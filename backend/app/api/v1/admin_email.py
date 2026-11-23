@@ -8,9 +8,11 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Cookie, Depends, Response
 from fastapi.responses import RedirectResponse
 
+from app.api.v1.auth import _should_secure_cookie
+from app.core.config import Settings, get_settings
 from app.core.dependencies import (
     get_admin_email_service,
     get_google_mail_service,
@@ -62,17 +64,37 @@ async def test_email_settings(
 
 @router.get("/google/start")
 async def google_start(
+    response: Response,
     admin: User = Depends(require_role("admin")),
     svc: GoogleMailService = Depends(get_google_mail_service),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, str]:
-    """@brief Google consent URL for the browser to open."""
-    return {"url": await svc.start(admin.id)}
+    """@brief Google consent URL; also binds the flow to this browser via a cookie."""
+    url, nonce = await svc.start(admin.id)
+    response.set_cookie(
+        NONCE_COOKIE,
+        nonce,
+        max_age=600,
+        httponly=True,
+        secure=_should_secure_cookie(settings),
+        samesite="lax",
+        path=NONCE_PATH,
+    )
+    return {"url": url}
 
 
 #: No router-level auth: Google redirects the browser here. The state (bound to the
 #: initiating admin in Valkey) is the credential and is re-checked in the service.
 callback_router = APIRouter(prefix="/admin/email", tags=["admin-email"])
 _DONE = "/app/admin?tab=email&google="
+NONCE_COOKIE = "nx_gmail_nonce"
+NONCE_PATH = "/api/v1/admin/email/google"
+
+
+def _redirect(result: str) -> RedirectResponse:
+    resp = RedirectResponse(_DONE + result, status_code=303)
+    resp.delete_cookie(NONCE_COOKIE, path=NONCE_PATH)
+    return resp
 
 
 @callback_router.get("/google/callback")
@@ -80,14 +102,15 @@ async def google_callback(
     code: str = "",
     state: str = "",
     error: str = "",
+    nonce: str | None = Cookie(None, alias=NONCE_COOKIE),
     svc: GoogleMailService = Depends(get_google_mail_service),
 ) -> RedirectResponse:
     """@brief Finish the Google connection, then send the browser back to the Email tab."""
     if error or not code or not state:
-        return RedirectResponse(_DONE + "error", status_code=303)
+        return _redirect("error")
     try:
-        await svc.complete(code, state)
+        await svc.complete(code, state, nonce)
     except AppError as exc:
         logger.warning("google_mail_connect_failed", code=exc.code)
-        return RedirectResponse(_DONE + "error", status_code=303)
-    return RedirectResponse(_DONE + "connected", status_code=303)
+        return _redirect("error")
+    return _redirect("connected")

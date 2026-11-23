@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import secrets
 import uuid
 from typing import Any
@@ -19,6 +22,10 @@ from app.services.email.smtp_settings import config_from_row
 
 STATE_TTL = 600
 CALLBACK_PATH = "/api/v1/admin/email/google/callback"
+
+
+def _hash(nonce: str) -> str:
+    return hashlib.sha256(nonce.encode()).hexdigest()
 
 
 class GoogleMailService:
@@ -60,26 +67,42 @@ class GoogleMailService:
             )
         return cid, secret
 
-    async def start(self, admin_id: uuid.UUID) -> str:
-        """@return Google consent URL; state is stored 10 minutes, single use."""
+    async def start(self, admin_id: uuid.UUID) -> tuple[str, str]:
+        """
+        @return (consent URL, browser nonce). The caller sets the nonce as an HttpOnly
+                cookie; only its hash and the PKCE verifier are kept with the state.
+        """
         client_id, _secret = await self._client()
         state = secrets.token_urlsafe(32)
-        await self._vk.set(f"smtp:google_state:{state}", str(admin_id), ex=STATE_TTL)
-        return build_auth_url(client_id, self.redirect_uri, state)
+        nonce = secrets.token_urlsafe(32)
+        verifier = secrets.token_urlsafe(48)
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        record = {"uid": str(admin_id), "nh": _hash(nonce), "cv": verifier}
+        await self._vk.set(f"smtp:google_state:{state}", json.dumps(record), ex=STATE_TTL)
+        url = build_auth_url(client_id, self.redirect_uri, state, challenge.decode().rstrip("="))
+        return url, nonce
 
-    async def complete(self, code: str, state: str) -> None:
+    async def complete(self, code: str, state: str, nonce: str | None) -> None:
         """
-        @brief Verify state (consumed), check the initiator is still an admin, store tokens.
-        @throws AuthorizationError bad/expired/used state or initiator no longer an admin
+        @brief Verify state (consumed) and browser nonce, check the initiator is still
+               an admin, then store tokens.
+        @throws AuthorizationError bad/expired/used state, wrong browser, or not an admin
         """
         raw = await self._vk.getdel(f"smtp:google_state:{state}")
-        if not raw:
+        try:
+            rec: dict[str, Any] = json.loads(raw) if raw else {}
+            uid = uuid.UUID(rec["uid"])
+            ok = bool(nonce) and secrets.compare_digest(rec["nh"], _hash(nonce or ""))
+            verifier = str(rec["cv"])
+        except (ValueError, TypeError, KeyError):
+            ok = False
+        if not ok:
             raise AuthorizationError(message=_("This connection link expired. Start again."))
-        user = await self._users.get_by_id(uuid.UUID(str(raw)), self._cid)
+        user = await self._users.get_by_id(uid, self._cid)
         if user is None or user.role != "admin":
             raise AuthorizationError()
         client_id, secret = await self._client()
-        refresh, email = await exchange_code(client_id, secret, self.redirect_uri, code)
+        refresh, email = await exchange_code(client_id, secret, self.redirect_uri, code, verifier)
         key = derive_fernet_key(self._settings.SECRET_KEY)
         row = await self._communities.get(self._cid)
         # One direct write (not AdminEmailService.update) so the retarget rule that

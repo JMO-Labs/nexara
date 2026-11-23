@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -185,7 +186,9 @@ class TestConnectFlow:
 
     async def test_start_stores_state_10min_and_builds_url(self):
         svc, _, vk, _ = self._svc()
-        url = await svc.start(uuid.uuid4())
+        url, nonce = await svc.start(uuid.uuid4())
+        assert nonce
+        assert "code_challenge_method=S256" in url and "code_challenge=" in url
         assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
         for frag in ("access_type=offline", "prompt=consent", "client_id=cid", "mail.google.com"):
             assert frag in url
@@ -205,13 +208,15 @@ class TestConnectFlow:
 
     async def test_callback_sets_all_fields_in_one_update_and_keeps_refresh(self):
         svc, row, vk, _ = self._svc(row=_row(smtp_host="old.example.com", smtp_user="old"))
-        await svc.start(uuid.uuid4())
+        _, nonce = await svc.start(uuid.uuid4())
         state = next(k for k in vk.d).split(":")[-1]
+        verifier = json.loads(vk.d[f"smtp:google_state:{state}"])["cv"]
         with patch(
             "app.services.admin_google_mail.exchange_code",
             AsyncMock(return_value=("refresh-1", "me@gmail.com")),
-        ):
-            await svc.complete("code", state)
+        ) as ex:
+            await svc.complete("code", state, nonce)
+        assert ex.await_args.args[-1] == verifier
         assert (row.smtp_host, row.smtp_port, row.smtp_security) == (
             "smtp.gmail.com",
             587,
@@ -225,24 +230,41 @@ class TestConnectFlow:
 
     async def test_state_single_use_and_unknown_rejected(self):
         svc, _, vk, _ = self._svc()
-        await svc.start(uuid.uuid4())
+        _, nonce = await svc.start(uuid.uuid4())
         state = next(k for k in vk.d).split(":")[-1]
         with patch(
             "app.services.admin_google_mail.exchange_code", AsyncMock(return_value=("r", "e@g.com"))
         ):
-            await svc.complete("c", state)
+            await svc.complete("c", state, nonce)
             with pytest.raises(AuthorizationError):
-                await svc.complete("c", state)
+                await svc.complete("c", state, nonce)
             with pytest.raises(AuthorizationError):
-                await svc.complete("c", "nope")
+                await svc.complete("c", "nope", nonce)
+
+    async def test_missing_or_wrong_nonce_rejected_and_nothing_stored(self):
+        for bad in (None, "", "other"):
+            svc, row, vk, _ = self._svc()
+            await svc.start(uuid.uuid4())
+            state = next(k for k in vk.d).split(":")[-1]
+            with patch("app.services.admin_google_mail.exchange_code", AsyncMock()) as ex:
+                with pytest.raises(AuthorizationError):
+                    await svc.complete("c", state, bad)
+            ex.assert_not_called()
+            assert row.smtp_google_refresh is None
+
+    async def test_garbage_state_record_is_invalid(self):
+        svc, _, vk, _ = self._svc()
+        vk.d["smtp:google_state:x"] = "not-json"
+        with pytest.raises(AuthorizationError):
+            await svc.complete("c", "x", "n")
 
     async def test_non_admin_initiator_rejected(self):
         svc, row, vk, _ = self._svc(role="member")
-        await svc.start(uuid.uuid4())
+        _, nonce = await svc.start(uuid.uuid4())
         state = next(k for k in vk.d).split(":")[-1]
         with patch("app.services.admin_google_mail.exchange_code", AsyncMock()) as ex:
             with pytest.raises(AuthorizationError):
-                await svc.complete("c", state)
+                await svc.complete("c", state, nonce)
         ex.assert_not_called()
         assert row.smtp_google_refresh is None
 
@@ -258,12 +280,13 @@ class TestExchange:
 
         def handler(req):
             assert "grant_type=authorization_code" in req.content.decode()
+            assert "code_verifier=ver" in req.content.decode()
             return httpx.Response(
                 200, json={"refresh_token": "rt", "id_token": idt, "access_token": "a"}
             )
 
         with patch.object(go, "_http", lambda: _client(handler)):
-            assert await go.exchange_code("cid", "sec", "http://x/cb", "code") == (
+            assert await go.exchange_code("cid", "sec", "http://x/cb", "code", "ver") == (
                 "rt",
                 "me@gmail.com",
             )
@@ -275,7 +298,7 @@ class TestExchange:
         from app.core.exceptions import AppError
 
         with patch.object(go, "_http", lambda: _client(handler)), pytest.raises(AppError):
-            await go.exchange_code("cid", "sec", "http://x/cb", "code")
+            await go.exchange_code("cid", "sec", "http://x/cb", "code", "ver")
 
 
 class TestCallbackRoute:
@@ -299,7 +322,7 @@ class TestCallbackRoute:
             r.status_code == 303
             and r.headers["location"] == "/app/admin?tab=email&google=connected"
         )
-        svc.complete.assert_awaited_once_with("c", "s")
+        svc.complete.assert_awaited_once_with("c", "s", None)
 
     async def test_bad_state_and_denied_redirect_with_error(self, test_app):
         r, _ = await self._get(test_app, "?code=c&state=s", AuthorizationError())
@@ -307,3 +330,53 @@ class TestCallbackRoute:
         r, svc = await self._get(test_app, "?error=access_denied&state=s")
         assert r.headers["location"].endswith("google=error")
         svc.complete.assert_not_awaited()
+
+
+class TestNonceCookie:
+    async def test_start_sets_httponly_lax_cookie_and_callback_passes_and_clears_it(self, test_app):
+        from httpx import ASGITransport, AsyncClient
+
+        from app.core.dependencies import get_google_mail_service, require_role
+
+        svc = AsyncMock()
+        svc.start.return_value = ("https://g/x", "N1")
+        test_app.dependency_overrides[get_google_mail_service] = lambda: svc
+        test_app.dependency_overrides[require_role("admin")] = lambda: SimpleNamespace(
+            id=uuid.uuid4()
+        )
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=test_app), base_url="https://t"
+            ) as c:
+                from app.api.v1 import admin_email as ae
+
+                test_app.dependency_overrides.pop(require_role("admin"), None)
+                r = await c.get(
+                    "/api/v1/admin/email/google/callback?code=c&state=s",
+                    cookies={ae.NONCE_COOKIE: "N1"},
+                )
+        finally:
+            test_app.dependency_overrides.clear()
+        svc.complete.assert_awaited_once_with("c", "s", "N1")
+        assert (
+            "nx_gmail_nonce" in r.headers["set-cookie"] and "Max-Age=0" in r.headers["set-cookie"]
+        )
+
+    async def test_no_cookie_service_rejects_into_error_redirect(self, test_app):
+        r, svc = await TestCallbackRoute()._get(test_app, "?code=c&state=s", AuthorizationError())
+        assert r.headers["location"].endswith("google=error")
+        assert svc.complete.await_args.args[2] is None
+
+    async def test_start_sets_nonce_cookie_flags(self):
+        from fastapi import Response
+
+        from app.api.v1.admin_email import google_start
+
+        svc = AsyncMock()
+        svc.start.return_value = ("https://g/x", "N1")
+        resp = Response()
+        out = await google_start(resp, SimpleNamespace(id=uuid.uuid4()), svc, Settings())
+        c = resp.headers["set-cookie"]
+        assert out == {"url": "https://g/x"} and "nx_gmail_nonce=N1" in c
+        for flag in ("HttpOnly", "SameSite=lax", "Max-Age=600", "Path=/api/v1/admin/email/google"):
+            assert flag in c

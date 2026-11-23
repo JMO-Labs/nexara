@@ -53,7 +53,7 @@ def client_credentials(
     return env_id, env_secret
 
 
-def build_auth_url(client_id: str, redirect_uri: str, state: str) -> str:
+def build_auth_url(client_id: str, redirect_uri: str, state: str, challenge: str) -> str:
     """@brief Google consent URL requesting a refresh token."""
     return AUTH_URL + "?" + urlencode(
         {
@@ -64,6 +64,8 @@ def build_auth_url(client_id: str, redirect_uri: str, state: str) -> str:
             "access_type": "offline",
             "prompt": "consent",
             "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
         }
     )  # fmt: skip
 
@@ -87,7 +89,7 @@ def _id_token_email(id_token: str) -> str:
 
 
 async def exchange_code(
-    client_id: str, client_secret: str, redirect_uri: str, code: str
+    client_id: str, client_secret: str, redirect_uri: str, code: str, code_verifier: str
 ) -> tuple[str, str]:
     """
     @brief Trade an authorization code for (refresh_token, google_email).
@@ -99,6 +101,7 @@ async def exchange_code(
             "client_id": client_id,
             "client_secret": client_secret,
             "redirect_uri": redirect_uri,
+            "code_verifier": code_verifier,
             "grant_type": "authorization_code",
         }
     )

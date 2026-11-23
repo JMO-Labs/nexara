@@ -108,6 +108,7 @@ async def _invite_ctx(invite_id: str) -> _MailCtx | None:
     async with async_session_factory() as session:
         invite = await session.get(Invite, uuid.UUID(invite_id))
         if invite is None or invite.used_at is not None:
+            logger.info("invite_email.invite_not_found", invite_id=invite_id)
             return None
         creator = await session.get(User, invite.created_by)
         branding, sender = await _branding_ctx(session, invite.community_id)
