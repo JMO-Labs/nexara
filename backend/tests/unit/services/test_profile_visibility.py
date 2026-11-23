@@ -139,3 +139,11 @@ async def test_lookup_by_username_and_blocks():
     repo.get_by_username.return_value = None
     with pytest.raises(NotFoundError):
         await svc.lookup("nobody", _viewer())
+
+
+def test_relations_default_follows_whole_profile_level() -> None:
+    from app.services.profiles.visibility import effective_levels
+
+    assert effective_levels({}, "community")["relations"] == "community"
+    assert effective_levels({}, "admin_only")["relations"] == "private"
+    assert effective_levels({"relations": "groups"}, "admin_only")["relations"] == "groups"

@@ -67,6 +67,9 @@ class MemorialService:
         """@brief Actor is a confirmed relative of the member's owner."""
         if self._relations is None:
             return False
+        # Relatives may only act on members they can actually see.
+        if await self._household.get_visible(m.id, actor.id, self._cid) is None:
+            return False
         return await self._relations.is_confirmed_relative(actor.id, m.owner_id)
 
     async def set_passed_on(self, member_id: uuid.UUID, actor: User, passed_on: date | None) -> Any:

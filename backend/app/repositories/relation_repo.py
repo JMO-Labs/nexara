@@ -132,6 +132,9 @@ class RelationRepository:
                 and_(Relation.from_user_id == a, Relation.to_user_id == b),
                 and_(Relation.from_user_id == b, Relation.to_user_id == a),
             ),
+            # A block either way suspends the relation's powers.
+            not_blocked(Relation.from_user_id, a),
+            not_blocked(Relation.to_user_id, a),
         )
         return (await self._session.execute(stmt.limit(1))).first() is not None
 

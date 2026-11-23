@@ -114,3 +114,17 @@ async def test_list_for_visibility_and_blocks(session: AsyncSession) -> None:
     await repo.update(ruth.id, {"field_visibility": {"relations": "private"}})
     assert await svc.list_for(ruth.id, dana) == []
     assert len(await svc.list_for(ruth.id, ruth)) == 2
+
+
+async def test_block_suspends_confirmed_family(session: AsyncSession) -> None:
+    from app.models.moderation import UserBlock
+
+    repo = RelationRepository(session)
+    a, b = await _user(session, "a"), await _user(session, "b")
+    f = {"community_id": CID, "kind": "parent", "created_by": a.id, "status": "confirmed"}
+    await repo.create(from_user_id=a.id, to_user_id=b.id, **f)
+    assert await repo.confirmed_family_between(CID, a.id, b.id) is True
+    session.add(UserBlock(community_id=CID, blocker_id=b.id, blocked_id=a.id))
+    await session.flush()
+    assert await repo.confirmed_family_between(CID, a.id, b.id) is False
+    assert await repo.confirmed_family_between(CID, b.id, a.id) is False
