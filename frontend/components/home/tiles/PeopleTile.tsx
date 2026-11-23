@@ -151,6 +151,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
                     src={p.avatar_url ?? undefined}
                     name={p.display_name}
                     size="md"
+                    userId={p.user_id}
                   />
                 </Link>
               </li>

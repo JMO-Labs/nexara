@@ -115,6 +115,7 @@ export function ChannelList({
                 src={d.peer.avatar_url ?? undefined}
                 size="md"
                 name={d.peer.display_name}
+                userId={d.peer.id}
               />
             }
             unread={unread[d.channel_id] ?? 0}

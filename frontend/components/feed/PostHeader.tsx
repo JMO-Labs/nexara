@@ -56,6 +56,7 @@ export function PostHeader({
       <Avatar
         src={post.author.avatar_url ?? undefined}
         name={post.author.display_name}
+        userId={post.author.id}
       />
       <div className="min-w-0 grow">
         <p className="truncate text-sm font-semibold text-ink">

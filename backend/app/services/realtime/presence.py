@@ -94,6 +94,23 @@ async def is_online(user_id: UUID) -> bool:
     return bool((time.time() - float(score)) < PRESENCE_TTL_SECONDS)
 
 
+async def online_among(user_ids: list[UUID]) -> set[UUID]:
+    """
+    @brief Subset of user_ids with a fresh heartbeat (one round trip).
+
+    @param user_ids Candidate user UUIDs.
+    @return Set of UUIDs currently online.
+    """
+    if not user_ids:
+        return set()
+    pool = get_pool(get_settings(), DB_PUBSUB)
+    scores = await pool.zmscore(PRESENCE_KEY, [str(u) for u in user_ids])
+    cutoff = time.time() - PRESENCE_TTL_SECONDS
+    return {
+        u for u, s in zip(user_ids, scores, strict=True) if s is not None and float(s) >= cutoff
+    }
+
+
 async def cleanup_stale() -> int:
     """
     @brief Remove entries older than the TTL window.

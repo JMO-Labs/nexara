@@ -115,13 +115,8 @@ export function MemberHeader({
               name={profile.display_name}
               size="lg"
               className="size-24 text-3xl md:size-28"
+              userId={profile.id}
             />
-            {connection?.online && (
-              <i
-                aria-hidden
-                className="absolute right-1.5 bottom-1.5 size-5 rounded-full border-[3px] border-[var(--nx-glass-solid)] bg-[var(--nx-ok)]"
-              />
-            )}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {profile.memorialized_at ? null : isSelf ? (
