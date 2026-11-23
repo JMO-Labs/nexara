@@ -30,6 +30,8 @@ from app.services.notifications.types import (  # noqa: F401
     prompt_summary,
     reaction,
     ride_update,
+    story_answered,
+    story_request,
     system,
 )
 
@@ -60,5 +62,7 @@ __all__ = [
     "prompt_summary",
     "reaction",
     "ride_update",
+    "story_answered",
+    "story_request",
     "system",
 ]

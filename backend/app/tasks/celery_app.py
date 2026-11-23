@@ -27,6 +27,7 @@ celery_app = Celery(
     include=[
         "app.tasks.ai_tasks",
         "app.tasks.album_tasks",
+        "app.tasks.audio_tasks",
         "app.tasks.birthday_tasks",
         "app.tasks.capsule_tasks",
         "app.tasks.chore_tasks",
@@ -48,6 +49,7 @@ celery_app = Celery(
         "app.tasks.prompt_tasks",
         "app.tasks.retention_tasks",
         "app.tasks.shop_tasks",
+        "app.tasks.story_tasks",
     ],
 )
 """@brief The Celery application instance."""
@@ -78,6 +80,7 @@ celery_app.conf.update(
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
         "app.tasks.list_tasks.*": {"queue": "maintenance"},
         "chores.*": {"queue": "maintenance"},
+        "stories.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
@@ -232,6 +235,10 @@ celery_app.conf.update(
         "chores-advance-due": {
             "task": "chores.advance_due",
             "schedule": crontab(minute="*/15"),
+        },
+        "stories-daily": {
+            "task": "stories.daily",
+            "schedule": crontab(hour=9, minute=0),
         },
         "capsules-open-due": {
             "task": "capsules.open_due",

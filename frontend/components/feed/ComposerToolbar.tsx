@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   BarChart3,
   Hourglass,
+  Mic,
   PartyPopper,
   Trophy,
   X,
@@ -20,6 +21,7 @@ export interface ComposerToolbarProps {
   onKudos?: () => void;
   onCelebrate?: () => void;
   onCapsule?: () => void;
+  onRecord?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
   postDisabled?: boolean;
@@ -36,12 +38,14 @@ export function ComposerIcons({
   onKudos,
   onCelebrate,
   onCapsule,
+  onRecord,
   onPhotos,
   onPoll,
 }: {
   onKudos?: () => void;
   onCelebrate?: () => void;
   onCapsule?: () => void;
+  onRecord?: () => void;
   onPhotos?: () => void;
   onPoll?: () => void;
 }) {
@@ -65,6 +69,16 @@ export function ComposerIcons({
       >
         <BarChart3 className="size-[18px]" aria-hidden />
       </IconButton>
+      {onRecord ? (
+        <IconButton
+          aria-label="Record a voice note"
+          variant="ghost"
+          size="sm"
+          onClick={onRecord}
+        >
+          <Mic className="size-[18px]" aria-hidden />
+        </IconButton>
+      ) : null}
       {onCelebrate ? (
         <IconButton
           aria-label="Celebrate someone"
@@ -114,6 +128,7 @@ export function ComposerToolbar({
   onKudos,
   onCelebrate,
   onCapsule,
+  onRecord,
   onPhotos,
   onPoll,
   postDisabled,
@@ -124,6 +139,7 @@ export function ComposerToolbar({
         onKudos={onKudos}
         onCelebrate={onCelebrate}
         onCapsule={onCapsule}
+        onRecord={onRecord}
         onPhotos={onPhotos}
         onPoll={onPoll}
       />

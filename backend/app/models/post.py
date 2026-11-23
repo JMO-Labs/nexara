@@ -66,6 +66,10 @@ class Post(Base):
         UUID(as_uuid=True),
         ForeignKey("prompt_posts.id", ondelete="SET NULL", use_alter=True),
     )
+    story_request_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("story_requests.id", ondelete="SET NULL", use_alter=True),
+    )
     source_prompt_post_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("posts.id", ondelete="SET NULL"),

@@ -60,6 +60,7 @@ from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
+from app.api.v1.stories import router as stories_router
 from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.tags import router as tags_router
@@ -117,6 +118,7 @@ api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(rides_router)
 api_v1_router.include_router(time_capsules_router)
+api_v1_router.include_router(stories_router)
 api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)

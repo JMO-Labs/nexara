@@ -1039,6 +1039,12 @@
     "ride_update": {
       "label": "Ride update"
     },
+    "story_request": {
+      "label": "Story request"
+    },
+    "story_answered": {
+      "label": "Story answered"
+    },
     "kudos_received": {
       "label": "You got kudos"
     },
