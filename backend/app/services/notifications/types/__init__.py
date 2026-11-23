@@ -10,6 +10,7 @@ from app.services.notifications.types import (  # noqa: F401
     comment,
     event_reminder,
     event_rsvp,
+    expense_added,
     gallery_activity,
     gallery_reminder,
     gentle_nudge,
@@ -28,6 +29,7 @@ from app.services.notifications.types import (  # noqa: F401
     prompt,
     prompt_summary,
     reaction,
+    ride_update,
     system,
 )
 
@@ -38,6 +40,7 @@ __all__ = [
     "comment",
     "event_reminder",
     "event_rsvp",
+    "expense_added",
     "gallery_activity",
     "gallery_reminder",
     "gentle_nudge",
@@ -56,5 +59,6 @@ __all__ = [
     "prompt",
     "prompt_summary",
     "reaction",
+    "ride_update",
     "system",
 ]

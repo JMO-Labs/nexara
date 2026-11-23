@@ -86,3 +86,10 @@ class CommunityRepository:
         community.features = {**(community.features or {}), **patch}
         await self._session.flush()
         return community.features
+
+    async def update_currency(self, community_id: uuid.UUID, currency: str) -> None:
+        """@brief Set ``communities.currency`` (ISO 4217, validated by the caller)."""
+        community = await self.get(community_id)
+        if community is not None:
+            community.currency = currency
+            await self._session.flush()

@@ -30,6 +30,7 @@ export function MoreSheet({
   const signOut = useSignOut();
   const capsules = useFeature("time_capsules");
   const recipes = useFeature("recipes");
+  const expenses = useFeature("expenses");
   const onLogout = async () => {
     onClose();
     await signOut();
@@ -41,6 +42,7 @@ export function MoreSheet({
         {[...PHONE_EXTRA_NAV, ...visibleNav(MORE_NAV, admin)]
           .filter((i) => capsules || i.href !== "/app/capsules")
           .filter((i) => recipes || i.href !== "/app/recipes")
+          .filter((i) => expenses || i.href !== "/app/expenses")
           .map(({ label, href, Icon }) => (
             <li key={label}>
               <Link href={href} onClick={onClose} className={ROW}>

@@ -34,6 +34,8 @@ export interface ListUser {
   avatarUrl?: string | null;
 }
 
+export type ChoreRepeat = "daily" | "weekly" | "monthly";
+
 export type AssignmentStatus = "pending" | "accepted";
 
 export type ListActivityAction =
@@ -49,7 +51,8 @@ export type ListActivityAction =
   | "released"
   | "unassigned"
   | "signup_claimed"
-  | "signup_released";
+  | "signup_released"
+  | "missed";
 
 export interface ListActivity {
   id: string;
@@ -75,6 +78,13 @@ export interface ListItem {
   lon?: number | null;
   signupQuantityNeeded?: number | null;
   recipeId?: string | null;
+  repeat?: ChoreRepeat | null;
+  /** Ordered user ids taking turns. */
+  rotation?: string[];
+  rotationIndex?: number;
+  nextDueAt?: string | null;
+  /** Who is next in the rotation (display only). */
+  nextAssignee?: ListUser | null;
   assignee?: ListUser | null;
   assignmentStatus?: AssignmentStatus | null;
 }
@@ -155,6 +165,11 @@ export interface ListItemUpdateInput {
   values: Record<string, unknown>;
   /** Link (id) or unlink (null) a recipe; omit to leave unchanged. */
   recipeId?: string | null;
+}
+export interface ChoreScheduleInput {
+  /** null clears the schedule. */
+  repeat: ChoreRepeat | null;
+  rotation: string[];
 }
 export interface SignupClaimInput {
   quantity?: number;

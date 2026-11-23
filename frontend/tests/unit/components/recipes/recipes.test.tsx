@@ -2,13 +2,16 @@
  * @file tests/unit/components/recipes/recipes.test.tsx
  * @brief Recipe card/view render, ingredient checkboxes and form body mapping.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RecipeCard } from "@/components/recipes/RecipeCard";
 import { RecipeView } from "@/components/recipes/RecipeView";
 import { toInput } from "@/components/recipes/recipeInput";
 import type { Recipe } from "@/lib/api/recipes";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/hooks/useLists", () => ({ useLists: () => ({ data: undefined }) }));
 
 const recipe: Recipe = {
   id: "r1",

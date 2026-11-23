@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.list_assignments import item_out
+from app.api.v1.list_chores import get_chore_service
 from app.core.dependencies import get_current_user, get_db
 from app.core.list_dependencies import (
     get_community_id,
@@ -39,6 +40,7 @@ from app.schemas.list import (
     SignupClaim,
     SignupOut,
 )
+from app.services.chore_service import ChoreService
 from app.services.list_assignment_service import ListAssignmentService
 from app.services.list_completion_service import ListCompletionService
 from app.services.list_field_registry import ListFieldRegistry
@@ -160,11 +162,16 @@ async def list_items(
     community_id: uuid.UUID = Depends(get_community_id),
     service: ListItemService = Depends(get_list_item_service),
     assignments: ListAssignmentService = Depends(get_list_assignment_service),
+    chores: ChoreService = Depends(get_chore_service),
 ) -> ListItemPage:
-    """@brief Keyset page of a list's items (with assignee info)."""
+    """@brief Keyset page of a list's items (with assignee and next-in-rotation info)."""
     rows, nxt = await service.list_items(community_id, list_id, user.id, cursor, limit, sort_by)
     info = await assignments.describe(list_id, [r.id for r in rows])
-    return ListItemPage(items=[item_out(r, info.get(r.id)) for r in rows], pagination=_page(nxt))
+    upcoming = await chores.next_assignees(rows) if chores.enabled() else {}
+    return ListItemPage(
+        items=[item_out(r, info.get(r.id), upcoming.get(r.id)) for r in rows],
+        pagination=_page(nxt),
+    )
 
 
 @router.post("/{list_id}/items", response_model=ListItemOut, status_code=201)

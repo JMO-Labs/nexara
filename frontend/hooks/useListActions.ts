@@ -6,7 +6,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/query-keys";
 import { listApi } from "@/lib/api/lists";
-import type { ListMemberAddInput } from "@/lib/api/listTypes";
+import type {
+  ChoreScheduleInput,
+  ListMemberAddInput,
+} from "@/lib/api/listTypes";
 
 /** @brief Archive a list; refreshes the community's lists. */
 export function useListArchive(communityId: string) {
@@ -30,6 +33,20 @@ export function useListItemUpdate(listId: string) {
       listApi.updateItem(listId, v.itemId, {
         values: v.values,
         ...("recipeId" in v ? { recipeId: v.recipeId } : {}),
+      }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: qk.lists.itemsAll(listId) }),
+  });
+}
+
+/** @brief Set an item's repeat and rotation. */
+export function useListChoreSet(listId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { itemId: string } & ChoreScheduleInput) =>
+      listApi.setChore(listId, v.itemId, {
+        repeat: v.repeat,
+        rotation: v.rotation,
       }),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: qk.lists.itemsAll(listId) }),

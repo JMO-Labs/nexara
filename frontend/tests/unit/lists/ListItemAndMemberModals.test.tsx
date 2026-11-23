@@ -12,15 +12,21 @@ import { fieldsOf } from "@/lib/lists/listFields";
 const h = vi.hoisted(() => ({
   create: { mutate: vi.fn(), isPending: false },
   update: { mutate: vi.fn(), isPending: false },
+  chore: { mutate: vi.fn(), isPending: false, isError: false },
   add: { mutate: vi.fn(), isPending: false },
   remove: { mutate: vi.fn(), isPending: false },
 }));
 vi.mock("@/components/recipes/RecipePicker", () => ({
   RecipePicker: () => null,
 }));
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
+vi.mock("@/hooks/useMembersList", () => ({
+  useMembersList: () => ({ data: [] }),
+}));
 vi.mock("@/hooks/useLists", () => ({ useListItemCreate: () => h.create }));
 vi.mock("@/hooks/useListActions", () => ({
   useListItemUpdate: () => h.update,
+  useListChoreSet: () => h.chore,
   useListMemberAdd: () => h.add,
   useListMemberRemove: () => h.remove,
   useListMembers: () => ({
@@ -79,6 +85,28 @@ describe("ListItemEditModal", () => {
       { itemId: "i1", values: { name: "Tents", done: true }, recipeId: null },
       expect.anything(),
     );
+  });
+});
+
+describe("ListItemEditModal chores", () => {
+  it("saves the item, then the repeat schedule", async () => {
+    h.update.mutate.mockImplementation((_v, o) => o.onSuccess());
+    render(
+      <ListItemEditModal
+        open
+        onClose={vi.fn()}
+        listId="l1"
+        fields={fields}
+        item={item("i1", "Tent")}
+      />,
+    );
+    await userEvent.selectOptions(screen.getByLabelText("Repeat"), "weekly");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(h.chore.mutate).toHaveBeenCalledWith(
+      { itemId: "i1", repeat: "weekly", rotation: [] },
+      expect.anything(),
+    );
+    h.update.mutate.mockReset();
   });
 });
 

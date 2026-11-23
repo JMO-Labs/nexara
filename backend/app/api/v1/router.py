@@ -27,6 +27,7 @@ from app.api.v1.communities import router as communities_router
 from app.api.v1.daily_questions import router as daily_questions_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
+from app.api.v1.expenses import router as expenses_router
 from app.api.v1.export import router as export_router
 from app.api.v1.features import router as features_router
 from app.api.v1.galleries import router as galleries_router
@@ -37,6 +38,7 @@ from app.api.v1.invites import router as invites_router
 from app.api.v1.kudos import router as kudos_router
 from app.api.v1.link_previews import router as link_previews_router
 from app.api.v1.list_assignments import router as list_assignments_router
+from app.api.v1.list_chores import router as list_chores_router
 from app.api.v1.list_templates import router as list_templates_router
 from app.api.v1.lists import router as lists_router
 from app.api.v1.media import router as media_router
@@ -54,6 +56,7 @@ from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
 from app.api.v1.recap import router as recap_router
 from app.api.v1.recipes import router as recipes_router
+from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
@@ -109,9 +112,12 @@ api_v1_router.include_router(invites_router)
 api_v1_router.include_router(link_previews_router)
 api_v1_router.include_router(lists_router)
 api_v1_router.include_router(list_assignments_router)
+api_v1_router.include_router(list_chores_router)
 api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
+api_v1_router.include_router(rides_router)
 api_v1_router.include_router(time_capsules_router)
+api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)

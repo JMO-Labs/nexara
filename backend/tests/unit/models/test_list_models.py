@@ -89,6 +89,10 @@ EXPECTED = {
             "lon",
             "signup_quantity_needed",
             "recipe_id",
+            "repeat",
+            "rotation",
+            "rotation_index",
+            "next_due_at",
         }
         | TS,
         ["id"],

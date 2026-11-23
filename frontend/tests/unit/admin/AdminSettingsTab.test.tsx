@@ -8,6 +8,9 @@ import * as admin from "@/hooks/useAdmin";
 import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab";
 
 vi.mock("@/hooks/useAdmin");
+vi.mock("@/components/admin/CurrencySetting", () => ({
+  CurrencySetting: () => null,
+}));
 
 const GB = 1024 ** 3;
 const server = {

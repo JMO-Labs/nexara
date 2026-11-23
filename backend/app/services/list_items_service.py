@@ -175,9 +175,12 @@ class ListItemService:
         user_id: uuid.UUID,
         values: dict[str, Any],
         position: int = 0,
+        recipe_id: uuid.UUID | None = None,
     ) -> ListItem:
         """
         @brief Validate, project and persist an item; bump ``item_count``.
+
+        @param recipe_id Optional pre-checked recipe to link (caller verifies visibility).
 
         @raises ValidationError On invalid values.
         """
@@ -185,7 +188,10 @@ class ListItemService:
         if lst.owner_id != user_id:
             raise AuthorizationError("Only the owner can add items")
         item = ListItem(
-            list_id=list_id, position=position, values=self._validate_values(lst, values)
+            list_id=list_id,
+            position=position,
+            values=self._validate_values(lst, values),
+            recipe_id=recipe_id,
         )
         self._apply_projection(lst, item)
         item = await self._items.create(item)

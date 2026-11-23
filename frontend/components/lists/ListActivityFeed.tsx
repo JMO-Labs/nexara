@@ -26,6 +26,7 @@ const VERBS: Record<string, string> = {
   unassigned: "unassigned",
   signup_claimed: "signed up for",
   signup_released: "dropped out of",
+  missed: "missed",
 };
 
 /**
@@ -51,6 +52,7 @@ export function describeActivity(a: ListActivity): string {
   const verb = VERBS[a.action] ?? a.action;
   const item = a.itemTitle || "an item";
   const to = a.targetUser?.displayName;
+  if (a.action === "missed" && to) return `${to} ${verb} ${item}`;
   if (a.action === "assigned" && to) return `${who} ${verb} ${item} to ${to}`;
   if (a.action === "unassigned" && to)
     return `${who} ${verb} ${to} from ${item}`;

@@ -63,8 +63,14 @@ export function useEventsPageState() {
     startOfDay(new Date()),
   );
   const [selectedEventId, setSelectedEventId] = React.useState<string | null>(
-    () => searchParams.get("event"),
+    null,
   );
+  // Deep links (notifications, mentions, search) open the event's own page,
+  // which works for any date, not just the month on screen.
+  const deepLink = searchParams.get("event");
+  React.useEffect(() => {
+    if (deepLink) router.replace(`/app/events/${encodeURIComponent(deepLink)}`);
+  }, [deepLink, router]);
 
   const monthStart = React.useMemo(() => startOfMonth(month), [month]);
   const monthEnd = React.useMemo(() => endOfMonth(month), [month]);
