@@ -1,0 +1,209 @@
+"""
+@file reply_parse.py
+@brief Parse inbound reply emails: token from the address, the reply text with
+       quotes and signature removed, auto-reply and sender checks. Stdlib only.
+"""
+
+from __future__ import annotations
+
+import re
+from email.message import Message
+from email.utils import getaddresses, parseaddr
+from html.parser import HTMLParser
+
+MAX_BODY = 5000
+"""@brief Longest reply (after cleaning) that is accepted."""
+
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{24}$")  # token_urlsafe(18) is 24 chars
+_WROTE_RE = re.compile(r"^On .*wrote:\s*$", re.DOTALL)
+_ORIGINAL_RE = re.compile(r"^-{3,}\s*Original Message\s*-{3,}\s*$", re.IGNORECASE)
+_BULK = {"bulk", "list", "auto_reply", "junk"}
+_BLOCK_TAGS = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6"}
+_SKIP_TAGS = {"script", "style", "head", "title"}
+
+
+def extract_token(addresses: list[str], base_local: str) -> str | None:
+    """
+    @brief Find ``<base_local>+<token>@...`` among recipient headers.
+    @param addresses Raw header values (To, Cc, Delivered-To, ...).
+    @param base_local Local part of the configured reply address (no plus tag).
+    @return The raw token, or None when no address carries a well-formed one.
+    """
+    prefix = base_local.lower() + "+"
+    for _name, addr in getaddresses(addresses):
+        local = addr.rpartition("@")[0]
+        if local.lower().startswith(prefix):
+            token = local[len(prefix) :]
+            if _TOKEN_RE.match(token):
+                return token
+    return None
+
+
+def is_auto_reply(msg: Message) -> bool:
+    """@return True for out-of-office / bulk / list mail that must never be posted."""
+    auto = msg.get("Auto-Submitted")
+    if auto is not None and str(auto).strip().lower() != "no":
+        return True
+    return str(msg.get("Precedence", "")).strip().lower() in _BULK
+
+
+def sender_address(msg: Message) -> str | None:
+    """@return The lower-cased From address; None if missing or the header repeats."""
+    froms = msg.get_all("From") or []
+    if len(froms) != 1:
+        return None
+    addr = parseaddr(str(froms[0]))[1].strip().lower()
+    return addr or None
+
+
+class _Text(HTMLParser):
+    """@brief HTML to text; drops script/style and quoted blocks (blockquote, gmail_quote)."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.out: list[str] = []
+        self._stack: list[tuple[str, bool]] = []  # (tag, opened a skipped region)
+        self._skip = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        quote = tag == "blockquote" or (
+            tag == "div" and "gmail_quote" in (dict(attrs).get("class") or "")
+        )
+        skip = quote or tag in _SKIP_TAGS
+        if tag not in ("br", "img", "hr", "meta", "link", "input"):
+            self._stack.append((tag, skip))
+            self._skip += skip
+        if tag in _BLOCK_TAGS and not self._skip:
+            self.out.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        for i in range(len(self._stack) - 1, -1, -1):
+            if self._stack[i][0] == tag:
+                for _t, skip in self._stack[i:]:
+                    self._skip -= skip
+                del self._stack[i:]
+                break
+        if tag in _BLOCK_TAGS and not self._skip:
+            self.out.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip:
+            self.out.append(data)
+
+
+def _decode(part: Message) -> str:
+    raw = part.get_payload(decode=True)
+    if not isinstance(raw, bytes):
+        return ""
+    try:
+        return raw.decode(part.get_content_charset() or "utf-8", errors="replace")
+    except LookupError:
+        return raw.decode("utf-8", errors="replace")
+
+
+def _raw_text(msg: Message) -> str:
+    """@brief text/plain if present, else tag-stripped HTML."""
+    plain = html = None
+    for part in msg.walk():
+        if part.is_multipart() or part.get_content_disposition() == "attachment":
+            continue
+        kind = part.get_content_type()
+        if kind == "text/plain" and plain is None:
+            plain = _decode(part)
+        elif kind == "text/html" and html is None:
+            html = _decode(part)
+    if plain is not None:
+        return plain
+    if html is None:
+        return ""
+    parser = _Text()
+    parser.feed(html)
+    parser.close()
+    return "".join(parser.out)
+
+
+def _is_cut(lines: list[str], i: int) -> bool:
+    line = lines[i].strip()
+    if line.startswith(">") or line.startswith("From: ") or _ORIGINAL_RE.match(line):
+        return True
+    joined = line if i + 1 >= len(lines) else f"{line} {lines[i + 1].strip()}"
+    return bool(line.startswith("On ") and (_WROTE_RE.match(line) or _WROTE_RE.match(joined)))
+
+
+def clean_body(msg: Message) -> str | None:
+    """
+    @brief The new text of a reply, without quoted history or signature.
+    @param msg Parsed inbound message.
+    @return Cleaned text; None when empty or longer than ``MAX_BODY``.
+    """
+    lines = _raw_text(msg).replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    kept: list[str] = []
+    for i, line in enumerate(lines):
+        if _is_cut(lines, i) or line.rstrip() in ("--", "-- "):
+            break
+        kept.append(line.rstrip())
+    while kept and (not kept[-1].strip() or set(kept[-1].strip()) == {"_"}):
+        kept.pop()  # trailing blanks and Outlook's "____" divider
+    text = "\n".join(kept).strip()
+    return text if text and len(text) <= MAX_BODY else None
+
+
+_COMMENT = re.compile(r"\([^()]*\)")
+_HOSTNAME = re.compile(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
+
+
+def _resinfos(header: str) -> tuple[str, list[dict[str, str]]]:
+    """
+    @brief Split an Authentication-Results header (RFC 8601) into its
+           authserv-id and result entries: [{"method": "dmarc", "result":
+           "pass", "header.from": "example.com", ...}].
+    """
+    parts = [p.strip() for p in _COMMENT.sub(" ", header).split(";")]
+    authserv = parts[0].split()[0].lower() if parts and parts[0] else ""
+    entries: list[dict[str, str]] = []
+    for part in parts[1:]:
+        tokens = part.split()
+        if not tokens or "=" not in tokens[0]:
+            continue
+        method, _, result = tokens[0].partition("=")
+        entry = {"method": method.lower(), "result": result.lower()}
+        for tok in tokens[1:]:
+            key, eq, val = tok.partition("=")
+            if eq:
+                entry[key.lower()] = val.strip('"').lower()
+        entries.append(entry)
+    return authserv, entries
+
+
+def authenticated(msg: Message, sender: str | None, authserv_id: str | None) -> bool:
+    """
+    @brief The community's own receiving server vouched for the sender: an
+           Authentication-Results header from ``authserv_id`` carries
+           ``dmarc=pass`` with ``header.from`` exactly the From domain.
+           Headers from any other server (including forged ones in the
+           message) are ignored; no trusted header means no.
+    """
+    if not sender or "@" not in sender or not authserv_id:
+        return False
+    domain = sender.rsplit("@", 1)[1].lower()
+    trusted = authserv_id.lower()
+    for header in msg.get_all("Authentication-Results") or []:
+        raw = str(header)
+        server, entries = _resinfos(raw)
+        if server != trusted:
+            continue
+        # Fail closed on anything our simple tokenizer can't read exactly:
+        # quoted strings, escapes, nested or unbalanced comments.
+        if (
+            '"' in raw
+            or "\\" in raw
+            or _COMMENT.sub("", raw).count("(")
+            or ")" in _COMMENT.sub("", raw)
+        ):
+            return False
+        dmarc = [e for e in entries if e["method"] == "dmarc"]
+        if len(dmarc) != 1 or dmarc[0]["result"] != "pass":
+            return False
+        got = dmarc[0].get("header.from", "")
+        return bool(_HOSTNAME.fullmatch(got)) and got == domain
+    return False

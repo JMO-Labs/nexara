@@ -142,7 +142,7 @@ export function MessageItem({
         </div>
       </div>
       {!deleted && (
-        <div className="flex items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+        <div className="hover-only flex items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
           {onReply && (
             <IconButton
               aria-label="Reply"

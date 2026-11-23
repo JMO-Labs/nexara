@@ -16,6 +16,15 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/hooks/useChat", () => ({
   useCreateDm: () => ({ mutateAsync, isPending: false }),
 }));
+const rels = vi.hoisted(() => ({ list: [] as unknown[] }));
+vi.mock("@/hooks/useRelations", () => ({
+  useRelations: () => ({ data: rels.list }),
+}));
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
+vi.mock("@/stores/session", () => ({
+  useSession: (sel: (s: { user: { id: string } }) => unknown) =>
+    sel({ user: { id: "me" } }),
+}));
 vi.mock("@/lib/api/chat", () => ({
   postChatMessage: (...a: unknown[]) => postChatMessage(...a),
 }));
@@ -66,5 +75,34 @@ describe("ConnectionCard", () => {
     render(<ConnectionCard person={person} status="" />);
     fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app/chat/ch1"));
+  });
+
+  it("offers to add how you know them when there is no relation", () => {
+    rels.list = [];
+    const onRelate = vi.fn();
+    render(<ConnectionCard person={person} status="" onRelate={onRelate} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add how you know Tomás" }),
+    );
+    expect(onRelate).toHaveBeenCalled();
+  });
+
+  it("shows a confirmed relation instead of the prompt", () => {
+    rels.list = [
+      {
+        id: "r1",
+        status: "confirmed",
+        kind: "parent",
+        display: "grandmother",
+        direction: null,
+        person: { id: "u1", type: "user" },
+      },
+    ];
+    render(<ConnectionCard person={person} status="" onRelate={vi.fn()} />);
+    expect(screen.getByText("Your grandmother")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Add how you know/ }),
+    ).toBeNull();
+    rels.list = [];
   });
 });

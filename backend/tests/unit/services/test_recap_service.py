@@ -164,3 +164,17 @@ def test_prefs_patch_accepts_recap_cadence():
 
     patch_ = NotificationPreferencesUpdate(recap_cadence="off")
     assert build_prefs_update(patch_, {}) == {"recap_cadence": "off"}
+
+
+async def test_newsletter_link_only_for_monthly_readers_and_flag():
+    ctx = _ctx()
+    ctx.community.created_at = SUN - timedelta(days=400)
+    with patch("app.services.recap_sections.RecapRepository") as rr:
+        rr.return_value.cadence = AsyncMock(return_value="monthly")
+        sec = await recap_sections.newsletter_link(ctx)
+        assert sec is not None
+        month = f"{(SUN.replace(day=1) - timedelta(days=1)):%Y-%m}"
+        assert sec["items"][0]["link"] == f"/app/newsletter/{month}"
+        assert await recap_sections.newsletter_link(_ctx({"newsletter": False})) is None
+        rr.return_value.cadence = AsyncMock(return_value="weekly")
+        assert await recap_sections.newsletter_link(ctx) is None

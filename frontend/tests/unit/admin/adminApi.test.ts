@@ -9,6 +9,7 @@ import {
   listAdminUsers,
   changeUserRole,
   suspendUser,
+  setUserSimpleMode,
   restoreUser,
   deleteUser,
   getAdminSettings,
@@ -130,6 +131,17 @@ describe("adminApi", () => {
         "/api/v1/admin/users/user-1/suspend",
       );
       expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe("setUserSimpleMode", () => {
+    it("PATCHes the admin user settings path", async () => {
+      vi.mocked(client.apiPatch).mockResolvedValue({ message: "ok" });
+      await setUserSimpleMode("user-1", true);
+      expect(client.apiPatch).toHaveBeenCalledWith(
+        "/api/v1/admin/users/user-1/settings",
+        { simple_mode: true },
+      );
     });
   });
 

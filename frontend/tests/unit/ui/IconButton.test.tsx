@@ -14,10 +14,22 @@ describe("IconButton", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
-  it("shows no tooltip when tooltip prop is absent", async () => {
+  it("uses the aria-label as the tooltip by default", async () => {
     render(
       <TooltipProvider>
         <IconButton aria-label="Close">x</IconButton>
+      </TooltipProvider>,
+    );
+    await userEvent.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Close");
+  });
+
+  it("shows no tooltip when opted out", async () => {
+    render(
+      <TooltipProvider>
+        <IconButton aria-label="Close" tooltip={false}>
+          x
+        </IconButton>
       </TooltipProvider>,
     );
     await userEvent.tab();

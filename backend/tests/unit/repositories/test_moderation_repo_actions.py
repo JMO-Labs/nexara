@@ -90,10 +90,16 @@ class TestContentLookup:
 class TestRemoveContent:
     async def test_post_is_soft_deleted(self):
         session = _session()
+        session.execute.return_value = _scalar(uuid.uuid4())  # it was a prompt answer
         await ModerationRepository(session).soft_delete_content("post", TARGET_ID, COMMUNITY_ID)
-        sql = _sql(session)
-        assert sql.startswith("update posts") and "deleted_at" in sql
-        assert "posts.community_id" in sql
+        stmts = [
+            str(c.args[0].compile(dialect=postgresql.dialect())).lower()
+            for c in session.execute.call_args_list
+        ]
+        assert stmts[0].startswith("update posts") and "deleted_at" in stmts[0]
+        assert "posts.community_id" in stmts[0]
+        # The prompt's answer count is recomputed from live answers.
+        assert stmts[-1].startswith("update prompt_posts set response_count=(select count(*)")
 
     @pytest.mark.parametrize(
         ("target_type", "table"),

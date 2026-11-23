@@ -255,7 +255,7 @@ class TestPromptResponses:
                 },
             ):
                 with patch(
-                    "app.repositories.prompt_repo.PromptRepository.increment_response_count",
+                    "app.repositories.prompt_repo.PromptRepository.refresh_response_count",
                 ) as mock_incr:
                     with patch(
                         "app.repositories.prompt_repo.PromptRepository.get_by_id",
@@ -486,7 +486,7 @@ class TestInterestCapture:
                 },
             ):
                 with patch(
-                    "app.repositories.prompt_repo.PromptRepository.increment_response_count",
+                    "app.repositories.prompt_repo.PromptRepository.refresh_response_count",
                 ):
                     with patch(
                         "app.repositories.prompt_repo.PromptRepository.get_by_id",

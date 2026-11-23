@@ -165,8 +165,20 @@ class ModerationContentMixin:
             await self._session.execute(
                 update(model).where(*scope).values(deleted_at=datetime.now(UTC))
             )
+            if target_type == "post":
+                await self._recount_prompt_answers(target_id)
         else:
             await self._session.execute(delete(model).where(*scope))
+
+    async def _recount_prompt_answers(self, post_id: uuid.UUID) -> None:
+        """@brief A removed post may have been a prompt answer; fix its count."""
+        from app.repositories.prompt_repo import refresh_response_count
+
+        pp = (
+            await self._session.execute(select(Post.reply_to_prompt_id).where(Post.id == post_id))
+        ).scalar_one_or_none()
+        if pp is not None:
+            await refresh_response_count(self._session, pp)
 
     async def deactivate_user(self, user_id: uuid.UUID, community_id: uuid.UUID) -> None:
         """

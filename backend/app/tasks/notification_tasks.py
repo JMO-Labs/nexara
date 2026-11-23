@@ -55,6 +55,39 @@ def _branding_kwargs(branding: Any) -> dict[str, Any]:
     }
 
 
+REPLY_TYPES = frozenset({"comment", "mention", "new_post"})
+"""@brief Notification types whose email may carry a reply-by-email address."""
+
+
+async def _reply_to(
+    session: Any, user: User, notification_type: str, payload: dict[str, Any]
+) -> str | None:
+    """
+    @brief Mint a fresh reply token and return the Reply-To address.
+
+    None unless the type is replyable, the post is known, and the feature is
+    on with complete settings. Never raises: the email goes out regardless.
+    """
+    from app.repositories.community_repo import CommunityRepository
+    from app.repositories.reply_token_repo import ReplyTokenRepository
+    from app.services.email import reply_address
+
+    if notification_type not in REPLY_TYPES or not payload.get("post_id"):
+        return None
+    try:
+        community = await CommunityRepository(session).get(user.community_id)
+        if community is None or not reply_address.is_active(community):
+            return None
+        token = await ReplyTokenRepository(session).create(
+            user.community_id, user.id, uuid.UUID(str(payload["post_id"]))
+        )
+        await session.commit()
+        return reply_address.with_token(community.inbound_reply_address or "", token)
+    except Exception as exc:
+        logger.warning("reply_to_unavailable", error=type(exc).__name__)
+        return None
+
+
 async def _send_email_notification_async(
     user_id: uuid.UUID,
     notification_type: str,
@@ -79,6 +112,7 @@ async def _send_email_notification_async(
         to_email = user.email
         branding = await BrandingRepository(session).get(user.community_id)
         sender_name = getattr(branding, "email_sender_name", None) or None
+        reply_to = await _reply_to(session, user, notification_type, payload)
 
     branding_kwargs = _branding_kwargs(branding)
 
@@ -101,6 +135,7 @@ async def _send_email_notification_async(
         html_body=html,
         text_body=text,
         sender_name=sender_name,
+        reply_to=reply_to,
     )
     return {"status": "sent" if sent else "skipped"}
 

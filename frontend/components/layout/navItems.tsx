@@ -12,6 +12,7 @@ import {
   Inbox,
   MessageCircle,
   Network,
+  Newspaper,
   Receipt,
   Settings,
   ShieldCheck,
@@ -101,6 +102,19 @@ export const TOP_NAV: NavItem[] = [
   },
 ];
 
+/** @brief Simple mode nav: Home feed, Photos, Family, Calendar (in order). */
+export const SIMPLE_NAV_HREFS = [
+  "/app",
+  "/app/photos",
+  "/app/family",
+  "/app/events",
+] as const;
+
+/** @brief Simple mode nav items, in SIMPLE_NAV_HREFS order. */
+export const SIMPLE_NAV: NavItem[] = SIMPLE_NAV_HREFS.map(
+  (h) => TOP_NAV.find((t) => t.href === h) as NavItem,
+);
+
 /** @brief Top-nav items that the phone tab bar has no room for (shown first in the More sheet). */
 export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
   (t) => !TAB_NAV.some((x) => x.href === t.href),
@@ -110,6 +124,7 @@ export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
 export const MORE_NAV: NavItem[] = [
   { label: "Time capsules", href: "/app/capsules", Icon: Hourglass },
   { label: "Recipes", href: "/app/recipes", Icon: ChefHat },
+  { label: "Newsletter", href: "/app/newsletter", Icon: Newspaper },
   { label: "Shared costs", href: "/app/expenses", Icon: Receipt },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },

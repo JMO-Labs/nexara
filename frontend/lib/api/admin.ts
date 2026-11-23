@@ -3,7 +3,7 @@
  * @brief Admin panel API endpoints covering metrics, user management,
  *        settings, and audit logging.
  */
-import { apiGet, apiPost, apiPut, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, seg } from "./client";
 
 /**
  * @brief Community-level activity metrics.
@@ -177,6 +177,17 @@ export const restoreUser = (userId: string) =>
  */
 export const deleteUser = (userId: string) =>
   apiDelete<MessageResponse>(`/api/v1/admin/users/${seg(userId)}`);
+
+/**
+ * @brief Turn simple mode on/off for a user (admin).
+ * @param userId User ID
+ * @param simpleMode New value
+ * @return MessageResponse
+ */
+export const setUserSimpleMode = (userId: string, simpleMode: boolean) =>
+  apiPatch<MessageResponse>(`/api/v1/admin/users/${seg(userId)}/settings`, {
+    simple_mode: simpleMode,
+  });
 
 /**
  * @brief Fetch admin settings.

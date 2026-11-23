@@ -827,6 +827,7 @@
         "deactivated": "User deactivated",
         "restored": "User restored",
         "memorialized": "Account memorialized",
+        "simpleMode": "Simple mode updated",
         "deleted": "User deleted"
       },
       "audit": {

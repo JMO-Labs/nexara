@@ -17,9 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError
+from app.core.features import require_feature
 from app.core.i18n import _
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
+from app.repositories.community_repo import CommunityRepository
+from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.admin import (
     AdminSettingsResponse,
@@ -104,6 +107,42 @@ class AdminService:
             admin_id=str(admin_user.id),
             target_id=str(target_user_id),
             new_role=new_role,
+        )
+
+    async def set_simple_mode(
+        self,
+        admin_user: User,
+        target_user_id: uuid.UUID,
+        value: bool,
+        ip: str | None,
+    ) -> None:
+        """
+        @brief Turn simple mode on/off for a user and audit-log it.
+
+        @param admin_user The admin performing the action.
+        @param target_user_id UUID of the user to update.
+        @param value New simple_mode value.
+        @param ip IP address of the request.
+        @raises NotFoundError If the target user is not found.
+        @raises AppError FEATURE_DISABLED when turning on with the flag off.
+        """
+        if value:
+            community = await CommunityRepository(self._session).get(self._community_id)
+            if community is not None:
+                require_feature(community, "simple_mode")
+        target = await self._user_repo.get_by_id(target_user_id, self._community_id)
+        if not target:
+            raise NotFoundError(message=_("User not found"))
+        repo = SettingsRepository(self._session)
+        await repo.get_or_create(target_user_id, self._community_id)
+        await repo.update(target_user_id, {"simple_mode": value})
+        await self._audit_repo.append(
+            actor_id=admin_user.id,
+            action="admin.user.simple_mode",
+            target_type="user",
+            target_id=target_user_id,
+            extra_data={"simple_mode": value},
+            ip_address=ip,
         )
 
     async def suspend_user(

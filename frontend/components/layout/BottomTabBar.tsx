@@ -8,7 +8,8 @@ import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChatRealtime } from "@/hooks/useChat";
-import { TAB_NAV, isItemActive, type NavItem } from "./navItems";
+import { useSimpleMode } from "@/stores/simpleMode";
+import { SIMPLE_NAV, TAB_NAV, isItemActive, type NavItem } from "./navItems";
 import { CreateMenu } from "./CreateMenu";
 
 /** Bottom padding Shell applies so content clears the bar. */
@@ -18,9 +19,6 @@ export const TAB_BAR_CLEARANCE =
 const TAB =
   "relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-1 text-xs";
 
-const LEFT = TAB_NAV.slice(0, 2);
-const RIGHT = TAB_NAV.slice(2);
-
 /**
  * @brief Phone bottom tab bar.
  * @return nav element
@@ -29,6 +27,8 @@ export function BottomTabBar() {
   const pathname = usePathname();
   const reduced = useReducedMotion();
   const { unread } = useChatRealtime();
+  const simple = useSimpleMode((s) => s.on);
+  const tabs = simple ? SIMPLE_NAV : TAB_NAV;
   const total = Object.values(unread).reduce((a, b) => a + b, 0);
 
   const item = (nav: NavItem) => {
@@ -63,11 +63,11 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="glass fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] items-center rounded-3xl p-1 md:hidden"
+      className="glass fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] items-center rounded-3xl p-1 md:hidden print:hidden"
     >
-      {LEFT.map(item)}
+      {tabs.slice(0, 2).map(item)}
       <CreateMenu compact className="mx-1 shrink-0" />
-      {RIGHT.map(item)}
+      {tabs.slice(2).map(item)}
     </nav>
   );
 }

@@ -105,7 +105,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {b.name}
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-[var(--nx-muted)]">
+                  <span className="flex items-center gap-1 text-xs font-medium text-[var(--nx-red)]">
                     {b.gotcha ? (
                       <PawPrint
                         aria-hidden
@@ -114,7 +114,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
                     ) : (
                       <Cake
                         aria-hidden
-                        className="size-3.5 text-[var(--nx-red)]"
+                        className="nx-cake size-3.5 text-[var(--nx-red)]"
                       />
                     )}
                     <span className="sr-only">

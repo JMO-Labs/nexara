@@ -79,7 +79,7 @@ export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
               ) : null}
               {canReport ? (
                 <div
-                  className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                  className="hover-only absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ReportButton

@@ -72,6 +72,24 @@ class CommunityRepository:
         await self._session.flush()
         return community
 
+    async def update_inbound(
+        self, community_id: uuid.UUID, values: dict[str, Any]
+    ) -> Community | None:
+        """
+        @brief Update reply-by-email columns (password already encrypted).
+        @param values column -> value; keys must start with ``inbound_``
+        @throws ValueError on any other column
+        """
+        if any(not k.startswith("inbound_") for k in values):
+            raise ValueError("Only inbound_* columns")
+        community = await self.get(community_id)
+        if community is None:
+            return None
+        for key, value in values.items():
+            setattr(community, key, value)
+        await self._session.flush()
+        return community
+
     async def update_features(
         self, community_id: uuid.UUID, patch: dict[str, bool]
     ) -> dict[str, Any]:

@@ -154,6 +154,7 @@ class UserSettings(Base):
     reduce_transparency: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
+    simple_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     # Locale
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="en-US")

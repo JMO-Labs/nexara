@@ -111,7 +111,7 @@ export function KudosComposer({ open, onClose }: KudosComposerProps) {
             <ul
               id={listId}
               role="listbox"
-              className="glass absolute top-full z-10 mt-1 w-full rounded-[20px] p-1 shadow-[0_12px_32px_-12px_color-mix(in_srgb,var(--nx-ink)_35%,transparent)]"
+              className="glass absolute top-full z-10 mt-1 w-full rounded-[20px] bg-[var(--nx-glass-solid)] p-1 shadow-[0_12px_32px_-12px_color-mix(in_srgb,var(--nx-ink)_35%,transparent)]"
             >
               {matches.map((u) => (
                 <li

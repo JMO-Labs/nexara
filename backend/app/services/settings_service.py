@@ -11,7 +11,9 @@ from typing import Any
 import structlog
 
 from app.core.exceptions import NotFoundError
+from app.core.features import require_feature
 from app.core.i18n import _
+from app.repositories.community_repo import CommunityRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.profile import ProfileUpdate
@@ -54,6 +56,7 @@ class SettingsService:
     @param settings_repo SettingsRepository instance.
     @param user_repo UserRepository instance.
     @param community_id UUID of the community scope.
+    @param communities Optional CommunityRepository (feature-flag guard).
     """
 
     def __init__(
@@ -61,7 +64,9 @@ class SettingsService:
         settings_repo: SettingsRepository,
         user_repo: UserRepository,
         community_id: uuid.UUID,
+        communities: CommunityRepository | None = None,
     ) -> None:
+        self._communities = communities
         self._settings_repo = settings_repo
         self._user_repo = user_repo
         self._community_id = community_id
@@ -90,6 +95,10 @@ class SettingsService:
         """
         current = await self._settings_repo.get_or_create(user_id, self._community_id)
         update_dict = data.model_dump(exclude_unset=True)
+        if update_dict.get("simple_mode") and self._communities is not None:
+            community = await self._communities.get(self._community_id)
+            if community is not None:
+                require_feature(community, "simple_mode")
         if data.home_layout is not None:
             # Keys the client didn't send (e.g. pinned favorites) survive.
             update_dict["home_layout"] = {

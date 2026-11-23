@@ -31,15 +31,21 @@ const KINDS: [RelationKind, string][] = [
 export function AddRelationDialog({
   open,
   onClose,
+  presetUserId,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Start with this member picked (e.g. from the people strip card). */
+  presetUserId?: string;
 }) {
   const me = useSession((s) => s.user?.id);
   const members = useMembersList().data ?? [];
   const household = useVisibleHousehold().data ?? [];
   const { request } = useRelationActions();
-  const [userId, setUserId] = React.useState("");
+  const [userId, setUserId] = React.useState(presetUserId ?? "");
+  React.useEffect(() => {
+    if (open && presetUserId) setUserId(presetUserId);
+  }, [open, presetUserId]);
   const [memberId, setMemberId] = React.useState("");
   const [kind, setKind] = React.useState<RelationKind>("parent");
   const [label, setLabel] = React.useState("");

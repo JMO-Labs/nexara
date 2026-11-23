@@ -52,6 +52,7 @@ from app.models.list_template import (  # noqa: F401
 from app.models.media import Media  # noqa: F401
 from app.models.media_ai import MediaAIMetadata  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
+from app.models.newsletter import NewsletterOverride  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401
 from app.models.notification_digest import NotificationDigestQueue  # noqa: F401
 from app.models.nudge import Nudge  # noqa: F401
@@ -64,6 +65,7 @@ from app.models.question_bank import QuestionBank, QuestionBankUse  # noqa: F401
 from app.models.recipe import Recipe  # noqa: F401
 from app.models.reconnect import ReconnectSnooze  # noqa: F401
 from app.models.relation import Relation  # noqa: F401
+from app.models.reply_token import InboundReply, ReplyToken  # noqa: F401
 from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot  # noqa: F401
 from app.models.story_request import StoryRequest  # noqa: F401
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401

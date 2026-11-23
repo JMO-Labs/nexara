@@ -19,6 +19,7 @@ from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.community_repo import CommunityRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.auth import SelfHostEmail
@@ -50,6 +51,7 @@ def _build_service(
         settings_repo=SettingsRepository(db),
         user_repo=UserRepository(db),
         community_id=community_id,
+        communities=CommunityRepository(db),
     )
 
 

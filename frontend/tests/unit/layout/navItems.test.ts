@@ -52,6 +52,7 @@ describe("navItems", () => {
     expect(MORE_NAV.map((i) => i.label)).toEqual([
       "Time capsules",
       "Recipes",
+      "Newsletter",
       "Shared costs",
       "Settings",
       "Admin",

@@ -93,3 +93,45 @@ async def test_ordinary_prompt_answers_visible(session: AsyncSession) -> None:
     pp = await _prompt_post(session, admin, reveal=False)
     ruth_answer = await _post(session, ruth, pp)
     assert ruth_answer.id in await _visible(session, maya)
+
+
+async def test_feed_leaves_daily_question_thread_to_the_card(session: AsyncSession) -> None:
+    from app.repositories.post_repo import PostRepository
+
+    admin, ruth, maya = [await _user(session, n) for n in ("admin", "ruth", "maya")]
+    daily = await _prompt_post(session, admin, reveal=True)
+    weekly = await _prompt_post(session, admin, reveal=False)
+    host = (
+        await session.execute(select(PromptPost.post_id).where(PromptPost.id == daily))
+    ).scalar_one()
+    answer = await _post(session, maya, daily)
+    other_answer = await _post(session, ruth, weekly)
+    plain = await _post(session, ruth)
+    items, _ = await PostRepository(session).list_feed(CID, viewer_id=maya.id, limit=100)
+    ids = {uuid.UUID(str(i["id"])) for i in items}
+    assert plain.id in ids and other_answer.id in ids
+    assert answer.id not in ids and host not in ids
+
+
+async def test_answer_count_drops_when_an_answer_is_deleted(session: AsyncSession) -> None:
+    from datetime import UTC as _UTC
+    from datetime import datetime as _dt
+
+    from app.repositories.prompt_repo import PromptRepository
+
+    admin, ruth, maya = [await _user(session, n) for n in ("admin", "ruth", "maya")]
+    pp = await _prompt_post(session, admin, reveal=True)
+    a = await _post(session, ruth, pp)
+    await _post(session, maya, pp)
+    repo = PromptRepository(session)
+    await repo.refresh_response_count(pp)
+
+    async def count() -> int:
+        row = await session.execute(select(PromptPost.response_count).where(PromptPost.id == pp))
+        return int(row.scalar_one())
+
+    assert await count() == 2
+    a.deleted_at = _dt.now(_UTC)
+    await session.flush()
+    await repo.refresh_response_count(pp)
+    assert await count() == 1

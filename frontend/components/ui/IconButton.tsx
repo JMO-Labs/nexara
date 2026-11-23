@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/ui/IconButton.tsx
- * @brief Round icon-only button; aria-label is required.
+ * @brief Round icon-only button; aria-label is required and doubles as
+ *        the hover/focus tooltip unless one is given (or `tooltip={false}`).
  */
 import * as React from "react";
 import { buttonVariants, type ButtonProps } from "./Button";
@@ -10,8 +11,11 @@ import { Tooltip } from "./Tooltip";
 
 export type IconButtonProps = Omit<ButtonProps, "asChild" | "loading"> & {
   "aria-label": string;
-  /** Hover/focus tooltip text; no tooltip when omitted. */
-  tooltip?: string;
+  /**
+   * Hover/focus tooltip text. Defaults to the aria-label so every icon
+   * button explains itself; pass `false` to opt out.
+   */
+  tooltip?: string | false;
   /** Shortcut hint shown beside the tooltip text, e.g. "Ctrl+K". */
   shortcut?: string;
   tooltipSide?: "top" | "right" | "bottom" | "left";
@@ -48,18 +52,18 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         {...rest}
       />
     );
-    if (!tooltip) return button;
+    const tip = tooltip === undefined ? rest["aria-label"] : tooltip;
+    if (!tip) return button;
     return (
       <Tooltip
         side={tooltipSide}
         content={
           shortcut ? (
             <>
-              {tooltip}{" "}
-              <kbd className="ml-1 font-mono opacity-80">{shortcut}</kbd>
+              {tip} <kbd className="ml-1 font-mono opacity-80">{shortcut}</kbd>
             </>
           ) : (
-            tooltip
+            tip
           )
         }
       >

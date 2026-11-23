@@ -54,6 +54,14 @@ class Community(Base):
     amazon_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     amazon_partner_tag: Mapped[str | None] = mapped_column(Text, nullable=True)
     amazon_marketplace: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Reply by email (IMAP polling); password is Fernet-encrypted, write-only.
+    inbound_imap_host: Mapped[str | None] = mapped_column(Text, nullable=True)
+    inbound_imap_port: Mapped[int] = mapped_column(Integer, nullable=False, server_default="993")
+    inbound_imap_user: Mapped[str | None] = mapped_column(Text, nullable=True)
+    inbound_imap_password: Mapped[str | None] = mapped_column(Text, nullable=True)
+    inbound_reply_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Name the receiving server uses in Authentication-Results (e.g. mx.google.com).
+    inbound_authserv_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Per-community feature flags (see app.core.features); unset keys use defaults.
     features: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
