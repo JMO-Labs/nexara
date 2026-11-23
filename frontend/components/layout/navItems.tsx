@@ -12,6 +12,7 @@ import {
   Inbox,
   MessageCircle,
   Network,
+  Newspaper,
   Receipt,
   Settings,
   ShieldCheck,
@@ -123,6 +124,7 @@ export const PHONE_EXTRA_NAV: NavItem[] = TOP_NAV.filter(
 export const MORE_NAV: NavItem[] = [
   { label: "Time capsules", href: "/app/capsules", Icon: Hourglass },
   { label: "Recipes", href: "/app/recipes", Icon: ChefHat },
+  { label: "Newsletter", href: "/app/newsletter", Icon: Newspaper },
   { label: "Shared costs", href: "/app/expenses", Icon: Receipt },
   { label: "Settings", href: "/app/settings", Icon: Settings },
   { label: "Admin", href: "/app/admin", Icon: ShieldCheck, adminOnly: true },

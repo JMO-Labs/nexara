@@ -40,6 +40,7 @@ export function MoreSheet({
         (i) => i.href === "/app/settings" || i.adminOnly,
       )
     : [...PHONE_EXTRA_NAV, ...visibleNav(MORE_NAV, admin)];
+  const newsletter = useFeature("newsletter");
   const onLogout = async () => {
     onClose();
     await signOut();
@@ -52,6 +53,7 @@ export function MoreSheet({
           .filter((i) => capsules || i.href !== "/app/capsules")
           .filter((i) => recipes || i.href !== "/app/recipes")
           .filter((i) => expenses || i.href !== "/app/expenses")
+          .filter((i) => newsletter || i.href !== "/app/newsletter")
           .filter((i) => tree || i.href !== "/app/family")
           .map(({ label, href, Icon }) => (
             <li key={label}>
