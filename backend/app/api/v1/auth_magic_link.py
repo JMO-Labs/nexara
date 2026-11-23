@@ -32,14 +32,15 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
     @param raw_token Raw opaque refresh token.
     @param settings Application settings (used to derive Secure flag).
     """
-    from app.api.v1.auth import COOKIE_MAX_AGE, REFRESH_COOKIE, _should_secure_cookie
+    from app.api.v1.auth import COOKIE_MAX_AGE, REFRESH_COOKIE
+    from app.core.cookies import should_secure_cookie
 
     response.set_cookie(
         REFRESH_COOKIE,
         raw_token,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )

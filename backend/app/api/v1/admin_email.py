@@ -11,13 +11,10 @@ import structlog
 from fastapi import APIRouter, Cookie, Depends, Response
 from fastapi.responses import RedirectResponse
 
-from app.api.v1.auth import _should_secure_cookie
 from app.core.config import Settings, get_settings
-from app.core.dependencies import (
-    get_admin_email_service,
-    get_google_mail_service,
-    require_role,
-)
+from app.core.cookies import should_secure_cookie
+from app.core.dependencies import require_role
+from app.core.deps_mail import get_admin_email_service, get_google_mail_service
 from app.core.exceptions import AppError
 from app.models.user import User
 from app.schemas.admin_email import (
@@ -76,7 +73,7 @@ async def google_start(
         nonce,
         max_age=600,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path=NONCE_PATH,
     )

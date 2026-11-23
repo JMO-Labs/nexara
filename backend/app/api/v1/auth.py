@@ -19,6 +19,7 @@ from app.api.v1.auth_magic_link import router as magic_link_router
 from app.api.v1.auth_oidc import router as oidc_router
 from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
+from app.core.cookies import should_secure_cookie
 from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
 from app.core.rate_limit import limiter
@@ -47,12 +48,6 @@ REFRESH_COOKIE = "refresh_token"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
 
 
-def _should_secure_cookie(settings: Settings) -> bool:
-    """@brief Return True if cookies should use the Secure flag (origins are HTTPS)."""
-    origins = settings.allowed_origins_list
-    return all(o.startswith("https://") for o in origins) if origins else True
-
-
 def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) -> None:
     """
     @brief Set the HttpOnly refresh token cookie on the response.
@@ -66,7 +61,7 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
         raw_token,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )

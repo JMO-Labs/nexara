@@ -13,7 +13,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
-from app.core.dependencies import get_admin_email_service, get_current_user
+from app.core.dependencies import get_current_user
+from app.core.deps_mail import get_admin_email_service
 from app.services.admin_email_service import AdminEmailService
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
