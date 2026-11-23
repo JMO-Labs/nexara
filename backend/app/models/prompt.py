@@ -127,5 +127,8 @@ class PromptPost(Base):
         UUID(as_uuid=True),
         ForeignKey("posts.id", ondelete="SET NULL"),
     )
+    # Daily questions share one prompts row whose body is overwritten each fire;
+    # this keeps the text that was actually asked for this post.
+    question_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint("prompt_id", "fired_at"),)

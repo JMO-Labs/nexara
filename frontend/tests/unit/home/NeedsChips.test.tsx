@@ -72,3 +72,25 @@ describe("NeedsChips", () => {
     expect(screen.getByText(text)).toBeInTheDocument();
   });
 });
+
+describe("NeedsChips quick nav", () => {
+  it("shows N unanswered button, hides at 0", async () => {
+    const { useQotd } = await import("@/stores/qotd");
+    needs = {
+      rsvps: [],
+      polls: [],
+      prompt: { prompt_post_id: "pp", post_id: "p2", title: "T" },
+      list_items: null,
+    };
+    useQotd.setState({ ids: ["a", "b"], answered: { a: false, b: false } });
+    const { unmount } = renderWithProviders(<NeedsChips />);
+    expect(
+      screen.getByRole("button", { name: "2 unanswered" }),
+    ).toBeInTheDocument();
+    unmount();
+    useQotd.setState({ answered: { a: true, b: true } });
+    renderWithProviders(<NeedsChips />);
+    expect(screen.queryByText("Needs you")).toBeNull();
+    useQotd.setState({ ids: null, answered: {} });
+  });
+});

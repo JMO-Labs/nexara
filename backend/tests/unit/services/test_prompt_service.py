@@ -184,6 +184,30 @@ class TestFireDuePrompts:
         prompt_repo.create_prompt_post.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_daily_question_keeps_own_text_per_fire(
+        self,
+        service: PromptService,
+        prompt_repo: AsyncMock,
+        dq: AsyncMock,
+    ) -> None:
+        d1 = date(2026, 4, 25)
+        p = _make_prompt(frequency_type="weekly", trigger_weekday=d1.weekday())
+        p.prompt_type = "daily_question"
+        prompt_repo.list_enabled.return_value = [p]
+        prompt_repo.create_prompt_post.side_effect = lambda pp: pp
+        texts = iter(["Q one?", "Q two?"])
+
+        async def _prepare(prompt: MagicMock) -> bool:
+            prompt.body = next(texts)  # shared row overwritten each day
+            return True
+
+        dq.prepare_fire.side_effect = _prepare
+        await service.fire_due_prompts(d1)
+        await service.fire_due_prompts(d1 + timedelta(days=7))
+        a, b = (c.args[0] for c in prompt_repo.create_prompt_post.await_args_list)
+        assert (a.question_text, b.question_text) == ("Q one?", "Q two?")
+
+    @pytest.mark.asyncio
     async def test_group_prompt_posts_to_group_only(
         self,
         service: PromptService,
@@ -282,6 +306,7 @@ class TestFinaliseExpired:
         tracker.response_count = 5
         tracker.is_finalised = False
         tracker.summary_post_id = None
+        tracker.question_text = None
 
         prompt_repo.list_expired_unfinalised.return_value = [tracker]
         prompt_repo.get_by_id.return_value = prompt
@@ -313,6 +338,7 @@ class TestFinaliseExpired:
         tracker.response_count = 3
         tracker.is_finalised = False
         tracker.summary_post_id = None
+        tracker.question_text = None
 
         m1, m2, m3 = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
 
@@ -439,6 +465,7 @@ def _make_prompt_post(prompt_id: uuid.UUID) -> MagicMock:
     pp.response_count = 2
     pp.is_finalised = False
     pp.summary_post_id = None
+    pp.question_text = None
     return pp
 
 
