@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
+import { useFeature } from "@/hooks/useFeature";
 import { cn } from "@/lib/utils";
 import { TOP_NAV, isItemActive } from "./navItems";
 
@@ -19,6 +20,7 @@ const LINK =
 export function TopNav() {
   const pathname = usePathname();
   const reduced = useReducedMotion();
+  const tree = useFeature("family_tree");
   return (
     <motion.nav
       layout={!reduced}
@@ -26,7 +28,7 @@ export function TopNav() {
       aria-label="Main"
       className="glass flex items-center gap-0.5 rounded-full p-1"
     >
-      {TOP_NAV.map((item) => {
+      {TOP_NAV.filter((i) => tree || i.href !== "/app/family").map((item) => {
         const { label, href } = item;
         const active = isItemActive(pathname, item);
         return (

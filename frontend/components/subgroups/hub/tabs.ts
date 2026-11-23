@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Newspaper,
   List,
+  Network,
   Users,
   Settings,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { PostsTab } from "./PostsTab";
 import { ListsTab } from "./ListsTab";
 import { TaggedTab } from "./TaggedTab";
 import { MembersTab } from "./MembersTab";
+import { TreeTab } from "./TreeTab";
 import { SettingsTab } from "./SettingsTab";
 
 export type IconType = LucideIcon;
@@ -46,6 +48,13 @@ export const GROUP_TABS: GroupTab[] = [
   { id: "lists", label: "Lists", Icon: List, Component: ListsTab },
   { id: "tagged", label: "Tagged", Icon: AtSign, Component: TaggedTab },
   { id: "members", label: "Members", Icon: Users, Component: MembersTab },
+  {
+    id: "tree",
+    label: "Tree",
+    Icon: Network,
+    Component: TreeTab,
+    visible: (s) => !!s.my_role,
+  },
   {
     id: "settings",
     label: "Settings",
