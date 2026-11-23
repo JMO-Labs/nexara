@@ -70,7 +70,7 @@ export function KudosCard({
       aria-label={`Kudos to ${name}${authorName ? ` from ${authorName}` : ""}`}
       aria-busy={pending || undefined}
       data-pending={pending ? "true" : undefined}
-      className="glass-item text-ink relative flex flex-col gap-4 overflow-hidden rounded-[28px] p-5 shadow-[0_18px_48px_-24px_color-mix(in_srgb,var(--nx-sun)_70%,transparent)] data-[pending=true]:opacity-60 md:p-6"
+      className="glass-item text-ink relative flex flex-col gap-4 overflow-hidden rounded-[28px] p-5 data-[pending=true]:opacity-60 md:p-6"
     >
       <span
         aria-hidden="true"
