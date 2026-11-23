@@ -5,6 +5,7 @@
  *        the strong surface; the leaf corner sits on the sender side.
  *        Hover/focus reveals Reply; other authors offer a Send DM action.
  */
+import * as React from "react";
 import { format } from "date-fns";
 import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
@@ -22,6 +23,30 @@ export interface MessageItemProps {
   onSendDm?: (userId: string) => void;
   /** Spacing/font density. */
   density?: "comfortable" | "compact";
+  /** Lowercase search text; matching spans are wrapped in <mark>. */
+  highlight?: string;
+}
+
+/**
+ * @brief Split text on a case-insensitive needle, wrapping hits in <mark>.
+ * @param text message body
+ * @param needle lowercase search text
+ */
+function marked(text: string, needle: string) {
+  const lower = text.toLowerCase();
+  const out: React.ReactNode[] = [];
+  let i = 0;
+  for (let at = lower.indexOf(needle); at >= 0; at = lower.indexOf(needle, i)) {
+    if (at > i) out.push(text.slice(i, at));
+    out.push(
+      <mark key={at} className="rounded bg-accent/40 px-0.5 text-inherit">
+        {text.slice(at, at + needle.length)}
+      </mark>,
+    );
+    i = at + needle.length;
+  }
+  out.push(text.slice(i));
+  return out;
 }
 
 /**
@@ -36,6 +61,7 @@ export function MessageItem({
   onReply,
   onSendDm,
   density = "comfortable",
+  highlight = "",
 }: MessageItemProps) {
   let time = "";
   try {
@@ -101,6 +127,10 @@ export function MessageItem({
         >
           {deleted ? (
             message.content
+          ) : highlight ? (
+            <p className="whitespace-pre-wrap break-words">
+              {marked(message.content, highlight)}
+            </p>
           ) : (
             <Markdown
               content={message.content}

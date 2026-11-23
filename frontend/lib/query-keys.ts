@@ -38,6 +38,7 @@ export const qk = {
     channels: () => ["chat", "channels"] as const,
     messages: (channelId: string) => ["chat", "messages", channelId] as const,
     dms: () => ["chat", "dms"] as const,
+    context: (channelId: string) => ["chat", "context", channelId] as const,
     subgroupChannel: (subgroupId: string) =>
       ["chat", "subgroup-channel", subgroupId] as const,
   },

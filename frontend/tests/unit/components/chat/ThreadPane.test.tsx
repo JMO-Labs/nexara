@@ -5,11 +5,19 @@
 import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import {
-  ThreadPane,
-  DetailsPane,
-} from "@/components/chat/chat-layout/ThreadPane";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+vi.mock("@/hooks/useActivePrompts", () => ({
+  useActivePrompts: () => ({ data: [] }),
+}));
+import { ThreadPane } from "@/components/chat/chat-layout/ThreadPane";
 import { gridClass } from "@/components/chat/chat-layout/helpers";
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <QueryClientProvider client={new QueryClient()}>
+    {children}
+  </QueryClientProvider>
+);
 
 const props = {
   title: "General",
@@ -29,14 +37,14 @@ const props = {
 
 describe("ThreadPane", () => {
   it("empty-state CTA focuses the composer", () => {
-    render(<ThreadPane {...props} />);
+    render(<ThreadPane {...props} />, { wrapper });
     fireEvent.click(
       screen.getByRole("button", { name: /start conversation/i }),
     );
     expect(document.activeElement).toBe(screen.getByLabelText("Message"));
   });
   it("toggles density", () => {
-    render(<ThreadPane {...props} />);
+    render(<ThreadPane {...props} />, { wrapper });
     const btn = screen.getByRole("button", { name: /compact density/i });
     expect(btn.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(btn);
@@ -44,10 +52,10 @@ describe("ThreadPane", () => {
   });
   it("keeps density across a remount (channel switch)", () => {
     window.localStorage.clear();
-    const { unmount } = render(<ThreadPane {...props} />);
+    const { unmount } = render(<ThreadPane {...props} />, { wrapper });
     fireEvent.click(screen.getByRole("button", { name: /compact density/i }));
     unmount();
-    render(<ThreadPane {...props} />);
+    render(<ThreadPane {...props} />, { wrapper });
     expect(
       screen
         .getByRole("button", { name: /comfortable density/i })
@@ -71,36 +79,27 @@ describe("ThreadPane", () => {
 });
 
 describe("gridClass (pane collapse)", () => {
-  it("stacks below md, 2 panes at md, 3 panes only at lg", () => {
+  it("stacks below md, 2 panes at md, inline details only at xl", () => {
     expect(gridClass(false)).toContain("grid-cols-1");
     expect(gridClass(false)).toContain("md:grid-cols-[300px_minmax(0,1fr)]");
     expect(gridClass(false)).not.toContain("_320px]");
-    expect(gridClass(true)).toContain("md:grid-cols-[300px_minmax(0,1fr)]");
-    expect(gridClass(true)).not.toContain(
-      "md:grid-cols-[300px_minmax(0,1fr)_320px]",
-    );
     expect(gridClass(true)).toContain(
-      "lg:grid-cols-[300px_minmax(0,1fr)_320px]",
+      "xl:grid-cols-[300px_minmax(0,1fr)_320px]",
     );
-  });
-  it("details pane shows only at lg", () => {
-    render(<DetailsPane />);
-    const aside = screen.getByRole("complementary", { name: "Details" });
-    expect(aside.className).toContain("lg:flex");
-    expect(aside.className).not.toContain("md:flex");
+    expect(gridClass(true)).not.toContain("lg:grid-cols");
   });
 });
 
 describe("ThreadPane brand styling", () => {
   it("has no hard header divider and glass header buttons", () => {
-    render(<ThreadPane {...props} />);
+    render(<ThreadPane {...props} />, { wrapper });
     const header = screen
       .getByRole("heading", { name: "General" })
       .closest("header") as HTMLElement;
     expect(header.className).not.toContain("border-b");
     const density = screen.getByRole("button", { name: /compact density/i });
     expect(density).toHaveClass("glass-btn", "rounded-full");
-    const details = screen.getByRole("button", { name: /open thread panel/i });
+    const details = screen.getByRole("button", { name: /open details/i });
     expect(details).toHaveClass("glass-btn", "rounded-full");
   });
 });
