@@ -31,36 +31,3 @@ export function DetailsSection({
     </section>
   );
 }
-
-/**
- * @brief Photo grid shared by both detail kinds.
- * @param media thumbnails (links open the media viewer)
- */
-export function PhotoGrid({
-  media,
-}: {
-  media: { id: string; thumb_url: string }[];
-}) {
-  return (
-    <DetailsSection title="Shared photos" show={media.length > 0}>
-      <ul className="grid list-none grid-cols-3 gap-1.5 p-0">
-        {media.map((m) => (
-          <li key={m.id}>
-            <a
-              href={`/app/media/${m.id}`}
-              aria-label="Open photo"
-              className="block aspect-square overflow-hidden rounded-xl outline-none focus-visible:outline-2 focus-visible:outline-accent"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={m.thumb_url}
-                alt=""
-                className="size-full object-cover"
-              />
-            </a>
-          </li>
-        ))}
-      </ul>
-    </DetailsSection>
-  );
-}

@@ -10,7 +10,7 @@ import { Avatar } from "@/components/ui";
 import { useOnline } from "@/stores/presence";
 import type { DmContext } from "@/lib/api/chatContext";
 import { inDays, localTime, presenceText } from "../format";
-import { DetailsSection, PhotoGrid } from "./DetailsSection";
+import { DetailsSection } from "./DetailsSection";
 
 /**
  * @param ctx DM context from the API
@@ -78,7 +78,6 @@ export function PersonDetails({ ctx }: { ctx: DmContext }) {
           ))}
         </ul>
       </DetailsSection>
-      <PhotoGrid media={ctx.recent_media} />
     </div>
   );
 }

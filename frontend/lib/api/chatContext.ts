@@ -9,10 +9,6 @@ export interface ContextEvent {
   title: string;
   starts_at: string;
 }
-export interface ContextMedia {
-  id: string;
-  thumb_url: string;
-}
 export interface DmContext {
   kind: "dm";
   peer: {
@@ -26,7 +22,6 @@ export interface DmContext {
   };
   shared_groups: { id: string; name: string; slug: string }[];
   upcoming_events: ContextEvent[];
-  recent_media: ContextMedia[];
 }
 export interface GroupContext {
   kind: "group";
@@ -34,7 +29,6 @@ export interface GroupContext {
   member_count: number;
   next_event: ContextEvent | null;
   open_lists: { id: string; title: string; item_count: number }[];
-  recent_media: ContextMedia[];
 }
 export type ChatContext = DmContext | GroupContext;
 

@@ -27,7 +27,6 @@ const group: ChatContext = {
   member_count: 12,
   next_event: null,
   open_lists: [],
-  recent_media: [],
 };
 
 function Harness({ ctx }: { ctx?: ChatContext }) {
@@ -74,7 +73,6 @@ describe("ConversationHeader", () => {
           },
           shared_groups: [],
           upcoming_events: [],
-          recent_media: [],
         }}
       />,
     );

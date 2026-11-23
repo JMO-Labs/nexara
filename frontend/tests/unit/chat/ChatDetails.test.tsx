@@ -46,7 +46,6 @@ const dm: DmContext = {
   upcoming_events: [
     { id: "e", title: "BBQ", starts_at: "2026-11-29T18:00:00Z" },
   ],
-  recent_media: [],
 };
 const group: GroupContext = {
   kind: "group",
@@ -54,7 +53,6 @@ const group: GroupContext = {
   member_count: 1,
   next_event: null,
   open_lists: [],
-  recent_media: [],
 };
 
 describe("details", () => {

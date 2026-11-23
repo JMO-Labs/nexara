@@ -14,7 +14,7 @@ import {
   unwatchPresence,
 } from "@/stores/presence";
 import type { GroupContext } from "@/lib/api/chatContext";
-import { DetailsSection, PhotoGrid } from "./DetailsSection";
+import { DetailsSection } from "./DetailsSection";
 
 /**
  * @brief Watch member presence and return how many are online.
@@ -95,7 +95,6 @@ export function GroupDetails({ ctx }: { ctx: GroupContext }) {
           ))}
         </ul>
       </DetailsSection>
-      <PhotoGrid media={ctx.recent_media} />
     </div>
   );
 }

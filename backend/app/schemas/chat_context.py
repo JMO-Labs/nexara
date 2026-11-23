@@ -40,13 +40,6 @@ class ContextEvent(BaseModel):
     starts_at: datetime
 
 
-class ContextMedia(BaseModel):
-    """@brief Image attached in the conversation."""
-
-    id: UUID
-    thumb_url: str
-
-
 class ContextMember(BaseModel):
     """@brief Group member summary."""
 
@@ -70,7 +63,6 @@ class DmContext(BaseModel):
     peer: ContextPeer
     shared_groups: list[ContextGroup] = Field(default_factory=list)
     upcoming_events: list[ContextEvent] = Field(default_factory=list)
-    recent_media: list[ContextMedia] = Field(default_factory=list)
 
 
 class GroupContext(BaseModel):
@@ -81,4 +73,3 @@ class GroupContext(BaseModel):
     member_count: int = 0
     next_event: ContextEvent | None = None
     open_lists: list[ContextList] = Field(default_factory=list)
-    recent_media: list[ContextMedia] = Field(default_factory=list)
