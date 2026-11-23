@@ -4,24 +4,47 @@
 
 All email sending flows through this module.  Tasks are routed to the
 ``email`` queue for high-priority, fast execution.  If SMTP is not
-configured (``SMTP_HOST`` is empty), tasks become no-ops.
+configured (no DB settings and no ``SMTP_HOST``), tasks become no-ops.
 """
 
 from __future__ import annotations
+
+import asyncio
+import uuid
 
 import structlog
 from celery import Task
 
 from app.core.config import get_settings
+from app.db.session import async_session_factory
+from app.services.email.sender import send_email as smtp_send
+from app.services.email.smtp_settings import SmtpConfig, resolve_smtp
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
 
+async def _resolve() -> SmtpConfig | None:
+    """@brief Resolve the default community's SMTP config (DB row, else env)."""
+    async with async_session_factory() as session:
+        return await resolve_smtp(session, uuid.UUID(get_settings().COMMUNITY_ID))
+
+
 def _smtp_configured() -> bool:
-    """@brief Return True if SMTP settings are present."""
-    settings = get_settings()
-    return bool(settings.SMTP_HOST)
+    """@brief Return True if SMTP is configured (DB row or env)."""
+    return asyncio.run(_resolve()) is not None
+
+
+async def _send_async(
+    to: str, subject: str, html_body: str, text_body: str | None
+) -> dict[str, str]:
+    """@brief Resolve config and send through the single sender."""
+    cfg = await _resolve()
+    if cfg is None:
+        logger.info("email_skipped_smtp_not_configured", to=to, subject=subject)
+        return {"status": "skipped"}
+    await smtp_send(cfg, to, subject, html_body, text_body)
+    return {"status": "sent"}
 
 
 @celery_app.task(
@@ -54,34 +77,7 @@ def send_email(
     @param text_body Optional plain-text fallback body.
     @return Dict with ``status`` key (``"sent"`` or ``"skipped"``).
     """
-    if not _smtp_configured():
-        logger.info("email_skipped_smtp_not_configured", to=to, subject=subject)
-        return {"status": "skipped"}
-
-    settings = get_settings()
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = settings.SMTP_FROM
-    msg["To"] = to
-
-    if text_body:
-        msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
-
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.ehlo()
-        if settings.SMTP_PORT == 587:
-            server.starttls()
-        if settings.SMTP_USER and settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_FROM, to, msg.as_string())
-
-    logger.info("email_sent", to=to, subject=subject)
-    return {"status": "sent"}
+    return asyncio.run(_send_async(to, subject, html_body, text_body))
 
 
 @celery_app.task(

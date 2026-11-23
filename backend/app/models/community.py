@@ -62,6 +62,18 @@ class Community(Base):
     inbound_reply_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Name the receiving server uses in Authentication-Results (e.g. mx.google.com).
     inbound_authserv_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # SMTP (overrides env SMTP_*); password / google_refresh are Fernet-encrypted.
+    smtp_host: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    smtp_security: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_user: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_password: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_from: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_from_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_auth: Mapped[str] = mapped_column(Text, nullable=False, server_default="password")
+    smtp_google_refresh: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    smtp_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Per-community feature flags (see app.core.features); unset keys use defaults.
     features: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")

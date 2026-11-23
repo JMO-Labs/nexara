@@ -28,7 +28,8 @@ from app.repositories.digest_repo import DigestRepository
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.webhook_repo import WebhookRepository
-from app.services.email.sender import EmailSender
+from app.services.email.sender import send_email
+from app.services.email.smtp_settings import resolve_smtp
 from app.services.email.templates import EmailTemplateRenderer
 from app.services.notifications import registry
 from app.services.notifications import types as _notification_types  # noqa: F401
@@ -113,6 +114,10 @@ async def _send_email_notification_async(
         branding = await BrandingRepository(session).get(user.community_id)
         sender_name = getattr(branding, "email_sender_name", None) or None
         reply_to = await _reply_to(session, user, notification_type, payload)
+        cfg = await resolve_smtp(session, user.community_id)
+    if cfg is None:
+        logger.debug("email_skipped_smtp_not_configured", user_id=str(user_id))
+        return {"status": "skipped"}
 
     branding_kwargs = _branding_kwargs(branding)
 
@@ -128,16 +133,16 @@ async def _send_email_notification_async(
         **branding_kwargs,
     )
 
-    sender = EmailSender()
-    sent = await sender.send(
-        to=to_email,
-        subject=payload.get("subject", "New notification"),
-        html_body=html,
-        text_body=text,
+    await send_email(
+        cfg,
+        to_email,
+        payload.get("subject", "New notification"),
+        html,
+        text,
         sender_name=sender_name,
         reply_to=reply_to,
     )
-    return {"status": "sent" if sent else "skipped"}
+    return {"status": "sent"}
 
 
 async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[str, Any]:
@@ -354,6 +359,9 @@ async def _send_digest_email_async(
             return {"status": "skipped"}
         to_email = user.email
         branding = await BrandingRepository(session).get(user.community_id)
+        cfg = await resolve_smtp(session, user.community_id)
+    if cfg is None:
+        return {"status": "skipped"}
     items = [
         {"message": n.payload.get("message", ""), "link": n.payload.get("link", "")} for n in notes
     ]
@@ -363,14 +371,15 @@ async def _send_digest_email_async(
         **_branding_kwargs(branding),
     )
     label = type_key.replace("_", " ")
-    sent = await EmailSender().send(
-        to=to_email,
-        subject=f"{len(items)} new {label} notification{'' if len(items) == 1 else 's'}",
-        html_body=html,
-        text_body=text,
+    await send_email(
+        cfg,
+        to_email,
+        f"{len(items)} new {label} notification{'' if len(items) == 1 else 's'}",
+        html,
+        text,
         sender_name=getattr(branding, "email_sender_name", None) or None,
     )
-    return {"status": "sent" if sent else "skipped"}
+    return {"status": "sent"}
 
 
 @celery_app.task(

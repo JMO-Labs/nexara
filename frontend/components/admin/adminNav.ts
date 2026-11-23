@@ -15,6 +15,7 @@ import {
   MailPlus,
   MessageSquareQuote,
   Puzzle,
+  Send,
   Settings,
   ShieldAlert,
   ShoppingBag,
@@ -52,7 +53,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (13 tabs + 4 route links). */
+/** @brief Grouped admin sections (14 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -129,6 +130,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Shopping",
         "Amazon keys for live wishlist prices.",
         ShoppingBag,
+      ),
+      tab(
+        "email",
+        "Email",
+        "Outgoing mail server (SMTP) for invites and notifications.",
+        Send,
       ),
       tab(
         "email-reply",

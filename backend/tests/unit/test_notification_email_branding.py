@@ -36,7 +36,8 @@ async def _run(branding):
         patch.object(nt, "async_session_factory", factory),
         patch.object(nt, "BrandingRepository", return_value=repo),
         patch.object(nt, "EmailTemplateRenderer", return_value=renderer),
-        patch.object(nt, "EmailSender", return_value=sender),
+        patch.object(nt, "resolve_smtp", AsyncMock(return_value=MagicMock())),
+        patch.object(nt, "send_email", sender.send),
         patch.object(nt, "get_settings", return_value=MagicMock(APP_BASE_URL=f"{BASE}/")),
     ):
         await nt._send_email_notification_async(uuid.uuid4(), "comment", {})

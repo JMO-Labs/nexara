@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.repositories.activity_repo import ActivityRepository
     from app.repositories.webhook_repo import WebhookRepository
+    from app.services.admin_email_service import AdminEmailService
     from app.services.ai.admin_ai_service import AdminAIService
     from app.services.ai.suggestion_service import SuggestionService
     from app.services.email_reply_admin_service import EmailReplyAdminService
@@ -367,6 +368,31 @@ def get_email_reply_admin_service(
     if ip is None and request.client:
         ip = request.client.host
     return EmailReplyAdminService(
+        CommunityRepository(db),
+        uuid.UUID(settings.COMMUNITY_ID),
+        settings,
+        audit_repo=AuditRepository(db),
+        actor_id=user.id,
+        ip_address=ip,
+    )
+
+
+def get_admin_email_service(
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AdminEmailService:
+    """@brief Provide an AdminEmailService (admin only) with audit logging."""
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.community_repo import CommunityRepository
+    from app.services.admin_email_service import AdminEmailService
+
+    forwarded = request.headers.get("x-forwarded-for")
+    ip = forwarded.split(",")[0].strip() if forwarded else None
+    if ip is None and request.client:
+        ip = request.client.host
+    return AdminEmailService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),
         settings,

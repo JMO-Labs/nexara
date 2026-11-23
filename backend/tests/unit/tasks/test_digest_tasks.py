@@ -82,12 +82,13 @@ async def test_send_digest_renders_and_sends():
     with (
         patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
         patch.object(nt, "BrandingRepository") as br,
-        patch.object(nt, "EmailSender", return_value=sender),
+        patch.object(nt, "resolve_smtp", AsyncMock(return_value=MagicMock())),
+        patch.object(nt, "send_email", sender.send),
     ):
         br.return_value.get = AsyncMock(return_value=None)
         out = await nt._send_digest_email_async(uuid4(), "comment", [uuid4()])
     assert out == {"status": "sent"}
-    assert "hi" in sender.send.await_args.kwargs["html_body"]
+    assert "hi" in sender.send.await_args.args[3]
 
 
 async def test_send_digest_no_notifications_skipped():

@@ -73,7 +73,7 @@ class TestDispatchEventReminders:
 
 
 class TestSenderNamePassthrough:
-    """@brief Branding email_sender_name is passed to EmailSender.send."""
+    """@brief Branding email_sender_name is passed to send_email."""
 
     async def test_passes_branding_sender_name(self):
         import uuid
@@ -94,11 +94,11 @@ class TestSenderNamePassthrough:
         with (
             patch.object(nt, "async_session_factory", factory),
             patch.object(nt, "BrandingRepository") as repo,
-            patch.object(nt, "EmailSender") as sender_cls,
+            patch.object(nt, "resolve_smtp", AsyncMock(return_value=MagicMock())),
+            patch.object(nt, "send_email", send),
             patch.object(nt, "EmailTemplateRenderer") as rend,
         ):
             repo.return_value.get = AsyncMock(return_value=branding)
             rend.return_value.render.return_value = ("<p>x</p>", "x")
-            sender_cls.return_value.send = send
             await nt._send_email_notification_async(uuid.uuid4(), "comment", {})
         assert send.call_args.kwargs["sender_name"] == "Silva Family"
