@@ -11,6 +11,7 @@ import {
   Images,
   Inbox,
   MessageCircle,
+  Network,
   Receipt,
   Settings,
   ShieldCheck,
@@ -91,6 +92,7 @@ export const TOP_NAV: NavItem[] = [
     href: "/app/wishlists",
     Icon: Gift,
   },
+  { label: "Family", href: "/app/family", Icon: Network },
   {
     label: "Inbox",
     href: "/app/inbox",

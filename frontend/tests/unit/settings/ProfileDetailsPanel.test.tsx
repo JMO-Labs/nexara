@@ -20,7 +20,9 @@ vi.mock("@/hooks/useSettings", () => ({
   useUpdateProfile: () => ({ mutate, isPending: false }),
 }));
 vi.mock("@/components/settings/VisibilitySelect", () => ({
-  VisibilitySelect: () => null,
+  VisibilitySelect: ({ field }: { field: string }) => (
+    <span data-testid={`vis-${field}`} />
+  ),
 }));
 vi.mock("@/components/media/CoverPicker", () => ({ CoverPicker: () => null }));
 
@@ -66,5 +68,11 @@ describe("ProfileDetailsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save details" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/name and a phone/);
     expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("has a Relations visibility row", () => {
+    renderWithProviders(<ProfileDetailsPanel />);
+    expect(screen.getByText("Relations")).toBeInTheDocument();
+    expect(screen.getByTestId("vis-relations")).toBeInTheDocument();
   });
 });

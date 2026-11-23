@@ -65,6 +65,7 @@ from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.tags import router as tags_router
 from app.api.v1.time_capsules import router as time_capsules_router
+from app.api.v1.tree import router as tree_router
 from app.api.v1.trips import router as trips_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
@@ -122,6 +123,7 @@ api_v1_router.include_router(time_capsules_router)
 api_v1_router.include_router(trips_router)
 api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(relations_router)
+api_v1_router.include_router(tree_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
