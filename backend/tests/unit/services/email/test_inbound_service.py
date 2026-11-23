@@ -230,3 +230,35 @@ def test_authenticated_requires_trusted_server_and_exact_dmarc() -> None:
         )
         is False
     )
+
+
+def test_authenticated_fails_closed_on_tricky_headers() -> None:
+    from app.services.email.reply_parse import authenticated
+
+    def ar(value: str) -> EmailMessage:
+        m = _msg(auth=False)
+        m["Authentication-Results"] = value
+        return m
+
+    ok, who = "mx.example.net", "ruth@example.com"
+    good = "mx.example.net; dmarc=pass header.from=example.com"
+    assert authenticated(ar(good), who, ok) is True
+    # Two dmarc entries, or one that isn't pass.
+    assert authenticated(ar(good + "; dmarc=fail header.from=example.com"), who, ok) is False
+    assert authenticated(ar("mx.example.net; dmarc=none header.from=example.com"), who, ok) is False
+    # Quoted strings, escapes and nested comments are refused outright.
+    assert (
+        authenticated(ar('mx.example.net; dmarc=pass header.from="example.com"'), who, ok) is False
+    )
+    assert (
+        authenticated(ar(r"mx.example.net; dmarc=pass header.from=example.com\;x"), who, ok)
+        is False
+    )
+    assert (
+        authenticated(
+            ar("mx.example.net; spf=pass (a (nested) c); dmarc=pass header.from=example.com"),
+            who,
+            ok,
+        )
+        is False
+    )

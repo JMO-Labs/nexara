@@ -149,6 +149,7 @@ def clean_body(msg: Message) -> str | None:
 
 
 _COMMENT = re.compile(r"\([^()]*\)")
+_HOSTNAME = re.compile(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
 
 
 def _resinfos(header: str) -> tuple[str, list[dict[str, str]]]:
@@ -187,11 +188,22 @@ def authenticated(msg: Message, sender: str | None, authserv_id: str | None) -> 
     domain = sender.rsplit("@", 1)[1].lower()
     trusted = authserv_id.lower()
     for header in msg.get_all("Authentication-Results") or []:
-        server, entries = _resinfos(str(header))
+        raw = str(header)
+        server, entries = _resinfos(raw)
         if server != trusted:
             continue
-        return any(
-            e["method"] == "dmarc" and e["result"] == "pass" and e.get("header.from") == domain
-            for e in entries
-        )
+        # Fail closed on anything our simple tokenizer can't read exactly:
+        # quoted strings, escapes, nested or unbalanced comments.
+        if (
+            '"' in raw
+            or "\\" in raw
+            or _COMMENT.sub("", raw).count("(")
+            or ")" in _COMMENT.sub("", raw)
+        ):
+            return False
+        dmarc = [e for e in entries if e["method"] == "dmarc"]
+        if len(dmarc) != 1 or dmarc[0]["result"] != "pass":
+            return False
+        got = dmarc[0].get("header.from", "")
+        return bool(_HOSTNAME.fullmatch(got)) and got == domain
     return False
