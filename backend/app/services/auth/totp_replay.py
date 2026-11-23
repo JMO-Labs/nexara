@@ -8,12 +8,17 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
+from datetime import UTC, datetime
 
 from redis.exceptions import RedisError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.core.security import hash_token
 from app.core.valkey import DB_CACHE, get_pool
+from app.models.auth import UserBackupCode
 
 MAX_FAILURES = 5
 MAX_USER_FAILURES = 10
@@ -87,3 +92,18 @@ async def clear_user_attempts(user_id: uuid.UUID, settings: Settings) -> None:
         await get_pool(settings, DB_CACHE).delete(_user_key(user_id))
     except RedisError as exc:
         raise _unavailable() from exc
+
+
+async def consume_backup_code(session: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
+    """@brief Mark an unused backup code as used.  @return True if one matched."""
+    stmt = select(UserBackupCode).where(
+        UserBackupCode.user_id == user_id,
+        UserBackupCode.code_hash == hash_token(code),
+        UserBackupCode.used_at.is_(None),
+    )
+    backup = (await session.execute(stmt)).scalar_one_or_none()
+    if not backup:
+        return False
+    backup.used_at = datetime.now(UTC)
+    await session.flush()
+    return True

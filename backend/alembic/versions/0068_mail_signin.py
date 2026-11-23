@@ -1,13 +1,14 @@
 """Mail settings (SMTP on communities) and sign-in tracking.
 
 @file 0068_mail_signin.py
-@brief Add communities.smtp_* columns. Task 4 appends signin_events below.
+@brief Add communities.smtp_* columns and the signin_events table.
 
 Revision ID: 0068_mail_signin
 Revises: 0067_prompt_answer_recount
 """
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import INET, UUID
 
 from alembic import op
 
@@ -60,13 +61,52 @@ def _downgrade_mail() -> None:
         op.drop_column("communities", col)
 
 
+def _upgrade_signin() -> None:
+    """@brief signin_events: per-attempt sign-in log (90-day retention)."""
+    op.create_table(
+        "signin_events",
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
+        sa.Column(
+            "community_id", UUID(as_uuid=True), sa.ForeignKey("communities.id"), nullable=False
+        ),
+        sa.Column("user_id", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE")),
+        sa.Column("email_tried", sa.Text()),
+        sa.Column("method", sa.Text(), nullable=False),
+        sa.Column("success", sa.Boolean(), nullable=False),
+        sa.Column("reason", sa.Text()),
+        sa.Column("ip", INET()),
+        sa.Column("user_agent", sa.Text()),
+        sa.Column("device", sa.Text()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.CheckConstraint(
+            "method IN ('password','totp','recovery','passkey','magic_link','sso')",
+            name="ck_signin_events_method",
+        ),
+    )
+    op.create_index(
+        "ix_signin_events_community_created",
+        "signin_events",
+        ["community_id", sa.text("created_at DESC")],
+    )
+    op.create_index("ix_signin_events_ip_created", "signin_events", ["ip", "created_at"])
+
+
+def _downgrade_signin() -> None:
+    """@brief Drop signin_events."""
+    op.drop_table("signin_events")
+
+
 def upgrade() -> None:
     """@brief Apply all 0068 changes."""
     _upgrade_mail()
-    # Task 4: _upgrade_signin() goes here.
+    _upgrade_signin()
 
 
 def downgrade() -> None:
     """@brief Revert all 0068 changes."""
-    # Task 4: _downgrade_signin() goes here (before the mail columns).
+    _downgrade_signin()
     _downgrade_mail()

@@ -185,6 +185,10 @@ celery_app.conf.update(
             "task": "app.tasks.retention_tasks.age_ai_usage_logs",
             "schedule": crontab(hour="3", minute="30"),
         },
+        "purge-signin-events": {
+            "task": "app.tasks.retention_tasks.purge_signin_events",
+            "schedule": crontab(hour="3", minute="45"),
+        },
         "age-post-media": {
             "task": "app.tasks.retention_tasks.age_post_media",
             "schedule": crontab(day_of_week="sat", hour="4", minute="0"),

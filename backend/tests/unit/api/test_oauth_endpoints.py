@@ -147,7 +147,7 @@ class TestOAuthExchangeEndpoint:
             mock_valkey.return_value = mock_redis
 
             mock_auth = MagicMock()
-            mock_auth._issue_tokens = AsyncMock(
+            mock_auth.login_sso = AsyncMock(
                 return_value={
                     "access_token": "jwt-token",
                     "expires_in": 900,

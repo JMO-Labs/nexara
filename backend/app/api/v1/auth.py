@@ -167,6 +167,7 @@ async def register(
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    request: Request,
     body: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -174,7 +175,7 @@ async def login(
 ) -> Any:
     """@brief Authenticate with email and password."""
     svc = AuthService(db, settings)
-    result = await svc.login(email=body.email, password=body.password)
+    result = await svc.login(email=body.email, password=body.password, request=request)
 
     if result.get("requires_2fa"):
         return LoginResponse(
@@ -301,6 +302,7 @@ async def login_2fa(
     result = await svc.verify_2fa_login(
         two_factor_token=body.two_factor_token,
         code=body.code,
+        request=request,
     )
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(

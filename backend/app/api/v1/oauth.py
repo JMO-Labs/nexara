@@ -225,6 +225,7 @@ async def oauth_callback(
 
 @router.post("/exchange", response_model=LoginResponse)
 async def oauth_exchange(
+    request: Request,
     body: OAuthExchangeRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -251,7 +252,7 @@ async def oauth_exchange(
         raise AuthenticationError(message=_("User not found or deactivated"))
 
     auth_svc = AuthService(db, settings)
-    result = await auth_svc._issue_tokens(user)
+    result = await auth_svc.login_sso(user, request=request)
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

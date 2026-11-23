@@ -9,6 +9,8 @@ table.  All tasks are routed to the ``maintenance`` queue.
 
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 
 from app.tasks.celery_app import celery_app
@@ -183,3 +185,31 @@ def age_posts() -> dict[str, int]:
     """
     logger.info("age_posts")
     return {"deleted_count": 0}
+
+
+SIGNIN_RETENTION_DAYS = 90
+
+
+async def _purge_signin_events_async() -> int:
+    from app.db.session import async_session_factory
+    from app.repositories.signin_repo import SigninRepository
+
+    async with async_session_factory() as session:
+        deleted = await SigninRepository(session).purge_older_than(SIGNIN_RETENTION_DAYS)
+        await session.commit()
+    return deleted
+
+
+@celery_app.task(
+    name="app.tasks.retention_tasks.purge_signin_events",
+    queue="maintenance",
+)
+def purge_signin_events() -> dict[str, int]:
+    """
+    @brief Delete sign-in log rows older than 90 days (fixed, not admin-configurable).
+
+    @return Dict with ``deleted_count``.
+    """
+    deleted = asyncio.run(_purge_signin_events_async())
+    logger.info("purge_signin_events", deleted_count=deleted)
+    return {"deleted_count": deleted}
