@@ -37,7 +37,7 @@ export function TopBar() {
       <header
         data-scrolled={scrolled || undefined}
         className={cn(
-          "sticky top-0 z-20 flex items-center gap-2 px-4 py-2 transition-[background-color,box-shadow,backdrop-filter] duration-200 motion-reduce:transition-none md:px-8",
+          "sticky top-0 z-20 flex print:hidden items-center gap-2 px-4 py-2 transition-[background-color,box-shadow,backdrop-filter] duration-200 motion-reduce:transition-none md:px-8",
           // Once content scrolls beneath, give the bar a glass backdrop so the
           // logo and nav never sit on top of posts.
           scrolled &&

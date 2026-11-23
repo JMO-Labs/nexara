@@ -63,7 +63,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="glass fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] items-center rounded-3xl p-1 md:hidden"
+      className="glass fixed inset-x-0 bottom-0 z-40 mx-3 mb-[calc(.75rem+env(safe-area-inset-bottom))] flex h-[60px] items-center rounded-3xl p-1 md:hidden print:hidden"
     >
       {LEFT.map(item)}
       <CreateMenu compact className="mx-1 shrink-0" />

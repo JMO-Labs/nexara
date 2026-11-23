@@ -32,6 +32,7 @@ export function MoreSheet({
   const recipes = useFeature("recipes");
   const expenses = useFeature("expenses");
   const tree = useFeature("family_tree");
+  const newsletter = useFeature("newsletter");
   const onLogout = async () => {
     onClose();
     await signOut();
@@ -44,6 +45,7 @@ export function MoreSheet({
           .filter((i) => capsules || i.href !== "/app/capsules")
           .filter((i) => recipes || i.href !== "/app/recipes")
           .filter((i) => expenses || i.href !== "/app/expenses")
+          .filter((i) => newsletter || i.href !== "/app/newsletter")
           .filter((i) => tree || i.href !== "/app/family")
           .map(({ label, href, Icon }) => (
             <li key={label}>

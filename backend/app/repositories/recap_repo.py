@@ -89,3 +89,8 @@ class RecapRepository:
         )
         row = (await self._session.execute(stmt)).first()
         return (row[0], row[1] or "", row[2]) if row else None
+
+    async def cadence(self, user_id: uuid.UUID) -> str:
+        """@return The user's recap cadence (``weekly`` when no settings row)."""
+        stmt = select(UserSettings.recap_cadence).where(UserSettings.user_id == user_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none() or "weekly"

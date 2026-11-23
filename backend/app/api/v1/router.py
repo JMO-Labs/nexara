@@ -45,6 +45,7 @@ from app.api.v1.media import router as media_router
 from app.api.v1.memorials import router as memorials_router
 from app.api.v1.memories import router as memories_router
 from app.api.v1.moderation import router as moderation_router
+from app.api.v1.newsletter import router as newsletter_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
@@ -126,6 +127,7 @@ api_v1_router.include_router(rides_router)
 api_v1_router.include_router(time_capsules_router)
 api_v1_router.include_router(trips_router)
 api_v1_router.include_router(stories_router)
+api_v1_router.include_router(newsletter_router)
 api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(relations_router)
 api_v1_router.include_router(tree_router)

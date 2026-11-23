@@ -16,6 +16,7 @@ from typing import Any, TypedDict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.core.features import is_enabled
 from app.models.community import Community
 from app.models.user import User
@@ -35,6 +36,7 @@ from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.services.celebration_service import CelebrationService
 from app.services.memories_service import MemoriesService
+from app.services.newsletter_service import check_month
 from app.services.notification_service import NotificationService
 from app.services.notifications.types.list_payloads import item_title
 from app.services.story_service import StoryService
@@ -211,6 +213,27 @@ async def story_requests(ctx: RecapContext) -> RecapSection | None:
     return {"key": "stories", "title": "Stories people asked you for", "items": items}
 
 
+async def newsletter_link(ctx: RecapContext) -> RecapSection | None:
+    """@brief Monthly-recap readers get a link to last month's printable newsletter."""
+    if not is_enabled(ctx.community, "newsletter"):
+        return None
+    if await RecapRepository(ctx.session).cadence(ctx.user.id) != "monthly":
+        return None
+    first = ctx.today.replace(day=1)
+    prev = (first - timedelta(days=1)).replace(day=1)
+    month = f"{prev.year}-{prev.month:02d}"
+    try:
+        check_month(month, ctx.tz, ctx.community.created_at, ctx.now)
+    except NotFoundError:
+        return None
+    label = f"{prev.strftime('%B %Y')} newsletter, ready to print"
+    return {
+        "key": "newsletter",
+        "title": "Your monthly newsletter",
+        "items": [{"text": label, "link": f"/app/newsletter/{month}"}],
+    }
+
+
 SECTIONS: list[SectionBuilder] = [
     on_this_day,
     daily_question,
@@ -220,5 +243,6 @@ SECTIONS: list[SectionBuilder] = [
     new_recipes,
     my_chores,
     story_requests,
+    newsletter_link,
 ]
 """@brief Ordered section builders; append new ones here."""

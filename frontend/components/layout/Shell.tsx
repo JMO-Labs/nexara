@@ -100,7 +100,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <AppBackdrop />
         <a
           href="#main"
-          className="bg-surface-strong text-bg focus:outline-accent sr-only z-50 rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
+          className="bg-surface-strong text-bg focus:outline-accent sr-only z-50 print:hidden rounded-xl px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2"
         >
           Skip to content
         </a>
@@ -135,7 +135,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <KeyboardShortcutsModal />
             <WelcomeModal />
             <OnboardingTour />
-            <div className="hidden md:block">
+            <div className="hidden md:block print:hidden">
               <FloatingChatDock />
             </div>
             <ConfirmDialog />

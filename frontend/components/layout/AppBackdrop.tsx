@@ -24,7 +24,7 @@ export function AppBackdrop() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg print:hidden"
     >
       <div
         className="absolute -inset-20 opacity-80"
