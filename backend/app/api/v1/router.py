@@ -56,6 +56,7 @@ from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
 from app.api.v1.recap import router as recap_router
 from app.api.v1.recipes import router as recipes_router
+from app.api.v1.relations import router as relations_router
 from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
@@ -118,6 +119,7 @@ api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(rides_router)
 api_v1_router.include_router(time_capsules_router)
 api_v1_router.include_router(expenses_router)
+api_v1_router.include_router(relations_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)

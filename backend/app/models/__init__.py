@@ -62,6 +62,7 @@ from app.models.post import Comment, Post, PostMedia, Reaction  # noqa: F401
 from app.models.prompt import Prompt, PromptPost  # noqa: F401
 from app.models.question_bank import QuestionBank, QuestionBankUse  # noqa: F401
 from app.models.recipe import Recipe  # noqa: F401
+from app.models.relation import Relation  # noqa: F401
 from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot  # noqa: F401
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401
 from app.models.suggestion import Suggestion  # noqa: F401

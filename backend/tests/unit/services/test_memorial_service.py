@@ -132,3 +132,19 @@ async def test_mention_lookup_excludes_memorialized():
     await TagRepository(session).users_by_username(CID, ["ruth"])
     sql = str(session.execute.await_args.args[0].compile(dialect=postgresql.dialect()))
     assert "memorialized_at IS NULL" in sql
+
+
+async def test_confirmed_relative_of_owner_sets_passed_on():
+    from app.services.relation_service import RelationService
+
+    svc, p = _svc()
+    rel = AsyncMock(spec=RelationService)
+    rel.is_confirmed_relative.return_value = True
+    svc._relations = rel
+    p["household"].get.return_value = _member()
+    actor = _user()
+    await svc.set_passed_on(uuid.uuid4(), actor, date(2026, 1, 2))
+    rel.is_confirmed_relative.assert_awaited_once_with(actor.id, OWNER)
+    rel.is_confirmed_relative.return_value = False
+    with pytest.raises(AuthorizationError):
+        await svc.set_passed_on(uuid.uuid4(), _user(), date(2026, 1, 2))
