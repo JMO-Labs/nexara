@@ -247,14 +247,15 @@ function EmailForm({ data }: { data: api.EmailSettings }) {
       <div className="flex max-w-[880px] flex-col border-t border-border">
         <SettingsRow label="Send test to">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <Input
-              aria-label="Send test to"
-              type="email"
-              className="md:flex-1"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="you@example.com"
-            />
+            <div className="min-w-0 md:flex-1">
+              <Input
+                aria-label="Send test to"
+                type="email"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
             <Button
               type="button"
               variant="secondary"
