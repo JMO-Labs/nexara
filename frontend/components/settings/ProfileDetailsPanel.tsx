@@ -20,6 +20,7 @@ import { Panel } from "@/components/ui/page";
 import { CoverPicker } from "@/components/media/CoverPicker";
 import { useMyProfile, useUpdateProfile } from "@/hooks/useSettings";
 import type { ProfileUpdate } from "@/lib/api/settings";
+import { useFeature } from "@/hooks/useFeature";
 import { VisibilitySelect } from "./VisibilitySelect";
 
 type LinkRow = { label: string; url: string };
@@ -70,6 +71,7 @@ function Field({
 export function ProfileDetailsPanel() {
   const { data: me } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
+  const relationsOn = useFeature("relations");
   const [draft, setDraft] = React.useState<Draft | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -309,6 +311,14 @@ export function ProfileDetailsPanel() {
           </div>
         </div>
       </Field>
+      {relationsOn && (
+        <SettingsRow
+          label="Relations"
+          description="Who can see the family and friends linked to you, and show you on the family tree."
+        >
+          <VisibilitySelect field="relations" label="relations" />
+        </SettingsRow>
+      )}
       {error && (
         <p role="alert" className="mt-2 text-sm text-destructive">
           {error}

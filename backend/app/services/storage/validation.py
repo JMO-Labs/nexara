@@ -45,9 +45,16 @@ WEBM_HEADER = b"\x1a\x45\xdf\xa3"
 SVG_MARKERS = (b"<svg", b"<?xml")
 """@brief Byte prefixes that indicate SVG content (always rejected)."""
 
+OGG_HEADER = b"OggS"
+"""@brief Ogg container (Vorbis / Opus) capture pattern."""
+
+AUDIO_BRANDS = {b"M4A ", b"M4B "}
+"""@brief ftyp major brands indicating audio-only MP4 (m4a / audiobook)."""
+
 MAX_SIZE_BYTES: dict[str, int] = {
     "image": 20 * 1024 * 1024,
     "video": 500 * 1024 * 1024,
+    "audio": 25 * 1024 * 1024,
 }
 """@brief Per-category upload size limits in bytes."""
 
@@ -77,6 +84,8 @@ def _check_ftyp(header: bytes) -> tuple[bool, str]:
     if header[4:8] != FTYP_BOX_MARKER:
         return False, ""
     brand = header[8:12]
+    if brand in AUDIO_BRANDS:
+        return True, "audio/mp4"
     if brand in MP4_BRANDS:
         return True, "video/mp4"
     if brand in MOV_BRANDS:
@@ -89,7 +98,12 @@ def _check_webm(header: bytes) -> bool:
     return header[:4] == WEBM_HEADER
 
 
-def validate_file_content(header: bytes) -> str:
+def _check_mp3(header: bytes) -> bool:
+    """@brief True for an ID3 tag or an MPEG audio frame sync (0xFFEx)."""
+    return header[:3] == b"ID3" or (header[0] == 0xFF and (header[1] & 0xE0) == 0xE0)
+
+
+def validate_file_content(header: bytes, declared: str | None = None) -> str:
     """
     @brief Detect the true MIME type of a file from its magic bytes.
 
@@ -97,6 +111,8 @@ def validate_file_content(header: bytes) -> str:
     SVG content is always rejected regardless of declared type.
 
     @param header First 12+ bytes of the file.
+    @param declared Client-declared type; only used to tell audio-only WebM
+           (``audio/webm``) from video WebM, which share one header.
     @return Detected MIME type string.
     @raises UploadValidationError If the type is unsupported or SVG.
     """
@@ -116,10 +132,17 @@ def validate_file_content(header: bytes) -> str:
 
     matched, mime = _check_ftyp(header)
     if matched:
-        return mime
+        # Browsers label recorder output ``iso5``/``mp42`` etc.; trust a declared m4a.
+        return "audio/mp4" if mime == "video/mp4" and declared == "audio/mp4" else mime
 
     if _check_webm(header):
-        return "video/webm"
+        return "audio/webm" if (declared or "").startswith("audio/") else "video/webm"
+
+    if header[:4] == OGG_HEADER:
+        return "audio/ogg"
+
+    if _check_mp3(header):
+        return "audio/mpeg"
 
     raise UploadValidationError("Unsupported file type")
 

@@ -12,13 +12,7 @@ import * as React from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import {
-  Avatar,
-  Button,
-  Chip,
-  IconButton,
-  type ScopeValue,
-} from "@/components/ui";
+import { Avatar, IconButton, type ScopeValue } from "@/components/ui";
 import { useSession } from "@/stores/session";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useCalendars } from "@/hooks/useCalendars";
@@ -28,6 +22,8 @@ import { AudiencePicker } from "./AudiencePicker";
 import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
 import { KudosComposer } from "./KudosComposer";
 import { CelebrateComposer } from "./CelebrateComposer";
+import { InterestPrompt } from "./InterestPrompt";
+import { Recorder } from "@/components/audio/Recorder";
 import { CapsuleComposer } from "@/components/capsules/CapsuleComposer";
 import { useFeature } from "@/hooks/useFeature";
 import {
@@ -75,6 +71,13 @@ export function PostComposer({
   const [capsuleOpen, setCapsuleOpen] = React.useState(false);
   const openCapsule = useFeature("time_capsules")
     ? () => setCapsuleOpen(true)
+    : undefined;
+  const [recording, setRecording] = React.useState(false);
+  const openRecorder = useFeature("voice_stories")
+    ? () => {
+        setExpanded(true);
+        setRecording(true);
+      }
     : undefined;
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
@@ -206,42 +209,23 @@ export function PostComposer({
   if (!me) return null;
 
   const interestPrompt = showInterest ? (
-    <div
-      role="status"
-      className="bg-surface text-ink mt-2 flex flex-col items-start gap-2 rounded-2xl border border-muted/40 p-3"
-    >
-      <p className="text-sm font-semibold">Add to your interests?</p>
-      {interestCategorySlug && (
-        <Chip tone="accent">{interestCategorySlug}</Chip>
-      )}
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          loading={addingInterest}
-          onClick={async () => {
-            if (!interestCategorySlug) return;
-            setAddingInterest(true);
-            try {
-              await addInterest(interestCategorySlug);
-              setShowInterest(false);
-            } catch (e) {
-              console.error("Failed to add interest:", e);
-            } finally {
-              setAddingInterest(false);
-            }
-          }}
-        >
-          Add
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setShowInterest(false)}
-        >
-          Not now
-        </Button>
-      </div>
-    </div>
+    <InterestPrompt
+      slug={interestCategorySlug}
+      busy={addingInterest}
+      onAdd={async () => {
+        if (!interestCategorySlug) return;
+        setAddingInterest(true);
+        try {
+          await addInterest(interestCategorySlug);
+          setShowInterest(false);
+        } catch (e) {
+          console.error("Failed to add interest:", e);
+        } finally {
+          setAddingInterest(false);
+        }
+      }}
+      onDismiss={() => setShowInterest(false)}
+    />
   ) : null;
 
   const fileInput = (
@@ -286,6 +270,7 @@ export function PostComposer({
             onKudos={() => setKudosOpen(true)}
             onCelebrate={() => setCelebrateOpen(true)}
             onCapsule={openCapsule}
+            onRecord={openRecorder}
             onPhotos={openPhotos}
             onPoll={togglePoll}
           />
@@ -345,6 +330,15 @@ export function PostComposer({
             />
           )}
           <MediaTray items={uploads.items} onRemove={uploads.remove} />
+          {recording && (
+            <Recorder
+              onReady={(m) => {
+                uploads.addAudio(m.id);
+                setRecording(false);
+              }}
+              onCancel={() => setRecording(false)}
+            />
+          )}
           {fileInput}
           {error ? (
             <p role="alert" className="mt-1 text-xs text-destructive">
@@ -365,6 +359,7 @@ export function PostComposer({
             onKudos={() => setKudosOpen(true)}
             onCelebrate={() => setCelebrateOpen(true)}
             onCapsule={openCapsule}
+            onRecord={openRecorder}
             onPhotos={() => fileRef.current?.click()}
             onPoll={togglePoll}
             postDisabled={uploads.busy}

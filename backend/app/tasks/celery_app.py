@@ -27,6 +27,7 @@ celery_app = Celery(
     include=[
         "app.tasks.ai_tasks",
         "app.tasks.album_tasks",
+        "app.tasks.audio_tasks",
         "app.tasks.birthday_tasks",
         "app.tasks.capsule_tasks",
         "app.tasks.chore_tasks",
@@ -41,6 +42,7 @@ celery_app = Celery(
         "app.tasks.media_tasks",
         "app.tasks.memories_tasks",
         "app.tasks.recap_tasks",
+        "app.tasks.trip_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -48,6 +50,7 @@ celery_app = Celery(
         "app.tasks.prompt_tasks",
         "app.tasks.retention_tasks",
         "app.tasks.shop_tasks",
+        "app.tasks.story_tasks",
     ],
 )
 """@brief The Celery application instance."""
@@ -78,6 +81,9 @@ celery_app.conf.update(
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
         "app.tasks.list_tasks.*": {"queue": "maintenance"},
         "chores.*": {"queue": "maintenance"},
+        "trips.*": {"queue": "notifications"},
+        "stories.*": {"queue": "notifications"},
+        "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
@@ -213,6 +219,10 @@ celery_app.conf.update(
             "task": "app.tasks.nudge_tasks.send_gentle_nudges",
             "schedule": crontab(hour="10", minute="0"),
         },
+        "nudges-reconnect": {
+            "task": "nudges.reconnect",
+            "schedule": crontab(hour="15", minute="0"),
+        },
         "trivia-select-daily-question": {
             "task": "plugins.example_trivia.select_daily_question",
             "schedule": crontab(hour="0", minute="0"),
@@ -232,6 +242,14 @@ celery_app.conf.update(
         "chores-advance-due": {
             "task": "chores.advance_due",
             "schedule": crontab(minute="*/15"),
+        },
+        "trips-sweep": {
+            "task": "trips.sweep",
+            "schedule": crontab(minute="*/5"),
+        },
+        "stories-daily": {
+            "task": "stories.daily",
+            "schedule": crontab(hour=9, minute=0),
         },
         "capsules-open-due": {
             "task": "capsules.open_due",

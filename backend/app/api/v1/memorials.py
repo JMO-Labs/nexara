@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.relations import build_relation_service
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.models.user import User
@@ -40,6 +41,7 @@ def _service(
         AuditRepository(db),
         CommunityRepository(db),
         cid,
+        relations=build_relation_service(db, cid),
     )
 
 

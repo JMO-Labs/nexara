@@ -14,6 +14,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { HomeTile, type TileSlotProps } from "@/components/home/HomeTile";
 import { useHomePeople } from "@/hooks/useHomePeople";
 import { useCelebrations } from "@/hooks/useHousehold";
+import { WatchingChips } from "@/components/trips/WatchingChips";
 import { HouseholdAvatar } from "@/components/household/HouseholdCards";
 
 const when = (d: number) =>
@@ -134,6 +135,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
             ))}
           </ul>
         )}
+        <WatchingChips />
         <div>
           <p className="mb-2 text-sm text-[var(--nx-muted)]">
             {online.length
@@ -151,6 +153,7 @@ export function PeopleTile({ open, onToggle }: TileSlotProps) {
                     src={p.avatar_url ?? undefined}
                     name={p.display_name}
                     size="md"
+                    userId={p.user_id}
                   />
                 </Link>
               </li>

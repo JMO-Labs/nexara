@@ -121,6 +121,9 @@ class UserSettings(Base):
     notif_nudge_email: Mapped[bool] = _bool_col("false")
     receive_gentle_nudges: Mapped[bool] = _bool_col()
     receive_nudges: Mapped[bool] = _bool_col()
+    # Private "reach out to family" reminders (migration 0061); days in 14/30/60/90
+    reconnect_nudges: Mapped[bool] = _bool_col()
+    reconnect_days: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="30")
 
     # Email digest
     email_digest_enabled: Mapped[bool] = _bool_col("false")

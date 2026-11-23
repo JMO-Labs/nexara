@@ -121,6 +121,7 @@ async def _event_generator(
                     event_id=event_id,
                 )
             except TimeoutError:
+                await set_online(user_id)
                 yield ": heartbeat\n\n"
 
     except asyncio.CancelledError:
@@ -129,4 +130,5 @@ async def _event_generator(
         logger.exception("sse_error", user_id=str(user_id))
     finally:
         await manager.disconnect(conn, user_id, is_sse=True)
-        await set_offline(user_id)
+        if not manager.has_connections(user_id):
+            await set_offline(user_id)

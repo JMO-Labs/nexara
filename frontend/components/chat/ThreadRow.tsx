@@ -23,6 +23,10 @@ export interface ThreadRowProps {
   mentions?: boolean;
   /** ISO timestamp shown when there is no badge. */
   time?: string | null;
+  /** Relative time ("2h"), shown beside the unread badge. */
+  timeLabel?: string | null;
+  /** ~56px row (chat sidebar). */
+  dense?: boolean;
   selected?: boolean;
   /** Home accordion state; sets aria-expanded. */
   expanded?: boolean;
@@ -53,6 +57,8 @@ export function ThreadRow({
   unread = 0,
   mentions,
   time,
+  timeLabel,
+  dense,
   selected,
   expanded,
   onClick,
@@ -67,7 +73,8 @@ export function ThreadRow({
         aria-expanded={expanded}
         aria-current={selected ? "true" : undefined}
         className={cn(
-          "flex w-full items-center gap-3 rounded-[22px] p-3 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+          "flex w-full items-center gap-3 rounded-[22px] text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+          dense ? "p-2" : "p-3",
           selected &&
             "bg-[color-mix(in_srgb,var(--nx-ink)_8%,var(--nx-item))] shadow-[inset_0_0_0_1px_var(--nx-glass-hi)]",
           className,
@@ -97,25 +104,36 @@ export function ThreadRow({
             {preview}
           </small>
         </span>
-        {mentions ? (
-          <span
-            aria-label="Mentions you"
-            className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[var(--nx-red)] px-1.5 text-xs font-medium text-white"
-          >
-            @
-          </span>
-        ) : unread > 0 ? (
-          <span
-            aria-label={`${unread} unread`}
-            className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[var(--nx-blue)] px-1.5 text-xs font-medium text-white"
-          >
-            {unread}
-          </span>
-        ) : time ? (
-          <time dateTime={time} className="text-xs text-[var(--nx-muted)]">
-            {clock(time)}
-          </time>
-        ) : null}
+        {(() => {
+          const badge = mentions ? (
+            <span
+              aria-label="Mentions you"
+              className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[var(--nx-red)] px-1.5 text-xs font-medium text-white"
+            >
+              @
+            </span>
+          ) : unread > 0 ? (
+            <span
+              aria-label={`${unread} unread`}
+              className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-[var(--nx-blue)] px-1.5 text-xs font-medium text-white"
+            >
+              {unread}
+            </span>
+          ) : null;
+          const stamp = timeLabel ? (
+            <span className="text-xs text-[var(--nx-muted)]">{timeLabel}</span>
+          ) : !badge && time ? (
+            <time dateTime={time} className="text-xs text-[var(--nx-muted)]">
+              {clock(time)}
+            </time>
+          ) : null;
+          return badge || stamp ? (
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              {stamp}
+              {badge}
+            </span>
+          ) : null;
+        })()}
       </button>
       {onDelete && (
         <IconButton

@@ -34,6 +34,8 @@ export interface MessageListProps {
   onStartConversation?: () => void;
   /** Row density. */
   density?: "comfortable" | "compact";
+  /** Lowercase search text to highlight in message bodies. */
+  highlight?: string;
 }
 
 /**
@@ -90,6 +92,7 @@ export const MessageList = React.forwardRef<
     onRetry,
     onStartConversation,
     density = "comfortable",
+    highlight = "",
   },
   forwardedRef,
 ) {
@@ -171,6 +174,17 @@ export const MessageList = React.forwardRef<
     );
   }
 
+  if (ordered.length === 0 && highlight) {
+    return (
+      <div className="flex min-h-0 flex-1">
+        <EmptyState
+          title="No matching messages"
+          description="Try a different word. Only loaded messages are searched."
+        />
+      </div>
+    );
+  }
+
   if (ordered.length === 0) {
     return (
       <div className="flex min-h-0 flex-1">
@@ -200,7 +214,7 @@ export const MessageList = React.forwardRef<
         </p>
       )}
       <div
-        className="relative mx-auto w-full max-w-[860px]"
+        className="relative mx-auto w-full max-w-[760px]"
         style={{ height: virtualizer.getTotalSize() }}
       >
         {virtualizer.getVirtualItems().map((vi) => {
@@ -221,9 +235,17 @@ export const MessageList = React.forwardRef<
                 <div
                   role="separator"
                   aria-label={dayLabel(m.created_at)}
-                  className="px-4 py-2 text-center text-xs font-medium text-muted"
+                  className="flex items-center gap-3 px-4 py-3 text-xs font-medium text-muted"
                 >
-                  {dayLabel(m.created_at)}
+                  <span
+                    aria-hidden
+                    className="h-px flex-1 bg-[var(--nx-glass-edge)]"
+                  />
+                  <span>{dayLabel(m.created_at)}</span>
+                  <span
+                    aria-hidden
+                    className="h-px flex-1 bg-[var(--nx-glass-edge)]"
+                  />
                 </div>
               )}
               <motion.div
@@ -239,6 +261,7 @@ export const MessageList = React.forwardRef<
                   onReply={onReply}
                   onSendDm={onSendDm}
                   density={density}
+                  highlight={highlight}
                 />
               </motion.div>
             </div>

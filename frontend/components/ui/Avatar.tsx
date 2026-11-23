@@ -4,6 +4,7 @@
  */
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/stores/presence";
 
 const sizes = {
   sm: "size-6 text-[10px]",
@@ -17,6 +18,8 @@ export interface AvatarProps {
   name?: string;
   size?: keyof typeof sizes;
   className?: string;
+  /** When set, watches presence and shows an online dot. */
+  userId?: string;
 }
 
 /**
@@ -59,17 +62,24 @@ function initials(name: string | undefined): string {
 }
 
 /**
- * @brief Round avatar; image when `src`, else initials.
+ * @brief Round avatar; image when `src`, else initials. Online dot when `userId` is online.
  * @param src image url
  * @param name person name (alt text + initials)
  * @return avatar element
  */
-export function Avatar({ src, name, size = "md", className }: AvatarProps) {
+export function Avatar({
+  src,
+  name,
+  size = "md",
+  className,
+  userId,
+}: AvatarProps) {
   const [failed, setFailed] = React.useState(false);
+  const online = useOnline(userId);
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
+        "relative inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
         sizes[size],
         className,
       )}
@@ -80,12 +90,21 @@ export function Avatar({ src, name, size = "md", className }: AvatarProps) {
         <img
           src={src}
           alt={name ?? ""}
-          className="size-full object-cover"
+          className="size-full rounded-full object-cover"
           onError={() => setFailed(true)}
         />
       ) : (
         <span role="img" aria-label={name ?? "Unknown user"}>
           {initials(name) || "?"}
+        </span>
+      )}
+      {online && (
+        // Static on purpose: no animation, so nothing to reduce for motion.
+        <span
+          data-testid="online-dot"
+          className="bg-ok ring-surface absolute right-0 bottom-0 size-1/4 rounded-full ring-2"
+        >
+          <span className="sr-only">online</span>
         </span>
       )}
     </span>

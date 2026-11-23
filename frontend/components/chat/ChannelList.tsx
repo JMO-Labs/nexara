@@ -10,6 +10,8 @@ import { fadeInOut, useMotionProps } from "@/components/ui/motion";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui";
 import { groupColor } from "@/lib/groupColor";
 import type { ChatChannel, DmThread } from "@/lib/api/chat";
+import type { HomeChatThread } from "@/lib/api/home";
+import { agoShort } from "./format";
 import { ThreadRow } from "./ThreadRow";
 
 export type ChatSegment = "all" | "groups" | "direct";
@@ -26,6 +28,33 @@ export interface ChannelListProps {
   query?: string;
   /** Which kinds of thread to show. */
   segment?: ChatSegment;
+  /** Home-chats data by channel id: preview, unread and last activity. */
+  threads?: Record<string, HomeChatThread>;
+}
+
+/** @brief "Richard: he bud" preview, or null with no message. */
+function previewOf(t?: HomeChatThread): string | null {
+  const m = t?.last_message;
+  if (!m) return null;
+  return m.author_name ? `${m.author_name}: ${m.content}` : m.content;
+}
+
+/** @brief Newest activity first; threads without activity last. */
+function byActivity<T>(
+  items: T[],
+  id: (x: T) => string,
+  threads?: Record<string, HomeChatThread>,
+): T[] {
+  const at = (x: T) => threads?.[id(x)]?.last_activity_at ?? "";
+  return [...items].sort((a, b) => at(b).localeCompare(at(a)));
+}
+
+function Heading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="px-2 pb-1 pt-2 text-xs font-medium text-[var(--nx-muted)]">
+      {children}
+    </h2>
+  );
 }
 
 /**
@@ -43,6 +72,7 @@ export function ChannelList({
   loading,
   query = "",
   segment = "all",
+  threads,
 }: ChannelListProps) {
   const fade = useMotionProps(fadeInOut);
   if (loading) {
@@ -89,42 +119,71 @@ export function ChannelList({
   }
 
   const row = "glass-item";
+  const unreadOf = (id: string) =>
+    unread[id] ?? threads?.[id]?.unread_count ?? 0;
+  const stampOf = (id: string) => {
+    const t = threads?.[id];
+    return t?.last_message ? agoShort(t.last_activity_at) : null;
+  };
   return (
-    <ul className="flex list-none flex-col gap-2 p-0">
-      {grouped.map((c) => (
-        <li key={c.id}>
-          <ThreadRow
-            name={`# ${c.name}`}
-            preview={c.channel_type}
-            color={groupColor(c.subgroup_id, null)}
-            unread={unread[c.id] ?? 0}
-            selected={activeId === c.id}
-            onClick={() => onSelect(c.id)}
-            className={row}
-          />
-        </li>
-      ))}
-      {direct.map((d) => (
-        <li key={d.channel_id}>
-          <ThreadRow
-            name={d.peer.display_name}
-            preview={`@${d.peer.username}`}
-            color="var(--nx-muted)"
-            avatar={
-              <Avatar
-                src={d.peer.avatar_url ?? undefined}
-                size="md"
-                name={d.peer.display_name}
-              />
-            }
-            unread={unread[d.channel_id] ?? 0}
-            selected={activeId === d.channel_id}
-            onClick={() => onSelect(d.channel_id)}
-            onDelete={onDeleteDm ? () => onDeleteDm(d.channel_id) : undefined}
-            className={row}
-          />
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-1">
+      {grouped.length > 0 && (
+        <section aria-label="Groups">
+          <Heading>Groups</Heading>
+          <ul className="flex list-none flex-col gap-1.5 p-0">
+            {byActivity(grouped, (c) => c.id, threads).map((c) => (
+              <li key={c.id}>
+                <ThreadRow
+                  dense
+                  name={`# ${c.name}`}
+                  preview={previewOf(threads?.[c.id]) ?? c.channel_type}
+                  timeLabel={stampOf(c.id)}
+                  color={groupColor(c.subgroup_id, null)}
+                  unread={unreadOf(c.id)}
+                  selected={activeId === c.id}
+                  onClick={() => onSelect(c.id)}
+                  className={row}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {direct.length > 0 && (
+        <section aria-label="People">
+          <Heading>People</Heading>
+          <ul className="flex list-none flex-col gap-1.5 p-0">
+            {byActivity(direct, (d) => d.channel_id, threads).map((d) => (
+              <li key={d.channel_id}>
+                <ThreadRow
+                  dense
+                  name={d.peer.display_name}
+                  preview={
+                    previewOf(threads?.[d.channel_id]) ?? `@${d.peer.username}`
+                  }
+                  timeLabel={stampOf(d.channel_id)}
+                  color="var(--nx-muted)"
+                  avatar={
+                    <Avatar
+                      src={d.peer.avatar_url ?? undefined}
+                      size="md"
+                      name={d.peer.display_name}
+                      userId={d.peer.id}
+                    />
+                  }
+                  unread={unreadOf(d.channel_id)}
+                  selected={activeId === d.channel_id}
+                  onClick={() => onSelect(d.channel_id)}
+                  onDelete={
+                    onDeleteDm ? () => onDeleteDm(d.channel_id) : undefined
+                  }
+                  className={row}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
   );
 }

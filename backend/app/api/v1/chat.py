@@ -22,6 +22,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.exceptions import ValidationError
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.chat_context_repo import ChatContextRepository
 from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import ChatChannelRepository, ChatMessageRepository
 from app.repositories.moderation_repo import ModerationRepository
@@ -32,6 +33,8 @@ from app.schemas.chat import (
     DirectMessageThreadResponse,
     MessageHistoryResponse,
 )
+from app.schemas.chat_context import DmContext, GroupContext
+from app.services.chat_context_service import ChatContextService
 from app.services.chat_service import ChatService
 from app.services.realtime.handlers.chat_handler import chat_rate_limiter
 
@@ -183,3 +186,18 @@ async def list_dm_threads(
     """@brief List every DM thread the user participates in."""
     threads = await service.list_dm_threads(user)
     return [DirectMessageThreadResponse.model_validate(t) for t in threads]
+
+
+@router.get(
+    "/channels/{channel_id}/context",
+    response_model=DmContext | GroupContext,
+)
+async def get_channel_context(
+    channel_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> DmContext | GroupContext:
+    """@brief Details-panel data for a channel the caller participates in (else 404)."""
+    service = ChatContextService(ChatChannelRepository(db), ChatContextRepository(db), community_id)
+    return await service.get_context(user, channel_id)

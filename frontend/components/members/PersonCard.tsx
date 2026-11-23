@@ -43,13 +43,8 @@ export function PersonCard({ person }: { person: DirectoryPerson }) {
             name={person.display_name}
             size="lg"
             className="size-12 bg-[color-mix(in_srgb,var(--nx-blue)_30%,transparent)] text-ink"
+            userId={person.user_id}
           />
-          {person.online && (
-            <i
-              aria-hidden
-              className="absolute right-[-1px] bottom-[-1px] size-3 rounded-full border-2 border-[var(--nx-glass-solid)] bg-[var(--nx-ok)]"
-            />
-          )}
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[15px] font-medium text-ink">

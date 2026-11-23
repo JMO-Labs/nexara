@@ -31,6 +31,7 @@ describe("navItems", () => {
       "Photos",
       "Community",
       "Wishlists",
+      "Family",
       "Inbox",
     ]);
   });
@@ -39,10 +40,11 @@ describe("navItems", () => {
     expect(community.href).toBe("/app/community");
     expect(community.match).toEqual(["/app/members", "/app/subgroups"]);
   });
-  it("phone extra nav is Community, Wishlists and Inbox", () => {
+  it("phone extra nav is Community, Wishlists, Family and Inbox", () => {
     expect(PHONE_EXTRA_NAV.map((i) => i.label)).toEqual([
       "Community",
       "Wishlists",
+      "Family",
       "Inbox",
     ]);
   });

@@ -5,7 +5,7 @@
  *        thumbnail job marks media ready, since posts reject unready media).
  */
 import * as React from "react";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Mic, Plus, X } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { getMedia, singleUpload } from "@/lib/api/media";
 
@@ -137,6 +137,8 @@ interface Upload {
   key: string;
   id?: string;
   preview: string;
+  /** Already-uploaded voice note (no image preview). */
+  audio?: boolean;
   state: "uploading" | "ready" | "error";
 }
 
@@ -175,9 +177,23 @@ export function useMediaUploads() {
     }
   };
 
+  /** @brief Add an already-uploaded, ready voice note. */
+  const addAudio = (id: string) =>
+    setItems((xs) => [
+      ...xs,
+      {
+        key: crypto.randomUUID(),
+        id,
+        preview: "",
+        audio: true,
+        state: "ready",
+      },
+    ]);
+
   return {
     items,
     add,
+    addAudio,
     remove: (key: string) => setItems((xs) => xs.filter((x) => x.key !== key)),
     readyIds: items.filter((x) => x.state === "ready").map((x) => x.id!),
     busy: items.some((x) => x.state === "uploading"),
@@ -206,8 +222,14 @@ export function MediaTray({
           key={x.key}
           className="relative size-20 overflow-hidden rounded-2xl"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={x.preview} alt="" className="size-full object-cover" />
+          {x.audio ? (
+            <span className="grid size-full place-items-center bg-bg text-ink">
+              <Mic className="size-6" aria-label="Voice note" />
+            </span>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={x.preview} alt="" className="size-full object-cover" />
+          )}
           {x.state === "uploading" && (
             <span className="absolute inset-0 grid place-items-center bg-black/40">
               <Loader2
@@ -223,7 +245,7 @@ export function MediaTray({
           )}
           <button
             type="button"
-            aria-label="Remove photo"
+            aria-label={x.audio ? "Remove voice note" : "Remove photo"}
             onClick={() => onRemove(x.key)}
             className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-black/60 text-white"
           >

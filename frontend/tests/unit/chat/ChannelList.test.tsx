@@ -184,3 +184,56 @@ describe("ChannelList", () => {
     expect(cls).not.toMatch(/bg-accent/);
   });
 });
+
+describe("ChannelList home-chats merge", () => {
+  const thread = (id: string, at: string, unread: number) => ({
+    channel_id: id,
+    name: "x",
+    channel_type: "direct" as const,
+    subgroup_id: null,
+    peer: null,
+    last_message: {
+      id: "m",
+      author_name: "Richard",
+      content: "he bud",
+      created_at: at,
+    },
+    unread_count: unread,
+    mentions_me: false,
+    last_activity_at: at,
+  });
+  it("shows preview, unread badge and sections, newest first", () => {
+    const two: DmThread[] = [
+      ...dms,
+      {
+        channel_id: "d2",
+        peer: {
+          id: "u2",
+          username: "bo",
+          display_name: "Bo",
+          avatar_url: null,
+        },
+        created_at: "",
+      },
+    ];
+    wrap(
+      <ChannelList
+        channels={channels}
+        dms={two}
+        activeId={null}
+        unread={{}}
+        onSelect={() => {}}
+        threads={{
+          d1: thread("d1", "2026-11-20T10:00:00Z", 0),
+          d2: thread("d2", "2026-11-22T10:00:00Z", 3),
+        }}
+      />,
+    );
+    expect(screen.getAllByText("Richard: he bud")).toHaveLength(2);
+    expect(screen.getByLabelText("3 unread")).toBeInTheDocument();
+    expect(screen.getByText("People")).toBeInTheDocument();
+    expect(screen.getByText("Groups")).toBeInTheDocument();
+    const names = screen.getAllByText(/^(Alex|Bo)$/).map((n) => n.textContent);
+    expect(names).toEqual(["Bo", "Alex"]);
+  });
+});

@@ -12,6 +12,7 @@ import { Skeleton, EmptyState, Button } from "@/components/ui";
 import { Panel, SideNav, TwoPane } from "@/components/ui/page";
 import { cn } from "@/lib/utils";
 import { useSubgroupDetail } from "@/hooks/useSubgroups";
+import { useFeature } from "@/hooks/useFeature";
 import { CoverBand } from "./CoverBand";
 import { MemberOnlyGate } from "./MemberOnlyGate";
 import { GroupChatPanel } from "./GroupChatPanel";
@@ -57,6 +58,7 @@ export function GroupHub({ slug }: GroupHubProps) {
   const { data: subgroup, isLoading } = useSubgroupDetail(slug);
   const currentTab = searchParams.get("tab") || "overview";
   const [chatOpen, toggleChat] = usePersistedFlag(CHAT_OPEN_KEY);
+  const treeOn = useFeature("family_tree");
 
   if (isLoading) {
     return (
@@ -83,7 +85,9 @@ export function GroupHub({ slug }: GroupHubProps) {
     return <MemberOnlyGate subgroup={subgroup} />;
   }
 
-  const visibleTabs = getVisibleTabs(subgroup);
+  const visibleTabs = getVisibleTabs(subgroup).filter(
+    (t) => t.id !== "tree" || treeOn,
+  );
   const active = visibleTabs.find((t) => t.id === currentTab) ?? visibleTabs[0];
   const Active = active?.Component;
 

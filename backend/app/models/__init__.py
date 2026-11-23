@@ -62,11 +62,15 @@ from app.models.post import Comment, Post, PostMedia, Reaction  # noqa: F401
 from app.models.prompt import Prompt, PromptPost  # noqa: F401
 from app.models.question_bank import QuestionBank, QuestionBankUse  # noqa: F401
 from app.models.recipe import Recipe  # noqa: F401
+from app.models.reconnect import ReconnectSnooze  # noqa: F401
+from app.models.relation import Relation  # noqa: F401
 from app.models.retention import RetentionPolicy, StorageAlert, StorageSnapshot  # noqa: F401
+from app.models.story_request import StoryRequest  # noqa: F401
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember  # noqa: F401
 from app.models.suggestion import Suggestion  # noqa: F401
 from app.models.tag import Tag  # noqa: F401
 from app.models.time_capsule import TimeCapsule, TimeCapsuleRecipient  # noqa: F401
+from app.models.trip import Trip, TripWatcher  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.user_export import UserExport  # noqa: F401
 from app.models.user_oauth_link import UserOAuthLink  # noqa: F401

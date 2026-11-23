@@ -52,18 +52,24 @@ from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
+from app.api.v1.presence import router as presence_router
 from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
 from app.api.v1.recap import router as recap_router
 from app.api.v1.recipes import router as recipes_router
+from app.api.v1.reconnect import router as reconnect_router
+from app.api.v1.relations import router as relations_router
 from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
+from app.api.v1.stories import router as stories_router
 from app.api.v1.subgroups import router as subgroups_router
 from app.api.v1.suggestions import router as suggestions_router
 from app.api.v1.tags import router as tags_router
 from app.api.v1.time_capsules import router as time_capsules_router
+from app.api.v1.tree import router as tree_router
+from app.api.v1.trips import router as trips_router
 from app.api.v1.users import router as users_router
 from app.api.v1.users_directory import router as users_directory_router
 from app.api.v1.weather import router as weather_router
@@ -104,6 +110,7 @@ api_v1_router.include_router(tags_router)
 api_v1_router.include_router(wishlists_router)
 api_v1_router.include_router(household_router)
 api_v1_router.include_router(memorials_router)
+api_v1_router.include_router(presence_router)
 api_v1_router.include_router(memories_router)
 api_v1_router.include_router(weather_router)
 api_v1_router.include_router(users_router)
@@ -117,10 +124,15 @@ api_v1_router.include_router(list_templates_router)
 api_v1_router.include_router(kudos_router)
 api_v1_router.include_router(rides_router)
 api_v1_router.include_router(time_capsules_router)
+api_v1_router.include_router(trips_router)
+api_v1_router.include_router(stories_router)
 api_v1_router.include_router(expenses_router)
+api_v1_router.include_router(relations_router)
+api_v1_router.include_router(tree_router)
 api_v1_router.include_router(recipes_router)
 api_v1_router.include_router(bookmarks_router)
 api_v1_router.include_router(nudges_router)
+api_v1_router.include_router(reconnect_router)
 api_v1_router.include_router(suggestions_router)
 api_v1_router.include_router(media_router)
 api_v1_router.include_router(notifications_router)

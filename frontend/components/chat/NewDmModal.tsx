@@ -85,6 +85,7 @@ export function NewDmModal({
                       size="md"
                       src={u.avatar_url ?? undefined}
                       name={u.display_name}
+                      userId={u.id}
                     />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold">

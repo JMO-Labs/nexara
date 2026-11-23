@@ -71,6 +71,9 @@ class UnreadCountResponse(BaseModel):
 DigestCadence = Literal["instant", "hourly", "daily", "off"]
 """@brief Allowed per-type digest cadence values."""
 
+ReconnectDays = Literal[14, 30, 60, 90]
+"""@brief Allowed reconnect-reminder quiet gaps in days."""
+
 RecapCadence = Literal["weekly", "monthly", "off"]
 """@brief Allowed family-recap email cadences."""
 
@@ -94,6 +97,8 @@ class NotificationPreferences(BaseModel):
     dnd_timezone: str
     digest_cadence: dict[str, str]
     recap_cadence: RecapCadence | None = None
+    reconnect_nudges: bool | None = None
+    reconnect_days: ReconnectDays | None = None
 
     model_config = {"from_attributes": True}
 
@@ -110,3 +115,5 @@ class NotificationPreferencesUpdate(BaseModel):
     dnd_timezone: str | None = None
     digest_cadence: dict[str, str] | None = None
     recap_cadence: RecapCadence | None = None
+    reconnect_nudges: bool | None = None
+    reconnect_days: ReconnectDays | None = None

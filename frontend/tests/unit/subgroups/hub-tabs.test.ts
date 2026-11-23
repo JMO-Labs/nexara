@@ -15,9 +15,10 @@ describe("GROUP_TABS", () => {
       "lists",
       "tagged",
       "members",
+      "tree",
       "settings",
     ];
-    expect(GROUP_TABS).toHaveLength(8);
+    expect(GROUP_TABS).toHaveLength(9);
 
     GROUP_TABS.forEach((tab) => {
       expect(tabIds).toContain(tab.id);

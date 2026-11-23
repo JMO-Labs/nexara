@@ -19,7 +19,7 @@ export interface MediaItem {
   height: number | null;
   duration_secs: number | null;
   alt_text: string | null;
-  status: "processing" | "ready" | "error";
+  status: "processing" | "ready" | "error" | "rejected";
   created_at: string;
 }
 
@@ -137,4 +137,21 @@ export async function uploadFile(
     return m;
   }
   return await multipartUpload(file, onProgress);
+}
+
+/**
+ * @brief Poll until a media row leaves "processing" (e.g. audio transcode).
+ * @param id media id
+ * @param tries seconds to wait (1 s apart)
+ * @return the ready media
+ * @throws Error when processing fails, is rejected or times out
+ */
+export async function waitUntilReady(id: string, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const m = await getMedia(id);
+    if (m.status === "ready") return m;
+    if (m.status !== "processing") throw new Error("Processing failed");
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error("Processing timed out");
 }

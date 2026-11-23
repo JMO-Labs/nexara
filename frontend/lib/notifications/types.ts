@@ -54,6 +54,9 @@ export interface NotificationItem {
 /** @brief Family recap email cadence. */
 export type RecapCadence = "weekly" | "monthly" | "off";
 
+/** @brief Allowed quiet gaps (days) before a reconnect reminder. */
+export type ReconnectDays = 14 | 30 | 60 | 90;
+
 export interface PreferencesPayload {
   notification_prefs: Record<string, Partial<Record<Channel, boolean>>>;
   dnd_schedule: Record<string, { start: string; end: string }[]> | null;
@@ -61,6 +64,8 @@ export interface PreferencesPayload {
   dnd_timezone: string;
   digest_cadence: Record<string, DigestCadence>;
   recap_cadence?: RecapCadence;
+  reconnect_nudges?: boolean;
+  reconnect_days?: ReconnectDays;
 }
 
 export interface WebhookCreateBody {

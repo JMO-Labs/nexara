@@ -29,8 +29,15 @@ from app.services.notifications.types import (  # noqa: F401
     prompt,
     prompt_summary,
     reaction,
+    reconnect,
+    relation_request,
     ride_update,
+    story_answered,
+    story_request,
     system,
+    trip_arrived,
+    trip_overdue,
+    trip_started,
 )
 
 __all__ = [
@@ -59,6 +66,13 @@ __all__ = [
     "prompt",
     "prompt_summary",
     "reaction",
+    "reconnect",
+    "relation_request",
     "ride_update",
+    "story_answered",
+    "story_request",
     "system",
+    "trip_arrived",
+    "trip_overdue",
+    "trip_started",
 ]

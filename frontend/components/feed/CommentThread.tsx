@@ -47,6 +47,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
         src={comment.author.avatar_url ?? undefined}
         name={comment.author.display_name}
         size="sm"
+        userId={comment.author.id}
       />
       <div className="min-w-0 grow">
         <div className="glass-item rounded-[20px] px-3 py-2">

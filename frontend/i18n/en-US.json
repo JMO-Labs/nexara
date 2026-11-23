@@ -317,6 +317,11 @@
       "recap_weekly": "Weekly",
       "recap_monthly": "Monthly",
       "recap_off": "Off",
+      "reconnect_title": "Reconnect reminders",
+      "reconnect_hint": "A private nudge to reach out to a family member you have not talked to in a while. At most one a week.",
+      "reconnect_toggle": "Remind me to reconnect",
+      "reconnect_days": "After this many quiet days",
+      "reconnect_days_option": "{days} days",
       "snooze_title": "Snooze",
       "snooze_1h": "1 hour",
       "snooze_morning": "Until morning",
@@ -1033,11 +1038,35 @@
     "capsule_opened": {
       "label": "Time capsule opened"
     },
+    "reconnect": {
+      "label": "Reconnect reminder",
+      "snooze": "Snooze 90 days"
+    },
+    "trip_started": {
+      "label": "Trip started"
+    },
+    "trip_overdue": {
+      "label": "Trip overdue"
+    },
+    "trip_arrived": {
+      "label": "Made it safely"
+    },
     "expense_added": {
       "label": "Shared cost added"
     },
     "ride_update": {
       "label": "Ride update"
+    },
+    "relation_request": {
+      "label": "Family link request",
+      "accept": "Accept",
+      "decline": "Decline"
+    },
+    "story_request": {
+      "label": "Story request"
+    },
+    "story_answered": {
+      "label": "Story answered"
     },
     "kudos_received": {
       "label": "You got kudos"
