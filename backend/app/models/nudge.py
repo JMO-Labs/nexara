@@ -19,7 +19,9 @@ class Nudge(Base):
 
     __tablename__ = "nudges"
     __table_args__ = (
-        CheckConstraint("nudge_type IN ('user_initiated', 'gentle')", name="ck_nudges_type"),
+        CheckConstraint(
+            "nudge_type IN ('user_initiated', 'gentle', 'reconnect')", name="ck_nudges_type"
+        ),
         Index("ix_nudges_pair_created", "sender_id", "target_id", "created_at"),
         Index("ix_nudges_target_type_created", "target_id", "nudge_type", "created_at"),
     )

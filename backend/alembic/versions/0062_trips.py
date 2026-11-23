@@ -4,7 +4,7 @@
 @brief Add trips and trip_watchers (no location columns, by design).
 
 Revision ID: 0062_trips
-Revises: 0059_chore_rotation
+Revises: 0061_reconnect
 """
 
 import sqlalchemy as sa
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 revision = "0062_trips"
-down_revision = "0060_relations"
+down_revision = "0061_reconnect"
 branch_labels = None
 depends_on = None
 

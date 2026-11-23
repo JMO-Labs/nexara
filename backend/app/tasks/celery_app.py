@@ -83,6 +83,7 @@ celery_app.conf.update(
         "chores.*": {"queue": "maintenance"},
         "trips.*": {"queue": "notifications"},
         "stories.*": {"queue": "notifications"},
+        "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
@@ -217,6 +218,10 @@ celery_app.conf.update(
         "send-gentle-nudges": {
             "task": "app.tasks.nudge_tasks.send_gentle_nudges",
             "schedule": crontab(hour="10", minute="0"),
+        },
+        "nudges-reconnect": {
+            "task": "nudges.reconnect",
+            "schedule": crontab(hour="15", minute="0"),
         },
         "trivia-select-daily-question": {
             "task": "plugins.example_trivia.select_daily_question",
