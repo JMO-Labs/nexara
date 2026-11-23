@@ -57,7 +57,7 @@ export function PromptResponsesList({
   }
   const all = q.data?.pages.flatMap((p) => p.items) ?? [];
   if (all.length === 0) {
-    return <EmptyState title="No responses yet." />;
+    return <p className="py-2 text-sm text-muted">No responses yet.</p>;
   }
   const term = search.trim().toLowerCase();
   const posts = term
@@ -73,7 +73,9 @@ export function PromptResponsesList({
           onChange={(e) => setSearch(e.target.value)}
         />
       )}
-      {posts.length === 0 && <EmptyState title="No matching responses." />}
+      {posts.length === 0 && (
+        <p className="py-2 text-sm text-muted">No matching responses.</p>
+      )}
       {posts.map((post) => (
         <PostCard key={post.id} post={post} />
       ))}
