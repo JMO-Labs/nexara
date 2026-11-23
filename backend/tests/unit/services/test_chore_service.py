@@ -36,7 +36,7 @@ def _build(rotation=(A, B, C), index=0, completed=False, active=A, usable=None, 
     item.repeat, item.rotation, item.rotation_index = "weekly", list(rotation), index
     item.completed, item.next_due_at = completed, NOW - timedelta(minutes=1)
     repo = AsyncMock(spec=ChoreRepository)
-    repo.usable_users.side_effect = lambda ids, _o: (
+    repo.usable_users.side_effect = lambda ids, _o, _c: (
         set(ids) if usable is None else set(ids) & usable
     )
     items = AsyncMock(spec=ListItemRepository)
@@ -122,7 +122,7 @@ async def test_advance_nobody_eligible_only_moves_date():
     svc, item, _l, _r, assign, *_ = _build(usable=set())
     await svc.advance(item, NOW)
     assign.add.assert_not_awaited()
-    assert item.next_due_at > NOW
+    assert item.next_due_at is None
 
 
 async def test_advance_twice_is_one_advance():
@@ -142,7 +142,7 @@ async def test_advance_catches_up_after_downtime():
 async def test_set_schedule_validates_members_and_flag_and_owner():
     svc, item, lst, repo, assign, _a, _n, _l = _build(rotation=(), active=None)
     item.repeat = None
-    repo.usable_users.side_effect = lambda ids, _o: set(ids) - {C}
+    repo.usable_users.side_effect = lambda ids, _o, _c: set(ids) - {C}
     with pytest.raises(ValidationError):
         await svc.set_schedule(lst.id, item.id, lst.owner_id, "weekly", [A, C], NOW)
     with pytest.raises(AuthorizationError):
@@ -184,3 +184,20 @@ async def test_recap_my_chores_flag_and_visibility():
         assert hidden is not None and hidden["items"] == []
         ctx.community.features = {"chores": False}
         assert await recap_sections.my_chores(ctx) is None
+
+
+async def test_set_schedule_rejects_user_from_another_community():
+    foreign = uuid.uuid4()
+    svc, item, lst, repo, *_ = _build(rotation=(), active=None)
+    repo.usable_users.side_effect = lambda ids, _o, cid: set(ids) - {foreign}
+    with pytest.raises(ValidationError):
+        await svc.set_schedule(lst.id, item.id, lst.owner_id, "weekly", [A, foreign], NOW)
+    assert repo.usable_users.await_args.args[2] == CID
+
+
+async def test_advance_with_missing_list_parks_item():
+    svc, item, _l, _r, assign, _a, _n, lists = _build()
+    lists.get_by_id.return_value = None
+    await svc.advance(item, NOW)
+    assert item.next_due_at is None
+    assign.add.assert_not_awaited()

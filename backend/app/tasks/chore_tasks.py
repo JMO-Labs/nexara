@@ -64,10 +64,13 @@ async def advance_due(session: AsyncSession, now: datetime) -> int:
         lst = await session.get(List, item.list_id)
         community = await session.get(Community, lst.community_id) if lst else None
         if community is None:
+            item.next_due_at = None
+            await session.commit()
             continue
         svc = services.setdefault(community.id, _service(session, community))
         if not svc.enabled():
-            await session.rollback()
+            await svc.park(item)
+            await session.commit()
             continue
         try:
             await svc.advance(item, now)

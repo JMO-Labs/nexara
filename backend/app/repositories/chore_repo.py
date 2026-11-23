@@ -28,7 +28,9 @@ class ChoreRepository:
         """@return Ids of live repeating items whose ``next_due_at`` has passed."""
         stmt = (
             select(ListItem.id)
+            .join(List, List.id == ListItem.list_id)
             .where(
+                List.deleted_at.is_(None),
                 ListItem.repeat.is_not(None),
                 ListItem.deleted_at.is_(None),
                 ListItem.next_due_at <= now,
@@ -45,27 +47,32 @@ class ChoreRepository:
         """
         stmt = (
             select(ListItem)
+            .join(List, List.id == ListItem.list_id)
             .where(
+                List.deleted_at.is_(None),
                 ListItem.id == item_id,
                 ListItem.repeat.is_not(None),
                 ListItem.deleted_at.is_(None),
                 ListItem.next_due_at <= now,
             )
-            .with_for_update(skip_locked=True)
+            .with_for_update(of=ListItem, skip_locked=True)
         )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def usable_users(self, ids: set[uuid.UUID], owner_id: uuid.UUID) -> set[uuid.UUID]:
+    async def usable_users(
+        self, ids: set[uuid.UUID], owner_id: uuid.UUID, community_id: uuid.UUID
+    ) -> set[uuid.UUID]:
         """
         @brief Subset of ``ids`` that may be rotated in or notified.
 
-        Excludes deactivated, deleted and memorialized users and anyone in a
-        block relation (either direction) with the list owner.
+        Excludes users of other communities, deactivated, deleted and memorialized
+        users and anyone in a block relation (either direction) with the list owner.
         """
         if not ids:
             return set()
         stmt = select(User.id).where(
             User.id.in_(ids),
+            User.community_id == community_id,
             User.is_active.is_(True),
             User.deleted_at.is_(None),
             User.memorialized_at.is_(None),

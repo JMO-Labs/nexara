@@ -87,7 +87,7 @@ class ChoreService:
 
     async def _eligible(self, lst: List, ids: set[uuid.UUID]) -> set[uuid.UUID]:
         """@brief Users who are current list members and usable (see repo)."""
-        usable = await self._repo.usable_users(ids, lst.owner_id)
+        usable = await self._repo.usable_users(ids, lst.owner_id, self._cid)
         return {u for u in usable if u == lst.owner_id or await self._lists.can_view(lst, u)}
 
     async def _give(self, lst: List, item: ListItem, user_id: uuid.UUID) -> None:
@@ -165,6 +165,10 @@ class ChoreService:
         await self._items.update(item, {"completed": False, "values": values})
         await self._lists.increment_counters(lst.id, {"completed_count": -1})
 
+    async def park(self, item: ListItem) -> None:
+        """@brief Take an item that cannot run out of the due set (``next_due_at = NULL``)."""
+        await self._items.update(item, {"next_due_at": None})
+
     async def advance(self, item: ListItem, now: datetime) -> None:
         """
         @brief Roll a due chore to the next eligible person (item row is locked).
@@ -177,6 +181,7 @@ class ChoreService:
             return
         lst = await self._lists.get_by_id(item.list_id, self._cid)
         if lst is None:
+            await self.park(item)
             return
         due = item.next_due_at
         while due <= now:
@@ -201,6 +206,8 @@ class ChoreService:
                 break
         if pick is not None:
             changes["rotation_index"] = pick[0]
+        elif order:
+            changes["next_due_at"] = None  # nobody usable: leave the due set
         await self._items.update(item, changes)
         if pick is not None:
             await self._give(lst, item, pick[1])

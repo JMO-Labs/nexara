@@ -38,6 +38,7 @@ async def test_advance_due_skips_flag_off_and_locked_rows():
         svc = MagicMock()
         svc.enabled.return_value = community is on
         svc.advance = AsyncMock()
+        svc.park = AsyncMock()
         with (
             patch.object(chore_tasks, "ChoreRepository") as repo,
             patch.object(chore_tasks, "_service", return_value=svc),
@@ -46,6 +47,7 @@ async def test_advance_due_skips_flag_off_and_locked_rows():
             repo.return_value.lock_due = AsyncMock(side_effect=[MagicMock(), None])
             assert await chore_tasks.advance_due(session, NOW) == expected
         assert svc.advance.await_count == expected
+        assert svc.park.await_count == (0 if community is on else 1)
 
 
 async def test_advance_failure_rolls_back_and_continues():
