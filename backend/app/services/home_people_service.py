@@ -14,6 +14,7 @@ from app.core.exceptions import AppError, NotFoundError
 from app.models.user import User
 from app.repositories.home_people_repo import HomePeopleRepository, PersonRow
 from app.schemas.home_people import HomePeopleResponse, HomePerson, SharedGroup
+from app.services.memories_service import local_today
 from app.services.realtime import presence
 
 BIRTHDAY_WINDOW_DAYS = 14
@@ -46,7 +47,7 @@ class HomePeopleService:
     @param repo HomePeopleRepository.
     @param community_id Community scope.
     @param online_fn Async callable returning online user id strings.
-    @param today_fn Callable returning today's date.
+    @param today_fn Maps a viewer IANA timezone to their local date.
     """
 
     def __init__(
@@ -54,7 +55,7 @@ class HomePeopleService:
         repo: HomePeopleRepository,
         community_id: uuid.UUID,
         online_fn: Callable[[], Awaitable[list[str]]] = presence.get_online_users,
-        today_fn: Callable[[], date] = date.today,
+        today_fn: Callable[[str | None], date] = local_today,
     ) -> None:
         self._repo = repo
         self._community_id = community_id
@@ -73,7 +74,7 @@ class HomePeopleService:
         events = await self._repo.shared_event_counts(
             viewer.id, [r.user.id for r in rows], self._community_id
         )
-        today = self._today_fn()
+        today = self._today_fn(viewer.timezone)
         people = [self._build(r, online_ids, today, events.get(r.user.id, 0)) for r in rows]
         rank = {f: i for i, f in enumerate(favs)}
         for p in people:
