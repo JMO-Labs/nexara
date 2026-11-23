@@ -121,7 +121,11 @@ export default function LedgerRoute({
                   <p className="font-medium">{e.description}</p>
                   <p className="text-xs text-muted">
                     {e.payer_name} paid {formatCents(e.amount_cents, currency)}{" "}
-                    on {e.spent_on}
+                    on{" "}
+                    {new Date(`${e.spent_on}T12:00:00`).toLocaleDateString(
+                      undefined,
+                      { month: "short", day: "numeric", year: "numeric" },
+                    )}
                   </p>
                 </div>
                 <IconButton

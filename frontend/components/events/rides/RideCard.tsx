@@ -133,7 +133,7 @@ export function RideCard({
             <Button
               key={o.id}
               size="sm"
-              disabled={busy}
+              disabled={busy || o.seats_left < ride.seats}
               onClick={() => onAnswer(ride.id, o.id)}
               aria-label={`I can take ${ride.driver_name} in my ride from ${o.origin || "my place"}`}
             >
