@@ -73,11 +73,8 @@ class TestTotpReplay:
         user = _make_user(totp_enabled=True, totp_secret=secret)
         svc._user_repo.get_by_id.return_value = user
         svc._issue_tokens = AsyncMock(return_value={"access_token": "a"})
-        redis = MagicMock()
+        redis = _fake_redis()
         redis.set = AsyncMock(side_effect=[True, None])  # NX: second set fails
-        redis.get = AsyncMock(return_value=None)
-        redis.incr = AsyncMock()
-        redis.expire = AsyncMock()
         from app.core.security import create_2fa_pending_token
 
         tok = create_2fa_pending_token(user.id, settings=svc._settings)
@@ -127,26 +124,57 @@ class Test2FALoginRateLimit:
         assert codes[10] == 429
 
 
-def _fake_redis():
-    """@brief In-memory stand-in for the Valkey calls used by totp_replay."""
-    store: dict[str, int] = {}
-    r = MagicMock()
+class _FakePipe:
+    def __init__(self, r):
+        self.r, self.ops = r, []
 
-    async def _set(k, v, nx=False, ex=None):
-        if nx and k in store:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+    def incr(self, k):
+        self.ops.append(("incr", k))
+
+    def expire(self, k, ttl, nx=False):
+        self.ops.append(("expire", k, ttl, nx))
+
+    async def execute(self):
+        out = []
+        for op in self.ops:
+            if op[0] == "incr":
+                self.r.store[op[1]] = self.r.store.get(op[1], 0) + 1
+                out.append(self.r.store[op[1]])
+            else:
+                if not (op[3] and op[1] in self.r.ttl):
+                    self.r.ttl[op[1]] = op[2]
+                out.append(True)
+        return out
+
+
+class _FakeRedis:
+    """@brief In-memory Valkey stand-in with TTL bookkeeping."""
+
+    def __init__(self):
+        self.store: dict = {}
+        self.ttl: dict = {}
+
+    def pipeline(self, transaction=True):
+        return _FakePipe(self)
+
+    async def set(self, k, v, nx=False, ex=None):
+        if nx and k in self.store:
             return None
-        store[k] = 1
+        self.store[k] = 1
         return True
 
-    async def _get(k):
-        return store.get(k)
+    async def delete(self, k):
+        self.store.pop(k, None)
 
-    async def _incr(k):
-        store[k] = store.get(k, 0) + 1
 
-    r.set, r.get, r.incr = _set, _get, _incr
-    r.expire = AsyncMock()
-    return r
+def _fake_redis():
+    return _FakeRedis()
 
 
 class TestAttemptCapAndNormalise:
@@ -195,8 +223,54 @@ class TestAttemptCapAndNormalise:
 
         svc, secret, tok = await self._setup()
         r = _fake_redis()
-        r.get = AsyncMock(side_effect=RedisConnErr("down"))
+        r.pipeline = MagicMock(side_effect=RedisConnErr("down"))
         with patch("app.services.auth.totp_replay.get_pool", return_value=r):
             with pytest.raises(AppError) as ei:
                 await svc.verify_2fa_login(two_factor_token=tok, code="123456")
         assert ei.value.status_code == 503
+
+
+class TestAccountCap:
+    @pytest.mark.asyncio
+    async def test_cap_across_tokens_and_reset(self):
+        from app.core.security import create_2fa_pending_token
+
+        svc = _make_service()
+        secret = pyotp.random_base32()
+        user = _make_user(totp_enabled=True, totp_secret=secret)
+        svc._user_repo.get_by_id.return_value = user
+        svc._try_backup_code = AsyncMock(return_value=False)
+        svc._issue_tokens = AsyncMock(return_value={"access_token": "a"})
+        redis = _fake_redis()
+        with patch("app.services.auth.totp_replay.get_pool", return_value=redis):
+            n = 0
+            for _ in range(3):
+                tok = create_2fa_pending_token(user.id, settings=svc._settings)
+                for _ in range(4):
+                    if n == 10:
+                        break
+                    with pytest.raises(AuthenticationError):
+                        await svc.verify_2fa_login(two_factor_token=tok, code="000000")
+                    n += 1
+            tok = create_2fa_pending_token(user.id, settings=svc._settings)
+            with pytest.raises(AuthenticationError):
+                await svc.verify_2fa_login(two_factor_token=tok, code=pyotp.TOTP(secret).now())
+            assert all(t > 0 for t in redis.ttl.values()) and redis.ttl
+
+    @pytest.mark.asyncio
+    async def test_success_resets_user_counter(self):
+        from app.core.security import create_2fa_pending_token
+
+        svc = _make_service()
+        secret = pyotp.random_base32()
+        user = _make_user(totp_enabled=True, totp_secret=secret)
+        svc._user_repo.get_by_id.return_value = user
+        svc._try_backup_code = AsyncMock(return_value=False)
+        svc._issue_tokens = AsyncMock(return_value={"access_token": "a"})
+        redis = _fake_redis()
+        with patch("app.services.auth.totp_replay.get_pool", return_value=redis):
+            tok = create_2fa_pending_token(user.id, settings=svc._settings)
+            with pytest.raises(AuthenticationError):
+                await svc.verify_2fa_login(two_factor_token=tok, code="000000")
+            await svc.verify_2fa_login(two_factor_token=tok, code=pyotp.TOTP(secret).now())
+        assert f"totp:fail:user:{user.id}" not in redis.store

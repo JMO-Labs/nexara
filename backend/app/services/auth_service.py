@@ -42,9 +42,9 @@ from app.services.auth.registration import register_user
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.auth.totp_replay import (
     claim_totp_code,
-    is_token_locked,
+    clear_user_attempts,
     normalize_totp,
-    record_failure,
+    reserve_attempt,
 )
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
@@ -171,10 +171,11 @@ class AuthService:
         except ValueError as exc:
             raise AuthenticationError(message=str(exc)) from exc
 
-        if await is_token_locked(two_factor_token, self._settings):
+        user_id = uuid.UUID(payload["sub"])
+        if not await reserve_attempt(two_factor_token, user_id, self._settings):
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        user = await self._user_repo.get_by_id(uuid.UUID(payload["sub"]))
+        user = await self._user_repo.get_by_id(user_id)
         if not user or not user.totp_secret:
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
@@ -184,8 +185,8 @@ class AuthService:
         else:
             ok = await self._try_backup_code(user.id, code.strip())
         if not ok:
-            await record_failure(two_factor_token, self._settings)
             raise AuthenticationError(message=_("Invalid 2FA code"))
+        await clear_user_attempts(user.id, self._settings)
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))

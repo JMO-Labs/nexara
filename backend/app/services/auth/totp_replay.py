@@ -16,6 +16,8 @@ from app.core.exceptions import AppError
 from app.core.valkey import DB_CACHE, get_pool
 
 MAX_FAILURES = 5
+MAX_USER_FAILURES = 10
+_USER_TTL = 900
 _TOKEN_TTL = 300
 _CODE_RE = re.compile(r"[0-9]{6}", re.ASCII)
 
@@ -39,6 +41,10 @@ def _fail_key(token: str) -> str:
     return f"totp:fail:{hashlib.sha256(token.encode()).hexdigest()}"
 
 
+def _user_key(user_id: uuid.UUID) -> str:
+    return f"totp:fail:user:{user_id}"
+
+
 async def claim_totp_code(user_id: uuid.UUID, code: str, settings: Settings) -> bool:
     """
     @brief Atomically mark a TOTP code as used.
@@ -53,21 +59,31 @@ async def claim_totp_code(user_id: uuid.UUID, code: str, settings: Settings) -> 
         raise _unavailable() from exc
 
 
-async def is_token_locked(token: str, settings: Settings) -> bool:
-    """@brief True once a pending token has used up its failed attempts."""
+async def reserve_attempt(token: str, user_id: uuid.UUID, settings: Settings) -> bool:
+    """
+    @brief Atomically count one 2FA attempt against the token and the account.
+
+    Both counters are INCR + EXPIRE NX in one MULTI so the TTL always exists.
+
+    @return False when either cap (5 per token, 10 per user/15 min) is exceeded.
+    @raises AppError 503 if Valkey is unavailable.
+    """
+    tkey, ukey = _fail_key(token), _user_key(user_id)
     try:
-        raw = await get_pool(settings, DB_CACHE).get(_fail_key(token))
+        async with get_pool(settings, DB_CACHE).pipeline(transaction=True) as pipe:
+            pipe.incr(tkey)
+            pipe.expire(tkey, _TOKEN_TTL, nx=True)
+            pipe.incr(ukey)
+            pipe.expire(ukey, _USER_TTL, nx=True)
+            res = await pipe.execute()
     except RedisError as exc:
         raise _unavailable() from exc
-    return int(raw or 0) >= MAX_FAILURES
+    return int(res[0]) <= MAX_FAILURES and int(res[2]) <= MAX_USER_FAILURES
 
 
-async def record_failure(token: str, settings: Settings) -> None:
-    """@brief Count a failed code against the pending token."""
+async def clear_user_attempts(user_id: uuid.UUID, settings: Settings) -> None:
+    """@brief Reset the per-account counter after a successful 2FA login."""
     try:
-        redis = get_pool(settings, DB_CACHE)
-        key = _fail_key(token)
-        await redis.incr(key)
-        await redis.expire(key, _TOKEN_TTL)
+        await get_pool(settings, DB_CACHE).delete(_user_key(user_id))
     except RedisError as exc:
         raise _unavailable() from exc
