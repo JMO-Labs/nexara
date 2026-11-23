@@ -92,5 +92,19 @@
 
 ---
 
+### Task 7: Birthday countdowns in viewer's time zone
+
+**Files:**
+- Modify: `backend/app/services/home_people_service.py` (`today_fn` → viewer-local date), `backend/app/services/chat_context_service.py`, `backend/app/services/household_service.py` (same `birthday_in_days` callers)
+- Create: `backend/app/core/localdate.py` — `def local_today(tz: str | None) -> date` (`ZoneInfo(tz)` fallback UTC on None/invalid)
+- Test: `backend/tests/unit/core/test_localdate.py`, extend home_people service test
+
+**Interfaces:**
+- Every `birthday_in_days(b, today)` caller passes `local_today(viewer.timezone)`.
+- [ ] Tests: 2026-11-23T23:30Z with tz `America/New_York` → local date 2026-11-23 (UTC already 24th) so a Nov 24 birthday = 1, not 0; invalid tz → UTC; None → UTC.
+- [ ] Implement → PASS → commit `fix(home): count birthdays in the viewer's time zone`
+
+---
+
 ### Task 5: Polish PR 1
 - [ ] Full suites + `next build`; eval rebuild; live: configure Gmail preset with fake creds → test shows readable error; invite sends via MailHog-style `aiosmtpd` sink container (`python -m aiosmtpd -n -l 0.0.0.0:1025`); screenshots EmailTab desktop + phone; open PR "Platform 1: security fixes, email, sign-in log" on base `feat/eng-w5-access`.
