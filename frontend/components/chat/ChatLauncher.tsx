@@ -17,12 +17,13 @@ interface RowProps {
   name: string;
   label: string;
   src?: string;
+  userId?: string;
   unread: number;
   onSelect: (id: string) => void;
 }
 
 /** @brief One selectable thread row with unread dot. */
-function Row({ id, name, label, src, unread, onSelect }: RowProps) {
+function Row({ id, name, label, src, userId, unread, onSelect }: RowProps) {
   return (
     <button
       type="button"
@@ -30,7 +31,7 @@ function Row({ id, name, label, src, unread, onSelect }: RowProps) {
       aria-label={label}
       className="flex w-full items-center gap-2 rounded-[18px] px-3 py-2 text-left text-sm outline-none hover:bg-white/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
-      <Avatar size="sm" name={name} src={src} />
+      <Avatar size="sm" name={name} src={src} userId={userId} />
       <span className="min-w-0 flex-1 truncate">{name}</span>
       {unread > 0 && (
         <span
@@ -103,6 +104,7 @@ function ThreadList({
               name={d.peer.display_name}
               label={`Open conversation with ${d.peer.display_name}`}
               src={d.peer.avatar_url ?? undefined}
+              userId={d.peer.id}
               unread={unread[d.channel_id] ?? 0}
               onSelect={onSelect}
             />

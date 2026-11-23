@@ -210,6 +210,16 @@ class ConnectionManager:
                     pass
         return sent
 
+    def has_connections(self, user_id: UUID) -> bool:
+        """
+        @brief Whether this process holds any live connection for the user.
+
+        # ponytail: in-process only; with several workers a user connected
+        # elsewhere may be set offline here, but the other worker's next
+        # heartbeat refresh (<=15 s) restores presence, so it self-heals.
+        """
+        return bool(self._connections.get(user_id))
+
     @property
     def connected_user_ids(self) -> set[UUID]:
         """@brief Return the set of currently connected user UUIDs."""

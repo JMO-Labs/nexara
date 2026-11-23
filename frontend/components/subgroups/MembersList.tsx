@@ -70,6 +70,7 @@ function MemberRow({
       <Avatar
         src={m.avatar_url ?? undefined}
         name={m.display_name ?? m.username ?? m.user_id}
+        userId={m.user_id}
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-base">

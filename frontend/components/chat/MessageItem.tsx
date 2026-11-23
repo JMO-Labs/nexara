@@ -70,6 +70,7 @@ export function MessageItem({
             size="md"
             name={name}
             src={message.author?.avatar_url ?? undefined}
+            userId={message.author?.id}
           />
         )}
       </div>

@@ -52,6 +52,7 @@ from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
+from app.api.v1.presence import router as presence_router
 from app.api.v1.prompts import router as prompts_router
 from app.api.v1.push import router as push_router
 from app.api.v1.recap import router as recap_router
@@ -106,6 +107,7 @@ api_v1_router.include_router(tags_router)
 api_v1_router.include_router(wishlists_router)
 api_v1_router.include_router(household_router)
 api_v1_router.include_router(memorials_router)
+api_v1_router.include_router(presence_router)
 api_v1_router.include_router(memories_router)
 api_v1_router.include_router(weather_router)
 api_v1_router.include_router(users_router)

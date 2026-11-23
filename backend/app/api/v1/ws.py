@@ -69,7 +69,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         logger.exception("ws_unexpected_error", user_id=str(user_id))
     finally:
         await manager.disconnect(ws, user_id, is_sse=False)
-        await set_offline(user_id)
+        if not manager.has_connections(user_id):
+            await set_offline(user_id)
 
 
 async def _authenticate(ws: WebSocket) -> UUID | None:

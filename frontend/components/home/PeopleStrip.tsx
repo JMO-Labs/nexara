@@ -87,10 +87,8 @@ export function PeopleStrip() {
                   name={p.display_name}
                   size="lg"
                   className="size-10 md:size-11"
+                  userId={p.user_id}
                 />
-                {p.online && (
-                  <i className="absolute right-[-1px] bottom-[-1px] size-3 rounded-full border-2 border-[var(--nx-glass-solid)] bg-[var(--nx-ok)]" />
-                )}
                 {p.birthday_in_days != null && (
                   <i className="absolute top-[-6px] right-[-6px] grid size-5 place-items-center rounded-full bg-[var(--nx-glass-solid)] text-[var(--nx-red)]">
                     <Cake aria-hidden className="size-3" />

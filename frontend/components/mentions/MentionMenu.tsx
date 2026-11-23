@@ -64,6 +64,7 @@ export function MentionMenu({
             size="sm"
             name={u.display_name}
             src={u.avatar_url ?? undefined}
+            userId={u.id}
           />
           <span className="min-w-0 flex-1 truncate">{u.display_name}</span>
           <span
