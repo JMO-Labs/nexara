@@ -93,3 +93,21 @@ async def test_ordinary_prompt_answers_visible(session: AsyncSession) -> None:
     pp = await _prompt_post(session, admin, reveal=False)
     ruth_answer = await _post(session, ruth, pp)
     assert ruth_answer.id in await _visible(session, maya)
+
+
+async def test_feed_leaves_daily_question_thread_to_the_card(session: AsyncSession) -> None:
+    from app.repositories.post_repo import PostRepository
+
+    admin, ruth, maya = [await _user(session, n) for n in ("admin", "ruth", "maya")]
+    daily = await _prompt_post(session, admin, reveal=True)
+    weekly = await _prompt_post(session, admin, reveal=False)
+    host = (
+        await session.execute(select(PromptPost.post_id).where(PromptPost.id == daily))
+    ).scalar_one()
+    answer = await _post(session, maya, daily)
+    other_answer = await _post(session, ruth, weekly)
+    plain = await _post(session, ruth)
+    items, _ = await PostRepository(session).list_feed(CID, viewer_id=maya.id, limit=100)
+    ids = {uuid.UUID(str(i["id"])) for i in items}
+    assert plain.id in ids and other_answer.id in ids
+    assert answer.id not in ids and host not in ids

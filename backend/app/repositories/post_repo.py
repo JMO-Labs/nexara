@@ -22,7 +22,11 @@ from app.models.media import Media
 from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.post_enrichment import enrich_posts
-from app.repositories.visibility_preds import my_subgroup_ids, post_visible
+from app.repositories.visibility_preds import (
+    my_subgroup_ids,
+    outside_daily_question,
+    post_visible,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -67,7 +71,7 @@ class PostRepository(BaseRepository[Post]):
 
         stmt = (
             self._base_query()
-            .where(Post.community_id == community_id)
+            .where(Post.community_id == community_id, outside_daily_question())
             .order_by(Post.created_at.desc())
         )
 

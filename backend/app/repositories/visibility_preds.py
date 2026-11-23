@@ -81,6 +81,23 @@ def answer_revealed(viewer_id: uuid.UUID) -> Any:
     return or_(Post.reply_to_prompt_id.is_(None), Post.author_id == viewer_id, ~gated, answered)
 
 
+def outside_daily_question() -> Any:
+    """
+    @brief Not the daily question's own post nor an answer to it; the feed
+           shows those inside the question card instead of repeating them.
+    """
+    daily = (
+        select(PromptPost.id, PromptPost.post_id)
+        .join(Prompt, Prompt.id == PromptPost.prompt_id)
+        .where(Prompt.prompt_type == "daily_question")
+        .subquery()
+    )
+    return and_(
+        or_(Post.reply_to_prompt_id.is_(None), Post.reply_to_prompt_id.notin_(select(daily.c.id))),
+        Post.id.notin_(select(daily.c.post_id)),
+    )
+
+
 def gallery_visible(viewer_id: uuid.UUID, subgroup_ids: Any, community_id: uuid.UUID) -> Any:
     """@brief Gallery the viewer may open."""
     in_group = _in(Gallery.subgroup_id, subgroup_ids)
