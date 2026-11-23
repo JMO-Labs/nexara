@@ -50,14 +50,17 @@ class PushSubscriptionRepository(BaseRepository[PushSubscription]):
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def delete_by_endpoint(self, endpoint: str) -> bool:
+    async def delete_by_endpoint(self, endpoint: str, *, user_id: uuid.UUID | None = None) -> bool:
         """
-        @brief Delete a subscription by endpoint.
+        @brief Delete a subscription by endpoint, optionally scoped to an owner.
 
         @param endpoint Web Push endpoint URL.
+        @param user_id When given, only delete rows owned by this user.
         @return True if a row was deleted, False otherwise.
         """
         stmt = delete(PushSubscription).where(PushSubscription.endpoint == endpoint)
+        if user_id is not None:
+            stmt = stmt.where(PushSubscription.user_id == user_id)
         result = await self._session.execute(stmt)
         rowcount = cast(CursorResult[Any], result).rowcount or 0
         return rowcount > 0

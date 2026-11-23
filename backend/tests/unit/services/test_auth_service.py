@@ -3,7 +3,7 @@
 @brief Unit tests for AuthService with mocked repositories.
 
 Tests cover registration, login, refresh (including replay detection),
-2FA enrollment/verification, and OIDC group mapping.
+and 2FA enrollment/verification.
 """
 
 from __future__ import annotations
@@ -306,42 +306,6 @@ class TestRefresh:
 
         with pytest.raises(AuthenticationError, match="Invalid refresh token"):
             await svc.refresh("nonexistent-token")
-
-
-class TestOIDCGroupMapping:
-    """@brief OIDC group-to-role mapping tests."""
-
-    def test_admin_group_maps_to_admin(self):
-        from app.services.oidc_service import OIDCService
-
-        svc = OIDCService.__new__(OIDCService)
-        svc._settings = _make_settings()
-        svc._settings.OIDC_ADMIN_GROUP = "nexara-admin"
-        svc._settings.OIDC_MEMBER_GROUP = "nexara-member"
-
-        assert svc._map_groups_to_role(["nexara-admin", "other"]) == "admin"
-
-    def test_member_group_maps_to_member(self):
-        from app.services.oidc_service import OIDCService
-
-        svc = OIDCService.__new__(OIDCService)
-        svc._settings = _make_settings()
-        svc._settings.OIDC_ADMIN_GROUP = "nexara-admin"
-        svc._settings.OIDC_MEMBER_GROUP = "nexara-member"
-
-        assert svc._map_groups_to_role(["nexara-member"]) == "member"
-
-    def test_no_matching_group_raises(self):
-        from app.core.exceptions import AuthenticationError
-        from app.services.oidc_service import OIDCService
-
-        svc = OIDCService.__new__(OIDCService)
-        svc._settings = _make_settings()
-        svc._settings.OIDC_ADMIN_GROUP = "nexara-admin"
-        svc._settings.OIDC_MEMBER_GROUP = "nexara-member"
-
-        with pytest.raises(AuthenticationError, match="authorized group"):
-            svc._map_groups_to_role(["unrelated-group"])
 
 
 class TestRegisterInvites:

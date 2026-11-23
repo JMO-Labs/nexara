@@ -3,8 +3,7 @@
 @brief Authentication business logic: register, login, token rotation, 2FA.
 
 Orchestrates repositories, security utilities, and config to implement core
-auth flows.  OIDC logic lives in :mod:`app.services.oidc_service` and
-password-reset / HIBP checking in :mod:`app.services.password_service`.
+auth flows.  Password-reset / HIBP checking live in :mod:`app.services.password_service`.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AuthenticationError, AuthorizationError
 from app.core.i18n import _
 from app.core.security import (
     create_2fa_pending_token,
@@ -41,6 +40,7 @@ from app.services.auth.magic_link import verify_magic_link as _verify_magic_link
 from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth.registration import register_user
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
+from app.services.auth.totp_replay import claim_totp_code
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
@@ -170,9 +170,11 @@ class AuthService:
         if not user or not user.totp_secret:
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        if not verify_totp(user.totp_secret, code):
-            if not await self._try_backup_code(user.id, code):
+        if verify_totp(user.totp_secret, code):
+            if not await claim_totp_code(user.id, code, self._settings):
                 raise AuthenticationError(message=_("Invalid 2FA code"))
+        elif not await self._try_backup_code(user.id, code):
+            raise AuthenticationError(message=_("Invalid 2FA code"))
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))
@@ -238,13 +240,17 @@ class AuthService:
             await self._token_repo.revoke(stored.id)
             logger.info("user_logged_out", user_id=str(stored.user_id))
 
-    async def enroll_2fa(self, user: User) -> dict[str, str]:
+    async def enroll_2fa(self, user: User, current_code: str | None = None) -> dict[str, str]:
         """
         @brief Start 2FA enrollment by generating a TOTP secret.
 
         @param user The authenticated user.
+        @param current_code Reserved for the re-enroll flow (not yet used).
         @return Dict with ``secret`` and ``otpauth_uri``.
+        @raises AuthorizationError If 2FA is already enabled.
         """
+        if user.totp_enabled:
+            raise AuthorizationError(message="2fa_already_enabled")
         secret = generate_totp_secret()
         await self._user_repo.update_totp(user.id, totp_secret=secret, totp_enabled=False)
         uri = get_totp_uri(secret, user.email, settings=self._settings)
@@ -305,7 +311,7 @@ class AuthService:
         @brief Verify a magic link token and issue JWT session.
 
         @param raw_token The raw token from the magic link URL.
-        @return Dict with access_token, expires_in, raw_refresh_token.
+        @return Dict with tokens, or ``requires_2fa=True`` with a pending token.
         @raises AuthenticationError If token is invalid, expired, or consumed.
         """
         await self._assert_password_auth_allowed()
@@ -315,6 +321,9 @@ class AuthService:
             self._settings,
             raw_token,
         )
+        if user.totp_enabled:
+            pending = create_2fa_pending_token(user.id, settings=self._settings)
+            return {"requires_2fa": True, "two_factor_token": pending}
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
     # ── Helpers ───────────────────────────────────────────────────────────

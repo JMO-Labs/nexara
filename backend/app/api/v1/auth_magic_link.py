@@ -74,6 +74,8 @@ async def verify_magic_link(
     """@brief Verify a magic link token and return JWT session."""
     svc = AuthService(db, settings)
     result = await svc.verify_magic_link(token)
+    if result.get("requires_2fa"):
+        return LoginResponse(requires_2fa=True, two_factor_token=result["two_factor_token"])
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

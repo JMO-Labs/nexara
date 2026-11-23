@@ -21,6 +21,7 @@ from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
+from app.core.rate_limit import limiter
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -287,7 +288,9 @@ async def verify_2fa_enrollment(
 
 
 @router.post("/2fa/login", response_model=LoginResponse)
+@limiter.limit("10/minute")
 async def login_2fa(
+    request: Request,
     body: TwoFactorLoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
