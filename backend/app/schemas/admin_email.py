@@ -26,6 +26,8 @@ class EmailSettingsUpdate(BaseModel):
     from_addr: str | None = Field(None, max_length=254, pattern=_ADDR)
     from_name: str | None = Field(None, max_length=100)
     auth: Literal["password", "google_oauth"] | None = None
+    google_client_id: str | None = Field(None, max_length=200)
+    google_client_secret: str | None = Field(None, max_length=200)  # write-only
 
 
 class EmailSettingsOut(BaseModel):
@@ -40,6 +42,9 @@ class EmailSettingsOut(BaseModel):
     auth: str
     has_password: bool
     has_google_refresh: bool
+    google_client_id: str
+    has_google_client_secret: bool
+    google_env_client: bool  # server env provides a Google client
     configured: bool
     last_ok_at: datetime | None
     last_error: str | None

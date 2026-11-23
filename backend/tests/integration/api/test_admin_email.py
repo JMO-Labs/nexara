@@ -42,6 +42,8 @@ class FakeRepo:
             smtp_from_name=None,
             smtp_auth="password",
             smtp_google_refresh=None,
+            smtp_google_client_id=None,
+            smtp_google_client_secret=None,
             smtp_last_ok_at=None,
             smtp_last_error=None,
         )

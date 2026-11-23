@@ -60,6 +60,11 @@ class AdminEmailService:
             "auth": c.smtp_auth or "password",
             "has_password": bool(c.smtp_password),
             "has_google_refresh": bool(c.smtp_google_refresh),
+            "google_client_id": c.smtp_google_client_id or "",
+            "has_google_client_secret": bool(c.smtp_google_client_secret),
+            "google_env_client": bool(
+                self._settings.GOOGLE_MAIL_CLIENT_ID and self._settings.GOOGLE_MAIL_CLIENT_SECRET
+            ),
             "configured": bool(c.smtp_host),
             "last_ok_at": c.smtp_last_ok_at,
             "last_error": c.smtp_last_error,
@@ -80,6 +85,13 @@ class AdminEmailService:
         for key in ("port", "security", "auth"):
             if changes.get(key):
                 values[f"smtp_{key}"] = changes[key]
+        if "google_client_id" in changes:
+            values["smtp_google_client_id"] = (changes["google_client_id"] or "").strip() or None
+        if "google_client_secret" in changes:
+            gs = (changes["google_client_secret"] or "").strip()
+            values["smtp_google_client_secret"] = (
+                encrypt_secret(gs, derive_fernet_key(self._settings.SECRET_KEY)) if gs else None
+            )
         if "password" in changes:
             pw = (changes["password"] or "").strip()
             values["smtp_password"] = (
@@ -89,6 +101,12 @@ class AdminEmailService:
         retarget = any(
             col in values and values[col] != getattr(c, col) for col in ("smtp_host", "smtp_user")
         ) or ("smtp_port" in values and values["smtp_port"] != (c.smtp_port or 587))
+        # A refresh token is bound to the OAuth client that issued it.
+        new_client = "smtp_google_client_id" in values and values["smtp_google_client_id"] != (
+            c.smtp_google_client_id
+        )
+        if new_client:
+            values["smtp_google_refresh"] = None
         if retarget:
             values["smtp_google_refresh"] = None
             if not (changes.get("password") or "").strip():

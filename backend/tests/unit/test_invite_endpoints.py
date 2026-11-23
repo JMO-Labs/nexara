@@ -87,6 +87,7 @@ class TestCreateInvite:
             with (
                 patch("app.api.v1.invites.InviteRepository") as mock_repo_cls,
                 patch("app.api.v1.invites.AuditRepository") as mock_audit_cls,
+                patch("app.api.v1.invites.send_invite_email") as mail,
             ):
                 mock_repo = AsyncMock()
                 mock_repo.create.return_value = mock_invite
@@ -106,6 +107,8 @@ class TestCreateInvite:
                 data = resp.json()
                 assert data["email"] == "new@example.com"
                 assert "raw_token" in data
+                args = mail.apply_async.call_args.kwargs["args"]
+                assert args == [str(mock_invite.id), data["raw_token"]]
                 mock_audit.append.assert_called_once()
         finally:
             test_app.dependency_overrides.clear()

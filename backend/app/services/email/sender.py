@@ -18,6 +18,7 @@ from aiosmtplib import SMTP, errors
 from sqlalchemy import select, update
 
 from app.models.community import Community
+from app.services.email.google_oauth import google_access_token
 from app.services.email.smtp_settings import SmtpConfig
 
 logger = structlog.get_logger(__name__)
@@ -109,6 +110,7 @@ async def _record(community_id: uuid.UUID | None, error: str | None) -> None:
 
 
 UNREADABLE_MSG = "Saved password can't be read; re-enter it."
+UNREADABLE_GOOGLE_MSG = "Saved Google connection can't be read; connect the account again."
 
 
 async def _fail(cfg: SmtpConfig, record: bool, err: SmtpSendError, exc: Exception | None) -> None:
@@ -151,7 +153,8 @@ async def send_email(
     @throws SmtpSendError sanitised category + message; raw text only goes to the log.
     """
     if cfg.secret_unreadable:
-        await _fail(cfg, record, SmtpSendError("auth_failed", UNREADABLE_MSG), None)
+        why = UNREADABLE_GOOGLE_MSG if cfg.auth == "google_oauth" else UNREADABLE_MSG
+        await _fail(cfg, record, SmtpSendError("auth_failed", why), None)
     if cfg.security == "none" and (cfg.user or cfg.password):
         await _fail(
             cfg,
@@ -171,18 +174,21 @@ async def send_email(
     msg.attach(MIMEText(text or html, "plain", "utf-8"))
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    password = cfg.password
-    if cfg.host == "smtp.gmail.com":
+    google = cfg.auth == "google_oauth"
+    password = "" if google else cfg.password
+    if cfg.host == "smtp.gmail.com" and not google:
         password = password.replace(" ", "")  # app passwords are shown grouped
     try:
         async with SMTP(
             hostname=cfg.host,
             port=cfg.port,
-            username=cfg.user or None,
+            username=None if google else cfg.user or None,
             password=password or None,
             use_tls=cfg.security == "ssl",
             start_tls=cfg.security == "starttls",
         ) as smtp:
+            if google:
+                await smtp.auth_xoauth2(cfg.user, await google_access_token(cfg))
             await smtp.send_message(msg)
     except Exception as exc:
         await _fail(cfg, record, classify(exc), exc)

@@ -28,6 +28,7 @@ from app.repositories.audit_repo import AuditRepository
 from app.repositories.invite_repo import InviteRepository
 from app.schemas.auth import InviteCreateRequest, InviteResponse
 from app.schemas.common import MessageResponse
+from app.tasks.email_tasks import send_invite_email
 
 logger = structlog.get_logger(__name__)
 
@@ -100,6 +101,11 @@ async def create_invite(
         role=body.role,
         created_by=str(admin.id),
     )
+
+    try:  # delay: the invite row commits when this request ends
+        send_invite_email.apply_async(args=[str(invite.id), raw_token], countdown=5)
+    except Exception:  # broker down must not fail invite creation; admin still has the link
+        logger.warning("invite_email_enqueue_failed", invite_id=str(invite.id))
 
     invite_data = InviteResponse.model_validate(invite).model_dump()
     invite_data["raw_token"] = raw_token

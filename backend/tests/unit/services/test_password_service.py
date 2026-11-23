@@ -93,10 +93,12 @@ class TestRequestPasswordReset:
         svc._user_repo.find_by_email.return_value = mock_user
         svc._token_repo = AsyncMock()
 
-        result = await svc.request_password_reset("user@example.com")
+        with patch("app.services.password_service.send_password_reset_email") as task:
+            result = await svc.request_password_reset("user@example.com")
 
         assert result is not None
         assert isinstance(result, str)
+        task.delay.assert_called_once_with(str(mock_user.id), result)
         svc._token_repo.create.assert_awaited_once()
 
     @pytest.mark.asyncio

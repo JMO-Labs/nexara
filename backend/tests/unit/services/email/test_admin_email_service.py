@@ -23,6 +23,8 @@ COLS = {
     "smtp_from_name": None,
     "smtp_auth": "password",
     "smtp_google_refresh": None,
+    "smtp_google_client_id": None,
+    "smtp_google_client_secret": None,
     "smtp_last_ok_at": None,
     "smtp_last_error": None,
 }
@@ -135,3 +137,16 @@ async def test_unreadable_password_test_returns_auth_failed():
     out = await svc.test("to@example.com")
     assert out["ok"] is False and out["category"] == "auth_failed"
     assert out["error"] == "Saved password can't be read; re-enter it."
+
+
+async def test_google_client_secret_encrypted_never_returned_and_client_change_drops_refresh():
+    svc, row, _ = _svc()
+    row.smtp_google_refresh = "enc-refresh"
+    out = await svc.update({"google_client_id": "cid", "google_client_secret": "shh"})
+    assert row.smtp_google_client_secret not in (None, "shh")
+    assert row.smtp_google_refresh is None  # new client id invalidates the old refresh token
+    assert out["google_client_id"] == "cid" and out["has_google_client_secret"] is True
+    assert "shh" not in str(out)
+    row.smtp_google_refresh = "enc-refresh"
+    await svc.update({"google_client_id": "cid"})
+    assert row.smtp_google_refresh == "enc-refresh"

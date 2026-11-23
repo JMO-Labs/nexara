@@ -23,6 +23,8 @@ _SMTP_TEXT_COLS = (
     "smtp_from",
     "smtp_from_name",
     "smtp_google_refresh",  # Fernet
+    "smtp_google_client_id",  # admin-entered Google OAuth client (env GOOGLE_MAIL_* otherwise)
+    "smtp_google_client_secret",  # Fernet
     "smtp_last_error",
 )
 

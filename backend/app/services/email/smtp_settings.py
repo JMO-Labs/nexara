@@ -32,6 +32,8 @@ class SmtpConfig:
     from_name: str | None = None
     auth: str = "password"  # password | google_oauth
     google_refresh: str | None = None
+    google_client_id: str = ""
+    google_client_secret: str = ""
     #: Set when read from the DB row; send_email records last ok/error on it.
     community_id: uuid.UUID | None = None
     #: A stored secret could not be decrypted (SECRET_KEY changed?); sending is refused.
@@ -49,21 +51,24 @@ def config_from_row(row: Community, secret_key: str) -> SmtpConfig | None:
         return None
     key = derive_fernet_key(secret_key)
     port = row.smtp_port or 587
-    unreadable = False
+    bad: set[str] = set()
 
-    def _dec(value: str | None) -> str | None:
-        nonlocal unreadable
+    def _dec(name: str, value: str | None) -> str | None:
         if not value:
             return None
         try:
             return decrypt_secret(value, key)
         except InvalidToken:
-            unreadable = True
-            logger.warning("email.secret_decrypt_failed")
+            bad.add(name)
+            logger.warning("email.secret_decrypt_failed", field=name)
             return None
 
-    password = _dec(row.smtp_password) or ""
-    refresh = _dec(row.smtp_google_refresh)
+    password = _dec("password", row.smtp_password) or ""
+    refresh = _dec("refresh", row.smtp_google_refresh)
+    client_secret = _dec("client_secret", getattr(row, "smtp_google_client_secret", None)) or ""
+    auth = row.smtp_auth or "password"
+    # Only the secrets the active auth mode uses may block a send.
+    needed = {"password"} if auth == "password" else {"refresh", "client_secret"}
     return SmtpConfig(
         host=row.smtp_host,
         port=port,
@@ -72,10 +77,12 @@ def config_from_row(row: Community, secret_key: str) -> SmtpConfig | None:
         password=password,
         from_addr=row.smtp_from or row.smtp_user or "noreply@nexara.local",
         from_name=row.smtp_from_name,
-        auth=row.smtp_auth or "password",
+        auth=auth,
         google_refresh=refresh,
+        google_client_id=getattr(row, "smtp_google_client_id", None) or "",
+        google_client_secret=client_secret,
         community_id=row.id,
-        secret_unreadable=unreadable,
+        secret_unreadable=bool(bad & needed),
     )
 
 

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from app.repositories.activity_repo import ActivityRepository
     from app.repositories.webhook_repo import WebhookRepository
     from app.services.admin_email_service import AdminEmailService
+    from app.services.admin_google_mail import GoogleMailService
     from app.services.ai.admin_ai_service import AdminAIService
     from app.services.ai.suggestion_service import SuggestionService
     from app.services.email_reply_admin_service import EmailReplyAdminService
@@ -374,6 +375,24 @@ def get_email_reply_admin_service(
         audit_repo=AuditRepository(db),
         actor_id=user.id,
         ip_address=ip,
+    )
+
+
+def get_google_mail_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> GoogleMailService:
+    """@brief Provide the Google mail connect flow (no auth: the callback is a browser redirect)."""
+    from app.core.valkey import DB_CACHE, get_pool
+    from app.repositories.community_repo import CommunityRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.admin_google_mail import GoogleMailService
+
+    return GoogleMailService(
+        CommunityRepository(db),
+        UserRepository(db),
+        settings,
+        get_pool(settings, DB_CACHE),
     )
 
 

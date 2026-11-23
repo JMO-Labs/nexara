@@ -72,6 +72,8 @@ class Community(Base):
     smtp_from_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     smtp_auth: Mapped[str] = mapped_column(Text, nullable=False, server_default="password")
     smtp_google_refresh: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_google_client_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    smtp_google_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     smtp_last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     smtp_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Per-community feature flags (see app.core.features); unset keys use defaults.
