@@ -83,7 +83,9 @@ class InboundService:
             return "ignored"
         user = await self._session.get(User, row.user_id)
         sender = reply_parse.sender_address(msg)
-        if not self._user_ok(user, sender) or not reply_parse.authenticated(msg, sender):
+        if not self._user_ok(user, sender) or not reply_parse.authenticated(
+            msg, sender, community.inbound_authserv_id
+        ):
             return "ignored"
         assert user is not None
         post = await self._posts.get_by_id(row.post_id, community_id=self._cid)

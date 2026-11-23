@@ -24,6 +24,7 @@ def is_configured(community: Any) -> bool:
         and community.inbound_imap_user
         and community.inbound_imap_password
         and reply_local_part(community.inbound_reply_address)
+        and community.inbound_authserv_id
     )
 
 

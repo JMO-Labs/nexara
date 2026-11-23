@@ -60,6 +60,8 @@ class Community(Base):
     inbound_imap_user: Mapped[str | None] = mapped_column(Text, nullable=True)
     inbound_imap_password: Mapped[str | None] = mapped_column(Text, nullable=True)
     inbound_reply_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Name the receiving server uses in Authentication-Results (e.g. mx.google.com).
+    inbound_authserv_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Per-community feature flags (see app.core.features); unset keys use defaults.
     features: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")

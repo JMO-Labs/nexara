@@ -31,6 +31,8 @@ class EmailReplyUpdate(BaseModel):
     reply_address: str | None = Field(
         None, max_length=254, pattern=r"^$|^[^@\s+]+@[^@\s]+\.[^@\s]+$"
     )
+    # The trusted Authentication-Results server name (e.g. mx.google.com).
+    authserv_id: str | None = Field(None, max_length=253, pattern=r"^$|^[A-Za-z0-9.-]+$")
 
 
 @router.get("")

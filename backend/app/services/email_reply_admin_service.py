@@ -18,7 +18,7 @@ from app.repositories.community_repo import CommunityRepository
 from app.services.email import imap_client
 from app.services.email.reply_address import is_configured
 
-_FIELDS = ("imap_host", "imap_user", "reply_address")
+_FIELDS = ("imap_host", "imap_user", "reply_address", "authserv_id")
 
 
 class EmailReplyAdminService:
@@ -50,6 +50,7 @@ class EmailReplyAdminService:
             "imap_port": c.inbound_imap_port or 993,
             "imap_user": c.inbound_imap_user or "",
             "reply_address": c.inbound_reply_address or "",
+            "authserv_id": c.inbound_authserv_id or "",
             "has_password": bool(c.inbound_imap_password),
             "configured": is_configured(c),
         }

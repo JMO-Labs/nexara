@@ -25,7 +25,7 @@ def _msg(body="Thanks!", sender="ruth@example.com", auth=True, **headers) -> Ema
     if auth:  # what the receiving mail server adds for a genuine message
         domain = sender.rsplit("@", 1)[-1].rstrip(">").lower()
         m["Authentication-Results"] = (
-            f"mx.example.net; dkim=pass header.i=@{domain}; dmarc=pass header.from={domain}"
+            f"mx.example.net; spf=pass smtp.mailfrom={domain}; dmarc=pass header.from={domain}"
         )
     m["From"] = sender
     m["To"] = f"reply+{TOKEN}@mail.example.com"
@@ -51,7 +51,9 @@ def _svc(**over):
         expires_at=datetime.now(UTC) + timedelta(days=1),
     )
     community = SimpleNamespace(
-        features={"reply_by_email": True}, inbound_reply_address="reply@mail.example.com"
+        features={"reply_by_email": True},
+        inbound_reply_address="reply@mail.example.com",
+        inbound_authserv_id="mx.example.net",
     )
     communities, tokens, moderation, posts, ps, session = (AsyncMock() for _ in range(6))
     communities.get.return_value = over.pop("community", community)
@@ -179,13 +181,52 @@ async def test_forged_sender_without_authentication_is_ignored() -> None:
     ps.add_comment.assert_not_awaited()
 
 
-def test_authenticated_requires_aligned_domain() -> None:
+def test_authenticated_requires_trusted_server_and_exact_dmarc() -> None:
     from app.services.email.reply_parse import authenticated
 
-    good = _msg()
-    assert authenticated(good, "ruth@example.com") is True
-    other = _msg(sender="ruth@example.com")
-    del other["Authentication-Results"]
-    other["Authentication-Results"] = "mx; dkim=pass header.d=evil.com; dmarc=fail"
-    assert authenticated(other, "ruth@example.com") is False
-    assert authenticated(_msg(auth=False), "ruth@example.com") is False
+    ok = "mx.example.net"
+    assert authenticated(_msg(), "ruth@example.com", ok) is True
+    # No trusted server configured, or none present: fail closed.
+    assert authenticated(_msg(), "ruth@example.com", None) is False
+    assert authenticated(_msg(auth=False), "ruth@example.com", ok) is False
+
+    def with_ar(value: str) -> EmailMessage:
+        m = _msg(auth=False)
+        m["Authentication-Results"] = value
+        return m
+
+    # A header written by the sender (another server name) is ignored.
+    assert (
+        authenticated(
+            with_ar("evil.example; dmarc=pass header.from=example.com"), "ruth@example.com", ok
+        )
+        is False
+    )
+    # Parent-domain / TLD / suffix tricks don't align.
+    assert (
+        authenticated(with_ar("mx.example.net; dmarc=pass header.from=com"), "ruth@example.com", ok)
+        is False
+    )
+    assert (
+        authenticated(
+            with_ar("mx.example.net; dmarc=pass header.from=evil-example.com"),
+            "ruth@example.com",
+            ok,
+        )
+        is False
+    )
+    # dkim pass alone, or dmarc text hidden in a comment, is not enough.
+    assert (
+        authenticated(
+            with_ar("mx.example.net; dkim=pass header.i=@example.com"), "ruth@example.com", ok
+        )
+        is False
+    )
+    assert (
+        authenticated(
+            with_ar("mx.example.net; spf=fail (dmarc=pass header.from=example.com)"),
+            "ruth@example.com",
+            ok,
+        )
+        is False
+    )

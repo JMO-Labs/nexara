@@ -21,6 +21,7 @@ def _community(on=True, host="imap.example.com"):
         inbound_imap_user="bot",
         inbound_imap_password="enc",
         inbound_reply_address="reply@example.com",
+        inbound_authserv_id="mx.example.com",
     )
 
 

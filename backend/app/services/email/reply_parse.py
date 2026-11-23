@@ -148,28 +148,50 @@ def clean_body(msg: Message) -> str | None:
     return text if text and len(text) <= MAX_BODY else None
 
 
-_AUTH_PASS = re.compile(
-    r"\b(?:dkim=pass[^;]*header\.(?:d|i)=@?(?P<d>[\w.-]+)"
-    r"|dmarc=pass[^;]*header\.from=(?P<f>[\w.-]+))",
-    re.I,
-)
+_COMMENT = re.compile(r"\([^()]*\)")
 
 
-def authenticated(msg: Message, sender: str | None) -> bool:
+def _resinfos(header: str) -> tuple[str, list[dict[str, str]]]:
     """
-    @brief The receiving server vouched for the sender's domain: the topmost
-           Authentication-Results header has dkim=pass or dmarc=pass aligned
-           with the From domain. The token alone is a bearer secret; this
-           stops a leaked reply address being used with a forged From.
+    @brief Split an Authentication-Results header (RFC 8601) into its
+           authserv-id and result entries: [{"method": "dmarc", "result":
+           "pass", "header.from": "example.com", ...}].
     """
-    if not sender or "@" not in sender:
+    parts = [p.strip() for p in _COMMENT.sub(" ", header).split(";")]
+    authserv = parts[0].split()[0].lower() if parts and parts[0] else ""
+    entries: list[dict[str, str]] = []
+    for part in parts[1:]:
+        tokens = part.split()
+        if not tokens or "=" not in tokens[0]:
+            continue
+        method, _, result = tokens[0].partition("=")
+        entry = {"method": method.lower(), "result": result.lower()}
+        for tok in tokens[1:]:
+            key, eq, val = tok.partition("=")
+            if eq:
+                entry[key.lower()] = val.strip('"').lower()
+        entries.append(entry)
+    return authserv, entries
+
+
+def authenticated(msg: Message, sender: str | None, authserv_id: str | None) -> bool:
+    """
+    @brief The community's own receiving server vouched for the sender: an
+           Authentication-Results header from ``authserv_id`` carries
+           ``dmarc=pass`` with ``header.from`` exactly the From domain.
+           Headers from any other server (including forged ones in the
+           message) are ignored; no trusted header means no.
+    """
+    if not sender or "@" not in sender or not authserv_id:
         return False
     domain = sender.rsplit("@", 1)[1].lower()
-    results = msg.get_all("Authentication-Results") or []
-    if not results:
-        return False
-    for m in _AUTH_PASS.finditer(str(results[0])):
-        got = (m.group("d") or m.group("f") or "").lower()
-        if got == domain or domain.endswith("." + got):
-            return True
+    trusted = authserv_id.lower()
+    for header in msg.get_all("Authentication-Results") or []:
+        server, entries = _resinfos(str(header))
+        if server != trusted:
+            continue
+        return any(
+            e["method"] == "dmarc" and e["result"] == "pass" and e.get("header.from") == domain
+            for e in entries
+        )
     return False

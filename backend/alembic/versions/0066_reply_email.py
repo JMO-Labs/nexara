@@ -31,6 +31,7 @@ def upgrade() -> None:
     op.add_column("communities", sa.Column("inbound_imap_user", sa.Text(), nullable=True))
     op.add_column("communities", sa.Column("inbound_imap_password", sa.Text(), nullable=True))
     op.add_column("communities", sa.Column("inbound_reply_address", sa.Text(), nullable=True))
+    op.add_column("communities", sa.Column("inbound_authserv_id", sa.Text(), nullable=True))
     op.create_table(
         "reply_tokens",
         sa.Column("token_hash", sa.CHAR(64), primary_key=True),
@@ -64,6 +65,7 @@ def downgrade() -> None:
     op.drop_table("inbound_replies")
     op.drop_table("reply_tokens")
     for col in (
+        "inbound_authserv_id",
         "inbound_reply_address",
         "inbound_imap_password",
         "inbound_imap_user",

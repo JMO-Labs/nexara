@@ -19,6 +19,7 @@ COLS = {
     "inbound_imap_user": None,
     "inbound_imap_password": None,
     "inbound_reply_address": None,
+    "inbound_authserv_id": None,
 }
 
 
@@ -42,6 +43,7 @@ FULL = {
     "imap_user": "bot@example.com",
     "imap_password": "hunter2-pw",
     "reply_address": "reply@example.com",
+    "authserv_id": "mx.example.com",
 }
 
 

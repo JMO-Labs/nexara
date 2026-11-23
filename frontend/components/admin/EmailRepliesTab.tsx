@@ -34,14 +34,21 @@ function SetupSteps() {
           the mailbox: turn on plus-addressing, or set a catch-all.
         </li>
         <li>
+          Open any email in that mailbox, view the original message and find the{" "}
+          <code>Authentication-Results:</code> line. Copy the first word after
+          the colon (for Gmail it is <code>mx.google.com</code>) into Trusted
+          mail server. Replies are only accepted when this server confirms the
+          sender (DMARC pass).
+        </li>
+        <li>
           Save, press Test connection, then turn on &quot;Reply by email&quot;
           under Features.
         </li>
       </ol>
       <p className="text-sm text-muted">
         Members then answer a comment, mention or new-post email by replying to
-        it. The reply is posted as their comment. Replies from any other address
-        are ignored.
+        it. The reply is posted as their comment. Replies from any other
+        address, or that your mail server could not verify, are ignored.
       </p>
     </Panel>
   );
@@ -56,6 +63,7 @@ function ReplyForm({ data }: { data: api.EmailReplySettings }) {
     imap_port: String(data.imap_port),
     imap_user: data.imap_user,
     reply_address: data.reply_address,
+    authserv_id: data.authserv_id,
   });
   const [password, setPassword] = useState("");
   const save = useMutation({
@@ -104,6 +112,14 @@ function ReplyForm({ data }: { data: api.EmailReplySettings }) {
             value={form.reply_address}
             onChange={set("reply_address")}
             placeholder="reply@yourdomain.com"
+            autoComplete="off"
+          />
+          <Input
+            label="Trusted mail server"
+            value={form.authserv_id}
+            onChange={set("authserv_id")}
+            placeholder="mx.google.com"
+            hint="The name your provider stamps on incoming mail (see step 4)."
             autoComplete="off"
           />
           <Input

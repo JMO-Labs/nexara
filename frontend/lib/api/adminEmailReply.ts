@@ -9,6 +9,8 @@ export interface EmailReplySettings {
   imap_port: number;
   imap_user: string;
   reply_address: string;
+  /** Mail server name trusted in Authentication-Results headers. */
+  authserv_id: string;
   has_password: boolean;
   /** Every field is filled in (the feature flag is separate). */
   configured: boolean;
@@ -20,6 +22,7 @@ export type EmailReplyUpdate = Partial<{
   imap_user: string;
   imap_password: string;
   reply_address: string;
+  authserv_id: string;
 }>;
 
 export const EMAIL_REPLY_URL = "/api/v1/admin/email-reply";

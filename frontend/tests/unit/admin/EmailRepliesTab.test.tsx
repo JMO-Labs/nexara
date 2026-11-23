@@ -21,6 +21,7 @@ const saved: EmailReplySettings = {
   imap_port: 993,
   imap_user: "bot@example.com",
   reply_address: "reply@example.com",
+  authserv_id: "mx.example.com",
   has_password: true,
   configured: true,
 };
