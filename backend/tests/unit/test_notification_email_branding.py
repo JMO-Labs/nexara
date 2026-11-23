@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.branding import CommunityBranding
 from app.repositories.branding_repo import BrandingRepository
-from app.tasks import notification_tasks as nt
+from app.tasks import notification_email_tasks as nt
 
 BASE = "https://nexara.example"
 COMMUNITY = uuid.uuid4()

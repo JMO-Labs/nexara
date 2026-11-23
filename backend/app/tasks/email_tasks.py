@@ -28,7 +28,7 @@ from app.services.email.sender import send_email as smtp_send
 from app.services.email.smtp_settings import SmtpConfig, resolve_smtp
 from app.services.email.templates import EmailTemplateRenderer
 from app.tasks.celery_app import celery_app
-from app.tasks.notification_tasks import _branding_kwargs
+from app.tasks.notification_email_tasks import _branding_kwargs
 
 logger = structlog.get_logger(__name__)
 

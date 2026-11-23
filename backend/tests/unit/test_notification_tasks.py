@@ -79,7 +79,7 @@ class TestSenderNamePassthrough:
         import uuid
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from app.tasks import notification_tasks as nt
+        from app.tasks import notification_email_tasks as nt
 
         user = MagicMock(email="u@example.com", community_id=uuid.uuid4())
         session = MagicMock()

@@ -6,7 +6,7 @@ import structlog
 
 from app.models.notification import Notification
 from app.services.notifications.channels.base import ChannelResult
-from app.tasks.notification_tasks import send_email_notification
+from app.tasks.notification_email_tasks import send_email_notification
 
 logger = structlog.get_logger(__name__)
 

@@ -23,7 +23,7 @@ from app.services.email.smtp_settings import resolve_smtp
 from app.services.email.templates import EmailTemplateRenderer
 from app.services.recap_service import UNSUBSCRIBE_TTL, RecapService
 from app.tasks.celery_app import celery_app
-from app.tasks.notification_tasks import _branding_kwargs
+from app.tasks.notification_email_tasks import _branding_kwargs
 
 logger = structlog.get_logger(__name__)
 
