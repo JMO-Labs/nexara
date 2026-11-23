@@ -60,7 +60,7 @@ describe("SettingsRow", () => {
     const row = container.firstElementChild as HTMLElement;
     expect(row).toHaveClass(
       "grid-cols-1",
-      "md:grid-cols-[15rem_minmax(0,1fr)]",
+      "md:grid-cols-[13rem_minmax(0,1fr)]",
     );
     expect(row).toHaveClass("md:items-center");
   });

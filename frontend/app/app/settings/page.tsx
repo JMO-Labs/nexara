@@ -10,7 +10,7 @@ import { SettingsTabs } from "@/components/settings/SettingsTabs";
  */
 export default function SettingsPage() {
   return (
-    <div className="mx-auto w-full max-w-[960px]">
+    <div className="mx-auto w-full max-w-[1120px]">
       <SettingsTabs />
     </div>
   );
