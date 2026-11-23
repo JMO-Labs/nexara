@@ -39,6 +39,9 @@ def effective_levels(stored: dict[str, str] | None, profile_visible_to: str) -> 
     for f in FIELDS:
         v = (stored or {}).get(f)
         out[f] = v if v in LEVELS else (legacy if f in LEGACY_FIELDS else "private")  # type: ignore[assignment]
+    # Not a User column: who sees your relations list (default community).
+    rel = (stored or {}).get("relations")
+    out["relations"] = rel if rel in LEVELS else "community"  # type: ignore[assignment]
     return out
 
 

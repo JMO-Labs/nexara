@@ -14,6 +14,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { PostCard } from "@/components/feed/PostCard";
 import { ListDetailPanel } from "@/components/lists/ListDetailPanel";
 import { WithList } from "@/components/lists/pages/ListDetailView";
+import { api } from "@/lib/api/client";
 import { callAction } from "@/lib/api/notifications";
 import { safeInternalLink } from "@/lib/safeLink";
 import { renderNotif } from "@/lib/notifications/renderers";
@@ -113,8 +114,12 @@ function NotifDetail({
   const act = async (key: string) => {
     setPending(key);
     try {
-      await callAction(entry.notif.id, key);
+      // Types that declare an endpoint (e.g. relation_request) are called directly.
+      const a = r.actions.find((x) => x.key === key);
+      if (a?.url.startsWith("/api/v1/")) await api(a.url, { method: a.method });
+      else await callAction(entry.notif.id, key);
       void qc.invalidateQueries({ queryKey: ["notifications"] });
+      void qc.invalidateQueries({ queryKey: ["relations"] });
     } finally {
       setPending(null);
     }

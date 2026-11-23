@@ -10,6 +10,7 @@ import { PageHeader, Segmented } from "@/components/ui/page";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MemberHeader } from "@/components/members/MemberHeader";
 import { AboutCard } from "@/components/members/AboutCard";
+import { RelationsCard } from "@/components/relations/RelationsCard";
 import { MemberTaggedTab } from "@/components/members/MemberTaggedTab";
 import { useSearchParams } from "next/navigation";
 import { MemberGroupsTab } from "@/components/members/MemberGroupsTab";
@@ -89,6 +90,9 @@ export function MemberProfile({ userId }: { userId: string }) {
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
         <div className="lg:sticky lg:top-24">
           <AboutCard profile={p} isSelf={isSelf} />
+          <div className="mt-5">
+            <RelationsCard userId={userId} isSelf={isSelf} />
+          </div>
         </div>
         <div className="min-w-0">
           <Segmented

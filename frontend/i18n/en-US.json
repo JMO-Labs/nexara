@@ -1039,6 +1039,11 @@
     "ride_update": {
       "label": "Ride update"
     },
+    "relation_request": {
+      "label": "Family link request",
+      "accept": "Accept",
+      "decline": "Decline"
+    },
     "kudos_received": {
       "label": "You got kudos"
     },
