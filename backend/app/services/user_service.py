@@ -224,7 +224,7 @@ class UserService:
         return bool(url and url.startswith(GRAVATAR_BASE + "/"))
 
     @staticmethod
-    def get_avatar_url(user: User, size: int = 80, gravatar_email: str | None = None) -> str:
+    def get_avatar_url(user: User, size: int = 80) -> str:
         """
         @brief Return the user's avatar URL, falling back to Gravatar.
 
@@ -233,12 +233,11 @@ class UserService:
 
         @param user The User model instance.
         @param size Avatar size in pixels.
-        @param gravatar_email Optional override for the hash source (else login email).
         @return URL string.
         """
         if user.avatar_url:
             return user.avatar_url
         # MD5 is mandated by the Gravatar URL scheme, not used for security.
-        email_bytes = (gravatar_email or user.email).strip().lower().encode()
+        email_bytes = user.email.strip().lower().encode()
         email_hash = hashlib.md5(email_bytes, usedforsecurity=False).hexdigest()
         return f"{GRAVATAR_BASE}/{email_hash}?s={size}&d=mp"

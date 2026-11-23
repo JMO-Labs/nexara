@@ -257,10 +257,3 @@ class TestListBlocked:
         svc._moderation_repo.list_blocked_users.assert_awaited_once_with(
             viewer.id, viewer.community_id
         )
-
-
-class TestGravatarEmail:
-    def test_fallback_uses_override(self):
-        user = MagicMock(avatar_url=None, email="a@b.c")
-        other = UserService.get_avatar_url(user, gravatar_email="z@y.x")
-        assert other != UserService.get_avatar_url(user)
