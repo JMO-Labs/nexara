@@ -6,7 +6,7 @@
  */
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, SendHorizontal } from "lucide-react";
+import { Cake, Check, SendHorizontal } from "lucide-react";
 import { useCreateDm } from "@/hooks/useChat";
 import { useFeature } from "@/hooks/useFeature";
 import { useRelations } from "@/hooks/useRelations";
@@ -109,7 +109,15 @@ export function ConnectionCard({
         {person.shared_events_30d > 0 && (
           <li>{person.shared_events_30d} shared events this month</li>
         )}
-        {status && <li>{status}</li>}
+        {status &&
+          (person.birthday_in_days != null ? (
+            <li className="flex items-center gap-1.5 font-medium text-[var(--nx-red)]">
+              <Cake aria-hidden className="nx-cake size-3.5" />
+              {status}
+            </li>
+          ) : (
+            <li>{status}</li>
+          ))}
       </ul>
       <form
         onSubmit={quickSend}

@@ -6,6 +6,7 @@
  *        hover card or profile); until then, a suggested ranking.
  */
 import { Cake } from "lucide-react";
+import { cn } from "@/lib/utils";
 import * as React from "react";
 import { HoverCard } from "radix-ui";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,7 @@ function relative(iso: string): string {
 function statusOf(p: HomePerson): string {
   if (p.online) return "Online now";
   if (p.birthday_in_days === 0) return "Birthday today";
+  if (p.birthday_in_days === 1) return "Birthday tomorrow";
   if (p.birthday_in_days != null) {
     return `Birthday in ${p.birthday_in_days} days`;
   }
@@ -93,8 +95,15 @@ export function PeopleStrip() {
                   userId={p.user_id}
                 />
                 {p.birthday_in_days != null && (
-                  <i className="absolute top-[-6px] right-[-6px] grid size-5 place-items-center rounded-full bg-[var(--nx-glass-solid)] text-[var(--nx-red)]">
-                    <Cake aria-hidden className="size-3" />
+                  <i
+                    className={cn(
+                      "absolute top-[-6px] right-[-6px] grid size-5 place-items-center rounded-full",
+                      p.birthday_in_days === 0
+                        ? "bg-[var(--nx-red)] text-[var(--nx-glass-solid)]"
+                        : "bg-[var(--nx-glass-solid)] text-[var(--nx-red)]",
+                    )}
+                  >
+                    <Cake aria-hidden className="nx-cake size-3" />
                   </i>
                 )}
               </button>
