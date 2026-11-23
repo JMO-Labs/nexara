@@ -143,7 +143,7 @@ export function NewsletterView({
       )}
       {data.top_posts.length > 0 && (
         <Section title="Top moments">
-          <ul className="m-0 grid list-none gap-3 p-0">
+          <ul className="nx-news-cols m-0 grid list-none gap-3 p-0 md:grid-cols-2">
             {data.top_posts.map((p) => (
               <li key={p.id} className={CARD}>
                 {p.media_ids[0] && (
@@ -151,7 +151,7 @@ export function NewsletterView({
                   <img
                     src={mediaThumbUrl(p.media_ids[0])}
                     alt=""
-                    className="nx-news-photo mb-2 rounded-xl"
+                    className="nx-news-photo mb-2 aspect-[4/3] w-full rounded-xl object-cover"
                   />
                 )}
                 <p className="m-0 text-ink">{p.excerpt}</p>
@@ -166,14 +166,14 @@ export function NewsletterView({
       )}
       {data.photos.length > 0 && (
         <Section title="Photos">
-          <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
+          <ul className="nx-news-photos m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3">
             {data.photos.map((p) => (
               <li key={p.media_id} className="nx-news-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaThumbUrl(p.media_id)}
                   alt={p.alt ?? "Photo from this month"}
-                  className="nx-news-photo rounded-xl"
+                  className="nx-news-photo aspect-[4/3] w-full rounded-xl object-cover"
                 />
               </li>
             ))}
