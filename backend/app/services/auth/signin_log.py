@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.valkey import DB_CACHE, get_pool
+from app.db.session import async_session_factory
 from app.models.signin_event import SigninEvent
 from app.repositories.signin_repo import SigninRepository
 
@@ -90,20 +91,13 @@ def _default_notifier(session: AsyncSession, community_id: uuid.UUID) -> Notific
     )
 
 
-async def is_new_device(
-    session: AsyncSession, community_id: uuid.UUID, user_id: uuid.UUID, device: str
-) -> bool:
-    """@return True when the user has no successful sign-in with ``device`` in 90 days."""
-    return not await SigninRepository(session).has_success_with_device(
-        community_id, user_id, device
-    )
-
-
-async def _check_burst(repo: SigninRepository, community_id: uuid.UUID, ip: str) -> None:
+async def _check_burst(
+    repo: SigninRepository, settings: Settings, community_id: uuid.UUID, ip: str
+) -> None:
     """@brief Log ``security.signin_burst`` once per 10 min per IP at >=10 failures."""
     if await repo.count_failures(community_id, ip, BURST_WINDOW_MINUTES) < BURST_THRESHOLD:
         return
-    redis = get_pool(get_settings(), DB_CACHE)
+    redis = get_pool(settings, DB_CACHE)
     if await redis.set(f"signin:burst:{ip}", "1", nx=True, ex=BURST_WINDOW_MINUTES * 60):
         # ponytail: swap for admin_alert("signin_burst", {"ip": ip}) once PR 2 lands it.
         logger.warning("security.signin_burst", ip=ip)
@@ -120,6 +114,7 @@ async def record_signin(
     reason: str | None,
     request: Request | None,
     notifier: NotificationService | None = None,
+    settings: Settings | None = None,
 ) -> SigninEvent:
     """
     @brief Persist a sign-in event; alert on new device (success) or burst (failure).
@@ -133,6 +128,7 @@ async def record_signin(
     @param reason Failure reason code, or None.
     @param request Current request for IP / User-Agent (optional).
     @param notifier Override for the NotificationService (tests).
+    @param settings Injected settings (defaults to ``get_settings()``).
     @return The stored SigninEvent.
     """
     repo = SigninRepository(session)
@@ -171,7 +167,7 @@ async def record_signin(
             svc = notifier or _default_notifier(session, community_id)
             await svc.notify(user_id, "new_signin", payload)
         elif not success and ip:
-            await _check_burst(repo, community_id, ip)
+            await _check_burst(repo, settings or get_settings(), community_id, ip)
     except Exception:
         logger.warning("signin.alert_failed", exc_info=True)
     return event
@@ -192,7 +188,7 @@ async def record_signin_safe(session: AsyncSession, **kwargs: Any) -> SigninEven
 
 
 async def log_success(
-    session: AsyncSession, user: User, method: str, request: Request | None
+    session: AsyncSession, settings: Settings, user: User, method: str, request: Request | None
 ) -> None:
     """@brief Safely record a successful sign-in for ``user``."""
     await record_signin_safe(
@@ -204,36 +200,39 @@ async def log_success(
         success=True,
         reason=None,
         request=request,
+        settings=settings,
     )
 
 
 async def log_failure(
-    session: AsyncSession,
     settings: Settings,
     user: User | None,
     email: str | None,
     method: str,
     reason: str,
-    request: Request | None,
+    request: Request | None = None,
 ) -> None:
     """
-    @brief Safely record a failed sign-in and commit it.
+    @brief Safely record a failed sign-in in its OWN short-lived session.
 
-    The caller is about to raise, and ``get_db`` rolls back on exceptions, so the
-    event is committed here to survive.
+    The caller is about to raise and ``get_db`` rolls back the request session, so
+    the row is written and committed separately; no other pending request state
+    is ever committed by this.
     """
-    ev = await record_signin_safe(
-        session,
-        community_id=user.community_id if user else uuid.UUID(settings.COMMUNITY_ID),
-        user_id=user.id if user else None,
-        email=email,
-        method=method,
-        success=False,
-        reason=reason,
-        request=request,
-    )
-    if ev is not None:
-        try:
-            await session.commit()
-        except Exception:
-            logger.warning("signin.record_failed", exc_info=True)
+    try:
+        async with async_session_factory() as session:
+            ev = await record_signin_safe(
+                session,
+                community_id=user.community_id if user else uuid.UUID(settings.COMMUNITY_ID),
+                user_id=user.id if user else None,
+                email=email,
+                method=method,
+                success=False,
+                reason=reason,
+                request=request,
+                settings=settings,
+            )
+            if ev is not None:
+                await session.commit()
+    except Exception:
+        logger.warning("signin.record_failed", exc_info=True)

@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AppError, AuthenticationError
 from app.core.i18n import _
 from app.core.security import (
     create_2fa_pending_token,
@@ -135,28 +136,21 @@ class AuthService:
         @raises AuthenticationError On invalid credentials.
         """
         await self._assert_password_auth_allowed()
+        fail = partial(log_failure, self._settings, request=request)
         user = await self._user_repo.find_by_email(email)
         if not user or not user.password_hash:
-            await log_failure(
-                self._session,
-                self._settings,
-                user,
-                email,
-                "password",
-                "unknown_email" if not user else "no_password",
-                request,
-            )
+            await fail(user, email, "password", "no_password" if user else "unknown_email")
             raise AuthenticationError(message=_("Invalid email or password"))
         if not verify_password(password, user.password_hash):
-            await log_failure(
-                self._session, self._settings, user, email, "password", "bad_password", request
-            )
+            await fail(user, email, "password", "bad_password")
             raise AuthenticationError(message=_("Invalid email or password"))
-        reject_memorialized(user)
+        try:
+            reject_memorialized(user)
+        except AppError:
+            await fail(user, email, "password", "memorialized")
+            raise
         if not user.is_active:
-            await log_failure(
-                self._session, self._settings, user, email, "password", "inactive", request
-            )
+            await fail(user, email, "password", "inactive")
             raise AuthenticationError(message=_("Account is deactivated"))
 
         if user.totp_enabled:
@@ -165,7 +159,7 @@ class AuthService:
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_logged_in", user_id=str(user.id))
-        await log_success(self._session, user, "password", request)
+        await log_success(self._session, self._settings, user, "password", request)
         return await self._issue_tokens(user)
 
     async def verify_2fa_login(
@@ -194,11 +188,14 @@ class AuthService:
             raise AuthenticationError(message=str(exc)) from exc
 
         user_id = uuid.UUID(payload["sub"])
+        fail = partial(log_failure, self._settings, request=request)
         if not await reserve_attempt(two_factor_token, user_id, self._settings):
+            await fail(None, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
         user = await self._user_repo.get_by_id(user_id)
         if not user or not user.totp_secret:
+            await fail(user, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
         canonical = normalize_totp(code)
@@ -211,15 +208,13 @@ class AuthService:
             if ok:
                 method = "recovery"
         if not ok:
-            await log_failure(
-                self._session, self._settings, user, user.email, method, "bad_code", request
-            )
+            await fail(user, user.email, method, "bad_code")
             raise AuthenticationError(message=_("Invalid 2FA code"))
         await clear_user_attempts(user.id, self._settings)
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))
-        await log_success(self._session, user, method, request)
+        await log_success(self._session, self._settings, user, method, request)
         return await self._issue_tokens(user)
 
     async def refresh(
@@ -345,15 +340,14 @@ class AuthService:
                 self._settings,
                 raw_token,
             )
-        except AuthenticationError:
-            await log_failure(
-                self._session, self._settings, None, None, "magic_link", "invalid_token", request
-            )
+        except AppError as exc:
+            reason = "memorialized" if exc.code == "ACCOUNT_MEMORIALIZED" else "invalid_token"
+            await log_failure(self._settings, None, None, "magic_link", reason, request)
             raise
         if user.totp_enabled:
             pending = create_2fa_pending_token(user.id, settings=self._settings)
             return {"requires_2fa": True, "two_factor_token": pending}
-        await log_success(self._session, user, "magic_link", request)
+        await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
     async def login_sso(self, user: User, request: Request | None = None) -> dict[str, Any]:
@@ -364,7 +358,7 @@ class AuthService:
         @param request Current request (sign-in log IP / User-Agent).
         @return Dict with token data and ``raw_refresh_token``.
         """
-        await log_success(self._session, user, "sso", request)
+        await log_success(self._session, self._settings, user, "sso", request)
         return await self._issue_tokens(user)
 
     # ── Helpers ───────────────────────────────────────────────────────────

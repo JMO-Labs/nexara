@@ -1096,6 +1096,9 @@
     "new_post": {
       "label": "New post"
     },
+    "new_signin": {
+      "label": "New sign-in from another device"
+    },
     "nudge_received": {
       "label": "You got a nudge"
     },
