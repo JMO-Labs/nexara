@@ -26,6 +26,9 @@ vi.mock("@/components/layout/MoreSheet", () => ({
   MoreSheet: ({ open }: { open: boolean }) =>
     open ? <div role="dialog" aria-label="More" /> : null,
 }));
+vi.mock("@/components/trips/ActiveTripBar", () => ({
+  ActiveTripBar: () => null,
+}));
 vi.mock("@/hooks/useSettings", () => ({
   useUserSettings: () => ({ data: undefined }),
 }));

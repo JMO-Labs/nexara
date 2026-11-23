@@ -41,6 +41,7 @@ celery_app = Celery(
         "app.tasks.media_tasks",
         "app.tasks.memories_tasks",
         "app.tasks.recap_tasks",
+        "app.tasks.trip_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -78,6 +79,7 @@ celery_app.conf.update(
         "app.tasks.nudge_tasks.*": {"queue": "maintenance"},
         "app.tasks.list_tasks.*": {"queue": "maintenance"},
         "chores.*": {"queue": "maintenance"},
+        "trips.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "plugins.example_trivia.*": {"queue": "maintenance"},
     },
@@ -232,6 +234,10 @@ celery_app.conf.update(
         "chores-advance-due": {
             "task": "chores.advance_due",
             "schedule": crontab(minute="*/15"),
+        },
+        "trips-sweep": {
+            "task": "trips.sweep",
+            "schedule": crontab(minute="*/5"),
         },
         "capsules-open-due": {
             "task": "capsules.open_due",
