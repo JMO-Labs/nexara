@@ -6,10 +6,12 @@
  *        hover card or profile); until then, a suggested ranking.
  */
 import { Cake } from "lucide-react";
+import * as React from "react";
 import { HoverCard } from "radix-ui";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConnectionCard } from "@/components/home/ConnectionCard";
+import { AddRelationDialog } from "@/components/relations/AddRelationDialog";
 import { useHomePeople } from "@/hooks/useHomePeople";
 import type { HomePerson } from "@/lib/api/home";
 import { groupColor } from "@/lib/groupColor";
@@ -49,6 +51,7 @@ function statusOf(p: HomePerson): string {
  */
 export function PeopleStrip() {
   const router = useRouter();
+  const [relateTo, setRelateTo] = React.useState<string | null>(null);
   const { data } = useHomePeople();
   const all = data?.items ?? [];
   const pinned = all.filter((p) => p.favorite);
@@ -104,12 +107,21 @@ export function PeopleStrip() {
                 collisionPadding={16}
                 className="z-50 rounded-[22px] border border-[var(--nx-line)] bg-[var(--nx-glass-solid)] p-4 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 max-md:hidden"
               >
-                <ConnectionCard person={p} status={status} />
+                <ConnectionCard
+                  person={p}
+                  status={status}
+                  onRelate={() => setRelateTo(p.user_id)}
+                />
               </HoverCard.Content>
             </HoverCard.Portal>
           </HoverCard.Root>
         );
       })}
+      <AddRelationDialog
+        open={relateTo !== null}
+        onClose={() => setRelateTo(null)}
+        presetUserId={relateTo ?? undefined}
+      />
     </div>
   );
 }

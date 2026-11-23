@@ -8,6 +8,9 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, SendHorizontal } from "lucide-react";
 import { useCreateDm } from "@/hooks/useChat";
+import { useFeature } from "@/hooks/useFeature";
+import { useRelations } from "@/hooks/useRelations";
+import { useSession } from "@/stores/session";
 import { postChatMessage } from "@/lib/api/chat";
 import type { HomePerson } from "@/lib/api/home";
 import { FavoriteButton } from "./FavoriteButton";
@@ -22,10 +25,19 @@ import { FavoriteButton } from "./FavoriteButton";
 export function ConnectionCard({
   person,
   status,
+  onRelate,
 }: {
   person: HomePerson;
   status: string;
+  /** Opens "add how you know them" (owned by the strip so it outlives the card). */
+  onRelate?: () => void;
 }) {
+  const me = useSession((s) => s.user?.id);
+  const relationsOn = useFeature("relations");
+  const rels = useRelations(me ?? "", Boolean(me) && relationsOn).data ?? [];
+  const rel = rels.find(
+    (r) => r.person.type === "user" && r.person.id === person.user_id,
+  );
   const router = useRouter();
   const dm = useCreateDm();
   const first = person.display_name.split(" ")[0];
@@ -68,9 +80,28 @@ export function ConnectionCard({
           className="-mt-1 -mr-1 size-8"
         />
       </div>
-      <span className="my-1.5 mb-2.5 inline-block rounded-full border border-dashed border-[var(--nx-line)] px-[9px] py-0.5 text-xs text-[var(--nx-faint)]">
-        Add how you know {first}
-      </span>
+      {rel?.status === "confirmed" ? (
+        <span className="my-1.5 mb-2.5 inline-block rounded-full bg-[color-mix(in_srgb,var(--nx-accent)_14%,transparent)] px-[9px] py-0.5 text-xs text-[var(--nx-ink)]">
+          Your {rel.display}
+        </span>
+      ) : rel ? (
+        <span className="my-1.5 mb-2.5 inline-block text-xs text-[var(--nx-faint)]">
+          {rel.direction === "incoming"
+            ? `${first} asked to link as your ${rel.display}`
+            : `Waiting for ${first} to confirm`}
+        </span>
+      ) : (
+        relationsOn &&
+        onRelate && (
+          <button
+            type="button"
+            onClick={onRelate}
+            className="my-1.5 mb-2.5 inline-block rounded-full border border-dashed border-[var(--nx-line)] px-[9px] py-0.5 text-xs text-[var(--nx-muted)] hover:text-[var(--nx-ink)] focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            Add how you know {first}
+          </button>
+        )
+      )}
       <ul className="mb-3 grid gap-1.5 text-[13px] text-[var(--nx-muted)]">
         {person.shared_groups.map((g) => (
           <li key={g.id}>{g.name}</li>
