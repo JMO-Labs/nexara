@@ -76,5 +76,21 @@
 
 ---
 
+### Task 6: Gravatar email (user request 2026-11-23)
+
+**Files:**
+- Modify: migration 0068 (`user_settings.gravatar_email text null`), `backend/app/models/user_settings.py`, `backend/app/schemas/profile.py` / settings schemas, `backend/app/services/settings_service.py:130-140`, `backend/app/services/user_service.py` (`gravatar_url`, avatar fallback ~229-243), `frontend/components/settings/AvatarPicker.tsx`, `frontend/lib/api/settings.ts`
+- Test: settings service unit test, AvatarPicker vitest
+
+**Interfaces:**
+- `gravatar_email` (≤254 chars, validated `EmailStr`, stored lowercased/stripped; empty string → null). Private: never returned except to the owner via `/settings/`.
+- Hash source = `gravatar_email or user.email` everywhere (opt-in URL and fallback).
+- Saving a new `gravatar_email` while the avatar is Gravatar-managed (`is_gravatar(avatar_url)`) recomputes `avatar_url`; uploaded photo untouched.
+- UI: under the "Use Gravatar" toggle, input "Gravatar email" (`type="email"`, placeholder = login email, help "Use a different email for your Gravatar picture. Only you see this.").
+- [ ] Tests: gravatar_email set → avatar URL hash = sha256 of it; cleared → login email hash; uploaded avatar unchanged on change; invalid email → 422; public profile response has no gravatar_email.
+- [ ] Implement → PASS → commit `feat(settings): separate Gravatar email`
+
+---
+
 ### Task 5: Polish PR 1
 - [ ] Full suites + `next build`; eval rebuild; live: configure Gmail preset with fake creds → test shows readable error; invite sends via MailHog-style `aiosmtpd` sink container (`python -m aiosmtpd -n -l 0.0.0.0:1025`); screenshots EmailTab desktop + phone; open PR "Platform 1: security fixes, email, sign-in log" on base `feat/eng-w5-access`.
