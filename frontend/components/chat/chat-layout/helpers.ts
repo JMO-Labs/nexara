@@ -108,15 +108,16 @@ export function isDesktop(): boolean {
 }
 
 /**
- * @brief Grid classes for chat panes: stacked < md, 2 panes at md,
- *        3 panes (with details) only at lg.
- * @param showDetails whether the details pane is open
+ * @brief Grid classes for chat panes: stacked < md, 2 panes at md, and a
+ *        third (inline details) column only at xl. Below xl details open as
+ *        a slide-over instead.
+ * @param showDetails whether the inline details column is open
  * @return class string
  */
 export function gridClass(showDetails: boolean): string {
   const base =
     "grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[300px_minmax(0,1fr)] md:gap-[18px]";
   return showDetails
-    ? `${base} lg:grid-cols-[300px_minmax(0,1fr)_320px]`
+    ? `${base} xl:grid-cols-[300px_minmax(0,1fr)_320px]`
     : base;
 }

@@ -42,6 +42,8 @@ const QUICK_EMOJI = ["👍", "❤️", "🎉", "😂", "🤔", "🔥", "✨", "�
 export interface ComposerHandle {
   /** Move focus into the message textarea. */
   focus: () => void;
+  /** Replace the draft with text and focus (does not send). */
+  prefill: (text: string) => void;
 }
 
 export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
@@ -68,7 +70,13 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
 
     React.useImperativeHandle(
       ref,
-      () => ({ focus: () => taRef.current?.focus() }),
+      () => ({
+        focus: () => taRef.current?.focus(),
+        prefill: (text: string) => {
+          setValue(text);
+          taRef.current?.focus();
+        },
+      }),
       [],
     );
 
@@ -106,7 +114,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
     };
 
     return (
-      <div className="shrink-0 px-2.5 pb-2.5">
+      <div className="mx-auto w-full max-w-[760px] shrink-0 px-2.5 pb-2.5">
         {replyTo && (
           <div className="flex items-center gap-2 mb-1.5 rounded-[18px] bg-[var(--nx-bubble)] px-3 py-1.5">
             <CornerUpLeft size={14} aria-hidden />

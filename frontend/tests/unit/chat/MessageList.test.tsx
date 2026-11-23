@@ -44,7 +44,7 @@ describe("MessageList", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
     spy.mockRestore();
   });
-  it("centres messages in an 860px column and fades the top edge", () => {
+  it("centres messages in an 760px column and fades the top edge", () => {
     const spy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockReturnValue({ width: 400, height: 400 } as DOMRect);
@@ -58,7 +58,7 @@ describe("MessageList", () => {
     const scroller = container.querySelector("[data-density]") as HTMLElement;
     expect(scroller.className).toContain("py-4");
     expect(scroller.className).toContain("mask-image");
-    const column = screen.getByText("hello").closest(".max-w-\\[860px\\]");
+    const column = screen.getByText("hello").closest(".max-w-\\[760px\\]");
     expect(column).not.toBeNull();
     spy.mockRestore();
   });

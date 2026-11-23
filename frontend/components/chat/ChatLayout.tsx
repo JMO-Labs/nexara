@@ -27,7 +27,11 @@ import { groupColor } from "@/lib/groupColor";
 import { chatWs } from "@/lib/realtime/chat-ws";
 import { NewDmModal } from "./NewDmModal";
 import { SidebarPane } from "./chat-layout/SidebarPane";
-import { ThreadPane, DetailsPane } from "./chat-layout/ThreadPane";
+import { ThreadPane } from "./chat-layout/ThreadPane";
+import { DetailsHost } from "./chat-layout/DetailsHost";
+import { useDetails } from "./chat-layout/useDetails";
+import { useHomeChats } from "@/hooks/useHomeChats";
+import { useChatContext } from "@/hooks/useChatContext";
 import {
   gridClass,
   isDesktop,
@@ -65,7 +69,16 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
   const confirm = useConfirmDialog((s) => s.confirm);
   const [replyTo, setReplyTo] = React.useState<ChatMessage | null>(null);
   const [dmModalOpen, setDmModalOpen] = React.useState(false);
-  const [threadPaneOpen, setThreadPaneOpen] = React.useState(false);
+  const details = useDetails();
+  const homeChats = useHomeChats(20);
+  const contextQ = useChatContext(activeId);
+  const threads = React.useMemo(
+    () =>
+      Object.fromEntries(
+        (homeChats.data?.items ?? []).map((t) => [t.channel_id, t]),
+      ),
+    [homeChats.data],
+  );
 
   // Drop reply context when switching channels (state-during-render pattern).
   const [prevChannel, setPrevChannel] = React.useState<string | null>(activeId);
@@ -232,7 +245,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
     ? `@${activeDm.peer.username}`
     : activeChannel?.channel_type;
 
-  const showDetails = threadPaneOpen && Boolean(activeId);
+  const showDetails = details.inline && details.open && Boolean(activeId);
 
   return (
     <div className={gridClass(showDetails)}>
@@ -242,6 +255,7 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         dms={dms}
         activeId={activeId}
         unread={unread}
+        threads={threads}
         onSelect={select}
         onDeleteDm={onDeleteDm}
         loading={channelsQ.isLoading || dmsQ.isLoading}
@@ -257,8 +271,9 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
           color={threadColor}
           subtitle={threadSubtitle}
           onBack={back}
-          detailsOpen={threadPaneOpen}
-          onToggleDetails={() => setThreadPaneOpen((o) => !o)}
+          context={contextQ.data}
+          detailsOpen={details.open}
+          onToggleDetails={details.toggle}
           list={{
             messages,
             isLoading: messagesQ.isLoading,
@@ -301,7 +316,14 @@ export function ChatLayout({ activeId }: ChatLayoutProps) {
         </div>
       )}
 
-      {showDetails && <DetailsPane />}
+      {activeId && (
+        <DetailsHost
+          channelId={activeId}
+          inline={details.inline}
+          open={details.open}
+          onClose={details.close}
+        />
+      )}
 
       <NewDmModal
         open={dmModalOpen}
