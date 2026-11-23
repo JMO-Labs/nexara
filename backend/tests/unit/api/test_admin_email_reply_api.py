@@ -13,7 +13,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
-from app.core.dependencies import get_current_user, get_email_reply_admin_service
+from app.core.dependencies import get_current_user
+from app.core.deps_mail import get_email_reply_admin_service
 from app.services.email_reply_admin_service import EmailReplyAdminService
 from tests.unit.services.email.test_reply_admin import COLS, FULL
 

@@ -6,6 +6,8 @@ from uuid import uuid4
 
 import pytest
 
+from app.services.email.sender import SmtpSendError
+from app.tasks import notification_email_tasks as ne
 from app.tasks import notification_tasks as nt
 
 
@@ -64,8 +66,8 @@ async def test_dispatch_skips_user_without_settings():
 async def test_send_digest_missing_user_skipped():
     session = MagicMock()
     session.get = AsyncMock(return_value=None)
-    with patch.object(nt, "async_session_factory", return_value=_session_cm(session)):
-        out = await nt._send_digest_email_async(uuid4(), "comment", [uuid4()])
+    with patch.object(ne, "async_session_factory", return_value=_session_cm(session)):
+        out = await ne._send_digest_email_async(uuid4(), "comment", [uuid4()])
     assert out == {"status": "skipped"}
 
 
@@ -80,14 +82,15 @@ async def test_send_digest_renders_and_sends():
     sender = MagicMock()
     sender.send = AsyncMock(return_value=True)
     with (
-        patch.object(nt, "async_session_factory", return_value=_session_cm(session)),
-        patch.object(nt, "BrandingRepository") as br,
-        patch.object(nt, "EmailSender", return_value=sender),
+        patch.object(ne, "async_session_factory", return_value=_session_cm(session)),
+        patch.object(ne, "BrandingRepository") as br,
+        patch.object(ne, "resolve_smtp", AsyncMock(return_value=MagicMock())),
+        patch.object(ne, "send_email", sender.send),
     ):
         br.return_value.get = AsyncMock(return_value=None)
-        out = await nt._send_digest_email_async(uuid4(), "comment", [uuid4()])
+        out = await ne._send_digest_email_async(uuid4(), "comment", [uuid4()])
     assert out == {"status": "sent"}
-    assert "hi" in sender.send.await_args.kwargs["html_body"]
+    assert "hi" in sender.send.await_args.args[3]
 
 
 async def test_send_digest_no_notifications_skipped():
@@ -96,8 +99,8 @@ async def test_send_digest_no_notifications_skipped():
     session = MagicMock()
     session.get = AsyncMock(return_value=MagicMock(email="a@b.c", community_id=uuid4()))
     session.execute = AsyncMock(return_value=res)
-    with patch.object(nt, "async_session_factory", return_value=_session_cm(session)):
-        assert await nt._send_digest_email_async(uuid4(), "c", [uuid4()]) == {"status": "skipped"}
+    with patch.object(ne, "async_session_factory", return_value=_session_cm(session)):
+        assert await ne._send_digest_email_async(uuid4(), "c", [uuid4()]) == {"status": "skipped"}
 
 
 def _dispatch_patches(session, repo, st):
@@ -201,21 +204,58 @@ def test_send_digest_email_invalid_uuid_returns_error():
 
 def test_send_digest_email_runs_async_impl():
     with patch.object(
-        nt, "_send_digest_email_async", new=AsyncMock(return_value={"status": "sent"})
+        ne, "_send_digest_email_async", new=AsyncMock(return_value={"status": "sent"})
     ):
         out = nt.send_digest_email(str(uuid4()), "comment", [str(uuid4())])
     assert out == {"status": "sent"}
 
 
-def test_send_digest_email_retries_on_failure():
-    boom = RuntimeError("smtp down")
+def test_send_digest_email_retries_transient_smtp_error():
+    boom = SmtpSendError("timeout")
     with (
-        patch.object(nt, "_send_digest_email_async", new=AsyncMock(side_effect=boom)),
+        patch.object(ne, "_send_digest_email_async", new=AsyncMock(side_effect=boom)),
         patch.object(nt.send_digest_email, "retry", side_effect=Exception("retry")) as retry,
         pytest.raises(Exception, match="retry"),
     ):
         nt.send_digest_email.run(str(uuid4()), "comment", [str(uuid4())])
     retry.assert_called_once_with(exc=boom)
+
+
+def test_send_digest_email_permanent_smtp_error_not_retried():
+    boom = SmtpSendError("auth_failed")
+    with (
+        patch.object(ne, "_send_digest_email_async", new=AsyncMock(side_effect=boom)),
+        patch.object(nt.send_digest_email, "retry") as retry,
+        pytest.raises(SmtpSendError),
+    ):
+        nt.send_digest_email.run(str(uuid4()), "comment", [str(uuid4())])
+    retry.assert_not_called()
+
+
+def test_send_email_notification_retry_policy():
+    from app.tasks.notification_email_tasks import send_email_notification as task
+
+    args = (str(uuid4()), "comment", {})
+    with (
+        patch.object(
+            ne,
+            "_send_email_notification_async",
+            AsyncMock(side_effect=SmtpSendError("connect_failed")),
+        ),
+        patch.object(task, "retry", side_effect=Exception("retry")) as retry,
+        pytest.raises(Exception, match="retry"),
+    ):
+        task.run(*args)
+    retry.assert_called_once()
+    with (
+        patch.object(
+            ne, "_send_email_notification_async", AsyncMock(side_effect=SmtpSendError("rejected"))
+        ),
+        patch.object(task, "retry") as retry,
+        pytest.raises(SmtpSendError),
+    ):
+        task.run(*args)
+    retry.assert_not_called()
 
 
 def test_effective_tz_prefers_user_timezone():

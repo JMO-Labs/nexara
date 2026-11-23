@@ -21,6 +21,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.core.cookies import should_secure_cookie
 from app.core.dependencies import get_db
 from app.core.exceptions import AuthenticationError
 from app.core.i18n import _
@@ -55,12 +56,6 @@ def _get_valkey_client(settings: Settings) -> Redis:
     return get_pool(settings, DB_CACHE)
 
 
-def _should_secure_cookie(settings: Settings) -> bool:
-    """@brief Return True if cookies should use the Secure flag (origins are HTTPS)."""
-    origins = settings.allowed_origins_list or []
-    return all(o.startswith("https://") for o in origins) if origins else True
-
-
 def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) -> None:
     """@brief Set HttpOnly refresh token cookie."""
     response.set_cookie(
@@ -68,7 +63,7 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
         raw_token,
         max_age=REFRESH_MAX_AGE,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )
@@ -225,6 +220,7 @@ async def oauth_callback(
 
 @router.post("/exchange", response_model=LoginResponse)
 async def oauth_exchange(
+    request: Request,
     body: OAuthExchangeRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -251,7 +247,7 @@ async def oauth_exchange(
         raise AuthenticationError(message=_("User not found or deactivated"))
 
     auth_svc = AuthService(db, settings)
-    result = await auth_svc._issue_tokens(user)
+    result = await auth_svc.login_sso(user, request=request)
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

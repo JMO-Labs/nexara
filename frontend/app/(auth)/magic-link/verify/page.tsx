@@ -26,7 +26,13 @@ export default function MagicLinkVerifyPage() {
       try {
         const resp = await verifyMagicLink(token);
         if (cancelled) return;
-        await completeLogin(resp);
+        const out = await completeLogin(resp);
+        if (out.kind === "two_factor") {
+          router.replace(
+            `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent("/app")}`,
+          );
+          return;
+        }
         router.replace("/app");
       } catch (e) {
         if (!cancelled)

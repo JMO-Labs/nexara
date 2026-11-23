@@ -13,6 +13,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user, get_db
+from app.schemas.profile import ProfileResponse
 
 
 def _user(pronouns: str | None = None) -> MagicMock:
@@ -29,6 +30,10 @@ def _user(pronouns: str | None = None) -> MagicMock:
     u.email_verified = True
     u.avatar_url = u.bio = u.title = u.location = u.website_url = None
     u.birthday = u.last_seen_at = u.tour_completed_at = u.deleted_at = None
+    u.timezone = u.banner_media_id = u.phone = u.contact_email = None
+    u.address = u.emergency_contact = u.availability = u.dietary = None
+    u.links = []
+    u.skills = []
     u.pronouns = pronouns
     u.storage_used = 0
     u.storage_quota = 1
@@ -84,9 +89,15 @@ class TestPronouns:
 
     async def test_public_profile_includes_pronouns(self, client_for):
         target = _user("he/him")
-        with patch("app.api.v1.users.UserService") as svc_cls:
-            svc_cls.return_value.get_user = AsyncMock(return_value=target)
-            svc_cls.return_value.get_public_profile = AsyncMock(return_value=target)
+        view = ProfileResponse.model_validate(
+            {
+                k: getattr(target, k)
+                for k in ("id", "username", "display_name", "role", "created_at")
+            }
+            | {"pronouns": "he/him"}
+        )
+        with patch("app.api.v1.users.ProfileService") as svc_cls:
+            svc_cls.return_value.view = AsyncMock(return_value=view)
             async with client_for(_user()) as c:
                 resp = await c.get(f"/api/v1/users/{target.id}")
         assert resp.status_code == 200

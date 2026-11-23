@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useHomeNeeds } from "@/hooks/useHomeNeeds";
+import { openFirstUnanswered, selectUnanswered, useQotd } from "@/stores/qotd";
 
 interface Chip {
   key: string;
@@ -20,6 +21,8 @@ interface Chip {
   href: string;
   icon: LucideIcon;
   hot?: boolean;
+  /** When set, renders a button that runs this instead of navigating. */
+  onClick?: () => void;
 }
 
 /**
@@ -37,6 +40,7 @@ function clip(s: string): string {
  */
 export function NeedsChips() {
   const { data } = useHomeNeeds();
+  const unanswered = useQotd((s) => selectUnanswered(s)?.length ?? null);
   if (!data) return null;
 
   const chips: Chip[] = [
@@ -54,14 +58,20 @@ export function NeedsChips() {
       icon: BarChart3,
     })),
     ...(data.prompt
-      ? [
-          {
-            key: "prompt",
-            text: "Today's prompt",
-            href: `/app/prompts/${data.prompt.prompt_post_id}`,
-            icon: Sparkles,
-          },
-        ]
+      ? unanswered === 0
+        ? []
+        : [
+            {
+              key: "prompt",
+              text:
+                unanswered === null
+                  ? "Today's prompt"
+                  : `${unanswered} unanswered`,
+              onClick: unanswered === null ? undefined : openFirstUnanswered,
+              href: `/app/prompts/${data.prompt.prompt_post_id}`,
+              icon: Sparkles,
+            },
+          ]
       : []),
     ...(data.list_items
       ? [
@@ -86,20 +96,34 @@ export function NeedsChips() {
         <Inbox aria-hidden className="size-[15px]" />
         Needs you
       </span>
-      {chips.map(({ key, text, href, icon: Icon, hot }) => (
-        <Link
-          key={key}
-          href={href}
-          aria-label={text}
-          className="glass-item inline-flex h-[34px] shrink-0 items-center gap-[7px] rounded-full px-3.5 text-[13.5px] whitespace-nowrap"
-        >
-          <Icon
-            aria-hidden
-            className={`size-[15px] ${hot ? "text-[var(--nx-red)]" : ""}`}
-          />
-          {clip(text)}
-        </Link>
-      ))}
+      {chips.map(({ key, text, href, icon: Icon, hot, onClick }) => {
+        const cls =
+          "glass-item inline-flex h-[34px] shrink-0 items-center gap-[7px] rounded-full px-3.5 text-[13.5px] whitespace-nowrap";
+        const body = (
+          <>
+            <Icon
+              aria-hidden
+              className={`size-[15px] ${hot ? "text-[var(--nx-red)]" : ""}`}
+            />
+            {clip(text)}
+          </>
+        );
+        return onClick ? (
+          <button
+            key={key}
+            type="button"
+            aria-label={text}
+            onClick={onClick}
+            className={cls}
+          >
+            {body}
+          </button>
+        ) : (
+          <Link key={key} href={href} aria-label={text} className={cls}>
+            {body}
+          </Link>
+        );
+      })}
     </div>
   );
 }

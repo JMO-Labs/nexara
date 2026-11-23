@@ -90,6 +90,24 @@ class CommunityRepository:
         await self._session.flush()
         return community
 
+    async def update_smtp(
+        self, community_id: uuid.UUID, values: dict[str, Any]
+    ) -> Community | None:
+        """
+        @brief Update SMTP columns (password already encrypted).
+        @param values column -> value; keys must start with ``smtp_``
+        @throws ValueError on any other column
+        """
+        if any(not k.startswith("smtp_") for k in values):
+            raise ValueError("Only smtp_* columns")
+        community = await self.get(community_id)
+        if community is None:
+            return None
+        for key, value in values.items():
+            setattr(community, key, value)
+        await self._session.flush()
+        return community
+
     async def update_features(
         self, community_id: uuid.UUID, patch: dict[str, bool]
     ) -> dict[str, Any]:

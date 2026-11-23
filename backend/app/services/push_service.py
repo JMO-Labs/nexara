@@ -100,7 +100,7 @@ class PushService:
         @param user_id User UUID.
         @param endpoint Web Push endpoint URL.
         """
-        await self._push_repo.delete_by_endpoint(endpoint)
+        await self._push_repo.delete_by_endpoint(endpoint, user_id=user_id)
 
     async def register_device(self, user_id: uuid.UUID, platform: str, token: str) -> DeviceToken:
         """

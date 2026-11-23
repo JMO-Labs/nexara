@@ -128,15 +128,21 @@ class SettingsService:
         raw = data.model_dump(mode="json", exclude_unset=True)
         visibility = raw.pop("field_visibility", None)
         gravatar = raw.pop("use_gravatar", None)
+        g_email_set = "gravatar_email" in raw
+        g_email = (raw.pop("gravatar_email", None) or "").strip().lower() or None
+        row = await self._settings_repo.get_or_create(user_id, user.community_id)
+        g_src = (g_email if g_email_set else row.gravatar_email) or user.email
         if "avatar_media_id" in raw:
             raw.pop("avatar_media_id")
             raw["avatar_url"] = await self._avatar_url(user, data.avatar_media_id)
         if gravatar is not None:
             # Only touch Gravatar-managed avatars; an uploaded photo always wins.
             if gravatar and not user.avatar_url:
-                raw["avatar_url"] = UserService.gravatar_url(user.email)
+                raw["avatar_url"] = UserService.gravatar_url(g_src)
             elif not gravatar and UserService.is_gravatar(user.avatar_url):
                 raw["avatar_url"] = None
+        elif g_email_set and UserService.is_gravatar(user.avatar_url):
+            raw["avatar_url"] = UserService.gravatar_url(g_src)
         if raw.get("display_name") is None:
             raw.pop("display_name", None)  # required; never cleared
         update_dict = {k: (None if v == "" else v) for k, v in raw.items()}
@@ -152,11 +158,13 @@ class SettingsService:
             update_dict["banner_media_id"] = data.banner_media_id
         if update_dict:
             await self._user_repo.update(user, update_dict)
+        s_update: dict[str, Any] = {}
         if visibility:
-            row = await self._settings_repo.get_or_create(user_id, user.community_id)
-            await self._settings_repo.update(
-                user_id, {"field_visibility": {**(row.field_visibility or {}), **visibility}}
-            )
+            s_update["field_visibility"] = {**(row.field_visibility or {}), **visibility}
+        if g_email_set:
+            s_update["gravatar_email"] = g_email
+        if s_update:
+            await self._settings_repo.update(user_id, s_update)
         logger.info(
             "profile_updated",
             user_id=str(user_id),

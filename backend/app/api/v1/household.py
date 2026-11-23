@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -23,6 +22,7 @@ from app.schemas.household import (
     HouseholdUpdate,
 )
 from app.services.household_service import HouseholdService
+from app.services.memories_service import local_today
 
 router = APIRouter(tags=["household"])
 
@@ -47,7 +47,7 @@ async def upcoming(
     user: User = Depends(get_current_user), svc: HouseholdService = Depends(_service)
 ) -> Any:
     """@brief Birthdays and gotcha days in the next 14 days."""
-    return await svc.upcoming(user, date.today())
+    return await svc.upcoming(user, local_today(user.timezone))
 
 
 @router.get("/users/{user_id}/household", response_model=list[HouseholdResponse])

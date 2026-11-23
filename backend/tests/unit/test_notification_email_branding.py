@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.branding import CommunityBranding
 from app.repositories.branding_repo import BrandingRepository
-from app.tasks import notification_tasks as nt
+from app.tasks import notification_email_tasks as nt
 
 BASE = "https://nexara.example"
 COMMUNITY = uuid.uuid4()
@@ -36,7 +36,8 @@ async def _run(branding):
         patch.object(nt, "async_session_factory", factory),
         patch.object(nt, "BrandingRepository", return_value=repo),
         patch.object(nt, "EmailTemplateRenderer", return_value=renderer),
-        patch.object(nt, "EmailSender", return_value=sender),
+        patch.object(nt, "resolve_smtp", AsyncMock(return_value=MagicMock())),
+        patch.object(nt, "send_email", sender.send),
         patch.object(nt, "get_settings", return_value=MagicMock(APP_BASE_URL=f"{BASE}/")),
     ):
         await nt._send_email_notification_async(uuid.uuid4(), "comment", {})

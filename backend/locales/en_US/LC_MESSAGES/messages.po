@@ -21,7 +21,7 @@ msgstr "An unexpected error occurred"
 msgid "Invalid or expired credentials"
 msgstr "Invalid or expired credentials"
 
-#: app/core/exceptions.py
+#: app/core/exceptions.py app/services/prompt_service.py
 msgid "Insufficient permissions"
 msgstr "Insufficient permissions"
 
@@ -69,35 +69,33 @@ msgstr "Invalid token payload"
 msgid "Invalid user identifier"
 msgstr "Invalid user identifier"
 
-#: app/core/dependencies.py
+#: app/api/v1/oauth.py app/core/dependencies.py app/services/auth/magic_link.py app/services/auth_service.py
 msgid "User not found or deactivated"
 msgstr "User not found or deactivated"
 
 #: app/core/dependencies.py
+#, python-format
 msgid "This action requires one of the following roles: %(roles)s"
 msgstr "This action requires one of the following roles: %(roles)s"
 
-#: app/tasks/email_tasks.py
-msgid "SMTP not configured — email not sent"
-msgstr "SMTP not configured — email not sent"
-
-#: app/tasks/notification_tasks.py
+#: app/services/post_service_base.py
+#, python-format
 msgid "%(user)s commented on your post"
 msgstr "%(user)s commented on your post"
 
-#: app/services/auth_service.py
+#: app/services/auth/registration.py
 msgid "Registration is currently disabled"
 msgstr "Registration is currently disabled"
 
-#: app/services/auth_service.py
+#: app/services/auth/registration.py
 msgid "An invite token is required to register"
 msgstr "An invite token is required to register"
 
-#: app/services/auth_service.py
+#: app/services/auth/registration.py app/services/user_service.py
 msgid "Email is already registered"
 msgstr "Email is already registered"
 
-#: app/services/auth_service.py
+#: app/services/auth/registration.py
 msgid "Username is already taken"
 msgstr "Username is already taken"
 
@@ -129,31 +127,35 @@ msgstr "Token reuse detected — all sessions revoked"
 msgid "Refresh token expired"
 msgstr "Refresh token expired"
 
-#: app/services/auth_service.py
+#: app/services/auth/two_factor.py
 msgid "2FA enrollment not started"
 msgstr "2FA enrollment not started"
 
-#: app/services/auth_service.py
+#: app/services/auth/two_factor.py
 msgid "Invalid TOTP code"
 msgstr "Invalid TOTP code"
 
-#: app/services/auth_service.py
+#: app/services/password_service.py
 msgid "Invalid or expired reset token"
 msgstr "Invalid or expired reset token"
 
-#: app/services/auth_service.py
+#: app/services/admin_service.py app/services/memorial_service.py app/services/moderation_service.py
+#: app/services/nudge_service.py app/services/password_service.py app/services/profiles/service.py
+#: app/services/realtime/handlers/chat_handler.py app/services/reconnect_service.py
+#: app/services/relation_service.py app/services/settings_service.py app/services/storage/usage_service.py
+#: app/services/tag_service.py app/services/user_service.py
 msgid "User not found"
 msgstr "User not found"
 
-#: app/services/auth_service.py
+#: app/services/auth/invite.py
 msgid "Invalid invite token"
 msgstr "Invalid invite token"
 
-#: app/services/auth_service.py
+#: app/services/auth/invite.py
 msgid "Invite has already been used"
 msgstr "Invite has already been used"
 
-#: app/services/auth_service.py
+#: app/services/auth/invite.py
 msgid "Invite has expired"
 msgstr "Invite has expired"
 
@@ -165,41 +167,13 @@ msgstr "Refresh token missing"
 msgid "Logged out successfully"
 msgstr "Logged out successfully"
 
-#: app/api/v1/auth.py
+#: app/api/v1/auth_password_reset.py
 msgid "If that email is registered, a reset link has been sent"
 msgstr "If that email is registered, a reset link has been sent"
 
-#: app/api/v1/auth.py
+#: app/api/v1/auth_password_reset.py
 msgid "Password has been reset successfully"
 msgstr "Password has been reset successfully"
-
-#: app/api/v1/auth.py
-msgid "Invalid OIDC state"
-msgstr "Invalid OIDC state"
-
-#: app/api/v1/auth.py
-msgid "Missing OIDC code verifier"
-msgstr "Missing OIDC code verifier"
-
-#: app/services/oidc_service.py
-msgid "OIDC is not configured"
-msgstr "OIDC is not configured"
-
-#: app/services/oidc_service.py
-msgid "OIDC response missing subject"
-msgstr "OIDC response missing subject"
-
-#: app/services/oidc_service.py
-msgid "Your account does not belong to an authorized group"
-msgstr "Your account does not belong to an authorized group"
-
-#: app/services/oidc_service.py
-msgid "OIDC token exchange failed"
-msgstr "OIDC token exchange failed"
-
-#: app/services/oidc_service.py
-msgid "Invalid OIDC id_token"
-msgstr "Invalid OIDC id_token"
 
 #: app/services/user_service.py
 msgid "Account uses external authentication"
@@ -213,11 +187,11 @@ msgstr "Current password is incorrect"
 msgid "Invalid password"
 msgstr "Invalid password"
 
-#: app/services/user_service.py
+#: app/api/v1/users.py
 msgid "Password updated successfully"
 msgstr "Password updated successfully"
 
-#: app/services/user_service.py
+#: app/api/v1/users.py
 msgid "Account deactivated"
 msgstr "Account deactivated"
 
@@ -248,3 +222,4 @@ msgstr "Token missing"
 #: app/api/v1/ws.py
 msgid "Invalid token"
 msgstr "Invalid token"
+

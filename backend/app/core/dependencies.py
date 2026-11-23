@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from app.repositories.webhook_repo import WebhookRepository
     from app.services.ai.admin_ai_service import AdminAIService
     from app.services.ai.suggestion_service import SuggestionService
-    from app.services.email_reply_admin_service import EmailReplyAdminService
     from app.services.notifications.dispatcher import Dispatcher
     from app.services.shop.amazon_admin_service import AmazonAdminService
     from app.services.webhook_service import WebhookService
@@ -342,31 +341,6 @@ def get_amazon_admin_service(
     if ip is None and request.client:
         ip = request.client.host
     return AmazonAdminService(
-        CommunityRepository(db),
-        uuid.UUID(settings.COMMUNITY_ID),
-        settings,
-        audit_repo=AuditRepository(db),
-        actor_id=user.id,
-        ip_address=ip,
-    )
-
-
-def get_email_reply_admin_service(
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> EmailReplyAdminService:
-    """@brief Provide an EmailReplyAdminService (admin only) with audit logging."""
-    from app.repositories.audit_repo import AuditRepository
-    from app.repositories.community_repo import CommunityRepository
-    from app.services.email_reply_admin_service import EmailReplyAdminService
-
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
-    return EmailReplyAdminService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),
         settings,

@@ -51,16 +51,18 @@ describe("SettingsRow", () => {
     expect(input).toBeInTheDocument();
   });
 
-  it("uses a 12-col grid: label 4/12, control 8/12 from md", () => {
+  it("uses a fixed label column and fluid control from md", () => {
     const { container } = wrap(
       <SettingsRow label="Email" description="d">
         <input />
       </SettingsRow>,
     );
     const row = container.firstElementChild as HTMLElement;
-    expect(row).toHaveClass("grid-cols-1", "md:grid-cols-12");
-    expect(row.children[0]).toHaveClass("md:col-span-4");
-    expect(row.children[1]).toHaveClass("md:col-span-8");
+    expect(row).toHaveClass(
+      "grid-cols-1",
+      "md:grid-cols-[13rem_minmax(0,1fr)]",
+    );
+    expect(row).toHaveClass("md:items-center");
   });
 
   it("description uses AA-safe muted color, not opacity", () => {

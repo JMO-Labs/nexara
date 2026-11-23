@@ -32,14 +32,15 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
     @param raw_token Raw opaque refresh token.
     @param settings Application settings (used to derive Secure flag).
     """
-    from app.api.v1.auth import COOKIE_MAX_AGE, REFRESH_COOKIE, _should_secure_cookie
+    from app.api.v1.auth import COOKIE_MAX_AGE, REFRESH_COOKIE
+    from app.core.cookies import should_secure_cookie
 
     response.set_cookie(
         REFRESH_COOKIE,
         raw_token,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )
@@ -66,6 +67,7 @@ async def request_magic_link(
 
 @router.get("/verify", response_model=LoginResponse)
 async def verify_magic_link(
+    request: Request,
     token: str,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -73,7 +75,9 @@ async def verify_magic_link(
 ) -> Any:
     """@brief Verify a magic link token and return JWT session."""
     svc = AuthService(db, settings)
-    result = await svc.verify_magic_link(token)
+    result = await svc.verify_magic_link(token, request=request)
+    if result.get("requires_2fa"):
+        return LoginResponse(requires_2fa=True, two_factor_token=result["two_factor_token"])
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

@@ -2,10 +2,12 @@
 {% block title %}You're invited - {{ community_name }}{% endblock %}
 {% block content %}
 <h2 style="color: {{ color_primary }};">You're invited to {{ community_name }}</h2>
+<p>{{ inviter | default('Someone') }} invited you to join {{ community_name }}.</p>
 {% if message %}
 <p>{{ message }}</p>
 {% endif %}
 <p>
   <a href="{{ invite_url | default('#') }}" style="display: inline-block; padding: 12px 24px; background: {{ color_primary }}; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">Accept invite</a>
 </p>
+<p style="font-size: 13px; word-break: break-all;">Or paste this link into your browser: {{ invite_url | default('#') }}</p>
 {% endblock %}

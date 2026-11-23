@@ -12,7 +12,8 @@ import { PostComposer } from "@/components/feed/PostComposer";
 import { PostCard } from "@/components/feed/PostCard";
 import { ActivityLine } from "@/components/feed/ActivityLine";
 import { PromptPostCard } from "@/components/feed/PromptPostCard";
-import { DailyQuestionCard } from "@/components/prompts/DailyQuestionCard";
+import { DailyQuestionStack } from "@/components/prompts/DailyQuestionStack";
+import { stackIndex } from "@/components/prompts/stackPlacement";
 import { useActivePrompts } from "@/hooks/useActivePrompts";
 import { useHomeFeed } from "@/hooks/useHomeFeed";
 import type { FeedItem } from "@/lib/api/home";
@@ -82,6 +83,19 @@ export function HomeFeed({
     [allPending, filter],
   );
   const isEmpty = items.length === 0;
+  const daily = React.useMemo(
+    () =>
+      (prompts ?? []).filter((p) => p.prompt.prompt_type === "daily_question"),
+    [prompts],
+  );
+  const others = (prompts ?? []).filter(
+    (p) => p.prompt.prompt_type !== "daily_question",
+  );
+  const stackAt = React.useMemo(() => {
+    if (daily.length === 0) return -1;
+    const newest = daily.reduce((a, b) => (a.fired_at > b.fired_at ? a : b));
+    return stackIndex(items, newest.fired_at);
+  }, [daily, items]);
 
   React.useEffect(() => {
     const el = sentinelRef.current;
@@ -148,24 +162,21 @@ export function HomeFeed({
             onPosted={() => setReplyTo(null)}
           />
         </div>
-        {prompts && prompts.length > 0 && (
+        {others.length > 0 && (
           <section aria-label="Active prompts" className="flex flex-col gap-2">
-            {prompts.map((p) =>
-              p.prompt.prompt_type === "daily_question" ? (
-                <DailyQuestionCard key={p.id} post={p} />
-              ) : (
-                <PromptPostCard
-                  key={p.id}
-                  post={p}
-                  onReply={(id, title) => {
-                    setReplyTo({ id, title });
-                    focusComposer();
-                  }}
-                />
-              ),
-            )}
+            {others.map((p) => (
+              <PromptPostCard
+                key={p.id}
+                post={p}
+                onReply={(id, title) => {
+                  setReplyTo({ id, title });
+                  focusComposer();
+                }}
+              />
+            ))}
           </section>
         )}
+        {daily.length > 0 && isEmpty && <DailyQuestionStack posts={daily} />}
         <AnimatePresence mode="wait" initial={false}>
           {isLoading ? (
             <motion.div
@@ -216,10 +227,10 @@ export function HomeFeed({
           ) : (
             <ul key="list" className="flex flex-col gap-2">
               <AnimatePresence>
-                {items.map((i) => {
+                {items.flatMap((i, idx) => {
                   const key = `${i.kind}:${i.id}`;
                   const fresh = freshIds.has(key);
-                  return (
+                  const row = (
                     <motion.li
                       key={key}
                       data-testid="feed-item"
@@ -248,7 +259,20 @@ export function HomeFeed({
                       )}
                     </motion.li>
                   );
+                  return idx === stackAt
+                    ? [
+                        <li key="qotd-stack">
+                          <DailyQuestionStack posts={daily} />
+                        </li>,
+                        row,
+                      ]
+                    : [row];
                 })}
+                {stackAt === items.length && (
+                  <li key="qotd-stack">
+                    <DailyQuestionStack posts={daily} />
+                  </li>
+                )}
               </AnimatePresence>
             </ul>
           )}

@@ -21,6 +21,7 @@ from app.core.i18n import _
 from app.core.security import hash_password, hash_token
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.tasks.email_tasks import send_password_reset_email
 
 logger = structlog.get_logger(__name__)
 
@@ -111,6 +112,10 @@ class PasswordService:
             family_id=family_id,
             expires_at=expires,
         )
+        try:
+            send_password_reset_email.delay(str(user.id), token)
+        except Exception:  # broker down: same response either way (no enumeration signal)
+            logger.warning("password_reset_enqueue_failed")
         return token
 
     async def reset_password(self, token: str, new_password: str) -> None:

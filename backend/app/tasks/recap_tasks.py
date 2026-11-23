@@ -18,11 +18,12 @@ from app.core.security import create_purpose_token
 from app.db.session import async_session_factory
 from app.models.user import User
 from app.repositories.branding_repo import BrandingRepository
-from app.services.email.sender import EmailSender
+from app.services.email.sender import send_email
+from app.services.email.smtp_settings import resolve_smtp
 from app.services.email.templates import EmailTemplateRenderer
 from app.services.recap_service import UNSUBSCRIBE_TTL, RecapService
 from app.tasks.celery_app import celery_app
-from app.tasks.notification_tasks import _branding_kwargs
+from app.tasks.notification_email_tasks import _branding_kwargs
 
 logger = structlog.get_logger(__name__)
 
@@ -54,6 +55,9 @@ async def _send_async(user_id: uuid.UUID) -> dict[str, str]:
             return {"status": "skipped"}
         branding = await BrandingRepository(session).get(user.community_id)
         to_email = user.email
+        cfg = await resolve_smtp(session, user.community_id)
+    if cfg is None:
+        return {"status": "skipped"}
     for s in sections:
         for item in s["items"]:
             if item.get("link", "").startswith("/"):
@@ -70,15 +74,16 @@ async def _send_async(user_id: uuid.UUID) -> dict[str, str]:
         },
         **_branding_kwargs(branding),
     )
-    sent = await EmailSender().send(
-        to=to_email,
-        subject="Your family recap",
-        html_body=html,
-        text_body=text,
+    await send_email(
+        cfg,
+        to_email,
+        "Your family recap",
+        html,
+        text,
         list_unsubscribe=f"<{unsub}>",
         sender_name=getattr(branding, "email_sender_name", None) or None,
     )
-    return {"status": "sent" if sent else "skipped"}
+    return {"status": "sent"}
 
 
 @celery_app.task(name="app.tasks.recap_tasks.send_recap_email", queue="email")

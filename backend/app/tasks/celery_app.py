@@ -44,6 +44,7 @@ celery_app = Celery(
         "app.tasks.memories_tasks",
         "app.tasks.recap_tasks",
         "app.tasks.trip_tasks",
+        "app.tasks.notification_email_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
@@ -72,6 +73,7 @@ celery_app.conf.update(
         "app.tasks.media_tasks.*": {"queue": "media"},
         "app.tasks.ai_tasks.*": {"queue": "media"},
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
+        "app.tasks.notification_email_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
         "app.tasks.birthday_tasks.*": {"queue": "notifications"},
@@ -184,6 +186,10 @@ celery_app.conf.update(
         "age-ai-usage-logs": {
             "task": "app.tasks.retention_tasks.age_ai_usage_logs",
             "schedule": crontab(hour="3", minute="30"),
+        },
+        "purge-signin-events": {
+            "task": "app.tasks.retention_tasks.purge_signin_events",
+            "schedule": crontab(hour="3", minute="45"),
         },
         "age-post-media": {
             "task": "app.tasks.retention_tasks.age_post_media",

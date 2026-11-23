@@ -53,7 +53,7 @@ def _svc(rows: list[PersonRow], online: list[PersonRow] | None = None, today: da
     async def online_fn() -> list[str]:
         return [str(r.user.id) for r in (online or [])]
 
-    svc = HomePeopleService(repo, COMMUNITY_ID, online_fn=online_fn, today_fn=lambda: today)
+    svc = HomePeopleService(repo, COMMUNITY_ID, online_fn=online_fn, today_fn=lambda tz: today)
     return svc, repo
 
 
@@ -183,3 +183,27 @@ async def test_set_favorite_pins_unpins_and_rejects_unknown():
     repo.favorites.return_value = [uuid.uuid4() for _ in range(24)]
     with pytest.raises(AppError):
         await svc.set_favorite(_viewer(), a.user.id, True)
+
+
+async def test_today_uses_viewer_timezone():
+    """23:30Z on the 23rd is still the 23rd in New York; Nov 24 birthday is 1 day away."""
+    from app.services.memories_service import local_today
+
+    now = datetime(2026, 11, 24, 3, 30, tzinfo=UTC)
+    repo = AsyncMock(spec=HomePeopleRepository)
+    repo.candidates.return_value = [_row("Leo", birthday=date(1990, 11, 24))]
+    repo.shared_event_counts.return_value = {}
+    repo.favorites.return_value = []
+    repo.rows_for.return_value = []
+
+    async def online_fn() -> list[str]:
+        return []
+
+    svc = HomePeopleService(
+        repo, COMMUNITY_ID, online_fn=online_fn, today_fn=lambda tz: local_today(tz, now)
+    )
+    viewer = _viewer()
+    viewer.timezone = "America/New_York"
+    assert (await svc.list(viewer, 10)).items[0].birthday_in_days == 1
+    viewer.timezone = None
+    assert (await svc.list(viewer, 10)).items[0].birthday_in_days == 0

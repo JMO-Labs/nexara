@@ -3,46 +3,54 @@
 @brief Authentication business logic: register, login, token rotation, 2FA.
 
 Orchestrates repositories, security utilities, and config to implement core
-auth flows.  OIDC logic lives in :mod:`app.services.oidc_service` and
-password-reset / HIBP checking in :mod:`app.services.password_service`.
+auth flows.  Password-reset / HIBP checking live in :mod:`app.services.password_service`.
 """
 
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from functools import partial
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AppError, AuthenticationError
 from app.core.i18n import _
 from app.core.security import (
     create_2fa_pending_token,
     decode_token,
-    generate_backup_codes,
-    generate_totp_secret,
-    get_totp_uri,
     hash_token,
     verify_password,
     verify_totp,
 )
-from app.models.auth import UserBackupCode
 from app.models.user import User
 from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 from app.services.auth import sso_only as _sso_only
+from app.services.auth import two_factor
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
 from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth.registration import register_user
+from app.services.auth.signin_log import log_failure, log_success
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
+from app.services.auth.totp_replay import (
+    claim_totp_code,
+    clear_user_attempts,
+    consume_backup_code,
+    normalize_totp,
+    reserve_attempt,
+)
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
+
+if TYPE_CHECKING:
+    from fastapi import Request
 
 logger = structlog.get_logger(__name__)
 
@@ -116,23 +124,33 @@ class AuthService:
         *,
         email: str,
         password: str,
+        request: Request | None = None,
     ) -> dict[str, Any]:
         """
         @brief Authenticate with email and password.
 
         @param email User email address.
         @param password Plaintext password.
+        @param request Current request (sign-in log IP / User-Agent).
         @return Dict with tokens, or ``requires_2fa=True`` with a pending token.
         @raises AuthenticationError On invalid credentials.
         """
         await self._assert_password_auth_allowed()
+        fail = partial(log_failure, self._settings, request=request)
         user = await self._user_repo.find_by_email(email)
         if not user or not user.password_hash:
+            await fail(user, email, "password", "no_password" if user else "unknown_email")
             raise AuthenticationError(message=_("Invalid email or password"))
         if not verify_password(password, user.password_hash):
+            await fail(user, email, "password", "bad_password")
             raise AuthenticationError(message=_("Invalid email or password"))
-        reject_memorialized(user)
+        try:
+            reject_memorialized(user)
+        except AppError:
+            await fail(user, email, "password", "memorialized")
+            raise
         if not user.is_active:
+            await fail(user, email, "password", "inactive")
             raise AuthenticationError(message=_("Account is deactivated"))
 
         if user.totp_enabled:
@@ -141,6 +159,7 @@ class AuthService:
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_logged_in", user_id=str(user.id))
+        await log_success(self._session, self._settings, user, "password", request)
         return await self._issue_tokens(user)
 
     async def verify_2fa_login(
@@ -148,12 +167,14 @@ class AuthService:
         *,
         two_factor_token: str,
         code: str,
+        request: Request | None = None,
     ) -> dict[str, Any]:
         """
         @brief Complete a 2FA-pending login by verifying the TOTP code.
 
         @param two_factor_token Signed JWT issued during the ``login`` step.
         @param code 6-digit TOTP code or 8-char backup code.
+        @param request Current request (sign-in log IP / User-Agent).
         @return Dict with access + refresh tokens.
         @raises AuthenticationError If the token or code is invalid.
         """
@@ -166,16 +187,34 @@ class AuthService:
         except ValueError as exc:
             raise AuthenticationError(message=str(exc)) from exc
 
-        user = await self._user_repo.get_by_id(uuid.UUID(payload["sub"]))
-        if not user or not user.totp_secret:
+        user_id = uuid.UUID(payload["sub"])
+        fail = partial(log_failure, self._settings, request=request)
+        user = await self._user_repo.get_by_id(user_id)
+        if not await reserve_attempt(two_factor_token, user_id, self._settings):
+            await fail(user, user.email if user else None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        if not verify_totp(user.totp_secret, code):
-            if not await self._try_backup_code(user.id, code):
-                raise AuthenticationError(message=_("Invalid 2FA code"))
+        if not user or not user.totp_secret:
+            await fail(user, None, "totp", "bad_2fa_session")
+            raise AuthenticationError(message=_("Invalid 2FA session"))
+
+        canonical = normalize_totp(code)
+        if canonical and verify_totp(user.totp_secret, canonical):
+            method = "totp"
+            ok = await claim_totp_code(user.id, canonical, self._settings)
+        else:
+            method = "totp" if canonical else "recovery"
+            ok = await self._try_backup_code(user.id, code.strip())
+            if ok:
+                method = "recovery"
+        if not ok:
+            await fail(user, user.email, method, "bad_code")
+            raise AuthenticationError(message=_("Invalid 2FA code"))
+        await clear_user_attempts(user.id, self._settings)
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))
+        await log_success(self._session, self._settings, user, method, request)
         return await self._issue_tokens(user)
 
     async def refresh(
@@ -238,41 +277,23 @@ class AuthService:
             await self._token_repo.revoke(stored.id)
             logger.info("user_logged_out", user_id=str(stored.user_id))
 
-    async def enroll_2fa(self, user: User) -> dict[str, str]:
+    async def enroll_2fa(self, user: User, current_code: str | None = None) -> dict[str, str]:
         """
-        @brief Start 2FA enrollment by generating a TOTP secret.
+        @brief Start 2FA enrollment (see :func:`app.services.auth.two_factor.enroll`).
 
-        @param user The authenticated user.
         @return Dict with ``secret`` and ``otpauth_uri``.
+        @raises AuthorizationError If 2FA is already enabled.
         """
-        secret = generate_totp_secret()
-        await self._user_repo.update_totp(user.id, totp_secret=secret, totp_enabled=False)
-        uri = get_totp_uri(secret, user.email, settings=self._settings)
-        return {"secret": secret, "otpauth_uri": uri}
+        return await two_factor.enroll(self._user_repo, self._settings, user)
 
     async def verify_2fa_enrollment(self, user: User, code: str) -> list[str]:
         """
-        @brief Complete 2FA enrollment by verifying the first TOTP code.
+        @brief Finish 2FA enrollment (see :func:`app.services.auth.two_factor.verify_enrollment`).
 
-        @param user The authenticated user (must have a pending totp_secret).
-        @param code The 6-digit TOTP code.
-        @return List of one-time backup codes.
+        @return One-time backup codes.
         @raises AuthenticationError If the code is invalid.
         """
-        if not user.totp_secret:
-            raise AuthenticationError(message=_("2FA enrollment not started"))
-        if not verify_totp(user.totp_secret, code):
-            raise AuthenticationError(message=_("Invalid TOTP code"))
-
-        await self._user_repo.update_totp(user.id, totp_enabled=True)
-        codes = generate_backup_codes()
-        for raw_code in codes:
-            bc = UserBackupCode(user_id=user.id, code_hash=hash_token(raw_code))
-            self._session.add(bc)
-        await self._session.flush()
-
-        logger.info("user_2fa_enrolled", user_id=str(user.id))
-        return codes
+        return await two_factor.verify_enrollment(self._session, self._user_repo, user, code)
 
     async def check_hibp(self, password: str) -> bool:
         """@brief Delegate to PasswordService.check_hibp."""
@@ -300,22 +321,45 @@ class AuthService:
             email,
         )
 
-    async def verify_magic_link(self, raw_token: str) -> dict[str, Any]:
+    async def verify_magic_link(
+        self, raw_token: str, request: Request | None = None
+    ) -> dict[str, Any]:
         """
         @brief Verify a magic link token and issue JWT session.
 
         @param raw_token The raw token from the magic link URL.
-        @return Dict with access_token, expires_in, raw_refresh_token.
+        @param request Current request (sign-in log IP / User-Agent).
+        @return Dict with tokens, or ``requires_2fa=True`` with a pending token.
         @raises AuthenticationError If token is invalid, expired, or consumed.
         """
         await self._assert_password_auth_allowed()
-        user = await _verify_magic_link_impl(
-            self._session,
-            self._user_repo,
-            self._settings,
-            raw_token,
-        )
+        try:
+            user = await _verify_magic_link_impl(
+                self._session,
+                self._user_repo,
+                self._settings,
+                raw_token,
+            )
+        except AppError as exc:
+            reason = "memorialized" if exc.code == "ACCOUNT_MEMORIALIZED" else "invalid_token"
+            await log_failure(self._settings, None, None, "magic_link", reason, request)
+            raise
+        if user.totp_enabled:
+            pending = create_2fa_pending_token(user.id, settings=self._settings)
+            return {"requires_2fa": True, "two_factor_token": pending}
+        await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
+
+    async def login_sso(self, user: User, request: Request | None = None) -> dict[str, Any]:
+        """
+        @brief Record an SSO sign-in and issue tokens for the already-verified user.
+
+        @param user Authenticated (active, non-memorialized) user.
+        @param request Current request (sign-in log IP / User-Agent).
+        @return Dict with token data and ``raw_refresh_token``.
+        """
+        await log_success(self._session, self._settings, user, "sso", request)
+        return await self._issue_tokens(user)
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -339,18 +383,4 @@ class AuthService:
 
     async def _try_backup_code(self, user_id: uuid.UUID, code: str) -> bool:
         """@brief Attempt to consume a backup code.  Returns True on success."""
-        from sqlalchemy import select
-
-        code_hash = hash_token(code)
-        stmt = select(UserBackupCode).where(
-            UserBackupCode.user_id == user_id,
-            UserBackupCode.code_hash == code_hash,
-            UserBackupCode.used_at.is_(None),
-        )
-        result = await self._session.execute(stmt)
-        backup = result.scalar_one_or_none()
-        if not backup:
-            return False
-        backup.used_at = datetime.now(UTC)
-        await self._session.flush()
-        return True
+        return await consume_backup_code(self._session, user_id, code)

@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
+    # Google OAuth client for "Connect Google account" mail (XOAUTH2); admin may override.
+    GOOGLE_MAIL_CLIENT_ID: str = ""
+    GOOGLE_MAIL_CLIENT_SECRET: str = ""
 
     # --- Auth / JWT ---
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

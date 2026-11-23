@@ -64,6 +64,25 @@ describe("DailyQuestionCard", () => {
     expect(screen.queryByLabelText("Your answer")).toBeNull();
   });
 
+  it("prefers the post's own question_text over the shared prompt body", () => {
+    st.page = { items: [] };
+    render(
+      <DailyQuestionCard post={{ ...post, question_text: "Yesterday's Q?" }} />,
+    );
+    expect(screen.getByText("Yesterday's Q?")).toBeTruthy();
+    expect(screen.queryByText("Best meal ever?")).toBeNull();
+  });
+
+  it("embedded: hides header and title, keeps a labelled textarea", () => {
+    st.page = { items: [] };
+    render(<DailyQuestionCard post={post} embedded />);
+    expect(screen.queryByText("Question of the day")).toBeNull();
+    expect(screen.queryByText("Best meal ever?")).toBeNull();
+    expect(
+      screen.getByLabelText("Your answer to: Best meal ever?"),
+    ).toBeTruthy();
+  });
+
   it("renders nothing when the feature is off", () => {
     st.feature = false;
     st.page = {};

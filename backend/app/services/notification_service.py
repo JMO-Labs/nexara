@@ -105,6 +105,7 @@ PREF_MAP = {
     "list.assigned": ("notif_list_item_inapp", "notif_list_item_email"),
     "list_assigned": ("notif_list_item_inapp", "notif_list_item_email"),
     "list.member": ("notif_list_member_inapp", "notif_list_member_email"),
+    "new_signin": ("notif_system_inapp", "notif_system_email"),
     "data_export_ready": ("notif_system_inapp", "notif_system_email"),
     "data_export_failed": ("notif_system_inapp", "notif_system_email"),
 }

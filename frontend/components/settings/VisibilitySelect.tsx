@@ -48,7 +48,7 @@ export function VisibilitySelect({
     onError: () => setValue(null),
   });
   return (
-    <label className="glass-item relative flex h-10 shrink-0 items-center gap-1.5 rounded-full pr-3 pl-3 text-xs text-muted focus-within:outline-2 focus-within:outline-accent">
+    <label className="glass-item relative flex h-10 w-[8.75rem] shrink-0 items-center gap-1.5 rounded-full pr-3 pl-3 text-xs text-muted focus-within:outline-2 focus-within:outline-accent">
       <Eye className="size-3.5" aria-hidden />
       <span className="sr-only">Who can see your {label}</span>
       <select

@@ -37,6 +37,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
+  /** Owner-only override for the Gravatar hash. */
+  gravatar_email?: string | null;
 }
 
 export type NotificationType =
@@ -86,6 +88,8 @@ export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
 export interface ProfileUpdate {
   /** Opt in/out of showing your Gravatar (server stores the URL). */
   use_gravatar?: boolean;
+  /** Private email for the Gravatar hash; "" clears it. */
+  gravatar_email?: string;
   /** Uploaded photo; null removes it. */
   avatar_media_id?: string | null;
   display_name?: string;

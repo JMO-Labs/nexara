@@ -127,6 +127,7 @@ class UserSettingsResponse(BaseModel):
     reduce_transparency: bool = False
     simple_mode: bool = False
     field_visibility: dict[str, str] = Field(default_factory=dict)
+    gravatar_email: str | None = None  # owner-only (this endpoint)
 
     model_config = {"from_attributes": True}
 

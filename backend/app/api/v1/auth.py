@@ -19,8 +19,10 @@ from app.api.v1.auth_magic_link import router as magic_link_router
 from app.api.v1.auth_oidc import router as oidc_router
 from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
+from app.core.cookies import should_secure_cookie
 from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
+from app.core.rate_limit import limiter
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -46,12 +48,6 @@ REFRESH_COOKIE = "refresh_token"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days
 
 
-def _should_secure_cookie(settings: Settings) -> bool:
-    """@brief Return True if cookies should use the Secure flag (origins are HTTPS)."""
-    origins = settings.allowed_origins_list
-    return all(o.startswith("https://") for o in origins) if origins else True
-
-
 def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) -> None:
     """
     @brief Set the HttpOnly refresh token cookie on the response.
@@ -65,7 +61,7 @@ def _set_refresh_cookie(response: Response, raw_token: str, settings: Settings) 
         raw_token,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=_should_secure_cookie(settings),
+        secure=should_secure_cookie(settings),
         samesite="lax",
         path="/api/v1/auth",
     )
@@ -166,6 +162,7 @@ async def register(
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    request: Request,
     body: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -173,7 +170,7 @@ async def login(
 ) -> Any:
     """@brief Authenticate with email and password."""
     svc = AuthService(db, settings)
-    result = await svc.login(email=body.email, password=body.password)
+    result = await svc.login(email=body.email, password=body.password, request=request)
 
     if result.get("requires_2fa"):
         return LoginResponse(
@@ -287,7 +284,9 @@ async def verify_2fa_enrollment(
 
 
 @router.post("/2fa/login", response_model=LoginResponse)
+@limiter.limit("10/minute")
 async def login_2fa(
+    request: Request,
     body: TwoFactorLoginRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -298,6 +297,7 @@ async def login_2fa(
     result = await svc.verify_2fa_login(
         two_factor_token=body.two_factor_token,
         code=body.code,
+        request=request,
     )
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(

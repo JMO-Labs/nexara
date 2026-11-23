@@ -29,6 +29,8 @@ export interface PromptPost {
   is_pinned: boolean;
   subgroup_id: string | null;
   subgroup_name: string | null;
+  /** Text actually asked for this post (daily questions); null otherwise. */
+  question_text?: string | null;
   fired_at: string;
   expires_at: string;
 }

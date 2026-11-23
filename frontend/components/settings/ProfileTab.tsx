@@ -15,6 +15,7 @@ import { HouseholdPanel } from "./HouseholdPanel";
 import { VisibilitySelect } from "./VisibilitySelect";
 import { AvatarPicker } from "./AvatarPicker";
 import { TimezoneSelect } from "./TimezoneSelect";
+import { GravatarEmailInput } from "./GravatarEmailInput";
 
 const GRAVATAR = "https://www.gravatar.com/avatar/";
 
@@ -103,6 +104,12 @@ export function ProfileTab() {
               isPending ||
               (!!profile?.avatar_url &&
                 !profile.avatar_url.startsWith(GRAVATAR))
+            }
+          />
+          <GravatarEmailInput
+            loginEmail={profile?.email}
+            disabled={
+              !!profile?.avatar_url && !profile.avatar_url.startsWith(GRAVATAR)
             }
           />
         </SettingsRow>

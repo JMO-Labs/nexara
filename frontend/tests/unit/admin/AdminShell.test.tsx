@@ -85,20 +85,21 @@ describe("AdminShell", () => {
     ).toBeInTheDocument();
   });
 
-  it("links all 13 tabs plus the 4 route items", () => {
+  it("links all 14 tabs plus the 4 route items", () => {
     render(<AdminShell>body</AdminShell>);
     const hrefs = (n: string) =>
       within(screen.getByRole("navigation", { name: n }))
         .getAllByRole("link")
         .map((a) => a.getAttribute("href"));
     const all = GROUPS.flatMap(hrefs);
-    expect(all).toHaveLength(17);
+    expect(all).toHaveLength(18);
     for (const t of [
       "metrics",
       "users",
       "invites",
       "sso",
       "shopping",
+      "email",
       "email-reply",
       "features",
       "interests",
