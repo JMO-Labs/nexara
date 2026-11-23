@@ -31,6 +31,8 @@ def _row() -> MagicMock:
     row.dnd_timezone = "UTC"
     row.digest_cadence = {}
     row.recap_cadence = "weekly"
+    row.reconnect_nudges = True
+    row.reconnect_days = 30
     return row
 
 

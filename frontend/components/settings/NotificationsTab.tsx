@@ -19,6 +19,7 @@ import type {
 import { DnDScheduleEditor } from "./DnDScheduleEditor";
 import { NotificationMatrix } from "./NotificationMatrix";
 import { RecapSetting } from "./RecapSetting";
+import { ReconnectSetting } from "./ReconnectSetting";
 import { PushSubscriptionRow } from "./PushSubscriptionRow";
 import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
 import { WebhookList } from "./WebhookList";
@@ -108,6 +109,13 @@ export function NotificationsTab() {
         <RecapSetting
           value={prefs.recap_cadence ?? "weekly"}
           onChange={(c) => change({ recap_cadence: c })}
+        />
+      </Panel>
+      <Panel title={t("reconnect_title")}>
+        <ReconnectSetting
+          enabled={prefs.reconnect_nudges ?? true}
+          days={prefs.reconnect_days ?? 30}
+          onChange={change}
         />
       </Panel>
       <PushSubscriptionRow />

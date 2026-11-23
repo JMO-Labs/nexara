@@ -134,6 +134,9 @@ def build_prefs_update(
         data["dnd_timezone"] = tz
     if "recap_cadence" in fields and patch.recap_cadence is not None:
         data["recap_cadence"] = patch.recap_cadence
+    for key in ("reconnect_nudges", "reconnect_days"):
+        if key in fields and getattr(patch, key) is not None:
+            data[key] = getattr(patch, key)
     if "digest_cadence" in fields:
         cadence = patch.digest_cadence or {}
         for key, value in cadence.items():
