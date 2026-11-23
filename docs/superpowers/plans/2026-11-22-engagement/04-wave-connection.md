@@ -105,3 +105,22 @@
 - [ ] Eval: Ruth↔Dana parent confirmed, Maya grandchild → tree shows 3 generations, "grandparent" label; group tree with via_family; reconnect task picks stale relative; trip overdue alert via forced clock; record a real 10-s clip in browser (Playwright fake media flag), answer story request.
 - [ ] Screenshots of tree (light/dark/phone + list view), screen-reader pass on tree; `/simplify`.
 - [ ] Push; PR "feat: engagement wave 4 — connection" on wave-3 PR.
+
+---
+
+### Task 7 (added 2026-11-22, user request): Online status indicators
+
+Presence already exists (Valkey sorted set `services/realtime/presence.py`, set on SSE/WS connect, privacy `show_online_status` / `show_last_seen`) but only the Home people strip and member header show it, and two bugs make it wrong.
+
+**Files:**
+- Create: `backend/app/services/presence_service.py`, `backend/app/api/v1/presence.py`, `backend/app/schemas/presence.py`, `frontend/lib/api/presence.ts`, `frontend/stores/presence.ts`, `frontend/components/layout/PresenceSync.tsx`
+- Modify: `backend/app/api/v1/sse.py` (+ `ws.py`) heartbeat + disconnect, `frontend/components/ui/Avatar.tsx` (`userId` prop → dot), call sites listed below
+- Test: backend unit + one real-Postgres privacy test; frontend Avatar dot, store batching, path test
+
+**Interfaces:**
+- Bug 1: SSE/WS heartbeat calls `set_online(user_id)` (refresh) every heartbeat; Bug 2: on disconnect call `set_offline` only when the connection manager has no other live connection for that user.
+- `POST /api/v1/presence {user_ids: list[UUID] (1..200)}` → `{online: list[UUID], last_seen: dict[UUID, datetime | None]}`. Only same-community, active, non-memorialized users; omit anyone in a block relation with the viewer; `online` only when the target's `show_online_status` is true; `last_seen` only when `show_last_seen` is true. Viewer always sees themselves.
+- Frontend: `usePresenceStore` (zustand) — `watch(ids)` / `unwatch(ids)` ref-counted; `PresenceSync` (mounted once in Shell) posts the watched ids every 60 s and on SSE reconnect; `useOnline(userId) -> boolean`.
+- `Avatar` gets optional `userId`; when online renders a 25%-size dot (success token, 2px ring of surface colour) bottom-right with `<span className="sr-only">online</span>`; no dot when offline (no grey dot).
+- Pass `userId` at: chat thread list + conversation header + message author, post and comment authors, members directory cards, mention picker rows, profile header, Home People tile/strip (replace their bespoke dot).
+- Respects the existing "Show online status" privacy toggle (already in Settings → Privacy).
