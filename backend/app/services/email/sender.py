@@ -118,7 +118,12 @@ async def _fail(cfg: SmtpConfig, record: bool, err: SmtpSendError, exc: Exceptio
     raw = ""
     if exc is not None:
         raw = f"{type(exc).__name__}: {exc}"
-        for secret in (cfg.password, cfg.password.replace(" ", ""), cfg.google_refresh):
+        for secret in (
+            cfg.password,
+            cfg.password.replace(" ", ""),
+            cfg.google_refresh,
+            cfg.google_client_secret,
+        ):
             if secret:
                 raw = raw.replace(secret, "***")
     logger.error("email_send_failed", category=err.category, host=cfg.host, detail=raw[:500])

@@ -163,7 +163,7 @@ def _row(**kw):
 
 
 class TestConnectFlow:
-    def _svc(self, role="admin", row=None):
+    def _svc(self, role="admin", row=None, active=True):
         from app.services.admin_google_mail import GoogleMailService
 
         row = row or _row()
@@ -178,7 +178,10 @@ class TestConnectFlow:
         repo.update_smtp.side_effect = upd
         users = AsyncMock()
         users.get_by_id.return_value = SimpleNamespace(
-            id=uuid.uuid4(), role=role, community_id=uuid.UUID(Settings().COMMUNITY_ID)
+            id=uuid.uuid4(),
+            role=role,
+            is_active=active,
+            community_id=uuid.UUID(Settings().COMMUNITY_ID),
         )
         s = Settings(GOOGLE_MAIL_CLIENT_ID="cid", GOOGLE_MAIL_CLIENT_SECRET="csec")
         vk = FakeValkey()
@@ -268,6 +271,16 @@ class TestConnectFlow:
         ex.assert_not_called()
         assert row.smtp_google_refresh is None
 
+    async def test_deactivated_admin_initiator_rejected(self):
+        svc, row, vk, _ = self._svc(active=False)
+        _, nonce = await svc.start(uuid.uuid4())
+        state = next(k for k in vk.d).split(":")[-1]
+        with patch("app.services.admin_google_mail.exchange_code", AsyncMock()) as ex:
+            with pytest.raises(AuthorizationError):
+                await svc.complete("c", state, nonce)
+        ex.assert_not_called()
+        assert row.smtp_google_refresh is None
+
 
 class TestExchange:
     async def test_exchange_returns_refresh_and_email_from_id_token(self):
@@ -305,7 +318,7 @@ class TestCallbackRoute:
     async def _get(self, test_app, query, side_effect=None):
         from httpx import ASGITransport, AsyncClient
 
-        from app.core.dependencies import get_google_mail_service
+        from app.core.deps_mail import get_google_mail_service
 
         svc = AsyncMock()
         svc.complete.side_effect = side_effect
@@ -336,7 +349,7 @@ class TestNonceCookie:
     async def test_start_sets_httponly_lax_cookie_and_callback_passes_and_clears_it(self, test_app):
         from httpx import ASGITransport, AsyncClient
 
-        from app.core.dependencies import get_google_mail_service, require_role
+        from app.core.deps_mail import get_google_mail_service, require_role
 
         svc = AsyncMock()
         svc.start.return_value = ("https://g/x", "N1")

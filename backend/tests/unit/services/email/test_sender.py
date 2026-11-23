@@ -263,3 +263,14 @@ class TestDecryptFailure:
         )
         cfg = config_from_row(row, "k")
         assert cfg.secret_unreadable and cfg.password == ""
+
+
+async def test_client_secret_scrubbed_from_logs():
+    from app.services.email.sender import _fail
+
+    cfg = _cfg(google_client_secret="CSEC-123")
+    err = SmtpSendError("connect_failed")
+    with patch("app.services.email.sender.logger") as log:
+        with pytest.raises(SmtpSendError):
+            await _fail(cfg, False, err, RuntimeError("boom CSEC-123 end"))
+    assert "CSEC-123" not in log.error.call_args.kwargs["detail"]

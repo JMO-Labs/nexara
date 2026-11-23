@@ -99,7 +99,7 @@ class GoogleMailService:
         if not ok:
             raise AuthorizationError(message=_("This connection link expired. Start again."))
         user = await self._users.get_by_id(uid, self._cid)
-        if user is None or user.role != "admin":
+        if user is None or user.role != "admin" or not user.is_active:
             raise AuthorizationError()
         client_id, secret = await self._client()
         refresh, email = await exchange_code(client_id, secret, self.redirect_uri, code, verifier)
