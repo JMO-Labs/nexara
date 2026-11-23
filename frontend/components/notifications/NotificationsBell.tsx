@@ -188,7 +188,7 @@ export function NotificationsBell() {
           tabIndex={-1}
           role="dialog"
           aria-label="Notifications"
-          className="glass text-ink z-[1100] fixed inset-x-0 top-14 mx-3 flex max-h-[min(70dvh,560px)] flex-col overflow-hidden rounded-[28px] outline-none sm:absolute sm:inset-x-auto sm:top-[calc(100%+10px)] sm:right-0 sm:mx-0 sm:w-[380px]"
+          className="glass text-ink z-[1100] fixed bg-[var(--nx-glass-solid)] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] inset-x-0 top-14 mx-3 flex max-h-[min(70dvh,560px)] flex-col overflow-hidden rounded-[28px] outline-none sm:absolute sm:inset-x-auto sm:top-[calc(100%+10px)] sm:right-0 sm:mx-0 sm:w-[380px]"
         >
           <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-2">
             <h2 className="text-base font-semibold">Notifications</h2>
