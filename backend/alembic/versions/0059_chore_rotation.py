@@ -14,7 +14,7 @@ from alembic import op
 
 revision = "0059_chore_rotation"
 # ponytail: chained to 0056 in this worktree; orchestrator re-chains at merge.
-down_revision = "0056_memorials"
+down_revision = "0058_event_rides"
 branch_labels = None
 depends_on = None
 
