@@ -92,7 +92,7 @@ class TreeService:
                 hidden.add(uid)
         return hidden
 
-    def _user_node(self, u: User, s_birthday_shared: bool) -> TreeNode:
+    def _user_node(self, u: User, s_birthday_shared: bool, show_year: bool = False) -> TreeNode:
         """@brief Named user node; memorial dates only when the birthday is shared."""
         memorial = u.memorialized_at is not None
         shared = memorial and s_birthday_shared
@@ -103,7 +103,8 @@ class TreeService:
             kind="user",
             memorial=memorial,
             link=f"/app/u/{u.username}",
-            born=u.birthday.isoformat() if shared and u.birthday else None,
+            # The tree shows life-span years, so a hidden birth year hides "born".
+            born=u.birthday.isoformat() if shared and show_year and u.birthday else None,
             died=u.passed_on.isoformat() if shared and u.passed_on else None,
         )
 
@@ -219,7 +220,7 @@ class TreeService:
                 s = settings.get(uid)
                 shared = bool(s is None or s.show_birthday_to == "community")
                 if uid not in hidden:
-                    node = self._user_node(users[uid], shared)
+                    node = self._user_node(users[uid], shared, bool(s and s.show_birthday_year))
             else:
                 mid = uuid.UUID(nid[2:])
                 if mid in seen and mid in live:
@@ -271,7 +272,11 @@ class TreeService:
                 direct.add((a, b, "via_family"))
         settings = await self._tree.settings_for(list(members))
         nodes = [
-            self._user_node(users[m], m in settings and settings[m].show_birthday_to == "community")
+            self._user_node(
+                users[m],
+                m in settings and settings[m].show_birthday_to == "community",
+                m in settings and settings[m].show_birthday_year,
+            )
             for m in sorted(members, key=str)
         ]
         edges = [TreeEdge(a=a, b=b, kind=k) for a, b, k in sorted(direct)]

@@ -131,14 +131,19 @@ async def test_memorial_dates_only_when_birthday_shared(session) -> None:
     kw["memorialized_at"] = datetime.now(UTC)  # type: ignore[assignment]
     shared = await _user(session, cid, "Shared", **kw)
     hidden = await _user(session, cid, "Hid", **kw)
-    hidden_s = await ProfileRepository(session).get_settings(hidden.id)
-    hidden_s.show_birthday_to = "nobody"
+    no_year = await _user(session, cid, "NoYear", **kw)
+    repo = ProfileRepository(session)
+    (await repo.get_settings(shared.id)).show_birthday_year = True
+    (await repo.get_settings(hidden.id)).show_birthday_to = "nobody"
     await _rel(session, cid, shared, "parent", me)
     await _rel(session, cid, hidden, "parent", me)
+    await _rel(session, cid, no_year, "sibling", me)
     tree = await _svc(session, cid).family(me)
     by = {n.name: n for n in tree.nodes}
     assert by["Shared"].memorial and by["Shared"].born == "1930-03-04"
     assert by["Hid"].memorial and by["Hid"].born is None and by["Hid"].died is None
+    # Birth year hidden: no birth date, but the passing date still shows.
+    assert by["NoYear"].born is None and by["NoYear"].died == "2020-01-02"
 
 
 async def test_group_tree_excludes_outsiders(session) -> None:

@@ -1,3 +1,4 @@
+"use client";
 /**
  * @file stores/presence.ts
  * @brief Ref-counted presence watches batched into one request per tick.
