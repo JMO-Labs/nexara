@@ -21,6 +21,10 @@
 | `05-pwa-notify.md` | 5: PWA install/offline/update, push devices, OS notifications, badge | `feat/plat-5-pwa` |
 | `06-monitoring.md` | 6: System page, disk, sign-in log UI, audit upgrades, admin alerts | `feat/plat-6-monitor` |
 | `07-onboarding-age.md` | 7: onboarding wizard, age groups + suggestions, NSFW gating | `feat/plat-7-onboard` |
+| `08-plugin-core.md` | 8: plugin core contract (spec P1) — replaces old in-process plugin system | `feat/plat-8-plugins` |
+| `09-plugin-host.md` | 9: plugin-host sandbox + compose/Helm (spec P2) | `feat/plat-9-host` |
+| `10-sassybot.md` | 10: Sassybot as plugin in public repo `JMO-Labs/nexara-sassybot`; remove core Sassybot (spec P3) | `feat/plat-10-sassybot` |
+| `11-marketplace.md` | 11: registry repo `JMO-Labs/nexara-plugins` (public), index, ratings, Marketplace/Sources tabs (spec P4) | `feat/plat-11-market` |
 
 Each branch starts from the previous one. Each PR ends with a polish task: full suites + `npx next build`, eval rebuild, live script, phone-width screenshots (LAN 192.168.1.196:8090), a11y check.
 
@@ -42,6 +46,7 @@ Each branch starts from the previous one. Each PR ends with a polish task: full 
 - **Q16 Age groups:** `child` (<13), `teen` (13–17), `adult` (18+); admin-set wins, else from birthday, else not-adult; only restriction now = no NSFW for child/teen; Users tab edit; invites can preset.
 - **Q17:** admin setting "Adult status needs admin approval" (default off; when on, birthday alone never makes adult); members suggest an age group with note → admin queue → approve applies + audit; subject not notified; user sees own group read-only.
 - **Q18 Onboarding:** after first sign-in (any method): 1 photo/name/pronouns, 2 birthday (year hidden default), 3 contact + location (private default), 4 family relations + household/pets, 5 push on this device + digest, 6 2FA (required if policy demands). Admin picks required steps; progress saved; SSO pre-fills; existing users get a one-time "Complete your profile" card; tour runs after.
+- **Plugins (2026-11-23, user: "Include the plugin system and the sassbot plugin"):** spec = `docs/superpowers/specs/2026-11-23-plugin-system-design.md` (copied from feat/frontend-overhaul) + its P1 plan `docs/superpowers/plans/2026-11-23-plugin-core-p1.md`. New system **replaces** the old in-process plugin system (manifest.toml, HookRegistry, nxr_plugin keys, frontend plugin JS, example-recipe-box/trivia, cookiecutter) — spec supersedes it. Repos `JMO-Labs/nexara-sassybot` and `JMO-Labs/nexara-plugins` created **public** (user approved). Plans 08–11 written when PR 7 lands, from the spec.
 - **Q9/Q14/Q19 Delivery:** order above; passkeys tested behind user's HTTPS reverse proxy.
 
 ## Migration numbers (fixed)
