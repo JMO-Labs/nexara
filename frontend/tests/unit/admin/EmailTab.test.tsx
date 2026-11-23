@@ -96,4 +96,16 @@ describe("EmailTab", () => {
       to: "a@b.co",
     });
   });
+
+  it("omits password from PUT when untouched, even after editing other fields", async () => {
+    renderTab();
+    fireEvent.change(await screen.findByLabelText("SMTP server"), {
+      target: { value: "mail.example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(client.apiPut).toHaveBeenCalled());
+    const body = client.apiPut.mock.calls[0][1];
+    expect(body.host).toBe("mail.example.com");
+    expect("password" in body).toBe(false);
+  });
 });

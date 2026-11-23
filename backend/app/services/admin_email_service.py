@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.core.encryption import derive_fernet_key, encrypt_secret
 from app.core.exceptions import NotFoundError
 from app.repositories.community_repo import CommunityRepository
-from app.services.email.sender import scrub_error, send_email
+from app.services.email.sender import classify, send_email
 from app.services.email.smtp_settings import config_from_env, config_from_row
 
 # API field -> communities column (text fields only)
@@ -70,6 +70,9 @@ class AdminEmailService:
         @param changes host, port, security, user, password, from_addr, from_name, auth;
                '' clears a text field, a missing key keeps it
         """
+        c = await self._communities.get(self._cid)
+        if c is None:
+            raise NotFoundError()
         values: dict[str, Any] = {}
         for key, col in _TEXT.items():
             if key in changes:
@@ -82,6 +85,14 @@ class AdminEmailService:
             values["smtp_password"] = (
                 encrypt_secret(pw, derive_fernet_key(self._settings.SECRET_KEY)) if pw else None
             )
+        # Re-pointing the server or login must not carry the stored secrets to a new target.
+        retarget = any(
+            col in values and values[col] != getattr(c, col) for col in ("smtp_host", "smtp_user")
+        ) or ("smtp_port" in values and values["smtp_port"] != (c.smtp_port or 587))
+        if retarget:
+            values["smtp_google_refresh"] = None
+            if not (changes.get("password") or "").strip():
+                values["smtp_password"] = None
         if await self._communities.update_smtp(self._cid, values) is None:
             raise NotFoundError()
         if self._audit is not None and values:
@@ -106,7 +117,7 @@ class AdminEmailService:
             raise NotFoundError()
         cfg = config_from_row(c, self._settings.SECRET_KEY) or config_from_env(self._settings)
         if cfg is None:
-            return {"ok": False, "error": "Save the mail server settings first."}
+            return {"ok": False, "error": "Save the mail server settings first.", "category": None}
         try:
             await send_email(
                 cfg,
@@ -117,10 +128,10 @@ class AdminEmailService:
                 record=False,
             )
         except Exception as exc:
-            err = scrub_error(exc, cfg)
-            await self._communities.update_smtp(self._cid, {"smtp_last_error": err})
-            return {"ok": False, "error": err}
+            err = classify(exc)  # raw text is already in the server log
+            await self._communities.update_smtp(self._cid, {"smtp_last_error": err.stored})
+            return {"ok": False, "error": err.message, "category": err.category}
         await self._communities.update_smtp(
             self._cid, {"smtp_last_ok_at": datetime.now(UTC), "smtp_last_error": None}
         )
-        return {"ok": True, "error": None}
+        return {"ok": True, "error": None, "category": None}

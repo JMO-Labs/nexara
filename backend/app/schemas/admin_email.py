@@ -18,7 +18,8 @@ class EmailSettingsUpdate(BaseModel):
     """@brief Partial update; '' clears a text field, an omitted field is kept."""
 
     host: str | None = Field(None, max_length=253, pattern=_HOST)
-    port: int | None = Field(None, ge=1, le=65535)
+    # Fixed set keeps the Test button from probing arbitrary ports.
+    port: Literal[25, 465, 587, 1025, 2525] | None = None
     security: Literal["starttls", "ssl", "none"] | None = None
     user: str | None = Field(None, max_length=254)
     password: str | None = Field(None, max_length=500)
@@ -55,3 +56,5 @@ class EmailTestOut(BaseModel):
 
     ok: bool
     error: str | None = None
+    #: auth_failed|connect_failed|tls_failed|rejected|timeout|unknown
+    category: str | None = None

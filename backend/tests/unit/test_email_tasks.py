@@ -37,7 +37,7 @@ class TestSendInviteEmail:
     """@brief Verify the invite email task."""
 
     def test_skips_when_smtp_not_configured(self):
-        with patch("app.tasks.email_tasks._smtp_configured", return_value=False):
+        with patch("app.tasks.email_tasks._resolve", AsyncMock(return_value=None)):
             result = send_invite_email("fake-invite-id")
             assert result["status"] == "skipped"
 
@@ -49,7 +49,7 @@ class TestSendPasswordResetEmail:
     """@brief Verify the password reset email task."""
 
     def test_skips_when_smtp_not_configured(self):
-        with patch("app.tasks.email_tasks._smtp_configured", return_value=False):
+        with patch("app.tasks.email_tasks._resolve", AsyncMock(return_value=None)):
             result = send_password_reset_email("fake-user-id", "fake-token")
             assert result["status"] == "skipped"
 

@@ -5,15 +5,19 @@
 
 from __future__ import annotations
 
+import ssl
+import uuid
+from datetime import UTC, datetime, timedelta
 from email.utils import formataddr
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiosmtplib import errors as smtp_errors
 
 from app.core.config import Settings
 from app.core.encryption import derive_fernet_key, encrypt_secret
-from app.services.email.sender import send_email
+from app.services.email.sender import SmtpSendError, classify, send_email
 from app.services.email.smtp_settings import SmtpConfig, resolve_smtp
 
 
@@ -59,7 +63,7 @@ class TestTransport:
         assert kw["use_tls"] is True and kw["start_tls"] is False
 
     async def test_none_security(self):
-        smtp, _, _ = await _send(_cfg(port=25, security="none"))
+        smtp, _, _ = await _send(_cfg(port=25, security="none", user="", password=""))
         kw = smtp.call_args.kwargs
         assert kw["use_tls"] is False and kw["start_tls"] is False
 
@@ -96,16 +100,19 @@ class TestStatus:
         _, _, rec = await _send(_cfg(community_id="cid"))
         assert rec.await_args.args[1] is None
 
-    async def test_failure_recorded_truncated_and_raised(self):
+    async def test_failure_recorded_generic_and_raised(self):
         ctx = _ctx()
-        ctx.send_message.side_effect = OSError("x" * 500)
+        ctx.send_message.side_effect = OSError("secret leaked host=10.0.0.5")
         with (
             patch("app.services.email.sender.SMTP", return_value=ctx),
             patch("app.services.email.sender._record", new=AsyncMock()) as rec,
-            pytest.raises(OSError),
+            pytest.raises(SmtpSendError) as ei,
         ):
             await send_email(_cfg(password="secret"), "u@e.com", "S", "<p>x</p>", "x")
-        assert len(rec.await_args.args[1]) <= 300
+        assert ei.value.category == "connect_failed"
+        stored = rec.await_args.args[1]
+        assert stored.startswith("connect_failed: ") and "10.0.0.5" not in stored
+        assert "secret" not in str(ei.value)
 
     async def test_record_false_skips(self):
         ctx = _ctx()
@@ -153,3 +160,106 @@ class TestResolve:
     async def test_none_when_unconfigured(self):
         with patch("app.services.email.smtp_settings.get_settings", return_value=Settings()):
             assert await resolve_smtp(self._session(SimpleNamespace(smtp_host=None)), "c") is None
+
+
+class TestNoPlaintextCredentials:
+    async def test_none_security_with_credentials_refused(self):
+        ctx = _ctx()
+        with (
+            patch("app.services.email.sender.SMTP", return_value=ctx) as smtp,
+            patch("app.services.email.sender._record", new=AsyncMock()),
+            pytest.raises(SmtpSendError, match="without encryption"),
+        ):
+            await send_email(_cfg(security="none", port=25), "u@e.com", "S", "<p>x</p>")
+        smtp.assert_not_called()
+
+    async def test_none_security_without_credentials_ok(self):
+        smtp, _, _ = await _send(_cfg(security="none", port=25, user="", password=""))
+        smtp.assert_called_once()
+
+    async def test_unreadable_secret_refused(self):
+        with (
+            patch("app.services.email.sender.SMTP") as smtp,
+            patch("app.services.email.sender._record", new=AsyncMock()),
+            pytest.raises(SmtpSendError) as ei,
+        ):
+            await send_email(_cfg(secret_unreadable=True), "u@e.com", "S", "<p>x</p>")
+        assert ei.value.category == "auth_failed" and "re-enter" in ei.value.message
+        smtp.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("exc", "cat"),
+    [
+        (smtp_errors.SMTPAuthenticationError(535, "bad"), "auth_failed"),
+        (smtp_errors.SMTPConnectError("nope"), "connect_failed"),
+        (smtp_errors.SMTPServerDisconnected("gone"), "connect_failed"),
+        (ConnectionRefusedError(), "connect_failed"),
+        (smtp_errors.SMTPConnectTimeoutError("t"), "timeout"),
+        (smtp_errors.SMTPReadTimeoutError("t"), "timeout"),
+        (TimeoutError(), "timeout"),
+        (ssl.SSLError("x"), "tls_failed"),
+        (smtp_errors.SMTPNotSupported("no starttls"), "tls_failed"),
+        (smtp_errors.SMTPRecipientRefused(550, "no", "a@b.c"), "rejected"),
+        (smtp_errors.SMTPSenderRefused(550, "no", "a@b.c"), "rejected"),
+        (smtp_errors.SMTPDataError(554, "spam"), "rejected"),
+        (ValueError("?"), "unknown"),
+    ],
+)
+def test_classify(exc, cat):
+    assert classify(exc).category == cat
+
+
+class TestRecordThrottle:
+    """@brief _record writes only on status change or a stale success."""
+
+    def _factory(self, last_ok, last_err):
+        session = AsyncMock()
+        session.execute.return_value = MagicMock(
+            one_or_none=MagicMock(return_value=(last_ok, last_err))
+        )
+        factory = MagicMock()
+        factory.return_value.__aenter__ = AsyncMock(return_value=session)
+        factory.return_value.__aexit__ = AsyncMock(return_value=None)
+        return factory, session
+
+    async def _run(self, last_ok, last_err, error):
+        from app.services.email import sender
+
+        factory, session = self._factory(last_ok, last_err)
+        with patch("app.db.session.async_session_factory", factory):
+            await sender._record(uuid.uuid4(), error)
+        return session.commit.await_count  # 1 = written, 0 = skipped
+
+    async def test_recent_ok_skipped(self):
+        assert await self._run(datetime.now(UTC) - timedelta(minutes=1), None, None) == 0
+
+    async def test_old_ok_written(self):
+        assert await self._run(datetime.now(UTC) - timedelta(minutes=11), None, None) == 1
+
+    async def test_error_to_ok_written(self):
+        assert await self._run(datetime.now(UTC), "auth_failed: x", None) == 1
+
+    async def test_ok_to_error_written_same_error_skipped(self):
+        assert await self._run(datetime.now(UTC), None, "timeout: x") == 1
+        assert await self._run(datetime.now(UTC), "timeout: x", "timeout: x") == 0
+
+
+class TestDecryptFailure:
+    async def test_bad_ciphertext_flags_unreadable(self):
+        from app.services.email.smtp_settings import config_from_row
+
+        row = SimpleNamespace(
+            id="cid",
+            smtp_host="h",
+            smtp_port=587,
+            smtp_security="starttls",
+            smtp_user="u",
+            smtp_password="not-fernet",
+            smtp_from=None,
+            smtp_from_name=None,
+            smtp_auth="password",
+            smtp_google_refresh=None,
+        )
+        cfg = config_from_row(row, "k")
+        assert cfg.secret_unreadable and cfg.password == ""

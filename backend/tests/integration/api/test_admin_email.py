@@ -111,8 +111,8 @@ async def test_test_failure_returns_ok_false_and_stores_error(env):
         ):
             r = await c.post("/api/v1/admin/email/test", json={"to": "a@b.co"})
     assert r.status_code == 200
-    assert r.json()["ok"] is False and "535" in r.json()["error"]
-    assert "535" in env.repo.row.smtp_last_error
+    assert r.json()["ok"] is False and r.json()["category"] == "connect_failed"
+    assert "535" not in r.text and "535" not in env.repo.row.smtp_last_error
     assert "abcd" not in r.text
 
 
@@ -121,5 +121,25 @@ async def test_test_success(env):
         await c.put("/api/v1/admin/email", json=BODY)
         with patch("app.services.admin_email_service.send_email", AsyncMock()):
             r = await c.post("/api/v1/admin/email/test", json={"to": "a@b.co"})
-    assert r.json() == {"ok": True, "error": None}
+    assert r.json() == {"ok": True, "error": None, "category": None}
     assert env.repo.row.smtp_last_ok_at is not None
+
+
+@pytest.mark.parametrize("port", [22, 80, 443, 3306, 6379, 5432, 0, 99999])
+async def test_disallowed_port_422(env, port):
+    async with env.client() as c:
+        r = await c.put("/api/v1/admin/email", json={**BODY, "port": port})
+    assert r.status_code == 422
+
+
+@pytest.mark.parametrize("port", [25, 465, 587, 1025, 2525])
+async def test_allowed_ports_ok(env, port):
+    async with env.client() as c:
+        r = await c.put("/api/v1/admin/email", json={**BODY, "port": port})
+    assert r.status_code == 200
+
+
+async def test_lan_host_allowed(env):
+    async with env.client() as c:
+        r = await c.put("/api/v1/admin/email", json={**BODY, "host": "10.0.0.5"})
+    assert r.status_code == 200

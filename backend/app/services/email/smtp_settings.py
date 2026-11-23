@@ -8,11 +8,15 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+import structlog
+from cryptography.fernet import InvalidToken
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.encryption import decrypt_secret, derive_fernet_key
 from app.models.community import Community
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -30,6 +34,8 @@ class SmtpConfig:
     google_refresh: str | None = None
     #: Set when read from the DB row; send_email records last ok/error on it.
     community_id: uuid.UUID | None = None
+    #: A stored secret could not be decrypted (SECRET_KEY changed?); sending is refused.
+    secret_unreadable: bool = False
 
 
 def infer_security(port: int) -> str:
@@ -43,18 +49,33 @@ def config_from_row(row: Community, secret_key: str) -> SmtpConfig | None:
         return None
     key = derive_fernet_key(secret_key)
     port = row.smtp_port or 587
-    refresh = row.smtp_google_refresh
+    unreadable = False
+
+    def _dec(value: str | None) -> str | None:
+        nonlocal unreadable
+        if not value:
+            return None
+        try:
+            return decrypt_secret(value, key)
+        except InvalidToken:
+            unreadable = True
+            logger.warning("email.secret_decrypt_failed")
+            return None
+
+    password = _dec(row.smtp_password) or ""
+    refresh = _dec(row.smtp_google_refresh)
     return SmtpConfig(
         host=row.smtp_host,
         port=port,
         security=row.smtp_security or infer_security(port),
         user=row.smtp_user or "",
-        password=decrypt_secret(row.smtp_password, key) if row.smtp_password else "",
+        password=password,
         from_addr=row.smtp_from or row.smtp_user or "noreply@nexara.local",
         from_name=row.smtp_from_name,
         auth=row.smtp_auth or "password",
-        google_refresh=decrypt_secret(refresh, key) if refresh else None,
+        google_refresh=refresh,
         community_id=row.id,
+        secret_unreadable=unreadable,
     )
 
 

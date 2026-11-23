@@ -17,22 +17,20 @@ from celery import Task
 
 from app.core.config import get_settings
 from app.db.session import async_session_factory
+from app.services.email.sender import SmtpSendError
 from app.services.email.sender import send_email as smtp_send
 from app.services.email.smtp_settings import SmtpConfig, resolve_smtp
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
+_RETRYABLE = frozenset({"connect_failed", "timeout"})
+
 
 async def _resolve() -> SmtpConfig | None:
     """@brief Resolve the default community's SMTP config (DB row, else env)."""
     async with async_session_factory() as session:
         return await resolve_smtp(session, uuid.UUID(get_settings().COMMUNITY_ID))
-
-
-def _smtp_configured() -> bool:
-    """@brief Return True if SMTP is configured (DB row or env)."""
-    return asyncio.run(_resolve()) is not None
 
 
 async def _send_async(
@@ -52,7 +50,6 @@ async def _send_async(
     name="app.tasks.email_tasks.send_email",
     max_retries=3,
     default_retry_delay=30,
-    autoretry_for=(ConnectionError, OSError),
     retry_backoff=True,
     retry_backoff_max=600,
     retry_jitter=True,
@@ -77,7 +74,12 @@ def send_email(
     @param text_body Optional plain-text fallback body.
     @return Dict with ``status`` key (``"sent"`` or ``"skipped"``).
     """
-    return asyncio.run(_send_async(to, subject, html_body, text_body))
+    try:
+        return asyncio.run(_send_async(to, subject, html_body, text_body))
+    except SmtpSendError as exc:
+        if exc.category in _RETRYABLE:  # transient; auth/rejection won't fix themselves
+            raise self.retry(exc=exc) from exc
+        raise
 
 
 @celery_app.task(
@@ -97,7 +99,7 @@ def send_invite_email(self: Task, invite_id: str) -> dict[str, str]:
     @param invite_id UUID string of the invite record.
     @return Dict with ``status`` key.
     """
-    if not _smtp_configured():
+    if asyncio.run(_resolve()) is None:
         return {"status": "skipped"}
 
     logger.info("send_invite_email", invite_id=invite_id)
@@ -119,7 +121,7 @@ def send_password_reset_email(self: Task, user_id: str, token: str) -> dict[str,
     @param token Password reset token string.
     @return Dict with ``status`` key.
     """
-    if not _smtp_configured():
+    if asyncio.run(_resolve()) is None:
         return {"status": "skipped"}
 
     logger.info("send_password_reset_email", user_id=user_id)
