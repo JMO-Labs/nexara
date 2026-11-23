@@ -32,6 +32,9 @@ from app.services.notifications.types import (  # noqa: F401
     relation_request,
     ride_update,
     system,
+    trip_arrived,
+    trip_overdue,
+    trip_started,
 )
 
 __all__ = [
@@ -63,4 +66,7 @@ __all__ = [
     "relation_request",
     "ride_update",
     "system",
+    "trip_arrived",
+    "trip_overdue",
+    "trip_started",
 ]

@@ -1033,6 +1033,15 @@
     "capsule_opened": {
       "label": "Time capsule opened"
     },
+    "trip_started": {
+      "label": "Trip started"
+    },
+    "trip_overdue": {
+      "label": "Trip overdue"
+    },
+    "trip_arrived": {
+      "label": "Made it safely"
+    },
     "expense_added": {
       "label": "Shared cost added"
     },
