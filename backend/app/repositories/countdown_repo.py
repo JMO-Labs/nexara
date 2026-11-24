@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, delete, func, or_, select, update
@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.countdown import Countdown, CountdownFollower, CountdownReminderSent
+from app.models.media import Media
 from app.models.post import Post
 from app.models.subgroup import SubgroupMember
 from app.models.user import User
@@ -26,12 +27,12 @@ def countdown_visible(viewer_id: Any, community_id: uuid.UUID) -> Any:
         Countdown.community_id == community_id,
         Countdown.deleted_at.is_(None),
         or_(
+            Countdown.author_id == viewer_id,
             Countdown.visibility == "community",
             and_(
                 Countdown.visibility == "subgroup",
                 Countdown.subgroup_id.in_(my_subgroup_ids(viewer_id)),
             ),
-            and_(Countdown.visibility == "private", Countdown.author_id == viewer_id),
         ),
         not_blocked(Countdown.author_id, viewer_id),
     )
@@ -47,6 +48,15 @@ class CountdownRepository:
         """@brief Whether the user belongs to the subgroup."""
         stmt = select(SubgroupMember.user_id).where(
             SubgroupMember.subgroup_id == subgroup_id, SubgroupMember.user_id == user_id
+        )
+        return (await self._s.execute(stmt)).first() is not None
+
+    async def own_media_exists(
+        self, cid: uuid.UUID, media_id: uuid.UUID, user_id: uuid.UUID
+    ) -> bool:
+        """@brief Whether the media exists in the community and the user uploaded it."""
+        stmt = select(Media.id).where(
+            Media.id == media_id, Media.community_id == cid, Media.uploader_id == user_id
         )
         return (await self._s.execute(stmt)).first() is not None
 
@@ -157,9 +167,13 @@ class CountdownRepository:
         return counts, set(mine.scalars())
 
     async def reminder_targets(
-        self, cid: uuid.UUID
+        self, cid: uuid.UUID, today: date
     ) -> list[tuple[Countdown, uuid.UUID, str | None]]:
-        """@return (countdown, follower id, follower timezone) for every live follow."""
+        """
+        @param today UTC date of the scan
+        @return (countdown, follower id, tz) for live follows that can be due
+                (yearly, or target within the reminder window, tz slack included).
+        """
         stmt = (
             select(Countdown, User.id, User.timezone)
             .join(CountdownFollower, CountdownFollower.countdown_id == Countdown.id)
@@ -168,6 +182,12 @@ class CountdownRepository:
                 User.deleted_at.is_(None),
                 User.community_id == cid,
                 countdown_visible(User.id, cid),
+                or_(
+                    Countdown.repeat_yearly,
+                    Countdown.target_date.between(
+                        today - timedelta(days=1), today + timedelta(days=8)
+                    ),
+                ),
             )
         )
         return [(c, uid, tz) for c, uid, tz in (await self._s.execute(stmt)).all()]

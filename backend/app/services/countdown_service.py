@@ -113,9 +113,22 @@ class CountdownService:
             raise NotFoundError(_("Countdown not found"))
         return c
 
+    async def _check_cover(self, viewer: User, media_id: uuid.UUID | None) -> None:
+        if media_id is not None and not await self._repo.own_media_exists(
+            self._cid, media_id, viewer.id
+        ):
+            raise ValidationError(message=_("Cover image not found"))
+
+    @staticmethod
+    def _check_not_past(viewer: User, target: date, yearly: bool) -> None:
+        if not yearly and target < local_today(viewer.timezone):
+            raise ValidationError(message=_("Date is in the past"))
+
     async def create(self, viewer: User, body: CountdownCreate) -> CountdownResponse:
         """@brief Create a countdown + feed post; the author follows it."""
         _valid_tz(body.tz)
+        self._check_not_past(viewer, body.target_date, body.repeat_yearly)
+        await self._check_cover(viewer, body.cover_media_id)
         if body.visibility == "subgroup":
             if body.subgroup_id is None or not await self._repo.is_member(
                 body.subgroup_id, viewer.id
@@ -162,6 +175,11 @@ class CountdownService:
                 data.pop("tz")
             else:
                 _valid_tz(data["tz"])
+        if "target_date" in data:
+            self._check_not_past(
+                viewer, data["target_date"], data.get("repeat_yearly", c.repeat_yearly)
+            )
+        await self._check_cover(viewer, data.get("cover_media_id"))
         await self._repo.apply(c, data)
         if c.post_id is not None and ("title" in data or "emoji" in data):
             await self._repo.set_post_content(c.post_id, _card_text(c.emoji, c.title))
@@ -204,11 +222,11 @@ class CountdownService:
         return sorted(items, key=lambda r: (r.days_left < 0, abs(r.days_left)))
 
     async def list_following(self, viewer: User, include_done: bool) -> list[CountdownResponse]:
-        """@brief Followed countdowns by days_left; hides one-offs >3 days past."""
+        """@brief Followed countdowns soonest first, ended last; hides one-offs >3 days past."""
         items = await self._view(await self._repo.list_following(self._cid, viewer.id), viewer)
         if not include_done:
             items = [r for r in items if r.days_left >= -HIDE_AFTER_DAYS]
-        return sorted(items, key=lambda r: r.days_left)
+        return sorted(items, key=lambda r: (r.days_left < 0, abs(r.days_left)))
 
     async def send_reminders(self, now: datetime | None = None) -> int:
         """
@@ -217,7 +235,7 @@ class CountdownService:
         """
         now = now or datetime.now(UTC)
         sent = 0
-        for c, user_id, tz in await self._repo.reminder_targets(self._cid):
+        for c, user_id, tz in await self._repo.reminder_targets(self._cid, now.date()):
             today = local_today(tz, now)
             left = days_left(c, today)
             kind = KINDS.get(left)

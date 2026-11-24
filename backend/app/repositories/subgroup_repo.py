@@ -14,11 +14,13 @@ import uuid
 from typing import Any
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.models.countdown import Countdown
 from app.models.media import Media
+from app.models.post import Post
 from app.models.subgroup import ChatChannel, Subgroup, SubgroupMember
 from app.repositories.base import BaseRepository
 from app.repositories.subgroup_member_repo import SubgroupMemberRepository
@@ -263,8 +265,26 @@ class SubgroupRepository(BaseRepository[Subgroup]):
         scope (their ``subgroup_id`` is ``SET NULL``). Children groups
         also detach (``parent_id`` becomes NULL) rather than disappearing.
         """
+        await self._privatize_countdowns(subgroup)
         await self._session.delete(subgroup)
         await self._session.flush()
+
+    async def _privatize_countdowns(self, subgroup: Subgroup) -> None:
+        """@brief Group countdowns (and feed posts) become author-only, not community-wide."""
+        ids = (
+            await self._session.execute(
+                update(Countdown)
+                .where(Countdown.subgroup_id == subgroup.id)
+                .values(visibility="private")
+                .returning(Countdown.id)
+            )
+        ).scalars()
+        await self._session.execute(
+            update(Post)
+            .where(Post.countdown_id.in_(list(ids)))
+            .values(visibility="private")
+            .execution_options(synchronize_session=False)
+        )
 
     async def archive(self, subgroup: Subgroup) -> Subgroup:
         """
