@@ -4,7 +4,7 @@
  * @brief Member preferences for each enabled plugin that declares any.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { ManifestFieldsForm } from "@/components/plugins/ManifestFieldsForm";
 import { usePluginUi } from "@/hooks/usePluginUi";
 import {
@@ -17,7 +17,7 @@ import { useToasts } from "@/stores/toasts";
 function PluginPrefs({ plugin }: { plugin: PluginUi }) {
   const qc = useQueryClient();
   const key = ["plugins", "prefs", plugin.plugin_id];
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: key,
     queryFn: () => getPluginPrefs(plugin.plugin_id),
   });
@@ -41,6 +41,13 @@ function PluginPrefs({ plugin }: { plugin: PluginUi }) {
           pending={save.isPending}
           onSubmit={(v) => save.mutate(v)}
         />
+      ) : isError ? (
+        <div role="alert" className="flex items-center gap-2 text-sm">
+          <span>Could not load your preferences.</span>
+          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       ) : (
         <p className="text-sm text-muted">Loading…</p>
       )}

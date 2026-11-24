@@ -27,6 +27,13 @@ vi.mock("@/lib/api/users", () => ({
       { id: "u1", username: "o", display_name: "Ola Ode", avatar_url: null },
       { id: "u2", username: "ann", display_name: "Ann Lee", avatar_url: null },
       { id: "u3", username: "bo", display_name: "Bo Diaz", avatar_url: null },
+      {
+        id: "u9",
+        username: "bot",
+        display_name: "Sassybot",
+        avatar_url: null,
+        is_bot: true,
+      },
     ],
     next_cursor: null,
     has_more: false,
@@ -67,6 +74,7 @@ test("owner adds a collaborator via select + Add", async () => {
   renderIt(true);
   await screen.findByText("Ann Lee");
   const select = await screen.findByLabelText("Add contributor");
+  expect(screen.queryByRole("option", { name: "Sassybot" })).toBeNull();
   expect(
     await screen.findByRole("option", { name: "Bo Diaz" }),
   ).toBeInTheDocument();

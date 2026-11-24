@@ -9,7 +9,7 @@ import uuid
 from typing import Any
 
 from app.core.exceptions import AppError
-from app.plugins.manifest import PluginManifest, validate_values
+from app.plugins.manifest import PluginManifest, validate_values, with_defaults
 from app.repositories.plugin_repo import PluginRepository
 
 
@@ -31,11 +31,10 @@ async def validate_plugin_flags(
     @param community_id The author's community.
     @param flags ``{plugin_id: {flag: value}}`` from the request.
     @return The flags to store (only validated keys).
-    Flags of plugins not enabled here are silently dropped.
+    Flags of plugins not enabled here are silently dropped. Untouched flags of enabled
+    plugins are filled from manifest defaults (the composer shows them as pre-set).
     @raises AppError 422 ``invalid_plugin_flag`` for an unknown flag key or bad value.
     """
-    if not flags:
-        return {}
     allowed = {
         inst.plugin_id: PluginManifest.model_validate(inst.manifest).composer_flags
         for inst in await repo.list_enabled_installs(community_id)
@@ -45,7 +44,12 @@ async def validate_plugin_flags(
         if plugin_id not in allowed:
             continue  # not installed/enabled/running here: dropped, the post still succeeds
         try:
-            out[plugin_id] = dict(validate_values(allowed[plugin_id], values))
+            out[plugin_id] = with_defaults(
+                allowed[plugin_id], validate_values(allowed[plugin_id], values)
+            )
         except AppError as exc:
             raise _invalid(f"{plugin_id}: {exc.details}") from exc
+    for plugin_id, fields in allowed.items():
+        if plugin_id not in flags and (defaults := with_defaults(fields, {})):
+            out[plugin_id] = defaults
     return out

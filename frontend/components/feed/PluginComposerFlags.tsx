@@ -28,7 +28,7 @@ function Flag({
   const id = useId();
   if (spec.type === "boolean")
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Switch id={id} checked={value === true} onCheckedChange={onChange} />
         <label htmlFor={id} className="text-sm">
           {spec.label}
@@ -36,8 +36,8 @@ function Flag({
       </div>
     );
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={id} className="text-sm">
+    <div className="flex flex-wrap items-center gap-2">
+      <label htmlFor={id} className="min-w-0 text-sm">
         {spec.label}
       </label>
       {spec.type === "select" ? (
@@ -57,7 +57,9 @@ function Flag({
             onChange(
               spec.type === "number" && e.target.value !== ""
                 ? Number(e.target.value)
-                : e.target.value,
+                : spec.type === "number"
+                  ? undefined
+                  : e.target.value,
             )
           }
         />
@@ -84,12 +86,18 @@ export function PluginComposerFlags({ value, onChange }: Props) {
             key={`${p.plugin_id}.${k}`}
             spec={spec}
             value={value[p.plugin_id]?.[k] ?? spec.default}
-            onChange={(v) =>
-              onChange({
-                ...value,
-                [p.plugin_id]: { ...value[p.plugin_id], [k]: v },
-              })
-            }
+            onChange={(v) => {
+              const { [k]: _drop, ...rest } = value[p.plugin_id] ?? {};
+              void _drop;
+              const next = v === undefined ? rest : { ...rest, [k]: v };
+              const { [p.plugin_id]: _p, ...others } = value;
+              void _p;
+              onChange(
+                Object.keys(next).length
+                  ? { ...others, [p.plugin_id]: next }
+                  : others,
+              );
+            }}
           />
         )),
       )}

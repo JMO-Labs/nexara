@@ -159,3 +159,12 @@ def sassybot_delay():
 
     with patch("app.tasks.ai_tasks.sassybot_comment_task.apply_async") as m:
         yield m
+
+
+@pytest.fixture(autouse=True)
+def _no_plugin_flags():
+    """@brief Flag validation hits the DB (covered by the plugins API tests)."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.services.post_service.validate_plugin_flags", AsyncMock(return_value={})):
+        yield

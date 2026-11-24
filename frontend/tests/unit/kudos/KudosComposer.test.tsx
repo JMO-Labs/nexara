@@ -40,6 +40,13 @@ beforeEach(() => {
     items: [
       { id: "u2", username: "ana", display_name: "Ana Lima", avatar_url: null },
       { id: "u3", username: "bo", display_name: "Bo Chen", avatar_url: null },
+      {
+        id: "u9",
+        username: "bobot",
+        display_name: "Bo Bot",
+        avatar_url: null,
+        is_bot: true,
+      },
     ],
     next_cursor: null,
     has_more: false,
@@ -85,6 +92,7 @@ describe("KudosComposer", () => {
       await screen.findByRole("option", { name: /Bo Chen/ }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Ana/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /Bo Bot/ })).toBeNull();
   });
 
   it("cancel closes without posting", async () => {

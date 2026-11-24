@@ -45,7 +45,7 @@ export function KudosComposer({ open, onClose }: KudosComposerProps) {
   const matches =
     q && !picked
       ? (users.data?.items ?? [])
-          .filter((u) => u.display_name.toLowerCase().includes(q))
+          .filter((u) => !u.is_bot && u.display_name.toLowerCase().includes(q))
           .slice(0, 8)
       : [];
 

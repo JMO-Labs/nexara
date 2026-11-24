@@ -50,6 +50,10 @@ label = "Notify me"
 [composer_flags.silent]
 type = "boolean"
 label = "Silent"
+[composer_flags.tone]
+type = "string"
+label = "Tone"
+default = "mild"
 """
 
 
@@ -188,11 +192,23 @@ async def test_post_flags_valid_stored_unknown_422(env):
     stored = (
         await env.s.execute(select(Post.plugin_flags).where(Post.id == uuid.UUID(ok.json()["id"])))
     ).scalar_one()
-    assert stored == {env.pid: {"silent": True}}
+    assert stored == {env.pid: {"silent": True, "tone": "mild"}}
     for flags in ({env.pid: {"bogus": True}}, {env.pid: {"silent": "notabool"}}):
         r = await env.c.post("/api/v1/posts", json={"content": "x", "plugin_flags": flags})
         assert r.status_code == 422
         assert r.json()["error"]["code"] == "invalid_plugin_flag"
+
+
+async def test_untouched_flag_defaults_filled(env):
+    await _install(env)
+    await _enable(env)
+    env.who["u"] = env.u.member
+    r = await env.c.post("/api/v1/posts", json={"content": "hi"})
+    assert r.status_code == 201, r.text
+    stored = (
+        await env.s.execute(select(Post.plugin_flags).where(Post.id == uuid.UUID(r.json()["id"])))
+    ).scalar_one()
+    assert stored == {env.pid: {"tone": "mild"}}
 
 
 async def test_flags_for_unknown_or_disabled_plugin_dropped(env):

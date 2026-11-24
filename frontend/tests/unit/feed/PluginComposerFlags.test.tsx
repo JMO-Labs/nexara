@@ -40,4 +40,19 @@ describe("PluginComposerFlags", () => {
       .click(screen.getByRole("switch", { name: "Roast me" }));
     expect(onChange).toHaveBeenCalledWith({ sassy: { roast: true } });
   });
+
+  it("clearing a number flag removes its key", async () => {
+    ui.data = [
+      {
+        ...plugin,
+        composer_flags: { n: { type: "number", label: "Count" } },
+      },
+    ];
+    const onChange = vi.fn();
+    render(
+      <PluginComposerFlags value={{ sassy: { n: 3 } }} onChange={onChange} />,
+    );
+    await userEvent.setup().clear(screen.getByLabelText("Count"));
+    expect(onChange).toHaveBeenLastCalledWith({});
+  });
 });
