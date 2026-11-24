@@ -6,10 +6,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints
 
 
 class PushKeys(BaseModel):
@@ -41,6 +41,22 @@ class PushSubscriptionResponse(BaseModel):
     endpoint: str
     user_agent: str | None
     created_at: datetime
+
+
+class PushDeviceResponse(BaseModel):
+    """@brief A push-subscribed device; never exposes endpoint or keys."""
+
+    id: UUID
+    name: str
+    endpoint_hash: str
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+class PushDeviceRename(BaseModel):
+    """@brief Request body to rename a push device."""
+
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
 
 
 class VAPIDPublicKeyResponse(BaseModel):

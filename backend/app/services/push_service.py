@@ -5,9 +5,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
-from typing import TYPE_CHECKING
+from email.utils import parseaddr
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -15,7 +17,8 @@ from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.device_token import DeviceToken
 from app.models.notification import PushSubscription
-from app.schemas.push import PushSubscriptionResponse
+from app.schemas.push import PushDeviceResponse, PushSubscriptionResponse
+from app.services.auth.device import parse_device
 
 if TYPE_CHECKING:
     from app.repositories.device_token_repo import DeviceTokenRepo
@@ -24,14 +27,42 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
-PUSH_PREF_MAP = {
-    "mention": "notif_mention_push",
-    "comment": "notif_comment_push",
-    "reaction": "notif_reaction_push",
-    "new_post": "notif_new_post_push",
-    "system": "notif_system_push",
-    "invite_accepted": "notif_invite_accepted_push",
-}
+
+def vapid_subject(s: Any) -> str:
+    """
+    @brief Resolve the VAPID JWT ``sub`` claim (mailto: or https: URL).
+    @param s Settings object.
+    @return Explicit VAPID_SUBJECT, else https APP_BASE_URL, else SMTP_FROM address.
+    """
+
+    def _str(name: str) -> str:
+        v = getattr(s, name, "")
+        return v.strip() if isinstance(v, str) else ""
+
+    sub = _str("VAPID_SUBJECT")
+    if sub.startswith(("mailto:", "https://")):
+        return sub
+    base = _str("APP_BASE_URL")
+    if base.startswith("https://"):
+        return base.rstrip("/")
+    addr = parseaddr(_str("SMTP_FROM"))[1]
+    return f"mailto:{addr}" if "@" in addr else "mailto:noreply@example.com"
+
+
+def endpoint_hash(endpoint: str) -> str:
+    """@brief Short stable id of a push endpoint (lets a client spot its own device)."""
+    return hashlib.sha256(endpoint.encode()).hexdigest()[:16]
+
+
+def _device(sub: PushSubscription) -> PushDeviceResponse:
+    """@brief Map a subscription to its secret-free device view."""
+    return PushDeviceResponse(
+        id=sub.id,
+        name=sub.name or parse_device(sub.user_agent),
+        endpoint_hash=endpoint_hash(sub.endpoint),
+        created_at=sub.created_at,
+        last_used_at=sub.last_used_at,
+    )
 
 
 class PushService:
@@ -71,7 +102,8 @@ class PushService:
         """
         @brief Subscribe a user to push notifications (upsert by endpoint).
 
-        Deletes any existing subscription with the same endpoint, then creates new.
+        Replaces any existing subscription with the same endpoint, keeping
+        the owner's custom device name.
 
         @param user_id User UUID.
         @param endpoint Web Push endpoint URL.
@@ -81,6 +113,7 @@ class PushService:
         @return The created PushSubscription.
         """
         existing = await self._push_repo.find_by_endpoint(endpoint)
+        kept_name = existing.name if existing and existing.user_id == user_id else None
         if existing:
             await self._push_repo.delete_by_endpoint(endpoint)
 
@@ -90,6 +123,7 @@ class PushService:
             p256dh=p256dh,
             auth=auth,
             user_agent=user_agent,
+            name=kept_name or parse_device(user_agent),
         )
         return await self._push_repo.create(sub)
 
@@ -172,16 +206,21 @@ class PushService:
         title: str,
         body: str,
         url: str,
+        *,
+        tag: str | None = None,
+        badge_count: int | None = None,
     ) -> None:
         """
         @brief Send a Web Push notification to all subscriptions for a user.
 
-        On 410 Gone from the push service, removes the stale subscription.
+        On 404/410 from the push service, removes the stale subscription.
 
         @param user_id Recipient user UUID.
         @param title Notification title.
         @param body Notification body.
         @param url URL to open when clicked.
+        @param tag Collapse key so repeat notifications stack.
+        @param badge_count Unread in-app count for the app badge.
         """
         subs = await self._push_repo.list_for_user(user_id)
         if not subs:
@@ -189,13 +228,17 @@ class PushService:
 
         vapid_private = getattr(self._settings, "VAPID_PRIVATE_KEY", "")
         vapid_public = getattr(self._settings, "VAPID_PUBLIC_KEY", "")
-        smtp_from = getattr(self._settings, "SMTP_FROM", "") or "noreply@example.com"
         if not vapid_private or not vapid_public:
             logger.warning("push_vapid_not_configured")
             return
 
-        payload = json.dumps({"title": title, "body": body, "url": url})
-        vapid_sub = f"mailto:{smtp_from}" if smtp_from else "mailto:noreply@example.com"
+        data: dict[str, object] = {"title": title, "body": body, "url": url}
+        if tag is not None:
+            data["tag"] = tag
+        if badge_count is not None:
+            data["badge_count"] = badge_count
+        payload = json.dumps(data)
+        vapid_sub = vapid_subject(self._settings)
 
         from pywebpush import WebPushException, webpush
 
@@ -212,29 +255,57 @@ class PushService:
                 )
             except WebPushException as exc:
                 resp = getattr(exc, "response", None)
-                if resp is not None and getattr(resp, "status_code", None) == 410:
+                if resp is not None and getattr(resp, "status_code", None) in (404, 410):
                     await self._push_repo.cleanup_stale(sub.endpoint)
-                    logger.info("push_subscription_removed_410", endpoint=sub.endpoint)
+                    logger.info(
+                        "push_subscription_removed", endpoint_hash=endpoint_hash(sub.endpoint)
+                    )
                 else:
-                    logger.warning("push_send_failed", endpoint=sub.endpoint, error=str(exc))
+                    logger.warning(
+                        "push_send_failed",
+                        endpoint_hash=endpoint_hash(sub.endpoint),
+                        status=getattr(resp, "status_code", None),
+                    )
+            else:
+                try:
+                    await self._push_repo.touch_last_used(sub.id)
+                except Exception as exc:
+                    logger.warning(
+                        "push_touch_failed",
+                        endpoint_hash=endpoint_hash(sub.endpoint),
+                        error=type(exc).__name__,
+                    )
 
-    async def should_send_push(self, user_id: uuid.UUID, notification_type: str) -> bool:
+    async def list_devices(self, user_id: uuid.UUID) -> list[PushDeviceResponse]:
         """
-        @brief Check if push should be sent based on user settings.
+        @brief List the caller's push devices (no endpoint or keys).
 
-        @param user_id User UUID.
-        @param notification_type Type (mention, comment, etc.).
-        @return True if push should be sent.
+        @param user_id Owner UUID.
+        @return Device views, newest first.
         """
-        if notification_type not in PUSH_PREF_MAP:
-            return False
+        subs = await self._push_repo.list_devices(user_id, self._community_id)
+        return [_device(s) for s in subs]
 
-        settings = await self._settings_repo.get_by_user_id(user_id)
-        if settings is None:
-            return True
+    async def rename_device(
+        self, user_id: uuid.UUID, device_id: uuid.UUID, name: str
+    ) -> PushDeviceResponse:
+        """
+        @brief Rename one of the caller's push devices.
 
-        if getattr(settings, "mute_all_push", False):
-            return False
+        @raise NotFoundError If the device is not the caller's.
+        """
+        sub = await self._push_repo.get_device(device_id, user_id, self._community_id)
+        if sub is None:
+            raise NotFoundError(_("Device not found"))
+        sub.name = name
+        await self._push_repo.flush()
+        return _device(sub)
 
-        pref_key = PUSH_PREF_MAP[notification_type]
-        return bool(getattr(settings, pref_key, True))
+    async def delete_device(self, user_id: uuid.UUID, device_id: uuid.UUID) -> None:
+        """
+        @brief Remove one of the caller's push devices.
+
+        @raise NotFoundError If the device is not the caller's.
+        """
+        if not await self._push_repo.delete_device(device_id, user_id, self._community_id):
+            raise NotFoundError(_("Device not found"))

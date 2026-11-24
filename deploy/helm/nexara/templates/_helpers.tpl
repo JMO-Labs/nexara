@@ -44,6 +44,12 @@ env:
       name: {{ include "nexara.appSecret" . }}
       key: apprise-encryption-key
       optional: true
+- name: VAPID_PRIVATE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "nexara.appSecret" . }}
+      key: vapid-private-key
+      optional: true
 {{- if eq .Values.storage.backend "s3" }}
 - name: S3_ACCESS_KEY
   valueFrom:

@@ -97,24 +97,3 @@ class TestSendPush:
             mock_webpush.side_effect = WebPushException("Gone", response=mock_response)
             await service.send_push(USER_ID, "Title", "Body", "/")
             push_repo.cleanup_stale.assert_awaited_once_with(sub.endpoint)
-
-
-class TestShouldSendPush:
-    @pytest.mark.asyncio
-    async def test_push_skipped_when_mute_all(self, service, settings_repo):
-        settings = MagicMock()
-        settings.mute_all_push = True
-        settings_repo.get_by_user_id.return_value = settings
-
-        result = await service.should_send_push(USER_ID, "mention")
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_push_skipped_when_type_disabled(self, service, settings_repo):
-        settings = MagicMock()
-        settings.mute_all_push = False
-        settings.notif_mention_push = False
-        settings_repo.get_by_user_id.return_value = settings
-
-        result = await service.should_send_push(USER_ID, "mention")
-        assert result is False

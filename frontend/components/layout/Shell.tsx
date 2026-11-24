@@ -5,6 +5,7 @@
  *        BottomTabBar. Bootstraps the session and gates rendering on it.
  *        Global ? listener opens keyboard shortcuts modal.
  */
+import { clearUserCache } from "@/lib/pwa/clearUserCache";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +28,8 @@ import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
+import { OfflineBanner } from "@/components/layout/OfflineBanner";
+import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { FloatingChatDock } from "@/components/chat/FloatingChatDock";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TooltipProvider } from "@/components/ui/Tooltip";
@@ -44,6 +47,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
+      clearUserCache();
       router.replace("/login");
     }
   }, [status, router]);
@@ -125,7 +129,9 @@ export function Shell({ children }: { children: ReactNode }) {
         {!isBooting && <PresenceSync />}
         <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />
+          <OfflineBanner />
           {!isBooting && <GraceBanner />}
+          {!isBooting && <InstallPrompt variant="banner" />}
           <main
             id="main"
             className={cn(

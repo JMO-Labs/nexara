@@ -9,14 +9,42 @@
  */
 import type { NextConfig } from "next";
 import path from "node:path";
+import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const API_TARGET = process.env.NEXARA_API_TARGET ?? "http://localhost:8000";
 
+/** @brief Write public/sw-version.js (git sha, else timestamp) for the SW. */
+function writeSwVersion(): string {
+  let v = String(Date.now());
+  try {
+    v =
+      execSync("git rev-parse --short HEAD", {
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .toString()
+        .trim() || v;
+  } catch {
+    /* no git (docker build): timestamp */
+  }
+  try {
+    writeFileSync(
+      path.resolve(__dirname, "public/sw-version.js"),
+      `self.__SW_VERSION__ = ${JSON.stringify(v)};\n`,
+    );
+  } catch {
+    /* read-only fs: SW falls back to "dev" */
+  }
+  return v;
+}
+const BUILD_ID = writeSwVersion();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   // Standalone output bundles a self-contained `.next/standalone/server.js`
   // for the production Docker image — no `node_modules` ship needed.
   output: "standalone",

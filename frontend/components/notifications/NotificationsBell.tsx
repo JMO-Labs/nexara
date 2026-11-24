@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { InboxRow } from "@/components/inbox/InboxRow";
 import { notifEntry } from "@/components/inbox/useInboxItems";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAppBadge } from "@/hooks/useAppBadge";
 import {
   getUnreadCount,
   listActive,
@@ -90,6 +91,7 @@ export function NotificationsBell() {
   });
 
   const unread = count?.count ?? 0;
+  useAppBadge(unread);
   const items = list?.items ?? [];
 
   useEffect(() => {

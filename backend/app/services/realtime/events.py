@@ -181,6 +181,7 @@ def user_notification(
     updated_at: str | None = None,
     count: int = 1,
     actor_ids: Sequence[UUID] | None = None,
+    os_notify: bool = False,
 ) -> RealtimeEvent:
     """
     @brief Build a notification event targeted at a single user.
@@ -193,6 +194,7 @@ def user_notification(
     @param updated_at ISO 8601 last-update timestamp (defaults to created_at).
     @param count Grouped occurrence count.
     @param actor_ids Actors folded into the notification.
+    @param os_notify Whether the client may raise an OS notification (push gate).
     """
     return RealtimeEvent(
         type=EventType.NOTIFICATION,
@@ -205,6 +207,7 @@ def user_notification(
             "updated_at": updated_at or created_at,
             "count": count,
             "actor_ids": [str(a) for a in actor_ids or ()],
+            "os_notify": os_notify,
         },
     )
 

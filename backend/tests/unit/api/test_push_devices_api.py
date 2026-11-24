@@ -93,3 +93,21 @@ async def test_register_device_unauthenticated(test_app):
         test_app, "POST", "/api/v1/push/devices", json={"platform": "ios", "token": "t"}
     )
     assert resp.status_code == 401
+
+
+async def test_delete_uuid_routes_to_web_device_and_404s_for_other_user(client_setup):
+    app, user, service = client_setup
+    did = uuid.uuid4()
+    service.delete_device.side_effect = NotFoundError("Device not found")
+    resp = await _request(app, "DELETE", f"/api/v1/push/devices/{did}")
+    assert resp.status_code == 404
+    service.delete_device.assert_awaited_once_with(user.id, did)
+    service.unregister_device.assert_not_awaited()
+
+
+async def test_delete_non_uuid_routes_to_fcm_token(client_setup):
+    app, user, service = client_setup
+    resp = await _request(app, "DELETE", "/api/v1/push/devices/fcm-token-abc")
+    assert resp.status_code == 200
+    service.unregister_device.assert_awaited_once_with(user.id, "fcm-token-abc")
+    service.delete_device.assert_not_awaited()

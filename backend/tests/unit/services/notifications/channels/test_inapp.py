@@ -43,7 +43,14 @@ async def test_send_emits_event() -> None:
         "updated_at": n.updated_at.isoformat(),
         "count": 2,
         "actor_ids": [str(ACTOR)],
+        "os_notify": False,
     }
+
+
+async def test_send_carries_os_notify() -> None:
+    bus = AsyncMock(spec=EventBus)
+    await InAppChannel(bus).send(_notif(), os_notify=True)
+    assert bus.emit.await_args.args[0].payload["os_notify"] is True
 
 
 async def test_send_swallows_errors() -> None:

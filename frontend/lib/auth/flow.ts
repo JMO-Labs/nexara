@@ -3,6 +3,7 @@
  * @brief Helpers that complete an auth flow: store the access token, hydrate
  *        the session store with /users/me, and surface 2FA continuation.
  */
+import { clearUserCache } from "@/lib/pwa/clearUserCache";
 import { setAccessToken } from "./session";
 import type { LoginResponse } from "@/lib/api/auth";
 import { getMe } from "@/lib/api/users";
@@ -39,6 +40,7 @@ export async function completeLogin(resp: LoginResponse): Promise<AuthOutcome> {
   usePendingTwoFactor.getState().clear();
   setAccessToken(resp.access_token);
   const user = await getMe();
+  clearUserCache();
   useSession.getState().setUser(user);
   return { kind: "authenticated" };
 }

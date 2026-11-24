@@ -1,12 +1,15 @@
 """@file Tests for the notification Dispatcher."""
 
 import asyncio
+from datetime import UTC, datetime
 from typing import ClassVar
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 from app.models.notification import Notification
 from app.services.notifications.channels.base import ChannelResult
 from app.services.notifications.dispatcher import Dispatcher
+from app.services.notifications.dnd import gate_channels
 from app.services.realtime.event_bus import EventBus
 
 
@@ -94,3 +97,35 @@ def test_registers_optional_fcm_channel() -> None:
     fcm = _Fake("fcm")
     d = Dispatcher(AsyncMock(spec=EventBus), fcm=fcm)  # type: ignore[arg-type]
     assert d._channels["fcm"] is fcm
+
+
+def _inapp_dispatcher() -> tuple[Dispatcher, AsyncMock]:
+    bus = AsyncMock(spec=EventBus)
+    return Dispatcher(bus), bus
+
+
+def _real_notif() -> MagicMock:
+    n = MagicMock(spec=Notification)
+    n.id, n.user_id, n.type, n.payload = uuid4(), uuid4(), "mention", {}
+    n.created_at, n.updated_at, n.count, n.actor_ids = datetime.now(UTC), None, 1, []
+    return n
+
+
+async def test_inapp_os_notify_false_when_push_suppressed() -> None:
+    """DnD/snooze/per-type gating that turns push off must also stop OS notifications."""
+    d, bus = _inapp_dispatcher()
+    t = MagicMock()
+    t.key, t.bypass_dnd = "mention", False
+    eff = gate_channels({"inapp": True, "push": True}, t, in_dnd_now=True)
+    await d.dispatch(_real_notif(), t, eff)  # type: ignore[arg-type]
+    assert bus.emit.await_args.args[0].payload["os_notify"] is False
+
+
+async def test_inapp_os_notify_true_when_push_on() -> None:
+    d, bus = _inapp_dispatcher()
+    with patch(
+        "app.services.notifications.channels.push.PushChannel.send",
+        AsyncMock(return_value=ChannelResult(ok=True)),
+    ):
+        await d.dispatch(_real_notif(), _T, {"inapp": True, "push": True})
+    assert bus.emit.await_args.args[0].payload["os_notify"] is True

@@ -15,6 +15,7 @@ import {
   CornerUpLeft,
 } from "lucide-react";
 import { IconButton } from "@/components/ui";
+import { useOnline } from "@/hooks/useOnline";
 import { MentionMenu } from "@/components/mentions/MentionMenu";
 import { useMentionInput } from "@/components/mentions/useMentionInput";
 
@@ -62,6 +63,7 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
     },
     ref,
   ) {
+    const online = useOnline();
     const [value, setValue] = React.useState("");
     const [emojiOpen, setEmojiOpen] = React.useState(false);
     const lastTyping = React.useRef(0);
@@ -205,10 +207,10 @@ export const Composer = React.forwardRef<ComposerHandle, ComposerProps>(
 
           <IconButton
             aria-label="Send message"
-            tooltip="Send message"
+            tooltip={online ? "Send message" : "You're offline"}
             shortcut="Enter"
             onClick={submit}
-            disabled={disabled || !value.trim()}
+            disabled={disabled || !online || !value.trim()}
             className="bg-surface-strong text-bg disabled:opacity-40"
           >
             <Send size={18} aria-hidden />

@@ -5,6 +5,8 @@
  *        store carries the identity scaffolding the whole shell depends on.
  */
 import { create } from "zustand";
+import { clearUserCache } from "@/lib/pwa/clearUserCache";
+import { clearLastUser, saveLastUser } from "@/lib/auth/lastUser";
 import type { CurrentUser } from "@/lib/api/users";
 
 export type SessionStatus =
@@ -21,11 +23,21 @@ interface SessionState {
   reset: () => void;
 }
 
-export const useSession = create<SessionState>((set) => ({
+export const useSession = create<SessionState>((set, get) => ({
   status: "idle",
   user: null,
-  setUser: (user) =>
-    set({ user, status: user ? "authenticated" : "unauthenticated" }),
+  setUser: (user) => {
+    // Sign-out (incl. forced 401) or account switch: purge saved pages.
+    const prev = get().user;
+    if (!user ? prev : prev && prev.id !== user.id) clearUserCache();
+    if (user) saveLastUser(user);
+    else clearLastUser();
+    set({ user, status: user ? "authenticated" : "unauthenticated" });
+  },
   setStatus: (status) => set({ status }),
-  reset: () => set({ user: null, status: "unauthenticated" }),
+  reset: () => {
+    clearUserCache();
+    clearLastUser();
+    set({ user: null, status: "unauthenticated" });
+  },
 }));

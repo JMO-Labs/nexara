@@ -36,6 +36,7 @@ export function TopBar() {
     <>
       <header
         data-scrolled={scrolled || undefined}
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}
         className={cn(
           "sticky top-0 z-40 flex print:hidden items-center gap-2 px-4 py-2 transition-[background-color,box-shadow,backdrop-filter] duration-200 motion-reduce:transition-none md:px-8",
           // Once content scrolls beneath, give the bar a glass backdrop so the

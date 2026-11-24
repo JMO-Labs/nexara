@@ -6,6 +6,8 @@
 import { Suspense, type ReactNode } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Shell } from "@/components/layout/Shell";
+import { SwPrecache } from "@/components/layout/SwPrecache";
+import { ForegroundNotifier } from "@/components/notifications/ForegroundNotifier";
 import { ToastBridge } from "@/components/notifications/ToastBridge";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -18,6 +20,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </PageTransition>
       </Shell>
       <ToastBridge />
+      <ForegroundNotifier />
+      <SwPrecache />
     </>
   );
 }

@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     # --- VAPID (Web Push) ---
     VAPID_PRIVATE_KEY: str = ""
     VAPID_PUBLIC_KEY: str = ""
+    VAPID_SUBJECT: str = ""
 
     # --- FCM (native mobile push); unset disables the channel ---
     FCM_CREDENTIALS_FILE: str | None = None

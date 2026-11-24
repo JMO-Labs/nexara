@@ -102,6 +102,8 @@ class PushSubscription(Base):
     p256dh: Mapped[str] = mapped_column(Text, nullable=False)
     auth: Mapped[str] = mapped_column(Text, nullable=False)
     user_agent: Mapped[str | None] = mapped_column(Text)
+    name: Mapped[str | None] = mapped_column(Text)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -8,11 +8,12 @@ from __future__ import annotations
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import PushSubscription
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
@@ -72,3 +73,74 @@ class PushSubscriptionRepository(BaseRepository[PushSubscription]):
         @param endpoint Web Push endpoint URL.
         """
         await self.delete_by_endpoint(endpoint)
+
+    async def list_devices(
+        self, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> list[PushSubscription]:
+        """
+        @brief List a user's subscriptions within a community, newest first.
+
+        @param user_id Owner UUID.
+        @param community_id Community scope (via the owning user).
+        @return Subscriptions.
+        """
+        stmt = (
+            select(PushSubscription)
+            .join(User, User.id == PushSubscription.user_id)
+            .where(PushSubscription.user_id == user_id, User.community_id == community_id)
+            .order_by(PushSubscription.created_at.desc())
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def get_device(
+        self, device_id: uuid.UUID, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> PushSubscription | None:
+        """
+        @brief Fetch one subscription owned by the user in the community.
+
+        @param device_id Subscription UUID.
+        @param user_id Owner UUID.
+        @param community_id Community scope.
+        @return The subscription or None.
+        """
+        stmt = (
+            select(PushSubscription)
+            .join(User, User.id == PushSubscription.user_id)
+            .where(
+                PushSubscription.id == device_id,
+                PushSubscription.user_id == user_id,
+                User.community_id == community_id,
+            )
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def delete_device(
+        self, device_id: uuid.UUID, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> bool:
+        """
+        @brief Delete one owned subscription.
+
+        @return True if a row was deleted.
+        """
+        sub = await self.get_device(device_id, user_id, community_id)
+        if sub is None:
+            return False
+        await self._session.delete(sub)
+        await self._session.flush()
+        return True
+
+    async def touch_last_used(self, device_id: uuid.UUID) -> None:
+        """
+        @brief Stamp last_used_at after a successful push send.
+
+        @param device_id Subscription UUID.
+        """
+        await self._session.execute(
+            update(PushSubscription)
+            .where(PushSubscription.id == device_id)
+            .values(last_used_at=func.now())
+        )
+
+    async def flush(self) -> None:
+        """@brief Flush pending changes to the session."""
+        await self._session.flush()

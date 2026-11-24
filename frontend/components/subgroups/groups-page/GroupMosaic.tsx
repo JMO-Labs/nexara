@@ -5,6 +5,7 @@
  *        error / loading / empty states.
  */
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, EmptyState } from "@/components/ui";
 import { SubgroupCard } from "@/components/subgroups/SubgroupCard";
 import { MemberStack } from "./MemberStack";
@@ -20,7 +21,7 @@ export interface GroupMosaicProps {
   joinBusy: string | null | undefined;
   leaveBusy: string | null | undefined;
   onCreate: () => void;
-  /** Retry handler for the error state (defaults to page reload). */
+  /** Retry handler for the error state (defaults to refetching queries). */
   onRetry?: () => void;
   /** True when a search/filter hid otherwise existing groups. */
   isFiltered?: boolean;
@@ -35,6 +36,21 @@ const GRID =
  * @param props list data, query state and action callbacks
  * @return grid or fallback state
  */
+/** @brief Retry via onRetry. */
+function RetryButton({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Button variant="secondary" onClick={onRetry}>
+      Retry
+    </Button>
+  );
+}
+
+/** @brief Default retry: refetch all queries (needs QueryClientProvider). */
+function RefetchButton() {
+  const qc = useQueryClient();
+  return <RetryButton onRetry={() => qc.invalidateQueries()} />;
+}
+
 export function GroupMosaic({
   data,
   isLoading,
@@ -53,14 +69,7 @@ export function GroupMosaic({
       <EmptyState
         title="Couldn't load groups"
         description={error instanceof Error ? error.message : String(error)}
-        action={
-          <Button
-            variant="secondary"
-            onClick={onRetry ?? (() => window.location.reload())}
-          >
-            Retry
-          </Button>
-        }
+        action={onRetry ? <RetryButton onRetry={onRetry} /> : <RefetchButton />}
       />
     );
   }

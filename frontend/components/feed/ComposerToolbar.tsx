@@ -3,6 +3,7 @@
  * @file components/feed/ComposerToolbar.tsx
  * @brief Action row for PostComposer: photos, poll, kudos, cancel, post.
  */
+import { useOnline } from "@/hooks/useOnline";
 import {
   Image as ImageIcon,
   BarChart3,
@@ -133,6 +134,7 @@ export function ComposerToolbar({
   onPoll,
   postDisabled,
 }: ComposerToolbarProps) {
+  const online = useOnline();
   return (
     <div className="mt-2 flex items-center gap-2">
       <ComposerIcons
@@ -155,7 +157,8 @@ export function ComposerToolbar({
       <Button
         onClick={onSubmit}
         loading={posting}
-        disabled={postDisabled}
+        disabled={postDisabled || !online}
+        title={online ? undefined : "You're offline"}
         size="sm"
       >
         Post
