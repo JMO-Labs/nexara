@@ -18,6 +18,9 @@ import { loadLastUser } from "@/lib/auth/lastUser";
 import { ApiError } from "@/lib/api/errors";
 import { getMe } from "@/lib/api/users";
 
+/** Backoff between boot retries while online but the server is failing. */
+const RETRY_MS = [2_000, 5_000, 15_000, 30_000];
+
 export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
   const state = useSession();
   const setUser = useSession((s) => s.setUser);
@@ -28,15 +31,43 @@ export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
     if (useSession.getState().status === "authenticated") return;
 
     let cancelled = false;
+    let running = false;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const retry = () => {
+      clearTimeout(timer);
+      void boot();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") retry();
+    };
+    const stopRetry = () => {
+      clearTimeout(timer);
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
     // Network trouble is never a sign-out: boot from the last user (offline
-    // shell + their persisted cache) or wait for connectivity and retry.
+    // shell + their persisted cache) or retry: on `online`, when the app is
+    // shown again, and with backoff while the browser says it is online
+    // (5xx/429 from a reachable server never fires `online`).
     const offline = () => {
       const last = loadLastUser();
-      if (last) setUser(last);
-      else window.addEventListener("online", boot, { once: true });
+      if (last) {
+        // Not setUser: re-saving would extend the snapshot's 24h lifetime.
+        useSession.setState({ user: last, status: "authenticated" });
+        return;
+      }
+      window.addEventListener("online", retry);
+      document.addEventListener("visibilitychange", onVisible);
+      if (navigator.onLine)
+        timer = setTimeout(
+          retry,
+          RETRY_MS[Math.min(attempt++, RETRY_MS.length - 1)],
+        );
     };
     async function boot() {
-      if (cancelled) return;
+      if (cancelled || running) return;
+      running = true;
       setStatus("loading");
       try {
         let token = getAccessToken();
@@ -45,6 +76,7 @@ export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
           if (r.transient) return offline();
           token = r.token;
         }
+        stopRetry();
         if (!token) {
           setUser(null);
           return;
@@ -59,6 +91,8 @@ export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
           setAccessToken(null);
           setUser(null);
         } else offline();
+      } finally {
+        running = false;
       }
     }
     void boot();
@@ -69,7 +103,7 @@ export function useSessionBootstrap(): ReturnType<typeof useSession.getState> {
 
     return () => {
       cancelled = true;
-      window.removeEventListener("online", boot);
+      stopRetry();
       off();
     };
   }, [setUser, setStatus]);

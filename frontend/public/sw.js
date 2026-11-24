@@ -62,10 +62,9 @@ self.addEventListener("activate", (event) => {
 
 /** @brief Static asset (build chunk or font) served cache-first. */
 function isStatic(url) {
-  return (
-    url.pathname.startsWith("/_next/static/") ||
-    /\.(woff2?|ttf|otf)$/.test(url.pathname)
-  );
+  const p = url.pathname;
+  if (p.startsWith("/api/")) return false;
+  return p.startsWith("/_next/static/") || /\.(woff2?|ttf|otf)$/.test(p);
 }
 
 /** @brief Cache same-origin static assets and /app pages the page reports. */

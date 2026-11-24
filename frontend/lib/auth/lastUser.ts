@@ -7,24 +7,44 @@
 import type { CurrentUser } from "@/lib/api/users";
 
 const KEY = "nx_last_user";
+
+/** Only what the shell needs: no contact, address, birthday or health data. */
+const SHELL_FIELDS = [
+  "id",
+  "username",
+  "display_name",
+  "avatar_url",
+  "role",
+  "is_admin",
+  "community_id",
+  "is_active",
+  "two_factor_enabled",
+  "tour_completed_at",
+  "timezone",
+] as const;
 const MAX_AGE = 24 * 60 * 60 * 1000; // = PERSIST_MAX_AGE
 
 /** @brief Remember `user` as the device's last session user. */
 export function saveLastUser(user: CurrentUser): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), user }));
+    const shell = Object.fromEntries(
+      SHELL_FIELDS.filter((k) => k in user).map((k) => [k, user[k]]),
+    );
+    localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), user: shell }));
   } catch {
     /* storage unavailable */
   }
 }
 
-/** @return the snapshot if fresh, else null */
+/** @return the snapshot (shell fields; email blank) if fresh, else null */
 export function loadLastUser(): CurrentUser | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const { at, user } = JSON.parse(raw) as { at: number; user: CurrentUser };
-    return Date.now() - at < MAX_AGE && user?.id ? user : null;
+    return Date.now() - at < MAX_AGE && user?.id
+      ? { ...user, email: "" }
+      : null;
   } catch {
     return null;
   }

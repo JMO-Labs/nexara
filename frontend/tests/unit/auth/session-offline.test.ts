@@ -106,7 +106,7 @@ describe("session bootstrap", () => {
     await waitFor(() =>
       expect(useSession.getState().status).toBe("authenticated"),
     );
-    expect(useSession.getState().user).toEqual(ME);
+    expect(useSession.getState().user).toMatchObject(ME);
     expect(postMessage).not.toHaveBeenCalled();
   });
 
@@ -136,6 +136,67 @@ describe("session bootstrap", () => {
     await waitFor(() =>
       expect(useSession.getState().status).toBe("authenticated"),
     );
+  });
+
+  it("server 5xx while online: retries with backoff, no snapshot", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi.fn<(url: string) => Promise<Response>>(() =>
+        Promise.resolve(json({}, 503)),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+      renderHook(() => useSessionBootstrap());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      fetchMock.mockImplementation((url: string) =>
+        Promise.resolve(
+          url.endsWith("/auth/refresh")
+            ? json({ access_token: "n" })
+            : json(ME),
+        ),
+      );
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(useSession.getState().status).toBe("authenticated");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("retries when the app becomes visible again", async () => {
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(() =>
+      Promise.resolve(json({}, 429)),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderHook(() => useSessionBootstrap());
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith("/auth/refresh") ? json({ access_token: "n" }) : json(ME),
+      ),
+    );
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() =>
+      expect(useSession.getState().status).toBe("authenticated"),
+    );
+  });
+
+  it("booting from the snapshot does not extend its lifetime", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000);
+    saveLastUser(ME);
+    vi.spyOn(Date, "now").mockReturnValue(5_000);
+    vi.stubGlobal("fetch", vi.fn(offline));
+    renderHook(() => useSessionBootstrap());
+    await waitFor(() =>
+      expect(useSession.getState().status).toBe("authenticated"),
+    );
+    expect(JSON.parse(localStorage.getItem("nx_last_user")!).at).toBe(1_000);
+    vi.restoreAllMocks();
   });
 
   it("refresh 401 signs out and forgets the last user", async () => {
@@ -170,5 +231,50 @@ describe("logout", () => {
     );
     expect(unsubscribe).toHaveBeenCalled();
     expect(getAccessToken()).toBeNull();
+  });
+});
+
+describe("last-user snapshot", () => {
+  it("stores only shell fields", () => {
+    saveLastUser({
+      id: "u1",
+      username: "a",
+      display_name: "A",
+      avatar_url: null,
+      role: "member",
+      is_active: true,
+      tour_completed_at: null,
+      timezone: "UTC",
+      email: "a@b.c",
+      phone: "123",
+      contact_email: "c@d.e",
+      address: "1 Road",
+      birthday: "2000-01-01",
+      emergency_contact: { name: "M", phone: "9", relation: "mum" },
+      dietary: "vegan",
+      bio: "hi",
+    });
+    const raw = localStorage.getItem("nx_last_user")!;
+    for (const bad of [
+      "a@b.c",
+      "123",
+      "c@d.e",
+      "1 Road",
+      "2000-01-01",
+      "emergency",
+      "vegan",
+      "bio",
+    ])
+      expect(raw).not.toContain(bad);
+    expect(JSON.parse(raw).user).toEqual({
+      id: "u1",
+      username: "a",
+      display_name: "A",
+      avatar_url: null,
+      role: "member",
+      is_active: true,
+      tour_completed_at: null,
+      timezone: "UTC",
+    });
   });
 });
