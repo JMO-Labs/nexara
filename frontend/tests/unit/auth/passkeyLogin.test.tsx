@@ -125,8 +125,19 @@ describe("two-factor page methods", () => {
     expect(screen.queryByRole("button", { name: "Use a passkey" })).toBeNull();
   });
 
-  it("passkey-only without passkey support falls back to the code form", () => {
+  it("passkey-only over HTTP explains HTTPS instead of a useless code form", () => {
     usePendingTwoFactor.getState().set("T", ["passkey"]);
+    vi.mocked(pk.passkeysAvailable).mockReturnValue(false);
+    render(<TwoFactorPage />);
+    expect(screen.queryByLabelText("Code")).toBeNull();
+    expect(
+      screen.getByText(/Passkeys need a secure \(HTTPS\) connection/),
+    ).toBeTruthy();
+    expect(screen.getByText("Back to sign-in")).toBeTruthy();
+  });
+
+  it("passkey + totp over HTTP still offers the code form", () => {
+    usePendingTwoFactor.getState().set("T", ["passkey", "totp", "recovery"]);
     vi.mocked(pk.passkeysAvailable).mockReturnValue(false);
     render(<TwoFactorPage />);
     expect(screen.getByLabelText("Code")).toBeTruthy();

@@ -39,9 +39,12 @@ export default function TwoFactorPage() {
   const next = safeInternalLink(params.get("next")) ?? "/app";
   const canPasskey = isClient && passkeysAvailable();
   const hasPasskey = pending.includes("passkey") && canPasskey;
+  const codeMethods = pending.includes("totp") || pending.includes("recovery");
+  // Passkey-only over plain HTTP: no usable method on this page.
+  const passkeyBlocked =
+    pending.includes("passkey") && !codeMethods && !canPasskey;
   // Never leave the card empty: fall back to the code form.
-  const hasCode =
-    pending.includes("totp") || pending.includes("recovery") || !hasPasskey;
+  const hasCode = !passkeyBlocked && (codeMethods || !hasPasskey);
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
@@ -93,9 +96,11 @@ export default function TwoFactorPage() {
     <AuthCard
       title="Two-factor verification"
       subtitle={
-        hasCode
-          ? "Enter the 6-digit code from your authenticator app, or a recovery code."
-          : "Confirm it is you with your passkey."
+        passkeyBlocked
+          ? "Your account signs in with a passkey."
+          : hasCode
+            ? "Enter the 6-digit code from your authenticator app, or a recovery code."
+            : "Confirm it is you with your passkey."
       }
     >
       {error && (
@@ -105,6 +110,20 @@ export default function TwoFactorPage() {
         >
           {error}
         </p>
+      )}
+      {passkeyBlocked && (
+        <>
+          <p role="status" className="text-sm">
+            Passkeys need a secure (HTTPS) connection. Open the site over HTTPS
+            or ask an admin to reset your 2FA.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center text-muted underline-offset-4 hover:text-ink underline"
+          >
+            Back to sign-in
+          </Link>
+        </>
       )}
       {hasCode && (
         <form
