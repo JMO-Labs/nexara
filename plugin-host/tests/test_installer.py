@@ -182,3 +182,22 @@ def test_spec_rejects_bad_entrypoint_and_extra_env() -> None:
     with pytest.raises(ValueError):
         InstallSpec.model_validate(body)
     assert "SECRET" not in repr(spec(data))
+
+
+@pytest.mark.parametrize("link", ["plugins", f"plugins/{PID}", f"plugins/{PID}/1.0.0"])
+async def test_symlinked_plugin_path_refused_first(
+    tmp_path: Path, runner: Any, calls: Calls, link: str
+) -> None:
+    target = tmp_path / "elsewhere"
+    target.mkdir()
+    path = tmp_path / link
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.symlink_to(target)
+    data = good_tar()
+    with respx.mock:
+        route = respx.get(PKG_IP_URL).mock(return_value=httpx.Response(200, content=data))
+        with pytest.raises(InstallError) as e:
+            await install(PID, spec(data), tmp_path, runner=runner)
+    assert e.value.code == "unsafe_path"
+    assert not route.called and not calls
+    assert list(target.iterdir()) == []

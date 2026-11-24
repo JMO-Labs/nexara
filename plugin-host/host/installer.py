@@ -82,8 +82,10 @@ async def install(
     @return The version dir. Re-PUT of the current version with the same sha is a no-op.
     """
     pdir = data_dir / "plugins" / plugin_id
-    pdir.mkdir(parents=True, exist_ok=True)
     root = pdir / spec.version
+    if any(p.is_symlink() for p in (pdir.parent, pdir, root)):
+        raise InstallError("unsafe_path")  # before any mkdir/rmtree/write through it
+    pdir.mkdir(parents=True, exist_ok=True)
     sha = spec.sha256.lower()
     if root.exists():
         if current_version(pdir) == spec.version:
