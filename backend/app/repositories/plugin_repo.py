@@ -17,6 +17,7 @@ from app.models.plugin import PluginCommunity, PluginInstall, PluginToken, Plugi
 from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.user import User
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import media_is_nsfw
 
 REMOVED_COMMENT = "This comment was removed."
 
@@ -209,11 +210,11 @@ class PluginRepository(BaseRepository[PluginInstall]):
         return list(res.scalars().all())
 
     async def list_post_media(self, post_id: uuid.UUID) -> list[tuple[uuid.UUID, str]]:
-        """@brief ``(media_id, content_type)`` of a post's attachments, in order."""
+        """@brief ``(media_id, content_type)`` of a post's non-NSFW attachments, in order."""
         res = await self._session.execute(
             select(Media.id, Media.content_type)
             .join(PostMedia, PostMedia.media_id == Media.id)
-            .where(PostMedia.post_id == post_id)
+            .where(PostMedia.post_id == post_id, ~media_is_nsfw(Media.id))
             .order_by(PostMedia.position)
         )
         return [(r[0], r[1]) for r in res.all()]

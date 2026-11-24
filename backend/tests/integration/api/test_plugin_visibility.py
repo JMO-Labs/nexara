@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 from app.core.dependencies import get_current_user
 from app.models.media import Media
-from app.models.post import Post
+from app.models.post import Post, PostMedia
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.models.user import User
 from app.plugins.events import dispatch_plugin_event
@@ -72,6 +72,63 @@ async def _dispatch(e, post: Post, author: User) -> list[dict]:
     with patch("app.tasks.plugin_tasks.deliver_plugin_event.delay", delay):
         await dispatch_plugin_event(e.s, CID, post=post, comment=None, author=author)
     return [json.loads(c.args[2]) for c in delay.call_args_list]
+
+
+# --- I1: NSFW never reaches a bot -------------------------------------------------------
+
+
+async def test_bot_token_cannot_read_nsfw_post_or_comments(env):
+    _bot, h = await _bot_client(env)
+    nsfw = await _post(env.s, env.u.member, is_nsfw=True)
+    ok = await _post(env.s, env.u.member)
+    assert (await env.c.get(f"/api/v1/posts/{nsfw.id}", headers=h)).status_code == 404
+    assert (await env.c.get(f"/api/v1/posts/{nsfw.id}/comments", headers=h)).status_code == 404
+    assert (await env.c.get(f"/api/v1/posts/{ok.id}", headers=h)).status_code == 200
+    ids = {i["id"] for i in (await env.c.get("/api/v1/posts?limit=50", headers=h)).json()["items"]}
+    assert str(nsfw.id) not in ids and str(ok.id) in ids
+
+
+async def test_human_feed_nsfw_unchanged(env):
+    nsfw = await _post(env.s, env.u.owner, is_nsfw=True)
+    env.who["u"] = env.u.member
+    assert (await env.c.get(f"/api/v1/posts/{nsfw.id}")).status_code == 200
+
+
+async def test_bot_feed_hides_nsfw_media(env):
+    _bot, h = await _bot_client(env)
+    p = await _post(env.s, env.u.member)
+    good, bad = await _media(env.s, env.u.member, False), await _media(env.s, env.u.member, True)
+    env.s.add_all(
+        [
+            PostMedia(post_id=p.id, media_id=good.id, position=0),
+            PostMedia(post_id=p.id, media_id=bad.id, position=1),
+        ]
+    )
+    await env.s.flush()
+    body = (await env.c.get(f"/api/v1/posts/{p.id}", headers=h)).json()
+    assert [m["id"] for m in body["media"]] == [str(good.id)]
+
+
+async def test_webhook_payload_omits_nsfw_media(env):
+    await _bot_client(env)
+    p = await _post(env.s, env.u.member)
+    good, bad = await _media(env.s, env.u.member, False), await _media(env.s, env.u.member, True)
+    env.s.add_all(
+        [
+            PostMedia(post_id=p.id, media_id=good.id, position=0),
+            PostMedia(post_id=p.id, media_id=bad.id, position=1),
+        ]
+    )
+    await env.s.flush()
+    out = [b for b in await _dispatch(env, p, env.u.member) if b["event"] == "post.created"]
+    assert len(out) == 1
+    assert [m["id"] for m in out[0]["data"]["post"]["media"]] == [str(good.id)]
+
+
+async def test_webhook_skips_nsfw_post(env):
+    await _bot_client(env)
+    p = await _post(env.s, env.u.member, is_nsfw=True)
+    assert await _dispatch(env, p, env.u.member) == []
 
 
 # --- I3: ?subgroup_id= never bypasses visibility ----------------------------------------
