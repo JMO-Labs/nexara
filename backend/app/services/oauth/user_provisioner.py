@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError, AuthenticationError, SsoRefusedError
+from app.core.exceptions import AppError, SsoRefusedError
 from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
 from app.plugins.hooks import HookRegistry
@@ -33,6 +33,7 @@ from app.services.oauth.group_mapper import (
     resolve_subgroup_mappings,
 )
 from app.services.oauth.profile_sync import audit_role_synced, sync_profile
+from app.services.oauth.role_sync import audit_role_sync_skipped, can_change_role
 from app.services.oauth.sso_rules import clean_username, evaluate_gates, unique_username
 
 if TYPE_CHECKING:
@@ -115,7 +116,7 @@ class UserProvisioner:
         """@brief Build a refusal; a known (linked) user is signed out everywhere."""
         if user_id is not None:
             await TokenRepository(self._db).revoke_all_for_user(user_id)
-        return SsoRefusedError(code)
+        return SsoRefusedError(code, user_id)
 
     async def _sync_profile(
         self, user: User, auth_result: OAuthAuthResult, provider: OAuthProvider
@@ -145,7 +146,8 @@ class UserProvisioner:
         @param role Resolved community role.
         @return The user (created or updated).
         @raises SsoRefusedError sso_domain_not_allowed / sso_group_required /
-                sso_no_account / sso_account_disabled.
+                sso_no_account / sso_account_disabled / sso_email_unverified /
+                sso_email_unverified_local / sso_email_taken.
         """
         link = await self._link_repo.find_by_provider_and_sub(provider.id, auth_result.sub)
         linked = await self._user_repo.get_by_id(link.user_id) if link else None
@@ -153,8 +155,6 @@ class UserProvisioner:
         if link is None and auth_result.email and auth_result.email_verified:
             email_user = await self._user_repo.find_by_email(auth_result.email.strip().lower())
         decision = evaluate_gates(provider, auth_result, link, linked, email_user)
-        if decision.code == "sso_email_unverified":
-            raise AuthenticationError(message="Email not verified by identity provider")
         if decision.code:
             # A refused linked user is signed out everywhere.
             raise await self._refuse(decision.code, link.user_id if link else None)
@@ -185,6 +185,8 @@ class UserProvisioner:
             user.id,
             auth_result.groups or [],
             provider.claim_mapping,
+            session=self._db,
+            provider_id=provider.id,
         )
         return user
 
@@ -194,10 +196,13 @@ class UserProvisioner:
         return bool(provider.group_mappings) or bool(global_role_mappings(provider.claim_mapping))
 
     async def _sync_role(self, user: User, role: str, provider: OAuthProvider) -> None:
-        """@brief Apply a group-mapped role change and audit it."""
+        """@brief Apply a group-mapped role change and audit it (never demotes the last admin)."""
         if not self._maps_roles(provider) or user.role == role:
             return
         old = user.role
+        if not await can_change_role(self._user_repo, self._community_id, user, role):
+            await audit_role_sync_skipped(self._db, user.id, old, role, provider.id)
+            return
         await self._user_repo.update(user, {"role": role})
         await audit_role_synced(self._db, user.id, old, role, provider_id=provider.id)
 
@@ -268,7 +273,13 @@ class UserProvisioner:
         provider: OAuthProvider,
         role: str,
     ) -> User:
-        """@brief JIT-create a user (username from username_claim, deduped -2, -3...)."""
+        """@brief JIT-create a user (username from username_claim, deduped -2, -3...).
+
+        @raises SsoRefusedError sso_email_taken when the email belongs to another
+                (e.g. soft-deleted) account; no insert is attempted.
+        """
+        if await self._user_repo.email_owner_id(email) is not None:
+            raise SsoRefusedError("sso_email_taken")
         base = clean_username(auth_result.username) or _derive_username(
             auth_result.display_name, auth_result.email
         )

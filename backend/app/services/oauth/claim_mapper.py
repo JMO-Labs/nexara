@@ -19,6 +19,7 @@ DEFAULT_MAPPING: dict[str, str] = {
     "name": "name",
     "picture": "picture",
     "groups": "groups",
+    "email_verified": "email_verified",
 }
 """@brief Nexara field -> provider claim path (dotted for nested claims)."""
 
@@ -46,7 +47,8 @@ def map_claims(
     @param claims Verified ID token claims.
     @param claim_mapping Nexara field -> provider claim overrides (merged over defaults).
     @param username_claim Provider claim (dotted path) holding the username.
-    @return OAuthAuthResult (sub, email, display_name, avatar_url, groups).
+    @return OAuthAuthResult (sub, email, display_name, avatar_url, groups,
+            email_verified from the mapped claim, e.g. Entra's ``xms_edov``).
     @raises AuthenticationError when no subject resolves (mapped or standard `sub`).
     """
     overrides = {k: v for k, v in (claim_mapping or {}).items() if isinstance(v, str)}
@@ -73,6 +75,6 @@ def map_claims(
         display_name=str(name) if name else None,
         avatar_url=str(pic) if pic else None,
         groups=groups,
-        email_verified=_lookup(claims, "email_verified") in _VERIFIED,
+        email_verified=get("email_verified") in _VERIFIED,
         username=str(uname) if uname else None,
     )

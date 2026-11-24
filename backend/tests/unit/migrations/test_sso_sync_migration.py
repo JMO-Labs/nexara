@@ -70,3 +70,31 @@ def test_claim_columns_fold_into_claim_mapping(scratch_db) -> None:
     cur.execute("SELECT email_claim, name_claim FROM oauth_providers ORDER BY slug")
     assert cur.fetchall() == [("mail", "nick"), ("email", "name")]
     conn.close()
+
+
+def test_trust_email_and_live_slug_index(scratch_db) -> None:
+    """@brief trust_email defaults false; live-only slug uniqueness; downgrade renames."""
+    _alembic("upgrade", "0070_twofactor")
+    conn = psycopg2.connect(**{**ADMIN, "dbname": DB})
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("INSERT INTO communities (id) VALUES (%s) ON CONFLICT DO NOTHING", (CID,))
+    cols = "community_id, slug, display_name, client_id, client_secret_encrypted"
+    cur.execute(f"INSERT INTO oauth_providers ({cols}) VALUES (%s,'kc','K','c','s')", (CID,))
+    _alembic("upgrade", "0071_sso_sync")
+    cur.execute("SELECT trust_email FROM oauth_providers")
+    assert cur.fetchall() == [(False,)]
+    cur.execute(
+        "SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_oauth_provider_community_slug_live'"
+    )
+    (indexdef,) = cur.fetchone()
+    assert "UNIQUE" in indexdef and "deleted_at IS NULL" in indexdef
+    cur.execute("UPDATE oauth_providers SET deleted_at = now()")
+    cur.execute(f"INSERT INTO oauth_providers ({cols}) VALUES (%s,'kc','K2','c','s')", (CID,))
+    with pytest.raises(psycopg2.errors.UniqueViolation):
+        cur.execute(f"INSERT INTO oauth_providers ({cols}) VALUES (%s,'kc','K3','c','s')", (CID,))
+    _alembic("downgrade", "0070_twofactor")
+    cur.execute("SELECT slug FROM oauth_providers ORDER BY deleted_at NULLS FIRST")
+    live, dead = (r[0] for r in cur.fetchall())
+    assert live == "kc" and dead.startswith("kc-del-")
+    conn.close()

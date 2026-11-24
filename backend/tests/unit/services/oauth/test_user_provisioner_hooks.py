@@ -18,6 +18,7 @@ def _provisioner(link, new_user):
     link_repo.find_by_provider_and_sub.return_value = link
     user_repo = AsyncMock()
     user_repo.find_by_email.return_value = None
+    user_repo.email_owner_id.return_value = None
     user_repo.try_create.return_value = new_user
     user_repo.get_by_id.return_value = new_user
     session = AsyncMock()

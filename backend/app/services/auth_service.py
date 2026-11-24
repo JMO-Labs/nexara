@@ -39,6 +39,7 @@ from app.services.auth.memorial_guard import assert_usable, reject_memorialized
 from app.services.auth.policy import factor_methods
 from app.services.auth.registration import register_user
 from app.services.auth.signin_log import log_failure, log_success
+from app.services.auth.sso_exchange import resolve_exchange as _resolve_exchange
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.auth.totp_replay import (
     claim_totp_code,
@@ -328,6 +329,17 @@ class AuthService:
             return pending
         await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
+
+    async def exchange_sso(
+        self, data: dict[str, Any], request: Request | None = None
+    ) -> dict[str, Any]:
+        """
+        @brief Sign in the user named by a consumed SSO exchange payload.
+
+        @raises AuthenticationError Malformed payload, unknown or deactivated user.
+        """
+        user, pending_link = await _resolve_exchange(self._user_repo, data)
+        return await self.login_sso(user, request=request, pending_link=pending_link)
 
     async def login_sso(
         self,

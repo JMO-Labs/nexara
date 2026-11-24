@@ -22,6 +22,7 @@ from app.repositories.subgroup_repo import SubgroupMemberRepository
 from app.repositories.user_repo import UserRepository
 from app.services.oauth.group_mapper import sync_subgroups
 from app.services.oauth.profile_sync import audit_role_synced
+from app.services.oauth.role_sync import audit_role_sync_skipped, can_change_role
 
 
 async def create_link(
@@ -59,9 +60,19 @@ async def create_link(
     if user is None:
         return
     if role and user.role != role:
-        old = user.role
-        await users.update(user, {"role": role})
-        await audit_role_synced(session, user_id, old, str(role), provider_id=provider_id)
+        old, new = user.role, str(role)
+        if await can_change_role(users, user.community_id, user, new):
+            await users.update(user, {"role": new})
+            await audit_role_synced(session, user_id, old, new, provider_id=provider_id)
+        else:
+            await audit_role_sync_skipped(session, user_id, old, new, provider_id)
     if isinstance(subgroups, dict):
         mapped = {uuid.UUID(str(k)): str(v) for k, v in subgroups.items()}
-        await sync_subgroups(SubgroupMemberRepository(session), user.community_id, user_id, mapped)
+        await sync_subgroups(
+            SubgroupMemberRepository(session),
+            user.community_id,
+            user_id,
+            mapped,
+            session=session,
+            provider_id=provider_id,
+        )

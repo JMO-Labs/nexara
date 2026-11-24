@@ -203,9 +203,13 @@ async def log_failure(
     method: str,
     reason: str,
     request: Request | None = None,
+    *,
+    user_id: uuid.UUID | None = None,
 ) -> None:
     """
     @brief Safely record a failed sign-in in its OWN short-lived session.
+
+    ``user_id`` names a known account when no ``User`` object is at hand.
 
     The caller is about to raise and ``get_db`` rolls back the request session, so
     the row is written and committed separately; no other pending request state
@@ -216,7 +220,7 @@ async def log_failure(
             ev = await record_signin_safe(
                 session,
                 community_id=user.community_id if user else uuid.UUID(settings.COMMUNITY_ID),
-                user_id=user.id if user else None,
+                user_id=user.id if user else user_id,
                 email=email,
                 method=method,
                 success=False,

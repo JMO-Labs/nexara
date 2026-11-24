@@ -8,7 +8,7 @@ Covers provider CRUD, exchange code flow, and public provider list items.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_validator
@@ -38,6 +38,8 @@ def _norm_domains(value: list[str]) -> list[str]:
 
 
 Preset = Annotated[str | None, AfterValidator(_check_preset)]
+#: A provider's default community role (written to users.role on JIT create).
+CommunityRole = Literal["viewer", "member", "admin"]
 Domains = Annotated[list[str], AfterValidator(_norm_domains)]
 
 
@@ -120,12 +122,14 @@ class OAuthProviderCreate(BaseModel):
     jwks_uri: str | None = None
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] = Field(default_factory=dict)
-    default_role: str = "member"
+    default_role: CommunityRole = "member"
     preset: Preset = None
     allowed_domains: Domains = Field(default_factory=list)
     required_group: str | None = None
     username_claim: str = "preferred_username"
     sync_profile: bool = True
+    trust_email: bool | None = None
+    """@brief None = the preset's default (false without a preset)."""
     enabled: bool = True
     auto_create_users: bool = True
 
@@ -153,12 +157,13 @@ class OAuthProviderUpdate(BaseModel):
     jwks_uri: str | None = None
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] | None = None
-    default_role: str | None = None
+    default_role: CommunityRole | None = None
     preset: Preset = None
     allowed_domains: Domains | None = None
     required_group: str | None = None
     username_claim: str | None = None
     sync_profile: bool | None = None
+    trust_email: bool | None = None
     enabled: bool | None = None
     auto_create_users: bool | None = None
 
@@ -193,6 +198,7 @@ class OAuthProviderResponse(BaseModel):
     required_group: str | None = None
     username_claim: str = "preferred_username"
     sync_profile: bool = True
+    trust_email: bool = False
     enabled: bool
     auto_create_users: bool
     seeded_from_env: bool

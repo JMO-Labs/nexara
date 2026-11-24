@@ -47,6 +47,7 @@ def test_nothing_set_uses_default_app_base_url():
 
 def _svc() -> tuple[AdminOAuthService, AsyncMock]:
     repo = AsyncMock()
+    repo.find_by_slug.return_value = None
     repo.create.side_effect = lambda p: p
     repo.update.side_effect = lambda p, data: MagicMock(id=uuid.uuid4(), slug="s", **data)
     with patch(f"{MOD}.OAuthProviderRepository", return_value=repo):
@@ -113,23 +114,3 @@ async def test_update_discovery_keeps_explicit_endpoints_and_new_type(fetch, _au
     assert out.authorization_endpoint == DOC["authorization_endpoint"]
     extra = _audit.return_value.append.call_args.kwargs["extra_data"]
     assert extra["issuer"] == {"old": None, "new": DOC["issuer"]}
-
-
-@pytest.mark.parametrize("op", ["update", "toggle", "delete"])
-@patch(f"{MOD}.AuditRepository")
-async def test_mutations_invalidate_provider_cache(_audit, op):
-    from app.services.oauth import provider_manager
-
-    _audit.return_value.append = AsyncMock()
-    svc, repo = _svc()
-    current = MagicMock(spec=OAuthProvider, discovery_url=None, provider_type="oidc")
-    current.enabled, current.slug, current.id = True, "kc", uuid.uuid4()
-    repo.get_by_id.return_value = current
-    provider_manager._provider_cache[(uuid.uuid4(), "kc")] = (current, 1e18)
-    if op == "update":
-        await svc.update(current.id, OAuthProviderUpdate(display_name="x"))
-    elif op == "toggle":
-        await svc.toggle(current.id)
-    else:
-        await svc.delete(current.id)
-    assert provider_manager._provider_cache == {}

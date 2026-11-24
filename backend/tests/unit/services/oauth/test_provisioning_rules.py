@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.core.exceptions import AuthenticationError, AuthorizationError, SsoRefusedError
+from app.core.exceptions import AuthorizationError, SsoRefusedError
 from app.models.user import User
 from app.services.oauth import oauth2_email
-from app.services.oauth.flow import apply_verified_email
+from app.services.oauth.flow import apply_email_trust
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
 from tests.unit.services.oauth.helpers import sso_provider
 
@@ -245,10 +245,10 @@ async def test_github_unverified_no_link():
     """Public profile email is ignored; no verified email -> no link."""
     auth = OAuthAuthResult(sub="1", email="victim@example.com", email_verified=True)
     with patch("app.services.oauth.flow.fetch_verified_email", AsyncMock(return_value=None)):
-        await apply_verified_email(sso_provider(preset="github"), {"access_token": "t"}, auth)
+        await apply_email_trust(sso_provider(preset="github"), {"access_token": "t"}, auth)
     assert auth.email is None and auth.email_verified is False
     env = Env(email_user=_user())
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
         await env.run(auth, sso_provider(preset="github"))
     env.link_repo.create.assert_not_called()
 
@@ -256,13 +256,13 @@ async def test_github_unverified_no_link():
 async def test_github_verified_email_applied():
     auth = OAuthAuthResult(sub="1", email=None)
     with patch("app.services.oauth.flow.fetch_verified_email", AsyncMock(return_value="v@a.com")):
-        await apply_verified_email(sso_provider(preset="github"), {"access_token": "t"}, auth)
+        await apply_email_trust(sso_provider(preset="github"), {"access_token": "t"}, auth)
     assert auth.email == "v@a.com" and auth.email_verified is True
 
 
 async def test_non_oauth2_preset_untouched():
     auth = OAuthAuthResult(sub="1", email="a@b.c", email_verified=True)
     with patch("app.services.oauth.flow.fetch_verified_email", AsyncMock()) as f:
-        await apply_verified_email(sso_provider(preset="authentik"), {"access_token": "t"}, auth)
+        await apply_email_trust(sso_provider(preset="authentik"), {"access_token": "t"}, auth)
     f.assert_not_called()
     assert auth.email == "a@b.c"

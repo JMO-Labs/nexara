@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import SsoRefusedError
 from app.models.user import User
 from app.services.oauth.user_provisioner import (
     OAuthAuthResult,
@@ -179,6 +179,7 @@ class TestProvisionUser:
         mock_link_repo.find_by_provider_and_sub = AsyncMock(return_value=None)
         mock_user_repo.find_by_email = AsyncMock(return_value=None)
         mock_user_repo.username_owner_id = AsyncMock(return_value=None)
+        mock_user_repo.email_owner_id = AsyncMock(return_value=None)
 
         new_user = MagicMock(spec=User)
         new_user.id = uuid.uuid4()
@@ -243,7 +244,7 @@ class TestEmailVerification:
     @pytest.mark.asyncio
     async def test_unverified_email_rejected_for_new_user(self):
         coro, link_repo, user_repo = _run(OAuthAuthResult(sub="s", email="a@x.com"))
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
         user_repo.try_create.assert_not_called()
         link_repo.create.assert_not_called()
@@ -253,14 +254,14 @@ class TestEmailVerification:
         """Account-takeover guard."""
         existing = MagicMock(spec=User)
         coro, link_repo, _ = _run(OAuthAuthResult(sub="s", email="a@x.com"), user=existing)
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
         link_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_missing_email_rejected(self):
         coro, _, user_repo = _run(OAuthAuthResult(sub="s", email=None, email_verified=True))
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
         user_repo.try_create.assert_not_called()
 

@@ -24,6 +24,8 @@ class Preset:
     @param scopes Space-separated scopes.
     @param claim_mapping Nexara field -> provider claim.
     @param username_claim Claim holding the username (applied on create).
+    @param trust_email Default for the provider's trust_email (treat emails as
+           verified); on only for self-hosted IdPs where users cannot edit their email.
     @param help Admin-facing setup hint.
     """
 
@@ -40,6 +42,7 @@ class Preset:
     emails_endpoint: str | None = None
     claim_mapping: dict[str, Any] = field(default_factory=dict)
     username_claim: str = "preferred_username"
+    trust_email: bool = False
 
     def to_dict(self, key: str) -> dict[str, Any]:
         """@brief JSON-serialisable form for the presets endpoint."""
@@ -68,6 +71,7 @@ PRESETS: dict[str, Preset] = {
         params=("host", "slug"),
         scopes=_OIDC,
         claim_mapping={"groups": "groups"},
+        trust_email=True,
         help="Create an OAuth2/OIDC provider + application. The default profile "
         "scope already includes the groups claim.",
     ),
@@ -78,6 +82,7 @@ PRESETS: dict[str, Preset] = {
         params=("host", "realm"),
         scopes=_OIDC,
         claim_mapping={"groups": "groups"},
+        trust_email=True,
         help="Add a 'Group Membership' mapper to the client so the groups claim "
         "is included in the ID token.",
     ),
@@ -88,6 +93,7 @@ PRESETS: dict[str, Preset] = {
         params=("host",),
         scopes=f"{_OIDC} groups",
         claim_mapping={"groups": "groups"},
+        trust_email=True,
         help="Allow the groups scope on the Authelia OIDC client.",
     ),
     "google": Preset(
@@ -104,8 +110,10 @@ PRESETS: dict[str, Preset] = {
         params=("tenant",),
         defaults={"tenant": "common"},
         scopes=_OIDC,
-        claim_mapping={"groups": "groups"},
-        help="Enable the groups optional claim in the app registration's token configuration.",
+        claim_mapping={"groups": "groups", "email_verified": "xms_edov"},
+        help="In the app registration's Token configuration add the optional claims "
+        "'groups' and 'xms_edov' (email domain owner verified). Entra sends no "
+        "email_verified claim, so without xms_edov new accounts cannot sign in.",
     ),
     "gitlab": Preset(
         kind="oidc",
@@ -146,6 +154,7 @@ PRESETS: dict[str, Preset] = {
         discovery_url="{discovery_url}",
         params=("discovery_url",),
         scopes=_OIDC,
+        trust_email=True,
         help="Any OIDC provider; paste its discovery URL.",
     ),
 }

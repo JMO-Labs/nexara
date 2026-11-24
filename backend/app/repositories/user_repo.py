@@ -146,6 +146,23 @@ class UserRepository(BaseRepository[User]):
         stmt = select(User.id).where(func.lower(User.email) == email.lower()).limit(1)
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
+    async def count_active_admins(self, community_id: uuid.UUID) -> int:
+        """
+        @brief Number of active, non-deleted admins in a community.
+
+        @param community_id Community scope.
+        @return Admin count.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(User)
+            .where(User.community_id == community_id)
+            .where(User.role == "admin")
+            .where(User.is_active.is_(True))
+            .where(User.deleted_at.is_(None))
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
     async def username_owner_id(self, username: str) -> uuid.UUID | None:
         """
         @brief Id of the user holding ``username``, soft-deleted users included.

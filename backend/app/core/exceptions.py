@@ -18,6 +18,7 @@ without string-matching on messages.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import structlog
@@ -86,12 +87,15 @@ class SsoRefusedError(AuthorizationError):
     @brief SSO sign-in refused by a provisioning rule.
 
     @param code One of sso_no_account, sso_account_disabled,
-                sso_domain_not_allowed, sso_group_required (frontend-mapped).
+                sso_domain_not_allowed, sso_group_required, sso_email_unverified,
+                sso_email_unverified_local, sso_email_taken (frontend-mapped).
+    @param user_id Known (linked) user the refusal concerns, for the sign-in log.
     """
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, user_id: uuid.UUID | None = None) -> None:
         super().__init__(message=code)
         self.code = code
+        self.user_id = user_id
 
 
 class NotFoundError(AppError):

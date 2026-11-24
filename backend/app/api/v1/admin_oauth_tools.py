@@ -21,7 +21,7 @@ from app.models.user import User
 from app.schemas.oauth import GroupMappingPreview, OIDCTestResult
 from app.services.oauth import sso_test_login
 from app.services.oauth.admin_oauth_service import AdminOAuthService
-from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints
+from app.services.oauth.discovery import DiscoveryEndpoints
 from app.services.oauth.presets import PRESETS
 
 router = APIRouter(prefix="/admin/oauth", tags=["admin-oauth"])
@@ -42,10 +42,10 @@ class OAuthDiscoverRequest(BaseModel):
 @router.post("/discover")
 async def discover_issuer(
     body: OAuthDiscoverRequest,
-    _user: User = Depends(require_role("admin")),
+    svc: AdminOAuthService = Depends(get_admin_oauth_service),
 ) -> DiscoveryEndpoints:
-    """@brief Run OIDC discovery for an issuer URL."""
-    return await discover_endpoints(body.issuer.strip())
+    """@brief Run OIDC discovery for an issuer URL (422 invalid_discovery on failure)."""
+    return await svc.discover_issuer(body.issuer)
 
 
 @router.get("/providers/{provider_id}/group-mapping-preview", response_model=GroupMappingPreview)

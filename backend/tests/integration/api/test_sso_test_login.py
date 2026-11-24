@@ -1,7 +1,7 @@
 """
 @file test_sso_test_login.py
 @brief Real-Postgres + Valkey: admin SSO test login reports and never provisions;
-       provider changes apply to the next login (cache invalidation).
+       provider changes apply to the next login (no provider cache).
 
 The IdP is mocked at the token exchange and ID-token verification; state, Valkey
 keys, the callback and the DB are real.
@@ -85,8 +85,10 @@ async def client(test_app, factory):
     valkey._pools.clear()
     ip = {"X-Forwarded-For": f"198.18.{secrets.randbelow(256)}.{secrets.randbelow(256)}"}
     transport = ASGITransport(app=test_app)
-    async with AsyncClient(transport=transport, base_url=ORIGIN, headers=ip) as c:
-        yield c
+    # Failed sign-ins are recorded in their own session: keep it in the test transaction.
+    with patch("app.services.auth.signin_log.async_session_factory", factory):
+        async with AsyncClient(transport=transport, base_url=ORIGIN, headers=ip) as c:
+            yield c
     test_app.dependency_overrides.clear()
     await close_pools()
 
@@ -168,6 +170,11 @@ async def _run_test_login(client, factory, admin, provider, claims) -> Any:
     """@brief Start, then hit the callback (no login cookies, only the bind cookie)."""
     state, bind = await _start(client, admin, provider)
     return await _callback(client, provider.slug, state, claims, bind)
+
+
+def _failed(resp) -> bool:
+    """@brief The browser was sent to /login?error=sso_failed (never raw JSON)."""
+    return resp.status_code == 302 and resp.headers["location"].endswith("/login?error=sso_failed")
 
 
 def _claims(email: str) -> dict[str, Any]:
@@ -253,7 +260,7 @@ async def test_non_admin_cannot_start_test_login(client, factory):
 async def test_unknown_state_still_rejected(client, factory):
     provider = await _provider(factory)
     r = await client.get(f"/api/v1/oauth/{provider.slug}/callback?code=c&state=nope")
-    assert r.status_code == 401
+    assert _failed(r)
 
 
 async def test_test_login_works_on_disabled_provider_and_is_audited(client, factory):
@@ -274,12 +281,12 @@ async def test_test_state_without_bind_cookie_rejected(client, factory):
     provider = await _provider(factory)
     state, _bind = await _start(client, admin, provider)
     resp = await _callback(client, provider.slug, state, _claims("e@example.com"))
-    assert resp.status_code == 401
+    assert _failed(resp)
     state, _bind = await _start(client, admin, provider)
     resp = await _callback(
         client, provider.slug, state, _claims("e@example.com"), {BIND_COOKIE: "forged"}
     )
-    assert resp.status_code == 401
+    assert _failed(resp)
 
 
 async def test_slug_mismatched_test_context_rejected(client, factory):
@@ -288,10 +295,10 @@ async def test_slug_mismatched_test_context_rejected(client, factory):
     other = await _provider(factory)
     state, bind = await _start(client, admin, provider)
     resp = await _callback(client, other.slug, state, _claims("f@example.com"), bind)
-    assert resp.status_code == 401
+    assert _failed(resp)
     # Single use: the context is gone, the right slug no longer works either.
     resp = await _callback(client, provider.slug, state, _claims("f@example.com"), bind)
-    assert resp.status_code == 401
+    assert _failed(resp)
 
 
 async def test_valid_cookie_state_with_stray_test_context_takes_normal_path(client, factory):
@@ -307,20 +314,20 @@ async def test_valid_cookie_state_with_stray_test_context_takes_normal_path(clie
     }
     resp = await _callback(client, provider.slug, state, _claims("g@example.com"), login)
     assert resp.status_code == 302
-    assert "/auth/callback?code=" in resp.headers["location"]
+    assert urlsplit(resp.headers["location"]).path == "/callback"
     # The stray test context was not consumed.
     assert await get_pool(_settings(), DB_CACHE).exists(f"oauth_test:{state}")
 
 
 async def test_disabled_provider_stops_login_immediately(client, factory):
-    """Toggle and update invalidate the provider cache: no stale logins."""
+    """Toggle/update/delete apply to the next login (provider read per request)."""
     admin = await _user(factory, "admin")
     provider = await _provider(factory, enabled=True)
     url = f"/api/v1/oauth/{provider.slug}/login"
-    assert (await client.get(url, follow_redirects=False)).status_code == 302  # cached
+    assert (await client.get(url, follow_redirects=False)).status_code == 302
     r = await client.post(f"/api/v1/admin/oauth/providers/{provider.id}/toggle", headers=admin)
     assert r.status_code == 200 and r.json()["enabled"] is False
-    assert (await client.get(url, follow_redirects=False)).status_code == 401
+    assert _failed(await client.get(url, follow_redirects=False))
     r = await client.put(
         f"/api/v1/admin/oauth/providers/{provider.id}", json={"enabled": True}, headers=admin
     )
@@ -328,4 +335,16 @@ async def test_disabled_provider_stops_login_immediately(client, factory):
     assert (await client.get(url, follow_redirects=False)).status_code == 302
     r = await client.delete(f"/api/v1/admin/oauth/providers/{provider.id}", headers=admin)
     assert r.status_code == 200
-    assert (await client.get(url, follow_redirects=False)).status_code == 401
+    assert _failed(await client.get(url, follow_redirects=False))
+
+
+async def test_preview_applies_trust_email(client, factory):
+    """The test login reports the same email trust the real login applies."""
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory, trust_email=True)
+    claims = {**_claims("h@example.com"), "email_verified": False}
+    resp = await _run_test_login(client, factory, admin, provider, claims)
+    result_id = parse_qs(urlsplit(resp.headers["location"]).query)["result"][0]
+    body = (await client.get(f"/api/v1/admin/oauth/test-login/{result_id}", headers=admin)).json()
+    assert body["identity"]["email_verified"] is True
+    assert body["outcome"]["action"] == "create"

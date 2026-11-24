@@ -42,9 +42,12 @@ _COOKIES = {"oauth_state": "abc", "oauth_verifier": "v", "oauth_provider": "oidc
 
 
 async def test_callback_oidc_without_nonce_cookie_is_rejected(test_app):
-    """id_token present but no nonce cookie -> Missing OAuth session."""
-    resp = await _callback(test_app, _mock_provider(), {"id_token": "jwt"}, _COOKIES)
-    assert resp.status_code == 401
+    """id_token present but no nonce cookie -> redirect /login?error=sso_failed."""
+    with patch("app.api.v1.oauth.log_failure", AsyncMock()) as log:
+        resp = await _callback(test_app, _mock_provider(), {"id_token": "jwt"}, _COOKIES)
+    assert resp.status_code == 302
+    assert resp.headers["location"].endswith("/login?error=sso_failed")
+    assert log.await_args.args[4] == "callback:AuthenticationError"
 
 
 async def test_callback_uses_custom_claim_mapping(test_app):
@@ -64,7 +67,11 @@ async def test_callback_uses_custom_claim_mapping(test_app):
 
 def _svc(repo=None) -> AdminOAuthService:
     settings = SimpleNamespace(
-        OIDC_HTTP_TIMEOUT=5, APP_BASE_URL="https://app.example.com", SECRET_KEY="k"
+        OIDC_HTTP_TIMEOUT=5,
+        APP_BASE_URL="https://app.example.com",
+        SECRET_KEY="k",
+        allowed_origins_list=[],
+        base_url_unset=False,
     )
     svc = AdminOAuthService(MagicMock(), uuid.uuid4(), settings, uuid.uuid4(), None)  # type: ignore[arg-type]
     if repo is not None:
@@ -74,10 +81,11 @@ def _svc(repo=None) -> AdminOAuthService:
 
 async def test_create_oidc_provider_invalid_discovery_returns_422():
     """fetch_discovery ValueError is wrapped in AppError 422."""
-    body = SimpleNamespace(discovery_url=" https://x.example.com ")
+    body = SimpleNamespace(slug="x", discovery_url=" https://x.example.com ")
+    repo = MagicMock(find_by_slug=AsyncMock(return_value=None))
     with patch.object(svc_mod, "fetch_discovery", AsyncMock(side_effect=ValueError("bad"))):
         with pytest.raises(AppError) as ei:
-            await _svc().register_oidc(body)  # type: ignore[arg-type]
+            await _svc(repo).register_oidc(body)  # type: ignore[arg-type]
     assert ei.value.status_code == 422
 
 
@@ -99,7 +107,7 @@ async def test_test_provider_without_discovery_url():
 
 
 def _provider():
-    return SimpleNamespace(discovery_url="https://idp.example.com/d", client_id="cid")
+    return SimpleNamespace(discovery_url="https://idp.example.com/d", client_id="cid", slug="kc")
 
 
 def _http_client(post):
@@ -119,6 +127,8 @@ async def test_test_provider_unexpected_status():
         res = await _run_test_provider(_provider())
     assert res.token_endpoint_reachable is False
     assert "Unexpected token endpoint status 200" in res.error
+    sent = client.post.await_args.kwargs["data"]["redirect_uri"]
+    assert sent == "https://app.example.com/api/v1/oauth/kc/callback"  # same as real logins
 
 
 async def test_test_provider_token_endpoint_unreachable():

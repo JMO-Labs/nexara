@@ -61,6 +61,7 @@ def _provider():
         required_group=None,
         username_claim="preferred_username",
         sync_profile=True,
+        trust_email=False,
         enabled=True,
         auto_create_users=True,
         seeded_from_env=False,
@@ -86,6 +87,7 @@ async def test_register_oidc_uses_discovery_and_masks_secret(test_app, admin_ove
         patch("app.services.oauth.admin_oauth_service.AuditRepository") as audit_cls,
     ):
         repo = AsyncMock()
+        repo.find_by_slug = AsyncMock(return_value=None)
         repo.create = AsyncMock(return_value=prov)
         repo_cls.return_value = repo
         audit_cls.return_value = AsyncMock()

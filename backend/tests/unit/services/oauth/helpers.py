@@ -27,6 +27,7 @@ def sso_provider(**overrides: Any) -> MagicMock:
     p.auto_create_users = True
     p.preset = None
     p.username_claim = "preferred_username"
+    p.trust_email = False
     for key, value in overrides.items():
         setattr(p, key, value)
     return p

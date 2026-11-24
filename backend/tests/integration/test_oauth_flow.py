@@ -30,6 +30,7 @@ def _mock_provider(slug: str = "oidc", enabled: bool = True) -> MagicMock:
     p.provider_type = "oidc"
     p.userinfo_endpoint = None
     p.preset = None
+    p.trust_email = False
     return p
 
 
@@ -68,7 +69,7 @@ class TestOAuthLoginFlow:
 
     @pytest.mark.asyncio
     async def test_disabled_provider_returns_error(self, test_app):
-        """GET /oauth/{slug}/login returns error when provider disabled."""
+        """GET /oauth/{slug}/login redirects to /login?error=sso_failed when disabled."""
         mock_provider = _mock_provider(enabled=False)
         mock_manager = AsyncMock()
         mock_manager.get_provider = AsyncMock(return_value=mock_provider)
@@ -78,11 +79,12 @@ class TestOAuthLoginFlow:
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get("/api/v1/oauth/oidc/login")
 
-        assert resp.status_code == 401
+        assert resp.status_code == 302
+        assert resp.headers["location"].endswith("/login?error=sso_failed")
 
     @pytest.mark.asyncio
-    async def test_unknown_provider_returns_404(self, test_app):
-        """GET /oauth/unknown/login returns 404."""
+    async def test_unknown_provider_redirects(self, test_app):
+        """GET /oauth/unknown/login redirects to /login?error=sso_failed."""
         mock_manager = AsyncMock()
         mock_manager.get_provider = AsyncMock(return_value=None)
 
@@ -91,7 +93,8 @@ class TestOAuthLoginFlow:
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get("/api/v1/oauth/unknown/login")
 
-        assert resp.status_code == 401
+        assert resp.status_code == 302
+        assert resp.headers["location"].endswith("/login?error=sso_failed")
 
 
 class TestOAuthCallbackFlow:
@@ -151,7 +154,7 @@ class TestOAuthCallbackFlow:
 
         assert resp.status_code == 302
         location = resp.headers.get("location", "")
-        assert "/auth/callback?code=" in location
+        assert "/callback?code=" in location and "/auth/callback" not in location
         assert mock_valkey.setex.called
 
 
@@ -164,27 +167,14 @@ class TestOAuthExchange:
         user_id = uuid.uuid4()
         payload = json.dumps({"user_id": str(user_id), "provider_slug": "oidc"})
         mock_valkey = AsyncMock()
-        mock_valkey.get = AsyncMock(
-            return_value=payload.encode() if isinstance(payload, str) else payload
-        )
-        mock_valkey.delete = AsyncMock()
-
-        mock_user = MagicMock()
-        mock_user.id = user_id
-        mock_user.is_active = True
-        mock_user.memorialized_at = None
+        mock_valkey.getdel = AsyncMock(return_value=payload.encode())
 
         with (
             patch("app.api.v1.oauth.get_pool", return_value=mock_valkey),
-            patch("app.api.v1.oauth.UserRepository") as mock_user_repo_cls,
             patch("app.api.v1.oauth.AuthService") as mock_auth_cls,
         ):
-            mock_user_repo = AsyncMock()
-            mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
-            mock_user_repo_cls.return_value = mock_user_repo
-
             mock_auth = MagicMock()
-            mock_auth.login_sso = AsyncMock(
+            mock_auth.exchange_sso = AsyncMock(
                 return_value={
                     "access_token": "jwt-token",
                     "expires_in": 900,
@@ -204,12 +194,14 @@ class TestOAuthExchange:
         data = resp.json()
         assert data.get("access_token") == "jwt-token"
         assert "set-cookie" in resp.headers
+        mock_valkey.getdel.assert_awaited_once_with("oauth_exchange:valid-exchange-code")
+        assert mock_auth.exchange_sso.await_args.args[0]["user_id"] == str(user_id)
 
     @pytest.mark.asyncio
     async def test_invalid_exchange_code_returns_401(self, test_app):
         """POST /oauth/exchange with expired/invalid code returns 401."""
         mock_valkey = AsyncMock()
-        mock_valkey.get = AsyncMock(return_value=None)
+        mock_valkey.getdel = AsyncMock(return_value=None)
 
         with patch("app.api.v1.oauth.get_pool", return_value=mock_valkey):
             transport = ASGITransport(app=test_app)

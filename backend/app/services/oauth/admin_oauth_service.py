@@ -12,6 +12,7 @@ from typing import Any, cast
 
 import httpx
 import structlog
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -33,18 +34,16 @@ from app.services.auth import sso_only
 from app.services.oauth import sso_test_login
 from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
 from app.services.oauth.group_mapper import preview_group_mapping
-from app.services.oauth.presets import PRESETS
-from app.services.oauth.provider_manager import ProviderManager
+from app.services.oauth.provider_rules import (
+    invalid_discovery,
+    slug_taken,
+    trust_email_for,
+    update_audit,
+    username_claim_for,
+)
 from app.services.oauth.public_url import callback_url
 
 logger = structlog.get_logger(__name__)
-
-
-def _username_claim(body: OAuthProviderCreate) -> str:
-    """@brief Explicit username_claim wins; else the preset's (github login, ...)."""
-    if "username_claim" not in body.model_fields_set and body.preset in PRESETS:
-        return PRESETS[body.preset].username_claim
-    return body.username_claim
 
 
 class AdminOAuthService:
@@ -94,7 +93,7 @@ class AdminOAuthService:
         try:
             doc = await fetch_discovery(discovery_url.strip(), self._settings.OIDC_HTTP_TIMEOUT)
         except (ValueError, httpx.HTTPError) as exc:
-            raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
+            raise invalid_discovery(exc) from exc
         keys = (
             "authorization_endpoint",
             "token_endpoint",
@@ -105,9 +104,29 @@ class AdminOAuthService:
         endpoints = cast(DiscoveryEndpoints, {k: doc[k] for k in keys if doc.get(k)})
         return endpoints, str(doc["issuer"])
 
-    def _invalidate(self) -> None:
-        """@brief Drop this worker's provider cache so changes apply to the next login."""
-        ProviderManager(self._db).invalidate_cache()
+    async def discover_issuer(self, issuer: str) -> DiscoveryEndpoints:
+        """
+        @brief OIDC discovery for an issuer URL.
+
+        @raises AppError 422 invalid_discovery.
+        """
+        try:
+            return await discover_endpoints(issuer.strip())
+        except (ValueError, httpx.HTTPError) as exc:
+            raise invalid_discovery(exc) from exc
+
+    async def _ensure_slug_free(self, slug: str, keep: uuid.UUID | None = None) -> None:
+        """@brief 409 sso_slug_taken when a live provider (other than ``keep``) has ``slug``."""
+        existing = await self._repo.find_by_slug(self._cid, slug)
+        if existing is not None and existing.id != keep:
+            raise slug_taken()
+
+    async def _persist(self, provider: OAuthProvider) -> OAuthProvider:
+        """@brief Insert a provider; a lost slug race maps to 409 sso_slug_taken."""
+        try:  # the request rolls back on the 409
+            return await self._repo.create(provider)
+        except IntegrityError as exc:
+            raise slug_taken() from exc
 
     def callback_url(self, slug: str) -> str:
         """@brief Redirect URI the admin registers at the IdP."""
@@ -153,12 +172,13 @@ class AdminOAuthService:
 
     async def create(self, body: OAuthProviderCreate) -> OAuthProvider:
         """@brief Create a provider, filling endpoints from OIDC discovery."""
+        await self._ensure_slug_free(body.slug)
         endpoints: DiscoveryEndpoints = {}
         issuer = body.issuer
         if body.provider_type == "oidc" and body.discovery_url:
             endpoints, issuer = await self._discover(body.discovery_url)
         elif body.provider_type == "oidc" and body.issuer:
-            endpoints = await discover_endpoints(body.issuer.strip())
+            endpoints = await self.discover_issuer(body.issuer)
         provider = OAuthProvider(
             community_id=self._cid,
             slug=body.slug,
@@ -185,25 +205,26 @@ class AdminOAuthService:
             preset=body.preset,
             allowed_domains=body.allowed_domains,
             required_group=body.required_group,
-            username_claim=_username_claim(body),
+            username_claim=username_claim_for(body),
             sync_profile=body.sync_profile,
+            trust_email=trust_email_for(body),
             enabled=body.enabled,
             auto_create_users=body.auto_create_users,
         )
-        provider = await self._repo.create(provider)
-        self._invalidate()  # a soft-deleted provider may have held this slug
+        provider = await self._persist(provider)
         await self._audit("oauth.provider.created", provider.id, {"slug": provider.slug})
         logger.info("oauth_provider_created", provider_id=str(provider.id), slug=provider.slug)
         return provider
 
     async def register_oidc(self, body: OIDCProviderCreate) -> OAuthProvider:
         """@brief Register an OIDC provider from its discovery URL."""
+        await self._ensure_slug_free(body.slug)
         try:
             doc = await fetch_discovery(
                 body.discovery_url.strip(), self._settings.OIDC_HTTP_TIMEOUT
             )
         except (ValueError, httpx.HTTPError) as exc:
-            raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
+            raise invalid_discovery(exc) from exc
         provider = OAuthProvider(
             community_id=self._cid,
             slug=body.slug,
@@ -221,8 +242,7 @@ class AdminOAuthService:
             jwks_uri=doc.get("jwks_uri"),
             end_session_endpoint=doc.get("end_session_endpoint"),
         )
-        provider = await self._repo.create(provider)
-        self._invalidate()
+        provider = await self._persist(provider)
         await self._audit(
             "oauth.provider.created", provider.id, {"slug": provider.slug, "type": "oidc"}
         )
@@ -232,6 +252,8 @@ class AdminOAuthService:
         """@brief Partially update a provider (blank secret keeps the stored one)."""
         provider = await self.get(provider_id)
         data = body.model_dump(exclude_unset=True)
+        if data.get("slug") and data["slug"] != provider.slug:
+            await self._ensure_slug_free(data["slug"], keep=provider.id)
         secret = data.pop("client_secret", None)
         if secret:
             data["client_secret_encrypted"] = self._encrypt(secret)
@@ -246,23 +268,24 @@ class AdminOAuthService:
             if issuer != provider.issuer:
                 extra = {"issuer": {"old": provider.issuer, "new": issuer}}
             data.update({"issuer": issuer, "discovery_url": new_url})
-        provider = await self._repo.update(provider, data)
-        self._invalidate()
+        extra.update(update_audit(provider, data, bool(secret)))
+        try:
+            provider = await self._repo.update(provider, data)
+        except IntegrityError as exc:
+            raise slug_taken() from exc
         await self._audit("oauth.provider.updated", provider.id, {"slug": provider.slug, **extra})
         return provider
 
     async def delete(self, provider_id: uuid.UUID) -> None:
-        """@brief Soft-delete a provider and drop the provider cache."""
+        """@brief Soft-delete a provider."""
         provider = await self.get(provider_id)
         await self._repo.soft_delete(provider)
-        self._invalidate()
         await self._audit("oauth.provider.deleted", provider_id, {"slug": provider.slug})
 
     async def toggle(self, provider_id: uuid.UUID) -> OAuthProvider:
         """@brief Flip a provider's enabled flag."""
         provider = await self.get(provider_id)
         provider = await self._repo.update(provider, {"enabled": not provider.enabled})
-        self._invalidate()
         await self._audit(
             "oauth.provider.toggled",
             provider.id,
@@ -296,14 +319,14 @@ class AdminOAuthService:
             return OIDCTestResult(discovery_ok=False, error=str(exc))
         result = OIDCTestResult(discovery_ok=True, issuer=doc.get("issuer"))
         try:
-            callback_url = f"{s.APP_BASE_URL.rstrip('/')}/api/v1/oauth/test/callback"
+            redirect_uri = callback_url(s, provider.slug)
             async with httpx.AsyncClient(timeout=s.OIDC_HTTP_TIMEOUT) as client:
                 resp = await client.post(
                     doc["token_endpoint"],
                     data={
                         "grant_type": "authorization_code",
                         "code": "nexara-sandbox-test",
-                        "redirect_uri": callback_url,
+                        "redirect_uri": redirect_uri,
                         "client_id": provider.client_id,
                     },
                 )

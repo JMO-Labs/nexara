@@ -4,7 +4,7 @@
 """
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
@@ -61,7 +61,9 @@ class TestProvisionerGroupMapping:
     async def test_applies_subgroup_mappings_with_token_groups(self):
         result, user, _, apply, (subs, mem, cid) = await _provision(CM, ["eng", "ops"])
         assert result is user
-        apply.assert_awaited_once_with(subs, mem, cid, user.id, ["eng", "ops"], CM)
+        apply.assert_awaited_once_with(
+            subs, mem, cid, user.id, ["eng", "ops"], CM, session=ANY, provider_id=ANY
+        )
 
     async def test_role_synced_when_only_claim_mapping_group_mapping(self):
         _, user, user_repo, _, _ = await _provision(CM, ["ops"], role="admin")

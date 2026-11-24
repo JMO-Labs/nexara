@@ -69,7 +69,7 @@ def evaluate_gates(
     @param linked_user The link's user (None when missing/soft-deleted).
     @param email_user Account matching the verified email (only looked up without a link).
     @return GateDecision. ``sso_email_unverified`` means the IdP did not verify
-            the email (the provisioner raises AuthenticationError for it).
+            the email (a refusal like the others; admins can enable trust_email).
     """
     trusted = auth_result.email if auth_result.email_verified else None
     gate = gate_refusal(provider, trusted, auth_result.groups)

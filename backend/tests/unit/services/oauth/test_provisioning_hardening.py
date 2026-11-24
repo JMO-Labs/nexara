@@ -61,7 +61,9 @@ def test_preset_username_claims():
 def _svc():
     settings = SimpleNamespace(OIDC_HTTP_TIMEOUT=5, APP_BASE_URL="https://a", SECRET_KEY="k")
     svc = admin_mod.AdminOAuthService(MagicMock(), uuid.uuid4(), settings, uuid.uuid4(), None)  # type: ignore[arg-type]
-    svc._repo = MagicMock(create=AsyncMock(side_effect=lambda p: p))  # type: ignore[assignment]
+    svc._repo = MagicMock(  # type: ignore[assignment]
+        create=AsyncMock(side_effect=lambda p: p), find_by_slug=AsyncMock(return_value=None)
+    )
     svc._audit = AsyncMock()  # type: ignore[method-assign]
     return svc
 

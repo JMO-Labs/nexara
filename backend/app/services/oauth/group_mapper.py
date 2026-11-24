@@ -13,6 +13,8 @@ import structlog
 from app.schemas.subgroup import SUBGROUP_ROLES
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 
 logger = structlog.get_logger()
@@ -150,6 +152,9 @@ async def sync_subgroups(
     community_id: uuid.UUID,
     user_id: uuid.UUID,
     mapped: dict[uuid.UUID, str],
+    *,
+    session: AsyncSession | None = None,
+    provider_id: uuid.UUID | str | None = None,
 ) -> list[uuid.UUID]:
     """
     @brief Make the user's SSO memberships match ``mapped``.
@@ -161,9 +166,13 @@ async def sync_subgroups(
     @param community_id Community scope.
     @param user_id User being synced.
     @param mapped subgroup_id -> role from resolve_subgroup_mappings.
+    @param session When given, changes are audited (sso.subgroups_synced).
+    @param provider_id Provider driving the sync (audit only).
     @return Subgroup IDs the user was newly added to.
     """
     joined: list[uuid.UUID] = []
+    changed: list[uuid.UUID] = []
+    removed: list[uuid.UUID] = []
     for sub_id, role in mapped.items():
         row = await member_repo.get_membership(sub_id, user_id)
         if row is None:
@@ -177,9 +186,15 @@ async def sync_subgroups(
             joined.append(sub_id)
         elif row.source == "sso" and row.role != role:
             await member_repo.update_role(row, role)
+            changed.append(sub_id)
     for sub_id in await member_repo.list_sso_subgroup_ids(user_id, community_id):
         if sub_id not in mapped:
             await member_repo.remove_member(sub_id, user_id)
+            removed.append(sub_id)
+    if session is not None:
+        from app.services.oauth.role_sync import audit_subgroups_synced  # avoid import cycle
+
+        await audit_subgroups_synced(session, user_id, joined, removed, changed, provider_id)
     return joined
 
 
@@ -190,6 +205,9 @@ async def apply_subgroup_mappings(
     user_id: uuid.UUID,
     groups: list[str],
     claim_mapping: dict[str, Any] | None,
+    *,
+    session: AsyncSession | None = None,
+    provider_id: uuid.UUID | str | None = None,
 ) -> list[uuid.UUID]:
     """
     @brief Resolve the user's group claims and sync SSO subgroup memberships.
@@ -202,7 +220,9 @@ async def apply_subgroup_mappings(
     if not has_subgroup_rules(claim_mapping):
         return []
     mapped = await resolve_subgroup_mappings(subgroup_repo, community_id, groups, claim_mapping)
-    return await sync_subgroups(member_repo, community_id, user_id, mapped)
+    return await sync_subgroups(
+        member_repo, community_id, user_id, mapped, session=session, provider_id=provider_id
+    )
 
 
 async def preview_group_mapping(

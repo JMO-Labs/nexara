@@ -20,25 +20,30 @@ from app.services.oauth.oauth2_email import OAUTH2_EMAIL_PRESETS, fetch_verified
 from app.services.oauth.user_provisioner import OAuthAuthResult
 
 
-async def apply_verified_email(
+async def apply_email_trust(
     provider: OAuthProvider, token_data: dict[str, Any], auth_result: OAuthAuthResult
 ) -> None:
     """
-    @brief For GitHub/Discord presets, replace the profile email with the verified one.
+    @brief The single place email trust is decided (real and test login).
 
-    The profile email is untrusted: without a verified address the result carries
-    no email, so it can neither link nor create an account.
+    GitHub/Discord: the profile email is untrusted and replaced by the verified
+    one from the provider API (``trust_email`` ignored); without one the result
+    carries no email, so it can neither link nor create an account. Other
+    providers: ``trust_email`` treats a present email as verified (IdPs such as
+    authentik send email_verified=false by default).
 
-    @param provider OAuth provider (preset).
+    @param provider OAuth provider (preset, trust_email).
     @param token_data Token response (access_token).
     @param auth_result Mapped claims; email/email_verified updated in place.
     """
-    if provider.preset not in OAUTH2_EMAIL_PRESETS:
+    if provider.preset in OAUTH2_EMAIL_PRESETS:
+        token = token_data.get("access_token")
+        email = await fetch_verified_email(provider.preset, str(token)) if token else None
+        auth_result.email = email
+        auth_result.email_verified = email is not None
         return
-    token = token_data.get("access_token")
-    email = await fetch_verified_email(provider.preset, str(token)) if token else None
-    auth_result.email = email
-    auth_result.email_verified = email is not None
+    if provider.trust_email and auth_result.email:
+        auth_result.email_verified = True
 
 
 class OAuthFlow:

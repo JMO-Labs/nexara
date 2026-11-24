@@ -2,8 +2,9 @@
 
 @file 0071_sso_sync.py
 @brief Adds oauth_providers preset/allowed_domains/required_group/username_claim/
-sync_profile and subgroup_members.source; folds the per-column *_claim values
-into claim_mapping (existing keys win) and drops the columns.
+sync_profile/trust_email and subgroup_members.source; folds the per-column
+*_claim values into claim_mapping (existing keys win) and drops the columns;
+makes the (community_id, slug) uniqueness ignore soft-deleted providers.
 
 Revision ID: 0071_sso_sync
 Revises: 0070_twofactor
@@ -46,6 +47,18 @@ def upgrade() -> None:
         sa.Column("sync_profile", sa.Boolean(), nullable=False, server_default="true"),
     )
     op.add_column(
+        "oauth_providers",
+        sa.Column("trust_email", sa.Boolean(), nullable=False, server_default="false"),
+    )
+    op.drop_constraint("uq_oauth_provider_community_slug", "oauth_providers", type_="unique")
+    op.create_index(
+        "uq_oauth_provider_community_slug_live",
+        "oauth_providers",
+        ["community_id", "slug"],
+        unique=True,
+        postgresql_where=sa.text("deleted_at IS NULL"),
+    )
+    op.add_column(
         "subgroup_members",
         sa.Column("source", sa.Text(), nullable=False, server_default="manual"),
     )
@@ -70,6 +83,20 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """@brief Restore *_claim columns from claim_mapping; drop new columns."""
+    # Rename deleted duplicates so the full (community_id, slug) constraint fits.
+    op.execute(
+        "UPDATE oauth_providers SET slug = left(slug, 50) || '-del-' || left(id::text, 8) "
+        "WHERE deleted_at IS NOT NULL"
+    )
+    # IF EXISTS: databases that ran an earlier draft of this unreleased revision.
+    op.execute("DROP INDEX IF EXISTS uq_oauth_provider_community_slug_live")
+    op.execute(
+        "ALTER TABLE oauth_providers DROP CONSTRAINT IF EXISTS uq_oauth_provider_community_slug"
+    )
+    op.execute("ALTER TABLE oauth_providers DROP COLUMN IF EXISTS trust_email")
+    op.create_unique_constraint(
+        "uq_oauth_provider_community_slug", "oauth_providers", ["community_id", "slug"]
+    )
     for col, (key, dflt) in _CLAIMS.items():
         op.add_column(
             "oauth_providers",

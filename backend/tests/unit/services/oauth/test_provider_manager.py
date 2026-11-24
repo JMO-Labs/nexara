@@ -1,6 +1,6 @@
 """
 @file test_provider_manager.py
-@brief Unit tests for OAuth provider manager with caching and env seeding.
+@brief Unit tests for OAuth provider manager (DB lookup and env seeding).
 """
 
 import uuid
@@ -10,14 +10,6 @@ import pytest
 
 import app.services.oauth.provider_manager as pm
 from app.services.oauth.provider_manager import ProviderManager
-
-
-@pytest.fixture(autouse=True)
-def clear_cache():
-    """Clear module-level provider cache between tests."""
-    pm._provider_cache.clear()
-    yield
-    pm._provider_cache.clear()
 
 
 class TestGetProvider:
@@ -41,40 +33,17 @@ class TestGetProvider:
         mock_repo.find_by_slug.assert_called_once_with(community_id, "oidc")
 
     @pytest.mark.asyncio
-    async def test_returns_cached_provider_on_second_call(self):
-        """get_provider returns cached provider on second call."""
-        mock_provider = MagicMock()
-        mock_provider.slug = "oidc"
+    async def test_reads_db_on_every_call(self):
+        """No cache: each lookup hits the repo so every worker sees changes."""
         mock_repo = AsyncMock()
-        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
-        mock_session = AsyncMock()
-
+        mock_repo.find_by_slug = AsyncMock(return_value=MagicMock())
         with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
-            manager = ProviderManager(mock_session)
-            community_id = uuid.uuid4()
-            first = await manager.get_provider(community_id, "oidc")
-            second = await manager.get_provider(community_id, "oidc")
-
-        assert first is second
-        mock_repo.find_by_slug.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_cache_expires_after_ttl(self):
-        """get_provider cache expires after TTL."""
-        mock_provider = MagicMock()
-        mock_provider.slug = "oidc"
-        mock_repo = AsyncMock()
-        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
-        mock_session = AsyncMock()
-
-        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
-            with patch.object(pm, "CACHE_TTL", 0):
-                manager = ProviderManager(mock_session)
-                community_id = uuid.uuid4()
-                await manager.get_provider(community_id, "oidc")
-                await manager.get_provider(community_id, "oidc")
-
+            manager = ProviderManager(AsyncMock())
+            cid = uuid.uuid4()
+            await manager.get_provider(cid, "oidc")
+            await manager.get_provider(cid, "oidc")
         assert mock_repo.find_by_slug.call_count == 2
+        assert not hasattr(pm, "_provider_cache")
 
 
 class TestGetEnabledProviders:
@@ -95,26 +64,6 @@ class TestGetEnabledProviders:
 
         assert result == mock_providers
         mock_repo.list_enabled.assert_called_once_with(community_id)
-
-
-class TestInvalidateCache:
-    """@brief Tests for ProviderManager.invalidate_cache."""
-
-    @pytest.mark.asyncio
-    async def test_clears_module_cache(self):
-        """invalidate_cache clears the module cache."""
-        mock_provider = MagicMock()
-        mock_repo = AsyncMock()
-        mock_repo.find_by_slug = AsyncMock(return_value=mock_provider)
-        mock_session = AsyncMock()
-
-        with patch.object(pm, "OAuthProviderRepository", return_value=mock_repo):
-            manager = ProviderManager(mock_session)
-            community_id = uuid.uuid4()
-            await manager.get_provider(community_id, "oidc")
-            assert len(pm._provider_cache) > 0
-            manager.invalidate_cache()
-            assert len(pm._provider_cache) == 0
 
 
 class TestSeedFromEnv:
