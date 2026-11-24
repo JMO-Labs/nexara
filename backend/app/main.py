@@ -184,8 +184,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await start_subscriber()
     logger.info("realtime_pubsub_subscriber_started")
 
+    import asyncio
+
+    from app.services.worker_watch import run_loop
+
+    watchdog = asyncio.create_task(run_loop())
+
     yield
 
+    watchdog.cancel()
     await stop_subscriber()
     await close_pools()
     await engine.dispose()

@@ -32,8 +32,14 @@ async def test_non_admin_forbidden(test_app) -> None:
 
 async def test_valkey_down_still_200(test_app) -> None:
     sh._cache = None
+    import asyncio
+
     redis = MagicMock()
-    redis.ping = AsyncMock(side_effect=OSError("down"))
+
+    async def hang(*a, **k):
+        await asyncio.sleep(60)
+
+    redis.ping = hang
     redis.get = AsyncMock(side_effect=OSError("down"))
     redis.llen = AsyncMock(side_effect=OSError("down"))
     with (
