@@ -11,9 +11,10 @@ import { Button, IconButton, Input, Switch } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { SettingsRow } from "@/components/ui/SettingsRow";
 import { useToasts } from "@/stores/toasts";
+import { useConfirmDialog } from "@/stores/confirmDialog";
 import { formatApiError } from "@/lib/api/errors";
 import * as api from "@/lib/api/adminApprise";
-import { AdminLoading } from "./AdminState";
+import { AdminLoading, AdminNotice } from "./AdminState";
 
 const TARGETS = ["admin", "apprise", "targets"];
 const SETTINGS = ["admin", "apprise", "settings"];
@@ -22,6 +23,7 @@ const SETTINGS = ["admin", "apprise", "settings"];
 export function AlertsTab() {
   const qc = useQueryClient();
   const push = useToasts((s) => s.push);
+  const confirm = useConfirmDialog((s) => s.confirm);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const targets = useQuery({ queryKey: TARGETS, queryFn: api.listTargets });
@@ -67,14 +69,27 @@ export function AlertsTab() {
     onError: fail,
   });
 
+  if (targets.isError || settings.isError)
+    return (
+      <AdminNotice tone="error">Failed to load alert settings</AdminNotice>
+    );
   if (!targets.data || !settings.data) return <AdminLoading />;
+  const onRemove = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: "Remove alert target?",
+      message: `${name} will stop receiving admin alerts.`,
+      confirmLabel: "Remove",
+      tone: "danger",
+    });
+    if (ok) remove.mutate(id);
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (url.trim()) add.mutate();
   };
 
   return (
-    <Panel title="Alerts" className="flex flex-col gap-4">
+    <Panel className="flex flex-col gap-4">
       <p className="text-sm text-muted">
         Where Nexara sends admin alerts: repeated failed sign-ins, low disk,
         stopped workers, email failures.
@@ -99,13 +114,15 @@ export function AlertsTab() {
                     </div>
                     <IconButton
                       aria-label={`Test ${name}`}
+                      disabled={test.isPending}
                       onClick={() => test.mutate(t.id)}
                     >
                       <Send className="size-4" />
                     </IconButton>
                     <IconButton
                       aria-label={`Remove ${name}`}
-                      onClick={() => remove.mutate(t.id)}
+                      disabled={remove.isPending}
+                      onClick={() => onRemove(t.id, name)}
                     >
                       <Trash2 className="size-4" />
                     </IconButton>

@@ -22,7 +22,7 @@ export function TwoPane({ aside, children, asideWidth = 300 }: TwoPaneProps) {
       style={{ "--aside-w": `${asideWidth}px` } as React.CSSProperties}
       className="grid gap-4 md:grid-cols-[var(--aside-w)_minmax(0,1fr)] md:gap-[18px]"
     >
-      <aside className="min-w-0 md:sticky md:top-4 md:self-start">
+      <aside className="min-w-0 md:sticky md:top-20 md:self-start">
         {aside}
       </aside>
       <div className="min-w-0">{children}</div>

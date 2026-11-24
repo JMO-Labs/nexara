@@ -19,6 +19,7 @@ const api = vi.hoisted(() => ({
   createAppriseUrl: vi.fn(),
   deleteAppriseUrl: vi.fn(),
   testAppriseUrl: vi.fn(),
+  updateAppriseUrl: vi.fn(),
 }));
 vi.mock("@/lib/api/apprise", () => api);
 
@@ -60,7 +61,7 @@ describe("AppriseSection", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add app" }));
     expect(
       await screen.findByText(
-        "That address is on a private network. Ask an admin to allow it.",
+        "That address is on a private network or can't be reached. Ask an admin to allow local addresses.",
       ),
     ).toBeInTheDocument();
   });
@@ -124,5 +125,52 @@ describe("AppriseSection", () => {
       />,
     );
     expect(screen.getByRole("switch")).toBeDisabled();
+  });
+
+  it("links the hint to the URL input", () => {
+    wrap();
+    const hint = screen.getByText(/ntfy:\/\/ntfy.sh\/your-topic/);
+    expect(
+      screen.getByLabelText("App URL").getAttribute("aria-describedby"),
+    ).toContain(hint.id);
+  });
+
+  it("shows Paused and resumes via PATCH", async () => {
+    api.listAppriseUrls.mockResolvedValue([
+      { id: "1", label: "Phone", scheme: "ntfy", enabled: false },
+    ]);
+    api.updateAppriseUrl.mockResolvedValue({});
+    wrap();
+    expect(await screen.findByText("Paused")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Resume Phone" }));
+    await waitFor(() =>
+      expect(api.updateAppriseUrl).toHaveBeenCalledWith("1", { enabled: true }),
+    );
+  });
+
+  it("shows the blocked message when a test is blocked", async () => {
+    api.listAppriseUrls.mockResolvedValue([
+      { id: "1", label: "Phone", scheme: "ntfy", enabled: true },
+    ]);
+    api.testAppriseUrl.mockRejectedValue(
+      new ApiError(422, "apprise_url_blocked", "blocked"),
+    );
+    wrap();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Test Phone" }),
+    );
+    expect(
+      await screen.findByText(en.settings.notif.apprise_blocked),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a generic add error for non-validation failures", async () => {
+    api.createAppriseUrl.mockRejectedValue(new ApiError(500, "x", "boom"));
+    wrap();
+    await userEvent.type(screen.getByLabelText("App URL"), "ntfy://ntfy.sh/t");
+    await userEvent.click(screen.getByRole("button", { name: "Add app" }));
+    expect(
+      await screen.findByText(en.settings.notif.apprise_add_fail),
+    ).toBeInTheDocument();
   });
 });

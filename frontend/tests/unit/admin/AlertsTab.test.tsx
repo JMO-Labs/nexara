@@ -15,6 +15,12 @@ const client = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api/client", () => client);
 
+const confirmMock = vi.hoisted(() => vi.fn());
+vi.mock("@/stores/confirmDialog", () => ({
+  useConfirmDialog: (sel: (s: { confirm: typeof confirmMock }) => unknown) =>
+    sel({ confirm: confirmMock }),
+}));
+
 import { AlertsTab } from "@/components/admin/AlertsTab";
 
 const B = "/api/v1/admin/apprise";
@@ -46,6 +52,7 @@ describe("AlertsTab", () => {
     client.apiPut.mockResolvedValue({ allow_local: true });
     client.apiPost.mockResolvedValue({ status: "sent", message: "ok" });
     client.apiDelete.mockResolvedValue({});
+    confirmMock.mockResolvedValue(true);
   });
 
   it("lists targets with scheme only", async () => {
@@ -91,5 +98,40 @@ describe("AlertsTab", () => {
     await waitFor(() =>
       expect(client.apiDelete).toHaveBeenCalledWith(`${B}/targets/t1`),
     );
+  });
+
+  it("does not remove when confirm is declined", async () => {
+    confirmMock.mockResolvedValue(false);
+    renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Remove Phone" }),
+    );
+    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
+    expect(client.apiDelete).not.toHaveBeenCalled();
+  });
+
+  it("shows an error notice when loading fails", async () => {
+    client.apiGet.mockRejectedValue(new Error("boom"));
+    renderTab();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Failed to load alert settings",
+    );
+    expect(screen.queryByTestId("admin-loading")).not.toBeInTheDocument();
+  });
+
+  it("disables test while a test is pending", async () => {
+    client.apiPost.mockReturnValue(new Promise(() => {}));
+    renderTab();
+    const btn = await screen.findByRole("button", { name: "Test Phone" });
+    fireEvent.click(btn);
+    await waitFor(() => expect(btn).toBeDisabled());
+  });
+
+  it("has no duplicate Alerts heading", async () => {
+    renderTab();
+    await screen.findByText("Phone");
+    expect(
+      screen.queryByRole("heading", { name: "Alerts" }),
+    ).not.toBeInTheDocument();
   });
 });
