@@ -23,6 +23,7 @@ import { AlertsTab } from "./AlertsTab";
 import { EmailRepliesTab } from "./EmailRepliesTab";
 import { FeaturesTab } from "./FeaturesTab";
 import { SecurityPolicy } from "./SecurityPolicy";
+import { SigninsTab } from "./SigninsTab";
 
 const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   metrics: MetricsTab,
@@ -30,6 +31,7 @@ const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   invites: InvitesTab,
   sso: SsoTab,
   security: SecurityPolicy,
+  signins: SigninsTab,
   interests: InterestsTab,
   prompts: PromptsTab,
   branding: BrandingTab,

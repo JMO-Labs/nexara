@@ -22,6 +22,7 @@ from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
 from app.api.v1.admin_security import router as admin_security_router
 from app.api.v1.admin_shop import router as admin_shop_router
+from app.api.v1.admin_signins import router as admin_signins_router
 from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.admin_system import router as admin_system_router
 from app.api.v1.auth import router as auth_router
@@ -68,6 +69,7 @@ from app.api.v1.reconnect import router as reconnect_router
 from app.api.v1.relations import router as relations_router
 from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
+from app.api.v1.sessions import router as sessions_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.stories import router as stories_router
@@ -95,6 +97,8 @@ api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
 api_v1_router.include_router(admin_system_router)
+api_v1_router.include_router(admin_signins_router)
+api_v1_router.include_router(sessions_router)
 api_v1_router.include_router(admin_security_router)
 api_v1_router.include_router(admin_email_router)
 api_v1_router.include_router(admin_email_callback_router)

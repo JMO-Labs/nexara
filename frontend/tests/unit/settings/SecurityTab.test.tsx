@@ -15,6 +15,11 @@ vi.mock("@/lib/auth/session", () => ({
   refreshAccessToken: vi.fn().mockResolvedValue("t"),
 }));
 vi.mock("@/lib/api/twoFactor");
+vi.mock("@/lib/api/signins", () => ({
+  listSessions: vi.fn().mockResolvedValue([]),
+  revokeSession: vi.fn(),
+  revokeOtherSessions: vi.fn(),
+}));
 
 import { SecurityTab, disableProof } from "@/components/settings/SecurityTab";
 import { ResetTwoFactorButton } from "@/components/admin/ResetTwoFactorButton";

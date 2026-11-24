@@ -13,6 +13,7 @@ import {
   ToggleRight,
   History,
   KeyRound,
+  LogIn,
   Mail,
   MailPlus,
   MessageSquareQuote,
@@ -56,7 +57,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (17 tabs + 4 route links). */
+/** @brief Grouped admin sections (18 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -86,6 +87,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Security",
         "Require two-step sign-in for admins or everyone.",
         ShieldCheck,
+      ),
+      tab(
+        "signins",
+        "Sign-ins",
+        "Who signed in, from where, and failed attempts.",
+        LogIn,
       ),
     ],
   },
