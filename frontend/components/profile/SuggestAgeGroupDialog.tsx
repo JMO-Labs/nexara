@@ -37,6 +37,11 @@ export function SuggestAgeGroupDialog({
   const push = useToasts((s) => s.push);
   const [group, setGroup] = useState<AgeGroup>("adult");
   const [note, setNote] = useState("");
+  const close = () => {
+    setGroup("adult");
+    setNote("");
+    onClose();
+  };
   const send = useMutation({
     mutationFn: () =>
       suggestAgeGroup({
@@ -46,21 +51,20 @@ export function SuggestAgeGroupDialog({
       }),
     onSuccess: () => {
       push({ variant: "success", message: "Suggestion sent to admins" });
-      setNote("");
-      onClose();
+      close();
     },
     onError: (e) => push({ variant: "danger", message: formatApiError(e) }),
   });
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title="Suggest age group"
       description={`Admins will review your suggestion for ${name}.`}
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             Cancel
           </Button>
           <Button loading={send.isPending} onClick={() => send.mutate()}>

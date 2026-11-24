@@ -16,6 +16,7 @@ export interface CurrentUser {
   is_active: boolean;
   /** Effective age group (read-only). */
   age_group?: string | null;
+  age_group_source?: "admin" | "birthday" | "approval_pending" | "unknown";
   two_factor_enabled?: boolean;
   tour_completed_at: string | null;
   community_id?: string;

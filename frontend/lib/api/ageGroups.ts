@@ -22,6 +22,8 @@ export interface AgeSuggestion {
   subject_id: string;
   suggested_by: string;
   age_group: string;
+  subject_name?: string | null;
+  suggested_by_name?: string | null;
   note: string | null;
   status: string;
   created_at: string;

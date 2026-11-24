@@ -22,6 +22,8 @@ const row = {
   subject_id: "u1",
   suggested_by: "u2",
   age_group: "teen",
+  subject_name: "Sam Lee",
+  suggested_by_name: "Ann",
   note: "Turned 14",
   status: "pending",
   created_at: "2026-01-01T00:00:00Z",
@@ -50,7 +52,10 @@ describe("AgeGroupsTab", () => {
     client.apiPost.mockResolvedValue({ ...row, status: "approved" });
     renderTab();
     expect(await screen.findByText("Turned 14")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /approve teen/i }));
+    expect(screen.getByText(/Suggested by Ann/)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /approve teen for sam lee/i }),
+    );
     await waitFor(() =>
       expect(client.apiPost).toHaveBeenCalledWith(
         `${B}/suggestions/s1/approve`,
@@ -65,7 +70,7 @@ describe("AgeGroupsTab", () => {
     client.apiPost.mockResolvedValue(row);
     renderTab();
     fireEvent.click(
-      await screen.findByRole("button", { name: /reject teen/i }),
+      await screen.findByRole("button", { name: /reject teen for sam lee/i }),
     );
     await waitFor(() =>
       expect(client.apiPost).toHaveBeenCalledWith(`${B}/suggestions/s1/reject`),

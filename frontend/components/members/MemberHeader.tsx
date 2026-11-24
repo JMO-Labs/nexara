@@ -51,6 +51,7 @@ export function MemberHeader({
   const router = useRouter();
   const dm = useCreateDm();
   const [suggesting, setSuggesting] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const groups = connection?.shared_groups ?? [];
   const accent = groups.find(
     (g) => g.id === connection?.primary_group_id,
@@ -144,7 +145,7 @@ export function MemberHeader({
                   className="size-11"
                 />
                 <NudgeButton userId={profile.id} />
-                <Popover>
+                <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
@@ -157,7 +158,10 @@ export function MemberHeader({
                   <PopoverContent align="end" className="w-48 p-2">
                     <button
                       type="button"
-                      onClick={() => setSuggesting(true)}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setSuggesting(true);
+                      }}
                       className="min-h-11 w-full rounded-xl px-3 text-left text-sm hover:bg-[var(--nx-glass-solid)]"
                     >
                       Suggest age group

@@ -67,6 +67,8 @@ export interface AdminUserListItem {
   passed_on?: string | null;
   /** Explicit age group, when the API provides it. */
   age_group?: string | null;
+  /** Admin-set group or the one derived from birthday. */
+  effective_age_group?: string | null;
 }
 
 /**

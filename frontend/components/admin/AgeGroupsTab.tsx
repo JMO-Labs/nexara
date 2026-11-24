@@ -69,26 +69,34 @@ export function AgeGroupsTab() {
         ) : (
           <ul className="space-y-2">
             {list.data.map((s) => {
-              const label = api.AGE_LABEL[s.age_group as api.AgeGroup];
+              const label = (
+                api.AGE_LABEL[s.age_group as api.AgeGroup] ?? s.age_group
+              ).split(" (")[0];
+              const who = s.subject_name || "member";
               return (
                 <li key={s.id} className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">
-                      {label ?? s.age_group}
+                      {who} {"\u2192"} {label}
                     </p>
+                    {s.suggested_by_name && (
+                      <p className="text-xs text-muted">
+                        Suggested by {s.suggested_by_name}
+                      </p>
+                    )}
                     {s.note && (
                       <p className="break-words text-xs text-muted">{s.note}</p>
                     )}
                   </div>
                   <IconButton
-                    aria-label={`Approve ${label}`}
+                    aria-label={`Approve ${label} for ${who}`}
                     disabled={decide.isPending}
                     onClick={() => decide.mutate({ id: s.id, approve: true })}
                   >
                     <Check className="size-4" aria-hidden="true" />
                   </IconButton>
                   <IconButton
-                    aria-label={`Reject ${label}`}
+                    aria-label={`Reject ${label} for ${who}`}
                     disabled={decide.isPending}
                     onClick={() => decide.mutate({ id: s.id, approve: false })}
                   >

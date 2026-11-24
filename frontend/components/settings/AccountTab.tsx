@@ -19,6 +19,24 @@ const Schema = z.object({
 });
 type FormData = z.infer<typeof Schema>;
 
+const SOURCE_COPY: Record<string, string> = {
+  admin: " \u2014 set by your admin",
+  birthday: " \u2014 from your birthday",
+  approval_pending: " \u2014 waiting for admin approval",
+};
+
+/**
+ * @brief Read-only age group line text.
+ * @param group effective group
+ * @param source where it came from
+ * @return label plus source copy
+ */
+function ageText(group?: string | null, source?: string) {
+  if (!group || source === "unknown") return AGE_LABEL.unknown;
+  const name = (AGE_LABEL[group as AgeGroup] ?? group).split(" (")[0];
+  return name + (SOURCE_COPY[source ?? ""] ?? "");
+}
+
 /**
  * @brief Email change form.
  * @return account tab content
@@ -65,12 +83,7 @@ export function AccountTab() {
       </Panel>
       <Panel title="Age group">
         <p className="text-sm">
-          Age group:{" "}
-          {AGE_LABEL[(user?.age_group as AgeGroup) ?? "unknown"].split(" (")[0]}
-          {user?.age_group &&
-            (user.birthday
-              ? " \u2014 from your birthday"
-              : " \u2014 set by your admin")}
+          Age group: {ageText(user?.age_group, user?.age_group_source)}
         </p>
       </Panel>
       <DataExportSection />

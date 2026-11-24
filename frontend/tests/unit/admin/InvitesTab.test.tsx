@@ -120,4 +120,37 @@ describe("InvitesTab", () => {
       });
     });
   });
+
+  it("sends the chosen age group with the invite", async () => {
+    vi.mocked(useInvitesModule.useInvites).mockReturnValue({
+      isLoading: false,
+      data: [],
+    } as any);
+    const createMutation = { mutate: vi.fn(), isPending: false };
+    vi.mocked(useInvitesModule.useCreateInvite).mockReturnValue(
+      createMutation as any,
+    );
+    vi.mocked(useInvitesModule.useRevokeInvite).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as any);
+    render(<InvitesTab />, { wrapper });
+    fireEvent.change(screen.getByPlaceholderText(/email address/i), {
+      target: { value: "kid@example.com" },
+    });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Age group" }), {
+      key: "Enter",
+    });
+    fireEvent.click(await screen.findByRole("option", { name: /teen/i }));
+    fireEvent.submit(
+      screen.getByPlaceholderText(/email address/i).closest("form")!,
+    );
+    await waitFor(() =>
+      expect(createMutation.mutate).toHaveBeenCalledWith({
+        email: "kid@example.com",
+        role: "member",
+        age_group: "teen",
+      }),
+    );
+  });
 });
