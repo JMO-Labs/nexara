@@ -28,6 +28,7 @@ import { LinkPreviewCard } from "@/components/content/LinkPreviewCard";
 import { VideoEmbed, embedUrl } from "@/components/content/VideoEmbed";
 import { SourceBadge } from "./SourceBadge";
 import { KudosCard } from "./KudosCard";
+import { CountdownFeedCard } from "@/components/countdowns/CountdownFeedCard";
 import { PromptBadges } from "./PromptBadges";
 import type { Post } from "@/lib/api/posts";
 
@@ -63,6 +64,8 @@ export function PostCard({
   const confirm = useConfirmDialog((s) => s.confirm);
   const nsfwMut = useSetPostNsfw();
   const groupMod = useIsGroupMod(post.subgroup_id);
+
+  if (post.countdown_id) return <CountdownFeedCard id={post.countdown_id} />;
 
   if (post.recipient_id && post.recipient) {
     return (

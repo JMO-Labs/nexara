@@ -102,6 +102,7 @@ export interface Post {
   is_nsfw?: boolean;
   /** Moderator-locked: the author cannot clear NSFW. */
   nsfw_locked?: boolean;
+  countdown_id?: string | null;
 }
 
 export interface Comment {

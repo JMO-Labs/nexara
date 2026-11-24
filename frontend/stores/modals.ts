@@ -10,6 +10,7 @@ export type ModalKey =
   | "create-post"
   | "create-event"
   | "create-gallery"
+  | "create-countdown"
   | "create-subgroup"
   | "invite-member"
   | "confirm";
