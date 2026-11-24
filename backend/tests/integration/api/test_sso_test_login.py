@@ -1,6 +1,7 @@
 """
 @file test_sso_test_login.py
-@brief Real-Postgres + Valkey: admin SSO test login reports and never provisions.
+@brief Real-Postgres + Valkey: admin SSO test login reports and never provisions;
+       provider changes apply to the next login (cache invalidation).
 
 The IdP is mocked at the token exchange and ID-token verification; state, Valkey
 keys, the callback and the DB are real.
@@ -11,6 +12,7 @@ from __future__ import annotations
 import os
 import secrets
 import uuid
+from http.cookies import SimpleCookie
 from typing import Any
 from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlsplit
@@ -25,6 +27,7 @@ from app.core import valkey
 from app.core.dependencies import get_db
 from app.core.security import create_access_token
 from app.core.valkey import DB_CACHE, close_pools, get_pool
+from app.models.audit import AuditLog
 from app.models.auth import RefreshToken
 from app.models.oauth_provider import OAuthProvider
 from app.models.signin_event import SigninEvent
@@ -32,6 +35,7 @@ from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
 from app.services.oauth.flow import OAuthFlow
+from app.services.oauth.sso_test_login import BIND_COOKIE
 
 DB_URL = os.environ.get(
     "DATABASE_URL", "postgresql+asyncpg://nexara:nexara@localhost:5432/nexara_test"
@@ -107,6 +111,7 @@ async def _user(factory, role: str) -> dict[str, str]:
 
 
 async def _provider(factory, **over: Any) -> OAuthProvider:
+    over.setdefault("enabled", False)  # testing works before the provider is enabled
     async with factory() as s:
         sub = Subgroup(community_id=CID, name="Smith Family", slug=f"smith-{uuid.uuid4().hex[:6]}")
         s.add(sub)
@@ -120,7 +125,6 @@ async def _provider(factory, **over: Any) -> OAuthProvider:
             client_secret_encrypted="x",
             authorization_endpoint="https://idp.example.com/authorize",
             token_endpoint="https://idp.example.com/token",
-            enabled=False,  # testing works before the provider is enabled
             claim_mapping={
                 "groups": "groups",
                 "group_mapping": {"smiths": [{"subgroup_id": str(sub.id), "role": "member"}]},
@@ -137,19 +141,33 @@ async def _count(factory, stmt) -> int:
         return int((await s.execute(stmt)).scalar_one())
 
 
-async def _run_test_login(client, factory, admin, provider, claims) -> Any:
-    """@brief Start, then hit the callback as the IdP would (no login cookies)."""
+async def _start(client, admin, provider) -> tuple[str, dict[str, str]]:
+    """@brief Start a test login; returns its state and the browser's bind cookie."""
     r = await client.post(f"/api/v1/admin/oauth/providers/{provider.id}/test-login", headers=admin)
     assert r.status_code == 200, r.text
+    jar = SimpleCookie(r.headers["set-cookie"])
+    assert jar[BIND_COOKIE]["path"] == "/api/v1/oauth" and jar[BIND_COOKIE]["httponly"]
     state = parse_qs(urlsplit(r.json()["authorize_url"]).query)["state"][0]
+    return state, {BIND_COOKIE: jar[BIND_COOKIE].value}
+
+
+async def _callback(client, slug: str, state: str, claims, cookies=None) -> Any:
+    """@brief Hit the callback as the IdP redirect would."""
     with (
         patch.object(OAuthFlow, "exchange_code", AsyncMock(return_value={"id_token": "t"})),
         patch("app.api.v1.oauth.verify_id_token", AsyncMock(return_value=claims)),
     ):
         return await client.get(
-            f"/api/v1/oauth/{provider.slug}/callback?code=c&state={state}",
+            f"/api/v1/oauth/{slug}/callback?code=c&state={state}",
             follow_redirects=False,
+            cookies=cookies,
         )
+
+
+async def _run_test_login(client, factory, admin, provider, claims) -> Any:
+    """@brief Start, then hit the callback (no login cookies, only the bind cookie)."""
+    state, bind = await _start(client, admin, provider)
+    return await _callback(client, provider.slug, state, claims, bind)
 
 
 def _claims(email: str) -> dict[str, Any]:
@@ -171,7 +189,8 @@ async def test_test_login_reports_without_provisioning(client, factory):
     assert resp.status_code == 302
     loc = urlsplit(resp.headers["location"])
     assert loc.path == "/sso-test"
-    assert "set-cookie" not in resp.headers
+    # Only the bind cookie is cleared: no session/refresh cookie is issued.
+    assert "refresh_token" not in resp.headers.get("set-cookie", "")
     result_id = parse_qs(loc.query)["result"][0]
     assert await _count(factory, select(func.count()).where(User.email == email)) == 0
     links = select(func.count()).where(UserOAuthLink.provider_id == provider.id)
@@ -235,3 +254,78 @@ async def test_unknown_state_still_rejected(client, factory):
     provider = await _provider(factory)
     r = await client.get(f"/api/v1/oauth/{provider.slug}/callback?code=c&state=nope")
     assert r.status_code == 401
+
+
+async def test_test_login_works_on_disabled_provider_and_is_audited(client, factory):
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory)
+    assert provider.enabled is False
+    resp = await _run_test_login(client, factory, admin, provider, _claims("d@example.com"))
+    assert urlsplit(resp.headers["location"]).path == "/sso-test"
+    audits = select(func.count()).where(
+        AuditLog.action == "sso.test_login.started", AuditLog.target_id == provider.id
+    )
+    assert await _count(factory, audits) == 1
+
+
+async def test_test_state_without_bind_cookie_rejected(client, factory):
+    """Another browser completing the admin's authorize URL cannot feed the result."""
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory)
+    state, _bind = await _start(client, admin, provider)
+    resp = await _callback(client, provider.slug, state, _claims("e@example.com"))
+    assert resp.status_code == 401
+    state, _bind = await _start(client, admin, provider)
+    resp = await _callback(
+        client, provider.slug, state, _claims("e@example.com"), {BIND_COOKIE: "forged"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_slug_mismatched_test_context_rejected(client, factory):
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory)
+    other = await _provider(factory)
+    state, bind = await _start(client, admin, provider)
+    resp = await _callback(client, other.slug, state, _claims("f@example.com"), bind)
+    assert resp.status_code == 401
+    # Single use: the context is gone, the right slug no longer works either.
+    resp = await _callback(client, provider.slug, state, _claims("f@example.com"), bind)
+    assert resp.status_code == 401
+
+
+async def test_valid_cookie_state_with_stray_test_context_takes_normal_path(client, factory):
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory, enabled=True)
+    state, bind = await _start(client, admin, provider)
+    login = {
+        **bind,
+        "oauth_state": state,
+        "oauth_verifier": "v",
+        "oauth_provider": provider.slug,
+        "oauth_nonce": "n",
+    }
+    resp = await _callback(client, provider.slug, state, _claims("g@example.com"), login)
+    assert resp.status_code == 302
+    assert "/auth/callback?code=" in resp.headers["location"]
+    # The stray test context was not consumed.
+    assert await get_pool(_settings(), DB_CACHE).exists(f"oauth_test:{state}")
+
+
+async def test_disabled_provider_stops_login_immediately(client, factory):
+    """Toggle and update invalidate the provider cache: no stale logins."""
+    admin = await _user(factory, "admin")
+    provider = await _provider(factory, enabled=True)
+    url = f"/api/v1/oauth/{provider.slug}/login"
+    assert (await client.get(url, follow_redirects=False)).status_code == 302  # cached
+    r = await client.post(f"/api/v1/admin/oauth/providers/{provider.id}/toggle", headers=admin)
+    assert r.status_code == 200 and r.json()["enabled"] is False
+    assert (await client.get(url, follow_redirects=False)).status_code == 401
+    r = await client.put(
+        f"/api/v1/admin/oauth/providers/{provider.id}", json={"enabled": True}, headers=admin
+    )
+    assert r.status_code == 200
+    assert (await client.get(url, follow_redirects=False)).status_code == 302
+    r = await client.delete(f"/api/v1/admin/oauth/providers/{provider.id}", headers=admin)
+    assert r.status_code == 200
+    assert (await client.get(url, follow_redirects=False)).status_code == 401

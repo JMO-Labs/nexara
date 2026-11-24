@@ -105,15 +105,19 @@ class AdminOAuthService:
         endpoints = cast(DiscoveryEndpoints, {k: doc[k] for k in keys if doc.get(k)})
         return endpoints, str(doc["issuer"])
 
+    def _invalidate(self) -> None:
+        """@brief Drop this worker's provider cache so changes apply to the next login."""
+        ProviderManager(self._db).invalidate_cache()
+
     def callback_url(self, slug: str) -> str:
         """@brief Redirect URI the admin registers at the IdP."""
         return callback_url(self._settings, slug)
 
-    async def start_test_login(self, provider_id: uuid.UUID) -> str:
+    async def start_test_login(self, provider_id: uuid.UUID) -> tuple[str, str]:
         """
-        @brief Begin an admin test login (nothing is provisioned).
+        @brief Begin an admin test login (nothing is provisioned); audited.
 
-        @return IdP authorize URL for the popup.
+        @return (IdP authorize URL for the popup, browser binding cookie value).
         """
         provider = await self.get(provider_id)
         if not provider.authorization_endpoint or not provider.token_endpoint:
@@ -123,7 +127,9 @@ class AdminOAuthService:
                 status_code=422,
             )
         valkey = get_pool(self._settings, DB_CACHE)
-        return await sso_test_login.start(valkey, self._settings, provider, self._actor)
+        started = await sso_test_login.start(valkey, self._settings, provider, self._actor)
+        await self._audit("sso.test_login.started", provider.id, {"slug": provider.slug})
+        return started
 
     async def read_test_result(self, result_id: str) -> dict[str, Any]:
         """@brief One-time read of this admin's test login result."""
@@ -185,6 +191,7 @@ class AdminOAuthService:
             auto_create_users=body.auto_create_users,
         )
         provider = await self._repo.create(provider)
+        self._invalidate()  # a soft-deleted provider may have held this slug
         await self._audit("oauth.provider.created", provider.id, {"slug": provider.slug})
         logger.info("oauth_provider_created", provider_id=str(provider.id), slug=provider.slug)
         return provider
@@ -215,6 +222,7 @@ class AdminOAuthService:
             end_session_endpoint=doc.get("end_session_endpoint"),
         )
         provider = await self._repo.create(provider)
+        self._invalidate()
         await self._audit(
             "oauth.provider.created", provider.id, {"slug": provider.slug, "type": "oidc"}
         )
@@ -227,25 +235,34 @@ class AdminOAuthService:
         secret = data.pop("client_secret", None)
         if secret:
             data["client_secret_encrypted"] = self._encrypt(secret)
+        extra: dict[str, Any] = {}
         new_url = (data.get("discovery_url") or "").strip()
-        if new_url and new_url != provider.discovery_url and provider.provider_type == "oidc":
+        ptype = data.get("provider_type") or provider.provider_type
+        if new_url and new_url != provider.discovery_url and ptype == "oidc":
             endpoints, issuer = await self._discover(new_url)
-            data.update({**endpoints, "issuer": issuer, "discovery_url": new_url})
+            for key, value in endpoints.items():
+                if not data.get(key):  # explicit endpoints in the body win (as in create)
+                    data[key] = value
+            if issuer != provider.issuer:
+                extra = {"issuer": {"old": provider.issuer, "new": issuer}}
+            data.update({"issuer": issuer, "discovery_url": new_url})
         provider = await self._repo.update(provider, data)
-        await self._audit("oauth.provider.updated", provider.id, {"slug": provider.slug})
+        self._invalidate()
+        await self._audit("oauth.provider.updated", provider.id, {"slug": provider.slug, **extra})
         return provider
 
     async def delete(self, provider_id: uuid.UUID) -> None:
         """@brief Soft-delete a provider and drop the provider cache."""
         provider = await self.get(provider_id)
         await self._repo.soft_delete(provider)
-        ProviderManager(self._db).invalidate_cache()
+        self._invalidate()
         await self._audit("oauth.provider.deleted", provider_id, {"slug": provider.slug})
 
     async def toggle(self, provider_id: uuid.UUID) -> OAuthProvider:
         """@brief Flip a provider's enabled flag."""
         provider = await self.get(provider_id)
         provider = await self._repo.update(provider, {"enabled": not provider.enabled})
+        self._invalidate()
         await self._audit(
             "oauth.provider.toggled",
             provider.id,

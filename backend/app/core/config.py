@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     ALLOWED_ORIGINS: str = ""
     OIDC_HTTP_TIMEOUT: float = 10.0
+    OAUTH_ALLOW_INSECURE_DISCOVERY: bool = False
+    """@brief Dev/eval only: allow http and private/localhost hosts in OIDC discovery."""
     LOG_LEVEL: str = "INFO"
 
     # --- Database ---

@@ -138,7 +138,10 @@ async def resolve_subgroup_mappings(
             if await subgroup_repo.get_by_id(sub_id, community_id) is None:
                 logger.warning("oauth_group_subgroup_missing", group=group, subgroup_id=str(sub_id))
                 continue
-            mapped[sub_id] = role
+            # Same subgroup mapped twice: the highest role wins (owner > moderator > member).
+            prev = mapped.get(sub_id)
+            if prev is None or SUBGROUP_ROLES.index(role) < SUBGROUP_ROLES.index(prev):
+                mapped[sub_id] = role
     return mapped
 
 

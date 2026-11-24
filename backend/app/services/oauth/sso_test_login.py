@@ -35,6 +35,8 @@ from app.services.oauth.public_url import callback_url
 from app.services.oauth.sso_rules import evaluate_gates
 from app.services.oauth.user_provisioner import OAuthAuthResult
 
+BIND_COOKIE = "oauth_test_bind"
+"""@brief HttpOnly cookie binding a test login to the browser that started it."""
 CONTEXT_TTL = 600
 """@brief Seconds an admin has to finish the IdP login."""
 RESULT_TTL = 300
@@ -58,7 +60,7 @@ async def load_provider(
 
 async def start(
     valkey: Redis, settings: Settings, provider: OAuthProvider, admin_id: uuid.UUID
-) -> str:
+) -> tuple[str, str]:
     """
     @brief Build the IdP authorize URL for a test login and remember its state.
 
@@ -66,13 +68,15 @@ async def start(
     @param settings App settings (public base URL).
     @param provider Provider under test (may be disabled).
     @param admin_id Admin who started the test.
-    @return Authorize URL to open in a popup.
+    @return (authorize URL for the popup, value for the BIND_COOKIE).
     """
     nonce = secrets.token_urlsafe(32) if provider.provider_type == "oidc" else None
     url, state, verifier = OAuthFlow().build_authorize_url(
         provider, callback_url(settings, provider.slug), nonce=nonce
     )
+    binding = secrets.token_urlsafe(32)
     ctx = {
+        "binding": binding,
         "admin_id": str(admin_id),
         "provider_id": str(provider.id),
         "slug": provider.slug,
@@ -80,7 +84,13 @@ async def start(
         "nonce": nonce,
     }
     await valkey.setex(_ctx_key(state), CONTEXT_TTL, json.dumps(ctx))
-    return url
+    return url, binding
+
+
+def binding_ok(ctx: dict[str, Any], cookie: str | None) -> bool:
+    """@brief True when the callback comes from the browser that started the test."""
+    expected = ctx.get("binding")
+    return bool(cookie and isinstance(expected, str) and secrets.compare_digest(expected, cookie))
 
 
 async def consume_context(valkey: Redis, state: str) -> dict[str, Any] | None:

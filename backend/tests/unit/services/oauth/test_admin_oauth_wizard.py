@@ -31,14 +31,18 @@ def _settings(**kw: str) -> Settings:
     return Settings(SECRET_KEY="k", **kw)  # type: ignore[arg-type]
 
 
-def test_callback_url_prefers_allowed_origin():
-    s = _settings(ALLOWED_ORIGINS="https://home.example.com/", APP_BASE_URL="https://x.io")
-    assert callback_url(s, "kc") == "https://home.example.com/api/v1/oauth/kc/callback"
+def test_explicit_app_base_url_wins_over_allowed_origins():
+    s = _settings(ALLOWED_ORIGINS="http://192.168.1.5:8080", APP_BASE_URL="https://n.example/")
+    assert callback_url(s, "kc") == "https://n.example/api/v1/oauth/kc/callback"
 
 
-def test_callback_url_falls_back_to_app_base_url():
-    s = _settings(APP_BASE_URL="https://nexara.example.com/")
-    assert public_base(s) == "https://nexara.example.com"
+def test_default_app_base_url_uses_first_allowed_origin():
+    s = _settings(ALLOWED_ORIGINS="https://home.example.com/,https://b.example")
+    assert public_base(s) == "https://home.example.com"
+
+
+def test_nothing_set_uses_default_app_base_url():
+    assert public_base(_settings()) == "http://localhost:8000"
 
 
 def _svc() -> tuple[AdminOAuthService, AsyncMock]:
@@ -90,3 +94,42 @@ async def test_read_test_result_missing_is_not_found():
         pytest.raises(NotFoundError),
     ):
         await svc.read_test_result("nope")
+
+
+@patch(f"{MOD}.AuditRepository")
+@patch(f"{MOD}.fetch_discovery", new_callable=AsyncMock, return_value=DOC)
+async def test_update_discovery_keeps_explicit_endpoints_and_new_type(fetch, _audit):
+    _audit.return_value.append = AsyncMock()
+    svc, repo = _svc()
+    current = MagicMock(spec=OAuthProvider, discovery_url=None, provider_type="oauth2")
+    current.issuer = None
+    repo.get_by_id.return_value = current
+    body = OAuthProviderUpdate(
+        provider_type="oidc", discovery_url=URL, token_endpoint="https://explicit/token"
+    )
+    out = await svc.update(uuid.uuid4(), body)
+    fetch.assert_awaited_once()  # new provider_type (oidc) decides, not the stored oauth2
+    assert out.token_endpoint == "https://explicit/token"
+    assert out.authorization_endpoint == DOC["authorization_endpoint"]
+    extra = _audit.return_value.append.call_args.kwargs["extra_data"]
+    assert extra["issuer"] == {"old": None, "new": DOC["issuer"]}
+
+
+@pytest.mark.parametrize("op", ["update", "toggle", "delete"])
+@patch(f"{MOD}.AuditRepository")
+async def test_mutations_invalidate_provider_cache(_audit, op):
+    from app.services.oauth import provider_manager
+
+    _audit.return_value.append = AsyncMock()
+    svc, repo = _svc()
+    current = MagicMock(spec=OAuthProvider, discovery_url=None, provider_type="oidc")
+    current.enabled, current.slug, current.id = True, "kc", uuid.uuid4()
+    repo.get_by_id.return_value = current
+    provider_manager._provider_cache[(uuid.uuid4(), "kc")] = (current, 1e18)
+    if op == "update":
+        await svc.update(current.id, OAuthProviderUpdate(display_name="x"))
+    elif op == "toggle":
+        await svc.toggle(current.id)
+    else:
+        await svc.delete(current.id)
+    assert provider_manager._provider_cache == {}

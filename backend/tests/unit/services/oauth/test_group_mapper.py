@@ -15,6 +15,7 @@ from app.services.oauth.group_mapper import (
     global_role_mappings,
     map_groups_to_role,
     preview_group_mapping,
+    resolve_subgroup_mappings,
 )
 
 
@@ -242,3 +243,19 @@ class TestListRules:
         out = await preview_group_mapping(subs, CID, CM_LIST, ["family"])
         fam = [e for e in out if e["group"] == "family"]
         assert len(fam) == 3 and all(e["matched"] for e in fam)
+
+
+async def test_same_subgroup_twice_highest_role_wins():
+    subs, _ = _repos()
+    cm = {
+        "group_mapping": {
+            "a": [{"subgroup_id": str(ENG), "role": "owner"}],
+            "b": {"subgroup_id": str(ENG), "role": "member"},
+            "c": [
+                {"subgroup_id": str(DES), "role": "member"},
+                {"subgroup_id": str(DES), "role": "moderator"},
+            ],
+        }
+    }
+    out = await resolve_subgroup_mappings(subs, CID, ["a", "b", "c"], cm)
+    assert out == {ENG: "owner", DES: "moderator"}

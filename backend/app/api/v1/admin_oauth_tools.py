@@ -10,13 +10,16 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 
+from app.core.config import Settings, get_settings
+from app.core.cookies import should_secure_cookie
 from app.core.dependencies import require_role
 from app.core.deps_oauth_admin import get_admin_oauth_service
 from app.models.user import User
 from app.schemas.oauth import GroupMappingPreview, OIDCTestResult
+from app.services.oauth import sso_test_login
 from app.services.oauth.admin_oauth_service import AdminOAuthService
 from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints
 from app.services.oauth.presets import PRESETS
@@ -72,10 +75,28 @@ class TestLoginStart(BaseModel):
 
 @router.post("/providers/{provider_id}/test-login", response_model=TestLoginStart)
 async def start_test_login(
-    provider_id: uuid.UUID, svc: AdminOAuthService = Depends(get_admin_oauth_service)
+    provider_id: uuid.UUID,
+    response: Response,
+    svc: AdminOAuthService = Depends(get_admin_oauth_service),
+    settings: Settings = Depends(get_settings),
 ) -> TestLoginStart:
-    """@brief Start a test login: real IdP round-trip, nothing provisioned."""
-    return TestLoginStart(authorize_url=await svc.start_test_login(provider_id))
+    """
+    @brief Start a test login: real IdP round-trip, nothing provisioned.
+
+    Sets an HttpOnly cookie binding the test to this browser; the callback
+    rejects a test state arriving without it.
+    """
+    url, binding = await svc.start_test_login(provider_id)
+    response.set_cookie(
+        sso_test_login.BIND_COOKIE,
+        binding,
+        max_age=sso_test_login.CONTEXT_TTL,
+        httponly=True,
+        secure=should_secure_cookie(settings),
+        samesite="lax",
+        path="/api/v1/oauth",
+    )
+    return TestLoginStart(authorize_url=url)
 
 
 @router.get("/test-login/{result_id}")

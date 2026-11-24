@@ -10,7 +10,8 @@ from app.core.config import Settings
 
 def public_base(settings: Settings) -> str:
     """
-    @brief Public frontend origin: first ALLOWED_ORIGINS entry, else APP_BASE_URL.
+    @brief Public origin: APP_BASE_URL when explicitly set, else the first
+           ALLOWED_ORIGINS entry, else the APP_BASE_URL default.
 
     The callback goes through the frontend proxy so login cookies are present.
 
@@ -18,7 +19,9 @@ def public_base(settings: Settings) -> str:
     @return Origin without trailing slash.
     """
     origins = settings.allowed_origins_list
-    return (origins[0] if origins else settings.APP_BASE_URL).rstrip("/")
+    if settings.base_url_unset and origins:
+        return origins[0].rstrip("/")
+    return settings.APP_BASE_URL.rstrip("/")
 
 
 def callback_url(settings: Settings, slug: str) -> str:

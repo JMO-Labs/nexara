@@ -176,7 +176,9 @@ async def _test_callback(
     valkey = _get_valkey_client(settings)
     result_id = await sso_test_login.store_result(valkey, ctx["admin_id"], result)
     query = urlencode({"result": result_id})
-    return RedirectResponse(url=f"{public_base(settings)}/sso-test?{query}", status_code=302)
+    done = RedirectResponse(url=f"{public_base(settings)}/sso-test?{query}", status_code=302)
+    done.delete_cookie(sso_test_login.BIND_COOKIE, path="/api/v1/oauth")
+    return done
 
 
 @router.get("/{slug}/login")
@@ -218,6 +220,7 @@ async def oauth_callback(
     oauth_verifier: str | None = Cookie(None, alias=OAUTH_VERIFIER_COOKIE),
     oauth_provider: str | None = Cookie(None, alias=OAUTH_PROVIDER_COOKIE),
     oauth_nonce: str | None = Cookie(None, alias=OAUTH_NONCE_COOKIE),
+    oauth_test_bind: str | None = Cookie(None, alias=sso_test_login.BIND_COOKIE),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> RedirectResponse:
@@ -227,7 +230,11 @@ async def oauth_callback(
     if not oauth_state or not secrets.compare_digest(oauth_state, state):
         # Not this browser's login: maybe an admin test login (state kept server-side).
         ctx = await sso_test_login.consume_context(_get_valkey_client(settings), state)
-        if ctx is None or ctx.get("slug") != slug:
+        if (
+            ctx is None
+            or ctx.get("slug") != slug
+            or not sso_test_login.binding_ok(ctx, oauth_test_bind)
+        ):
             raise AuthenticationError(message=_("Invalid OAuth state"))
         return await _test_callback(ctx, code, db, settings)
     if not oauth_verifier or oauth_provider != slug:
