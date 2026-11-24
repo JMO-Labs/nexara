@@ -16,6 +16,7 @@ from authlib.jose import JsonWebKey, JsonWebToken
 
 from app.core.exceptions import AuthenticationError
 
+from .claim_mapper import map_claims
 from .user_provisioner import OAuthAuthResult
 
 if TYPE_CHECKING:
@@ -42,13 +43,6 @@ async def _fetch_jwks(jwks_uri: str) -> dict[str, Any]:
         jwks = cast(dict[str, Any], resp.json())
     _JWKS_CACHE[jwks_uri] = jwks
     return jwks
-
-
-def _get_claim(claims: dict[str, Any], key: str | None, fallback: str) -> Any:
-    """@brief Get claim by key or fallback."""
-    if key and key in claims:
-        return claims.get(key)
-    return claims.get(fallback)
 
 
 async def verify_id_token(
@@ -101,31 +95,14 @@ def extract_claims(
     """
     @brief Extract sub, email, display_name, avatar_url, groups from claims.
 
-    Uses provider's claim mapping (sub_claim, email_claim, etc.).
+    Uses the provider's claim_mapping (single source of truth) over defaults.
 
     @param claims Verified ID token claims.
-    @param provider OAuth provider with claim mappings.
+    @param provider OAuth provider with claim_mapping.
     @return OAuthAuthResult with extracted values.
     """
-    sub = str(_get_claim(claims, getattr(provider, "sub_claim", None), "sub") or "")
-    email = _get_claim(claims, getattr(provider, "email_claim", None), "email")
-    display_name = _get_claim(claims, getattr(provider, "name_claim", None), "name")
-    avatar_url = _get_claim(claims, getattr(provider, "avatar_claim", None), "picture")
-
-    group_claim = getattr(provider, "group_claim", "groups")
-    groups_raw = _get_claim(claims, group_claim, "groups")
-    if isinstance(groups_raw, list):
-        groups = [str(g) for g in groups_raw]
-    elif isinstance(groups_raw, str):
-        groups = [groups_raw]
-    else:
-        groups = []
-
-    return OAuthAuthResult(
-        sub=sub,
-        email=str(email) if email else None,
-        display_name=str(display_name) if display_name else None,
-        avatar_url=str(avatar_url) if avatar_url else None,
-        groups=groups,
-        email_verified=claims.get("email_verified") in (True, "true"),
+    return map_claims(
+        claims,
+        getattr(provider, "claim_mapping", None),
+        getattr(provider, "username_claim", None) or "preferred_username",
     )

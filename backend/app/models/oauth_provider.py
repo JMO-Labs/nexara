@@ -12,8 +12,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func, text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -70,11 +70,17 @@ class OAuthProvider(Base):
         server_default="{}",
     )
     default_role: Mapped[str] = mapped_column(String(32), nullable=False, server_default="member")
-    group_claim: Mapped[str] = mapped_column(String(64), nullable=False, server_default="groups")
-    avatar_claim: Mapped[str] = mapped_column(String(64), nullable=False, server_default="picture")
-    sub_claim: Mapped[str] = mapped_column(String(64), nullable=False, server_default="sub")
-    email_claim: Mapped[str] = mapped_column(String(64), nullable=False, server_default="email")
-    name_claim: Mapped[str] = mapped_column(String(64), nullable=False, server_default="name")
+    preset: Mapped[str | None] = mapped_column(Text)
+    allowed_domains: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, server_default="{}"
+    )
+    required_group: Mapped[str | None] = mapped_column(Text)
+    username_claim: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="preferred_username"
+    )
+    sync_profile: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    trust_email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    """@brief Treat the IdP's emails as verified (self-hosted IdPs; see presets)."""
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     auto_create_users: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     seeded_from_env: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
@@ -91,5 +97,12 @@ class OAuthProvider(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        UniqueConstraint("community_id", "slug", name="uq_oauth_provider_community_slug"),
+        # Live providers only: a soft-deleted provider frees its slug.
+        Index(
+            "uq_oauth_provider_community_slug_live",
+            "community_id",
+            "slug",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )

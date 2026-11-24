@@ -12,7 +12,8 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.household import HouseholdMember
@@ -116,6 +117,61 @@ class UserRepository(BaseRepository[User]):
             HouseholdMember.handle == username.lower(), HouseholdMember.deleted_at.is_(None)
         )
         return (await self._session.execute(stmt.limit(1))).first() is not None
+
+    async def try_create(self, user: User) -> User | None:
+        """
+        @brief Insert ``user`` inside a savepoint.
+
+        @param user New (transient) user.
+        @return The persisted user, or None on a unique violation (the outer
+                transaction stays usable).
+        """
+        try:
+            async with self._session.begin_nested():
+                self._session.add(user)
+                await self._session.flush()
+        except IntegrityError:
+            return None
+        await self._session.refresh(user)
+        return user
+
+    async def email_owner_id(self, email: str) -> uuid.UUID | None:
+        """
+        @brief Id of the user holding ``email``, soft-deleted users included
+               (the unique constraint spans them).
+
+        @param email Email (case-insensitive).
+        @return Owner id or None.
+        """
+        stmt = select(User.id).where(func.lower(User.email) == email.lower()).limit(1)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def count_active_admins(self, community_id: uuid.UUID) -> int:
+        """
+        @brief Number of active, non-deleted admins in a community.
+
+        @param community_id Community scope.
+        @return Admin count.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(User)
+            .where(User.community_id == community_id)
+            .where(User.role == "admin")
+            .where(User.is_active.is_(True))
+            .where(User.deleted_at.is_(None))
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
+
+    async def username_owner_id(self, username: str) -> uuid.UUID | None:
+        """
+        @brief Id of the user holding ``username``, soft-deleted users included.
+
+        @param username Username (case-insensitive).
+        @return Owner id or None.
+        """
+        stmt = select(User.id).where(func.lower(User.username) == username.lower()).limit(1)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def list_by_community(
         self,

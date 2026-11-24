@@ -8,13 +8,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import SsoRefusedError
 from app.models.user import User
 from app.services.oauth.user_provisioner import (
     OAuthAuthResult,
     UserProvisioner,
     _derive_username,
 )
+from tests.unit.services.oauth.helpers import sso_provider
 
 
 @pytest.fixture(autouse=True)
@@ -72,7 +73,7 @@ class TestProvisionUser:
         mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
 
         auth_result = OAuthAuthResult(sub="oidc-123", email="u@x.com", display_name="User")
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -110,7 +111,7 @@ class TestProvisionUser:
         mock_user_repo.update = AsyncMock(return_value=mock_user)
 
         auth_result = OAuthAuthResult(sub="oidc-123", email="u@x.com")
-        mock_provider = MagicMock()
+        mock_provider = sso_provider(group_mappings={"ops": "admin"})
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -147,7 +148,7 @@ class TestProvisionUser:
             avatar_url="https://x.com/a.png",
             email_verified=True,
         )
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -177,11 +178,12 @@ class TestProvisionUser:
 
         mock_link_repo.find_by_provider_and_sub = AsyncMock(return_value=None)
         mock_user_repo.find_by_email = AsyncMock(return_value=None)
-        mock_user_repo.find_by_username = AsyncMock(return_value=None)
+        mock_user_repo.username_owner_id = AsyncMock(return_value=None)
+        mock_user_repo.email_owner_id = AsyncMock(return_value=None)
 
         new_user = MagicMock(spec=User)
         new_user.id = uuid.uuid4()
-        mock_user_repo.create = AsyncMock(return_value=new_user)
+        mock_user_repo.try_create = AsyncMock(return_value=new_user)
         mock_link_repo.create = AsyncMock()
 
         auth_result = OAuthAuthResult(
@@ -190,7 +192,7 @@ class TestProvisionUser:
             display_name="New User",
             email_verified=True,
         )
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
         community_id = uuid.uuid4()
 
@@ -206,8 +208,8 @@ class TestProvisionUser:
                 result = await provisioner.provision_user(auth_result, mock_provider, "member")
 
         assert result is new_user
-        mock_user_repo.create.assert_called_once()
-        user_created = mock_user_repo.create.call_args[0][0]
+        mock_user_repo.try_create.assert_called_once()
+        user_created = mock_user_repo.try_create.call_args[0][0]
         assert user_created.email == "newuser@example.com"
         assert user_created.community_id == community_id
         assert user_created.role == "member"
@@ -219,8 +221,7 @@ def _run(auth_result, *, link=None, user=None):
     link_repo, user_repo = AsyncMock(), AsyncMock()
     link_repo.find_by_provider_and_sub = AsyncMock(return_value=link)
     user_repo.find_by_email = AsyncMock(return_value=user)
-    provider = MagicMock()
-    provider.id = uuid.uuid4()
+    provider = sso_provider()
 
     async def go():
         with (
@@ -243,9 +244,9 @@ class TestEmailVerification:
     @pytest.mark.asyncio
     async def test_unverified_email_rejected_for_new_user(self):
         coro, link_repo, user_repo = _run(OAuthAuthResult(sub="s", email="a@x.com"))
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
-        user_repo.create.assert_not_called()
+        user_repo.try_create.assert_not_called()
         link_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
@@ -253,26 +254,27 @@ class TestEmailVerification:
         """Account-takeover guard."""
         existing = MagicMock(spec=User)
         coro, link_repo, _ = _run(OAuthAuthResult(sub="s", email="a@x.com"), user=existing)
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
         link_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_missing_email_rejected(self):
         coro, _, user_repo = _run(OAuthAuthResult(sub="s", email=None, email_verified=True))
-        with pytest.raises(AuthenticationError, match="Email not verified"):
+        with pytest.raises(SsoRefusedError, match="sso_email_unverified"):
             await coro
-        user_repo.create.assert_not_called()
+        user_repo.try_create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_verified_email_lookup_is_case_insensitive(self):
         existing = MagicMock(spec=User)
         existing.id = uuid.uuid4()
+        existing.email = "mixed@x.com"
         coro, link_repo, user_repo = _run(
             OAuthAuthResult(sub="s", email="Mixed@X.com", email_verified=True), user=existing
         )
         assert await coro is existing
-        user_repo.find_by_email.assert_called_once_with("mixed@x.com")
+        user_repo.find_by_email.assert_called_once_with("mixed@x.com")  # no email re-sync
         link_repo.create.assert_called_once()
 
     @pytest.mark.asyncio

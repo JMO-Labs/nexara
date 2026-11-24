@@ -16,6 +16,34 @@ import httpx
 from app.core.encryption import decrypt_secret, derive_fernet_key
 from app.core.exceptions import AuthenticationError
 from app.models.oauth_provider import OAuthProvider
+from app.services.oauth.oauth2_email import OAUTH2_EMAIL_PRESETS, fetch_verified_email
+from app.services.oauth.user_provisioner import OAuthAuthResult
+
+
+async def apply_email_trust(
+    provider: OAuthProvider, token_data: dict[str, Any], auth_result: OAuthAuthResult
+) -> None:
+    """
+    @brief The single place email trust is decided (real and test login).
+
+    GitHub/Discord: the profile email is untrusted and replaced by the verified
+    one from the provider API (``trust_email`` ignored); without one the result
+    carries no email, so it can neither link nor create an account. Other
+    providers: ``trust_email`` treats a present email as verified (IdPs such as
+    authentik send email_verified=false by default).
+
+    @param provider OAuth provider (preset, trust_email).
+    @param token_data Token response (access_token).
+    @param auth_result Mapped claims; email/email_verified updated in place.
+    """
+    if provider.preset in OAUTH2_EMAIL_PRESETS:
+        token = token_data.get("access_token")
+        email = await fetch_verified_email(provider.preset, str(token)) if token else None
+        auth_result.email = email
+        auth_result.email_verified = email is not None
+        return
+    if provider.trust_email and auth_result.email:
+        auth_result.email_verified = True
 
 
 class OAuthFlow:
@@ -100,8 +128,11 @@ class OAuthFlow:
         if client_secret:
             data["client_secret"] = client_secret
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(token_endpoint, data=data)
+        # Accept: GitHub answers form-encoded otherwise.
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                token_endpoint, data=data, headers={"Accept": "application/json"}
+            )
             if resp.status_code != 200:
                 raise AuthenticationError("token exchange failed")
             return cast(dict[str, Any], resp.json())

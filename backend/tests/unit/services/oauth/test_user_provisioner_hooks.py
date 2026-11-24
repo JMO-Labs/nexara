@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+from tests.unit.services.oauth.helpers import sso_provider
 
 _P = "app.services.oauth.user_provisioner"
 
@@ -17,7 +18,8 @@ def _provisioner(link, new_user):
     link_repo.find_by_provider_and_sub.return_value = link
     user_repo = AsyncMock()
     user_repo.find_by_email.return_value = None
-    user_repo.create.return_value = new_user
+    user_repo.email_owner_id.return_value = None
+    user_repo.try_create.return_value = new_user
     user_repo.get_by_id.return_value = new_user
     session = AsyncMock()
     cid = uuid.uuid4()
@@ -30,11 +32,7 @@ def _provisioner(link, new_user):
 
 
 def _provider():
-    p = MagicMock()
-    p.id = uuid.uuid4()
-    p.group_mappings = None
-    p.claim_mapping = None
-    return p
+    return sso_provider(group_mappings=None, claim_mapping=None)
 
 
 async def test_new_oauth_user_emits_on_user_joined():

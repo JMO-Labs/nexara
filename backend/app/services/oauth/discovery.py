@@ -14,6 +14,23 @@ from typing import Any, TypedDict, cast
 from urllib.parse import urlparse
 
 import httpx
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
+def _insecure_allowed(url: str, reason: str) -> bool:
+    """
+    @brief True when OAUTH_ALLOW_INSECURE_DISCOVERY permits an otherwise rejected URL.
+
+    Logs a warning every time the escape hatch is used.
+    """
+    from app.core.config import get_settings
+
+    if not get_settings().OAUTH_ALLOW_INSECURE_DISCOVERY:
+        return False
+    logger.warning("oauth_insecure_discovery_allowed", url=url, reason=reason)
+    return True
 
 
 def _is_disallowed_host(hostname: str) -> bool:
@@ -57,10 +74,10 @@ async def discover_endpoints(issuer: str) -> DiscoveryEndpoints:
     @raises ValueError If scheme is not https or host is disallowed.
     """
     parsed = urlparse(issuer)
-    if parsed.scheme != "https":
+    if parsed.scheme != "https" and not _insecure_allowed(issuer, "http"):
         raise ValueError("Issuer must use https scheme")
     host = parsed.hostname or ""
-    if _is_disallowed_host(host):
+    if _is_disallowed_host(host) and not _insecure_allowed(issuer, "private host"):
         raise ValueError("Issuer host is disallowed (localhost or private IP)")
 
     url = issuer.rstrip("/") + "/.well-known/openid-configuration"
@@ -95,9 +112,9 @@ def clear_cache() -> None:
 def _validate_https_public(url: str, what: str) -> None:
     """@brief Require https and a non-private host. @raises ValueError otherwise."""
     parsed = urlparse(url)
-    if parsed.scheme != "https":
+    if parsed.scheme != "https" and not _insecure_allowed(url, "http"):
         raise ValueError(f"{what} must use https scheme")
-    if _is_disallowed_host(parsed.hostname or ""):
+    if _is_disallowed_host(parsed.hostname or "") and not _insecure_allowed(url, "private host"):
         raise ValueError(f"{what} host is disallowed (localhost or private IP)")
 
 

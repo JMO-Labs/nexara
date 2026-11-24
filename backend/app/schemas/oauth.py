@@ -8,15 +8,39 @@ Covers provider CRUD, exchange code flow, and public provider list items.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_validator
 
 from app.schemas.subgroup import SUBGROUP_ROLES
+from app.services.oauth.presets import PRESETS
 
 #: Community roles a group rule without subgroup_id may grant.
 COMMUNITY_ROLES = ("viewer", "member", "admin")
+
+
+def _check_preset(value: str | None) -> str | None:
+    """@brief Reject unknown preset keys."""
+    if value is not None and value not in PRESETS:
+        raise ValueError(f"preset must be one of {', '.join(PRESETS)}")
+    return value
+
+
+def _norm_domains(value: list[str]) -> list[str]:
+    """@brief Strip, lowercase, drop leading '@', drop empties, dedupe (order kept)."""
+    out: dict[str, None] = {}
+    for d in value:
+        d = d.strip().lstrip("@").strip().lower()
+        if d:
+            out[d] = None
+    return list(out)
+
+
+Preset = Annotated[str | None, AfterValidator(_check_preset)]
+#: A provider's default community role (written to users.role on JIT create).
+CommunityRole = Literal["viewer", "member", "admin"]
+Domains = Annotated[list[str], AfterValidator(_norm_domains)]
 
 
 class GroupMappingRule(BaseModel):
@@ -39,7 +63,8 @@ class GroupMappingRule(BaseModel):
         return self
 
 
-_RULES = TypeAdapter(dict[str, GroupMappingRule])
+#: A group maps to one rule, or a list (e.g. a community role plus several subgroups).
+_RULES = TypeAdapter(dict[str, GroupMappingRule | list[GroupMappingRule]])
 
 
 def validate_claim_mapping(value: dict[str, Any]) -> dict[str, Any]:
@@ -54,7 +79,14 @@ def validate_claim_mapping(value: dict[str, Any]) -> dict[str, Any]:
     for key, val in value.items():
         if key == "group_mapping":
             rules = _RULES.validate_python(val)
-            out[key] = {g: r.model_dump(mode="json") for g, r in rules.items()}
+            out[key] = {
+                g: (
+                    [x.model_dump(mode="json") for x in r]
+                    if isinstance(r, list)
+                    else r.model_dump(mode="json")
+                )
+                for g, r in rules.items()
+            }
         elif isinstance(val, str):
             out[key] = val
         else:
@@ -90,12 +122,14 @@ class OAuthProviderCreate(BaseModel):
     jwks_uri: str | None = None
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] = Field(default_factory=dict)
-    default_role: str = "member"
-    group_claim: str = "groups"
-    avatar_claim: str = "picture"
-    sub_claim: str = "sub"
-    email_claim: str = "email"
-    name_claim: str = "name"
+    default_role: CommunityRole = "member"
+    preset: Preset = None
+    allowed_domains: Domains = Field(default_factory=list)
+    required_group: str | None = None
+    username_claim: str = "preferred_username"
+    sync_profile: bool = True
+    trust_email: bool | None = None
+    """@brief None = the preset's default (false without a preset)."""
     enabled: bool = True
     auto_create_users: bool = True
 
@@ -123,12 +157,13 @@ class OAuthProviderUpdate(BaseModel):
     jwks_uri: str | None = None
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] | None = None
-    default_role: str | None = None
-    group_claim: str | None = None
-    avatar_claim: str | None = None
-    sub_claim: str | None = None
-    email_claim: str | None = None
-    name_claim: str | None = None
+    default_role: CommunityRole | None = None
+    preset: Preset = None
+    allowed_domains: Domains | None = None
+    required_group: str | None = None
+    username_claim: str | None = None
+    sync_profile: bool | None = None
+    trust_email: bool | None = None
     enabled: bool | None = None
     auto_create_users: bool | None = None
 
@@ -158,11 +193,12 @@ class OAuthProviderResponse(BaseModel):
     end_session_endpoint: str | None
     group_mappings: dict[str, str]
     default_role: str
-    group_claim: str
-    avatar_claim: str
-    sub_claim: str
-    email_claim: str
-    name_claim: str
+    preset: str | None = None
+    allowed_domains: list[str] = Field(default_factory=list)
+    required_group: str | None = None
+    username_claim: str = "preferred_username"
+    sync_profile: bool = True
+    trust_email: bool = False
     enabled: bool
     auto_create_users: bool
     seeded_from_env: bool
@@ -170,6 +206,12 @@ class OAuthProviderResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AdminOAuthProviderResponse(OAuthProviderResponse):
+    """@brief Admin view of a provider, plus the redirect URI to register at the IdP."""
+
+    callback_url: str
 
 
 class OAuthExchangeRequest(BaseModel):

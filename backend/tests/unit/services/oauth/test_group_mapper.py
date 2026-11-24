@@ -15,6 +15,7 @@ from app.services.oauth.group_mapper import (
     global_role_mappings,
     map_groups_to_role,
     preview_group_mapping,
+    resolve_subgroup_mappings,
 )
 
 
@@ -211,3 +212,50 @@ class TestPreview:
             }
         ]
         subs.get_by_id.assert_not_called()
+
+
+#: One IdP group granting a community role and two subgroups (list form).
+CM_LIST = {
+    "group_mapping": {
+        "family": [
+            {"subgroup_id": None, "role": "admin"},
+            {"subgroup_id": str(ENG), "role": "member"},
+            {"subgroup_id": str(DES), "role": "member"},
+        ],
+        "kids": [{"subgroup_id": None, "role": "viewer"}, {"role": "member"}],
+    }
+}
+
+
+class TestListRules:
+    """@brief A group_mapping value may be a list of rules (role + several subgroups)."""
+
+    def test_global_role_from_list_highest_wins(self):
+        assert global_role_mappings(CM_LIST) == {"family": "admin", "kids": "member"}
+
+    async def test_list_rules_join_every_subgroup(self):
+        subs, mem = _repos()
+        joined = await apply_subgroup_mappings(subs, mem, CID, UID, ["family"], CM_LIST)
+        assert set(joined) == {ENG, DES}
+
+    async def test_preview_one_entry_per_rule(self):
+        subs, _ = _repos()
+        out = await preview_group_mapping(subs, CID, CM_LIST, ["family"])
+        fam = [e for e in out if e["group"] == "family"]
+        assert len(fam) == 3 and all(e["matched"] for e in fam)
+
+
+async def test_same_subgroup_twice_highest_role_wins():
+    subs, _ = _repos()
+    cm = {
+        "group_mapping": {
+            "a": [{"subgroup_id": str(ENG), "role": "owner"}],
+            "b": {"subgroup_id": str(ENG), "role": "member"},
+            "c": [
+                {"subgroup_id": str(DES), "role": "member"},
+                {"subgroup_id": str(DES), "role": "moderator"},
+            ],
+        }
+    }
+    out = await resolve_subgroup_mappings(subs, CID, ["a", "b", "c"], cm)
+    assert out == {ENG: "owner", DES: "moderator"}

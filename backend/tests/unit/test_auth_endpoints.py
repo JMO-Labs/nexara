@@ -86,6 +86,7 @@ class TestAuthConfigEndpoint:
         mock_provider.slug = "oidc"
         mock_provider.display_name = "OIDC"
         mock_provider.icon_url = None
+        mock_provider.preset = None
 
         with patch("app.services.oauth.provider_manager.ProviderManager") as mock_manager_cls:
             mock_manager = AsyncMock()

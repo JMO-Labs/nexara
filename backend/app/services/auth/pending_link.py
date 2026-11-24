@@ -18,18 +18,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_oauth_link import UserOAuthLink
 from app.repositories.oauth_repo import UserOAuthLinkRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository
 from app.repositories.user_repo import UserRepository
+from app.services.oauth.group_mapper import sync_subgroups
+from app.services.oauth.profile_sync import audit_role_synced
+from app.services.oauth.role_sync import audit_role_sync_skipped, can_change_role
 
 
 async def create_link(
     session: AsyncSession, user_id: uuid.UUID, link: dict[str, Any] | None
 ) -> None:
     """
-    @brief Persist a held link (and its deferred group-mapped role); idempotent.
+    @brief Persist a held link, then its deferred role and subgroup sync; idempotent.
 
     @param session Request session.
     @param user_id Account that passed 2FA.
-    @param link provider_id, sub, email_from_provider, avatar_url, role; None = no-op.
+    @param link provider_id, sub, email_from_provider, avatar_url, role,
+                subgroups (subgroup_id -> role, present when the provider
+                syncs subgroups); None = no-op.
     """
     if not link:
         return
@@ -46,8 +52,27 @@ async def create_link(
             avatar_url=link.get("avatar_url"),
         )
     )
-    if link.get("role"):
-        users = UserRepository(session)
-        user = await users.get_by_id(user_id)
-        if user is not None and user.role != link["role"]:
-            await users.update(user, {"role": link["role"]})
+    role, subgroups = link.get("role"), link.get("subgroups")
+    if not role and not isinstance(subgroups, dict):
+        return
+    users = UserRepository(session)
+    user = await users.get_by_id(user_id)
+    if user is None:
+        return
+    if role and user.role != role:
+        old, new = user.role, str(role)
+        if await can_change_role(users, user.community_id, user, new):
+            await users.update(user, {"role": new})
+            await audit_role_synced(session, user_id, old, new, provider_id=provider_id)
+        else:
+            await audit_role_sync_skipped(session, user_id, old, new, provider_id)
+    if isinstance(subgroups, dict):
+        mapped = {uuid.UUID(str(k)): str(v) for k, v in subgroups.items()}
+        await sync_subgroups(
+            SubgroupMemberRepository(session),
+            user.community_id,
+            user_id,
+            mapped,
+            session=session,
+            provider_id=provider_id,
+        )

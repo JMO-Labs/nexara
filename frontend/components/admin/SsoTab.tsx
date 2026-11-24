@@ -22,6 +22,7 @@ import type {
   OAuthProviderCreate,
   OAuthProviderResponse,
 } from "@/lib/api/adminOauth";
+import { ApiError } from "@/lib/api/errors";
 import { SsoProviderForm } from "./SsoProviderForm";
 
 /**
@@ -31,6 +32,7 @@ import { SsoProviderForm } from "./SsoProviderForm";
 export function SsoTab() {
   const [openModal, setOpenModal] = useState(false);
   const [editing, setEditing] = useState<OAuthProviderResponse | null>(null);
+  const [slugError, setSlugError] = useState<string | null>(null);
   const confirm = useConfirmDialog((s) => s.confirm);
 
   const { data: providers, isLoading, error } = useOauthProviders();
@@ -45,17 +47,30 @@ export function SsoTab() {
   const closeModal = () => {
     setOpenModal(false);
     setEditing(null);
+    setSlugError(null);
   };
 
-  const handleSubmit = (v: OAuthProviderCreate, secretChanged: boolean) => {
-    if (editing) {
-      const { client_secret, ...rest } = v;
-      updateMutation.mutate({
-        providerId: editing.id,
-        updates: secretChanged ? { ...rest, client_secret } : rest,
-      });
-    } else {
-      createMutation.mutate(v);
+  const handleSubmit = async (
+    v: OAuthProviderCreate,
+    secretChanged: boolean,
+  ) => {
+    setSlugError(null);
+    try {
+      if (editing) {
+        const { client_secret, ...rest } = v;
+        await updateMutation.mutateAsync({
+          providerId: editing.id,
+          updates: secretChanged ? { ...rest, client_secret } : rest,
+        });
+      } else {
+        await createMutation.mutateAsync(v);
+      }
+    } catch (err) {
+      // Slug taken: keep the wizard open and show it on the slug field.
+      if (err instanceof ApiError && err.code === "sso_slug_taken") {
+        setSlugError(err.message || "A provider with this slug already exists");
+        return;
+      }
     }
     closeModal();
   };
@@ -111,7 +126,7 @@ export function SsoTab() {
         {hasProviders && (
           <Button onClick={() => setOpenModal(true)}>
             <Plus className="size-4" aria-hidden="true" />
-            Add OIDC provider
+            Add SSO provider
           </Button>
         )}
       </div>
@@ -177,11 +192,11 @@ export function SsoTab() {
             compact
             icon={KeyRound}
             title="No providers yet"
-            description="Connect an OIDC provider to let members sign in with SSO."
+            description="Connect an identity provider to let members sign in with SSO."
             action={
               <Button onClick={() => setOpenModal(true)}>
                 <Plus className="size-4" aria-hidden="true" />
-                Add OIDC provider
+                Add SSO provider
               </Button>
             }
           />
@@ -191,7 +206,8 @@ export function SsoTab() {
       <Modal
         open={openModal || !!editing}
         onClose={closeModal}
-        title={editing ? "Edit OIDC provider" : "Add OIDC provider"}
+        title={editing ? "Edit SSO provider" : "Add SSO provider"}
+        size="lg"
       >
         <SsoProviderForm
           key={editing?.id ?? "new"}
@@ -200,6 +216,7 @@ export function SsoTab() {
           onCancel={closeModal}
           onSubmit={handleSubmit}
           onTest={(url) => discoverMutation.mutateAsync(url)}
+          slugError={slugError}
         />
       </Modal>
     </div>

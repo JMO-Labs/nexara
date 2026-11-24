@@ -13,6 +13,8 @@ import structlog
 from app.schemas.subgroup import SUBGROUP_ROLES
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 
 logger = structlog.get_logger()
@@ -56,26 +58,144 @@ def map_groups_to_role(
     return best_role if best_role is not None else default_role
 
 
-def _rules(claim_mapping: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
-    """@brief Extract the optional group_mapping section (group -> rule dict)."""
+def _rules(claim_mapping: dict[str, Any] | None) -> dict[str, list[dict[str, Any]]]:
+    """
+    @brief Extract the optional group_mapping section as group -> list of rules.
+
+    A stored value is one rule dict or a list of them (role + several subgroups).
+    """
     section = (claim_mapping or {}).get("group_mapping")
     if not isinstance(section, dict):
         return {}
-    return {g: r for g, r in section.items() if isinstance(r, dict)}
+    out: dict[str, list[dict[str, Any]]] = {}
+    for group, value in section.items():
+        items = value if isinstance(value, list) else [value]
+        rules = [r for r in items if isinstance(r, dict)]
+        if rules:
+            out[group] = rules
+    return out
 
 
 def global_role_mappings(claim_mapping: dict[str, Any] | None) -> dict[str, str]:
     """
     @brief Group -> community role for rules without a subgroup_id.
 
+    When one group lists several community roles the highest wins.
+
     @param claim_mapping Provider claim_mapping (may hold group_mapping).
     @return Dict usable as group_mappings for map_groups_to_role.
     """
-    return {
-        g: str(r["role"])
-        for g, r in _rules(claim_mapping).items()
-        if not r.get("subgroup_id") and r.get("role")
-    }
+    out: dict[str, str] = {}
+    for g, rules in _rules(claim_mapping).items():
+        roles = [str(r["role"]) for r in rules if not r.get("subgroup_id") and r.get("role")]
+        if roles:
+            out[g] = max(
+                roles, key=lambda x: _ROLE_PRIORITY.index(x) if x in _ROLE_PRIORITY else -1
+            )
+    return out
+
+
+def has_subgroup_rules(claim_mapping: dict[str, Any] | None) -> bool:
+    """@brief True when any group_mapping rule targets a subgroup (sync is active)."""
+    return any(r.get("subgroup_id") for rules in _rules(claim_mapping).values() for r in rules)
+
+
+async def resolve_subgroup_mappings(
+    subgroup_repo: SubgroupRepository,
+    community_id: uuid.UUID,
+    groups: list[str],
+    claim_mapping: dict[str, Any] | None,
+) -> dict[uuid.UUID, str]:
+    """
+    @brief Resolve group claims to existing local subgroups (no writes).
+
+    Unmapped groups, invalid roles/ids and missing subgroups are skipped with a warning.
+
+    @param subgroup_repo Subgroup repository.
+    @param community_id Community scope.
+    @param groups Group names from the token.
+    @param claim_mapping Provider claim_mapping.
+    @return subgroup_id -> subgroup role.
+    """
+    rules = _rules(claim_mapping)
+    mapped: dict[uuid.UUID, str] = {}
+    if not rules:
+        return mapped
+    for group in groups:
+        if group not in rules:
+            logger.warning("oauth_group_unmapped", group=group)
+            continue
+        for rule in rules[group]:
+            if not rule.get("subgroup_id"):
+                continue
+            role = str(rule.get("role") or "member")
+            if role not in SUBGROUP_ROLES:
+                logger.warning("oauth_group_invalid_role", group=group, role=role)
+                continue
+            try:
+                sub_id = uuid.UUID(str(rule["subgroup_id"]))
+            except ValueError:
+                logger.warning("oauth_group_bad_subgroup_id", group=group)
+                continue
+            if await subgroup_repo.get_by_id(sub_id, community_id) is None:
+                logger.warning("oauth_group_subgroup_missing", group=group, subgroup_id=str(sub_id))
+                continue
+            # Same subgroup mapped twice: the highest role wins (owner > moderator > member).
+            prev = mapped.get(sub_id)
+            if prev is None or SUBGROUP_ROLES.index(role) < SUBGROUP_ROLES.index(prev):
+                mapped[sub_id] = role
+    return mapped
+
+
+async def sync_subgroups(
+    member_repo: SubgroupMemberRepository,
+    community_id: uuid.UUID,
+    user_id: uuid.UUID,
+    mapped: dict[uuid.UUID, str],
+    *,
+    session: AsyncSession | None = None,
+    provider_id: uuid.UUID | str | None = None,
+) -> list[uuid.UUID]:
+    """
+    @brief Make the user's SSO memberships match ``mapped``.
+
+    Adds missing memberships as source='sso', re-roles existing 'sso' rows,
+    and deletes 'sso' rows not in ``mapped``. 'manual' rows are never touched.
+
+    @param member_repo Subgroup member repository.
+    @param community_id Community scope.
+    @param user_id User being synced.
+    @param mapped subgroup_id -> role from resolve_subgroup_mappings.
+    @param session When given, changes are audited (sso.subgroups_synced).
+    @param provider_id Provider driving the sync (audit only).
+    @return Subgroup IDs the user was newly added to.
+    """
+    joined: list[uuid.UUID] = []
+    changed: list[uuid.UUID] = []
+    removed: list[uuid.UUID] = []
+    for sub_id, role in mapped.items():
+        row = await member_repo.get_membership(sub_id, user_id)
+        if row is None:
+            await member_repo.add_member(
+                community_id=community_id,
+                subgroup_id=sub_id,
+                user_id=user_id,
+                role=role,
+                source="sso",
+            )
+            joined.append(sub_id)
+        elif row.source == "sso" and row.role != role:
+            await member_repo.update_role(row, role)
+            changed.append(sub_id)
+    for sub_id in await member_repo.list_sso_subgroup_ids(user_id, community_id):
+        if sub_id not in mapped:
+            await member_repo.remove_member(sub_id, user_id)
+            removed.append(sub_id)
+    if session is not None:
+        from app.services.oauth.role_sync import audit_subgroups_synced  # avoid import cycle
+
+        await audit_subgroups_synced(session, user_id, joined, removed, changed, provider_id)
+    return joined
 
 
 async def apply_subgroup_mappings(
@@ -85,54 +205,24 @@ async def apply_subgroup_mappings(
     user_id: uuid.UUID,
     groups: list[str],
     claim_mapping: dict[str, Any] | None,
+    *,
+    session: AsyncSession | None = None,
+    provider_id: uuid.UUID | str | None = None,
 ) -> list[uuid.UUID]:
     """
-    @brief Add the user to subgroups mapped from their group claims.
+    @brief Resolve the user's group claims and sync SSO subgroup memberships.
 
-    Unmapped groups and missing subgroups are skipped with a warning.
-    Existing memberships are left untouched (idempotent).
+    No-op unless the provider has subgroup rules (so other providers' or
+    manual memberships are never removed by an unmapped provider).
 
-    @param subgroup_repo Subgroup repository.
-    @param member_repo Subgroup member repository.
-    @param community_id Community scope.
-    @param user_id User being provisioned.
-    @param groups Group names from the token.
-    @param claim_mapping Provider claim_mapping.
     @return Subgroup IDs the user was newly added to.
     """
-    rules = _rules(claim_mapping)
-    if not rules:
+    if not has_subgroup_rules(claim_mapping):
         return []
-    joined: list[uuid.UUID] = []
-    for group in groups:
-        rule = rules.get(group)
-        if rule is None:
-            logger.warning("oauth_group_unmapped", group=group)
-            continue
-        if not rule.get("subgroup_id"):
-            continue
-        role = str(rule.get("role") or "member")
-        if role not in SUBGROUP_ROLES:
-            logger.warning("oauth_group_invalid_role", group=group, role=role)
-            continue
-        try:
-            sub_id = uuid.UUID(str(rule["subgroup_id"]))
-        except ValueError:
-            logger.warning("oauth_group_bad_subgroup_id", group=group)
-            continue
-        if await subgroup_repo.get_by_id(sub_id, community_id) is None:
-            logger.warning("oauth_group_subgroup_missing", group=group, subgroup_id=str(sub_id))
-            continue
-        if await member_repo.get_membership(sub_id, user_id) is not None:
-            continue
-        await member_repo.add_member(
-            community_id=community_id,
-            subgroup_id=sub_id,
-            user_id=user_id,
-            role=role,
-        )
-        joined.append(sub_id)
-    return joined
+    mapped = await resolve_subgroup_mappings(subgroup_repo, community_id, groups, claim_mapping)
+    return await sync_subgroups(
+        member_repo, community_id, user_id, mapped, session=session, provider_id=provider_id
+    )
 
 
 async def preview_group_mapping(
@@ -152,7 +242,8 @@ async def preview_group_mapping(
     """
     sample = set(sample_groups or [])
     out: list[dict[str, Any]] = []
-    for group, rule in _rules(claim_mapping).items():
+    pairs = [(g, r) for g, rules in _rules(claim_mapping).items() for r in rules]
+    for group, rule in pairs:
         raw = rule.get("subgroup_id")
         exists: bool | None = None
         if raw:

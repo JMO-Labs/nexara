@@ -17,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+from tests.unit.services.oauth.helpers import sso_provider
 from tests.unit.services.test_auth_security_fixes import _fake_redis, _make_service, _make_user
 
 UP = "app.services.oauth.user_provisioner."
@@ -43,7 +44,7 @@ class World:
         return link
 
 
-PROVIDER = MagicMock(id=uuid.uuid4(), group_mappings={}, claim_mapping={})
+PROVIDER = sso_provider()
 
 
 async def _sso(world: World, methods: list[str]) -> UserProvisioner:
@@ -120,11 +121,24 @@ async def test_create_link_is_idempotent_and_noop_without_link():
     links.create.assert_not_awaited()
 
 
+def _real_exchange(auth, user):
+    """@brief AuthService factory: real exchange_sso resolution, stubbed login_sso."""
+    from app.services.auth_service import AuthService
+
+    def make(db, settings):
+        svc = AuthService.__new__(AuthService)
+        svc._user_repo = MagicMock(get_by_id=AsyncMock(return_value=user))
+        svc.login_sso = auth.login_sso  # type: ignore[method-assign]
+        return svc
+
+    return make
+
+
 async def test_exchange_returns_pending_2fa_for_held_link(test_app):
     uid = uuid.uuid4()
     user = MagicMock(id=uid, is_active=True, memorialized_at=None)
     redis = AsyncMock()
-    redis.get.return_value = (
+    redis.getdel.return_value = (
         f'{{"user_id": "{uid}", "provider_slug": "g", "pending_link": {{"sub": "s"}}}}'
     )
     auth = MagicMock()
@@ -133,10 +147,8 @@ async def test_exchange_returns_pending_2fa_for_held_link(test_app):
     )
     with (
         patch("app.api.v1.oauth._get_valkey_client", return_value=redis),
-        patch("app.api.v1.oauth.AuthService", return_value=auth),
-        patch("app.api.v1.oauth.UserRepository") as repo_cls,
+        patch("app.api.v1.oauth.AuthService", side_effect=_real_exchange(auth, user)),
     ):
-        repo_cls.return_value.get_by_id = AsyncMock(return_value=user)
         async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
             r = await c.post("/api/v1/oauth/exchange", json={"code": "x"})
     assert r.status_code == 200

@@ -67,10 +67,12 @@ class SubgroupMemberRepository(BaseRepository[SubgroupMember]):
         user_id: uuid.UUID,
         role: str = "member",
         invited_by: uuid.UUID | None = None,
+        source: str = "manual",
     ) -> SubgroupMember:
         """
         @brief Add a membership row.
 
+        @param source 'manual' or 'sso' (SSO-synced rows may be removed by sync).
         @return The created SubgroupMember.
         """
         member = SubgroupMember(
@@ -79,11 +81,29 @@ class SubgroupMemberRepository(BaseRepository[SubgroupMember]):
             user_id=user_id,
             role=role,
             invited_by=invited_by,
+            source=source,
         )
         self._session.add(member)
         await self._session.flush()
         await self._session.refresh(member)
         return member
+
+    async def list_sso_subgroup_ids(
+        self, user_id: uuid.UUID, community_id: uuid.UUID
+    ) -> list[uuid.UUID]:
+        """
+        @brief Subgroups the user belongs to via SSO sync (source='sso').
+
+        @param user_id User ID.
+        @param community_id Community scope.
+        @return Subgroup IDs.
+        """
+        stmt = select(SubgroupMember.subgroup_id).where(
+            SubgroupMember.user_id == user_id,
+            SubgroupMember.community_id == community_id,
+            SubgroupMember.source == "sso",
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
 
     async def remove_member(
         self,

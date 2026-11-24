@@ -60,11 +60,11 @@ class TestAdminOAuthProvidersList:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -73,7 +73,9 @@ class TestAdminOAuthProvidersList:
         mock_provider.created_at = datetime.now(UTC)
         mock_provider.updated_at = mock_provider.created_at
 
-        with patch("app.api.v1.admin_oauth.OAuthProviderRepository") as mock_repo_cls:
+        with patch(
+            "app.services.oauth.admin_oauth_service.OAuthProviderRepository"
+        ) as mock_repo_cls:
             mock_repo = AsyncMock()
             mock_repo.list = AsyncMock(return_value=([mock_provider], None))
             mock_repo_cls.return_value = mock_repo
@@ -83,6 +85,9 @@ class TestAdminOAuthProvidersList:
                 resp = await client.get("/api/v1/admin/oauth/providers")
 
             assert resp.status_code == 200
+            assert resp.json()[0]["callback_url"] == (
+                "http://localhost:3000/api/v1/oauth/oidc/callback"
+            )
 
 
 class TestAdminOAuthProviderCreate:
@@ -93,11 +98,13 @@ class TestAdminOAuthProviderCreate:
         """Admin can create OAuth provider."""
         with (
             patch(
-                "app.api.v1.admin_oauth.discover_endpoints",
+                "app.services.oauth.admin_oauth_service.discover_endpoints",
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as mock_repo_cls,
+            patch(
+                "app.services.oauth.admin_oauth_service.OAuthProviderRepository"
+            ) as mock_repo_cls,
         ):
             mock_provider = MagicMock()
             mock_provider.id = uuid.uuid4()
@@ -116,11 +123,11 @@ class TestAdminOAuthProviderCreate:
             mock_provider.end_session_endpoint = None
             mock_provider.group_mappings = {}
             mock_provider.default_role = "member"
-            mock_provider.group_claim = "groups"
-            mock_provider.avatar_claim = "picture"
-            mock_provider.sub_claim = "sub"
-            mock_provider.email_claim = "email"
-            mock_provider.name_claim = "name"
+            mock_provider.preset = None
+            mock_provider.allowed_domains = []
+            mock_provider.required_group = None
+            mock_provider.username_claim = "preferred_username"
+            mock_provider.sync_profile = True
             mock_provider.enabled = True
             mock_provider.auto_create_users = True
             mock_provider.seeded_from_env = False
@@ -130,10 +137,11 @@ class TestAdminOAuthProviderCreate:
             mock_provider.updated_at = mock_provider.created_at
 
             mock_repo = AsyncMock()
+            mock_repo.find_by_slug = AsyncMock(return_value=None)
             mock_repo.create = AsyncMock(return_value=mock_provider)
             mock_repo_cls.return_value = mock_repo
 
-            with patch("app.api.v1.admin_oauth.AuditRepository") as mock_audit_cls:
+            with patch("app.services.oauth.admin_oauth_service.AuditRepository") as mock_audit_cls:
                 mock_audit = AsyncMock()
                 mock_audit.append = AsyncMock()
                 mock_audit_cls.return_value = mock_audit
@@ -178,11 +186,11 @@ class TestAdminOAuthProviderUpdate:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -192,8 +200,10 @@ class TestAdminOAuthProviderUpdate:
         mock_provider.updated_at = mock_provider.created_at
 
         with (
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as mock_repo_cls,
-            patch("app.api.v1.admin_oauth.AuditRepository") as mock_audit_cls,
+            patch(
+                "app.services.oauth.admin_oauth_service.OAuthProviderRepository"
+            ) as mock_repo_cls,
+            patch("app.services.oauth.admin_oauth_service.AuditRepository") as mock_audit_cls,
         ):
             mock_repo = AsyncMock()
             mock_repo.get_by_id = AsyncMock(return_value=mock_provider)
@@ -224,17 +234,15 @@ class TestAdminOAuthProviderDelete:
         mock_provider.id = provider_id
 
         with (
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as mock_repo_cls,
-            patch("app.api.v1.admin_oauth.ProviderManager") as mock_mgr_cls,
-            patch("app.api.v1.admin_oauth.AuditRepository") as mock_audit_cls,
+            patch(
+                "app.services.oauth.admin_oauth_service.OAuthProviderRepository"
+            ) as mock_repo_cls,
+            patch("app.services.oauth.admin_oauth_service.AuditRepository") as mock_audit_cls,
         ):
             mock_repo = AsyncMock()
             mock_repo.get_by_id = AsyncMock(return_value=mock_provider)
             mock_repo.soft_delete = AsyncMock(return_value=mock_provider)
             mock_repo_cls.return_value = mock_repo
-            mock_mgr = MagicMock()
-            mock_mgr.invalidate_cache = MagicMock()
-            mock_mgr_cls.return_value = mock_mgr
             mock_audit = AsyncMock()
             mock_audit.append = AsyncMock()
             mock_audit_cls.return_value = mock_audit
@@ -270,11 +278,11 @@ class TestAdminOAuthProviderToggle:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = False
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -284,8 +292,10 @@ class TestAdminOAuthProviderToggle:
         mock_provider.updated_at = mock_provider.created_at
 
         with (
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as mock_repo_cls,
-            patch("app.api.v1.admin_oauth.AuditRepository") as mock_audit_cls,
+            patch(
+                "app.services.oauth.admin_oauth_service.OAuthProviderRepository"
+            ) as mock_repo_cls,
+            patch("app.services.oauth.admin_oauth_service.AuditRepository") as mock_audit_cls,
         ):
             mock_repo = AsyncMock()
             mock_repo.get_by_id = AsyncMock(return_value=mock_provider)
@@ -300,80 +310,3 @@ class TestAdminOAuthProviderToggle:
                 resp = await client.post(f"/api/v1/admin/oauth/providers/{provider_id}/toggle")
 
             assert resp.status_code == 200
-
-
-class TestAdminOAuthDiscover:
-    """@brief POST /api/v1/admin/oauth/discover tests."""
-
-    @pytest.mark.asyncio
-    async def test_discover_returns_endpoints(self, test_app, admin_override):
-        """Admin can run OIDC discovery for issuer URL."""
-        with patch(
-            "app.api.v1.admin_oauth.discover_endpoints",
-            new_callable=AsyncMock,
-            return_value={
-                "authorization_endpoint": "https://auth.example.com/authorize",
-                "token_endpoint": "https://auth.example.com/token",
-            },
-        ):
-            transport = ASGITransport(app=test_app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post(
-                    "/api/v1/admin/oauth/discover",
-                    json={"issuer": "https://auth.example.com"},
-                )
-
-            assert resp.status_code == 200
-            data = resp.json()
-            assert "authorization_endpoint" in data
-
-
-class TestAdminOAuthGroupMappingPreview:
-    """@brief GET /api/v1/admin/oauth/providers/{id}/group-mapping-preview tests."""
-
-    @pytest.mark.asyncio
-    async def test_preview_returns_entries(self, test_app, admin_override):
-        """Preview resolves the provider mapping for sample groups."""
-        provider = MagicMock()
-        provider.claim_mapping = {"group_mapping": {}}
-        entries = [
-            {
-                "group": "eng",
-                "subgroup_id": None,
-                "role": "admin",
-                "subgroup_exists": None,
-                "matched": True,
-            }
-        ]
-        with (
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls,
-            patch(
-                "app.api.v1.admin_oauth.preview_group_mapping",
-                new_callable=AsyncMock,
-                return_value=entries,
-            ) as preview,
-        ):
-            repo_cls.return_value.get_by_id = AsyncMock(return_value=provider)
-            transport = ASGITransport(app=test_app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get(
-                    f"/api/v1/admin/oauth/providers/{uuid.uuid4()}/group-mapping-preview",
-                    params={"groups": ["eng"]},
-                )
-
-        assert resp.status_code == 200
-        assert resp.json() == {"entries": entries}
-        assert preview.await_args.args[3] == ["eng"]
-
-    @pytest.mark.asyncio
-    async def test_preview_unknown_provider_returns_404(self, test_app, admin_override):
-        """Preview for a missing provider yields the not-found envelope."""
-        with patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls:
-            repo_cls.return_value.get_by_id = AsyncMock(return_value=None)
-            transport = ASGITransport(app=test_app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.get(
-                    f"/api/v1/admin/oauth/providers/{uuid.uuid4()}/group-mapping-preview"
-                )
-
-        assert resp.status_code == 404

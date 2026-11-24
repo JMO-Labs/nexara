@@ -22,6 +22,7 @@ export interface OAuthProvider {
   slug: string;
   display_name: string;
   icon_url: string | null;
+  preset?: string | null;
 }
 
 export interface AuthConfig {

@@ -1,13 +1,15 @@
 """
 @file provider_manager.py
-@brief Caches and retrieves OAuth provider configuration.
+@brief Retrieves OAuth provider configuration.
+
+No cache: one indexed SELECT per request, so every worker sees admin changes
+(disable, delete, re-create) immediately and no ORM object outlives a session.
 """
 
 from __future__ import annotations
 
-import time
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,15 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.encryption import derive_fernet_key, encrypt_secret
 from app.models.oauth_provider import OAuthProvider
 from app.repositories.oauth_repo import OAuthProviderRepository
-
-if TYPE_CHECKING:
-    pass
-
-CACHE_TTL: float = 300.0
-"""@brief Seconds to cache provider lookups."""
-
-_provider_cache: dict[tuple[uuid.UUID, str], tuple[OAuthProvider, float]] = {}
-"""@brief Module-level cache: (community_id, slug) -> (provider, expires_at)."""
 
 
 async def discover_endpoints(issuer: str) -> dict[str, str]:
@@ -48,7 +41,7 @@ async def discover_endpoints(issuer: str) -> dict[str, str]:
 
 class ProviderManager:
     """
-    @brief Manages OAuth provider lookup with optional in-memory cache.
+    @brief Manages OAuth provider lookup (read from the DB on every request).
 
     @param db Async SQLAlchemy session.
     """
@@ -70,25 +63,11 @@ class ProviderManager:
         """
         @brief Fetch an OAuth provider by community and slug.
 
-        Uses module-level cache with TTL; call invalidate_cache() after updates.
-
         @param community_id Community UUID.
         @param slug Provider slug (e.g. "google", "keycloak").
-        @return The provider or None.
+        @return The live (non-deleted) provider or None.
         """
-        key = (community_id, slug)
-        now = time.monotonic()
-        if key in _provider_cache:
-            cached_provider, expires_at = _provider_cache[key]
-            if now < expires_at:
-                return cached_provider
-            del _provider_cache[key]
-
-        provider = await self._repo.find_by_slug(community_id, slug)
-        if provider is not None:
-            _provider_cache[key] = (provider, now + CACHE_TTL)
-            return provider
-        return None
+        return await self._repo.find_by_slug(community_id, slug)
 
     async def get_enabled_providers(
         self,
@@ -101,10 +80,6 @@ class ProviderManager:
         @return List of enabled providers.
         """
         return await self._repo.list_enabled(community_id)
-
-    def invalidate_cache(self) -> None:
-        """@brief Clear the module-level provider cache."""
-        _provider_cache.clear()
 
     async def seed_from_env(
         self,

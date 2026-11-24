@@ -84,3 +84,20 @@ class TestGroupMappingValidation:
 
 def test_update_none_claim_mapping_allowed():
     assert OAuthProviderUpdate().claim_mapping is None
+
+
+@pytest.mark.parametrize("cls", SCHEMAS)
+def test_list_rules_accepted(cls):
+    sid = str(uuid4())
+    cm = {"group_mapping": {"fam": [{"role": "admin"}, {"subgroup_id": sid, "role": "member"}]}}
+    out = _build(cls, cm).claim_mapping["group_mapping"]["fam"]
+    assert out == [
+        {"subgroup_id": None, "role": "admin"},
+        {"subgroup_id": sid, "role": "member"},
+    ]
+
+
+@pytest.mark.parametrize("cls", SCHEMAS)
+def test_list_rule_invalid_role_rejected(cls):
+    with pytest.raises(ValidationError):
+        _build(cls, {"group_mapping": {"fam": [{"role": "owner"}]}})

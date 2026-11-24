@@ -115,3 +115,23 @@ export const useSetSsoOnly = () => {
     },
   });
 };
+
+/**
+ * @brief Built-in SSO presets (static per release).
+ */
+export const useOauthPresets = () =>
+  useQuery({
+    queryKey: [...qk.admin.oauth(), "presets"],
+    queryFn: oauthApi.listOauthPresets,
+    staleTime: Infinity,
+  });
+
+/**
+ * @brief Callback URL template for providers not saved yet.
+ */
+export const useCallbackTemplate = () =>
+  useQuery({
+    queryKey: [...qk.admin.oauth(), "callback-url"],
+    queryFn: oauthApi.getCallbackTemplate,
+    staleTime: Infinity,
+  });

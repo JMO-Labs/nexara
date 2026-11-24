@@ -56,11 +56,12 @@ def _provider():
         end_session_endpoint=None,
         group_mappings={},
         default_role="member",
-        group_claim="groups",
-        avatar_claim="picture",
-        sub_claim="sub",
-        email_claim="email",
-        name_claim="name",
+        preset=None,
+        allowed_domains=[],
+        required_group=None,
+        username_claim="preferred_username",
+        sync_profile=True,
+        trust_email=False,
         enabled=True,
         auto_create_users=True,
         seeded_from_env=False,
@@ -79,11 +80,14 @@ def _provider():
 async def test_register_oidc_uses_discovery_and_masks_secret(test_app, admin_override):
     prov = _provider()
     with (
-        patch("app.api.v1.oauth_admin.fetch_discovery", AsyncMock(return_value=DOC)),
-        patch("app.api.v1.oauth_admin.OAuthProviderRepository") as repo_cls,
-        patch("app.api.v1.oauth_admin.AuditRepository") as audit_cls,
+        patch(
+            "app.services.oauth.admin_oauth_service.fetch_discovery", AsyncMock(return_value=DOC)
+        ),
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.AuditRepository") as audit_cls,
     ):
         repo = AsyncMock()
+        repo.find_by_slug = AsyncMock(return_value=None)
         repo.create = AsyncMock(return_value=prov)
         repo_cls.return_value = repo
         audit_cls.return_value = AsyncMock()
@@ -115,9 +119,11 @@ async def test_test_endpoint_reports_discovery_and_exchange(test_app, admin_over
     http.__aenter__ = AsyncMock(return_value=http)
     http.__aexit__ = AsyncMock(return_value=False)
     with (
-        patch("app.api.v1.oauth_admin.fetch_discovery", AsyncMock(return_value=DOC)),
-        patch("app.api.v1.oauth_admin.OAuthProviderRepository") as repo_cls,
-        patch("app.api.v1.oauth_admin.httpx.AsyncClient", return_value=http),
+        patch(
+            "app.services.oauth.admin_oauth_service.fetch_discovery", AsyncMock(return_value=DOC)
+        ),
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.httpx.AsyncClient", return_value=http),
     ):
         repo = AsyncMock()
         repo.get_by_id = AsyncMock(return_value=prov)
@@ -135,10 +141,10 @@ async def test_test_endpoint_discovery_failure(test_app, admin_override):
     prov = _provider()
     with (
         patch(
-            "app.api.v1.oauth_admin.fetch_discovery",
+            "app.services.oauth.admin_oauth_service.fetch_discovery",
             AsyncMock(side_effect=ValueError("Issuer must use https")),
         ),
-        patch("app.api.v1.oauth_admin.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
     ):
         repo = AsyncMock()
         repo.get_by_id = AsyncMock(return_value=prov)

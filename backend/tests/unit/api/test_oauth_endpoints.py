@@ -118,7 +118,60 @@ class TestOAuthCallbackEndpoint:
                 )
 
             assert resp.status_code == 302
-            assert "location" in resp.headers
+            # L1: the page is app/(auth)/callback -> URL /callback (route groups vanish).
+            location = resp.headers["location"]
+            base, _, code = location.partition("/callback?code=")
+            assert base.startswith("http") and base.count("/") == 2  # public base, no path
+            assert mock_redis.setex.await_args.args[0] == f"oauth_exchange:{code}"
+
+    @pytest.mark.asyncio
+    async def test_callback_refusal_redirects_to_login_with_code(self, test_app):
+        """SSO refusal: no exchange code, redirect to /login?error=<code>."""
+        from app.core.exceptions import SsoRefusedError
+
+        provider = MagicMock(id=uuid.uuid4(), provider_type="oidc", preset=None)
+        provider.display_name = "Acme SSO&x"
+        uid = uuid.uuid4()
+        log_failure = AsyncMock()
+        with (
+            patch("app.api.v1.oauth.log_failure", log_failure),
+            patch("app.api.v1.oauth.ProviderManager") as manager_cls,
+            patch("app.api.v1.oauth.OAuthFlow") as flow_cls,
+            patch(
+                "app.api.v1.oauth.verify_id_token",
+                new_callable=AsyncMock,
+                return_value={"sub": "u1", "email": "a@other.com"},
+            ),
+            patch("app.api.v1.oauth.UserProvisioner") as prov_cls,
+            patch("app.api.v1.oauth._get_valkey_client") as valkey,
+        ):
+            manager_cls.return_value.get_provider = AsyncMock(return_value=provider)
+            flow_cls.return_value.exchange_code = AsyncMock(
+                return_value={"access_token": "at", "id_token": "id"}
+            )
+            prov_cls.return_value.provision_user = AsyncMock(
+                side_effect=SsoRefusedError("sso_domain_not_allowed", user_id=uid)
+            )
+            async with AsyncClient(
+                transport=ASGITransport(app=test_app),
+                base_url="http://test",
+                follow_redirects=False,
+                cookies={
+                    "oauth_state": "st",
+                    "oauth_verifier": "v",
+                    "oauth_provider": "oidc",
+                    "oauth_nonce": "n",
+                },
+            ) as client:
+                resp = await client.get("/api/v1/oauth/oidc/callback?code=c&state=st")
+        assert resp.status_code == 302
+        assert resp.headers["location"].endswith(
+            "/login?error=sso_domain_not_allowed&provider=Acme+SSO%26x"
+        )
+        valkey.return_value.setex.assert_not_called()
+        args, kwargs = log_failure.await_args
+        assert args[2:5] == ("a@other.com", "sso", "sso_domain_not_allowed")
+        assert kwargs["user_id"] == uid
 
 
 class TestOAuthExchangeEndpoint:
@@ -128,26 +181,19 @@ class TestOAuthExchangeEndpoint:
     async def test_exchange_returns_access_token_and_cookie(self, test_app):
         """POST /oauth/exchange with valid code returns access_token and refresh cookie."""
         user_id = uuid.uuid4()
-        mock_user = MagicMock()
-        mock_user.id = user_id
-        mock_user.role = "member"
-        mock_user.community_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
-        mock_user.memorialized_at = None
 
         with (
             patch("app.api.v1.oauth._get_valkey_client") as mock_valkey,
             patch("app.api.v1.oauth.AuthService") as mock_auth_cls,
-            patch("app.api.v1.oauth.UserRepository") as mock_repo_cls,
         ):
             mock_redis = AsyncMock()
-            mock_redis.get = AsyncMock(
+            mock_redis.getdel = AsyncMock(
                 return_value='{"user_id": "' + str(user_id) + '", "provider_slug": "oidc"}'
             )
-            mock_redis.delete = AsyncMock()
             mock_valkey.return_value = mock_redis
 
             mock_auth = MagicMock()
-            mock_auth.login_sso = AsyncMock(
+            mock_auth.exchange_sso = AsyncMock(
                 return_value={
                     "access_token": "jwt-token",
                     "expires_in": 900,
@@ -155,10 +201,6 @@ class TestOAuthExchangeEndpoint:
                 }
             )
             mock_auth_cls.return_value = mock_auth
-
-            mock_repo = AsyncMock()
-            mock_repo.get_by_id = AsyncMock(return_value=mock_user)
-            mock_repo_cls.return_value = mock_repo
 
             transport = ASGITransport(app=test_app)
             async with AsyncClient(
@@ -183,7 +225,7 @@ class TestOAuthExchangeEndpoint:
         """POST /oauth/exchange with invalid code returns 401."""
         with patch("app.api.v1.oauth._get_valkey_client") as mock_valkey:
             mock_redis = AsyncMock()
-            mock_redis.get = AsyncMock(return_value=None)
+            mock_redis.getdel = AsyncMock(return_value=None)
             mock_valkey.return_value = mock_redis
 
             transport = ASGITransport(app=test_app)
@@ -209,6 +251,7 @@ class TestAuthConfigWithOAuthProviders:
         mock_provider.slug = "oidc"
         mock_provider.display_name = "OIDC"
         mock_provider.icon_url = "https://example.com/icon.png"
+        mock_provider.preset = "google"
 
         with patch("app.services.oauth.provider_manager.ProviderManager") as mock_manager_cls:
             mock_manager = AsyncMock()
@@ -223,5 +266,6 @@ class TestAuthConfigWithOAuthProviders:
             data = resp.json()
             assert "oauth_providers" in data
             assert len(data["oauth_providers"]) == 1
+            assert data["oauth_providers"][0]["preset"] == "google"
             assert data["oauth_providers"][0]["slug"] == "oidc"
             assert data["oauth_providers"][0]["display_name"] == "OIDC"

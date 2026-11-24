@@ -16,7 +16,7 @@ from typing import cast
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.auth import RefreshToken
+from app.models.auth import MagicLinkToken, RefreshToken
 
 
 class TokenRepository:
@@ -131,6 +131,21 @@ class TokenRepository:
                 RefreshToken.revoked_at.is_(None),
             )
             .values(revoked_at=now)
+        )
+        result = await self._session.execute(stmt)
+        return cast(int, getattr(result, "rowcount", 0))
+
+    async def revoke_magic_links_for_user(self, user_id: uuid.UUID) -> int:
+        """
+        @brief Consume every outstanding magic-link sign-in token of a user.
+
+        @param user_id The user whose magic links should die.
+        @return Number of tokens consumed.
+        """
+        stmt = (
+            update(MagicLinkToken)
+            .where(MagicLinkToken.user_id == user_id, MagicLinkToken.consumed_at.is_(None))
+            .values(consumed_at=datetime.now(UTC))
         )
         result = await self._session.execute(stmt)
         return cast(int, getattr(result, "rowcount", 0))

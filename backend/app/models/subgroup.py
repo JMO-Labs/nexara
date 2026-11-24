@@ -6,7 +6,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Computed, DateTime, ForeignKey, Index, Text, func
+from sqlalchemy import Boolean, CheckConstraint, Computed, DateTime, ForeignKey, Index, Text, func
 from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -108,6 +108,7 @@ class SubgroupMember(Base):
         primary_key=True,
     )
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default="member")
+    source: Mapped[str] = mapped_column(Text, nullable=False, server_default="manual")
     invited_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id"),
@@ -118,7 +119,10 @@ class SubgroupMember(Base):
         nullable=False,
     )
 
-    __table_args__ = (Index("subgroup_members_user_idx", "user_id"),)
+    __table_args__ = (
+        Index("subgroup_members_user_idx", "user_id"),
+        CheckConstraint("source IN ('manual','sso')", name="subgroup_members_source_check"),
+    )
 
 
 class ChatChannel(Base):

@@ -112,6 +112,7 @@ async def _user(
             display_name="Matrix",
             password_hash=hash_password(PW) if password else None,
             is_active=True,
+            email_verified=True,  # SSO links only to verified local accounts
             two_factor_required_since=since,
         )
         if totp:

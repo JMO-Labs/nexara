@@ -6,6 +6,7 @@
  */
 import { Button } from "@/components/ui";
 import { oauthLoginUrl, type OAuthProvider } from "@/lib/api/auth";
+import { SsoGlyph } from "./SsoGlyph";
 import { API_BASE } from "@/lib/auth/session";
 
 /**
@@ -33,12 +34,17 @@ export function OAuthButtons({
       </h2>
       {providers.map((p) => (
         <Button key={p.slug} asChild variant="outline" className="w-full">
-          <a href={oauthLoginUrl(p.slug, API_BASE)}>
-            {p.icon_url && (
+          <a
+            href={oauthLoginUrl(p.slug, API_BASE)}
+            aria-label={`Continue with ${p.display_name}`}
+          >
+            {p.icon_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
               <img src={p.icon_url} alt="" className="size-5" />
+            ) : (
+              <SsoGlyph preset={p.preset} />
             )}
-            {p.display_name}
+            Continue with {p.display_name}
           </a>
         </Button>
       ))}
