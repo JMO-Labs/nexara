@@ -91,11 +91,11 @@ class OAuthProviderCreate(BaseModel):
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] = Field(default_factory=dict)
     default_role: str = "member"
-    group_claim: str = "groups"
-    avatar_claim: str = "picture"
-    sub_claim: str = "sub"
-    email_claim: str = "email"
-    name_claim: str = "name"
+    preset: str | None = None
+    allowed_domains: list[str] = Field(default_factory=list)
+    required_group: str | None = None
+    username_claim: str = "preferred_username"
+    sync_profile: bool = True
     enabled: bool = True
     auto_create_users: bool = True
 
@@ -124,11 +124,11 @@ class OAuthProviderUpdate(BaseModel):
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] | None = None
     default_role: str | None = None
-    group_claim: str | None = None
-    avatar_claim: str | None = None
-    sub_claim: str | None = None
-    email_claim: str | None = None
-    name_claim: str | None = None
+    preset: str | None = None
+    allowed_domains: list[str] | None = None
+    required_group: str | None = None
+    username_claim: str | None = None
+    sync_profile: bool | None = None
     enabled: bool | None = None
     auto_create_users: bool | None = None
 
@@ -158,11 +158,11 @@ class OAuthProviderResponse(BaseModel):
     end_session_endpoint: str | None
     group_mappings: dict[str, str]
     default_role: str
-    group_claim: str
-    avatar_claim: str
-    sub_claim: str
-    email_claim: str
-    name_claim: str
+    preset: str | None = None
+    allowed_domains: list[str] = Field(default_factory=list)
+    required_group: str | None = None
+    username_claim: str = "preferred_username"
+    sync_profile: bool = True
     enabled: bool
     auto_create_users: bool
     seeded_from_env: bool

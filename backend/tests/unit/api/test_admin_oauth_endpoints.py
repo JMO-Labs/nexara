@@ -60,11 +60,11 @@ class TestAdminOAuthProvidersList:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -116,11 +116,11 @@ class TestAdminOAuthProviderCreate:
             mock_provider.end_session_endpoint = None
             mock_provider.group_mappings = {}
             mock_provider.default_role = "member"
-            mock_provider.group_claim = "groups"
-            mock_provider.avatar_claim = "picture"
-            mock_provider.sub_claim = "sub"
-            mock_provider.email_claim = "email"
-            mock_provider.name_claim = "name"
+            mock_provider.preset = None
+            mock_provider.allowed_domains = []
+            mock_provider.required_group = None
+            mock_provider.username_claim = "preferred_username"
+            mock_provider.sync_profile = True
             mock_provider.enabled = True
             mock_provider.auto_create_users = True
             mock_provider.seeded_from_env = False
@@ -178,11 +178,11 @@ class TestAdminOAuthProviderUpdate:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = True
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -270,11 +270,11 @@ class TestAdminOAuthProviderToggle:
         mock_provider.end_session_endpoint = None
         mock_provider.group_mappings = {}
         mock_provider.default_role = "member"
-        mock_provider.group_claim = "groups"
-        mock_provider.avatar_claim = "picture"
-        mock_provider.sub_claim = "sub"
-        mock_provider.email_claim = "email"
-        mock_provider.name_claim = "name"
+        mock_provider.preset = None
+        mock_provider.allowed_domains = []
+        mock_provider.required_group = None
+        mock_provider.username_claim = "preferred_username"
+        mock_provider.sync_profile = True
         mock_provider.enabled = False
         mock_provider.auto_create_users = True
         mock_provider.seeded_from_env = False
@@ -309,7 +309,7 @@ class TestAdminOAuthDiscover:
     async def test_discover_returns_endpoints(self, test_app, admin_override):
         """Admin can run OIDC discovery for issuer URL."""
         with patch(
-            "app.api.v1.admin_oauth.discover_endpoints",
+            "app.api.v1.admin_oauth_tools.discover_endpoints",
             new_callable=AsyncMock,
             return_value={
                 "authorization_endpoint": "https://auth.example.com/authorize",
@@ -346,9 +346,9 @@ class TestAdminOAuthGroupMappingPreview:
             }
         ]
         with (
-            patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls,
+            patch("app.api.v1.admin_oauth_tools.OAuthProviderRepository") as repo_cls,
             patch(
-                "app.api.v1.admin_oauth.preview_group_mapping",
+                "app.api.v1.admin_oauth_tools.preview_group_mapping",
                 new_callable=AsyncMock,
                 return_value=entries,
             ) as preview,
@@ -368,7 +368,7 @@ class TestAdminOAuthGroupMappingPreview:
     @pytest.mark.asyncio
     async def test_preview_unknown_provider_returns_404(self, test_app, admin_override):
         """Preview for a missing provider yields the not-found envelope."""
-        with patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls:
+        with patch("app.api.v1.admin_oauth_tools.OAuthProviderRepository") as repo_cls:
             repo_cls.return_value.get_by_id = AsyncMock(return_value=None)
             transport = ASGITransport(app=test_app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -377,3 +377,18 @@ class TestAdminOAuthGroupMappingPreview:
                 )
 
         assert resp.status_code == 404
+
+
+class TestAdminOAuthPresets:
+    """@brief GET /api/v1/admin/oauth/presets tests."""
+
+    @pytest.mark.asyncio
+    async def test_lists_nine_presets(self, test_app, admin_override):
+        """Admin sees all nine built-in presets."""
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/v1/admin/oauth/presets")
+
+        assert resp.status_code == 200
+        assert len(resp.json()) == 9
+        assert {p["key"] for p in resp.json()} >= {"authentik", "github", "custom"}

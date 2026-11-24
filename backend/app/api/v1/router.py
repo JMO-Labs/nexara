@@ -16,11 +16,12 @@ from app.api.v1.admin_email import callback_router as admin_email_callback_route
 from app.api.v1.admin_email import router as admin_email_router
 from app.api.v1.admin_email_reply import router as admin_email_reply_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
+from app.api.v1.admin_oauth import settings_router as admin_sso_router
+from app.api.v1.admin_oauth_tools import router as admin_oauth_tools_router
 from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
 from app.api.v1.admin_security import router as admin_security_router
 from app.api.v1.admin_shop import router as admin_shop_router
-from app.api.v1.admin_sso import router as admin_sso_router
 from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
@@ -54,7 +55,6 @@ from app.api.v1.newsletter import router as newsletter_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
-from app.api.v1.oauth_admin import router as oauth_admin_router
 from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
@@ -86,8 +86,8 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
-api_v1_router.include_router(oauth_admin_router)
 api_v1_router.include_router(admin_oauth_router)
+api_v1_router.include_router(admin_oauth_tools_router)
 api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)

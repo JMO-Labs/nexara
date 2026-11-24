@@ -1,8 +1,8 @@
 """
 @file admin_oauth.py
-@brief Admin OAuth provider management endpoints.
+@brief Admin OAuth/SSO provider CRUD and the SSO-only toggle.
 
-CRUD for OAuth providers, toggle enabled state, and OIDC discovery.
+Discovery, test and preview tools live in admin_oauth_tools.py.
 All routes require admin role. Audit log entries for mutations.
 """
 
@@ -10,36 +10,37 @@ from __future__ import annotations
 
 import uuid
 
+import httpx
 import structlog
-from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.encryption import derive_fernet_key, encrypt_secret
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.oauth_provider import OAuthProvider
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.oauth_repo import OAuthProviderRepository
-from app.repositories.subgroup_repo import SubgroupRepository
 from app.schemas.common import MessageResponse
 from app.schemas.oauth import (
-    GroupMappingPreview,
     OAuthProviderCreate,
     OAuthProviderResponse,
     OAuthProviderUpdate,
+    OIDCProviderCreate,
 )
-from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints
-from app.services.oauth.group_mapper import preview_group_mapping
+from app.services.auth import sso_only
+from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
 from app.services.oauth.provider_manager import ProviderManager
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/admin/oauth", tags=["admin-oauth"])
+settings_router = APIRouter(prefix="/admin/settings", tags=["admin-settings"])
 
 
 def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
@@ -97,11 +98,11 @@ async def create_provider(
         end_session_endpoint=(body.end_session_endpoint or endpoints.get("end_session_endpoint")),
         group_mappings=body.group_mappings,
         default_role=body.default_role,
-        group_claim=body.group_claim,
-        avatar_claim=body.avatar_claim,
-        sub_claim=body.sub_claim,
-        email_claim=body.email_claim,
-        name_claim=body.name_claim,
+        preset=body.preset,
+        allowed_domains=body.allowed_domains,
+        required_group=body.required_group,
+        username_claim=body.username_claim,
+        sync_profile=body.sync_profile,
         enabled=body.enabled,
         auto_create_users=body.auto_create_users,
     )
@@ -157,24 +158,6 @@ async def update_provider(
         ip_address=client_ip(request),
     )
     return OAuthProviderResponse.model_validate(provider)
-
-
-@router.get("/providers/{provider_id}/group-mapping-preview", response_model=GroupMappingPreview)
-async def group_mapping_preview(
-    provider_id: uuid.UUID,
-    groups: list[str] | None = Query(default=None),
-    _user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
-) -> GroupMappingPreview:
-    """@brief Sandbox: resolve the provider's group mapping (optionally for sample groups)."""
-    provider = await OAuthProviderRepository(db).get_by_id(provider_id, community_id)
-    if not provider:
-        raise NotFoundError(message=_("OAuth provider not found"))
-    entries = await preview_group_mapping(
-        SubgroupRepository(db), community_id, provider.claim_mapping, groups
-    )
-    return GroupMappingPreview.model_validate({"entries": entries})
 
 
 @router.delete("/providers/{provider_id}", response_model=MessageResponse)
@@ -235,16 +218,84 @@ async def toggle_provider(
     return OAuthProviderResponse.model_validate(provider)
 
 
-class OAuthDiscoverRequest(BaseModel):
-    """@brief Request body for OIDC discovery."""
+@router.post("/providers/oidc", response_model=OAuthProviderResponse, status_code=201)
+async def create_oidc_provider(
+    body: OIDCProviderCreate,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> OAuthProviderResponse:
+    """@brief Register an OIDC provider from its discovery URL."""
+    try:
+        doc = await fetch_discovery(body.discovery_url.strip(), settings.OIDC_HTTP_TIMEOUT)
+    except (ValueError, httpx.HTTPError) as exc:
+        raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
 
-    issuer: str = Field(..., min_length=1)
+    provider = OAuthProvider(
+        community_id=community_id,
+        slug=body.slug,
+        display_name=body.display_name,
+        provider_type="oidc",
+        client_id=body.client_id,
+        client_secret_encrypted=encrypt_secret(
+            body.client_secret, derive_fernet_key(settings.SECRET_KEY)
+        ),
+        issuer=doc["issuer"],
+        discovery_url=body.discovery_url.strip(),
+        scopes=body.scopes,
+        claim_mapping=body.claim_mapping,
+        authorization_endpoint=doc["authorization_endpoint"],
+        token_endpoint=doc["token_endpoint"],
+        userinfo_endpoint=doc.get("userinfo_endpoint"),
+        jwks_uri=doc.get("jwks_uri"),
+        end_session_endpoint=doc.get("end_session_endpoint"),
+    )
+    provider = await OAuthProviderRepository(db).create(provider)
+    await AuditRepository(db).append(
+        actor_id=user.id,
+        action="oauth.provider.created",
+        target_type="oauth_provider",
+        target_id=provider.id,
+        extra_data={"slug": provider.slug, "type": "oidc"},
+        ip_address=client_ip(request),
+    )
+    return OAuthProviderResponse.model_validate(provider)
 
 
-@router.post("/discover")
-async def discover_issuer(
-    body: OAuthDiscoverRequest,
-    _user: User = Depends(require_role("admin")),
-) -> DiscoveryEndpoints:
-    """@brief Run OIDC discovery for an issuer URL."""
-    return await discover_endpoints(body.issuer.strip())
+class SsoOnlyUpdate(BaseModel):
+    """@brief Request body for the SSO-only toggle."""
+
+    enabled: bool
+
+
+class SsoOnlyResponse(BaseModel):
+    """@brief Current SSO-only state, with a lockout warning when enabled."""
+
+    sso_only: bool
+    warning: str | None = None
+
+
+@settings_router.patch("/sso-only", response_model=SsoOnlyResponse)
+async def set_sso_only(
+    body: SsoOnlyUpdate,
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> SsoOnlyResponse:
+    """@brief Enable/disable SSO-only mode (requires an enabled OIDC provider to enable)."""
+    await sso_only.set_sso_only(db, community_id, body.enabled, user.id)
+    await AuditRepository(db).append(
+        actor_id=user.id,
+        action="settings.sso_only.updated",
+        target_type="community",
+        target_id=community_id,
+        extra_data={"enabled": body.enabled},
+        ip_address=client_ip(request),
+    )
+    return SsoOnlyResponse(
+        sso_only=body.enabled,
+        warning=sso_only.SSO_ONLY_WARNING if body.enabled else None,
+    )

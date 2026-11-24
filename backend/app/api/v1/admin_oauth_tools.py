@@ -1,80 +1,73 @@
 """
-@file oauth_admin.py
-@brief Admin endpoints for generic OIDC providers (register via discovery, test).
+@file admin_oauth_tools.py
+@brief Admin SSO tools: presets, OIDC discovery, provider test, group-mapping preview.
+
+All routes require admin role and never return secrets.
 """
 
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import httpx
-import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.admin_oauth import _community_id
-from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
-from app.core.encryption import derive_fernet_key, encrypt_secret
-from app.core.exceptions import AppError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.core.i18n import _
-from app.models.oauth_provider import OAuthProvider
 from app.models.user import User
-from app.repositories.audit_repo import AuditRepository
 from app.repositories.oauth_repo import OAuthProviderRepository
-from app.schemas.oauth import OAuthProviderResponse, OIDCProviderCreate, OIDCTestResult
-from app.services.oauth.discovery import fetch_discovery
-
-logger = structlog.get_logger(__name__)
+from app.repositories.subgroup_repo import SubgroupRepository
+from app.schemas.oauth import GroupMappingPreview, OIDCTestResult
+from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
+from app.services.oauth.group_mapper import preview_group_mapping
+from app.services.oauth.presets import PRESETS
 
 router = APIRouter(prefix="/admin/oauth", tags=["admin-oauth"])
 
 
-@router.post("/providers/oidc", response_model=OAuthProviderResponse, status_code=201)
-async def create_oidc_provider(
-    body: OIDCProviderCreate,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    community_id: uuid.UUID = Depends(_community_id),
-) -> OAuthProviderResponse:
-    """@brief Register an OIDC provider from its discovery URL."""
-    try:
-        doc = await fetch_discovery(body.discovery_url.strip(), settings.OIDC_HTTP_TIMEOUT)
-    except (ValueError, httpx.HTTPError) as exc:
-        raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
+@router.get("/presets")
+async def list_presets(_user: User = Depends(require_role("admin"))) -> list[dict[str, Any]]:
+    """@brief List built-in SSO provider presets."""
+    return [p.to_dict(k) for k, p in PRESETS.items()]
 
-    provider = OAuthProvider(
-        community_id=community_id,
-        slug=body.slug,
-        display_name=body.display_name,
-        provider_type="oidc",
-        client_id=body.client_id,
-        client_secret_encrypted=encrypt_secret(
-            body.client_secret, derive_fernet_key(settings.SECRET_KEY)
-        ),
-        issuer=doc["issuer"],
-        discovery_url=body.discovery_url.strip(),
-        scopes=body.scopes,
-        claim_mapping=body.claim_mapping,
-        authorization_endpoint=doc["authorization_endpoint"],
-        token_endpoint=doc["token_endpoint"],
-        userinfo_endpoint=doc.get("userinfo_endpoint"),
-        jwks_uri=doc.get("jwks_uri"),
-        end_session_endpoint=doc.get("end_session_endpoint"),
+
+class OAuthDiscoverRequest(BaseModel):
+    """@brief Request body for OIDC discovery."""
+
+    issuer: str = Field(..., min_length=1)
+
+
+@router.post("/discover")
+async def discover_issuer(
+    body: OAuthDiscoverRequest,
+    _user: User = Depends(require_role("admin")),
+) -> DiscoveryEndpoints:
+    """@brief Run OIDC discovery for an issuer URL."""
+    return await discover_endpoints(body.issuer.strip())
+
+
+@router.get("/providers/{provider_id}/group-mapping-preview", response_model=GroupMappingPreview)
+async def group_mapping_preview(
+    provider_id: uuid.UUID,
+    groups: list[str] | None = Query(default=None),
+    _user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    community_id: uuid.UUID = Depends(_community_id),
+) -> GroupMappingPreview:
+    """@brief Sandbox: resolve the provider's group mapping (optionally for sample groups)."""
+    provider = await OAuthProviderRepository(db).get_by_id(provider_id, community_id)
+    if not provider:
+        raise NotFoundError(message=_("OAuth provider not found"))
+    entries = await preview_group_mapping(
+        SubgroupRepository(db), community_id, provider.claim_mapping, groups
     )
-    provider = await OAuthProviderRepository(db).create(provider)
-    await AuditRepository(db).append(
-        actor_id=user.id,
-        action="oauth.provider.created",
-        target_type="oauth_provider",
-        target_id=provider.id,
-        extra_data={"slug": provider.slug, "type": "oidc"},
-        ip_address=client_ip(request),
-    )
-    return OAuthProviderResponse.model_validate(provider)
+    return GroupMappingPreview.model_validate({"entries": entries})
 
 
 @router.post("/providers/{provider_id}/test", response_model=OIDCTestResult)

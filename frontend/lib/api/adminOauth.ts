@@ -24,11 +24,11 @@ export interface OAuthProviderResponse {
   end_session_endpoint: string | null;
   group_mappings: Record<string, string>;
   default_role: string;
-  group_claim: string;
-  avatar_claim: string;
-  sub_claim: string;
-  email_claim: string;
-  name_claim: string;
+  preset: string | null;
+  allowed_domains: string[];
+  required_group: string | null;
+  username_claim: string;
+  sync_profile: boolean;
   enabled: boolean;
   auto_create_users: boolean;
   seeded_from_env: boolean;
@@ -55,11 +55,11 @@ export interface OAuthProviderCreate {
   end_session_endpoint?: string;
   group_mappings?: Record<string, string>;
   default_role?: string;
-  group_claim?: string;
-  avatar_claim?: string;
-  sub_claim?: string;
-  email_claim?: string;
-  name_claim?: string;
+  preset?: string;
+  allowed_domains?: string[];
+  required_group?: string;
+  username_claim?: string;
+  sync_profile?: boolean;
   enabled?: boolean;
   auto_create_users?: boolean;
 }
@@ -83,11 +83,11 @@ export interface OAuthProviderUpdate {
   end_session_endpoint?: string;
   group_mappings?: Record<string, string>;
   default_role?: string;
-  group_claim?: string;
-  avatar_claim?: string;
-  sub_claim?: string;
-  email_claim?: string;
-  name_claim?: string;
+  preset?: string;
+  allowed_domains?: string[];
+  required_group?: string;
+  username_claim?: string;
+  sync_profile?: boolean;
   enabled?: boolean;
   auto_create_users?: boolean;
 }

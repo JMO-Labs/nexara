@@ -21,21 +21,10 @@ def clear_jwks_cache():
     tv._JWKS_CACHE.clear()
 
 
-def _make_provider(
-    sub_claim="sub",
-    email_claim="email",
-    name_claim="name",
-    group_claim="groups",
-    avatar_claim="picture",
-    jwks_uri="https://idp.example.com/jwks.json",
-):
-    """Create a mock provider with claim name attributes."""
+def _make_provider(claim_mapping=None, jwks_uri="https://idp.example.com/jwks.json"):
+    """Create a mock provider with a claim_mapping."""
     provider = MagicMock()
-    provider.sub_claim = sub_claim
-    provider.email_claim = email_claim
-    provider.name_claim = name_claim
-    provider.group_claim = group_claim
-    provider.avatar_claim = avatar_claim
+    provider.claim_mapping = claim_mapping or {}
     provider.jwks_uri = jwks_uri
     return provider
 
@@ -64,11 +53,13 @@ class TestExtractClaims:
     def test_uses_custom_claim_names_from_provider(self):
         """extract_claims uses custom claim names from provider config."""
         provider = _make_provider(
-            sub_claim="oidc_sub",
-            email_claim="mail",
-            name_claim="display_name",
-            group_claim="roles",
-            avatar_claim="avatar",
+            {
+                "sub": "oidc_sub",
+                "email": "mail",
+                "name": "display_name",
+                "groups": "roles",
+                "picture": "avatar",
+            }
         )
         claims = {
             "oidc_sub": "sub-456",
