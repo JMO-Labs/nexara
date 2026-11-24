@@ -4,6 +4,7 @@
  * @brief Shipping address on a wishlist, with a copy button for checkout.
  *        Event addresses link to the event.
  */
+import Link from "next/link";
 import { Copy, MapPin } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { useToasts } from "@/stores/toasts";
@@ -38,12 +39,12 @@ export function ShipToCard({ ship }: { ship: ShipTo }) {
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-medium">
           {ship.event_id ? (
-            <a
+            <Link
               className="underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
               href={`/app/events?event=${encodeURIComponent(ship.event_id)}`}
             >
               {ship.name}
-            </a>
+            </Link>
           ) : ship.name ? (
             `Ship to ${ship.name}`
           ) : (

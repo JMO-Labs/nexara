@@ -8,6 +8,9 @@ import { NextIntlClientProvider } from "next-intl";
 import messages from "@/i18n/en-US.json";
 import { useToasts } from "@/stores/toasts";
 
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
 type Handler = (data: unknown, type: string) => void;
 let handler: Handler = () => {};
 const sseSpy = vi.fn();
@@ -100,8 +103,6 @@ describe("ToastBridge", () => {
   });
 
   it("action dismisses and navigates to the link", () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
     mount();
     handler(
       { type: "a", id: "6", payload: { link: "/app/x" } },
@@ -111,7 +112,6 @@ describe("ToastBridge", () => {
     expect(action?.label).toBe("Open");
     action?.onClick();
     expect(dismissOne).toHaveBeenCalledWith("6");
-    expect(assign).toHaveBeenCalledWith("/app/x");
-    vi.unstubAllGlobals();
+    expect(push).toHaveBeenCalledWith("/app/x");
   });
 });

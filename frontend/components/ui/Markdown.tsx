@@ -5,6 +5,7 @@
  *        Headings flatten to body weight to fit chat/post density.
  */
 import * as React from "react";
+import Link from "next/link";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { linkifyMentions } from "@/lib/mentions";
 import { MentionLink } from "@/components/mentions/MentionLink";
@@ -35,10 +36,28 @@ const schema = {
   clobberPrefix: "nx-md-",
 };
 
+/** @brief True for same-origin / app-relative links (client-side nav). */
+function isInternal(href?: string): boolean {
+  if (!href) return false;
+  if (href.startsWith("/") && !href.startsWith("//")) return true;
+  try {
+    return (
+      typeof window !== "undefined" &&
+      new URL(href).origin === window.location.origin
+    );
+  } catch {
+    return false;
+  }
+}
+
 const components: Components = {
   a: ({ children, href, ...rest }) =>
     href?.startsWith("/app/u/") ? (
       <MentionLink name={href.slice(7)}>{children}</MentionLink>
+    ) : isInternal(href) ? (
+      <Link href={href as string} className={rest.className}>
+        {children}
+      </Link>
     ) : (
       <a {...rest} href={href} target="_blank" rel="noopener noreferrer">
         {children}

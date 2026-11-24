@@ -4,6 +4,7 @@
  * @brief Bridges SSE notification events to the toast queue for types
  *        whose descriptor sets toast_on_arrival. Renders nothing.
  */
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useSSE } from "@/hooks/useSSE";
 import { dismissOne, STREAM_PATH } from "@/lib/api/notifications";
@@ -20,6 +21,7 @@ interface StreamEvent {
 /** @brief Mount once inside the authenticated shell. @return null */
 export function ToastBridge() {
   const t = useTranslations();
+  const router = useRouter();
   const push = useToasts((s) => s.push);
   const { byKey } = useNotificationRegistry();
 
@@ -41,7 +43,7 @@ export function ToastBridge() {
               label: t("notifications.toast.open"),
               onClick: () => {
                 if (evt.id) dismissOne(evt.id).catch(() => {});
-                window.location.assign(link);
+                router.push(link);
               },
             }
           : undefined,

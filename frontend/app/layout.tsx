@@ -5,6 +5,7 @@
  */
 import type { Metadata, Viewport } from "next";
 import { outfit } from "@/theme/font";
+import UpdatePrompt from "@/components/layout/UpdatePrompt";
 import ServiceWorkerRegistrar from "@/components/layout/ServiceWorkerRegistrar";
 import Providers from "./providers";
 import "./globals.css";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   description: "A private home for your family and friends.",
   applicationName: "Nexara",
   manifest: "/manifest.webmanifest",
+  icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Nexara", statusBarStyle: "default" },
   formatDetection: { telephone: false, email: false, address: false },
 };
@@ -38,6 +40,7 @@ export default function RootLayout({
       <body>
         <Providers>{children}</Providers>
         <ServiceWorkerRegistrar />
+        <UpdatePrompt />
       </body>
     </html>
   );

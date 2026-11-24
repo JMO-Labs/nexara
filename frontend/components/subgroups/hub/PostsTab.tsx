@@ -4,6 +4,7 @@
  * @brief Posts tab: feed of posts filtered by subgroup.
  */
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { PostComposer } from "@/components/feed/PostComposer";
@@ -17,6 +18,7 @@ export interface PostsTabProps {
 
 export function PostsTab({ subgroup }: PostsTabProps) {
   const router = useRouter();
+  const qc = useQueryClient();
   const {
     data,
     isLoading,
@@ -63,9 +65,7 @@ export function PostsTab({ subgroup }: PostsTabProps) {
           description={
             error instanceof Error ? error.message : "Try again in a moment."
           }
-          action={
-            <Button onClick={() => window.location.reload()}>Retry</Button>
-          }
+          action={<Button onClick={() => qc.invalidateQueries()}>Retry</Button>}
         />
       ) : posts.length === 0 ? (
         <EmptyState

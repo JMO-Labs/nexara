@@ -16,6 +16,7 @@ import {
   Markdown,
 } from "@/components/ui";
 import { useComments, useCreateComment } from "@/hooks/usePosts";
+import { useOnline } from "@/hooks/useOnline";
 import { ReportButton } from "@/components/common/ReportButton";
 import type { Comment } from "@/lib/api/posts";
 
@@ -106,6 +107,7 @@ export function CommentThread({
     isFetchingNextPage,
   } = useComments(postId);
   const createMut = useCreateComment(postId);
+  const online = useOnline();
   const [text, setText] = React.useState("");
   const [replyTo, setReplyTo] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
@@ -169,7 +171,8 @@ export function CommentThread({
           size="sm"
           onClick={submit}
           loading={createMut.isPending}
-          disabled={!text.trim()}
+          disabled={!text.trim() || !online}
+          title={online ? undefined : "You're offline"}
           className="disabled:opacity-40"
         >
           Send
