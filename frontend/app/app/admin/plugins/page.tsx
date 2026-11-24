@@ -1,11 +1,11 @@
 /**
  * @file app/app/admin/plugins/page.tsx
- * @brief Plugins admin stub (frame and admin gate in admin/layout.tsx).
+ * @brief Installed plugins (frame and admin gate in admin/layout.tsx).
  */
-import { PluginsComingSoon } from "@/components/admin/PluginsComingSoon";
+import { InstalledTab } from "@/components/admin/plugins/InstalledTab";
 
 export const metadata = { title: "Plugins" };
 
 export default function PluginsPage() {
-  return <PluginsComingSoon />;
+  return <InstalledTab />;
 }
