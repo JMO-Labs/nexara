@@ -9,6 +9,7 @@ import { homeStagger, homeTile } from "@/components/ui/motion";
 import { useSession } from "@/stores/session";
 import { useHomeChats } from "@/hooks/useHomeChats";
 import { useHomeAccordion } from "@/hooks/useHomeAccordion";
+import { CompleteProfileCard } from "@/components/home/CompleteProfileCard";
 import { Greeting } from "@/components/home/Greeting";
 import { ScopeBar } from "@/components/home/ScopeBar";
 import { PeopleStrip } from "@/components/home/PeopleStrip";
@@ -53,6 +54,7 @@ export default function AppHome() {
         <PeopleStrip />
       </motion.div>
       <motion.div {...sectionProps}>
+        <CompleteProfileCard />
         <ScopeBar needs={<NeedsChips />} />
       </motion.div>
       <motion.div

@@ -27,6 +27,7 @@ import { BottomTabBar, TAB_BAR_CLEARANCE } from "./BottomTabBar";
 import { ModalRoot } from "./ModalRoot";
 import { KeyboardShortcutsModal } from "@/components/help/KeyboardShortcutsModal";
 import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
+import { useOnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { OfflineBanner } from "@/components/layout/OfflineBanner";
 import { InstallPrompt } from "@/components/layout/InstallPrompt";
@@ -43,6 +44,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { data: settings } = useUserSettings();
   const reduced = (settings as { reduce_transparency?: boolean } | undefined)
     ?.reduce_transparency;
+  const gate = useOnboardingGate();
   const setKeyboardShortcutsOpen = useModals((s) => s.setKeyboardShortcutsOpen);
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export function Shell({ children }: { children: ReactNode }) {
   // Past the 2FA grace period the API 403s everything but setup routes.
   useEffect(() => {
     function onSetupRequired() {
+      // The wizard's security step handles enrolment.
+      if (gate.pending) return;
       const tab = new URLSearchParams(window.location.search).get("tab");
       if (pathname !== "/app/settings" || tab !== "security")
         router.replace("/app/settings?tab=security");
@@ -75,7 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
     window.addEventListener("nx:2fa-setup-required", onSetupRequired);
     return () =>
       window.removeEventListener("nx:2fa-setup-required", onSetupRequired);
-  }, [router, pathname]);
+  }, [router, pathname, gate.pending]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -156,8 +160,12 @@ export function Shell({ children }: { children: ReactNode }) {
           <>
             <ModalRoot />
             <KeyboardShortcutsModal />
-            <WelcomeModal />
-            <OnboardingTour />
+            {gate.loaded && !gate.pending && (
+              <>
+                <WelcomeModal />
+                <OnboardingTour />
+              </>
+            )}
             <div className="hidden md:block print:hidden">
               <FloatingChatDock />
             </div>

@@ -39,6 +39,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
+  /** Home "complete your profile" card dismissed. */
+  profile_card_dismissed?: boolean;
   /** Owner-only override for the Gravatar hash. */
   gravatar_email?: string | null;
 }
@@ -85,6 +87,7 @@ export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
+  profile_card_dismissed?: boolean;
 }
 
 export interface ProfileUpdate {

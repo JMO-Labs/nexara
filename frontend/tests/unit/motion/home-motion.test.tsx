@@ -11,6 +11,9 @@ const animateMock = vi.hoisted(() =>
   vi.fn(() => ({ then: (r: () => void) => r() })),
 );
 const push = vi.hoisted(() => vi.fn());
+vi.mock("@/components/home/CompleteProfileCard", () => ({
+  CompleteProfileCard: () => null,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/app",

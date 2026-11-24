@@ -60,6 +60,8 @@ from app.api.v1.newsletter import router as newsletter_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
+from app.api.v1.onboarding import admin_router as admin_onboarding_router
+from app.api.v1.onboarding import router as onboarding_router
 from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
@@ -102,6 +104,8 @@ api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
 api_v1_router.include_router(age_groups_router)
 api_v1_router.include_router(admin_age_groups_router)
+api_v1_router.include_router(onboarding_router)
+api_v1_router.include_router(admin_onboarding_router)
 api_v1_router.include_router(admin_system_router)
 api_v1_router.include_router(admin_signins_router)
 api_v1_router.include_router(sessions_router)

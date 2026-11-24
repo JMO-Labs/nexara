@@ -3,6 +3,9 @@
  * @brief Home page frame: greeting, scope bar, six slots, default accordion.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+vi.mock("@/components/home/CompleteProfileCard", () => ({
+  CompleteProfileCard: () => null,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/app",

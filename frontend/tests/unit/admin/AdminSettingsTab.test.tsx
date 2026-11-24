@@ -8,6 +8,9 @@ import * as admin from "@/hooks/useAdmin";
 import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab";
 
 vi.mock("@/hooks/useAdmin");
+vi.mock("@/components/admin/OnboardingSettings", () => ({
+  OnboardingSettings: () => null,
+}));
 vi.mock("@/components/admin/CurrencySetting", () => ({
   CurrencySetting: () => null,
 }));

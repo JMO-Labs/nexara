@@ -127,6 +127,7 @@ class UserSettingsResponse(BaseModel):
     reduce_transparency: bool = False
     simple_mode: bool = False
     always_show_nsfw: bool = False  # adults: unblurred NSFW media; never widens access
+    profile_card_dismissed: bool = False
     field_visibility: dict[str, str] = Field(default_factory=dict)
     gravatar_email: str | None = None  # owner-only (this endpoint)
 
@@ -155,3 +156,4 @@ class UserSettingsUpdate(BaseModel):
     reduce_transparency: bool | None = None
     simple_mode: bool | None = None
     always_show_nsfw: bool | None = None
+    profile_card_dismissed: bool | None = None

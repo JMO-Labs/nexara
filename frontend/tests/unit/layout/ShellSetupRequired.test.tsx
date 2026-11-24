@@ -10,6 +10,9 @@ const nav = vi.hoisted(() => ({
   search: "",
   replace: vi.fn(),
 }));
+vi.mock("@/components/onboarding/OnboardingGate", () => ({
+  useOnboardingGate: () => ({ pending: false, loaded: true }),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.path,
   useSearchParams: () => new URLSearchParams(nav.search),
