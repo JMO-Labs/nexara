@@ -32,6 +32,9 @@ vi.mock("@/components/settings/AppearanceTab", () => ({
 vi.mock("@/components/settings/NudgePreferences", () => ({
   NudgePreferences: stub("engagement"),
 }));
+vi.mock("@/components/settings/SecurityTab", () => ({
+  SecurityTab: stub("security"),
+}));
 vi.mock("@/components/settings/StorageTab", () => ({
   StorageTab: stub("storage"),
 }));
@@ -40,6 +43,7 @@ import { SettingsTabs } from "@/components/settings/SettingsTabs";
 
 const IDS = [
   "account",
+  "security",
   "profile",
   "notifications",
   "privacy",
@@ -56,7 +60,7 @@ describe("SettingsTabs", () => {
     nav.tab = null;
   });
 
-  it("renders the Settings header and a nav with 10 tab links", () => {
+  it("renders the Settings header and a nav with 11 tab links", () => {
     render(<SettingsTabs />);
     expect(
       screen.getByRole("heading", { name: "Settings", level: 1 }),

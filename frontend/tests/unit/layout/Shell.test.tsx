@@ -17,6 +17,7 @@ const { stub } = vi.hoisted(() => ({
   }),
 }));
 vi.mock("@/components/layout/TopBar", () => stub("TopBar"));
+vi.mock("@/components/layout/GraceBanner", () => stub("GraceBanner"));
 vi.mock("@/components/layout/AppBackdrop", () =>
   stub("AppBackdrop", "backdrop"),
 );

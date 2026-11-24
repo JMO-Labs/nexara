@@ -24,9 +24,25 @@ describe("completeLogin", () => {
       requires_2fa: true,
       two_factor_token: "tft-123",
     });
-    expect(result).toEqual({ kind: "two_factor", two_factor_token: "tft-123" });
+    expect(result).toEqual({
+      kind: "two_factor",
+      two_factor_token: "tft-123",
+      methods: ["totp", "recovery"],
+    });
     expect(getAccessToken()).toBeNull();
     expect(useSession.getState().user).toBeNull();
+  });
+
+  it("passes through two_factor_methods", async () => {
+    const result = await completeLogin({
+      access_token: null,
+      token_type: "bearer",
+      expires_in: null,
+      requires_2fa: true,
+      two_factor_token: "t",
+      two_factor_methods: ["passkey"],
+    });
+    expect(result).toMatchObject({ methods: ["passkey"] });
   });
 
   it("sets access token and hydrates user on success", async () => {

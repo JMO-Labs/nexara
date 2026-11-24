@@ -31,6 +31,7 @@ import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
 import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
 import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
 import { AdminNotice } from "./AdminState";
+import { ResetTwoFactorButton } from "./ResetTwoFactorButton";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -319,6 +320,10 @@ export function UsersTab() {
                           </IconButton>
                         </>
                       )}
+                      <ResetTwoFactorButton
+                        userId={user.id}
+                        name={user.display_name || user.username}
+                      />
                       <IconButton
                         variant="glass"
                         aria-label="Delete user"

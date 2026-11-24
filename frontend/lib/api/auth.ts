@@ -11,6 +11,7 @@ export interface LoginResponse {
   expires_in: number | null;
   requires_2fa: boolean;
   two_factor_token: string | null;
+  two_factor_methods?: string[] | null;
 }
 
 export interface MessageResponse {
@@ -64,12 +65,6 @@ export const verifyTwoFactorLogin = (two_factor_token: string, code: string) =>
     { two_factor_token, code },
     { anonymous: true },
   );
-
-export const enrollTwoFactor = () =>
-  apiPost<{ secret: string; otpauth_uri: string }>(`${AUTH}/2fa/enroll`);
-
-export const verifyTwoFactorEnroll = (code: string) =>
-  apiPost<{ backup_codes: string[] }>(`${AUTH}/2fa/verify`, { code });
 
 export const requestMagicLink = (email: string) =>
   apiPost<MessageResponse>(

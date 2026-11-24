@@ -16,6 +16,7 @@ import {
   Lock,
   Palette,
   Puzzle,
+  ShieldCheck,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import { NudgePreferences } from "./NudgePreferences";
 import { PluginsSettingsTab } from "./PluginsSettingsTab";
 import { PluginSettingsProvider } from "@/lib/plugins/PluginSettingsContext";
 import { HelpTab } from "./HelpTab";
+import { SecurityTab } from "./SecurityTab";
 
 const TABS: {
   id: string;
@@ -46,6 +48,13 @@ const TABS: {
     description: "Your sign-in email and data.",
     icon: KeyRound,
     Body: AccountTab,
+  },
+  {
+    id: "security",
+    label: "Security",
+    description: "Two-step sign-in, recovery codes and passkeys.",
+    icon: ShieldCheck,
+    Body: SecurityTab,
   },
   {
     id: "profile",

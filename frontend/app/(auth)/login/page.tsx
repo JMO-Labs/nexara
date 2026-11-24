@@ -20,7 +20,8 @@ import {
   login as apiLogin,
   type OAuthProvider,
 } from "@/lib/api/auth";
-import { completeLogin } from "@/lib/auth/flow";
+import { completeLogin, twoFactorUrl } from "@/lib/auth/flow";
+import { authenticateWithPasskey, passkeysAvailable } from "@/lib/passkeys";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
@@ -50,7 +51,7 @@ export default function LoginPage() {
     };
   }, []);
 
-  const { register, handleSubmit, formState } = useForm<FormData>({
+  const { register, handleSubmit, formState, getValues } = useForm<FormData>({
     resolver: zodResolver(Schema),
     mode: "onTouched",
     defaultValues: { email: "", password: "" },
@@ -62,14 +63,25 @@ export default function LoginPage() {
     errorKey: "toasts.auth.login.failed",
     onSuccess: (out) => {
       if (out.kind === "two_factor") {
-        const url = `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent(next)}`;
-        router.push(url);
+        router.push(twoFactorUrl(out, next));
       } else {
         router.push(next);
       }
     },
   });
   const onSubmit = (data: FormData) => login.mutate(data);
+
+  const passkey = useMutationWithToast({
+    mutationFn: async () =>
+      completeLogin(
+        await authenticateWithPasskey({
+          email: getValues("email") || undefined,
+        }),
+      ),
+    errorKey: "toasts.auth.login.failed",
+    onSuccess: (out) =>
+      router.push(out.kind === "two_factor" ? twoFactorUrl(out, next) : next),
+  });
 
   return (
     <AuthCard
@@ -97,7 +109,7 @@ export default function LoginPage() {
             label="Email"
             type="email"
             autoFocus
-            autoComplete="email"
+            autoComplete="username webauthn"
             error={formState.errors.email?.message}
             disabled={login.isPending}
             {...register("email")}
@@ -126,6 +138,17 @@ export default function LoginPage() {
           <Button type="submit" size="lg" loading={login.isPending}>
             Sign in
           </Button>
+          {passkeysAvailable() && (
+            <Button
+              type="button"
+              size="lg"
+              variant="ghost"
+              loading={passkey.isPending}
+              onClick={() => passkey.mutate(undefined)}
+            >
+              Sign in with a passkey
+            </Button>
+          )}
         </form>
       )}
       <OAuthButtons providers={providers} showDivider={localAuth} />

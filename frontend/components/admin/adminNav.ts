@@ -18,6 +18,7 @@ import {
   Puzzle,
   Send,
   Settings,
+  ShieldCheck,
   ShieldAlert,
   ShoppingBag,
   Timer,
@@ -54,7 +55,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (15 tabs + 4 route links). */
+/** @brief Grouped admin sections (16 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -79,6 +80,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         MailPlus,
       ),
       tab("sso", "SSO", "Single sign-on providers.", KeyRound),
+      tab(
+        "security",
+        "Security",
+        "Require two-step sign-in for admins or everyone.",
+        ShieldCheck,
+      ),
     ],
   },
   {

@@ -15,6 +15,7 @@ import { z } from "zod";
 import { Input, Button } from "@/components/ui";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { verifyTwoFactorLogin } from "@/lib/api/auth";
+import { authenticateWithPasskey, passkeysAvailable } from "@/lib/passkeys";
 import { completeLogin } from "@/lib/auth/flow";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -31,6 +32,9 @@ export default function TwoFactorPage() {
   const params = useSearchParams();
   const token = params.get("token");
   const next = safeInternalLink(params.get("next")) ?? "/app";
+  const methods = (params.get("methods") ?? "totp,recovery").split(",");
+  const hasCode = methods.includes("totp") || methods.includes("recovery");
+  const hasPasskey = methods.includes("passkey");
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
@@ -66,10 +70,25 @@ export default function TwoFactorPage() {
     }
   };
 
+  const signInWithPasskey = async () => {
+    setError(null);
+    try {
+      const resp = await authenticateWithPasskey({ pendingToken: token });
+      await completeLogin(resp);
+      router.replace(next);
+    } catch (e) {
+      setError(formatApiError(e, "Passkey not accepted."));
+    }
+  };
+
   return (
     <AuthCard
       title="Two-factor verification"
-      subtitle="Enter the 6-digit code from your authenticator app, or a backup code."
+      subtitle={
+        hasCode
+          ? "Enter the 6-digit code from your authenticator app, or a recovery code."
+          : "Confirm it is you with your passkey."
+      }
     >
       {error && (
         <p
@@ -79,24 +98,36 @@ export default function TwoFactorPage() {
           {error}
         </p>
       )}
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        className="flex flex-col gap-4"
-      >
-        <Input
-          label="Code"
-          autoFocus
-          autoComplete="one-time-code"
-          inputMode="numeric"
-          error={formState.errors.code?.message}
-          disabled={formState.isSubmitting}
-          {...register("code")}
-        />
-        <Button type="submit" size="lg" loading={formState.isSubmitting}>
-          Verify
+      {hasCode && (
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-col gap-4"
+        >
+          <Input
+            label="Code"
+            autoFocus={hasCode}
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            error={formState.errors.code?.message}
+            disabled={formState.isSubmitting}
+            {...register("code")}
+          />
+          <Button type="submit" size="lg" loading={formState.isSubmitting}>
+            Verify
+          </Button>
+        </form>
+      )}
+      {hasPasskey && passkeysAvailable() && (
+        <Button
+          type="button"
+          size="lg"
+          variant={hasCode ? "ghost" : "primary"}
+          onClick={signInWithPasskey}
+        >
+          Use a passkey
         </Button>
-      </form>
+      )}
     </AuthCard>
   );
 }
