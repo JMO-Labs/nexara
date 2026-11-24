@@ -14,7 +14,6 @@ import {
   deleteUser,
   getAdminSettings,
   updateAdminSettings,
-  getAuditLog,
 } from "@/lib/api/admin";
 
 // Automock the transport but keep the real seg() path encoder.
@@ -206,37 +205,6 @@ describe("adminApi", () => {
         enable_registration: false,
       });
       expect(result).toEqual(mockSettings);
-    });
-  });
-
-  describe("getAuditLog", () => {
-    it("should call apiGet with filters", async () => {
-      const mockAuditLog = {
-        items: [
-          {
-            id: "audit-1",
-            actor_id: "user-1",
-            actor_display_name: "Admin User",
-            action: "user_role_changed",
-            target_type: "user",
-            target_id: "user-2",
-            target_display: "John Doe",
-            extra_data: { old_role: "member", new_role: "admin" },
-            ip_address: "127.0.0.1",
-            created_at: new Date(),
-          },
-        ],
-        next_cursor: null,
-        has_more: false,
-      };
-      vi.mocked(client.apiGet).mockResolvedValue(mockAuditLog);
-
-      const result = await getAuditLog({ limit: 50, cursor: null });
-
-      expect(client.apiGet).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/admin/audit-log?"),
-      );
-      expect(result).toEqual(mockAuditLog);
     });
   });
 });

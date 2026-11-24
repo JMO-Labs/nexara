@@ -88,7 +88,6 @@ export const qk = {
       ["admin", "users", filters ?? {}] as const,
     branding: () => ["admin", "branding"] as const,
     invites: () => ["admin", "invites"] as const,
-    auditLog: () => ["admin", "audit-log"] as const,
     metrics: () => ["admin", "metrics"] as const,
     settings: () => ["admin", "settings"] as const,
     oauth: () => ["admin", "oauth"] as const,

@@ -11,7 +11,6 @@ import {
   useAdminMetrics,
   useAdminUsers,
   useAdminSettings,
-  useAuditLog,
   useChangeUserRole,
   useSuspendUser,
   useRestoreUser,

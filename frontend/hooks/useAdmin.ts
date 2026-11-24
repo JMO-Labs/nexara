@@ -70,19 +70,6 @@ export const useAdminSettings = () =>
   });
 
 /**
- * @brief Fetch audit log entries.
- */
-export const useAuditLog = (filters?: {
-  limit?: number;
-  cursor?: string | null;
-}) =>
-  useQuery({
-    queryKey: qk.admin.auditLog(),
-    queryFn: () => adminApi.getAuditLog(filters),
-    staleTime: 60 * 1000, // 1 minute
-  });
-
-/**
  * @brief Change a user's role. Invalidates useAdminUsers on success.
  */
 export const useChangeUserRole = () => {
