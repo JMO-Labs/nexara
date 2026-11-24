@@ -6,10 +6,10 @@
 #   docker build -f deploy/docker/plugin-host.Dockerfile -t nexara-plugin-host .
 #   docker build --target test ...   # adds dev deps + tests (CI)
 
-FROM node:22-bookworm-slim AS node
-FROM ghcr.io/astral-sh/uv:0.5 AS uv
+FROM node:22.23.5-bookworm-slim@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb AS node
+FROM ghcr.io/astral-sh/uv:0.5.31@sha256:7bff3c3776ec467fc1437960f2c469d8beb30f536a6465a3350c647ccd260ec2 AS uv
 
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.12.16-slim-bookworm@sha256:44cf1793efa7c7a476bb0f2cff81443f4a072c90c1cb127e2924933daa3e8c64 AS base
 RUN apt-get update \
     && apt-get install -y --no-install-recommends bubblewrap util-linux libseccomp2 ca-certificates \
     && rm -rf /var/lib/apt/lists/*

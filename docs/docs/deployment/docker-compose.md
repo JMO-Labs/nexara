@@ -103,12 +103,13 @@ The `plugin-host` service installs and sandboxes plugin packages (bubblewrap,
 one uid per plugin). It is off by default; enable it with a compose profile:
 
 ```bash
-# in .env: PLUGIN_HOST_SECRET=$(openssl rand -hex 32)   (required, no default)
+# in .env: PLUGIN_HOST_SECRET=<openssl rand -hex 32>  (required, no default)
+#          PLUGIN_HOST_URL=http://plugin-host:8700
 docker compose --profile plugins up -d
 ```
 
 - Shares only the `nexara-plugins` network with `nexara`; it cannot reach
-  `nexara-db`. Nexara reaches it at `http://plugin-host:8700`.
+  `nexara-db`. Nexara reaches it at `PLUGIN_HOST_URL` (`http://plugin-host:8700`).
 - The container runs as root with `cap_drop: ALL` plus `SETUID`, `SETGID`,
   `CHOWN`, `KILL`, `seccomp=unconfined`, `apparmor=unconfined`,
   `no-new-privileges`, a read-only root filesystem, a sized `/tmp` tmpfs and
@@ -119,3 +120,8 @@ docker compose --profile plugins up -d
   bound all plugins combined.
 - Known gap: a disk quota for each plugin's `/state` is **not enforced**; a
   plugin can fill the `plugin_data` volume.
+
+GitLab CI: the host's sandbox tests need a privileged docker-in-docker runner.
+The job runs only when the project variable `PLUGIN_HOST_SANDBOX_CI=true` is
+set and a runner tagged `privileged` exists; otherwise a
+`test:plugin-host:skipped` job notes that they did not run.

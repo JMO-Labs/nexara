@@ -74,8 +74,9 @@ services:
       AMAZON_MARKETPLACE: "${AMAZON_MARKETPLACE:-www.amazon.com}"
       AMAZON_TOKEN_URL: "${AMAZON_TOKEN_URL:-https://api.amazon.com/auth/o2/token}"
       TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
-      # Plugin host (only used when the `plugins` profile is enabled)
-      PLUGIN_HOST_URL: "${PLUGIN_HOST_URL:-http://plugin-host:8700}"
+      # Plugin host: leave empty unless the `plugins` profile is enabled, then
+      # set PLUGIN_HOST_URL=http://plugin-host:8700 in .env
+      PLUGIN_HOST_URL: "${PLUGIN_HOST_URL:-}"
       PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
     volumes:
       - media:/data/media
@@ -125,8 +126,8 @@ services:
 
   # ── Plugin Host (optional: docker compose --profile plugins up -d) ─────────
   # Runs untrusted plugin code in bubblewrap sandboxes. No DB creds, no Docker
-  # socket; reachable only from `nexara` over the internal-facing nexara-plugins
-  # network (never joins nexara-net, so it cannot reach nexara-db).
+  # socket; reachable only from `nexara` over the dedicated nexara-plugins
+  # bridge network (never joins nexara-net, so it cannot reach nexara-db).
   plugin-host:
     profiles: ["plugins"]
     build:

@@ -5,7 +5,12 @@
 # Unit tests run as a non-root user (some assert non-root behaviour). The
 # `sandbox`-marked tests need real bwrap and run ONLY here, as root inside the
 # image with the same security options as the compose service
-# (docker-in-docker, so the runner must allow privileged services).
+# (docker-in-docker, so it needs a privileged runner).
+#
+# The sandbox job runs only when PLUGIN_HOST_SANDBOX_CI == "true" (project CI
+# variable) and only on runners tagged `privileged`. Otherwise a visible
+# `test:plugin-host:skipped` job explains why; the sandbox tests then run
+# nowhere, so enable this before merging plugin-host changes.
 ##
 
 .rules:plugin-host:
@@ -21,7 +26,7 @@
 
 lint:plugin-host:
   stage: lint
-  image: $PYTHON_IMAGE
+  image: python:3.12.16-slim-bookworm
   extends:
     - .cache:python
   before_script:
@@ -34,8 +39,19 @@ lint:plugin-host:
     - uv run mypy host
   rules: !reference [.rules:plugin-host, rules]
 
+test:plugin-host:skipped:
+  stage: test
+  image: busybox:1.37
+  script:
+    - echo "plugin-host unit+sandbox tests SKIPPED; set PLUGIN_HOST_SANDBOX_CI=true and provide a runner tagged 'privileged' (dind) to run them."
+  rules:
+    - if: $PLUGIN_HOST_SANDBOX_CI == "true"
+      when: never
+    - !reference [.rules:plugin-host, rules]
+
 test:plugin-host:
   stage: test
+  tags: [privileged]
   image: docker:27
   services:
     - docker:27-dind
@@ -57,4 +73,7 @@ test:plugin-host:
       --security-opt no-new-privileges:true --read-only
       --tmpfs /tmp:size=64m --tmpfs /data:size=256m plugin-host-test
       /opt/venv/bin/pytest -q -p no:cacheprovider -m sandbox
-  rules: !reference [.rules:plugin-host, rules]
+  rules:
+    - if: $PLUGIN_HOST_SANDBOX_CI != "true"
+      when: never
+    - !reference [.rules:plugin-host, rules]
