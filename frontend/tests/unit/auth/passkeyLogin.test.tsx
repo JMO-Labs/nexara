@@ -117,7 +117,11 @@ describe("two-factor page methods", () => {
   it("totp only: code input, no passkey button", () => {
     usePendingTwoFactor.getState().set("T", ["totp", "recovery"]);
     render(<TwoFactorPage />);
-    expect(screen.getByLabelText("Code")).toBeTruthy();
+    const input = screen.getByLabelText("Code");
+    // Recovery codes contain letters: no numeric keypad, no autocorrect.
+    expect(input).toHaveAttribute("inputmode", "text");
+    expect(input).toHaveAttribute("autocapitalize", "characters");
+    expect(input).toHaveAttribute("spellcheck", "false");
     expect(screen.queryByRole("button", { name: "Use a passkey" })).toBeNull();
   });
 

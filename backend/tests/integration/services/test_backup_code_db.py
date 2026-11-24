@@ -44,3 +44,15 @@ async def test_second_consume_of_same_code_is_false(session: AsyncSession):
     assert await consume_backup_code(session, u.id, "ABCD1234") is True
     assert await consume_backup_code(session, u.id, "ABCD1234") is False
     assert await consume_backup_code(session, u.id, "WRONG000") is False
+
+
+async def test_lowercase_and_grouped_code_is_accepted(session: AsyncSession):
+    sfx = uuid.uuid4().hex[:6]
+    u = User(community_id=CID, email=f"bl_{sfx}@nexara.dev", username=f"bl_{sfx}", display_name="b")
+    session.add(u)
+    await session.flush()
+    session.add(UserBackupCode(user_id=u.id, code_hash=hash_token("ABCD1234")))
+    session.add(UserBackupCode(user_id=u.id, code_hash=hash_token("WXYZ5678")))
+    await session.flush()
+    assert await consume_backup_code(session, u.id, " abcd1234 ") is True
+    assert await consume_backup_code(session, u.id, "wxyz-5678") is True

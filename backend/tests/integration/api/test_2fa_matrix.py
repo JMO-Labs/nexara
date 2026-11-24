@@ -117,7 +117,7 @@ async def _user(
         s.add(u)
         await s.flush()
         if totp:
-            out["codes"] = [secrets.token_hex(4) for _ in range(3)]
+            out["codes"] = [secrets.token_hex(4).upper() for _ in range(3)]
             s.add_all(UserBackupCode(user_id=u.id, code_hash=hash_token(c)) for c in out["codes"])
         if passkey:
             a = Auth(rpid="localhost")

@@ -115,7 +115,9 @@ export default function TwoFactorPage() {
             label="Code"
             autoFocus={hasCode}
             autoComplete="one-time-code"
-            inputMode="numeric"
+            inputMode="text"
+            autoCapitalize="characters"
+            spellCheck={false}
             error={formState.errors.code?.message}
             disabled={formState.isSubmitting}
             {...register("code")}
