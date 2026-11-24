@@ -29,7 +29,7 @@ def _row() -> MagicMock:
     row.failure_count = 0
     row.last_failure_at = None
     row.created_at = datetime.now(UTC)
-    row.apprise_url = "gAAAA-ciphertext"
+    row.apprise_url = "NTFY://ntfy.sh/secret-topic"
     return row
 
 
@@ -59,7 +59,16 @@ async def test_list_excludes_url(client, service) -> None:
         resp = await c.get(BASE)
     assert resp.status_code == 200
     assert "apprise_url" not in resp.json()[0]
-    assert "ciphertext" not in resp.text
+    assert "secret-topic" not in resp.text
+
+
+async def test_list_exposes_scheme_only(client, service) -> None:
+    service.list.return_value = [_row()]
+    async with client as c:
+        resp = await c.get(BASE)
+    item = resp.json()[0]
+    assert item["scheme"] == "ntfy"
+    assert "ntfy.sh" not in resp.text and "secret-topic" not in resp.text
 
 
 async def test_create_returns_no_url(client, service) -> None:

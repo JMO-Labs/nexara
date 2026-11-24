@@ -37,6 +37,23 @@ class AppriseURLResponse(BaseModel):
     created_at: datetime
 
 
+class AppriseMemberResponse(AppriseURLResponse):
+    """@brief Member view: adds the URL scheme only (never host, path or token)."""
+
+    scheme: str
+
+    @classmethod
+    def from_row(cls, row: object) -> AppriseMemberResponse:
+        """@brief Build from a row whose ``apprise_url`` is decrypted.
+
+        @param row AppriseURL row. @return response with lowercase scheme or "".
+        """
+        base = AppriseURLResponse.model_validate(row)
+        raw = str(getattr(row, "apprise_url", ""))
+        scheme = raw.partition("://")[0].lower() if "://" in raw else ""
+        return cls(**base.model_dump(), scheme=scheme)
+
+
 class AppriseTestResponse(BaseModel):
     """@brief Result of a test send."""
 

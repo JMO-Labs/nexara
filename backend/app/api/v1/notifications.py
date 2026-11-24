@@ -29,9 +29,9 @@ from app.repositories.apprise_repo import AppriseRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.schemas.apprise import (
+    AppriseMemberResponse,
     AppriseTestResponse,
     AppriseURLCreate,
-    AppriseURLResponse,
     AppriseURLUpdate,
 )
 from app.schemas.common import MessageResponse
@@ -298,36 +298,36 @@ def _apprise_service(
     return AppriseService(AppriseRepository(db), uuid.UUID(settings.COMMUNITY_ID))
 
 
-@router.get("/apprise", response_model=list[AppriseURLResponse])
+@router.get("/apprise", response_model=list[AppriseMemberResponse])
 async def list_apprise(
     user: User = Depends(get_current_user),
     service: AppriseService = Depends(_apprise_service),
-) -> list[AppriseURLResponse]:
+) -> list[AppriseMemberResponse]:
     """@brief List the user's Apprise URLs (URL itself never returned)."""
-    return [AppriseURLResponse.model_validate(r) for r in await service.list(user.id)]
+    return [AppriseMemberResponse.from_row(r) for r in await service.list(user.id)]
 
 
-@router.post("/apprise", response_model=AppriseURLResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/apprise", response_model=AppriseMemberResponse, status_code=status.HTTP_201_CREATED)
 async def create_apprise(
     body: AppriseURLCreate,
     user: User = Depends(get_current_user),
     service: AppriseService = Depends(_apprise_service),
-) -> AppriseURLResponse:
+) -> AppriseMemberResponse:
     """@brief Add an Apprise URL; 400 INVALID_APPRISE_URL if it does not parse."""
     row = await service.create(user.id, body.apprise_url, body.label)
-    return AppriseURLResponse.model_validate(row)
+    return AppriseMemberResponse.from_row(row)
 
 
-@router.patch("/apprise/{url_id}", response_model=AppriseURLResponse)
+@router.patch("/apprise/{url_id}", response_model=AppriseMemberResponse)
 async def update_apprise(
     url_id: uuid.UUID,
     body: AppriseURLUpdate,
     user: User = Depends(get_current_user),
     service: AppriseService = Depends(_apprise_service),
-) -> AppriseURLResponse:
+) -> AppriseMemberResponse:
     """@brief Update label/enabled of an owned Apprise URL."""
     row = await service.update(user.id, url_id, body.label, body.enabled)
-    return AppriseURLResponse.model_validate(row)
+    return AppriseMemberResponse.from_row(row)
 
 
 @router.delete("/apprise/{url_id}", response_model=MessageResponse)
