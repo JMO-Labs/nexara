@@ -68,10 +68,6 @@ async def test_routes_delegate_and_shape(test_app):
             "required": False,
             "grace_until": None,
         }
-        # legacy aliases
-        assert (await c.post("/api/v1/auth/2fa/enroll")).status_code == 200
-        r = await c.post("/api/v1/auth/2fa/verify", json={"code": "123456"})
-        assert len(r.json()["backup_codes"]) == 10
     svc.disable.assert_awaited_once_with("p", None)
 
 

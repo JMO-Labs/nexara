@@ -18,8 +18,6 @@ from app.schemas.auth import (
     LoginResponse,
     TwoFactorEnrollResponse,
     TwoFactorLoginRequest,
-    TwoFactorVerifyRequest,
-    TwoFactorVerifyResponse,
 )
 from app.schemas.common import MessageResponse
 from app.schemas.two_factor import CodeBody, DisableBody, RecoveryCodes, TwoFactorStatus
@@ -64,22 +62,6 @@ async def recovery_regenerate(
 ) -> RecoveryCodes:
     """@brief Replace the recovery codes (needs a valid code)."""
     return RecoveryCodes(recovery_codes=await svc.regenerate(body.code))
-
-
-# ponytail: alias, remove in PR3 Task 4
-@router.post("/enroll", response_model=TwoFactorEnrollResponse)
-async def enroll_alias(svc: TwoFactorService = Depends(get_two_factor_service)) -> Any:
-    """@brief Alias of ``/totp/start``."""
-    return await svc.start()
-
-
-# ponytail: alias, remove in PR3 Task 4
-@router.post("/verify", response_model=TwoFactorVerifyResponse)
-async def verify_alias(
-    body: TwoFactorVerifyRequest, svc: TwoFactorService = Depends(get_two_factor_service)
-) -> Any:
-    """@brief Alias of ``/totp/confirm`` (old response shape)."""
-    return TwoFactorVerifyResponse(backup_codes=await svc.confirm(body.code))
 
 
 @router.post("/login", response_model=LoginResponse)

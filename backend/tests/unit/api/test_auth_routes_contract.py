@@ -15,8 +15,6 @@ EXPECTED = {
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/refresh"),
     ("POST", "/api/v1/auth/logout"),
-    ("POST", "/api/v1/auth/2fa/enroll"),
-    ("POST", "/api/v1/auth/2fa/verify"),
     ("POST", "/api/v1/auth/2fa/login"),
     ("GET", "/api/v1/auth/2fa/status"),
     ("POST", "/api/v1/auth/2fa/totp/start"),
