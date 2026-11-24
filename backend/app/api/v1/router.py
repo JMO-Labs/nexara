@@ -23,6 +23,7 @@ from app.api.v1.admin_retention import router as admin_retention_router
 from app.api.v1.admin_security import router as admin_security_router
 from app.api.v1.admin_shop import router as admin_shop_router
 from app.api.v1.admin_storage import router as admin_storage_router
+from app.api.v1.admin_system import router as admin_system_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
@@ -93,6 +94,7 @@ api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
+api_v1_router.include_router(admin_system_router)
 api_v1_router.include_router(admin_security_router)
 api_v1_router.include_router(admin_email_router)
 api_v1_router.include_router(admin_email_callback_router)
