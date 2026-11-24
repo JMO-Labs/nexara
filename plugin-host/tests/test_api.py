@@ -331,3 +331,32 @@ async def test_installs_bounded(
     await settle(app)
     assert peak == 1
     assert {r["status"] for r in (await c.get("/plugins")).json()} == {"running"}
+
+
+async def test_sandbox_unavailable_reported(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from host.errors import SandboxUnavailableError
+
+    seen: dict[str, object] = {}
+
+    async def _install(plugin_id: str, spec: InstallSpec, data_dir: Path, **kw: object) -> Path:
+        seen.update(kw)
+        root = data_dir / "plugins" / plugin_id / spec.version
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    async def down(*a: object) -> None:
+        raise SandboxUnavailableError()
+
+    monkeypatch.setattr(main, "install", _install)
+    monkeypatch.setattr(sup, "start", down)
+    await c.put(f"/plugins/{PID}", json=spec_body(good_tar()))
+    await settle(app)
+    assert seen["uid"] == 20000  # installs run as the plugin's uid
+    row = (await c.get("/plugins")).json()[0]
+    assert row["status"] == "sandbox_unavailable"

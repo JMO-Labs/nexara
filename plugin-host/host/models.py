@@ -118,6 +118,9 @@ class Supervisor(Protocol):
     def logs(self, plugin_id: str, lines: int) -> list[str]:
         """@brief Last `lines` output lines."""
 
+    def port(self, plugin_id: str) -> int | None:
+        """@brief Local port of a running plugin (event proxy target), else None."""
+
 
 class NullSupervisor:
     """@brief Placeholder until the bwrap supervisor lands; tracks nothing."""
@@ -133,3 +136,6 @@ class NullSupervisor:
 
     def logs(self, plugin_id: str, lines: int) -> list[str]:
         return []
+
+    def port(self, plugin_id: str) -> int | None:
+        return None

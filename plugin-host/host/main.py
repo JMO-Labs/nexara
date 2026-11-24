@@ -7,6 +7,8 @@ import asyncio
 import logging
 import os
 import shutil
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated
@@ -18,15 +20,18 @@ from fastapi.responses import JSONResponse
 
 from host.auth import require_secret
 from host.deps import Runner, run_subprocess
+from host.errors import SandboxUnavailableError
 from host.installer import InstallError, current_version, install, prune, swap_current
 from host.models import (
     PLUGIN_ID_RE,
     InstallSpec,
-    NullSupervisor,
     PluginRecord,
     PluginRow,
     Supervisor,
 )
+from host.proxy import events_router
+from host.sandbox import bwrap_runner, plugin_uid
+from host.supervisor import BwrapSupervisor
 
 log = logging.getLogger("plugin_host")
 
@@ -88,6 +93,12 @@ def _fail(rec: PluginRecord, spec: InstallSpec, code: str) -> None:
         rec.pending, rec.status, rec.last_error = None, "failed", code
 
 
+def _sandbox_down(rec: PluginRecord, spec: InstallSpec) -> None:
+    """@brief bwrap self-test failed: nothing may start."""
+    if rec.pending is spec:
+        rec.pending, rec.status, rec.last_error = None, "sandbox_unavailable", "sandbox_unavailable"
+
+
 async def _rollback(host: HostState, pid: str, rec: PluginRecord, root: Path) -> None:
     """@brief New version failed to start: drop it and restart the last-good one."""
     if current_version(host.pdir(pid)) != root.name:
@@ -106,7 +117,10 @@ async def _install_and_start(host: HostState, pid: str, spec: InstallSpec) -> No
             return  # superseded or deleted while waiting
         try:
             async with host.installs:
-                root = await install(pid, spec, host.data_dir, runner=host.runner)
+                uid = plugin_uid(host.data_dir, pid)
+                root = await install(pid, spec, host.data_dir, runner=host.runner, uid=uid)
+        except SandboxUnavailableError:
+            return _sandbox_down(rec, spec)
         except InstallError as e:
             log.warning("[%s] install failed: %s", pid, e.code)
             return _fail(rec, spec, e.code)
@@ -115,6 +129,8 @@ async def _install_and_start(host: HostState, pid: str, spec: InstallSpec) -> No
             return _fail(rec, spec, "install_error")
         try:
             await host.supervisor.start(pid, root, spec)
+        except SandboxUnavailableError:
+            return _sandbox_down(rec, spec)
         except Exception as e:
             log.error("[%s] start failed: %s", pid, type(e).__name__)
             await _rollback(host, pid, rec, root)
@@ -172,7 +188,11 @@ async def start_plugin(plugin_id: PluginId, host: Host) -> Response:
         raise HTTPException(409, "needs_config" if rec.version else "not_installed")
     if current_version(host.pdir(plugin_id)) != rec.version:
         raise HTTPException(409, "not_installed")
-    await host.supervisor.start(plugin_id, host.pdir(plugin_id) / rec.version, rec.spec)
+    try:
+        await host.supervisor.start(plugin_id, host.pdir(plugin_id) / rec.version, rec.spec)
+    except SandboxUnavailableError:
+        rec.status = rec.last_error = "sandbox_unavailable"
+        raise HTTPException(503, "sandbox_unavailable") from None
     rec.status, rec.last_error = "running", None
     return Response(status_code=204)
 
@@ -212,18 +232,36 @@ def create_app(
     """
     @brief Build the app. Defaults come from env PLUGIN_HOST_SECRET / PLUGIN_HOST_DATA.
     An empty secret makes every control route return 401 (fail closed).
-    @param runner Install-step runner (Task 2: bwrap as plugin uid).
+    @param supervisor Default: BwrapSupervisor (self-test runs at startup).
+    @param runner Install-step runner. Default: bwrap as the plugin's uid.
     """
     secret = os.environ.get("PLUGIN_HOST_SECRET", "") if secret is None else secret
     data_dir = Path(os.environ.get("PLUGIN_HOST_DATA", "/data")) if data_dir is None else data_dir
-    host = HostState(secret, data_dir, supervisor or NullSupervisor(), runner or run_subprocess)
+    sup = BwrapSupervisor(data_dir) if supervisor is None else supervisor
+    host = HostState(secret, data_dir, sup, runner or bwrap_runner(data_dir))
     if not secret:
         log.error("PLUGIN_HOST_SECRET is empty; all control requests will be rejected")
     host.scan()
-    app = FastAPI(title="Nexara plugin host", docs_url=None, redoc_url=None, openapi_url=None)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if isinstance(sup, BwrapSupervisor):
+            await asyncio.to_thread(lambda: sup.available)  # startup self-test
+        yield
+        for pid in list(host.records):
+            await sup.stop(pid)
+
+    app = FastAPI(
+        title="Nexara plugin host",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=lifespan,
+    )
     app.state.host = host
     app.add_exception_handler(RequestValidationError, _validation_error)
     app.include_router(router)
+    app.include_router(events_router)  # unauthenticated: the plugin verifies the HMAC
     return app
 
 
