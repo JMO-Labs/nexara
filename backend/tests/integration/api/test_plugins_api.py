@@ -303,3 +303,20 @@ async def test_plugin_token_cannot_reach_admin_or_prefs(env):
         r = await env.c.request(method, path, headers={"Authorization": f"Bearer {tok}"}, json={})
         assert r.status_code == 403, (method, path, r.text)
         assert r.json()["error"]["code"] == "plugin_scope_denied"
+
+
+async def test_bot_active_flag_follows_plugin_state(env):
+    await _install(env)
+    bot, pid = await _bot_post(env)
+    env.who["u"] = env.u.member
+    author = (await env.c.get(f"/api/v1/posts/{pid}")).json()["author"]
+    assert author["is_bot"] is True and author["bot_active"] is True
+    env.who["u"] = env.u.owner
+    await env.c.patch(f"/api/v1/plugins/{env.pid}/communities/{CID}", json={"enabled": False})
+    env.who["u"] = env.u.member
+    author = (await env.c.get(f"/api/v1/posts/{pid}")).json()["author"]
+    assert author["is_bot"] is True and author["bot_active"] is False
+    prof = (await env.c.get(f"/api/v1/users/{bot.id}")).json()
+    assert prof["is_bot"] is True and prof["bot_active"] is False
+    me = (await env.c.get(f"/api/v1/users/{env.u.member.id}")).json()
+    assert me["is_bot"] is False and me["bot_active"] is False

@@ -10,6 +10,8 @@ export interface ChatAuthor {
   display_name: string;
   avatar_url: string | null;
   is_bot?: boolean;
+  /** false when the bot's plugin is disabled or uninstalled */
+  bot_active?: boolean;
 }
 
 export type ChannelType = "community" | "subgroup" | "direct";

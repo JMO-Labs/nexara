@@ -110,7 +110,9 @@ export function MessageItem({
         {!compact && (
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-semibold">{name}</span>
-            {message.author?.is_bot && <BotBadge />}
+            {message.author?.is_bot && (
+              <BotBadge active={message.author.bot_active !== false} />
+            )}
             <span className="text-xs text-muted">
               {time}
               {message.edited_at && " (edited)"}

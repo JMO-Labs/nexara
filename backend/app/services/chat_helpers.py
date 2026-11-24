@@ -43,6 +43,7 @@ def serialize_message(message: ChatMessage, author: User | None) -> dict[str, An
                 "display_name": author.display_name,
                 "avatar_url": author.avatar_url,
                 "is_bot": bool(author.is_bot),
+                "bot_active": author.bot_active,
             }
             if author is not None
             else None

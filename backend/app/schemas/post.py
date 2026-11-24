@@ -24,6 +24,7 @@ class PostAuthorResponse(BaseModel):
     display_name: str
     avatar_url: str | None = None
     is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
 
     model_config = {"from_attributes": True}
 

@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     website_url: str | None = None
     role: str
     is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
     created_at: datetime
     last_seen_at: datetime | None = None
 
@@ -69,6 +70,7 @@ class UserDetailResponse(BaseModel):
     dietary: str | None = None
     role: str
     is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
     totp_enabled: bool
     storage_used: int
     storage_quota: int

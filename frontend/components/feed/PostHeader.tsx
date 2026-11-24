@@ -68,7 +68,7 @@ export function PostHeader({
           {post.author.is_bot && (
             <>
               {" "}
-              <BotBadge />
+              <BotBadge active={post.author.bot_active !== false} />
             </>
           )}
         </p>

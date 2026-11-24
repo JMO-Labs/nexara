@@ -58,7 +58,7 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
             {comment.author.is_bot && (
               <>
                 {" "}
-                <BotBadge />
+                <BotBadge active={comment.author.bot_active !== false} />
               </>
             )}
           </p>

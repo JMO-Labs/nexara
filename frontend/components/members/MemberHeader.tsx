@@ -189,7 +189,7 @@ export function MemberHeader({
           {profile.is_bot && (
             <>
               {" "}
-              <BotBadge />
+              <BotBadge active={profile.bot_active !== false} />
             </>
           )}
         </h1>
