@@ -189,3 +189,12 @@ async def test_safe_wrapper_swallows_errors():
         )
     assert out is None
     assert log.warning.call_args.args[0] == "signin.record_failed"
+
+
+async def test_records_forwarded_client_ip_behind_proxy(repo, notifier):
+    req = SimpleNamespace(
+        client=SimpleNamespace(host="127.0.0.1"),
+        headers={"user-agent": CHROME_WIN, "x-forwarded-for": "198.51.100.9"},
+    )
+    ev = await _rec(repo, notifier, request=req)
+    assert str(ev.ip) == "198.51.100.9"

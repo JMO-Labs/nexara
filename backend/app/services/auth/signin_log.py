@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.valkey import DB_CACHE, get_pool
 from app.db.session import async_session_factory
@@ -68,8 +69,8 @@ def parse_device(user_agent: str | None) -> str:
 
 
 def _client_ip(request: Request | None) -> str | None:
-    """@brief Client IP exactly as RefreshToken records it (``request.client.host``)."""
-    host = request.client.host if request is not None and request.client else None
+    """@brief Real client IP (proxy-aware, as RefreshToken records it), validated."""
+    host = client_ip(request) if request is not None else None
     if not host:
         return None
     try:

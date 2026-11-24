@@ -20,6 +20,7 @@ from app.api.v1.auth_magic_link import router as magic_link_router
 from app.api.v1.auth_oidc import router as oidc_router
 from app.api.v1.auth_passkeys import router as auth_passkeys_router
 from app.api.v1.auth_password_reset import router as password_reset_router
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.cookies import should_secure_cookie
 from app.core.dependencies import get_db, get_dispatcher, get_optional_user
@@ -203,7 +204,7 @@ async def refresh(
     svc = AuthService(db, settings)
     result = await svc.refresh(
         refresh_token,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)

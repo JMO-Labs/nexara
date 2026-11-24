@@ -245,6 +245,22 @@ class TestRefreshEndpoint:
 
         assert resp.status_code == 401
 
+    @pytest.mark.asyncio
+    async def test_refresh_records_forwarded_client_ip(self, test_app):
+        with patch("app.api.v1.auth.AuthService") as mock_svc_cls:
+            mock_svc_cls.return_value.refresh = AsyncMock(
+                return_value={"access_token": "a", "expires_in": 1, "raw_refresh_token": "r"}
+            )
+            transport = ASGITransport(app=test_app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                client.cookies.set("refresh_token", "rt", path="/api/v1/auth")
+                resp = await client.post(
+                    "/api/v1/auth/refresh", headers={"X-Forwarded-For": "198.51.100.8"}
+                )
+        assert resp.status_code == 200
+        kwargs = mock_svc_cls.return_value.refresh.await_args.kwargs
+        assert kwargs["ip_address"] == "198.51.100.8"
+
 
 class TestLogoutEndpoint:
     """@brief POST /api/v1/auth/logout tests."""
