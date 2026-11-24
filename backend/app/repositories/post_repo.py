@@ -58,7 +58,7 @@ class PostRepository(BaseRepository[Post]):
         @param viewer_id Current user UUID for block filter, reaction state, and visibility.
         @param cursor Opaque cursor (ISO timestamp of last seen post).
         @param limit Number of posts to return.
-        @param subgroup_id Optional single subgroup ID filter (overrides visibility predicate).
+        @param subgroup_id Optional single subgroup ID filter (narrows only).
         @param subgroup_ids Subgroup IDs the viewer belongs to (for visibility scoping).
         @return Tuple of (enriched post dicts, next_cursor).
         """
@@ -77,10 +77,10 @@ class PostRepository(BaseRepository[Post]):
             except (ValueError, TypeError):
                 pass
 
-        if subgroup_id is not None:
-            stmt = stmt.where(Post.subgroup_id == subgroup_id)
-        elif viewer_id is not None:
-            allowed = subgroup_ids or []
+        if viewer_id is not None:
+            if subgroup_ids is None:
+                subgroup_ids = await self._viewer_subgroup_ids(viewer_id)
+            allowed = subgroup_ids
             if allowed:
                 visibility_pred = or_(
                     and_(Post.visibility == "community", Post.subgroup_id.is_(None)),
@@ -93,6 +93,11 @@ class PostRepository(BaseRepository[Post]):
                     and_(Post.visibility == "private", Post.author_id == viewer_id),
                 )
             stmt = stmt.where(visibility_pred)
+        else:
+            stmt = stmt.where(Post.visibility == "community", Post.subgroup_id.is_(None))
+
+        if subgroup_id is not None:
+            stmt = stmt.where(Post.subgroup_id == subgroup_id)
 
         if viewer_id:
             stmt = self.apply_block_filter(stmt, viewer_id)
@@ -119,6 +124,15 @@ class PostRepository(BaseRepository[Post]):
                 ordered.append(data)
 
         return ordered, next_cursor
+
+    async def _viewer_subgroup_ids(self, viewer_id: uuid.UUID) -> list[uuid.UUID]:
+        """@brief Viewer's direct subgroup memberships expanded with descendants."""
+        from app.models.subgroup import SubgroupMember
+        from app.repositories.subgroup_repo import expand_with_descendants
+
+        stmt = select(SubgroupMember.subgroup_id).where(SubgroupMember.user_id == viewer_id)
+        direct = list((await self._session.execute(stmt)).scalars().all())
+        return await expand_with_descendants(self._session, direct)
 
     async def count_new_since(
         self,

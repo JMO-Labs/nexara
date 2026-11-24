@@ -173,3 +173,45 @@ class TestListFeedVisibilityIntegration:
         assert str(sg1_post.id) not in returned_ids, "S1 post should be excluded"
         assert str(sg2_post.id) not in returned_ids, "S2 post should be excluded"
         assert str(b_private.id) not in returned_ids, "B's private post should be excluded"
+
+
+class TestListFeedSubgroupFilterVisibility:
+    """@brief The subgroup_id filter must narrow, never widen, visibility."""
+
+    @pytest.mark.asyncio
+    async def test_non_member_gets_nothing_member_gets_posts(self, session: AsyncSession):
+        """Non-member filtering by group X sees none of X's posts; member sees them."""
+        member = await _make_user(session, f"m_{uuid.uuid4().hex[:6]}")
+        outsider = await _make_user(session, f"o_{uuid.uuid4().hex[:6]}")
+        sg = await _make_subgroup(session, "parents")
+        await _join_subgroup(session, member, sg)
+
+        sg_post = await _make_post(session, member, "subgroup", sg.id, content="secret")
+        member_private = await _make_post(session, member, "private", sg.id, content="priv")
+
+        repo = PostRepository(session)
+        items, _ = await repo.list_feed(
+            COMMUNITY_ID, viewer_id=outsider.id, subgroup_id=sg.id, limit=50
+        )
+        assert items == []
+
+        items, _ = await repo.list_feed(
+            COMMUNITY_ID, viewer_id=member.id, subgroup_id=sg.id, limit=50
+        )
+        ids = {i["id"] for i in items}
+        assert str(sg_post.id) in ids
+        assert str(member_private.id) in ids
+
+    @pytest.mark.asyncio
+    async def test_other_users_private_post_never_returned(self, session: AsyncSession):
+        """A member never sees another member's private post via the filter."""
+        a = await _make_user(session, f"pa_{uuid.uuid4().hex[:6]}")
+        b = await _make_user(session, f"pb_{uuid.uuid4().hex[:6]}")
+        sg = await _make_subgroup(session, "pv")
+        await _join_subgroup(session, a, sg)
+        await _join_subgroup(session, b, sg)
+        b_private = await _make_post(session, b, "private", sg.id, content="bpriv")
+
+        repo = PostRepository(session)
+        items, _ = await repo.list_feed(COMMUNITY_ID, viewer_id=a.id, subgroup_id=sg.id, limit=50)
+        assert str(b_private.id) not in {i["id"] for i in items}
