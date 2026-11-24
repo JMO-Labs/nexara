@@ -68,6 +68,13 @@ class NotificationRepository(BaseRepository[Notification]):
         await self._session.refresh(notification)
         return notification
 
+    async def is_bot(self, user_id: uuid.UUID) -> bool:
+        """@brief True if the user is a plugin bot account (never notified)."""
+        from app.models.user import User
+
+        res = await self._session.execute(select(User.is_bot).where(User.id == user_id))
+        return res.scalar_one_or_none() is True
+
     async def list_for_user(
         self,
         user_id: uuid.UUID,

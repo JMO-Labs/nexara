@@ -34,16 +34,21 @@ class UserRepository(BaseRepository[User]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 
-    async def find_by_email(self, email: str) -> User | None:
+    async def find_by_email(self, email: str, *, include_bots: bool = False) -> User | None:
         """
         @brief Look up a user by email address (case-insensitive).
 
+        Plugin bots are excluded (login / magic-link / OAuth lookups) unless asked for.
+
         @param email Email to search for.
+        @param include_bots Also match plugin bot accounts (uniqueness checks).
         @return The matching User or None.
         """
         from sqlalchemy import func as sa_func
 
         stmt = self._base_query().where(sa_func.lower(User.email) == email.lower())
+        if not include_bots:
+            stmt = stmt.where(User.is_bot.is_(False))
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -67,7 +72,7 @@ class UserRepository(BaseRepository[User]):
         @param oidc_sub The ``sub`` claim from the OIDC id_token.
         @return The matching User or None.
         """
-        stmt = self._base_query().where(User.oidc_sub == oidc_sub)
+        stmt = self._base_query().where(User.oidc_sub == oidc_sub, User.is_bot.is_(False))
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -100,7 +105,7 @@ class UserRepository(BaseRepository[User]):
         @param email Email to check.
         @return True if a non-deleted user with this email exists.
         """
-        user = await self.find_by_email(email)
+        user = await self.find_by_email(email, include_bots=True)
         return user is not None
 
     async def username_exists(self, username: str) -> bool:
@@ -206,7 +211,7 @@ class UserRepository(BaseRepository[User]):
         @param cursor Opaque cursor from previous page.
         @return Tuple of (users, next_cursor).
         """
-        return await self.list(community_id, limit=limit, cursor=cursor)
+        return await self.list_by_community_search(community_id, limit=limit, cursor=cursor)
 
     async def list_by_community_search(
         self,
@@ -227,7 +232,7 @@ class UserRepository(BaseRepository[User]):
         """
         from sqlalchemy import or_
 
-        stmt = self._base_query().where(User.community_id == community_id)
+        stmt = self._base_query().where(User.community_id == community_id, User.is_bot.is_(False))
         if search and search.strip():
             term = f"%{search.strip()}%"
             stmt = stmt.where(

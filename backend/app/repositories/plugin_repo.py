@@ -185,3 +185,10 @@ class PluginRepository(BaseRepository[PluginInstall]):
         )
         await self._session.flush()
         return sum(int(getattr(r, "rowcount", 0) or 0) for r in (posts, comments, reactions))
+
+    async def list_communities(self, install_id: uuid.UUID) -> list[PluginCommunity]:
+        """@brief All per-community rows of an install."""
+        res = await self._session.execute(
+            select(PluginCommunity).where(PluginCommunity.install_id == install_id)
+        )
+        return list(res.scalars().all())

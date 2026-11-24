@@ -159,6 +159,8 @@ class NotificationService:
         """
         @brief Validate, persist and dispatch a notification.
 
+        Plugin bot accounts never receive notifications (returns None).
+
         @param user_id Recipient user UUID.
         @param type Registered notification type key.
         @param payload Payload validated against the type's schema.
@@ -185,7 +187,9 @@ class NotificationService:
                 details={"errors": exc.errors(include_url=False, include_context=False)},
             ) from exc
 
-        if await self._notification_repo.nsfw_blocked(user_id, payload):
+        if await self._notification_repo.is_bot(user_id) is True or (
+            await self._notification_repo.nsfw_blocked(user_id, payload)
+        ):
             return None
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
         eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})

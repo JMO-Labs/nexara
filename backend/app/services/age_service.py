@@ -156,7 +156,9 @@ class AgeService:
                 message=_("You cannot suggest your own age group"),
                 status_code=400,
             )
-        await self._subject(subject_id)
+        subject = await self._subject(subject_id)
+        if getattr(subject, "is_bot", False) is True:
+            raise NotFoundError(_("User not found"))
         if await self._repo.pending_exists(self._cid, subject_id, self._actor):
             raise AppError(
                 code="AGE_SUGGESTION_EXISTS",
