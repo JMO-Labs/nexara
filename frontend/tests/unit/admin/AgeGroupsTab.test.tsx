@@ -80,7 +80,11 @@ describe("AgeGroupsTab", () => {
   it("switch saves the setting", async () => {
     client.apiPut.mockResolvedValue({ adult_requires_approval: true });
     renderTab();
-    fireEvent.click(await screen.findByRole("switch"));
+    fireEvent.click(
+      await screen.findByRole("switch", {
+        name: "Adult status needs admin approval",
+      }),
+    );
     await waitFor(() =>
       expect(client.apiPut).toHaveBeenCalledWith(`${B}/settings`, {
         adult_requires_approval: true,

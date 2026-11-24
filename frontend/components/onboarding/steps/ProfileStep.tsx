@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/onboarding/steps/ProfileStep.tsx
- * @brief Wizard step 1: display name (prefilled from sign-up / SSO) and photo.
+ * @brief Wizard step 1: display name (prefilled from sign-up / SSO), photo
+ *        and pronouns.
  */
 import * as React from "react";
 import { Input } from "@/components/ui";
@@ -18,6 +19,7 @@ export function ProfileStep({
   const { data: me } = useMyProfile();
   const { mutate } = useUpdateProfile();
   const [name, setName] = React.useState(prefill.display_name);
+  const [pronouns, setPronouns] = React.useState<string | null>(null);
   return (
     <div className="space-y-4">
       <AvatarPicker
@@ -36,6 +38,23 @@ export function ProfileStep({
           onBlur={() => {
             const v = name.trim();
             if (v && v !== me?.display_name) mutate({ display_name: v });
+          }}
+        />
+      </div>
+      <div>
+        <label htmlFor="ob-pronouns" className="text-sm font-medium">
+          Pronouns
+        </label>
+        <Input
+          id="ob-pronouns"
+          maxLength={50}
+          placeholder="e.g. she/her"
+          value={pronouns ?? me?.pronouns ?? ""}
+          onChange={(e) => setPronouns(e.target.value)}
+          onBlur={() => {
+            const v = (pronouns ?? "").trim();
+            if (pronouns !== null && v !== (me?.pronouns ?? ""))
+              mutate({ pronouns: v });
           }}
         />
       </div>

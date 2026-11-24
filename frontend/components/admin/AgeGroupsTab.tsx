@@ -53,11 +53,11 @@ export function AgeGroupsTab() {
   return (
     <Panel className="flex max-w-[880px] flex-col">
       <SettingsRow
-        label="Adult changes need approval"
+        label="Adult status needs admin approval"
         description="When on, members can't move a profile to Adult without an admin approving it."
       >
         <Switch
-          aria-label="Adult changes need approval"
+          aria-label="Adult status needs admin approval"
           checked={settings.data.adult_requires_approval}
           disabled={toggle.isPending}
           onCheckedChange={(v) => toggle.mutate(v)}
