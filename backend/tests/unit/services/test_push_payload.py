@@ -240,3 +240,13 @@ def test_vapid_subject_parses_display_name() -> None:
 
 def test_vapid_subject_default() -> None:
     assert vapid_subject(SimpleNamespace()) == "mailto:noreply@example.com"
+
+
+def test_rename_schema_strips_and_rejects_blank() -> None:
+    from pydantic import ValidationError
+
+    from app.schemas.push import PushDeviceRename
+
+    assert PushDeviceRename(name="  Phone ").name == "Phone"
+    with pytest.raises(ValidationError):
+        PushDeviceRename(name="   ")

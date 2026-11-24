@@ -6,10 +6,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints
 
 
 class PushKeys(BaseModel):
@@ -56,7 +56,7 @@ class PushDeviceResponse(BaseModel):
 class PushDeviceRename(BaseModel):
     """@brief Request body to rename a push device."""
 
-    name: str = Field(min_length=1, max_length=60)
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
 
 
 class VAPIDPublicKeyResponse(BaseModel):

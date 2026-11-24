@@ -74,9 +74,10 @@ async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[
             user_id,
             payload.get("title", ""),
             payload.get("body", ""),
-            payload.get("url") or "/",
+            payload.get("url") or "/app",
             tag=payload.get("tag"),
-            badge_count=await NotificationRepository(session).get_unread_count(user_id),
+            # The row may not be committed yet; a push always means >= 1 unread.
+            badge_count=max(await NotificationRepository(session).get_unread_count(user_id), 1),
         )
         await session.commit()
         return {"status": "sent", "count": len(subs)}

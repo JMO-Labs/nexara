@@ -12,6 +12,8 @@ def _run(
     subs: list,
     send_side_effect: Exception | None = None,
     community_id: object = ...,
+    payload: dict | None = None,
+    unread: int = 2,
 ) -> tuple[dict, AsyncMock]:
     uid = uuid4()
     session_cm = MagicMock()
@@ -31,11 +33,11 @@ def _run(
         patch.object(
             nt,
             "NotificationRepository",
-            return_value=MagicMock(get_unread_count=AsyncMock(return_value=2)),
+            return_value=MagicMock(get_unread_count=AsyncMock(return_value=unread)),
         ),
         patch.object(nt, "get_settings", return_value=MagicMock()),
     ):
-        result = nt.send_push_notification(str(uid), PAYLOAD)
+        result = nt.send_push_notification(str(uid), PAYLOAD if payload is None else payload)
     return result, service.send_push
 
 
@@ -65,3 +67,13 @@ def test_skipped_when_user_has_no_community() -> None:
     result, send = _run([MagicMock()], community_id=None)
     assert result == {"status": "skipped", "count": 0}
     send.assert_not_awaited()
+
+
+def test_default_url_is_app() -> None:
+    _, send = _run([MagicMock()], payload={"title": "T", "body": "B"})
+    assert send.await_args.args[3] == "/app"
+
+
+def test_badge_count_at_least_one() -> None:
+    _, send = _run([MagicMock()], unread=0)
+    assert send.await_args.kwargs["badge_count"] == 1
