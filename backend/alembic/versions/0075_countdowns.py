@@ -110,6 +110,16 @@ def upgrade() -> None:
         sa.Column("occurrence", sa.Date(), primary_key=True),
         sa.CheckConstraint("kind IN ('d7','d1','d0')", name="countdown_reminders_kind_check"),
     )
+    for ch, default in (("inapp", "true"), ("push", "true"), ("email", "false")):
+        op.add_column(
+            "user_settings",
+            sa.Column(
+                f"notif_countdown_reminder_{ch}",
+                sa.Boolean(),
+                nullable=False,
+                server_default=default,
+            ),
+        )
     op.add_column(
         "posts",
         sa.Column(
@@ -124,6 +134,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     """@brief Drop countdown tables and the posts link."""
     op.drop_column("posts", "countdown_id")
+    for ch in ("inapp", "push", "email"):
+        op.drop_column("user_settings", f"notif_countdown_reminder_{ch}")
     op.drop_table("countdown_reminders_sent")
     op.drop_table("countdown_followers")
     op.drop_index("countdowns_community_date_idx", table_name="countdowns")

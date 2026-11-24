@@ -20,7 +20,7 @@ from app.models.user import User
 from app.repositories.visibility_preds import my_subgroup_ids, not_blocked
 
 
-def countdown_visible(viewer_id: uuid.UUID, community_id: uuid.UUID) -> Any:
+def countdown_visible(viewer_id: Any, community_id: uuid.UUID) -> Any:
     """@brief Live countdown the viewer may read (community / their group / own private)."""
     return and_(
         Countdown.community_id == community_id,
@@ -104,6 +104,10 @@ class CountdownRepository:
         await self._s.flush()
         return c
 
+    async def set_post_content(self, post_id: uuid.UUID, content: str) -> None:
+        """@brief Update the feed card text."""
+        await self._s.execute(update(Post).where(Post.id == post_id).values(content=content))
+
     async def soft_delete(self, c: Countdown) -> None:
         """@brief Soft-delete the countdown and its feed post."""
         now = datetime.now(UTC)
@@ -152,13 +156,19 @@ class CountdownRepository:
         )
         return counts, set(mine.scalars())
 
-    async def reminder_targets(self) -> list[tuple[Countdown, uuid.UUID, str | None]]:
+    async def reminder_targets(
+        self, cid: uuid.UUID
+    ) -> list[tuple[Countdown, uuid.UUID, str | None]]:
         """@return (countdown, follower id, follower timezone) for every live follow."""
         stmt = (
             select(Countdown, User.id, User.timezone)
             .join(CountdownFollower, CountdownFollower.countdown_id == Countdown.id)
             .join(User, User.id == CountdownFollower.user_id)
-            .where(Countdown.deleted_at.is_(None), User.deleted_at.is_(None))
+            .where(
+                User.deleted_at.is_(None),
+                User.community_id == cid,
+                countdown_visible(User.id, cid),
+            )
         )
         return [(c, uid, tz) for c, uid, tz in (await self._s.execute(stmt)).all()]
 

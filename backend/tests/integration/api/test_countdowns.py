@@ -53,7 +53,6 @@ async def test_get_404_and_delete_204(env):
     svc, c = env
     svc.get.side_effect = NotFoundError("nope")
     svc.follow.return_value = _resp()
-    svc.follow.return_value = _resp()
     async with c:
         assert (await c.get(f"/api/v1/countdowns/{uuid.uuid4()}")).status_code == 404
         assert (await c.delete(f"/api/v1/countdowns/{uuid.uuid4()}")).status_code == 204

@@ -40,7 +40,6 @@ async def list_following(
 
 @router.get("", response_model=list[CountdownResponse])
 async def list_countdowns(
-    scope: str = "all",
     user: User = Depends(get_current_user),
     svc: CountdownService = Depends(get_countdown_service),
 ) -> list[CountdownResponse]:

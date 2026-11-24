@@ -67,6 +67,9 @@ class NotificationPreferences(BaseModel):
     notif_event_reminder_inapp: bool | None = None
     notif_event_reminder_email: bool | None = None
     notif_event_reminder_push: bool | None = None
+    notif_countdown_reminder_inapp: bool | None = None
+    notif_countdown_reminder_email: bool | None = None
+    notif_countdown_reminder_push: bool | None = None
     notif_event_rsvp_inapp: bool | None = None
     notif_event_rsvp_email: bool | None = None
     notif_event_rsvp_push: bool | None = None

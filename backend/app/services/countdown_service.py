@@ -55,6 +55,10 @@ def reminder_text(c: Countdown, left: int) -> str:
     return _("{n} days until {title}").format(n=left, title=c.title)
 
 
+def _card_text(emoji: str | None, title: str) -> str:
+    return f"{emoji or ''} {title}".strip()
+
+
 def _valid_tz(tz: str) -> str:
     try:
         ZoneInfo(tz)
@@ -66,7 +70,14 @@ def _valid_tz(tz: str) -> str:
 class CountdownService:
     """@brief Business rules for countdowns."""
 
-    def __init__(self, repo: CountdownRepository, community_id: uuid.UUID, notifier: Any = None):
+    def __init__(
+        self,
+        repo: CountdownRepository,
+        community_id: uuid.UUID,
+        notifier: Any = None,
+        audit: Any = None,
+    ):
+        self._audit = audit
         self._repo = repo
         self._cid = community_id
         self._notifier = notifier
@@ -120,7 +131,7 @@ class CountdownService:
         post = Post(
             community_id=self._cid,
             author_id=viewer.id,
-            content=f"{body.emoji or ''} {body.title}".strip(),
+            content=_card_text(body.emoji, body.title),
             visibility=body.visibility,
             subgroup_id=body.subgroup_id,
         )
@@ -152,14 +163,31 @@ class CountdownService:
             else:
                 _valid_tz(data["tz"])
         await self._repo.apply(c, data)
+        if c.post_id is not None and ("title" in data or "emoji" in data):
+            await self._repo.set_post_content(c.post_id, _card_text(c.emoji, c.title))
         return (await self._view([c], viewer))[0]
 
     async def delete(self, viewer: User, countdown_id: uuid.UUID) -> None:
         """@brief Author or admin deletes it (and its feed post)."""
-        c = await self._visible(countdown_id, viewer)
-        if c.author_id != viewer.id and viewer.role != "admin":
+        admin = viewer.role == "admin"
+        c = (
+            await self._repo.get(self._cid, countdown_id)
+            if admin
+            else await self._visible(countdown_id, viewer)
+        )
+        if c is None:
+            raise NotFoundError(_("Countdown not found"))
+        if c.author_id != viewer.id and not admin:
             raise AuthorizationError(message=_("Only the author or an admin can delete this"))
         await self._repo.soft_delete(c)
+        if admin and c.author_id != viewer.id and self._audit is not None:
+            await self._audit.append(
+                actor_id=viewer.id,
+                action="countdown.deleted_by_admin",
+                target_type="countdown",
+                target_id=c.id,
+                extra_data={"title": c.title, "author_id": str(c.author_id)},
+            )
 
     async def follow(self, viewer: User, countdown_id: uuid.UUID, on: bool) -> CountdownResponse:
         """@brief Follow/unfollow (following requires visibility)."""
@@ -189,7 +217,7 @@ class CountdownService:
         """
         now = now or datetime.now(UTC)
         sent = 0
-        for c, user_id, tz in await self._repo.reminder_targets():
+        for c, user_id, tz in await self._repo.reminder_targets(self._cid):
             today = local_today(tz, now)
             left = days_left(c, today)
             kind = KINDS.get(left)

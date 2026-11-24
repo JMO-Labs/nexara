@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db
 from app.core.list_dependencies import _notifier
+from app.repositories.audit_repo import AuditRepository
 from app.repositories.countdown_repo import CountdownRepository
 from app.services.countdown_service import CountdownService
 
@@ -22,4 +23,4 @@ def get_countdown_service(
 ) -> CountdownService:
     """@brief CountdownService for the configured community."""
     cid = uuid.UUID(settings.COMMUNITY_ID)
-    return CountdownService(CountdownRepository(db), cid, _notifier(db, cid))
+    return CountdownService(CountdownRepository(db), cid, _notifier(db, cid), AuditRepository(db))
