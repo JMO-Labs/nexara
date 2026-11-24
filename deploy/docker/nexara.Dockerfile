@@ -75,6 +75,8 @@ COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/supervisord/supervisord.conf /etc/supervisord.conf
 COPY deploy/supervisord/conf.d/ /etc/supervisor.d/
 COPY deploy/valkey/valkey.conf /etc/valkey/valkey.conf
+# Newer Alpine valkey packages make /etc/valkey 0750 valkey:valkey; valkey runs as nexara here.
+RUN chmod 0755 /etc/valkey && chmod 0644 /etc/valkey/valkey.conf
 
 # Runtime dirs
 RUN mkdir -p /run/nginx /data/media \
