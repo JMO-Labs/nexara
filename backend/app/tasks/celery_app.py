@@ -70,6 +70,8 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     # ── Task routing ──────────────────────────────────────────────────
+    # Unrouted tasks go to "default" (Celery's own "celery" queue has no consumer).
+    task_default_queue="default",
     task_routes={
         "app.tasks.email_tasks.*": {"queue": "email"},
         "app.tasks.media_tasks.*": {"queue": "media"},
