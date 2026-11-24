@@ -14,9 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
-from app.core.dependencies import get_current_user, get_db, require_instance_owner, require_role
+from app.core.dependencies import get_current_user, get_db, require_role
 from app.core.exceptions import AuthorizationError
 from app.core.i18n import _
+from app.core.plugin_deps import require_instance_owner
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.plugin_repo import PluginRepository

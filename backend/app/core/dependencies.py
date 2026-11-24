@@ -124,22 +124,6 @@ async def get_current_user(
     return user
 
 
-async def require_instance_owner(current_user: User = Depends(get_current_user)) -> User:
-    """
-    @brief Instance owner = human admin of the default community (plugin install/uninstall).
-    @raises AuthorizationError For bots, non-admins and admins of other communities.
-    """
-    from app.models.user import COMMUNITY_DEFAULT
-
-    if (
-        current_user.is_bot is True
-        or current_user.role != "admin"
-        or str(current_user.community_id) != COMMUNITY_DEFAULT
-    ):
-        raise AuthorizationError(message=_("Only the instance owner can do this"))
-    return current_user
-
-
 def require_role(*roles: str) -> Callable[..., Any]:
     """
     @brief Factory that returns a dependency enforcing role membership.
