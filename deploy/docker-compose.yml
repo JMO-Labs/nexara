@@ -74,10 +74,14 @@ services:
       AMAZON_MARKETPLACE: "${AMAZON_MARKETPLACE:-www.amazon.com}"
       AMAZON_TOKEN_URL: "${AMAZON_TOKEN_URL:-https://api.amazon.com/auth/o2/token}"
       TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
+      # Plugin host (only used when the `plugins` profile is enabled)
+      PLUGIN_HOST_URL: "${PLUGIN_HOST_URL:-http://plugin-host:8700}"
+      PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
     volumes:
       - media:/data/media
     networks:
       - nexara-net
+      - nexara-plugins
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
       interval: 30s
@@ -119,7 +123,50 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Plugin Host (optional: docker compose --profile plugins up -d) ─────────
+  # Runs untrusted plugin code in bubblewrap sandboxes. No DB creds, no Docker
+  # socket; reachable only from `nexara` over the internal-facing nexara-plugins
+  # network (never joins nexara-net, so it cannot reach nexara-db).
+  plugin-host:
+    profiles: ["plugins"]
+    build:
+      context: ..
+      dockerfile: deploy/docker/plugin-host.Dockerfile
+      target: runtime
+    image: ghcr.io/jmo-labs/nexara-plugin-host:latest
+    restart: unless-stopped
+    environment:
+      # Required, no default on purpose (empty => host rejects every request).
+      # Generate with `openssl rand -hex 32`.
+      PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
+      NEXARA_URL: "http://nexara:8080"
+    volumes:
+      - plugin_data:/data
+    networks:
+      - nexara-plugins
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    # bwrap needs user namespaces: seccomp/apparmor are unconfined for this
+    # container only (the host applies its own seccomp filter per plugin).
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, KILL]
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+      - no-new-privileges:true
+    pids_limit: 512
+    mem_limit: "${PLUGIN_HOST_MEM_LIMIT:-1g}"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 8700), 3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
+  plugin_data:
+    driver: local
   postgres_data:
     driver: local
   media:
@@ -127,4 +174,8 @@ volumes:
 
 networks:
   nexara-net:
+    driver: bridge
+  # Plugin host <-> nexara only. Not internal:true because plugins need to
+  # download packages and call out to the internet.
+  nexara-plugins:
     driver: bridge

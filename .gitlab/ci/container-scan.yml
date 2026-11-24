@@ -57,3 +57,10 @@ scan:container:
     policy: pull-push
   rules: !reference [.rules:default-branch-and-tag, rules]
   allow_failure: true
+
+scan:plugin-host:
+  extends: scan:container
+  needs:
+    - job: build:plugin-host
+  variables:
+    NEXARA_IMAGE: "$CI_REGISTRY_IMAGE/nexara-plugin-host"

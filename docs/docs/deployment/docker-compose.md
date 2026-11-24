@@ -96,3 +96,26 @@ Migrations run on start. Take a backup first.
 `GET /healthz` (root path, not `/api/v1/healthz`) returns 200 when the
 database, Valkey and storage are healthy, 503 otherwise. The compose
 healthcheck uses it.
+
+## Plugin host (optional)
+
+The `plugin-host` service installs and sandboxes plugin packages (bubblewrap,
+one uid per plugin). It is off by default; enable it with a compose profile:
+
+```bash
+# in .env: PLUGIN_HOST_SECRET=$(openssl rand -hex 32)   (required, no default)
+docker compose --profile plugins up -d
+```
+
+- Shares only the `nexara-plugins` network with `nexara`; it cannot reach
+  `nexara-db`. Nexara reaches it at `http://plugin-host:8700`.
+- The container runs as root with `cap_drop: ALL` plus `SETUID`, `SETGID`,
+  `CHOWN`, `KILL`, `seccomp=unconfined`, `apparmor=unconfined`,
+  `no-new-privileges`, a read-only root filesystem, a sized `/tmp` tmpfs and
+  the `plugin_data` volume at `/data`. bubblewrap needs user namespaces, which
+  the default seccomp/AppArmor profiles block; the host applies its own seccomp
+  filter to every plugin instead. Do not add `systempaths=unconfined`.
+- `pids_limit: 512` and `mem_limit` (`PLUGIN_HOST_MEM_LIMIT`, default `1g`)
+  bound all plugins combined.
+- Known gap: a disk quota for each plugin's `/state` is **not enforced**; a
+  plugin can fill the `plugin_data` volume.

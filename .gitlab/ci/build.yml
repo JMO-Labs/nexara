@@ -60,3 +60,12 @@ build:docker:
         --compressed-caching=false \
         ${DESTINATIONS}
   rules: !reference [.rules:default-branch-and-tag, rules]
+
+build:plugin-host:
+  extends: build:docker
+  variables:
+    DOCKERFILE_PATH: "deploy/docker/plugin-host.Dockerfile"
+    NEXARA_IMAGE: "$CI_REGISTRY_IMAGE/nexara-plugin-host"
+  needs:
+    - job: test:plugin-host
+      optional: true
