@@ -178,3 +178,27 @@ class TestRecapHomePolls:
         with pytest.raises(NotFoundError):
             await svc.cast_vote(poll.id, kid.id, [])
         assert (await svc.get_poll(poll.id, grown.id)).id == poll.id
+
+
+class TestDigestEmail:
+    async def test_digest_skips_later_flagged_for_teen(self, session) -> None:
+        from app.tasks.notification_email_tasks import digest_notes_stmt
+
+        author, kid, grown = await adult(session), await teen(session), await adult(session)
+        p = await make_post(session, author, nsfw=False)
+        notes = [
+            Notification(
+                community_id=CID,
+                user_id=u.id,
+                type="comment",
+                payload={"post_id": str(p.id), "message": "m", "link": "/x"},
+            )
+            for u in (kid, grown)
+        ]
+        session.add_all(notes)
+        await session.flush()
+        p.is_nsfw = True
+        await session.flush()
+        for note, user, want in ((notes[0], kid, []), (notes[1], grown, [notes[1].id])):
+            rows = await session.execute(digest_notes_stmt(user.id, [note.id]))
+            assert [n.id for n in rows.scalars()] == want
