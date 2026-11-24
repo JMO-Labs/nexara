@@ -132,3 +132,12 @@ class UserSummaryResponse(BaseModel):
     avatar_url: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class PluginUserResponse(BaseModel):
+    """@brief Public profile fields only; what a plugin bot may read (spec 6.3 users:read)."""
+
+    id: UUID
+    username: str
+    display_name: str
+    avatar_url: str | None = None

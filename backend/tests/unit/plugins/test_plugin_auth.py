@@ -134,3 +134,45 @@ async def test_instance_owner_guard() -> None:
     ):
         with pytest.raises(AuthorizationError):
             await require_instance_owner(u)  # type: ignore[arg-type]
+
+
+async def test_denied_calls_count_toward_rate_limit() -> None:
+    app = _app(_bot(), None)
+    row = _row(["posts:read"])
+    codes = [(await _get(app, "/api/v1/secret", row)).status_code for _ in range(122)]
+    assert codes[:120] == [403] * 120 and codes[120] == 429
+
+
+async def test_user_profile_for_bot_is_public_fields_only() -> None:
+    from datetime import UTC, datetime
+
+    from app.api.v1.users import get_user_profile
+    from app.schemas.profile import PluginUserResponse, ProfileResponse
+
+    full = ProfileResponse(
+        id=uuid.uuid4(),
+        username="u",
+        display_name="U",
+        role="member",
+        created_at=datetime.now(UTC),
+        phone="555",
+        address="secret st",
+    )
+    with (
+        patch("app.api.v1.users.ProfileService") as svc,
+        patch("app.api.v1.users.ProfileRepository"),
+    ):
+        svc.return_value.view = AsyncMock(return_value=full)
+        out = await get_user_profile(full.id, _bot(), AsyncMock())  # type: ignore[arg-type]
+    assert isinstance(out, PluginUserResponse)
+    assert set(out.model_dump()) == {"id", "username", "display_name", "avatar_url"}
+
+
+async def test_media_metadata_other_community_404() -> None:
+    from app.core.exceptions import NotFoundError
+    from app.services.media_service import MediaService
+
+    svc = MediaService.__new__(MediaService)
+    svc._repo = MagicMock(get=AsyncMock(return_value=SimpleNamespace(community_id=uuid.uuid4())))
+    with pytest.raises(NotFoundError):
+        await svc.get_metadata(uuid.uuid4(), CID)

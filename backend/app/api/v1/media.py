@@ -201,8 +201,10 @@ async def get_media_metadata(
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
-    """@brief Return media metadata by ID (NSFW: adults only)."""
-    return await service.get_metadata(media_id, user.id)
+    """@brief Return media metadata by ID (NSFW: adults only; bots own community)."""
+    return await service.get_metadata(
+        media_id, user.id, user.community_id if user.is_bot else None
+    )
 
 
 async def _cache_headers(

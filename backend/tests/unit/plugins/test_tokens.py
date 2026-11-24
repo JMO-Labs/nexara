@@ -30,9 +30,9 @@ def test_rate_key_plugin_token_id() -> None:
     assert rate_limit_key(_req({}, "abc")) == "plugin:abc"
 
 
-def test_rate_key_plugin_header_not_ip() -> None:
-    k = rate_limit_key(_req({"authorization": "Bearer nxp_secret"}))
-    assert k.startswith("plugin:") and "nxp_secret" not in k
+def test_rate_key_unverified_nxp_header_stays_ip_bound() -> None:
+    for t in ("nxp_a", "nxp_b", "nxp_c"):
+        assert rate_limit_key(_req({"authorization": f"Bearer {t}"})) == "10.0.0.9"
 
 
 def test_rate_key_human_is_ip() -> None:

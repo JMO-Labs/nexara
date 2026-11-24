@@ -42,14 +42,34 @@ def _denied() -> AppError:
     )
 
 
+def _scope_for(request: Request) -> str | None:
+    """
+    @brief Scope required by the matched route, or None when it is not allowlisted.
+
+    ``scope["route"].path`` is router-relative (no include prefix), so a candidate full
+    template must end with it AND fully match the real request path.
+    """
+    from starlette.routing import compile_path
+
+    route_path = getattr(request.scope.get("route"), "path", None)
+    if not route_path:
+        return None
+    method = request.method.upper()
+    path = request.scope.get("path", "")
+    for (m, template), scope in PLUGIN_ROUTE_SCOPES.items():
+        if m == method and template.endswith(route_path):
+            regex, _fmt, _conv = compile_path(template)
+            if regex.fullmatch(path):
+                return scope
+    return None
+
+
 def check_scope(request: Request, granted: list[str]) -> None:
     """
     @brief Allow only allowlisted route templates whose scope was granted.
     @raises AppError 403 ``plugin_scope_denied``.
     """
-    route = request.scope.get("route")
-    template = getattr(route, "path", None)
-    scope = PLUGIN_ROUTE_SCOPES.get((request.method.upper(), template)) if template else None
+    scope = _scope_for(request)
     if scope is None or scope not in granted:
         raise _denied()
 
@@ -83,6 +103,7 @@ async def authenticate_plugin_token(request: Request, token: str, db: AsyncSessi
         raise bad
     tok, install, pc = row
     request.state.plugin_token_id = str(tok.id)
+    _enforce_rate(request, str(tok.id))  # first, so denied calls count too
     if pc.bot_user_id is None:
         raise bad
     check_scope(request, list(install.granted_scopes))
@@ -99,6 +120,5 @@ async def authenticate_plugin_token(request: Request, token: str, db: AsyncSessi
     ).scalar_one_or_none()
     if user is None:
         raise bad
-    _enforce_rate(request, str(tok.id))
     request.state.plugin_install_id = install.id
     return user

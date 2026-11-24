@@ -244,6 +244,12 @@ async def get_optional_user(
     if token is None:
         return None
 
+    if token.startswith("nxp_"):
+        # Never treat a plugin token as anonymous: authenticate (scope + rate limit) or 401/403.
+        from app.plugins.tokens import authenticate_plugin_token
+
+        return await authenticate_plugin_token(request, token, db)
+
     from app.models.user import User
 
     try:
