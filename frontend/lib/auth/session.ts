@@ -6,6 +6,7 @@
  *        SSR-safe: zero browser globals at module top level.
  */
 import { ApiError } from "@/lib/api/errors";
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
@@ -80,9 +81,10 @@ export async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-/** Best-effort logout: clears access token, asks backend to revoke refresh cookie. */
+/** Best-effort logout: clears access token and any pending 2FA step, asks backend to revoke refresh cookie. */
 export async function logout(): Promise<void> {
   setAccessToken(null);
+  usePendingTwoFactor.getState().clear();
   try {
     await fetch(`${API_BASE}/api/v1/auth/logout`, {
       method: "POST",

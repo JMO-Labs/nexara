@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { completeLogin } from "@/lib/auth/flow";
 import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import { useSession } from "@/stores/session";
-import { setAccessToken, getAccessToken } from "@/lib/auth/session";
+import { setAccessToken, getAccessToken, logout } from "@/lib/auth/session";
 import * as authApi from "@/lib/api/auth";
 
 describe("completeLogin", () => {
@@ -93,6 +93,16 @@ describe("completeLogin", () => {
         two_factor_token: null,
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("logout", () => {
+  it("clears a pending 2FA step", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
+    usePendingTwoFactor.getState().set("tft", ["totp"]);
+    await logout();
+    expect(usePendingTwoFactor.getState().token).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
 

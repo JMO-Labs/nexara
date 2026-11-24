@@ -1,9 +1,10 @@
 "use client";
 /**
  * @file app/(auth)/two-factor/page.tsx
- * @brief Completes a two-factor login. Reached only after /login responds
- *        with `requires_2fa: true`. The two_factor_token rides in the URL
- *        so a refresh on this page still recovers the flow.
+ * @brief Completes a two-factor login. Reached only after a sign-in responds
+ *        with `requires_2fa: true`. The two_factor_token lives in memory
+ *        (pendingTwoFactor store), so a reload loses it and shows the
+ *        expired card.
  */
 import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
