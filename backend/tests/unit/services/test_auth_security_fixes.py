@@ -57,7 +57,7 @@ class TestTotpReplay:
         svc._user_repo.get_by_id.return_value = user
         svc._issue_tokens = AsyncMock(return_value={"access_token": "a"})
         redis = _fake_redis()
-        redis.set = AsyncMock(side_effect=[True, None])  # NX: second set fails
+        redis.set = AsyncMock(side_effect=[True, True, None])  # used, spent, then NX fails
         from app.core.security import create_2fa_pending_token
 
         tok = create_2fa_pending_token(user.id, settings=svc._settings)

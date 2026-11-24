@@ -43,8 +43,8 @@ from app.services.auth.sso_exchange import resolve_exchange as _resolve_exchange
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
 from app.services.auth.totp_replay import (
     claim_totp_code,
-    clear_user_attempts,
     consume_backup_code,
+    finish_pending,
     normalize_totp,
     reserve_attempt,
 )
@@ -208,7 +208,7 @@ class AuthService:
         if not ok:
             await fail(user, user.email, method, "bad_code")
             raise AuthenticationError(message=_("Invalid 2FA code"))
-        await clear_user_attempts(user.id, self._settings)
+        await finish_pending(two_factor_token, payload, user.id, self._settings)
         await _pending_link.create_link(self._session, user.id, payload.get("oauth_link"))
 
         await self._user_repo.update_last_seen(user.id)

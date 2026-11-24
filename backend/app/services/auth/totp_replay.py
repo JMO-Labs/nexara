@@ -9,13 +9,14 @@ import hashlib
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from redis.exceptions import RedisError
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.exceptions import AppError
+from app.core.exceptions import AppError, AuthenticationError
 from app.core.security import hash_token
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.auth import UserBackupCode
@@ -84,6 +85,28 @@ async def reserve_attempt(token: str, user_id: uuid.UUID, settings: Settings) ->
     except RedisError as exc:
         raise _unavailable() from exc
     return int(res[0]) <= MAX_FAILURES and int(res[2]) <= MAX_USER_FAILURES
+
+
+async def finish_pending(
+    token: str, payload: dict[str, Any], user_id: uuid.UUID, settings: Settings
+) -> None:
+    """
+    @brief Spend a verified ``2fa_pending`` token (single-use) and reset attempt counters.
+
+    The token is denylisted in Valkey until its ``exp``.
+
+    @raises AuthenticationError If the token was already spent.
+    @raises AppError 503 if Valkey is unavailable.
+    """
+    ttl = max(1, int(payload["exp"] - datetime.now(UTC).timestamp()) + 1)
+    key = f"totp:spent:{hashlib.sha256(token.encode()).hexdigest()}"
+    try:
+        fresh = await get_pool(settings, DB_CACHE).set(key, "1", nx=True, ex=ttl)
+    except RedisError as exc:
+        raise _unavailable() from exc
+    if not fresh:
+        raise AuthenticationError(message="Invalid 2FA session")
+    await clear_user_attempts(user_id, settings)
 
 
 async def clear_user_attempts(user_id: uuid.UUID, settings: Settings) -> None:
