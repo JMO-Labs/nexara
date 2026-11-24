@@ -26,4 +26,15 @@ describe("Markdown links", () => {
       "_blank",
     );
   });
+  it.each(["//evil.com", "/\\evil.com"])(
+    "%s never becomes a same-tab off-site link",
+    (href) => {
+      render(<Markdown content={`[x](<${href}>)`} />);
+      const a = screen.getByRole("link", { name: "x" });
+      // Either opened as external, or encoded inert ("/%5Cevil.com").
+      const raw = a.getAttribute("href") ?? "";
+      if (a.getAttribute("target") !== "_blank")
+        expect(raw).toMatch(/^\/(?![/\\])/);
+    },
+  );
 });

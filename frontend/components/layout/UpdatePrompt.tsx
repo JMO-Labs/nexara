@@ -39,8 +39,15 @@ export default function UpdatePrompt() {
         },
       });
     };
+    let onVisible = () => {};
     const watch = (reg: ServiceWorkerRegistration) => {
       if (reg.waiting) show(reg.waiting);
+      // Installed PWAs navigate client-side and rarely re-check sw.js.
+      onVisible = () => {
+        if (document.visibilityState === "visible")
+          reg.update().catch(() => {});
+      };
+      document.addEventListener("visibilitychange", onVisible);
       reg.addEventListener("updatefound", () => {
         const w = reg.installing;
         w?.addEventListener("statechange", () => {
@@ -51,6 +58,7 @@ export default function UpdatePrompt() {
     sw.getRegistration()
       .then((r) => r && watch(r))
       .catch(() => {});
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [push]);
   return null;
 }

@@ -36,4 +36,24 @@ describe("UpdatePrompt", () => {
     expect(swAdd.mock.calls[0][2]).toEqual({ once: true });
     expect(postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
   });
+
+  it("re-checks for an update when the app becomes visible", async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const reg = { waiting: null, addEventListener: vi.fn(), update };
+    Object.defineProperty(navigator, "serviceWorker", {
+      value: { getRegistration: vi.fn().mockResolvedValue(reg) },
+      configurable: true,
+    });
+    const { unmount } = render(<UpdatePrompt />);
+    await vi.waitFor(() => expect(reg.addEventListener).toHaveBeenCalled());
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(update).toHaveBeenCalledTimes(1);
+    unmount();
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(update).toHaveBeenCalledTimes(1);
+  });
 });

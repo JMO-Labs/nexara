@@ -91,6 +91,28 @@ describe("PushDevices", () => {
     );
   });
 
+  it("focuses the name field, then returns focus to Rename on Cancel", async () => {
+    await browser(null);
+    api.listPushDevices.mockResolvedValue([dev("b", "Laptop", "ffff")]);
+    renderWithProviders(<PushDevices />);
+    await userEvent.click(await screen.findByLabelText("Rename Laptop"));
+    expect(document.activeElement).toBe(screen.getByLabelText("Device name"));
+    await userEvent.click(screen.getByText("Cancel"));
+    expect(document.activeElement).toBe(screen.getByLabelText("Rename Laptop"));
+  });
+
+  it("removing this device unsubscribes without the remove mutation", async () => {
+    const h = await browser("https://p/1");
+    api.listPushDevices.mockResolvedValue([dev("a", "Pixel", h!)]);
+    api.unsubscribePush.mockResolvedValue({ message: "ok" });
+    renderWithProviders(<PushDevices />);
+    await userEvent.click(await screen.findByLabelText("Remove Pixel"));
+    await waitFor(() =>
+      expect(api.unsubscribePush).toHaveBeenCalledWith("https://p/1"),
+    );
+    expect(api.removePushDevice).not.toHaveBeenCalled();
+  });
+
   it("removes another device", async () => {
     await browser(null);
     api.listPushDevices.mockResolvedValue([dev("b", "Laptop", "ffff")]);

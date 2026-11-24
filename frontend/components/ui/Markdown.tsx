@@ -11,6 +11,7 @@ import { linkifyMentions } from "@/lib/mentions";
 import { MentionLink } from "@/components/mentions/MentionLink";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { safePath } from "@/lib/notifications/pushTag";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
 export interface MarkdownProps {
@@ -39,7 +40,7 @@ const schema = {
 /** @brief True for same-origin / app-relative links (client-side nav). */
 function isInternal(href?: string): boolean {
   if (!href) return false;
-  if (href.startsWith("/") && !href.startsWith("//")) return true;
+  if (safePath(href)) return true;
   try {
     return (
       typeof window !== "undefined" &&

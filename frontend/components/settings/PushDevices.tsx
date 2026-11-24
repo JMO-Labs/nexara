@@ -4,7 +4,7 @@
  * @brief Push notification devices for the Notifications settings tab:
  *        enable/disable this device, rename and remove devices.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button, Badge, IconButton, Input, SettingsRow } from "@/components/ui";
@@ -32,6 +32,13 @@ function DeviceRow({
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(d.name);
+  // Return focus to the rename button when the form closes (WCAG 2.4.3).
+  const renameBtn = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (wasEditing.current && !editing) renameBtn.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
   const rename = useMutationWithToast<PushDevice, Error, string>({
     mutationFn: (n) => renamePushDevice(d.id, n),
     successKey: "toasts.settings.saved",
@@ -54,6 +61,7 @@ function DeviceRow({
             label="Device name"
             value={name}
             maxLength={60}
+            autoFocus
             onChange={(e) => setName(e.target.value)}
           />
           <Button type="submit" size="sm" loading={rename.isPending}>
@@ -73,6 +81,7 @@ function DeviceRow({
           <span className="flex-1 truncate text-sm">{d.name}</span>
           {mine && <Badge tone="leaf">This device</Badge>}
           <IconButton
+            ref={renameBtn}
             size="sm"
             variant="ghost"
             aria-label={`Rename ${d.name}`}
@@ -101,11 +110,9 @@ function DeviceRow({
 export function PushDevices() {
   const qc = useQueryClient();
   const p = usePushNotifications();
+  // Other devices only: this device goes through p.unsubscribe (own toast).
   const remove = useMutationWithToast<void, Error, PushDevice>({
-    mutationFn: async (d) => {
-      if (d.endpoint_hash === p.thisHash) await p.unsubscribe();
-      else await removePushDevice(d.id);
-    },
+    mutationFn: (d) => removePushDevice(d.id),
     successKey: "toasts.settings.saved",
     onSuccess: () => qc.invalidateQueries({ queryKey: ["push"] }),
   });
@@ -168,7 +175,11 @@ export function PushDevices() {
               key={d.id}
               d={d}
               mine={d.endpoint_hash === p.thisHash}
-              onRemove={() => remove.mutate(d)}
+              onRemove={() =>
+                d.endpoint_hash === p.thisHash
+                  ? p.unsubscribe().catch(() => {})
+                  : remove.mutate(d)
+              }
             />
           ))}
         </ul>
