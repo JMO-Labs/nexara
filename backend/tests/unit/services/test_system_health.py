@@ -22,6 +22,7 @@ def _settings(**kw):
         VAPID_PRIVATE_KEY="",
         STORAGE_BACKEND="local",
         LOCAL_STORAGE_PATH="/tmp",
+        APP_VERSION="9.9.9",
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -49,10 +50,23 @@ async def test_push_not_set_up_warns() -> None:
 async def test_workers_none_is_down() -> None:
     redis = MagicMock()
     redis.get = AsyncMock(return_value=None)
-    with patch.object(sh, "_ping_workers", return_value={}):
+    with patch.object(sh, "_ping_workers", return_value={}) as ping:
         assert (await sh._workers(redis)).status == "down"
+        assert ping.call_count == 2  # one retry before declaring down
         redis.get = AsyncMock(return_value=str(__import__("time").time() - 60))
-        assert (await sh._workers(redis)).status == "warn"  # heartbeat fallback
+        c = await sh._workers(redis)
+        # A fresh heartbeat is detail only; empty pings still mean down.
+        assert c.status == "down" and "heartbeat 1 min ago" in (c.detail or "")
+
+
+async def test_workers_retry_ping_recovers() -> None:
+    redis = MagicMock()
+    with patch.object(sh, "_ping_workers", side_effect=[{}, {"w": 1}]):
+        assert (await sh._workers(redis)).status == "ok"
+
+
+def test_version_from_settings() -> None:
+    assert sh.app_version(_settings(APP_VERSION="1.4.2")) == "1.4.2"
 
 
 async def test_beat_missing_warns_and_stale_warns() -> None:
@@ -125,8 +139,10 @@ async def test_disk_90_alerts_once() -> None:
 async def test_healthy_no_alert_and_worker_email_alerts() -> None:
     fired, alert, _ = await _run_check(_health(50.0))
     assert fired == []
-    fired, alert, _ = await _run_check(_health(None, "down"), err="x")
-    assert fired == ["worker_down", "email_failing"]
+    # worker_down comes only from the API watchdog, never from this worker task.
+    fired, alert, redis = await _run_check(_health(None, "down"), err="x")
+    assert fired == ["email_failing"]
+    assert alert.await_args.args[4] is redis  # task's own client, not the shared pool
 
 
 def _ok_redis():
@@ -170,6 +186,7 @@ async def test_db_probe_failure_only_marks_db_down() -> None:
     assert c["database"] == "down"
     assert c["valkey"] == c["workers"] == c["queues"] == "ok"
     assert c["email"] == "ok"
+    assert h.runtime.version == "9.9.9"
 
 
 async def test_valkey_hang_is_bounded() -> None:

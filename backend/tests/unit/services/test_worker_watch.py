@@ -50,3 +50,30 @@ async def test_tick_quiet_when_fresh_or_valkey_down() -> None:
     redis.get = AsyncMock(side_effect=OSError)
     with patch.object(ww, "get_pool", return_value=redis):
         assert await ww.tick(time.monotonic()) is False
+
+
+async def test_watchdog_alert_sends_apprise_inline_not_via_celery() -> None:
+    from app.services import admin_alerts as aa
+
+    redis = MagicMock()
+    redis.get = AsyncMock(return_value=str(time.time() - 3600))
+    redis.set = AsyncMock(return_value=True)
+    session = MagicMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    session.commit = AsyncMock()
+    users = MagicMock()
+    users.admin_ids = AsyncMock(return_value=[])
+    deliver, delay = AsyncMock(), MagicMock()
+    with (
+        patch.object(ww, "get_pool", return_value=redis),
+        patch.object(aa, "get_pool", return_value=redis),
+        patch.object(ww, "async_session_factory", return_value=session),
+        patch.object(aa, "deliver_apprise", deliver),
+        patch.object(aa, "UserRepository", return_value=users),
+        patch.object(aa, "build_notification_service", return_value=MagicMock()),
+        patch("app.tasks.admin_alert_tasks.send_apprise_alert.delay", delay),
+    ):
+        assert await ww.tick(time.monotonic())
+    deliver.assert_awaited_once()
+    delay.assert_not_called()

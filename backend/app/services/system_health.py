@@ -14,18 +14,17 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
 import psutil
 import structlog
 from redis.asyncio import Redis
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.valkey import DB_BROKER, DB_CACHE, get_pool
+from app.repositories.system_repo import SystemRepository
 from app.schemas.admin_system import Component, DiskInfo, RuntimeInfo, SystemHealth, TableSize
 
 logger = structlog.get_logger(__name__)
@@ -39,7 +38,8 @@ CACHE_SECONDS = 10
 WORKER_HEARTBEAT_KEY = "health:worker_heartbeat"
 HEARTBEAT_STALE = timedelta(minutes=12)
 OVERALL_TIMEOUT = 5.0
-T_DB, T_VALKEY, T_WORKERS, T_QUEUES, T_DISK = 2.0, 1.0, 2.0, 1.0, 2.0
+T_DB, T_VALKEY, T_WORKERS, T_QUEUES, T_DISK = 2.0, 1.0, 3.0, 1.0, 2.0
+PING_TIMEOUT = 1.0
 _STARTED = time.time()
 # ponytail: per-process cache is enough for 10 s of admin polling; no shared store.
 _cache: tuple[float, SystemHealth] | None = None
@@ -53,12 +53,9 @@ def grafana_link(settings: Settings) -> str | None:
     return url if url.lower().startswith(("http://", "https://")) else None
 
 
-def app_version() -> str:
-    """@brief Backend package version (``unknown`` when not installed)."""
-    try:
-        return version("nexara-backend")
-    except PackageNotFoundError:
-        return "unknown"
+def app_version(settings: Settings) -> str:
+    """@brief Release version from ``settings.APP_VERSION`` (images carry no package metadata)."""
+    return settings.APP_VERSION or "unknown"
 
 
 def _timed_out(name: str) -> Component:
@@ -68,8 +65,7 @@ def _timed_out(name: str) -> Component:
 async def _database(session: AsyncSession) -> Component:
     t0 = time.perf_counter()
     try:
-        async with session.begin_nested():
-            await session.execute(text("select 1"))
+        await SystemRepository(session).ping()
     except Exception:
         return Component(name="database", status="down", detail="Unreachable")
     dt = time.perf_counter() - t0
@@ -89,9 +85,19 @@ async def _valkey(cache: Redis) -> Component:
 
 
 def _ping_workers() -> dict[str, Any]:
+    """@brief Broadcast ping; bounded connect (1 s, one retry) so threads cannot pile up."""
     from app.tasks.celery_app import celery_app
 
-    return celery_app.control.inspect(timeout=1).ping() or {}
+    with celery_app.connection_for_write(connect_timeout=PING_TIMEOUT) as conn:
+        conn.ensure_connection(max_retries=1)
+        return celery_app.control.inspect(timeout=PING_TIMEOUT, connection=conn).ping() or {}
+
+
+async def _ping_once() -> dict[str, Any]:
+    try:
+        return await asyncio.to_thread(_ping_workers)
+    except Exception:
+        return {}
 
 
 def heartbeat_age(raw: str | bytes | None, now: datetime | None = None) -> timedelta | None:
@@ -106,23 +112,22 @@ def heartbeat_age(raw: str | bytes | None, now: datetime | None = None) -> timed
 
 
 async def _workers(cache: Redis) -> Component:
-    try:
-        pong = await asyncio.to_thread(_ping_workers)
-    except Exception:
-        pong = {}
+    """
+    @brief ``down`` when two pings get no reply; the heartbeat age is detail text only.
+
+    (The heartbeat drives the API watchdog's ``worker_down`` alert, not this status.)
+    """
+    pong = await _ping_once() or await _ping_once()
     if pong:
         return Component(name="workers", status="ok", detail=f"{len(pong)} online")
     try:
         age = heartbeat_age(await cache.get(WORKER_HEARTBEAT_KEY))
     except Exception:
         age = None
-    if age is not None and age <= HEARTBEAT_STALE:
-        return Component(
-            name="workers",
-            status="warn",
-            detail=f"No ping reply; heartbeat {int(age.total_seconds() // 60)} min ago",
-        )
-    return Component(name="workers", status="down", detail="No workers responding")
+    detail = "No workers responding"
+    if age is not None:
+        detail += f"; last heartbeat {int(age.total_seconds() // 60)} min ago"
+    return Component(name="workers", status="down", detail=detail)
 
 
 async def _queues(broker: Redis) -> Component:
@@ -153,14 +158,7 @@ async def smtp_state(
     session: AsyncSession, community_id: uuid.UUID
 ) -> tuple[datetime | None, str | None]:
     """@brief ``(smtp_last_ok_at, smtp_last_error)`` for the community (error clears on success)."""
-    async with session.begin_nested():
-        row = (
-            await session.execute(
-                text("select smtp_last_ok_at, smtp_last_error from communities where id = :cid"),
-                {"cid": community_id},
-            )
-        ).first()
-    return (row[0], row[1]) if row else (None, None)
+    return await SystemRepository(session).smtp_state(community_id)
 
 
 async def _email(session: AsyncSession, community_id: uuid.UUID) -> Component:
@@ -192,21 +190,8 @@ async def _disk(session: AsyncSession, settings: Settings) -> DiskInfo:
         except OSError:
             logger.warning("system_health.disk_unavailable")
     try:
-        async with session.begin_nested():
-            info.db_bytes = int(
-                (
-                    await session.execute(text("select pg_database_size(current_database())"))
-                ).scalar_one()
-            )
-            rows = await session.execute(
-                text(
-                    "select relname, pg_total_relation_size(c.oid) from pg_class c "
-                    "join pg_namespace n on n.oid = c.relnamespace "
-                    "where c.relkind = 'r' and n.nspname = 'public' "
-                    "order by 2 desc limit 10"
-                )
-            )
-            info.top_tables = [TableSize(name=r[0], bytes=int(r[1])) for r in rows]
+        info.db_bytes, top = await SystemRepository(session).sizes()
+        info.top_tables = [TableSize(name=n, bytes=b) for n, b in top]
     except Exception:
         logger.warning("system_health.db_size_unavailable")
     return info
@@ -224,11 +209,10 @@ def _cgroup_limit() -> int | None:
     return _read_int("/sys/fs/cgroup/memory.max")
 
 
-async def _runtime(session: AsyncSession) -> RuntimeInfo:
+async def _runtime(session: AsyncSession, settings: Settings) -> RuntimeInfo:
     head: str | None
     try:
-        async with session.begin_nested():
-            head = (await session.execute(text("select version_num from alembic_version"))).scalar()
+        head = await SystemRepository(session).alembic_head()
     except Exception:
         head = None
     mem = psutil.virtual_memory()
@@ -237,7 +221,7 @@ async def _runtime(session: AsyncSession) -> RuntimeInfo:
     if limit is not None and (cur := _read_int("/sys/fs/cgroup/memory.current")) is not None:
         used = cur  # container view when running under a cgroup limit
     return RuntimeInfo(
-        version=app_version(),
+        version=app_version(settings),
         alembic_head=head,
         uptime_seconds=int(time.time() - _STARTED),
         cpu_percent=psutil.cpu_percent(None),
@@ -256,7 +240,7 @@ async def collect(
     """
     @brief Gather a full health snapshot concurrently; never raises on dependency failure.
 
-    Each probe is bounded (DB 2 s, Valkey 1 s, workers 2 s, queues 1 s) and the whole
+    Each probe is bounded (DB 2 s, Valkey 1 s, workers 3 s, queues 1 s) and the whole
     call is capped at 5 s; a timed-out probe reports ``down`` / ``Timed out``. DB
     probes share one session so they are serialised by a lock, each in a savepoint.
 
@@ -297,18 +281,20 @@ async def collect(
             DiskInfo(external=settings.STORAGE_BACKEND.lower() != "local"),
             True,
         ),
-        bounded(_runtime(session), T_DISK, None, True),
+        bounded(_runtime(session, settings), T_DISK, None, True),
     ]
     tasks = [asyncio.ensure_future(j) for j in jobs]
     _, pending = await asyncio.wait(tasks, timeout=OVERALL_TIMEOUT)
     for t in pending:
         t.cancel()
+    if pending:  # let cancelled savepoints unwind before the caller reuses the session
+        await asyncio.gather(*pending, return_exceptions=True)
     results = [t.result() if t in tasks and not t.cancelled() and t.done() else None for t in tasks]
     comps = [r if r is not None else fb(n) for n, r in zip(names, results[:6], strict=True)]
     comps.insert(6, _push(settings))
     disk = results[6] or DiskInfo(external=settings.STORAGE_BACKEND.lower() != "local")
     runtime = results[7] or RuntimeInfo(
-        version=app_version(),
+        version=app_version(settings),
         uptime_seconds=int(time.time() - _STARTED),
         cpu_percent=0.0,
         mem_total_bytes=0,
