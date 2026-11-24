@@ -62,6 +62,8 @@ class Media(Base):
     alt_text: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="processing")
     is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Moderator-set NSFW flag: the author/owner may not clear it.
+    nsfw_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

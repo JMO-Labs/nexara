@@ -21,6 +21,7 @@ from app.schemas.poll import PollCreate
 from app.schemas.post import CelebrateIn
 from app.services import post_celebrate
 from app.services.activity_publish import record_activity
+from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 from app.services.post_comments import CommentsMixin
 from app.services.post_reactions import ReactionsMixin
 from app.services.realtime import events
@@ -232,9 +233,8 @@ class PostService(CommentsMixin, ReactionsMixin):
         if post.author_id != user.id:
             raise AuthorizationError(_("You can only edit your own posts"))
         if is_nsfw is not None and is_nsfw != post.is_nsfw:
-            # Any change (incl. un-flagging a moderated post) needs an adult.
-            await self._require_adult_for_nsfw(True, user)
-            post.is_nsfw = is_nsfw
+            await require_owner_may_flag(self._post_repo, self._community_id, user.id, is_nsfw)
+            apply_owner_flag(post, is_nsfw)
 
         await self._post_repo.update_content(post, content)
         await self._sync_tags("post", post.id, content, user, post, fresh=False)

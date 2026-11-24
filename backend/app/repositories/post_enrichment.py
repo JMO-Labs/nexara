@@ -23,7 +23,12 @@ from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.post_extras import post_extras
-from app.repositories.visibility_preds import nsfw_allowed, viewer_is_adult
+from app.repositories.visibility_preds import (
+    media_is_nsfw,
+    media_nsfw_ok,
+    nsfw_allowed,
+    viewer_is_adult,
+)
 
 
 async def enrich_posts(
@@ -61,15 +66,17 @@ async def enrich_posts(
             subgroup_name_map[sg_id] = sg_name
             subgroup_slug_map[sg_id] = sg_slug
 
+    # Photos NSFW on their own (flag or NSFW album) are dropped for non-adults;
+    # adults get ``is_nsfw`` per photo so the client can blur it.
     media_stmt = (
-        select(PostMedia.post_id, Media)
+        select(PostMedia.post_id, Media, media_is_nsfw(Media.id))
         .join(Media, PostMedia.media_id == Media.id)
-        .where(PostMedia.post_id.in_(post_ids))
+        .where(PostMedia.post_id.in_(post_ids), media_nsfw_ok(Media.id, viewer_id))
         .order_by(PostMedia.position)
     )
     media_result = await session.execute(media_stmt)
     media_map: dict[uuid.UUID, list[dict[str, Any]]] = {}
-    for pm_post_id, media in media_result.all():
+    for pm_post_id, media, media_nsfw in media_result.all():
         media_map.setdefault(pm_post_id, []).append(
             {
                 "id": str(media.id),
@@ -80,6 +87,7 @@ async def enrich_posts(
                 "mime_type": media.content_type,
                 "width": media.width,
                 "height": media.height,
+                "is_nsfw": bool(media_nsfw),
             }
         )
 

@@ -11,7 +11,6 @@ from typing import Any
 
 import structlog
 
-from app.core.exceptions import AuthorizationError
 from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
@@ -26,6 +25,7 @@ from app.services.ai.sassybot_service import wants_sassybot
 from app.services.group_tag_service import GroupTagService
 from app.services.household_mentions import sync_household_tags
 from app.services.notification_service import NotificationService
+from app.services.nsfw_rules import require_owner_may_flag
 from app.services.poll_service import PollService
 from app.services.realtime import events
 from app.services.realtime.audience import emit_to_audience, resolve_audience
@@ -115,9 +115,9 @@ class PostServiceBase:
             logger.warning("sassybot_enqueue_failed", post_id=str(post_id))
 
     async def _require_adult_for_nsfw(self, is_nsfw: bool, user: User) -> None:
-        """@throws AuthorizationError when a non-adult marks content NSFW."""
-        if is_nsfw and not await self._post_repo.viewer_adult(user.id):
-            raise AuthorizationError(_("Only adults can mark content as NSFW"))
+        """@throws AuthorizationError/AppError when the author may not flag (nsfw_rules)."""
+        if is_nsfw:
+            await require_owner_may_flag(self._post_repo, self._community_id, user.id, True)
 
     @property
     def _target(self) -> CommunityTarget:

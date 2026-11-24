@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,12 +27,14 @@ from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import (
     MediaResponse,
+    MediaUpdate,
     MultipartCompleteResponse,
     MultipartInitRequest,
     MultipartInitResponse,
     MultipartPartResponse,
 )
 from app.schemas.post import ReactionResponse, ReactionToggle
+from app.services.media import nsfw as media_nsfw
 from app.services.media.url_import import import_image_from_url
 from app.services.media_service import MediaService
 from app.services.storage.factory import get_storage_backend
@@ -122,6 +124,7 @@ async def complete_multipart_upload(
 @router.post("/upload", response_model=MediaResponse, status_code=201)
 async def upload_media(
     file: UploadFile,
+    is_nsfw: bool = Form(False),
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
@@ -129,18 +132,35 @@ async def upload_media(
     @brief Upload an image file (multipart/form-data).
 
     Accepts JPEG, PNG, GIF, WebP up to 20 MB. Enqueues thumbnail generation.
+    ``is_nsfw`` (form field): adults only, ``nsfw`` feature on.
     """
+    if is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
     content_type = file.content_type or "application/octet-stream"
     file_data = await file.read()
     size = len(file_data)
     filename = file.filename or "upload"
-    return await service.upload(
+    out = await service.upload(
         user=user,
         file_data=file_data,
         filename=filename,
         content_type=content_type,
         size=size,
     )
+    if is_nsfw:
+        out = await media_nsfw.set_media_nsfw(service, user, out.id, True)
+    return out
+
+
+@router.patch("/{media_id}", response_model=MediaResponse)
+async def update_media(
+    media_id: uuid.UUID,
+    body: MediaUpdate,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MediaResponse:
+    """@brief Uploader flags/unflags a photo NSFW (cannot clear a moderator lock)."""
+    return await media_nsfw.set_media_nsfw(service, user, media_id, body.is_nsfw)
 
 
 class ImportUrlRequest(BaseModel):

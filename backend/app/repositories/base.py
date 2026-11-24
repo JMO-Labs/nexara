@@ -200,6 +200,14 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
 
         return bool((await self._session.execute(select(viewer_is_adult(viewer_id)))).scalar())
 
+    async def feature_on(self, community_id: uuid.UUID, key: str) -> bool:
+        """@brief Whether a community feature flag is on (see ``core.features``)."""
+        from app.core.features import is_enabled
+        from app.models.community import Community
+
+        community = await self._session.get(Community, community_id)
+        return community is None or is_enabled(community, key)
+
     async def nsfw_hidden(
         self,
         viewer_id: uuid.UUID | None,

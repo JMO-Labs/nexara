@@ -7,6 +7,7 @@ NSFW tagging.
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,7 @@ from app.schemas.moderation import (
 )
 from app.services.moderation_service import ModerationService
 from app.services.notification_service import NotificationService
+from app.services.nsfw_moderation import NsfwModerationService
 from app.services.realtime.event_bus import event_bus
 
 router = APIRouter(tags=["moderation"])
@@ -150,16 +152,31 @@ async def mark_post_nsfw(
     return MessageResponse(message=_("Post marked NSFW"))
 
 
-@router.put("/moderation/posts/{post_id}/nsfw", response_model=MessageResponse)
-async def set_post_nsfw(
-    post_id: uuid.UUID,
+def _build_nsfw_service(
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> NsfwModerationService:
+    """@brief Build the moderator NSFW flag service."""
+    return NsfwModerationService(
+        ModerationRepository(db), AuditRepository(db), uuid.UUID(settings.COMMUNITY_ID), db
+    )
+
+
+@router.put("/moderation/{kind}/{entity_id}/nsfw", response_model=MessageResponse)
+async def set_content_nsfw(
+    kind: Literal["posts", "galleries", "media"],
+    entity_id: uuid.UUID,
     body: NsfwFlag,
-    user: User = Depends(require_role("admin")),
-    service: ModerationService = Depends(_build_service),
+    user: User = Depends(get_current_user),
+    service: NsfwModerationService = Depends(_build_nsfw_service),
 ) -> MessageResponse:
-    """@brief Flag or unflag a post as NSFW (admin/moderator only, audited)."""
-    await service.set_nsfw("posts", post_id, user.id, body.value)
-    return MessageResponse(message=_("Post marked NSFW") if body.value else _("NSFW flag removed"))
+    """
+    @brief Flag/unflag a post, album or photo NSFW (audited). Admins: anything; group
+           owners/moderators: posts/albums in their group (locks the flag); album
+           owners: their album under owner rules.
+    """
+    await service.set_flag(kind, entity_id, user, body.value)
+    return MessageResponse(message=_("Marked NSFW") if body.value else _("NSFW flag removed"))
 
 
 @router.post("/admin/moderation/media/{media_id}/mark-nsfw", response_model=MessageResponse)

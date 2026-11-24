@@ -38,6 +38,13 @@ class MediaResponse(BaseModel):
     alt_text: str | None = None
     status: MediaStatus
     created_at: datetime
+    is_nsfw: bool = False
+
+    @field_validator("is_nsfw", mode="before")
+    @classmethod
+    def _unflushed_nsfw(cls, v: object) -> bool:
+        """@brief A not-yet-flushed row has None (server default): treat as False."""
+        return v is True
 
     @field_validator("duration_secs", mode="before")
     @classmethod
@@ -49,6 +56,12 @@ class MediaResponse(BaseModel):
         return v  # type: ignore[return-value] # validator returns narrowed runtime type
 
     model_config = {"from_attributes": True}
+
+
+class MediaUpdate(BaseModel):
+    """@brief Uploader edit of a photo (``PATCH /api/v1/media/{id}``)."""
+
+    is_nsfw: bool
 
 
 class MultipartInitRequest(BaseModel):

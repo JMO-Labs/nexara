@@ -86,7 +86,9 @@ class ModerationService:
         @throws NotFoundError If the target is not in this community.
         @throws ConflictError If the user already reported this target.
         """
-        if not await self._repo.content_exists(target_type, target_id, self._community_id):
+        if not await self._repo.content_exists(
+            target_type, target_id, self._community_id, reporter_id
+        ):
             raise NotFoundError(_("Reported content not found"))
         try:
             report = await self._repo.create_report(

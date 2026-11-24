@@ -18,6 +18,7 @@ branch_labels = None
 depends_on = None
 
 _GROUPS = "age_group IN ('child','teen','adult')"
+_LOCKABLE = ("posts", "galleries", "media")
 
 
 def upgrade() -> None:
@@ -99,10 +100,18 @@ def upgrade() -> None:
         "user_settings",
         sa.Column("always_show_nsfw", sa.Boolean(), nullable=False, server_default="false"),
     )
+    # Set by a moderator: the author/owner may not clear the NSFW flag.
+    for table in _LOCKABLE:
+        op.add_column(
+            table,
+            sa.Column("nsfw_locked", sa.Boolean(), nullable=False, server_default="false"),
+        )
 
 
 def downgrade() -> None:
     """@brief Drop everything added by upgrade."""
+    for table in _LOCKABLE:
+        op.drop_column(table, "nsfw_locked")
     op.drop_column("user_settings", "always_show_nsfw")
     op.drop_column("galleries", "is_nsfw")
     op.drop_table("age_suggestions")

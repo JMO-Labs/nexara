@@ -23,6 +23,7 @@ from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.post_enrichment import enrich_posts
 from app.repositories.visibility_preds import (
+    media_is_nsfw,
     my_subgroup_ids,
     nsfw_allowed,
     outside_daily_question,
@@ -342,7 +343,7 @@ class PostRepository(BaseRepository[Post]):
         media_stmt = (
             select(PostMedia.post_id, Media.id)
             .join(Media, PostMedia.media_id == Media.id)
-            .where(PostMedia.post_id.in_(post_ids))
+            .where(PostMedia.post_id.in_(post_ids), ~media_is_nsfw(Media.id))
             .order_by(PostMedia.position)
         )
         media_result = await self._session.execute(media_stmt)

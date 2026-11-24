@@ -79,7 +79,7 @@ class TestCreateReport:
         repo.content_exists.return_value = False
         with pytest.raises(NotFoundError):
             await service.create_report(USER_ID, "post", TARGET_ID, "spam", None)
-        repo.content_exists.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID)
+        repo.content_exists.assert_awaited_once_with("post", TARGET_ID, COMMUNITY_ID, USER_ID)
         repo.create_report.assert_not_awaited()
 
     async def test_duplicate_rejected(self, service, repo):

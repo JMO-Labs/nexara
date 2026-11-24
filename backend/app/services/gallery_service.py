@@ -24,6 +24,7 @@ from app.schemas.gallery import (
 from app.services.activity_publish import record_activity
 from app.services.gallery_admin import GalleryAdminMixin
 from app.services.gallery_items import GalleryItemsMixin
+from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 
 
 class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
@@ -153,10 +154,11 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             raise NotFoundError(_("Gallery not found"))
         if gallery.owner_id != user_id:
             raise AuthorizationError(_("Only the gallery owner can edit this gallery"))
-        if data.is_nsfw is not None and data.is_nsfw != gallery.is_nsfw:
-            await self._require_adult_for_nsfw(True, user_id)
-
         update_data = data.model_dump(exclude_unset=True)
+        nsfw = update_data.pop("is_nsfw", None)
+        if nsfw is not None and nsfw != gallery.is_nsfw:
+            await require_owner_may_flag(self._repo, self._community_id, user_id, nsfw)
+            apply_owner_flag(gallery, nsfw)
         update_data["updated_at"] = datetime.now(UTC)
         gallery = await self._repo.update(gallery, update_data)
         await invalidate_search_cache_for_community(
