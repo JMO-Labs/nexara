@@ -129,7 +129,7 @@ def cleanup_expired_link_previews() -> dict[str, int]:
 )
 def age_audit_logs() -> dict[str, int]:
     """
-    @brief Delete audit log entries older than ``communities.audit_retention_days``.
+    @brief Delete audit log entries past the ``audit_logs`` retention policy.
 
     Run weekly (Sunday 03:15 UTC).
 

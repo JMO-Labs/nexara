@@ -27,6 +27,10 @@ class RetentionRepository:
         )
         return list(res.scalars().all())
 
+    async def get(self, key: str) -> RetentionPolicy | None:
+        """@brief One stored policy row by key, or None when only the default applies."""
+        return await self._session.get(RetentionPolicy, key)
+
     async def upsert(
         self,
         key: str,

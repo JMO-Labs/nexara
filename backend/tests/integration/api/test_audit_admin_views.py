@@ -15,6 +15,7 @@ from app.api.v1.admin_audit import get_admin_audit_service
 from app.core.deps_signins import get_admin_signin_service
 from app.models.audit import AuditLog
 from app.repositories.audit_repo import AuditRepository
+from app.repositories.retention_repo import RetentionRepository
 from app.repositories.signin_repo import SigninRepository
 from app.services.admin_audit_service import AdminAuditService
 from app.services.admin_signin_service import AdminSigninService
@@ -53,6 +54,12 @@ async def test_signins_export_and_audit_csv(world):
         await one_export(w)
         assert (await c.delete("/api/v1/admin/audit")).status_code == 405
         assert (await c.delete("/api/v1/admin/audit-log")).status_code == 405
+    paths = w.app.openapi()["paths"]
+    audit = {p: m for p, m in paths.items() if p.startswith("/api/v1/admin/audit")}
+    assert audit and all(not {"delete", "put", "patch"} & set(m) for m in audit.values())
+    from app.api.v1.admin_audit import router as audit_router
+
+    assert {m for r in audit_router.routes for m in getattr(r, "methods", ())} == {"GET"}
 
 
 async def one_export(w):
@@ -92,22 +99,51 @@ async def test_audit_list_filters(world):
             assert (await m.get(f"{base}.csv")).status_code == 403
 
 
-async def test_retention_purges_only_past_window(world):
-    w = world
-    repo = AuditRepository(w.s)
-    await w.s.execute(
-        text("update communities set audit_retention_days=365 where id=:i"), {"i": CID}
-    )
-    now = datetime.now(UTC)
-    ids = {}
-    for age in (366, 364):
+async def _aged(w, *ages):
+    repo, now, ids = AuditRepository(w.s), datetime.now(UTC), {}
+    for age in ages:
         e = await repo.append(actor_id=w.admin.id, action=f"ret.d{age}")
         ids[age] = e.id
         await w.s.execute(
             text("update audit_log set created_at=:t where id=:i"),
             {"t": now - timedelta(days=age), "i": e.id},
         )
-    deleted = await purge_audit_log(w.s)
-    assert deleted >= 1
+    return ids
+
+
+async def _policy(w, enabled, days):
+    await RetentionRepository(w.s).upsert("audit_logs", enabled, days, False, None)
+
+
+async def test_retention_default_purges_past_365(world):
+    w = world
+    await w.s.execute(text("delete from retention_policies where policy_key='audit_logs'"))
+    ids = await _aged(w, 366, 364)
+    assert await purge_audit_log(w.s) >= 1
     assert await w.s.get(AuditLog, ids[366]) is None
     assert await w.s.get(AuditLog, ids[364]) is not None
+
+
+async def test_retention_custom_730_keeps_400_day_row(world):
+    w = world
+    await _policy(w, True, 730)
+    ids = await _aged(w, 731, 400)
+    await purge_audit_log(w.s)
+    assert await w.s.get(AuditLog, ids[731]) is None
+    assert await w.s.get(AuditLog, ids[400]) is not None
+
+
+async def test_retention_disabled_purges_nothing(world):
+    w = world
+    await _policy(w, False, 365)
+    ids = await _aged(w, 2000)
+    assert await purge_audit_log(w.s) == 0
+    assert await w.s.get(AuditLog, ids[2000]) is not None
+
+
+async def test_retention_clamps_below_365(world):
+    w = world
+    await _policy(w, True, 30)
+    ids = await _aged(w, 100)
+    await purge_audit_log(w.s)
+    assert await w.s.get(AuditLog, ids[100]) is not None

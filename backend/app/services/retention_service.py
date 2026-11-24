@@ -12,14 +12,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.repositories.retention_repo import RetentionRepository
 from app.schemas.admin_retention import RetentionPolicyOut, RetentionUpdate
 
-DEFAULT_AUDIT_DAYS = 365
+MIN_AUDIT_DAYS = 365
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 # key -> (enabled, retention_days, delete_media_files); mirrors frontend POLICY_META.
@@ -85,21 +84,22 @@ class RetentionService:
 
 async def purge_audit_log(session: AsyncSession) -> int:
     """
-    @brief Delete audit rows older than the community's ``audit_retention_days``.
+    @brief Delete audit rows past the admin's ``audit_logs`` retention policy.
 
-    The audit table is instance-wide (single tenant); the setting comes from the
-    configured community, falling back to 365 days.
+    Source of truth is ``retention_policies['audit_logs']`` (the Retention UI), falling
+    back to the built-in default. Disabled (or no day limit) means keep forever; the
+    window is clamped to at least 365 days. ``communities.audit_retention_days`` is
+    not consulted (it has no write path).
 
     @param session Open session (caller commits).
     @return Rows deleted.
     """
-    from app.core.config import get_settings
-    from app.models.community import Community
     from app.repositories.audit_repo import AuditRepository
 
-    days = await session.scalar(
-        select(Community.audit_retention_days).where(
-            Community.id == uuid.UUID(get_settings().COMMUNITY_ID)
-        )
-    )
-    return await AuditRepository(session).purge_older_than(days or DEFAULT_AUDIT_DAYS)
+    row = await RetentionRepository(session).get("audit_logs")
+    enabled, days, _ = DEFAULT_POLICIES["audit_logs"]
+    if row is not None:
+        enabled, days = row.enabled, row.retention_days
+    if not enabled or days is None:
+        return 0
+    return await AuditRepository(session).purge_older_than(max(days, MIN_AUDIT_DAYS))
