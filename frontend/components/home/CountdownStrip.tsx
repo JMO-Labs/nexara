@@ -5,7 +5,7 @@
  */
 import Link from "next/link";
 import { useFollowing } from "@/hooks/useCountdowns";
-import { daysUntil } from "@/lib/api/countdowns";
+import { daysLeft } from "@/lib/api/countdowns";
 
 const MAX = 6;
 
@@ -17,8 +17,11 @@ export function CountdownStrip() {
   const { data } = useFollowing();
   if (!data?.length) return null;
   const items = data
-    .map((c) => ({ c, d: daysUntil(c.next_date) }))
-    .sort((a, b) => a.d - b.d)
+    .map((c) => ({ c, d: daysLeft(c) }))
+    .sort(
+      (a, b) =>
+        Number(a.d < 0) - Number(b.d < 0) || Math.abs(a.d) - Math.abs(b.d),
+    )
     .slice(0, MAX);
   return (
     <section
@@ -30,6 +33,13 @@ export function CountdownStrip() {
           <li key={c.id} className="shrink-0 snap-start">
             <Link
               data-testid="countdown-chip"
+              aria-label={
+                d === 0
+                  ? `Today: ${c.title}`
+                  : d > 0
+                    ? `${d} ${d === 1 ? "day" : "days"} until ${c.title}`
+                    : `${-d} ${d === -1 ? "day" : "days"} ago: ${c.title}`
+              }
               href={`/app/countdowns/${c.id}`}
               className={`border-border bg-surface flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
                 d === 0 ? "ring-accent font-bold ring-2" : ""

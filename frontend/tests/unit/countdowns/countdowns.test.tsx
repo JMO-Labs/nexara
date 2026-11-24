@@ -61,7 +61,25 @@ describe("CountdownCard", () => {
   });
 
   it("shows Today! on day 0", () => {
-    wrap(<CountdownCard c={{ ...base, next_date: "2026-06-10" }} now={NOW} />);
+    wrap(<CountdownCard c={{ ...base, days_left: 0 }} now={NOW} />);
+    expect(screen.getByText("Today!")).toBeInTheDocument();
+  });
+
+  it("prefers the server days_left over the browser clock", () => {
+    wrap(
+      <CountdownCard
+        c={{ ...base, days_left: 5, next_date: "2026-06-10" }}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByText("days until")).toBeInTheDocument();
+    expect(screen.queryByText("Today!")).toBeNull();
+  });
+
+  it("falls back to the browser clock without days_left", () => {
+    const c = { ...base, next_date: "2026-06-10" } as Partial<Countdown>;
+    delete c.days_left;
+    wrap(<CountdownCard c={c as Countdown} now={NOW} />);
     expect(screen.getByText("Today!")).toBeInTheDocument();
   });
 
@@ -70,7 +88,7 @@ describe("CountdownCard", () => {
     qc.setQueryData(["countdowns", "c1"], base);
     follow.mockReturnValue(new Promise(() => {}));
     wrap(<CountdownCard c={base} now={NOW} />, qc);
-    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow Trip" }));
     await waitFor(() =>
       expect(qc.getQueryData<Countdown>(["countdowns", "c1"])).toMatchObject({
         following: true,
@@ -104,12 +122,57 @@ describe("CountdownComposer", () => {
 });
 
 describe("fixes", () => {
+  it("mutations invalidate the real feed and home keys", async () => {
+    create.mockResolvedValue(base);
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    wrap(<CountdownComposer open onClose={() => {}} />, qc);
+    await userEvent.type(screen.getByLabelText("Title"), "Trip");
+    await userEvent.type(screen.getByLabelText("Date"), "2099-06-11");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    const keys = spy.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toContainEqual(["feed"]);
+    expect(keys).toContainEqual(["home-feed"]);
+  });
+
+  it("edit sends explicit nulls to clear fields; no onCreated", async () => {
+    const update = vi.fn().mockResolvedValue(base);
+    const api = await import("@/lib/api/countdowns");
+    vi.spyOn(api, "updateCountdown").mockImplementation(update);
+    const onCreated = vi.fn();
+    wrap(
+      <CountdownComposer
+        open
+        onClose={() => {}}
+        onCreated={onCreated}
+        countdown={{
+          ...base,
+          emoji: "🎉",
+          target_time: "09:30:00",
+          cover_media_id: "m1",
+        }}
+      />,
+    );
+    await userEvent.clear(screen.getByLabelText("Emoji"));
+    await userEvent.clear(screen.getByLabelText(/Time/));
+    await userEvent.click(screen.getByRole("button", { name: "Remove cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({
+      emoji: null,
+      target_time: null,
+      cover_media_id: null,
+    });
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
   it("list-page follow flips list cache optimistically", async () => {
     const qc = new QueryClient();
     qc.setQueryData(["countdowns", "list"], [base]);
     follow.mockReturnValue(new Promise(() => {}));
     wrap(<CountdownCard c={base} now={NOW} />, qc);
-    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow Trip" }));
     await waitFor(() =>
       expect(
         qc.getQueryData<Countdown[]>(["countdowns", "list"])?.[0],

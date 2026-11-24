@@ -7,16 +7,19 @@ import { Button } from "@/components/ui";
 import { useToggleFollow } from "@/hooks/useCountdowns";
 
 /**
- * @brief Toggle button (aria-pressed).
+ * @brief Toggle button; the accessible name carries state and countdown.
  * @param id countdown id
+ * @param title countdown title (accessible name)
  * @param following current state
  * @return button
  */
 export function FollowButton({
   id,
+  title,
   following,
 }: {
   id: string;
+  title: string;
   following: boolean;
 }) {
   const m = useToggleFollow(id);
@@ -24,7 +27,7 @@ export function FollowButton({
     <Button
       size="sm"
       variant={following ? "secondary" : "primary"}
-      aria-pressed={following}
+      aria-label={`${following ? "Following" : "Follow"} ${title}`}
       disabled={m.isPending}
       onClick={() => m.mutate(!following)}
     >

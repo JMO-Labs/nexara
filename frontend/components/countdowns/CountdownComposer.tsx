@@ -11,6 +11,13 @@ import { useMediaUpload } from "@/hooks/useMediaUpload";
 import { useCreateCountdown, useUpdateCountdown } from "@/hooks/useCountdowns";
 import type { Countdown } from "@/lib/api/countdowns";
 
+/** @brief Today as YYYY-MM-DD in the browser's timezone. */
+const localISODate = () => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 const EMOJIS = ["🎉", "🎂", "✈️", "🎄", "🏖️", "💍", "🎓", "⭐"];
 
 export interface CountdownComposerProps {
@@ -25,7 +32,7 @@ export interface CountdownComposerProps {
  * @brief Countdown composer modal.
  * @param open visibility
  * @param onClose cancel/after-create callback
- * @param onCreated receives the new countdown
+ * @param onCreated receives the new countdown (create only)
  * @return modal
  */
 export function CountdownComposer({
@@ -61,18 +68,20 @@ export function CountdownComposer({
     (editing || scope.visibility !== "subgroup" || scope.subgroup_id);
 
   const submit = () => {
+    // Edit sends explicit nulls so emptied fields are cleared server-side.
+    const opt = <T,>(v: T | "" | null) => (v ? v : editing ? null : undefined);
     const body = {
       title: title.trim(),
       target_date: date,
-      ...(time ? { target_time: time } : {}),
+      target_time: opt(time),
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      ...(emoji ? { emoji } : {}),
-      ...(cover ? { cover_media_id: cover } : {}),
+      emoji: opt(emoji),
+      cover_media_id: opt(cover),
       repeat_yearly: yearly,
     };
     const done = {
       onSuccess: (c: Countdown) => {
-        onCreated?.(c);
+        if (!editing) onCreated?.(c);
         onClose();
       },
     };
@@ -116,6 +125,7 @@ export function CountdownComposer({
         <Input
           label="Date"
           type="date"
+          min={editing || yearly ? undefined : localISODate()}
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
@@ -179,7 +189,12 @@ export function CountdownComposer({
             </span>
           ) : null}
           {cover && !upload.isPending ? (
-            <span className="text-sm">Cover attached</span>
+            <span className="flex items-center gap-2 text-sm">
+              Cover attached
+              <Button variant="ghost" size="sm" onClick={() => setCover(null)}>
+                Remove cover
+              </Button>
+            </span>
           ) : null}
         </div>
         {editing ? null : (

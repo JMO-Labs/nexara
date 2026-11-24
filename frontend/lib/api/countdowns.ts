@@ -52,6 +52,17 @@ export const unfollowCountdown = (id: string) =>
   apiDelete<Countdown>(`${BASE}/${seg(id)}/follow`);
 
 /**
+ * @brief Days left: the server's viewer-timezone count, else the browser clock.
+ * @param c countdown (days_left may be absent in stale caches)
+ * @param now reference instant for the fallback
+ * @return days (0 = today, negative = past)
+ */
+export const daysLeft = (
+  c: Pick<Countdown, "next_date"> & { days_left?: number },
+  now?: Date,
+): number => c.days_left ?? daysUntil(c.next_date, now);
+
+/**
  * @brief Whole calendar days from the viewer's today to a YYYY-MM-DD date.
  * @param date ISO date (next occurrence)
  * @param now reference instant (viewer's local clock)

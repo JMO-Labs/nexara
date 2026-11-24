@@ -29,7 +29,7 @@ export default function CountdownRoute({
   if (isError) return <p role="alert">Countdown not found.</p>;
   if (!c) return null;
   const mine = me?.id === c.author_id;
-  const admin = me?.role === "admin" || me?.role === "owner";
+  const admin = me?.role === "admin";
 
   const remove = async () => {
     const ok = await confirm({

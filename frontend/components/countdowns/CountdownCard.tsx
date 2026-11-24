@@ -6,17 +6,17 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
 import { mediaThumbUrl } from "@/lib/api/media";
-import { daysUntil, type Countdown } from "@/lib/api/countdowns";
+import { daysLeft, type Countdown } from "@/lib/api/countdowns";
 import { FollowButton } from "./FollowButton";
 
 /**
- * @brief Render a countdown (days computed in the viewer's timezone).
+ * @brief Render a countdown (server days_left, browser clock fallback).
  * @param c countdown
  * @param now optional clock override (tests)
  * @return card
  */
 export function CountdownCard({ c, now }: { c: Countdown; now?: Date }) {
-  const days = daysUntil(c.next_date, now);
+  const days = daysLeft(c, now);
   const today = days === 0;
   const date = new Date(`${c.next_date}T00:00:00`).toLocaleDateString(
     undefined,
@@ -79,7 +79,7 @@ export function CountdownCard({ c, now }: { c: Countdown; now?: Date }) {
         <span className="text-sm">
           {c.follower_count} {c.follower_count === 1 ? "follower" : "followers"}
         </span>
-        <FollowButton id={c.id} following={c.following} />
+        <FollowButton id={c.id} title={c.title} following={c.following} />
       </div>
     </Card>
   );

@@ -21,6 +21,7 @@ import {
   type Countdown,
   type CountdownInput,
 } from "@/lib/api/countdowns";
+import { qk } from "@/lib/query-keys";
 import { useToasts } from "@/stores/toasts";
 
 const KEY = ["countdowns"] as const;
@@ -41,8 +42,6 @@ export const useCountdown = (id: string) =>
     retry: false,
   });
 
-const POSTS = ["posts"] as const;
-
 /** @brief Apply a patch to a countdown in every cached list/detail. */
 function patchAll(qc: QueryClient, id: string, f: (c: Countdown) => Countdown) {
   qc.setQueriesData<Countdown | Countdown[]>({ queryKey: KEY }, (d) =>
@@ -54,11 +53,11 @@ function patchAll(qc: QueryClient, id: string, f: (c: Countdown) => Countdown) {
   );
 }
 
-/** @brief Refresh everything that may show a countdown. */
+/** @brief Refresh countdowns and the feed/Home posts that embed them. */
 const refresh = (qc: QueryClient) => {
   void qc.invalidateQueries({ queryKey: KEY });
-  void qc.invalidateQueries({ queryKey: POSTS });
-  void qc.invalidateQueries({ queryKey: ["home"] });
+  void qc.invalidateQueries({ queryKey: qk.feed.all() });
+  void qc.invalidateQueries({ queryKey: qk.home.feed() });
 };
 
 const fail = (message: string) => () =>
@@ -117,6 +116,6 @@ export function useToggleFollow(id: string) {
       fail("Could not update follow.")();
     },
     onSuccess: (c) => patchAll(qc, id, () => c),
-    onSettled: () => refresh(qc),
+    onSettled: () => void qc.invalidateQueries({ queryKey: KEY }),
   });
 }

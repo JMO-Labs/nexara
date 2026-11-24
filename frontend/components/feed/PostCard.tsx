@@ -65,7 +65,13 @@ export function PostCard({
   const nsfwMut = useSetPostNsfw();
   const groupMod = useIsGroupMod(post.subgroup_id);
 
-  if (post.countdown_id) return <CountdownFeedCard id={post.countdown_id} />;
+  if (post.countdown_id)
+    return (
+      <CountdownFeedCard
+        id={post.countdown_id}
+        authorName={post.author.display_name}
+      />
+    );
 
   if (post.recipient_id && post.recipient) {
     return (
