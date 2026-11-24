@@ -38,6 +38,8 @@ def effective_age_group(user: Any, community: Any | None) -> AgeGroup:
     @param community Object with ``adult_requires_approval`` (None = off).
     @return child/teen/adult, or unknown when undetermined.
     """
+    if getattr(user, "is_bot", False) is True:
+        return "unknown"  # plugin bots never count as adults (NSFW)
     group = getattr(user, "age_group", None)
     if group in GROUPS:
         return group  # type: ignore[no-any-return]

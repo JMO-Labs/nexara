@@ -11,6 +11,8 @@ and activated by the ``SlowAPIMiddleware``.
 
 from __future__ import annotations
 
+import hashlib
+
 import structlog
 from fastapi import Request
 from slowapi import Limiter
@@ -38,11 +40,20 @@ def _build_storage_uri() -> str | None:
 
 def rate_limit_key(request: Request) -> str:
     """
-    @brief Bucket key = real client IP behind our proxy (not nginx's 127.0.0.1).
+    @brief Bucket key: ``plugin:{token_id}`` for plugin tokens, else the real client IP.
+
+    Before auth resolves the token id (middleware pass) an ``nxp_`` bearer is bucketed
+    by a hash prefix so plugin traffic never shares its host's IP bucket.
 
     @param request Current request.
-    @return Client IP, or ``"unknown"`` when none can be determined.
+    @return Bucket key, or ``"unknown"`` when no client IP can be determined.
     """
+    token_id = getattr(getattr(request, "state", None), "plugin_token_id", None)
+    if token_id:
+        return f"plugin:{token_id}"
+    auth = request.headers.get("authorization", "")
+    if auth[:7].lower() == "bearer " and auth[7:].startswith("nxp_"):
+        return "plugin:" + hashlib.sha256(auth[7:].encode()).hexdigest()[:16]
     return client_ip(request) or "unknown"
 
 
