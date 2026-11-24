@@ -3,7 +3,7 @@
  * @file components/settings/AppriseSection.tsx
  * @brief "Other apps" settings: list, test, remove and add Apprise URLs.
  */
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Eye, EyeOff, Send, Trash2 } from "lucide-react";
@@ -15,6 +15,8 @@ import {
 } from "@/lib/api/apprise";
 import { ApiError } from "@/lib/api/errors";
 import { APPRISE_KEY, useAppriseUrls } from "@/hooks/useAppriseUrls";
+
+const INFO_MS = 5000;
 
 /**
  * @brief Apprise apps manager.
@@ -52,17 +54,27 @@ export function AppriseSection() {
   });
   const remove = useMutation({
     mutationFn: deleteAppriseUrl,
+    onMutate: () => setInfo(null),
     onSuccess: refresh,
+    onError: () => setInfo(t("apprise_remove_fail")),
   });
   const test = useMutation({
     mutationFn: testAppriseUrl,
+    onMutate: () => setInfo(null),
     onSuccess: (r) =>
       setInfo(r.status === "sent" ? t("apprise_test_ok") : r.message),
     onError: () => setInfo(t("apprise_test_fail")),
   });
 
+  useEffect(() => {
+    if (!info) return;
+    const id = setTimeout(() => setInfo(null), INFO_MS);
+    return () => clearTimeout(id);
+  }, [info]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    setInfo(null);
     if (url.trim()) add.mutate();
   };
 
@@ -76,9 +88,12 @@ export function AppriseSection() {
           const name = a.label || t("apprise_unnamed");
           return (
             <li key={a.id} className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm font-medium">
-                {name}
-              </p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{name}</p>
+                {a.scheme && (
+                  <p className="truncate text-xs text-muted">{a.scheme}://…</p>
+                )}
+              </div>
               <IconButton
                 aria-label={`${t("apprise_test")} ${name}`}
                 onClick={() => test.mutate(a.id)}
@@ -113,9 +128,9 @@ export function AppriseSection() {
               autoComplete="off"
               value={url}
               error={error ?? undefined}
-              hint={t("apprise_hint")}
               onChange={(e) => setUrl(e.target.value)}
             />
+            <p className="mt-1.5 text-sm text-muted">{t("apprise_hint")}</p>
           </div>
           <IconButton
             type="button"

@@ -65,8 +65,35 @@ describe("AppriseSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps examples visible after a failed add", async () => {
+    api.createAppriseUrl.mockRejectedValue(new ApiError(400, "x", "bad"));
+    wrap();
+    await userEvent.type(screen.getByLabelText("App URL"), "nope");
+    await userEvent.click(screen.getByRole("button", { name: "Add app" }));
+    await screen.findByText(en.settings.notif.apprise_invalid);
+    expect(
+      screen.getByText(/ntfy:\/\/ntfy.sh\/your-topic/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows feedback when remove fails", async () => {
+    api.listAppriseUrls.mockResolvedValue([
+      { id: "1", label: "Phone", scheme: "ntfy" },
+    ]);
+    api.deleteAppriseUrl.mockRejectedValue(new Error("x"));
+    wrap();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Remove Phone" }),
+    );
+    expect(
+      await screen.findByText(en.settings.notif.apprise_remove_fail),
+    ).toBeInTheDocument();
+  });
+
   it("lists apps with Test/Remove buttons", async () => {
-    api.listAppriseUrls.mockResolvedValue([{ id: "1", label: "Phone" }]);
+    api.listAppriseUrls.mockResolvedValue([
+      { id: "1", label: "Phone", scheme: "ntfy" },
+    ]);
     wrap();
     expect(
       await screen.findByRole("button", { name: "Test Phone" }),
@@ -74,6 +101,7 @@ describe("AppriseSection", () => {
     expect(
       screen.getByRole("button", { name: "Remove Phone" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("ntfy://…")).toBeInTheDocument();
   });
 
   it("disables matrix apprise switch when hint given", () => {
