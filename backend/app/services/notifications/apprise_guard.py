@@ -58,7 +58,8 @@ def _endpoint_hosts(plugin: object) -> list[str] | None:
     tokens = getattr(plugin, "template_tokens", None) or {}
     schema = str(getattr(plugin, "protocol", "") or getattr(plugin, "schema", "")).lower()
     names = {n for n in dir(plugin) if n.endswith("_host") and not n.startswith("_")}
-    if "host" in tokens and schema not in TOKEN_HOST_SCHEMES:
+    cloud = getattr(plugin, "mode", None) == "cloud"  # e.g. ntfy://topic -> ntfy.sh
+    if "host" in tokens and schema not in TOKEN_HOST_SCHEMES and not cloud:
         names.add("host")
         if not getattr(plugin, "host", None):
             return None
@@ -72,7 +73,10 @@ def _endpoint_hosts(plugin: object) -> list[str] | None:
 def _fail() -> AppError:
     return AppError(
         code="apprise_url_blocked",
-        message=_("Apprise URL points to a private or unresolvable address"),
+        message=_(
+            "That address is on a private network or can't be reached. "
+            "Ask an admin to allow local addresses."
+        ),
         status_code=422,
     )
 

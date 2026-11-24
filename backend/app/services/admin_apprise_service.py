@@ -65,7 +65,7 @@ class AdminAppriseService:
             )
         row = await self._repo.create(self._cid, None, url, label, is_admin_target=True)
         await self._log("apprise.target.created", row.id, {"label": label})
-        return row
+        return await self._repo.get(row.id) or row
 
     async def delete(self, url_id: uuid.UUID) -> None:
         """@brief Delete an admin target."""

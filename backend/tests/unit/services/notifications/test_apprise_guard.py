@@ -137,3 +137,30 @@ def test_member_sender_has_redirects_off_even_with_url_param() -> None:
     a = build_apprise("json://example.com/x?redirect=yes", allow_local=False)
     assert all(p.redirects is False for p in a)
     assert all(p.redirects for p in build_apprise("json://example.com/x", allow_local=True))
+
+
+def test_ntfy_short_form_cloud_mode_skips_dns() -> None:
+    with patch("socket.getaddrinfo", side_effect=AssertionError("no DNS")):
+        check_apprise_url("ntfy://mytopic", allow_local=False)
+
+
+async def test_admin_alert_logs_when_notify_returns_false() -> None:
+    from app.services import admin_alerts
+
+    target = MagicMock()
+    target.id = uuid.uuid4()
+    target.apprise_url = "ntfy://ntfy.sh/t"
+    repo = MagicMock()
+    repo.list_admin_targets = AsyncMock(return_value=[target])
+    apobj = MagicMock()
+    apobj.notify.return_value = False
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
+    with (
+        patch.object(admin_alerts, "AppriseRepository", return_value=repo),
+        patch.object(admin_alerts, "build_apprise", return_value=apobj),
+        patch.object(admin_alerts, "build_notification_service", return_value=MagicMock()),
+        patch.object(admin_alerts, "logger") as log,
+    ):
+        await admin_alerts._deliver(session, uuid.uuid4(), "disk_high", "msg")
+    log.warning.assert_any_call("admin_alert.apprise_failed", target_id=str(target.id))

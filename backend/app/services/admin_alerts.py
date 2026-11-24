@@ -44,9 +44,13 @@ async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, ms
     for t in await AppriseRepository(session).list_admin_targets(community_id):
         try:
             apobj = build_apprise(t.apprise_url, allow_local=True)
-            await asyncio.to_thread(apobj.notify, body=msg, title="Nexara alert")
+            ok = await asyncio.to_thread(apobj.notify, body=msg, title="Nexara alert")
+            if not ok:
+                logger.warning("admin_alert.apprise_failed", target_id=str(t.id))
         except Exception as exc:
-            logger.warning("admin_alert.apprise_failed", error=type(exc).__name__)
+            logger.warning(
+                "admin_alert.apprise_failed", target_id=str(t.id), error=type(exc).__name__
+            )
     svc = build_notification_service(session, community_id)
     admins = (
         (

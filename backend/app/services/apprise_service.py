@@ -61,7 +61,7 @@ class AppriseService:
             )
         await self._guard(url)
         row = await self._repo.create(self._community_id, user_id, url, label)
-        return row
+        return await self._repo.get(row.id) or row
 
     async def update(
         self, user_id: uuid.UUID, url_id: uuid.UUID, label: str | None, enabled: bool | None
