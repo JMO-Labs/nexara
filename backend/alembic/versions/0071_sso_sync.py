@@ -73,7 +73,7 @@ def downgrade() -> None:
     for col, (key, dflt) in _CLAIMS.items():
         op.add_column(
             "oauth_providers",
-            sa.Column(col, sa.String(64), nullable=False, server_default=dflt),
+            sa.Column(col, sa.Text(), nullable=False, server_default=dflt),
         )
         op.execute(
             f"UPDATE oauth_providers SET {col} = claim_mapping->>'{key}' "

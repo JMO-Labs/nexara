@@ -14,9 +14,31 @@ from uuid import UUID
 from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_validator
 
 from app.schemas.subgroup import SUBGROUP_ROLES
+from app.services.oauth.presets import PRESETS
 
 #: Community roles a group rule without subgroup_id may grant.
 COMMUNITY_ROLES = ("viewer", "member", "admin")
+
+
+def _check_preset(value: str | None) -> str | None:
+    """@brief Reject unknown preset keys."""
+    if value is not None and value not in PRESETS:
+        raise ValueError(f"preset must be one of {', '.join(PRESETS)}")
+    return value
+
+
+def _norm_domains(value: list[str]) -> list[str]:
+    """@brief Strip, lowercase, drop leading '@', drop empties, dedupe (order kept)."""
+    out: dict[str, None] = {}
+    for d in value:
+        d = d.strip().lstrip("@").strip().lower()
+        if d:
+            out[d] = None
+    return list(out)
+
+
+Preset = Annotated[str | None, AfterValidator(_check_preset)]
+Domains = Annotated[list[str], AfterValidator(_norm_domains)]
 
 
 class GroupMappingRule(BaseModel):
@@ -91,8 +113,8 @@ class OAuthProviderCreate(BaseModel):
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] = Field(default_factory=dict)
     default_role: str = "member"
-    preset: str | None = None
-    allowed_domains: list[str] = Field(default_factory=list)
+    preset: Preset = None
+    allowed_domains: Domains = Field(default_factory=list)
     required_group: str | None = None
     username_claim: str = "preferred_username"
     sync_profile: bool = True
@@ -124,8 +146,8 @@ class OAuthProviderUpdate(BaseModel):
     end_session_endpoint: str | None = None
     group_mappings: dict[str, str] | None = None
     default_role: str | None = None
-    preset: str | None = None
-    allowed_domains: list[str] | None = None
+    preset: Preset = None
+    allowed_domains: Domains | None = None
     required_group: str | None = None
     username_claim: str | None = None
     sync_profile: bool | None = None

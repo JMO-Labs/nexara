@@ -2,30 +2,19 @@
 @file admin_oauth.py
 @brief Admin OAuth/SSO provider CRUD and the SSO-only toggle.
 
-Discovery, test and preview tools live in admin_oauth_tools.py.
-All routes require admin role. Audit log entries for mutations.
+Discovery, test and preview tools live in admin_oauth_tools.py. Logic lives in
+AdminOAuthService; all routes require admin role.
 """
 
 from __future__ import annotations
 
 import uuid
 
-import httpx
-import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.client_ip import client_ip
-from app.core.config import Settings, get_settings
-from app.core.dependencies import get_db, require_role
-from app.core.encryption import derive_fernet_key, encrypt_secret
-from app.core.exceptions import AppError, NotFoundError
+from app.core.deps_oauth_admin import get_admin_oauth_service
 from app.core.i18n import _
-from app.models.oauth_provider import OAuthProvider
-from app.models.user import User
-from app.repositories.audit_repo import AuditRepository
-from app.repositories.oauth_repo import OAuthProviderRepository
 from app.schemas.common import MessageResponse
 from app.schemas.oauth import (
     OAuthProviderCreate,
@@ -33,235 +22,57 @@ from app.schemas.oauth import (
     OAuthProviderUpdate,
     OIDCProviderCreate,
 )
-from app.services.auth import sso_only
-from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
-from app.services.oauth.provider_manager import ProviderManager
-
-logger = structlog.get_logger(__name__)
+from app.services.oauth.admin_oauth_service import AdminOAuthService
 
 router = APIRouter(prefix="/admin/oauth", tags=["admin-oauth"])
 settings_router = APIRouter(prefix="/admin/settings", tags=["admin-settings"])
 
-
-def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
-    """@brief Extract community UUID from settings."""
-    return uuid.UUID(settings.COMMUNITY_ID)
+_Svc = Depends(get_admin_oauth_service)
 
 
 @router.get("/providers", response_model=list[OAuthProviderResponse])
-async def list_providers(
-    _user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
-) -> list[OAuthProviderResponse]:
+async def list_providers(svc: AdminOAuthService = _Svc) -> list[OAuthProviderResponse]:
     """@brief List all OAuth providers for the community."""
-    repo = OAuthProviderRepository(db)
-    items, _ = await repo.list(community_id=community_id, limit=100)
-    return [OAuthProviderResponse.model_validate(p) for p in items]
+    return [OAuthProviderResponse.model_validate(p) for p in await svc.list_all()]
 
 
 @router.post("/providers", response_model=OAuthProviderResponse, status_code=201)
 async def create_provider(
-    body: OAuthProviderCreate,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    community_id: uuid.UUID = Depends(_community_id),
+    body: OAuthProviderCreate, svc: AdminOAuthService = _Svc
 ) -> OAuthProviderResponse:
     """@brief Create a new OAuth provider."""
-    fernet_key = derive_fernet_key(settings.SECRET_KEY)
-    encrypted = encrypt_secret(body.client_secret, fernet_key)
-
-    endpoints: DiscoveryEndpoints = {}
-    if body.provider_type == "oidc" and body.issuer:
-        endpoints = await discover_endpoints(body.issuer.strip())
-
-    provider = OAuthProvider(
-        community_id=community_id,
-        slug=body.slug,
-        display_name=body.display_name,
-        provider_type=body.provider_type,
-        client_id=body.client_id,
-        client_secret_encrypted=encrypted,
-        issuer=body.issuer,
-        discovery_url=body.discovery_url,
-        claim_mapping=body.claim_mapping,
-        icon_url=body.icon_url,
-        scopes=body.scopes or "openid profile email groups",
-        authorization_endpoint=(
-            body.authorization_endpoint or endpoints.get("authorization_endpoint")
-        ),
-        token_endpoint=body.token_endpoint or endpoints.get("token_endpoint"),
-        userinfo_endpoint=(body.userinfo_endpoint or endpoints.get("userinfo_endpoint")),
-        jwks_uri=body.jwks_uri or endpoints.get("jwks_uri"),
-        end_session_endpoint=(body.end_session_endpoint or endpoints.get("end_session_endpoint")),
-        group_mappings=body.group_mappings,
-        default_role=body.default_role,
-        preset=body.preset,
-        allowed_domains=body.allowed_domains,
-        required_group=body.required_group,
-        username_claim=body.username_claim,
-        sync_profile=body.sync_profile,
-        enabled=body.enabled,
-        auto_create_users=body.auto_create_users,
-    )
-    repo = OAuthProviderRepository(db)
-    provider = await repo.create(provider)
-
-    audit = AuditRepository(db)
-    await audit.append(
-        actor_id=user.id,
-        action="oauth.provider.created",
-        target_type="oauth_provider",
-        target_id=provider.id,
-        extra_data={"slug": provider.slug},
-        ip_address=client_ip(request),
-    )
-    logger.info("oauth_provider_created", provider_id=str(provider.id), slug=provider.slug)
-    return OAuthProviderResponse.model_validate(provider)
+    return OAuthProviderResponse.model_validate(await svc.create(body))
 
 
 @router.put("/providers/{provider_id}", response_model=OAuthProviderResponse)
 async def update_provider(
-    provider_id: uuid.UUID,
-    body: OAuthProviderUpdate,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    community_id: uuid.UUID = Depends(_community_id),
+    provider_id: uuid.UUID, body: OAuthProviderUpdate, svc: AdminOAuthService = _Svc
 ) -> OAuthProviderResponse:
     """@brief Update an OAuth provider."""
-    repo = OAuthProviderRepository(db)
-    provider = await repo.get_by_id(provider_id, community_id)
-    if not provider:
-        raise NotFoundError(message=_("OAuth provider not found"))
-
-    data = body.model_dump(exclude_unset=True)
-    if "client_secret" in data and data["client_secret"]:
-        data["client_secret_encrypted"] = encrypt_secret(
-            data.pop("client_secret"), derive_fernet_key(settings.SECRET_KEY)
-        )
-    elif "client_secret" in data:
-        data.pop("client_secret")
-
-    provider = await repo.update(provider, data)
-
-    audit = AuditRepository(db)
-    await audit.append(
-        actor_id=user.id,
-        action="oauth.provider.updated",
-        target_type="oauth_provider",
-        target_id=provider.id,
-        extra_data={"slug": provider.slug},
-        ip_address=client_ip(request),
-    )
-    return OAuthProviderResponse.model_validate(provider)
+    return OAuthProviderResponse.model_validate(await svc.update(provider_id, body))
 
 
 @router.delete("/providers/{provider_id}", response_model=MessageResponse)
-async def delete_provider(
-    provider_id: uuid.UUID,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
-) -> MessageResponse:
+async def delete_provider(provider_id: uuid.UUID, svc: AdminOAuthService = _Svc) -> MessageResponse:
     """@brief Delete an OAuth provider."""
-    repo = OAuthProviderRepository(db)
-    provider = await repo.get_by_id(provider_id, community_id)
-    if not provider:
-        raise NotFoundError(message=_("OAuth provider not found"))
-
-    await repo.soft_delete(provider)
-    manager = ProviderManager(db)
-    manager.invalidate_cache()
-
-    audit = AuditRepository(db)
-    await audit.append(
-        actor_id=user.id,
-        action="oauth.provider.deleted",
-        target_type="oauth_provider",
-        target_id=provider_id,
-        extra_data={"slug": provider.slug},
-        ip_address=client_ip(request),
-    )
+    await svc.delete(provider_id)
     return MessageResponse(message=_("OAuth provider deleted"))
 
 
 @router.post("/providers/{provider_id}/toggle", response_model=OAuthProviderResponse)
 async def toggle_provider(
-    provider_id: uuid.UUID,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
+    provider_id: uuid.UUID, svc: AdminOAuthService = _Svc
 ) -> OAuthProviderResponse:
     """@brief Toggle provider enabled state."""
-    repo = OAuthProviderRepository(db)
-    provider = await repo.get_by_id(provider_id, community_id)
-    if not provider:
-        raise NotFoundError(message=_("OAuth provider not found"))
-
-    provider = await repo.update(provider, {"enabled": not provider.enabled})
-
-    audit = AuditRepository(db)
-    await audit.append(
-        actor_id=user.id,
-        action="oauth.provider.toggled",
-        target_type="oauth_provider",
-        target_id=provider.id,
-        extra_data={"slug": provider.slug, "enabled": provider.enabled},
-        ip_address=client_ip(request),
-    )
-    return OAuthProviderResponse.model_validate(provider)
+    return OAuthProviderResponse.model_validate(await svc.toggle(provider_id))
 
 
 @router.post("/providers/oidc", response_model=OAuthProviderResponse, status_code=201)
 async def create_oidc_provider(
-    body: OIDCProviderCreate,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-    community_id: uuid.UUID = Depends(_community_id),
+    body: OIDCProviderCreate, svc: AdminOAuthService = _Svc
 ) -> OAuthProviderResponse:
     """@brief Register an OIDC provider from its discovery URL."""
-    try:
-        doc = await fetch_discovery(body.discovery_url.strip(), settings.OIDC_HTTP_TIMEOUT)
-    except (ValueError, httpx.HTTPError) as exc:
-        raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
-
-    provider = OAuthProvider(
-        community_id=community_id,
-        slug=body.slug,
-        display_name=body.display_name,
-        provider_type="oidc",
-        client_id=body.client_id,
-        client_secret_encrypted=encrypt_secret(
-            body.client_secret, derive_fernet_key(settings.SECRET_KEY)
-        ),
-        issuer=doc["issuer"],
-        discovery_url=body.discovery_url.strip(),
-        scopes=body.scopes,
-        claim_mapping=body.claim_mapping,
-        authorization_endpoint=doc["authorization_endpoint"],
-        token_endpoint=doc["token_endpoint"],
-        userinfo_endpoint=doc.get("userinfo_endpoint"),
-        jwks_uri=doc.get("jwks_uri"),
-        end_session_endpoint=doc.get("end_session_endpoint"),
-    )
-    provider = await OAuthProviderRepository(db).create(provider)
-    await AuditRepository(db).append(
-        actor_id=user.id,
-        action="oauth.provider.created",
-        target_type="oauth_provider",
-        target_id=provider.id,
-        extra_data={"slug": provider.slug, "type": "oidc"},
-        ip_address=client_ip(request),
-    )
-    return OAuthProviderResponse.model_validate(provider)
+    return OAuthProviderResponse.model_validate(await svc.register_oidc(body))
 
 
 class SsoOnlyUpdate(BaseModel):
@@ -278,24 +89,7 @@ class SsoOnlyResponse(BaseModel):
 
 
 @settings_router.patch("/sso-only", response_model=SsoOnlyResponse)
-async def set_sso_only(
-    body: SsoOnlyUpdate,
-    request: Request,
-    user: User = Depends(require_role("admin")),
-    db: AsyncSession = Depends(get_db),
-    community_id: uuid.UUID = Depends(_community_id),
-) -> SsoOnlyResponse:
+async def set_sso_only(body: SsoOnlyUpdate, svc: AdminOAuthService = _Svc) -> SsoOnlyResponse:
     """@brief Enable/disable SSO-only mode (requires an enabled OIDC provider to enable)."""
-    await sso_only.set_sso_only(db, community_id, body.enabled, user.id)
-    await AuditRepository(db).append(
-        actor_id=user.id,
-        action="settings.sso_only.updated",
-        target_type="community",
-        target_id=community_id,
-        extra_data={"enabled": body.enabled},
-        ip_address=client_ip(request),
-    )
-    return SsoOnlyResponse(
-        sso_only=body.enabled,
-        warning=sso_only.SSO_ONLY_WARNING if body.enabled else None,
-    )
+    warning = await svc.set_sso_only(body.enabled)
+    return SsoOnlyResponse(sso_only=body.enabled, warning=warning)

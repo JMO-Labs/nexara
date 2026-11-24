@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.exceptions import AuthenticationError
+
 from .user_provisioner import OAuthAuthResult
 
 _VERIFIED = (True, "true")
@@ -40,6 +42,7 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> 
     @param claims Verified ID token claims.
     @param claim_mapping Nexara field -> provider claim overrides (merged over defaults).
     @return OAuthAuthResult (sub, email, display_name, avatar_url, groups).
+    @raises AuthenticationError when no subject resolves (mapped or standard `sub`).
     """
     overrides = {k: v for k, v in (claim_mapping or {}).items() if isinstance(v, str)}
     m = {**DEFAULT_MAPPING, **overrides}
@@ -54,9 +57,12 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> 
         groups = [raw_groups]
     else:
         groups = []
+    sub = get("sub") or claims.get("sub")
+    if not sub:
+        raise AuthenticationError(message="OAuth identity missing subject")
     email, name, pic = get("email"), get("name"), get("picture")
     return OAuthAuthResult(
-        sub=str(get("sub") or ""),
+        sub=str(sub),
         email=str(email) if email else None,
         display_name=str(name) if name else None,
         avatar_url=str(pic) if pic else None,

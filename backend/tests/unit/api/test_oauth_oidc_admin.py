@@ -79,9 +79,11 @@ def _provider():
 async def test_register_oidc_uses_discovery_and_masks_secret(test_app, admin_override):
     prov = _provider()
     with (
-        patch("app.api.v1.admin_oauth.fetch_discovery", AsyncMock(return_value=DOC)),
-        patch("app.api.v1.admin_oauth.OAuthProviderRepository") as repo_cls,
-        patch("app.api.v1.admin_oauth.AuditRepository") as audit_cls,
+        patch(
+            "app.services.oauth.admin_oauth_service.fetch_discovery", AsyncMock(return_value=DOC)
+        ),
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.AuditRepository") as audit_cls,
     ):
         repo = AsyncMock()
         repo.create = AsyncMock(return_value=prov)
@@ -115,9 +117,11 @@ async def test_test_endpoint_reports_discovery_and_exchange(test_app, admin_over
     http.__aenter__ = AsyncMock(return_value=http)
     http.__aexit__ = AsyncMock(return_value=False)
     with (
-        patch("app.api.v1.admin_oauth_tools.fetch_discovery", AsyncMock(return_value=DOC)),
-        patch("app.api.v1.admin_oauth_tools.OAuthProviderRepository") as repo_cls,
-        patch("app.api.v1.admin_oauth_tools.httpx.AsyncClient", return_value=http),
+        patch(
+            "app.services.oauth.admin_oauth_service.fetch_discovery", AsyncMock(return_value=DOC)
+        ),
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.httpx.AsyncClient", return_value=http),
     ):
         repo = AsyncMock()
         repo.get_by_id = AsyncMock(return_value=prov)
@@ -135,10 +139,10 @@ async def test_test_endpoint_discovery_failure(test_app, admin_override):
     prov = _provider()
     with (
         patch(
-            "app.api.v1.admin_oauth_tools.fetch_discovery",
+            "app.services.oauth.admin_oauth_service.fetch_discovery",
             AsyncMock(side_effect=ValueError("Issuer must use https")),
         ),
-        patch("app.api.v1.admin_oauth_tools.OAuthProviderRepository") as repo_cls,
+        patch("app.services.oauth.admin_oauth_service.OAuthProviderRepository") as repo_cls,
     ):
         repo = AsyncMock()
         repo.get_by_id = AsyncMock(return_value=prov)

@@ -36,3 +36,19 @@ def test_missing_and_string_group():
 
 def test_default_mapping_keys():
     assert {"email", "name", "groups"} <= set(DEFAULT_MAPPING)
+
+
+def test_sub_falls_back_to_standard_claim():
+    r = map_claims({"sub": "std", "id": ""}, {"sub": "id"})
+    assert r.sub == "std"
+
+
+def test_missing_subject_rejected():
+    import pytest
+
+    from app.core.exceptions import AuthenticationError
+
+    with pytest.raises(AuthenticationError):
+        map_claims({"email": "a@b.c"}, {"sub": "id"})
+    with pytest.raises(AuthenticationError):
+        map_claims({"sub": ""}, None)

@@ -13,8 +13,9 @@ import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.api.v1 import admin_oauth, admin_oauth_tools
 from app.core.exceptions import AppError, NotFoundError
+from app.services.oauth import admin_oauth_service as svc_mod
+from app.services.oauth.admin_oauth_service import AdminOAuthService
 from tests.integration.test_oauth_flow import _mock_provider
 
 _CB = "/api/v1/oauth/oidc/callback"
@@ -61,37 +62,29 @@ async def test_callback_uses_custom_claim_mapping(test_app):
     m_map.assert_called_once()
 
 
-def _deps():
-    return dict(
-        _user=MagicMock(),
-        db=MagicMock(),
-        settings=SimpleNamespace(OIDC_HTTP_TIMEOUT=5, APP_BASE_URL="https://app.example.com"),
-        community_id=uuid.uuid4(),
+def _svc(repo=None) -> AdminOAuthService:
+    settings = SimpleNamespace(
+        OIDC_HTTP_TIMEOUT=5, APP_BASE_URL="https://app.example.com", SECRET_KEY="k"
     )
+    svc = AdminOAuthService(MagicMock(), uuid.uuid4(), settings, uuid.uuid4(), None)  # type: ignore[arg-type]
+    if repo is not None:
+        svc._repo = repo  # type: ignore[assignment]
+    return svc
 
 
 async def test_create_oidc_provider_invalid_discovery_returns_422():
     """fetch_discovery ValueError is wrapped in AppError 422."""
     body = SimpleNamespace(discovery_url=" https://x.example.com ")
-    with patch.object(admin_oauth, "fetch_discovery", AsyncMock(side_effect=ValueError("bad"))):
+    with patch.object(svc_mod, "fetch_discovery", AsyncMock(side_effect=ValueError("bad"))):
         with pytest.raises(AppError) as ei:
-            await admin_oauth.create_oidc_provider(
-                body,
-                MagicMock(),
-                user=MagicMock(),
-                db=MagicMock(),
-                settings=_deps()["settings"],
-                community_id=uuid.uuid4(),
-            )
+            await _svc().register_oidc(body)  # type: ignore[arg-type]
     assert ei.value.status_code == 422
 
 
 async def _run_test_provider(provider, **patches):
-    d = _deps()
     repo = MagicMock()
     repo.get_by_id = AsyncMock(return_value=provider)
-    with patch.object(admin_oauth_tools, "OAuthProviderRepository", return_value=repo):
-        return await admin_oauth_tools.test_provider(uuid.uuid4(), **d)
+    return await _svc(repo).test(uuid.uuid4())
 
 
 async def test_test_provider_not_found():
@@ -120,8 +113,8 @@ async def test_test_provider_unexpected_status():
     client = _http_client(AsyncMock(return_value=SimpleNamespace(status_code=200)))
     doc = {"issuer": "https://idp.example.com", "token_endpoint": "https://idp.example.com/t"}
     with (
-        patch.object(admin_oauth_tools, "fetch_discovery", AsyncMock(return_value=doc)),
-        patch.object(admin_oauth_tools.httpx, "AsyncClient", return_value=client),
+        patch.object(svc_mod, "fetch_discovery", AsyncMock(return_value=doc)),
+        patch.object(svc_mod.httpx, "AsyncClient", return_value=client),
     ):
         res = await _run_test_provider(_provider())
     assert res.token_endpoint_reachable is False
@@ -132,8 +125,8 @@ async def test_test_provider_token_endpoint_unreachable():
     client = _http_client(AsyncMock(side_effect=httpx.ConnectError("boom")))
     doc = {"issuer": "https://idp.example.com", "token_endpoint": "https://idp.example.com/t"}
     with (
-        patch.object(admin_oauth_tools, "fetch_discovery", AsyncMock(return_value=doc)),
-        patch.object(admin_oauth_tools.httpx, "AsyncClient", return_value=client),
+        patch.object(svc_mod, "fetch_discovery", AsyncMock(return_value=doc)),
+        patch.object(svc_mod.httpx, "AsyncClient", return_value=client),
     ):
         res = await _run_test_provider(_provider())
     assert res.error == "Token endpoint unreachable: ConnectError"
