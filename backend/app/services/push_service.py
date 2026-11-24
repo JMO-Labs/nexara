@@ -80,7 +80,8 @@ class PushService:
         """
         @brief Subscribe a user to push notifications (upsert by endpoint).
 
-        Deletes any existing subscription with the same endpoint, then creates new.
+        Replaces any existing subscription with the same endpoint, keeping
+        the owner's custom device name.
 
         @param user_id User UUID.
         @param endpoint Web Push endpoint URL.
@@ -90,6 +91,7 @@ class PushService:
         @return The created PushSubscription.
         """
         existing = await self._push_repo.find_by_endpoint(endpoint)
+        kept_name = existing.name if existing and existing.user_id == user_id else None
         if existing:
             await self._push_repo.delete_by_endpoint(endpoint)
 
@@ -99,7 +101,7 @@ class PushService:
             p256dh=p256dh,
             auth=auth,
             user_agent=user_agent,
-            name=parse_device(user_agent),
+            name=kept_name or parse_device(user_agent),
         )
         return await self._push_repo.create(sub)
 
@@ -230,14 +232,28 @@ class PushService:
                     vapid_private_key=vapid_private,
                     vapid_claims={"sub": vapid_sub},
                 )
-                await self._push_repo.touch_last_used(sub.id)
             except WebPushException as exc:
                 resp = getattr(exc, "response", None)
                 if resp is not None and getattr(resp, "status_code", None) in (404, 410):
                     await self._push_repo.cleanup_stale(sub.endpoint)
-                    logger.info("push_subscription_removed", endpoint=sub.endpoint)
+                    logger.info(
+                        "push_subscription_removed", endpoint_hash=endpoint_hash(sub.endpoint)
+                    )
                 else:
-                    logger.warning("push_send_failed", endpoint=sub.endpoint, error=str(exc))
+                    logger.warning(
+                        "push_send_failed",
+                        endpoint_hash=endpoint_hash(sub.endpoint),
+                        status=getattr(resp, "status_code", None),
+                    )
+            else:
+                try:
+                    await self._push_repo.touch_last_used(sub.id)
+                except Exception as exc:
+                    logger.warning(
+                        "push_touch_failed",
+                        endpoint_hash=endpoint_hash(sub.endpoint),
+                        error=type(exc).__name__,
+                    )
 
     async def list_devices(self, user_id: uuid.UUID) -> list[PushDeviceResponse]:
         """
@@ -261,6 +277,7 @@ class PushService:
         if sub is None:
             raise NotFoundError(_("Device not found"))
         sub.name = name
+        await self._push_repo.flush()
         return _device(sub)
 
     async def delete_device(self, user_id: uuid.UUID, device_id: uuid.UUID) -> None:

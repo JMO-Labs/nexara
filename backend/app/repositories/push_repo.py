@@ -140,3 +140,7 @@ class PushSubscriptionRepository(BaseRepository[PushSubscription]):
             .where(PushSubscription.id == device_id)
             .values(last_used_at=func.now())
         )
+
+    async def flush(self) -> None:
+        """@brief Flush pending changes to the session."""
+        await self._session.flush()

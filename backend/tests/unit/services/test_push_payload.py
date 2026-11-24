@@ -151,3 +151,70 @@ async def test_subscribe_sets_default_name_from_ua() -> None:
         USER_ID, "https://p/e", "k", "a", "Mozilla/5.0 (iPhone) Safari/604.1"
     )
     assert sub.name == "Safari on iOS"
+
+
+def _cfg_svc(repo: AsyncMock) -> PushService:
+    return PushService(
+        repo,
+        AsyncMock(),
+        COMMUNITY_ID,
+        settings=MagicMock(VAPID_PRIVATE_KEY="p", VAPID_PUBLIC_KEY="q", SMTP_FROM="a@b.c"),
+    )
+
+
+async def test_logs_never_contain_endpoint() -> None:
+    from pywebpush import WebPushException
+    from structlog.testing import capture_logs
+
+    repo = AsyncMock(spec=PushSubscriptionRepository)
+    gone, bad = _sub(), _sub()
+    bad.endpoint = "https://push.example.com/other"
+    repo.list_for_user.return_value = [gone, bad]
+    errs = [
+        WebPushException("x", response=MagicMock(status_code=404)),
+        WebPushException(
+            "boom https://push.example.com/other", response=MagicMock(status_code=500)
+        ),
+    ]
+    with patch("pywebpush.webpush", side_effect=errs), capture_logs() as logs:
+        await _cfg_svc(repo).send_push(USER_ID, "t", "b", "/")
+    assert len(logs) == 2
+    blob = repr(logs)
+    assert "push.example.com" not in blob
+    assert logs[0]["endpoint_hash"] == endpoint_hash(gone.endpoint)
+    assert logs[1]["endpoint_hash"] == endpoint_hash(bad.endpoint)
+
+
+async def test_touch_failure_does_not_abort_other_devices() -> None:
+    repo = AsyncMock(spec=PushSubscriptionRepository)
+    a, b = _sub(), _sub()
+    repo.list_for_user.return_value = [a, b]
+    repo.touch_last_used.side_effect = [RuntimeError("db"), None]
+    with patch("pywebpush.webpush") as wp:
+        await _cfg_svc(repo).send_push(USER_ID, "t", "b", "/")
+    assert wp.call_count == 2
+    assert repo.touch_last_used.await_count == 2
+
+
+async def test_resubscribe_keeps_custom_name() -> None:
+    repo = AsyncMock(spec=PushSubscriptionRepository)
+    old = _sub()
+    old.name = "Mum's phone"
+    repo.find_by_endpoint.return_value = old
+    repo.create.side_effect = lambda s: s
+    sub = await _svc(repo).subscribe(
+        USER_ID, old.endpoint, "k", "a", "Mozilla/5.0 (iPhone) Safari/604.1"
+    )
+    assert sub.name == "Mum's phone"
+
+
+async def test_rename_flushes() -> None:
+    repo = AsyncMock(spec=PushSubscriptionRepository)
+    sub = _sub()
+    repo.get_device.return_value = sub
+    await _svc(repo).rename_device(USER_ID, sub.id, "n")
+    repo.flush.assert_awaited_once()
+
+
+def test_tag_falls_back_to_target_id() -> None:
+    assert build_push_payload(_notif("x", {"message": "m", "target_id": "t9"}))["tag"] == "x:t9"
