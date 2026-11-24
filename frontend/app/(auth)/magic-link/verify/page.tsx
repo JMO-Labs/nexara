@@ -28,7 +28,7 @@ export default function MagicLinkVerifyPage() {
         if (cancelled) return;
         const out = await completeLogin(resp);
         if (out.kind === "two_factor") {
-          router.replace(twoFactorUrl(out, "/app"));
+          router.replace(twoFactorUrl("/app"));
           return;
         }
         router.replace("/app");

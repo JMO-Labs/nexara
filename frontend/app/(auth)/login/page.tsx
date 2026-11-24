@@ -6,6 +6,7 @@
  */
 import { safeInternalLink } from "@/lib/safeLink";
 import { useEffect, useState } from "react";
+import { useIsClient } from "@/hooks/useIsClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -34,6 +35,7 @@ export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeInternalLink(params.get("next")) ?? "/app";
+  const isClient = useIsClient();
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
   const [localAuth, setLocalAuth] = useState(true);
 
@@ -63,7 +65,7 @@ export default function LoginPage() {
     errorKey: "toasts.auth.login.failed",
     onSuccess: (out) => {
       if (out.kind === "two_factor") {
-        router.push(twoFactorUrl(out, next));
+        router.push(twoFactorUrl(next));
       } else {
         router.push(next);
       }
@@ -80,7 +82,7 @@ export default function LoginPage() {
       ),
     errorKey: "toasts.auth.login.failed",
     onSuccess: (out) =>
-      router.push(out.kind === "two_factor" ? twoFactorUrl(out, next) : next),
+      router.push(out.kind === "two_factor" ? twoFactorUrl(next) : next),
   });
 
   return (
@@ -138,7 +140,7 @@ export default function LoginPage() {
           <Button type="submit" size="lg" loading={login.isPending}>
             Sign in
           </Button>
-          {passkeysAvailable() && (
+          {isClient && passkeysAvailable() && (
             <Button
               type="button"
               size="lg"

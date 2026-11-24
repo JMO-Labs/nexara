@@ -69,6 +69,29 @@ describe("SecurityTab", () => {
     expect(done).toBeEnabled();
   });
 
+  it("shows a message when copying recovery codes fails", async () => {
+    vi.mocked(api.totpStart).mockResolvedValue({
+      otpauth_uri: "otpauth://totp/x",
+      secret: "S",
+    });
+    vi.mocked(api.totpConfirm).mockResolvedValue({ recovery_codes: ["a-1"] });
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockRejectedValue(new Error("no")) },
+      configurable: true,
+    });
+    render(<SecurityTab />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Set up authenticator" }),
+    );
+    await userEvent.type(
+      await screen.findByLabelText("6-digit code"),
+      "123456",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Copy" }));
+    expect(await screen.findByText(/Copy failed/)).toBeTruthy();
+  });
+
   it("hides passkey controls on insecure context", async () => {
     setSecure(false);
     render(<SecurityTab />);

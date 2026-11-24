@@ -32,6 +32,7 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 vi.mock("@/lib/auth/flow", () => ({ completeLogin: vi.fn() }));
 
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import RegisterPage from "@/app/(auth)/register/page";
 import MagicLinkPage from "@/app/(auth)/magic-link/page";
 import ResetPasswordPage from "@/app/(auth)/reset-password/page";
@@ -88,7 +89,7 @@ describe("auth blur validation", () => {
   });
 
   it("two-factor validates code length on blur", async () => {
-    search = "token=t";
+    usePendingTwoFactor.getState().set("t", ["totp"]);
     render(<TwoFactorPage />);
     const u = userEvent.setup();
     await u.type(screen.getByLabelText("Code"), "12");

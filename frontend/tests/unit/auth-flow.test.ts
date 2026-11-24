@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { completeLogin } from "@/lib/auth/flow";
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import { useSession } from "@/stores/session";
 import { setAccessToken, getAccessToken } from "@/lib/auth/session";
 import * as authApi from "@/lib/api/auth";
@@ -43,6 +44,10 @@ describe("completeLogin", () => {
       two_factor_methods: ["passkey"],
     });
     expect(result).toMatchObject({ methods: ["passkey"] });
+    expect(usePendingTwoFactor.getState()).toMatchObject({
+      token: "t",
+      methods: ["passkey"],
+    });
   });
 
   it("sets access token and hydrates user on success", async () => {

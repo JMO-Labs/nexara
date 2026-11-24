@@ -41,6 +41,7 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 vi.mock("@/lib/auth/flow", () => ({ completeLogin: vi.fn() }));
 
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import RegisterPage from "@/app/(auth)/register/page";
 import MagicLinkPage from "@/app/(auth)/magic-link/page";
 import ResetPasswordPage from "@/app/(auth)/reset-password/page";
@@ -132,12 +133,14 @@ describe("auth leftovers", () => {
   });
 
   it("two-factor without token shows expired state", () => {
+    usePendingTwoFactor.getState().clear();
     render(<TwoFactorPage />);
     expect(screen.getByText("Two-factor session expired")).toBeInTheDocument();
   });
 
   it("two-factor rejects an unsafe next param", async () => {
-    search = "token=t&next=//evil.com";
+    usePendingTwoFactor.getState().set("t", ["totp"]);
+    search = "next=//evil.com";
     vi.mocked(api.verifyTwoFactorLogin).mockResolvedValue({} as never);
     render(<TwoFactorPage />);
     const u = userEvent.setup();

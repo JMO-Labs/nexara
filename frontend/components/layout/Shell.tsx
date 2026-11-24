@@ -64,7 +64,8 @@ export function Shell({ children }: { children: ReactNode }) {
   // Past the 2FA grace period the API 403s everything but setup routes.
   useEffect(() => {
     function onSetupRequired() {
-      if (pathname !== "/app/settings")
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (pathname !== "/app/settings" || tab !== "security")
         router.replace("/app/settings?tab=security");
     }
     window.addEventListener("nx:2fa-setup-required", onSetupRequired);

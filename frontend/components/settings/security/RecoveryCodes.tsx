@@ -22,15 +22,22 @@ export interface RecoveryCodesProps {
 export function RecoveryCodes({ codes, onDone }: RecoveryCodesProps) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const text = (codes ?? []).join("\n");
   const done = () => {
     setSaved(false);
     setCopied(false);
+    setCopyFailed(false);
     onDone();
   };
   const copy = async () => {
-    await navigator.clipboard?.writeText(text);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setCopyFailed(false);
+    } catch {
+      setCopyFailed(true);
+    }
   };
   const download = () => {
     const url = URL.createObjectURL(
@@ -71,6 +78,11 @@ export function RecoveryCodes({ codes, onDone }: RecoveryCodesProps) {
           Download .txt
         </Button>
       </div>
+      {copyFailed && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          Copy failed — select and copy manually.
+        </p>
+      )}
       <label className="mt-4 flex min-h-11 items-center gap-2 text-sm">
         <Checkbox
           checked={saved}

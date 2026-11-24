@@ -85,7 +85,13 @@ export function TotpSetup({ onClose, onEnabled }: TotpSetupProps) {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => navigator.clipboard?.writeText(secret)}
+              onClick={() =>
+                navigator.clipboard
+                  .writeText(secret)
+                  .catch(() =>
+                    setError("Copy failed — select and copy manually."),
+                  )
+              }
             >
               Copy key
             </Button>

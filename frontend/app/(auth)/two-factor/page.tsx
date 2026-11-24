@@ -7,6 +7,8 @@
  */
 import { safeInternalLink } from "@/lib/safeLink";
 import { useState } from "react";
+import { useIsClient } from "@/hooks/useIsClient";
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -30,11 +32,15 @@ type FormData = z.infer<typeof Schema>;
 export default function TwoFactorPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const token = params.get("token");
+  const isClient = useIsClient();
+  const token = usePendingTwoFactor((s) => s.token);
+  const pending = usePendingTwoFactor((s) => s.methods);
   const next = safeInternalLink(params.get("next")) ?? "/app";
-  const methods = (params.get("methods") ?? "totp,recovery").split(",");
-  const hasCode = methods.includes("totp") || methods.includes("recovery");
-  const hasPasskey = methods.includes("passkey");
+  const canPasskey = isClient && passkeysAvailable();
+  const hasPasskey = pending.includes("passkey") && canPasskey;
+  // Never leave the card empty: fall back to the code form.
+  const hasCode =
+    pending.includes("totp") || pending.includes("recovery") || !hasPasskey;
   const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState } = useForm<FormData>({
@@ -43,11 +49,12 @@ export default function TwoFactorPage() {
     defaultValues: { code: "" },
   });
 
+  if (!isClient) return null;
   if (!token) {
     return (
       <AuthCard
         title="Two-factor session expired"
-        subtitle="Start the sign-in flow again to receive a fresh prompt."
+        subtitle="Your sign-in session was lost (for example after a reload). Sign in again to continue."
       >
         <Link
           href="/login"

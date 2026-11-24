@@ -39,18 +39,19 @@ vi.mock("@/lib/passkeys", () => ({
 }));
 vi.mock("@/lib/auth/flow", () => ({
   completeLogin: vi.fn(),
-  twoFactorUrl: (o: { two_factor_token: string }, n: string) =>
-    `/two-factor?token=${o.two_factor_token}&next=${n}`,
+  twoFactorUrl: (n: string) => `/two-factor?next=${n}`,
 }));
 
 import LoginPage from "@/app/(auth)/login/page";
 import TwoFactorPage from "@/app/(auth)/two-factor/page";
 import * as pk from "@/lib/passkeys";
 import * as flow from "@/lib/auth/flow";
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 
 beforeEach(() => {
   vi.clearAllMocks();
   search = "";
+  usePendingTwoFactor.getState().clear();
   vi.mocked(pk.passkeysAvailable).mockReturnValue(true);
 });
 
@@ -81,7 +82,7 @@ describe("login passkey", () => {
 
 describe("two-factor page methods", () => {
   it("passkey-only: no code input, passkey button completes login", async () => {
-    search = "token=T&methods=passkey";
+    usePendingTwoFactor.getState().set("T", ["passkey"]);
     vi.mocked(pk.authenticateWithPasskey).mockResolvedValue({} as never);
     vi.mocked(flow.completeLogin).mockResolvedValue({ kind: "authenticated" });
     render(<TwoFactorPage />);
@@ -98,9 +99,21 @@ describe("two-factor page methods", () => {
   });
 
   it("totp only: code input, no passkey button", () => {
-    search = "token=T&methods=totp,recovery";
+    usePendingTwoFactor.getState().set("T", ["totp", "recovery"]);
     render(<TwoFactorPage />);
     expect(screen.getByLabelText("Code")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Use a passkey" })).toBeNull();
+  });
+
+  it("passkey-only without passkey support falls back to the code form", () => {
+    usePendingTwoFactor.getState().set("T", ["passkey"]);
+    vi.mocked(pk.passkeysAvailable).mockReturnValue(false);
+    render(<TwoFactorPage />);
+    expect(screen.getByLabelText("Code")).toBeTruthy();
+  });
+
+  it("without a pending token shows the expired card", () => {
+    render(<TwoFactorPage />);
+    expect(screen.getByText("Back to sign-in")).toBeTruthy();
   });
 });

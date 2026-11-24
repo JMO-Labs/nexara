@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button, IconButton, Input } from "@/components/ui";
+import { useIsClient } from "@/hooks/useIsClient";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useToasts } from "@/stores/toasts";
 import { formatApiError } from "@/lib/api/errors";
@@ -16,6 +17,7 @@ import {
   listPasskeys,
   renamePasskey,
 } from "@/lib/api/twoFactor";
+import { refreshAccessToken } from "@/lib/auth/session";
 import { passkeysAvailable, registerPasskey } from "@/lib/passkeys";
 
 const KEY = ["2fa", "passkeys"];
@@ -26,7 +28,8 @@ export function PasskeyList() {
   const qc = useQueryClient();
   const push = useToasts((s) => s.push);
   const confirm = useConfirmDialog((s) => s.confirm);
-  const secure = passkeysAvailable();
+  const isClient = useIsClient();
+  const secure = isClient && passkeysAvailable();
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const list = useQuery({
@@ -56,11 +59,15 @@ export function PasskeyList() {
     onError: fail,
   });
   const remove = useMutation({
-    mutationFn: deletePasskey,
+    mutationFn: async (id: string) => {
+      await deletePasskey(id);
+      await refreshAccessToken();
+    },
     onSuccess: refresh,
     onError: fail,
   });
 
+  if (!isClient) return null;
   if (!secure)
     return (
       <p className="text-sm text-muted">
