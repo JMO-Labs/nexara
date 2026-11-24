@@ -1,0 +1,15 @@
+[plugin]
+id = "dev.nexara.echo"
+name = "Echo"
+version = "0.1.0"
+description = "Replies to @echo mentions with an echo of the message."
+runtime = "python"
+entrypoint = "echo.py"
+
+[bot]
+display_name = "Echo"
+username = "echo"
+
+[permissions]
+scopes = ["posts:read", "comments:read", "comments:write"]
+events = ["mention"]
