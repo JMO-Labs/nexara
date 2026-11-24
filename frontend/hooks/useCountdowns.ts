@@ -15,6 +15,7 @@ import {
   followCountdown,
   getCountdown,
   listCountdowns,
+  listFollowing,
   unfollowCountdown,
   updateCountdown,
   type Countdown,
@@ -27,6 +28,10 @@ const KEY = ["countdowns"] as const;
 /** @brief Countdowns visible to the viewer. */
 export const useCountdowns = () =>
   useQuery({ queryKey: [...KEY, "list"], queryFn: listCountdowns });
+
+/** @brief Countdowns the viewer follows (home strip). */
+export const useFollowing = () =>
+  useQuery({ queryKey: [...KEY, "following"], queryFn: listFollowing });
 
 /** @brief One countdown. */
 export const useCountdown = (id: string) =>

@@ -13,6 +13,7 @@ import { CompleteProfileCard } from "@/components/home/CompleteProfileCard";
 import { Greeting } from "@/components/home/Greeting";
 import { ScopeBar } from "@/components/home/ScopeBar";
 import { PeopleStrip } from "@/components/home/PeopleStrip";
+import { CountdownStrip } from "@/components/home/CountdownStrip";
 import { NeedsChips } from "@/components/home/NeedsChips";
 import { HomeSideColumn } from "@/components/home/HomeSideColumn";
 import { FeedTile } from "@/components/home/tiles/FeedTile";
@@ -56,6 +57,9 @@ export default function AppHome() {
       <motion.div {...sectionProps}>
         <CompleteProfileCard />
         <ScopeBar needs={<NeedsChips />} />
+      </motion.div>
+      <motion.div {...sectionProps}>
+        <CountdownStrip />
       </motion.div>
       <motion.div
         {...sectionProps}

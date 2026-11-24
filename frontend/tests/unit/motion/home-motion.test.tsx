@@ -38,6 +38,9 @@ vi.mock("@/components/home/PeopleStrip", () => ({
   PeopleStrip: () => <div />,
 }));
 vi.mock("@/components/home/NeedsChips", () => ({ NeedsChips: () => <div /> }));
+vi.mock("@/components/home/CountdownStrip", () => ({
+  CountdownStrip: () => null,
+}));
 vi.mock("@/components/home/tiles/FeedTile", () => ({
   FeedTile: () => <div />,
 }));
