@@ -322,3 +322,12 @@ async def test_admin_refuses_bot_targets(op):
     with pytest.raises(AppError) as e:
         await call
     assert (e.value.code, e.value.status_code) == ("bot_account", 422)
+
+
+async def test_ui_lists_only_running_enabled_installs(env):
+    svc, repo, _users, _audit = env
+    repo.list_enabled_installs.return_value = [_install()]
+    out = await svc.list_enabled_ui()
+    assert [p.plugin_id for p in out] == [M.id]
+    repo.list_enabled_installs.assert_awaited_once()
+    repo.list_installs.assert_not_called()

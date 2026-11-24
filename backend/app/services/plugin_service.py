@@ -306,12 +306,9 @@ class PluginService:
         return [await self._out(i) for i in await self._repo.list_installs()]
 
     async def list_enabled_ui(self) -> list[PluginUiOut]:
-        """@brief Member-facing prefs/composer flag specs of plugins enabled here."""
+        """@brief Member-facing prefs/composer flag specs of running plugins enabled here."""
         out: list[PluginUiOut] = []
-        for inst in await self._repo.list_installs():
-            pc = await self._repo.get_community(inst.id, self._cid)
-            if pc is None or not pc.enabled:
-                continue
+        for inst in await self._repo.list_enabled_installs(self._cid):
             m = self._manifest(inst)
             out.append(
                 PluginUiOut(
