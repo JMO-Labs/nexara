@@ -64,7 +64,6 @@ class Env:
             patch(UP + "TokenRepository", return_value=self.tokens),
             patch(UP + "factor_methods", AsyncMock(return_value=[])),
             patch(UP + "CalendarRepository", return_value=AsyncMock()),
-            patch(UP + "HookRegistry.emit", AsyncMock()),
             patch(UP + "audit_role_synced", self.audit),
             patch("app.services.oauth.profile_sync.notify_email_synced", self.notify),
         ):

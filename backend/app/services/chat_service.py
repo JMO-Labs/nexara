@@ -25,7 +25,6 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.subgroup import ChatChannel
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.chat_read_repo import ChatReadRepository
 from app.repositories.chat_repo import (
@@ -252,15 +251,6 @@ class ChatService(ChatInternalsMixin):
             raise NotFoundError(_("Channel not found"))
         await self._ensure_dm_not_blocked(channel, user.id)
 
-        hook_kw: dict[str, Any] = {
-            "community_id": self._community_id,
-            "session": self._channel_repo.session,
-            "user_id": user.id,
-            "channel_id": channel.id,
-            "content": content,
-        }
-        await HookRegistry.emit("before_chat_sent", **hook_kw)
-
         message = await self._message_repo.create_message(
             community_id=self._community_id,
             channel_id=channel.id,
@@ -270,7 +260,6 @@ class ChatService(ChatInternalsMixin):
         if self._read_repo is not None:
             await self._read_repo.mark_read(user.id, channel.id, self._community_id)
         payload = serialize_message(message, user)
-        await HookRegistry.emit("after_chat_sent", message_id=message.id, **hook_kw)
 
         # Record activity with throttling via Redis SETNX (1 per 30 min per user per channel)
         # Only public/subgroup channels surface in feeds; never DMs.

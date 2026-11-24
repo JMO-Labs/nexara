@@ -61,7 +61,6 @@ from app.models.notification_digest import NotificationDigestQueue  # noqa: F401
 from app.models.nudge import Nudge  # noqa: F401
 from app.models.oauth_provider import OAuthProvider  # noqa: F401
 from app.models.passkey import Passkey  # noqa: F401
-from app.models.plugin import Plugin, PluginData  # noqa: F401
 from app.models.poll import Poll, PollOption, PollVote  # noqa: F401
 from app.models.post import Comment, Post, PostMedia, Reaction  # noqa: F401
 from app.models.prompt import Prompt, PromptPost  # noqa: F401

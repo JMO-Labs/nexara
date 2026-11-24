@@ -4,7 +4,7 @@
  * @brief Client-side provider tree. Wraps children with next-themes (class-based,
  *        system default), next-intl, and TanStack Query. Server state lives here; UI state lives in Zustand.
  */
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import {
   IsRestoringProvider,
@@ -14,7 +14,6 @@ import {
 import { PERSIST_MAX_AGE } from "@/lib/pwa/queryPersist";
 import { usePersistedCache } from "@/lib/pwa/usePersistedCache";
 import { NextIntlClientProvider } from "next-intl";
-import { loadPlugins } from "@/lib/plugins/plugin-loader";
 import { useSession } from "@/stores/session";
 import messages from "@/i18n/en-US.json";
 
@@ -44,15 +43,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const userId = useSession((s) => s.user?.id);
   // Restores + persists per signed-in user; also empties memory on purge.
   const isRestoring = usePersistedCache(queryClient, userId);
-
-  // The plugin manifest needs auth: load once, after the session is restored.
-  const authed = useSession((s) => s.status === "authenticated");
-  const pluginsLoaded = useRef(false);
-  useEffect(() => {
-    if (!authed || pluginsLoaded.current) return;
-    pluginsLoaded.current = true;
-    void loadPlugins();
-  }, [authed]);
 
   return (
     <NextThemesProvider

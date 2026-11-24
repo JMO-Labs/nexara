@@ -358,29 +358,6 @@ def get_amazon_admin_service(
     )
 
 
-async def get_plugin_from_api_key(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> str:
-    """
-    @brief Authenticate a plugin by API key (``X-Plugin-Api-Key`` or ``Bearer nxr_plugin_...``).
-
-    Optional alternative to JWT for plugin routes; never grants user access.
-    @return The authenticated plugin_id.
-    @throws AuthenticationError (401) if missing, invalid or revoked.
-    """
-    from app.plugins.api_keys import resolve_plugin_from_key
-
-    key = request.headers.get("x-plugin-api-key")
-    if not key:
-        auth = request.headers.get("authorization", "")
-        key = auth[7:] if auth.lower().startswith("bearer ") else ""
-    if not key:
-        raise AuthenticationError(message=_("Authentication required"))
-    return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
-
-
 _dispatcher: Dispatcher | None = None
 
 

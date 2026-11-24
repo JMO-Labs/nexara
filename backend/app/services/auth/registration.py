@@ -14,7 +14,6 @@ from app.core.exceptions import AuthorizationError, ConflictError
 from app.core.i18n import _
 from app.core.security import hash_password
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
 from app.repositories.calendar_repo import CalendarRepository
 from app.services.auth import sso_only as _sso_only
 from app.services.auth.invite import validate_invite as _validate_invite_impl
@@ -103,11 +102,5 @@ async def register_user(
                 actor_id=user.id,
             )
 
-    await HookRegistry.emit(
-        "on_user_joined",
-        community_id=user.community_id,
-        session=svc._session,
-        user_id=user.id,
-    )
     logger.info("user_registered", user_id=str(user.id), email=email)
     return await svc._issue_tokens(user)

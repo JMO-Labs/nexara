@@ -15,7 +15,6 @@ from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
 from app.repositories.celebration_repo import CelebrationRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import CelebrateIn
@@ -97,14 +96,6 @@ class PostService(CommentsMixin, ReactionsMixin):
             )
             if celebrate
             else None
-        )
-        await HookRegistry.emit(
-            "before_post_created",
-            community_id=self._community_id,
-            session=self._post_repo.session,
-            user_id=user.id,
-            content=content,
-            subgroup_id=subgroup_id,
         )
         post = await self._post_repo.create_post(
             author_id=user.id,
@@ -190,15 +181,6 @@ class PostService(CommentsMixin, ReactionsMixin):
                 },
             )
 
-        await HookRegistry.emit(
-            "after_post_created",
-            community_id=self._community_id,
-            session=self._post_repo.session,
-            user_id=user.id,
-            post_id=post.id,
-            content=content,
-            subgroup_id=subgroup_id,
-        )
         await invalidate_search_cache_for_community(
             self._community_id, service="post", action="create", user_id=user.id
         )

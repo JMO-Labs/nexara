@@ -30,8 +30,7 @@ import { AppearanceTab } from "./AppearanceTab";
 import { PrivacyTab } from "./PrivacyTab";
 import { StorageTab } from "./StorageTab";
 import { NudgePreferences } from "./NudgePreferences";
-import { PluginsSettingsTab } from "./PluginsSettingsTab";
-import { PluginSettingsProvider } from "@/lib/plugins/PluginSettingsContext";
+import { PluginsComingSoon } from "@/components/admin/PluginsComingSoon";
 import { HelpTab } from "./HelpTab";
 import { SecurityTab } from "./SecurityTab";
 
@@ -108,9 +107,9 @@ const TABS: {
   {
     id: "plugins",
     label: "Plugins",
-    description: "Settings for installed plugins.",
+    description: "Plugins for your community.",
     icon: Puzzle,
-    Body: PluginsSettingsTab,
+    Body: PluginsComingSoon,
   },
   {
     id: "help",
@@ -139,7 +138,7 @@ export function SettingsTabs() {
   const Body = current.Body;
 
   return (
-    <PluginSettingsProvider>
+    <>
       <PageHeader title="Settings" description={current.description} />
       <TwoPane
         aside={
@@ -172,6 +171,6 @@ export function SettingsTabs() {
           <Body />
         </section>
       </TwoPane>
-    </PluginSettingsProvider>
+    </>
   );
 }

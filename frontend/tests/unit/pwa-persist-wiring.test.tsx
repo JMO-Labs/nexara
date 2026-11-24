@@ -18,8 +18,6 @@ import {
   persistOptionsFor,
 } from "@/lib/pwa/queryPersist";
 
-vi.mock("@/lib/plugins/plugin-loader", () => ({ loadPlugins: vi.fn() }));
-
 type Blob = {
   buster: string;
   clientState: { queries: { queryKey: unknown[]; state: { data: unknown } }[] };
