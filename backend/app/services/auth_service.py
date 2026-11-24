@@ -35,6 +35,7 @@ from app.services.auth import sso_only as _sso_only
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
 from app.services.auth.memorial_guard import reject_memorialized
+from app.services.auth.policy import factor_methods
 from app.services.auth.registration import register_user
 from app.services.auth.signin_log import log_failure, log_success
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
@@ -153,9 +154,8 @@ class AuthService:
             await fail(user, email, "password", "inactive")
             raise AuthenticationError(message=_("Account is deactivated"))
 
-        if user.totp_enabled:
-            pending = create_2fa_pending_token(user.id, settings=self._settings)
-            return {"requires_2fa": True, "two_factor_token": pending}
+        if pending := await self._pending_2fa(user):
+            return pending
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_logged_in", user_id=str(user.id))
@@ -327,9 +327,8 @@ class AuthService:
             reason = "memorialized" if exc.code == "ACCOUNT_MEMORIALIZED" else "invalid_token"
             await log_failure(self._settings, None, None, "magic_link", reason, request)
             raise
-        if user.totp_enabled:
-            pending = create_2fa_pending_token(user.id, settings=self._settings)
-            return {"requires_2fa": True, "two_factor_token": pending}
+        if pending := await self._pending_2fa(user):
+            return pending
         await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
@@ -345,6 +344,14 @@ class AuthService:
         return await self._issue_tokens(user)
 
     # ── Helpers ───────────────────────────────────────────────────────────
+
+    async def _pending_2fa(self, user: User) -> dict[str, Any] | None:
+        """@brief Pending-2FA response (token + usable methods), or None if no factor is set."""
+        methods = await factor_methods(self._session, user)
+        if not methods:
+            return None
+        pending = create_2fa_pending_token(user.id, settings=self._settings)
+        return {"requires_2fa": True, "two_factor_token": pending, "two_factor_methods": methods}
 
     async def _issue_tokens(
         self,

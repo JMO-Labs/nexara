@@ -59,6 +59,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+def _enforce_2fa_setup(payload: dict[str, Any], request: Request) -> None:
+    """@brief 403 ``2fa_setup_required`` past the grace period (claims only, no query)."""
+    from app.services.auth.policy import enforce_setup
+
+    enforce_setup(payload, request.url.path)
+
+
 async def get_current_user(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
@@ -74,6 +81,7 @@ async def get_current_user(
     @param settings Application settings.
     @return The authenticated :class:`User` ORM instance.
     @raises AuthenticationError If the token is missing, invalid, or the user is not found.
+    @raises AppError 403 ``2fa_setup_required`` once the community 2FA grace period has ended.
     """
     from app.models.user import User
 
@@ -84,6 +92,7 @@ async def get_current_user(
         payload = decode_token(token, expected_type="access", settings=settings)
     except ValueError as exc:
         raise AuthenticationError(message=str(exc)) from exc
+    _enforce_2fa_setup(payload, request)
 
     user_id = payload.get("sub")
     if not user_id:
@@ -169,6 +178,7 @@ async def get_current_user_sse(
         payload = decode_token(resolved_token, expected_type="access", settings=settings)
     except ValueError as exc:
         raise AuthenticationError(message=str(exc)) from exc
+    _enforce_2fa_setup(payload, request)
 
     user_id = payload.get("sub")
     if not user_id:

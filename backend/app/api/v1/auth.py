@@ -173,6 +173,7 @@ async def login(
         return LoginResponse(
             requires_2fa=True,
             two_factor_token=result["two_factor_token"],
+            two_factor_methods=result.get("two_factor_methods"),
         )
 
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)

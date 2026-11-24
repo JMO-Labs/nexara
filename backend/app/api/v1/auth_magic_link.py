@@ -77,7 +77,11 @@ async def verify_magic_link(
     svc = AuthService(db, settings)
     result = await svc.verify_magic_link(token, request=request)
     if result.get("requires_2fa"):
-        return LoginResponse(requires_2fa=True, two_factor_token=result["two_factor_token"])
+        return LoginResponse(
+            requires_2fa=True,
+            two_factor_token=result["two_factor_token"],
+            two_factor_methods=result.get("two_factor_methods"),
+        )
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

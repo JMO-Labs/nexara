@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.passkey import Passkey
@@ -33,6 +33,13 @@ class PasskeyRepository:
             .order_by(Passkey.created_at)
         )
         return list((await self._session.execute(stmt)).scalars())
+
+    async def count_for_user(self, user_id: uuid.UUID) -> int:
+        """@brief Number of passkeys a user has registered."""
+        stmt = select(func.count()).where(
+            Passkey.user_id == user_id, Passkey.community_id == self._cid
+        )
+        return int((await self._session.execute(stmt)).scalar_one())
 
     async def get_owned(self, passkey_id: uuid.UUID, user_id: uuid.UUID) -> Passkey | None:
         """@brief A passkey by id, only if it belongs to ``user_id``."""

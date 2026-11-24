@@ -94,6 +94,7 @@ class TestVerifyMagicLink:
         mock_session = AsyncMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = token
+        mock_result.scalar_one.return_value = 0  # no passkeys
         mock_session.execute = AsyncMock(return_value=mock_result)
         mock_session.flush = AsyncMock()
 

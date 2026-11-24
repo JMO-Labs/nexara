@@ -64,7 +64,11 @@ def _sso_only_off():
 
 def _make_service(session=None, settings=None):
     """@brief Construct an AuthService with a mocked DB session."""
-    s = session or AsyncMock()
+    if session is None:
+        session = AsyncMock()
+        # Policy queries (passkey count) see an empty result by default.
+        session.execute.return_value = MagicMock(**{"scalar_one.return_value": 0})
+    s = session
     svc = AuthService(s, settings or _make_settings())
     svc._user_repo = AsyncMock()
     svc._token_repo = AsyncMock()
