@@ -1,0 +1,262 @@
+"""
+@file
+@brief Dependency install tests: lockfile/requirements validation, argv, runner.
+"""
+
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from host import deps
+from host.deps import check_lockfile, check_requirements, install_deps, run_subprocess
+from host.installer import InstallError
+from host.models import InstallSpec
+from tests.conftest import good_tar, spec_body
+
+REG = "https://registry.npmjs.org/"
+INTEGRITY = "sha512-" + "A" * 86 + "=="
+
+Calls = list[tuple[list[str], Path, int | None]]
+
+
+@pytest.fixture
+def calls() -> Calls:
+    return []
+
+
+@pytest.fixture
+def runner(calls: Calls) -> Any:
+    async def run(argv: list[str], cwd: Path, uid: int | None) -> None:
+        calls.append((argv, cwd, uid))
+
+    return run
+
+
+def lock(packages: dict[str, Any], version: int = 3) -> dict[str, Any]:
+    return {"name": "p", "lockfileVersion": version, "packages": {"": {"name": "p"}, **packages}}
+
+
+def pkg(name: str = "left-pad", **over: Any) -> dict[str, Any]:
+    entry = {
+        "version": "1.3.0",
+        "resolved": f"{REG}{name}/-/{name}-1.3.0.tgz",
+        "integrity": INTEGRITY,
+    }
+    entry.update(over)
+    return entry
+
+
+def write_node(root: Path, lockdata: dict[str, Any], pj: dict[str, Any] | None = None) -> None:
+    (root / "package.json").write_text(json.dumps(pj or {"dependencies": {"left-pad": "^1.3.0"}}))
+    (root / "package-lock.json").write_text(json.dumps(lockdata))
+
+
+def lock_code(root: Path) -> str:
+    with pytest.raises(InstallError) as e:
+        check_lockfile(root)
+    return e.value.code
+
+
+def test_lockfile_ok(tmp_path: Path) -> None:
+    write_node(
+        tmp_path,
+        lock(
+            {
+                "node_modules/left-pad": pkg(),
+                "node_modules/@s/x": pkg("@s/x"),
+                "node_modules/a/node_modules/b": pkg("b"),
+                "node_modules/z/node_modules/q": {"version": "1", "inBundle": True},
+            }
+        ),
+    )
+    check_lockfile(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        pkg(resolved="git+https://github.com/x/y.git#abc"),
+        pkg(resolved="file:../../etc"),
+        pkg(resolved="http://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz"),
+        pkg(resolved="https://evil.example/left-pad.tgz"),
+        pkg(resolved="https://registry.npmjs.org.evil.example/x.tgz"),
+        {"resolved": "../x", "link": True},
+        pkg(integrity=None),
+        {"version": "1.0.0"},
+    ],
+    ids=["git", "file", "http", "other-host", "lookalike", "link", "no-integrity", "no-resolved"],
+)
+def test_lockfile_unsafe_entries(tmp_path: Path, entry: dict[str, Any]) -> None:
+    entry = {k: v for k, v in entry.items() if v is not None}
+    write_node(tmp_path, lock({"node_modules/left-pad": entry}))
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+@pytest.mark.parametrize(
+    "key", ["node_modules/../../x", "lib/x", "node_modules/a/../../b", "node_modules/"]
+)
+def test_lockfile_bad_paths(tmp_path: Path, key: str) -> None:
+    write_node(tmp_path, lock({key: pkg()}))
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+def test_lockfile_v1_rejected(tmp_path: Path) -> None:
+    write_node(tmp_path, {"lockfileVersion": 1, "dependencies": {}})
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+def test_lockfile_missing(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text("{}")
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+def test_lockfile_garbage(tmp_path: Path) -> None:
+    (tmp_path / "package.json").write_text("{}")
+    (tmp_path / "package-lock.json").write_text("{nope")
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+@pytest.mark.parametrize(
+    "spec",
+    [
+        "git+https://github.com/x/y",
+        "file:../x",
+        "link:../x",
+        "workspace:*",
+        "user/repo",
+        "https://x.example/y.tgz",
+        "npm:other@1",
+    ],
+)
+def test_package_json_unsafe_specs(tmp_path: Path, spec: str) -> None:
+    write_node(tmp_path, lock({}), {"dependencies": {"x": spec}})
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+def test_package_json_workspaces_rejected(tmp_path: Path) -> None:
+    write_node(tmp_path, lock({}), {"workspaces": ["a"]})
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+H = "a" * 64
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "httpx==0.28.1\n",
+        "# c\n\nhttpx==0.28.1  # pinned\nanyio==4.6.2\n",
+        f"httpx==0.28.1 --hash=sha256:{H}\n",
+        f"httpx==0.28.1 \\\n    --hash=sha256:{H} \\\n    --hash=sha256:{'b' * 64}\n",
+        "uvicorn[standard]==0.32.0\n",
+        'uvloop==0.21.0 ; sys_platform != "win32"\n',
+        'x==1.0.0; python_version >= "3.10" and platform_machine == "x86_64"\n',
+        "Zope.Interface_x==7.1rc1\n",
+    ],
+)
+def test_requirements_ok(tmp_path: Path, text: str) -> None:
+    (tmp_path / "requirements.txt").write_text(text)
+    check_requirements(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "-r /proc/1/environ\n",
+        "--index-url http://127.0.0.1:9/simple\nx==1.0\n",
+        "-e git+https://x/y\n",
+        "x @ https://evil/x.whl\n",
+        "./local.whl\n",
+        "/etc/hostname\n",
+        "httpx\n",
+        "httpx>=0.28\n",
+        "httpx==0.*\n",
+        "httpx==${SECRET}\n",
+        "x==1.0 --extra-index-url https://e\n",
+        "x==1.0 --hash=md5:abc\n",
+        'x==1.0; os.system("id")\n',
+        "x==1.0 \\\n-r other.txt\n",
+    ],
+)
+def test_requirements_unsafe(tmp_path: Path, text: str) -> None:
+    (tmp_path / "requirements.txt").write_text(text)
+    with pytest.raises(InstallError) as e:
+        check_requirements(tmp_path)
+    assert e.value.code == "requirements_unsafe"
+
+
+def mkspec(runtime: str = "python") -> InstallSpec:
+    return InstallSpec.model_validate(spec_body(good_tar(), runtime=runtime))
+
+
+async def test_python_argv(tmp_path: Path, runner: Any, calls: Calls) -> None:
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    (root / "requirements.txt").write_text("httpx==0.28.1\n")
+    await install_deps(mkspec(), root, runner, uid=20001)
+    (venv, _, uid), (pip, cwd, _) = calls
+    assert venv[:2] == ["uv", "venv"] and "--no-config" in venv
+    assert venv[venv.index("--python") + 1] == deps.PLUGIN_PYTHON
+    assert pip[:3] == ["uv", "pip", "install"]
+    for flag in ("--no-config", "--no-sources"):
+        assert flag in pip
+    assert pip[pip.index("--only-binary") + 1] == ":all:"
+    assert pip[pip.index("--index-url") + 1] == "https://pypi.org/simple"
+    assert cwd == root and uid == 20001
+
+
+async def test_python_bad_requirements_never_runs_pip(
+    tmp_path: Path, runner: Any, calls: Calls
+) -> None:
+    (tmp_path / "requirements.txt").write_text("-r /etc/passwd\n")
+    with pytest.raises(InstallError):
+        await install_deps(mkspec(), tmp_path, runner)
+    assert calls == []
+
+
+async def test_node_argv(tmp_path: Path, runner: Any, calls: Calls) -> None:
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    write_node(root, lock({"node_modules/left-pad": pkg()}))
+    await install_deps(mkspec("node"), root, runner)
+    argv = calls[0][0]
+    assert argv[:2] == ["npm", "ci"]
+    for flag in (
+        "--omit=dev",
+        "--ignore-scripts",
+        "--userconfig=/dev/null",
+        "--globalconfig=/nonexistent/npmrc",
+        f"--registry={REG}",
+        "--git=/bin/false",
+    ):
+        assert flag in argv
+    assert f"--cache={tmp_path / 'plugins' / 'p' / '.cache' / 'npm'}" in argv
+
+
+async def test_node_unsafe_lock_never_runs_npm(tmp_path: Path, runner: Any, calls: Calls) -> None:
+    write_node(tmp_path, lock({"node_modules/x": pkg(resolved="git+https://x/y")}))
+    with pytest.raises(InstallError):
+        await install_deps(mkspec("node"), tmp_path, runner)
+    assert calls == []
+
+
+async def test_run_subprocess_env_and_no_output_logged(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PLUGIN_HOST_SECRET", "host-SECRET-xyz")
+    monkeypatch.setenv("npm_config_registry", "http://evil")
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    caplog.set_level(logging.DEBUG)
+    script = 'env > envdump; echo "LEAK $PLUGIN_HOST_SECRET out"; echo LEAK-ERR >&2; exit 3'
+    with pytest.raises(InstallError) as e:
+        await run_subprocess(["sh", "-c", script], root, None)
+    assert e.value.code == "deps_failed:exit=3"
+    assert "LEAK" not in caplog.text
+    env = (root / "envdump").read_text()
+    assert "host-SECRET-xyz" not in env and "npm_config" not in env
+    assert f"HOME={tmp_path / 'plugins' / 'p' / '.cache'}" in env
+    assert "UV_NO_CONFIG=1" in env

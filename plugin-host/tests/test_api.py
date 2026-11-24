@@ -27,9 +27,14 @@ class FakeSupervisor:
 
     def __init__(self) -> None:
         self.started: dict[str, tuple[Path, InstallSpec]] = {}
+        self.history: list[tuple[str, str, bool]] = []  # (version dir, spec version, v1 exists)
         self.stopped: list[str] = []
+        self.fail_versions: set[str] = set()
 
     async def start(self, plugin_id: str, root: Path, spec: InstallSpec) -> None:
+        self.history.append((root.name, spec.version, (root.parent / "1.0.0").is_dir()))
+        if root.name in self.fail_versions:
+            raise RuntimeError("spawn failed")
         self.started[plugin_id] = (root, spec)
 
     async def stop(self, plugin_id: str) -> None:
@@ -61,19 +66,20 @@ async def c(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
 
 
 def fake_install(tmp_path: Path, fail: str | None = None):  # type: ignore[no-untyped-def]
-    async def _install(plugin_id: str, spec: InstallSpec, data_dir: Path) -> Path:
+    async def _install(plugin_id: str, spec: InstallSpec, data_dir: Path, **kw: object) -> Path:
+        await asyncio.sleep(0)
         if fail:
             raise InstallError(fail)
         root = data_dir / "plugins" / plugin_id / spec.version
         root.mkdir(parents=True, exist_ok=True)
-        (data_dir / "plugins" / plugin_id / "current").symlink_to(spec.version)
         return root
 
     return _install
 
 
 async def settle(app: FastAPI) -> None:
-    await asyncio.gather(*app.state.host.tasks.values(), return_exceptions=True)
+    while app.state.host.tasks:
+        await asyncio.gather(*list(app.state.host.tasks), return_exceptions=True)
 
 
 async def test_put_installs_and_starts(
@@ -115,7 +121,7 @@ async def test_secrets_never_logged(
 ) -> None:
     caplog.set_level(logging.DEBUG)
 
-    async def crash(plugin_id: str, spec: InstallSpec, data_dir: Path) -> Path:
+    async def crash(plugin_id: str, spec: InstallSpec, data_dir: Path, **kw: object) -> Path:
         raise RuntimeError(f"boom {spec!r}")
 
     monkeypatch.setattr(main, "install", crash)
@@ -126,10 +132,9 @@ async def test_secrets_never_logged(
     assert row["last_error"] == "install_error"
 
 
-async def test_bad_plugin_id_422(c: httpx.AsyncClient) -> None:
-    r = await c.put("/plugins/..", json=spec_body(good_tar()))
-    assert r.status_code in (404, 422)
-    r = await c.put("/plugins/Bad_ID", json=spec_body(good_tar()))
+@pytest.mark.parametrize("pid", ["Bad_ID", "nodot", "a..b", "-a.b", "a.b%00"])
+async def test_bad_plugin_id_422(c: httpx.AsyncClient, pid: str) -> None:
+    r = await c.put(f"/plugins/{pid}", json=spec_body(good_tar()))
     assert r.status_code == 422
 
 
@@ -183,3 +188,146 @@ async def test_restart_reports_needs_config(tmp_path: Path, sup: FakeSupervisor)
         rows = (await c.get("/plugins")).json()
         assert rows[0]["status"] == "needs_config" and rows[0]["version"] == "1.0.0"
         assert (await c.post(f"/plugins/{PID}/start")).status_code == 409
+
+
+def v(version: str) -> dict:  # type: ignore[type-arg]
+    return spec_body(good_tar(version), version, entrypoint=f"main-{version}.py")
+
+
+async def test_update_prunes_old_only_after_start(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main, "install", fake_install(tmp_path))
+    pdir = tmp_path / "plugins" / PID
+    await c.put(f"/plugins/{PID}", json=v("1.0.0"))
+    await settle(app)
+    await c.put(f"/plugins/{PID}", json=v("1.1.0"))
+    await settle(app)
+    assert sup.history[-1] == ("1.1.0", "1.1.0", True)  # v1 still on disk during start
+    assert (pdir / "current").resolve().name == "1.1.0"
+    assert not (pdir / "1.0.0").exists()
+    row = (await c.get("/plugins")).json()[0]
+    assert (row["status"], row["version"]) == ("running", "1.1.0")
+
+
+async def test_start_failure_rolls_back(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main, "install", fake_install(tmp_path))
+    pdir = tmp_path / "plugins" / PID
+    await c.put(f"/plugins/{PID}", json=v("1.0.0"))
+    await settle(app)
+    sup.fail_versions.add("1.1.0")
+    await c.put(f"/plugins/{PID}", json=v("1.1.0"))
+    await settle(app)
+    assert (pdir / "current").resolve().name == "1.0.0" and (pdir / "1.0.0").is_dir()
+    assert not (pdir / "1.1.0").exists()
+    assert sup.history[-1] == ("1.0.0", "1.0.0", True)  # old version restarted
+    row = (await c.get("/plugins")).json()[0]
+    assert (row["status"], row["version"], row["last_error"]) == ("failed", "1.0.0", "start_failed")
+
+
+async def test_start_after_failed_update_uses_last_good_spec(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main, "install", fake_install(tmp_path))
+    await c.put(f"/plugins/{PID}", json=v("1.0.0"))
+    await settle(app)
+    monkeypatch.setattr(main, "install", fake_install(tmp_path, fail="deps_failed:exit=1"))
+    await c.put(f"/plugins/{PID}", json=v("1.1.0"))
+    await settle(app)
+    row = (await c.get("/plugins")).json()[0]
+    assert (row["status"], row["version"], row["last_error"]) == (
+        "failed",
+        "1.0.0",
+        "deps_failed:exit=1",
+    )
+    assert (await c.post(f"/plugins/{PID}/start")).status_code == 204
+    root, spec = sup.started[PID]
+    assert root.name == "1.0.0" and spec.entrypoint == "main-1.0.0.py"
+    assert (await c.get("/plugins")).json()[0]["status"] == "running"
+
+
+async def test_superseded_put_does_not_report_old_version(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gate, gate2 = asyncio.Event(), asyncio.Event()
+    inner = fake_install(tmp_path)
+
+    async def gated(plugin_id: str, spec: InstallSpec, data_dir: Path, **kw: object) -> Path:
+        await (gate if spec.version == "1.0.0" else gate2).wait()
+        return await inner(plugin_id, spec, data_dir)
+
+    monkeypatch.setattr(main, "install", gated)
+    await c.put(f"/plugins/{PID}", json=v("1.0.0"))
+    await asyncio.sleep(0.01)
+    await c.put(f"/plugins/{PID}", json=v("1.1.0"))
+    gate.set()
+    for _ in range(50):
+        if sup.history:
+            break
+        await asyncio.sleep(0.001)
+    assert sup.history[0][1] == "1.0.0"
+    row = (await c.get("/plugins")).json()[0]
+    assert row["status"] == "installing"  # v1 finishing must not claim "running"
+    gate2.set()
+    await settle(app)
+    assert [h[1] for h in sup.history] == ["1.0.0", "1.1.0"]
+    row = (await c.get("/plugins")).json()[0]
+    assert (row["status"], row["version"]) == ("running", "1.1.0")
+
+
+async def test_queued_put_superseded_before_start_is_skipped(
+    c: httpx.AsyncClient,
+    app: FastAPI,
+    sup: FakeSupervisor,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main, "install", fake_install(tmp_path))
+    lock = app.state.host.locks.setdefault(PID, asyncio.Lock())
+    async with lock:  # hold the per-plugin lock so both PUTs queue
+        await c.put(f"/plugins/{PID}", json=v("1.0.0"))
+        await c.put(f"/plugins/{PID}", json=v("1.1.0"))
+    await settle(app)
+    assert [h[1] for h in sup.history] == ["1.1.0"]
+
+
+async def test_installs_bounded(
+    c: httpx.AsyncClient, app: FastAPI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app.state.host, "installs", asyncio.Semaphore(1))
+    live = peak = 0
+
+    async def slow(plugin_id: str, spec: InstallSpec, data_dir: Path, **kw: object) -> Path:
+        nonlocal live, peak
+        live += 1
+        peak = max(peak, live)
+        await asyncio.sleep(0.01)
+        live -= 1
+        root = data_dir / "plugins" / plugin_id / spec.version
+        root.mkdir(parents=True)
+        return root
+
+    monkeypatch.setattr(main, "install", slow)
+    for pid in ("a.one", "a.two", "a.three"):
+        await c.put(f"/plugins/{pid}", json=spec_body(good_tar()))
+    await settle(app)
+    assert peak == 1
+    assert {r["status"] for r in (await c.get("/plugins")).json()} == {"running"}

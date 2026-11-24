@@ -17,7 +17,8 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
 
 from host.auth import require_secret
-from host.installer import InstallError, install
+from host.deps import Runner, run_subprocess
+from host.installer import InstallError, current_version, install, prune, swap_current
 from host.models import (
     PLUGIN_ID_RE,
     InstallSpec,
@@ -29,6 +30,7 @@ from host.models import (
 
 log = logging.getLogger("plugin_host")
 
+MAX_CONCURRENT_INSTALLS = 2
 PluginId = Annotated[str, PathParam(pattern=PLUGIN_ID_RE, max_length=128)]
 
 
@@ -39,15 +41,23 @@ class HostState:
     secret: str
     data_dir: Path
     supervisor: Supervisor
+    runner: Runner = run_subprocess
     records: dict[str, PluginRecord] = field(default_factory=dict)
-    tasks: dict[str, asyncio.Task[None]] = field(default_factory=dict)
+    tasks: set[asyncio.Task[None]] = field(default_factory=set)
     locks: dict[str, asyncio.Lock] = field(default_factory=dict)
+    installs: asyncio.Semaphore = field(
+        default_factory=lambda: asyncio.Semaphore(MAX_CONCURRENT_INSTALLS)
+    )
 
     def scan(self) -> None:
         """@brief After a restart, installed plugins await env from Nexara: needs_config."""
         for cur in (self.data_dir / "plugins").glob("*/current"):
-            if cur.is_symlink() and cur.exists():
-                self.records[cur.parent.name] = PluginRecord(cur.resolve().name, "needs_config")
+            version = current_version(cur.parent)
+            if version:
+                self.records[cur.parent.name] = PluginRecord(version, "needs_config")
+
+    def pdir(self, pid: str) -> Path:
+        return self.data_dir / "plugins" / pid
 
 
 def _host(request: Request) -> HostState:
@@ -72,22 +82,48 @@ def _row(host: HostState, pid: str, rec: PluginRecord) -> PluginRow:
     return PluginRow(id=pid, version=rec.version, status=rec.status, last_error=rec.last_error)
 
 
+def _fail(rec: PluginRecord, spec: InstallSpec, code: str) -> None:
+    """@brief Mark the PUT for `spec` failed unless a newer PUT superseded it."""
+    if rec.pending is spec:
+        rec.pending, rec.status, rec.last_error = None, "failed", code
+
+
+async def _rollback(host: HostState, pid: str, rec: PluginRecord, root: Path) -> None:
+    """@brief New version failed to start: drop it and restart the last-good one."""
+    if current_version(host.pdir(pid)) != root.name:
+        shutil.rmtree(root, ignore_errors=True)
+    if rec.spec is not None and rec.version is not None:
+        try:
+            await host.supervisor.start(pid, host.pdir(pid) / rec.version, rec.spec)
+        except Exception as e:
+            log.error("[%s] restart of previous version failed: %s", pid, type(e).__name__)
+
+
 async def _install_and_start(host: HostState, pid: str, spec: InstallSpec) -> None:
-    lock = host.locks.setdefault(pid, asyncio.Lock())
-    async with lock:
+    async with host.locks.setdefault(pid, asyncio.Lock()):
         rec = host.records.get(pid)
-        if rec is None or rec.spec is not spec:
+        if rec is None or rec.pending is not spec:
             return  # superseded or deleted while waiting
         try:
-            root = await install(pid, spec, host.data_dir)
-            await host.supervisor.start(pid, root, spec)
-            rec.version, rec.status, rec.last_error = spec.version, "running", None
+            async with host.installs:
+                root = await install(pid, spec, host.data_dir, runner=host.runner)
         except InstallError as e:
-            rec.status, rec.last_error = "failed", e.code
             log.warning("[%s] install failed: %s", pid, e.code)
+            return _fail(rec, spec, e.code)
         except Exception as e:  # never format the exception: it may embed the spec
-            rec.status, rec.last_error = "failed", "install_error"
             log.error("[%s] install error: %s", pid, type(e).__name__)
+            return _fail(rec, spec, "install_error")
+        try:
+            await host.supervisor.start(pid, root, spec)
+        except Exception as e:
+            log.error("[%s] start failed: %s", pid, type(e).__name__)
+            await _rollback(host, pid, rec, root)
+            return _fail(rec, spec, "start_failed")
+        swap_current(host.pdir(pid), spec.version)
+        prune(host.pdir(pid), spec.version)
+        rec.spec, rec.version = spec, spec.version
+        if rec.pending is spec:
+            rec.pending, rec.status, rec.last_error = None, "running", None
 
 
 @router.get("/plugins")
@@ -100,12 +136,10 @@ async def list_plugins(host: Host) -> list[PluginRow]:
 async def put_plugin(plugin_id: PluginId, spec: InstallSpec, host: Host) -> Response:
     """@brief Install/update and (re)start asynchronously; poll GET /plugins for the outcome."""
     rec = host.records.setdefault(plugin_id, PluginRecord(None, "installing"))
-    rec.status, rec.spec, rec.last_error = "installing", spec, None
+    rec.status, rec.pending, rec.last_error = "installing", spec, None
     task = asyncio.create_task(_install_and_start(host, plugin_id, spec))
-    host.tasks[plugin_id] = task
-    task.add_done_callback(
-        lambda t: host.tasks.pop(plugin_id, None) if host.tasks.get(plugin_id) is t else None
-    )
+    host.tasks.add(task)
+    task.add_done_callback(host.tasks.discard)
     return Response(status_code=202)
 
 
@@ -115,7 +149,7 @@ async def delete_plugin(plugin_id: PluginId, host: Host, purge: bool = False) ->
     host.records.pop(plugin_id, None)
     async with host.locks.setdefault(plugin_id, asyncio.Lock()):
         await host.supervisor.stop(plugin_id)
-        shutil.rmtree(host.data_dir / "plugins" / plugin_id, ignore_errors=True)
+        shutil.rmtree(host.pdir(plugin_id), ignore_errors=True)
         if purge:
             shutil.rmtree(host.data_dir / "plugin-state" / plugin_id, ignore_errors=True)
     return Response(status_code=204)
@@ -130,12 +164,15 @@ def _get(host: HostState, pid: str) -> PluginRecord:
 
 @router.post("/plugins/{plugin_id}/start", status_code=204)
 async def start_plugin(plugin_id: PluginId, host: Host) -> Response:
-    """@brief Start an installed plugin with its in-memory env."""
+    """@brief Start the last version that started OK, with its own spec and env."""
     rec = _get(host, plugin_id)
-    current = host.data_dir / "plugins" / plugin_id / "current"
-    if rec.spec is None or rec.status == "installing" or not current.exists():
-        raise HTTPException(409, "needs_config" if rec.spec is None else "not_installed")
-    await host.supervisor.start(plugin_id, current.resolve(), rec.spec)
+    if rec.status == "installing":
+        raise HTTPException(409, "installing")
+    if rec.spec is None or rec.version is None:
+        raise HTTPException(409, "needs_config" if rec.version else "not_installed")
+    if current_version(host.pdir(plugin_id)) != rec.version:
+        raise HTTPException(409, "not_installed")
+    await host.supervisor.start(plugin_id, host.pdir(plugin_id) / rec.version, rec.spec)
     rec.status, rec.last_error = "running", None
     return Response(status_code=204)
 
@@ -145,7 +182,7 @@ async def stop_plugin(plugin_id: PluginId, host: Host) -> Response:
     """@brief Stop a plugin (stays installed)."""
     rec = _get(host, plugin_id)
     await host.supervisor.stop(plugin_id)
-    if rec.status == "running":
+    if rec.status in ("running", "failed") and rec.pending is None:
         rec.status = "stopped"
     return Response(status_code=204)
 
@@ -170,14 +207,16 @@ def create_app(
     secret: str | None = None,
     data_dir: Path | None = None,
     supervisor: Supervisor | None = None,
+    runner: Runner | None = None,
 ) -> FastAPI:
     """
     @brief Build the app. Defaults come from env PLUGIN_HOST_SECRET / PLUGIN_HOST_DATA.
     An empty secret makes every control route return 401 (fail closed).
+    @param runner Install-step runner (Task 2: bwrap as plugin uid).
     """
     secret = os.environ.get("PLUGIN_HOST_SECRET", "") if secret is None else secret
     data_dir = Path(os.environ.get("PLUGIN_HOST_DATA", "/data")) if data_dir is None else data_dir
-    host = HostState(secret, data_dir, supervisor or NullSupervisor())
+    host = HostState(secret, data_dir, supervisor or NullSupervisor(), runner or run_subprocess)
     if not secret:
         log.error("PLUGIN_HOST_SECRET is empty; all control requests will be rejected")
     host.scan()

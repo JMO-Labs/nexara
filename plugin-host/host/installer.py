@@ -1,99 +1,30 @@
 """
 @file
-@brief Package installer: https download, sha256 check, safe tar extraction,
-       dependency install (no scripts, wheels only) and atomic `current` swap.
+@brief Install orchestration: download → sha256 → safe extract → manifest check →
+       deps → sha marker. `current` is swapped (and old versions pruned) by the caller
+       only after the new process started.
 """
 
 import asyncio
 import hashlib
 import hmac
-import io
-import logging
 import os
 import shutil
-import tarfile
 import tomllib
 import uuid
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
-import httpx
-
+from host.archive import safe_extract
+from host.deps import Runner, install_deps, run_subprocess
+from host.download import fetch
+from host.errors import InstallError
 from host.models import InstallSpec
 
-log = logging.getLogger(__name__)
+__all__ = ["InstallError", "install", "prune", "swap_current"]
 
-MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
-MAX_EXTRACT_BYTES = 200 * 1024 * 1024
-MAX_MEMBERS = 10_000
-DEPS_TIMEOUT_S = 600
 SHA_MARKER = ".nexara-sha256"
 MANIFEST = "nexara-plugin.toml"
-
-
-class InstallError(Exception):
-    """@brief Install failure; `code` is reported as last_error (no secrets)."""
-
-    def __init__(self, code: str) -> None:
-        super().__init__(code)
-        self.code = code
-
-
-async def _https_only(request: httpx.Request) -> None:
-    if request.url.scheme != "https":
-        raise InstallError("download_failed")
-
-
-async def _download(url: str) -> bytes:
-    """
-    @brief GET `url` over https only (redirects included), capped at MAX_DOWNLOAD_BYTES.
-    @return Package bytes.
-    """
-    if not url.startswith("https://"):
-        raise InstallError("download_failed")
-    buf = bytearray()
-    try:
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            max_redirects=5,
-            timeout=60,
-            event_hooks={"request": [_https_only]},
-        ) as client:
-            async with client.stream("GET", url) as r:
-                if r.status_code != 200:
-                    raise InstallError("download_failed")
-                if int(r.headers.get("content-length") or 0) > MAX_DOWNLOAD_BYTES:
-                    raise InstallError("package_too_large")
-                async for chunk in r.aiter_bytes():
-                    buf += chunk
-                    if len(buf) > MAX_DOWNLOAD_BYTES:
-                        raise InstallError("package_too_large")
-    except httpx.HTTPError as e:
-        raise InstallError("download_failed") from e
-    return bytes(buf)
-
-
-def _safe_extract(data: bytes, dest: Path) -> None:
-    """
-    @brief Extract a .tar(.gz) into `dest`, allowing only regular files and dirs.
-    Rejects absolute paths, `..`, links, devices/fifos, too many members and size bombs.
-    """
-    try:
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as tf:
-            total = 0
-            members = []
-            for m in tf:
-                parts = PurePosixPath(m.name).parts
-                if m.name.startswith(("/", "\\")) or ".." in parts or "\0" in m.name:
-                    raise InstallError("unsafe_archive")
-                if not (m.isfile() or m.isdir()):
-                    raise InstallError("unsafe_archive")
-                total += m.size
-                members.append(m)
-                if total > MAX_EXTRACT_BYTES or len(members) > MAX_MEMBERS:
-                    raise InstallError("unsafe_archive")
-            tf.extractall(dest, members=members, filter="data")
-    except (tarfile.TarError, OSError, EOFError) as e:
-        raise InstallError("invalid_archive") from e
+CACHE_DIR = ".cache"
 
 
 def _check_manifest(plugin_id: str, spec: InstallSpec, root: Path) -> None:
@@ -109,74 +40,23 @@ def _check_manifest(plugin_id: str, spec: InstallSpec, root: Path) -> None:
         raise InstallError("entrypoint_missing")
 
 
-async def _run(argv: list[str], cwd: Path) -> None:
-    """
-    @brief Run an installer subprocess with a minimal env (no plugin secrets).
-    `cwd` is <data>/plugins/<id>/<version>; caches live in <data>/.cache.
-    """
-    home = cwd.parents[2] / ".cache"
-    home.mkdir(parents=True, exist_ok=True)
-    env = {
-        "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-        "HOME": str(home),
-        "UV_CACHE_DIR": str(home / "uv"),
-        "UV_NO_CONFIG": "1",
-        "UV_PYTHON_DOWNLOADS": "never",
-        "npm_config_cache": str(home / "npm"),
-        "npm_config_update_notifier": "false",
-    }
-    proc = await asyncio.create_subprocess_exec(
-        *argv,
-        cwd=cwd,
-        env=env,
-        stdin=asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
-    )
-    try:
-        out, _ = await asyncio.wait_for(proc.communicate(), DEPS_TIMEOUT_S)
-    except (TimeoutError, asyncio.CancelledError):
-        proc.kill()
-        await proc.wait()
-        raise
-    if proc.returncode != 0:
-        log.warning(
-            "%s failed (%s): %s", argv[0], proc.returncode, out[-2000:].decode(errors="replace")
-        )
-        raise InstallError("deps_failed")
+def current_version(pdir: Path) -> str | None:
+    """@brief Name of the version dir `current` points at, if any."""
+    cur = pdir / "current"
+    return cur.resolve().name if cur.is_symlink() and cur.exists() else None
 
 
-async def _install_deps(spec: InstallSpec, root: Path) -> None:
-    """@brief node: npm ci without scripts; python: venv + wheel-only pip install."""
-    if spec.runtime == "node":
-        if (root / "package.json").is_file():
-            await _run(["npm", "ci", "--omit=dev", "--ignore-scripts"], root)
-        return
-    await _run(["uv", "venv", ".venv"], root)
-    if (root / "requirements.txt").is_file():
-        await _run(
-            [
-                "uv",
-                "pip",
-                "install",
-                "--only-binary",
-                ":all:",
-                "--python",
-                ".venv/bin/python",
-                "-r",
-                "requirements.txt",
-            ],
-            root,
-        )
-
-
-def _swap_current(pdir: Path, version: str) -> None:
-    """@brief Atomically point <pdir>/current at `version`, then prune other versions."""
+def swap_current(pdir: Path, version: str) -> None:
+    """@brief Atomically point <pdir>/current at `version`."""
     tmp = pdir / f".current-{uuid.uuid4().hex}"
     tmp.symlink_to(version)
     os.replace(tmp, pdir / "current")
+
+
+def prune(pdir: Path, keep: str) -> None:
+    """@brief Remove every version dir except `keep` (and `current`, the cache)."""
     for d in pdir.iterdir():
-        if d.name in (version, "current"):
+        if d.name in (keep, "current", CACHE_DIR):
             continue
         if d.is_symlink() or d.is_file():
             d.unlink()
@@ -184,38 +64,46 @@ def _swap_current(pdir: Path, version: str) -> None:
             shutil.rmtree(d, ignore_errors=True)
 
 
-async def install(plugin_id: str, spec: InstallSpec, data_dir: Path) -> Path:
+async def install(
+    plugin_id: str,
+    spec: InstallSpec,
+    data_dir: Path,
+    *,
+    runner: Runner = run_subprocess,
+    uid: int | None = None,
+) -> Path:
     """
-    @brief Download, verify, extract and prepare a plugin version, then swap `current`.
+    @brief Download, verify, extract and prepare a plugin version (no swap).
     @param plugin_id Validated plugin id (path-safe).
     @param spec Install request; `spec.env` is not touched here.
     @param data_dir Host data root (/data).
-    @return Path of the installed version dir. Previous version stays until success.
+    @param runner Executes npm/uv (argv, cwd, uid).
+    @param uid Plugin uid the runner should install as.
+    @return The version dir. Re-PUT of the current version with the same sha is a no-op.
     """
     pdir = data_dir / "plugins" / plugin_id
     pdir.mkdir(parents=True, exist_ok=True)
     root = pdir / spec.version
-    current = pdir / "current"
     sha = spec.sha256.lower()
     if root.exists():
-        if current.exists() and current.resolve() == root.resolve():
+        if current_version(pdir) == spec.version:
             marker = root / SHA_MARKER
             if marker.is_file() and hmac.compare_digest(marker.read_text().strip(), sha):
                 return root
             raise InstallError("version_conflict")
         shutil.rmtree(root)
 
-    data = await _download(spec.package_url)
+    data = await fetch(spec.package_url)
     if not hmac.compare_digest(hashlib.sha256(data).hexdigest(), sha):
         raise InstallError("sha256_mismatch")
     try:
         root.mkdir()
-        await asyncio.to_thread(_safe_extract, data, root)
+        await asyncio.to_thread(safe_extract, data, root)
+        del data
         _check_manifest(plugin_id, spec, root)
-        await _install_deps(spec, root)
+        await install_deps(spec, root, runner, uid)
         (root / SHA_MARKER).write_text(sha)
     except BaseException:
         shutil.rmtree(root, ignore_errors=True)
         raise
-    _swap_current(pdir, spec.version)
     return root

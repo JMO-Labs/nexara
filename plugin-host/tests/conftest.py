@@ -23,11 +23,13 @@ def manifest(plugin_id: str = "dev.nexara.echo", version: str = "1.0.0") -> byte
 
 
 def make_tar(
-    files: dict[str, bytes], extra: Callable[[tarfile.TarFile], None] | None = None
+    files: dict[str, bytes],
+    extra: Callable[[tarfile.TarFile], None] | None = None,
+    fmt: int = tarfile.USTAR_FORMAT,
 ) -> bytes:
     """@brief Build a .tar.gz from name->bytes, with an optional hook for odd members."""
     buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+    with tarfile.open(fileobj=buf, mode="w:gz", format=fmt) as tf:
         for name, data in files.items():
             info = tarfile.TarInfo(name)
             info.size = len(data)
@@ -43,7 +45,7 @@ def good_tar(version: str = "1.0.0", plugin_id: str = "dev.nexara.echo") -> byte
         {
             "nexara-plugin.toml": manifest(plugin_id, version),
             "echo.py": b"print('hi')\n",
-            "requirements.txt": b"httpx\n",
+            "requirements.txt": b"httpx==0.28.1\n",
         }
     )
 
@@ -71,3 +73,18 @@ def spec_body(data: bytes, version: str = "1.0.0", **over: Any) -> dict[str, Any
 def secrets() -> tuple[str, ...]:
     """@brief Secret values that must never reach logs or disk."""
     return ("tok-SECRET-123", "whs-SECRET-456", "set-SECRET-789")
+
+
+PUBLIC_IP = "93.184.216.34"
+PKG_IP_URL = f"https://{PUBLIC_IP}/dev.nexara.echo-1.0.0.tar.gz"
+
+
+@pytest.fixture(autouse=True)
+def public_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """@brief Resolve every hostname to one public IP (no real DNS in tests)."""
+    from host import download
+
+    async def resolve(host: str) -> list[str]:
+        return [PUBLIC_IP]
+
+    monkeypatch.setattr(download, "_resolve", resolve)

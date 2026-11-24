@@ -90,11 +90,16 @@ class ProcStatus:
 
 @dataclass
 class PluginRecord:
-    """@brief In-memory state for one plugin. `spec` (with env) is never persisted."""
+    """
+    @brief In-memory state for one plugin; specs (with env) are never persisted.
+    `version`/`spec` = last version that started OK (used by /start);
+    `pending` = spec of the in-flight PUT, if any.
+    """
 
     version: str | None
     status: Status
     spec: InstallSpec | None = None
+    pending: InstallSpec | None = None
     last_error: str | None = None
 
 
