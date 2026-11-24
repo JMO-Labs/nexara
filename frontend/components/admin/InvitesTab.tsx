@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/shadcn/table";
+import { AGE_GROUPS, AGE_LABEL } from "@/lib/api/ageGroups";
 import { AdminLoading, AdminNotice, stackTable } from "./AdminState";
 
 /**
@@ -44,6 +45,7 @@ const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function InvitesTab() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("member");
+  const [age, setAge] = useState("none");
 
   const { data: invites, isLoading, error } = useInvites();
   const createMutation = useCreateInvite();
@@ -52,9 +54,14 @@ export function InvitesTab() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      createMutation.mutate({ email, role });
+      createMutation.mutate({
+        email,
+        role,
+        ...(age !== "none" ? { age_group: age } : {}),
+      });
       setEmail("");
       setRole("member");
+      setAge("none");
     }
   };
 
@@ -80,6 +87,14 @@ export function InvitesTab() {
             <Option value="admin">Admin</Option>
             <Option value="member">Member</Option>
             <Option value="viewer">Viewer</Option>
+          </Select>
+          <Select label="Age group" value={age} onValueChange={setAge}>
+            <Option value="none">{AGE_LABEL.unknown}</Option>
+            {AGE_GROUPS.map((g) => (
+              <Option key={g} value={g}>
+                {AGE_LABEL[g]}
+              </Option>
+            ))}
           </Select>
           <Button type="submit" loading={createMutation.isPending}>
             Send invite

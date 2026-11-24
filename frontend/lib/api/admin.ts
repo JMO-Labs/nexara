@@ -65,6 +65,8 @@ export interface AdminUserListItem {
   status: string;
   memorialized_at?: string | null;
   passed_on?: string | null;
+  /** Explicit age group, when the API provides it. */
+  age_group?: string | null;
 }
 
 /**

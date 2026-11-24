@@ -14,6 +14,8 @@ export interface CurrentUser {
   role: string;
   is_admin?: boolean;
   is_active: boolean;
+  /** Effective age group (read-only). */
+  age_group?: string | null;
   two_factor_enabled?: boolean;
   tour_completed_at: string | null;
   community_id?: string;

@@ -19,6 +19,7 @@ import { AdminSettingsTab } from "./AdminSettingsTab";
 import { ShoppingTab } from "./ShoppingTab";
 import { EmailTab } from "./EmailTab";
 import { SystemTab } from "./system/SystemTab";
+import { AgeGroupsTab } from "./AgeGroupsTab";
 import { AlertsTab } from "./AlertsTab";
 import { EmailRepliesTab } from "./EmailRepliesTab";
 import { FeaturesTab } from "./FeaturesTab";
@@ -29,6 +30,7 @@ const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   metrics: MetricsTab,
   users: UsersTab,
   invites: InvitesTab,
+  "age-groups": AgeGroupsTab,
   sso: SsoTab,
   security: SecurityPolicy,
   signins: SigninsTab,

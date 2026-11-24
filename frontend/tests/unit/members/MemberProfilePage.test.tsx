@@ -124,6 +124,9 @@ describe("MemberProfilePage", () => {
     expect(screen.getByRole("button", { name: /Nudge/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "More actions" }));
     expect(screen.getByRole("button", { name: /^Block / })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Suggest age group" }),
+    ).toBeInTheDocument();
   });
 
   it("hides social actions on your own profile", () => {
@@ -131,6 +134,7 @@ describe("MemberProfilePage", () => {
     renderWithProviders(<MemberProfilePage />);
     expect(screen.queryByRole("button", { name: "Message" })).toBeNull();
     expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
+    expect(screen.queryByText("Suggest age group")).toBeNull();
   });
 
   it("switches between Photos and Groups tabs (no Posts tab)", () => {

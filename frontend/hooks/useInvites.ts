@@ -24,8 +24,15 @@ export const useInvites = () =>
 export const useCreateInvite = () => {
   const queryClient = useQueryClient();
   return useMutationWithToast({
-    mutationFn: ({ email, role }: { email: string; role: string }) =>
-      invitesApi.createInvite(email, role),
+    mutationFn: ({
+      email,
+      role,
+      age_group,
+    }: {
+      email: string;
+      role: string;
+      age_group?: string;
+    }) => invitesApi.createInvite(email, role, age_group),
     successKey: "toasts.invites.sent",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.admin.invites() });

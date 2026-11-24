@@ -11,6 +11,7 @@ import { SettingsRow, Input, Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { useUpdateEmail } from "@/hooks/useSettings";
 import { useSession } from "@/stores/session";
+import { AGE_LABEL, type AgeGroup } from "@/lib/api/ageGroups";
 import { DataExportSection } from "./DataExportSection";
 
 const Schema = z.object({
@@ -24,6 +25,7 @@ type FormData = z.infer<typeof Schema>;
  */
 export function AccountTab() {
   const currentEmail = useSession((s) => s.user?.email ?? "");
+  const user = useSession((s) => s.user);
   const { mutate, isPending } = useUpdateEmail();
   const { register, handleSubmit, formState, reset } = useForm<FormData>({
     resolver: zodResolver(Schema),
@@ -60,6 +62,16 @@ export function AccountTab() {
             </Button>
           </div>
         </form>
+      </Panel>
+      <Panel title="Age group">
+        <p className="text-sm">
+          Age group:{" "}
+          {AGE_LABEL[(user?.age_group as AgeGroup) ?? "unknown"].split(" (")[0]}
+          {user?.age_group &&
+            (user.birthday
+              ? " \u2014 from your birthday"
+              : " \u2014 set by your admin")}
+        </p>
       </Panel>
       <DataExportSection />
     </div>

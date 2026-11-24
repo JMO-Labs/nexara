@@ -31,6 +31,7 @@ import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
 import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
 import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
 import { AdminNotice } from "./AdminState";
+import { UserAgeSelect } from "./UserAgeSelect";
 import { ResetTwoFactorButton } from "./ResetTwoFactorButton";
 import { cn } from "@/lib/utils";
 import {
@@ -211,6 +212,7 @@ export function UsersTab() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Age group</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -240,6 +242,13 @@ export function UsersTab() {
                     <Badge tone={user.role === "admin" ? "accent" : "neutral"}>
                       {ROLE_LABEL[user.role] ?? user.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell className={`${cell} max-md:col-span-2`}>
+                    <UserAgeSelect
+                      userId={user.id}
+                      name={user.display_name || user.username}
+                      value={user.age_group}
+                    />
                   </TableCell>
                   <TableCell className={cell}>
                     <Badge
