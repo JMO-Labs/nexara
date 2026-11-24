@@ -18,7 +18,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const API_TARGET = process.env.NEXARA_API_TARGET ?? "http://localhost:8000";
 
 /** @brief Write public/sw-version.js (git sha, else timestamp) for the SW. */
-function writeSwVersion() {
+function writeSwVersion(): string {
   let v = String(Date.now());
   try {
     v =
@@ -38,11 +38,13 @@ function writeSwVersion() {
   } catch {
     /* read-only fs: SW falls back to "dev" */
   }
+  return v;
 }
-writeSwVersion();
+const BUILD_ID = writeSwVersion();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   // Standalone output bundles a self-contained `.next/standalone/server.js`
   // for the production Docker image — no `node_modules` ship needed.
   output: "standalone",

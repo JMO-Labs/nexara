@@ -75,14 +75,14 @@ function pageKey(url) {
   return url.origin + url.pathname;
 }
 
-/** @brief Only plain, non-sensitive /app HTML responses may be stored. */
+/** @brief Only plain /app shell HTML responses may be stored. */
 function cacheable(url, res) {
   const p = url.pathname;
   if (p !== "/app" && !p.startsWith("/app/")) return false;
   if (NEVER.some((n) => p === n || p.startsWith(n + "/"))) return false;
-  if (!res.ok || res.redirected) return false;
-  const cc = (res.headers && res.headers.get("Cache-Control")) || "";
-  return !/no-store|private/i.test(cc);
+  // /app HTML is a user-agnostic client-rendered shell (auth + data come from
+  // /api, never cached), so Next's no-store on dynamic routes is ignored.
+  return res.ok && !res.redirected;
 }
 
 /** @brief Store page as most-recent (delete+put) and evict oldest over cap. */
@@ -110,6 +110,13 @@ async function navigate(event, req) {
     if (cached) {
       event.waitUntil(storePage(key, cached.clone()).catch(() => {}));
       return cached;
+    }
+    // Miss on an /app route: any cached /app page is the same shell; the
+    // client router renders the requested route from it.
+    if (url.pathname.startsWith("/app/")) {
+      const keys = await cache.keys();
+      const shell = keys.length && (await cache.match(keys[keys.length - 1]));
+      if (shell) return shell;
     }
     const offline = await caches.match("/offline");
     return offline || Response.error();

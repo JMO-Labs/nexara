@@ -187,20 +187,34 @@ describe("sw.js", () => {
     expect(pages(env)).toBeUndefined();
   });
 
-  it("skips no-store/private, non-ok and redirected responses", async () => {
-    const bad = [
-      new Response("a", { headers: { "Cache-Control": "no-store" } }),
-      new Response("b", { headers: { "Cache-Control": "private, max-age=0" } }),
-      new Response("c", { status: 500 }),
-    ];
+  it("caches /app/events/123 despite no-store (client-rendered shell)", async () => {
+    env.fetchMock.mockResolvedValue(
+      new Response("shell", {
+        headers: { "Cache-Control": "private, no-store" },
+      }),
+    );
+    await doFetch(env, "https://x.test/app/events/123", { mode: "navigate" });
+    expect([...pages(env)!.keys()]).toEqual(["https://x.test/app/events/123"]);
+  });
+
+  it("skips non-ok and redirected responses", async () => {
     const redirected = new Response("d");
     Object.defineProperty(redirected, "redirected", { value: true });
-    bad.push(redirected);
-    for (const r of bad) {
+    for (const r of [new Response("c", { status: 500 }), redirected]) {
       env.fetchMock.mockResolvedValueOnce(r);
       await doFetch(env, "https://x.test/app/x", { mode: "navigate" });
     }
     expect(pages(env)).toBeUndefined();
+  });
+
+  it("offline miss on /app/** serves a cached /app shell", async () => {
+    env.fetchMock.mockResolvedValueOnce(new Response("shell"));
+    await doFetch(env, "https://x.test/app", { mode: "navigate" });
+    env.fetchMock.mockRejectedValue(new Error("offline"));
+    const res = await doFetch(env, "https://x.test/app/events/999", {
+      mode: "navigate",
+    });
+    expect(await res.text()).toBe("shell");
   });
 
   it("CLEAR_USER_CACHE deletes the pages cache", async () => {
