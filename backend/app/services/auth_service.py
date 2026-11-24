@@ -45,7 +45,7 @@ from app.services.auth.totp_replay import (
     normalize_totp,
     reserve_attempt,
 )
-from app.services.auth.two_factor import open_secret
+from app.services.auth.two_factor import read_secret
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
@@ -194,12 +194,12 @@ class AuthService:
             await fail(user, user.email if user else None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        if not user or not user.totp_secret:
+        if not user or not user.totp_enabled or not user.totp_secret:
             await fail(user, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
         canonical = normalize_totp(code)
-        secret = open_secret(user.totp_secret, self._settings)
+        secret = read_secret(user.totp_secret, self._settings, user.id)
         if canonical and verify_totp(secret, canonical):
             method = "totp"
             ok = await claim_totp_code(user.id, canonical, self._settings)

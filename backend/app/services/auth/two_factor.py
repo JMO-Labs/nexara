@@ -7,10 +7,12 @@ Secrets are Fernet tokens at rest; plaintext only exists transiently here.
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
+from cryptography.fernet import InvalidToken
 
 from app.core.config import Settings
 from app.core.encryption import decrypt_secret, derive_fernet_key, encrypt_secret
@@ -50,6 +52,28 @@ def open_secret(stored: str, settings: Settings) -> str:
     return decrypt_secret(stored, derive_fernet_key(settings.SECRET_KEY))
 
 
+def read_secret(stored: str, settings: Settings, user_id: uuid.UUID) -> str:
+    """
+    @brief Decrypt a stored secret, failing closed if SECRET_KEY changed.
+
+    @raises AppError 503 ``2fa_secret_unreadable`` when the token cannot be decrypted.
+    """
+    try:
+        return open_secret(stored, settings)
+    except InvalidToken as exc:
+        logger.error("2fa.secret_unreadable", user_id=str(user_id))
+        raise AppError(
+            code="2fa_secret_unreadable",
+            message=_("Your 2FA secret can no longer be read. Ask an admin to reset your 2FA."),
+            status_code=503,
+        ) from exc
+
+
+def _manage_key(user_id: uuid.UUID) -> uuid.UUID:
+    """@brief Per-user attempt namespace for 2FA management (separate from login's)."""
+    return uuid.uuid5(user_id, "2fa-manage-user")
+
+
 def _bad_code() -> AppError:
     return AppError(code="invalid_code", message=_("Invalid code"), status_code=400)
 
@@ -78,13 +102,17 @@ class TwoFactorService:
             ip_address=self._ip,
         )
 
-    async def _spend(self, secret: str | None, code: str, *, recovery: bool) -> bool:
-        """@brief Check a TOTP (or recovery) code under the attempt caps; one-time use."""
+    async def _reserve(self) -> None:
+        """@brief Count one management attempt; 429 when capped (own per-user counter)."""
         uid = self._user.id
-        if not await reserve_attempt(f"2fa-manage:{uid}", uid, self._settings):
+        if not await reserve_attempt(f"2fa-manage:{uid}", _manage_key(uid), self._settings):
             raise AppError(
                 code="too_many_attempts", message=_("Too many attempts"), status_code=429
             )
+
+    async def _spend(self, secret: str | None, code: str, *, recovery: bool) -> bool:
+        """@brief Check a TOTP (or recovery) code (caller reserved an attempt); one-time use."""
+        uid = self._user.id
         canonical = normalize_totp(code)
         if canonical and secret:
             ok = verify_totp(secret, canonical) and await claim_totp_code(
@@ -95,12 +123,14 @@ class TwoFactorService:
         else:
             ok = False
         if ok:
-            await clear_user_attempts(uid, self._settings)
+            await clear_user_attempts(_manage_key(uid), self._settings)
         return ok
 
     def _active_secret(self) -> str | None:
         s = self._user.totp_secret
-        return open_secret(s, self._settings) if s and self._user.totp_enabled else None
+        if s and self._user.totp_enabled:
+            return read_secret(s, self._settings, self._user.id)
+        return None
 
     async def start(self) -> dict[str, str]:
         """
@@ -131,7 +161,8 @@ class TwoFactorService:
             raise AppError(
                 code="2fa_not_started", message=_("2FA enrollment not started"), status_code=400
             )
-        secret = open_secret(pending, self._settings)
+        await self._reserve()
+        secret = read_secret(pending, self._settings, self._user.id)
         if not await self._spend(secret, code, recovery=False):
             raise _bad_code()
         await self._users.update_totp(
@@ -150,6 +181,7 @@ class TwoFactorService:
         @raises AppError 400 when neither proof is valid.
         """
         ok = False
+        await self._reserve()
         if password and self._user.password_hash:
             ok = verify_password(password, self._user.password_hash)
         if not ok and code:
@@ -168,6 +200,7 @@ class TwoFactorService:
 
         @raises AppError 400 on a wrong code or when TOTP is off.
         """
+        await self._reserve()
         secret = self._active_secret()
         if secret is None or not await self._spend(secret, code, recovery=True):
             raise _bad_code()

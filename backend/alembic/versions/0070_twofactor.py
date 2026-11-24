@@ -95,6 +95,8 @@ def upgrade() -> None:
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("passkeys_user_idx", "passkeys", ["user_id"])
+    # Unfinished enrolments (secret stored, never confirmed) are stale: drop them.
+    op.execute("UPDATE users SET totp_secret = NULL WHERE NOT totp_enabled")
     _rewrite(_enc)
 
 

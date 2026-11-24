@@ -204,3 +204,45 @@ def test_migration_encrypt_is_idempotent_and_round_trips():
         m._dec(enc, key) == "JBSWY3DPEHPK3PXP"
         and m._dec("JBSWY3DPEHPK3PXP", key) == "JBSWY3DPEHPK3PXP"
     )
+
+
+async def test_disable_password_path_is_attempt_capped_and_2fa_stays_on():
+    svc, users, repo, _ = _svc(
+        _user(totp_enabled=True, totp_secret=seal_secret("JBSWY3DPEHPK3PXP", S))
+    )
+    seq = [True] * 5 + [False]
+    with patch(TR + "reserve_attempt", AsyncMock(side_effect=seq)):
+        for _i in range(5):
+            with pytest.raises(AppError) as e:
+                await svc.disable("wrong-password", None)
+            assert e.value.status_code == 400
+        with pytest.raises(AppError) as e:
+            await svc.disable("right-password1", None)  # correct but capped
+    assert e.value.status_code == 429
+    users.update_totp.assert_not_called()
+    repo.delete_recovery_codes.assert_not_called()
+
+
+async def test_manage_attempts_use_their_own_per_user_counter():
+    from app.services.auth.two_factor import _manage_key
+
+    svc, *_ = _svc(_user(totp_pending_secret=seal_secret("JBSWY3DPEHPK3PXP", S)))
+    rec = AsyncMock(return_value=True)
+    with patch(TR + "reserve_attempt", rec):
+        with pytest.raises(AppError):
+            await svc.confirm("000000")
+    _tok, uid_arg, _s = rec.await_args.args
+    assert uid_arg == _manage_key(svc._user.id) and uid_arg != svc._user.id
+
+
+async def test_unreadable_secret_fails_closed_503_and_logs():
+    other = Settings(SECRET_KEY="rotated", JWT_ALGORITHM="HS256")
+    svc, users, repo, _ = _svc(
+        _user(totp_enabled=True, totp_secret=seal_secret("JBSWY3DPEHPK3PXP", other))
+    )
+    with patch(TR + "logger") as log:
+        with pytest.raises(AppError) as e:
+            await svc.regenerate("123456")
+    assert e.value.status_code == 503 and e.value.code == "2fa_secret_unreadable"
+    log.error.assert_called_once_with("2fa.secret_unreadable", user_id=str(svc._user.id))
+    repo.replace_recovery_codes.assert_not_called()
