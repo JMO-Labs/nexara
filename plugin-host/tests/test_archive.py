@@ -123,3 +123,33 @@ def test_memory_error_is_install_error(tmp_path: Path, monkeypatch: pytest.Monke
 
 def test_not_gzip(tmp_path: Path) -> None:
     assert code_of(b"not a tarball", tmp_path) == "invalid_archive"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        ".venv/bin/python",
+        ".VENV/x",
+        "./.venv/pyvenv.cfg",
+        "node_modules/a/index.js",
+        "Node_Modules/x",
+        ".venv",
+        "node_modules",
+    ],
+)
+def test_top_level_install_dirs_rejected(tmp_path: Path, name: str) -> None:
+    assert code_of(make_tar({**BASE, name: b"x"}), tmp_path) == "unsafe_archive"
+
+
+def test_nested_node_modules_name_allowed(tmp_path: Path) -> None:
+    safe_extract(make_tar({**BASE, "lib/node_modules_helper.js": b"x"}), tmp_path)
+
+
+def test_reviewer_shrinkwrap_rejected(tmp_path: Path) -> None:
+    shrink = (
+        b'{"lockfileVersion":3,"packages":{"":{"dependencies":{"left-pad":"1.3.0"}},'
+        b'"node_modules/left-pad":{"version":"1.3.0",'
+        b'"resolved":"http://127.0.0.1:18765/shrinkwrap-A.tgz"}}}'
+    )
+    data = make_tar({**BASE, "package.json": b"{}", "npm-shrinkwrap.json": shrink})
+    assert code_of(data, tmp_path) == "forbidden_config_file"

@@ -106,7 +106,7 @@ async def test_update_keeps_previous_until_swap(tmp_path: Path, runner: Any) -> 
     prune(pdir(tmp_path), "1.1.0")
     assert (pdir(tmp_path) / "current").resolve() == root.resolve()
     assert not (pdir(tmp_path) / "1.0.0").exists()
-    assert sorted(p.name for p in pdir(tmp_path).iterdir()) == ["1.1.0", "current"]
+    assert sorted(p.name for p in pdir(tmp_path).iterdir()) == [".cache", "1.1.0", "current"]
 
 
 async def test_prune_keeps_cache(tmp_path: Path) -> None:

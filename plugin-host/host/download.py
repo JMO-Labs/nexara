@@ -26,12 +26,22 @@ async def _resolve(host: str) -> list[str]:
     return [str(i[4][0]) for i in infos]
 
 
+# IPv6 ranges that embed or translate to IPv4 (or are deprecated); is_global alone
+# lets some through (e.g. NAT64 64:ff9b::/96 with a private IPv4 inside).
+_BLOCKED_V6 = tuple(
+    ipaddress.IPv6Network(n)
+    for n in ("::/96", "::ffff:0:0/96", "::ffff:0:0:0/96", "64:ff9b::/96", "64:ff9b:1::/48",
+              "2002::/16", "2001::/32")
+)  # fmt: skip
+
+
 def _public(addr: str) -> bool:
     """@brief True only for globally routable unicast (rejects private, loopback,
-    link-local, CGNAT, ULA, multicast, reserved, unspecified, IPv4-mapped private)."""
+    link-local, CGNAT, ULA, multicast, reserved, unspecified and IPv6 ranges that
+    embed/translate IPv4: IPv4-compatible/mapped, SIIT, NAT64, 6to4, Teredo)."""
     ip = ipaddress.ip_address(addr.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-        ip = ip.ipv4_mapped
+    if isinstance(ip, ipaddress.IPv6Address) and any(ip in n for n in _BLOCKED_V6):
+        return False
     return ip.is_global and not ip.is_multicast
 
 

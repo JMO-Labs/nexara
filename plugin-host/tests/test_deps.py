@@ -68,6 +68,7 @@ def test_lockfile_ok(tmp_path: Path) -> None:
                 "node_modules/left-pad": pkg(),
                 "node_modules/@s/x": pkg("@s/x"),
                 "node_modules/a/node_modules/b": pkg("b"),
+                "node_modules/z": pkg("z"),
                 "node_modules/z/node_modules/q": {"version": "1", "inBundle": True},
             }
         ),
@@ -136,12 +137,89 @@ def test_package_json_unsafe_specs(tmp_path: Path, spec: str) -> None:
     assert lock_code(tmp_path) == "lockfile_unsafe"
 
 
+def test_lockfile_uppercase_legacy_name_ok(tmp_path: Path) -> None:
+    write_node(tmp_path, lock({"node_modules/JSONStream": pkg("JSONStream")}))
+    check_lockfile(tmp_path)
+
+
+def test_inbundle_under_verified_parent_ok(tmp_path: Path) -> None:
+    write_node(
+        tmp_path,
+        lock(
+            {
+                "node_modules/a": pkg("a"),
+                "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
+            }
+        ),
+    )
+    check_lockfile(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "packages",
+    [
+        {"node_modules/b": {"version": "1.3.0", "inBundle": True}},
+        {"node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True}},
+        {
+            "node_modules/a": {"version": "1.0.0", "inBundle": True},
+            "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
+        },
+        {
+            "node_modules/a": pkg("a", resolved="https://evil/a.tgz"),
+            "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
+        },
+        {"node_modules/b": {"version": "http://127.0.0.1/x.tgz", "inBundle": True}},
+    ],
+    ids=["root-parent", "missing-parent", "bundled-parent", "unverified-parent", "url-version"],
+)
+def test_inbundle_without_verified_parent_rejected(
+    tmp_path: Path, packages: dict[str, Any]
+) -> None:
+    write_node(tmp_path, lock(packages))
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+@pytest.mark.parametrize("field", ["bundleDependencies", "bundledDependencies"])
+def test_bundle_dependencies_rejected(tmp_path: Path, field: str) -> None:
+    write_node(tmp_path, lock({}), {field: ["left-pad"]})
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+    lk = lock({})
+    lk["packages"][""][field] = ["left-pad"]
+    write_node(tmp_path, lk)
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"left-pad": "http://127.0.0.1/x.tgz"},
+        {"a": {"b": "git+https://x/y"}},
+        {"a": "$left-pad"},
+        {"a": ["1.0.0"]},
+    ],
+)
+def test_unsafe_overrides_rejected(tmp_path: Path, overrides: dict[str, Any]) -> None:
+    write_node(tmp_path, lock({}), {"overrides": overrides})
+    assert lock_code(tmp_path) == "lockfile_unsafe"
+
+
+def test_safe_overrides_ok(tmp_path: Path) -> None:
+    write_node(tmp_path, lock({}), {"overrides": {"a": "1.2.3", "b": {".": "^2", "c": "~1"}}})
+    check_lockfile(tmp_path)
+
+
 def test_package_json_workspaces_rejected(tmp_path: Path) -> None:
     write_node(tmp_path, lock({}), {"workspaces": ["a"]})
     assert lock_code(tmp_path) == "lockfile_unsafe"
 
 
 H = "a" * 64
+REVIEWER_PAYLOAD = (
+    "six==1.16.0 # a \\\n"
+    "--extra-index-url http://127.0.0.1:18765/P4/simple\n"
+    "six==1.16.0 # b \\\n"
+    "-r /etc/hostname\n"
+)
 
 
 @pytest.mark.parametrize(
@@ -150,7 +228,7 @@ H = "a" * 64
         "httpx==0.28.1\n",
         "# c\n\nhttpx==0.28.1  # pinned\nanyio==4.6.2\n",
         f"httpx==0.28.1 --hash=sha256:{H}\n",
-        f"httpx==0.28.1 \\\n    --hash=sha256:{H} \\\n    --hash=sha256:{'b' * 64}\n",
+        f"httpx==0.28.1 --hash=sha256:{H} --hash=sha256:{'b' * 64}\n",
         "uvicorn[standard]==0.32.0\n",
         'uvloop==0.21.0 ; sys_platform != "win32"\n',
         'x==1.0.0; python_version >= "3.10" and platform_machine == "x86_64"\n',
@@ -179,6 +257,10 @@ def test_requirements_ok(tmp_path: Path, text: str) -> None:
         "x==1.0 --hash=md5:abc\n",
         'x==1.0; os.system("id")\n',
         "x==1.0 \\\n-r other.txt\n",
+        REVIEWER_PAYLOAD,
+        f"httpx==0.28.1 \\\n    --hash=sha256:{H}\n",
+        "httpx==0.28.1 # trailing \\\n",
+        "httpx==0.28.1\\\n",
     ],
 )
 def test_requirements_unsafe(tmp_path: Path, text: str) -> None:
@@ -206,6 +288,54 @@ async def test_python_argv(tmp_path: Path, runner: Any, calls: Calls) -> None:
     assert pip[pip.index("--only-binary") + 1] == ":all:"
     assert pip[pip.index("--index-url") + 1] == "https://pypi.org/simple"
     assert cwd == root and uid == 20001
+    assert "requirements.txt" not in pip and "--require-hashes" not in pip
+    req = Path(pip[pip.index("-r") + 1])
+    assert req.is_absolute() and root not in req.parents
+    assert req.read_text() == "httpx==0.28.1\n"
+
+
+def test_requirements_canonical(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        f"# top\n\nhttpx==0.28.1   --hash=sha256:{H}  # c\n"
+        f'x==1.0 ;  sys_platform != "win32" --hash=sha256:{H}\n'
+    )
+    assert check_requirements(tmp_path) == [
+        f"httpx==0.28.1 --hash=sha256:{H}",
+        f'x==1.0 ; sys_platform != "win32" --hash=sha256:{H}',
+    ]
+
+
+def test_requirements_mixed_hashes_rejected(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(f"a==1.0 --hash=sha256:{H}\nb==1.0\n")
+    with pytest.raises(InstallError) as e:
+        check_requirements(tmp_path)
+    assert e.value.code == "requirements_unsafe"
+
+
+async def test_hashed_requirements_require_hashes(
+    tmp_path: Path, runner: Any, calls: Calls
+) -> None:
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    (root / "requirements.txt").write_text(f"httpx==0.28.1 --hash=sha256:{H}\n")
+    await install_deps(mkspec(), root, runner)
+    assert "--require-hashes" in calls[1][0]
+
+
+async def test_canonical_file_replaces_planted_symlink(
+    tmp_path: Path, runner: Any, calls: Calls
+) -> None:
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    (root / "requirements.txt").write_text("httpx==0.28.1\n")
+    victim = tmp_path / "victim"
+    victim.write_text("keep")
+    cache = root.parent / ".cache"
+    cache.mkdir()
+    (cache / deps.CANONICAL_REQS).symlink_to(victim)
+    await install_deps(mkspec(), root, runner)
+    assert victim.read_text() == "keep"
+    assert (cache / deps.CANONICAL_REQS).read_text() == "httpx==0.28.1\n"
 
 
 async def test_python_bad_requirements_never_runs_pip(

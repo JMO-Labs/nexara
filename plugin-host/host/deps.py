@@ -25,10 +25,12 @@ NPM_REGISTRY = "https://registry.npmjs.org/"
 PYPI_INDEX = "https://pypi.org/simple"
 PLUGIN_PYTHON = os.environ.get("PLUGIN_HOST_PYTHON", "/usr/local/bin/python3")
 
-_NPM_NAME = r"(@[a-z0-9][a-z0-9._~-]*/)?[a-z0-9][a-z0-9._~-]*"
+_NPM_NAME = r"(@[A-Za-z0-9][A-Za-z0-9._~-]*/)?[A-Za-z0-9][A-Za-z0-9._~-]*"
 _LOCK_KEY = re.compile(rf"node_modules/{_NPM_NAME}(/node_modules/{_NPM_NAME})*", re.ASCII)
 _SAFE_RANGE = re.compile(r"[0-9A-Za-z.^~<>=|*+ x-]*", re.ASCII)
 _DEP_FIELDS = ("dependencies", "optionalDependencies", "peerDependencies", "devDependencies")
+_BANNED_FIELDS = ("workspaces", "bundleDependencies", "bundledDependencies")
+CANONICAL_REQS = "requirements.canonical.txt"
 
 _PY_NAME = r"[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?"
 _MARKER_VAR = (
@@ -48,18 +50,44 @@ def _unsafe() -> InstallError:
     return InstallError("lockfile_unsafe")
 
 
+def _check_overrides(node: Any) -> None:
+    """@brief Every leaf of package.json `overrides` must be a plain semver range."""
+    if isinstance(node, dict):
+        for v in node.values():
+            _check_overrides(v)
+    elif not (isinstance(node, str) and _SAFE_RANGE.fullmatch(node)):
+        raise _unsafe()
+
+
+def _from_registry(entry: Any) -> bool:
+    """@brief Entry resolves to the npm registry over https and carries an integrity hash."""
+    if not isinstance(entry, dict):
+        return False
+    resolved, integrity = entry.get("resolved"), entry.get("integrity")
+    return (
+        isinstance(resolved, str)
+        and resolved.startswith(NPM_REGISTRY)
+        and isinstance(integrity, str)
+        and integrity.startswith("sha")
+    )
+
+
 def check_lockfile(root: Path) -> None:
     """
     @brief Require package-lock.json v>=2 whose every package resolves to the npm
-    registry over https with an integrity hash (bundled deps excepted); package.json
-    may only use plain semver ranges (no git/file/link/url/workspace/alias specs).
+    registry over https with an integrity hash. An `inBundle` entry without `resolved`
+    is allowed only inside a non-root parent that itself passed that check.
+    package.json may only use plain semver ranges (deps and overrides); workspaces
+    and bundle(d)Dependencies are rejected.
     """
     try:
         pj: Any = json.loads((root / "package.json").read_text("utf-8"))
         lock: Any = json.loads((root / "package-lock.json").read_text("utf-8"))
     except (OSError, ValueError) as e:
         raise _unsafe() from e
-    if not isinstance(pj, dict) or not isinstance(lock, dict) or "workspaces" in pj:
+    if not isinstance(pj, dict) or not isinstance(lock, dict):
+        raise _unsafe()
+    if any(f in pj for f in _BANNED_FIELDS):
         raise _unsafe()
     for f in _DEP_FIELDS:
         specs = pj.get(f) or {}
@@ -68,8 +96,13 @@ def check_lockfile(root: Path) -> None:
         for v in specs.values():
             if not isinstance(v, str) or not _SAFE_RANGE.fullmatch(v):
                 raise _unsafe()
+    if "overrides" in pj:
+        _check_overrides(pj["overrides"])
     ver, pkgs = lock.get("lockfileVersion"), lock.get("packages")
     if not isinstance(ver, int) or ver < 2 or not isinstance(pkgs, dict):
+        raise _unsafe()
+    lock_root = pkgs.get("", {})
+    if not isinstance(lock_root, dict) or any(f in lock_root for f in _BANNED_FIELDS):
         raise _unsafe()
     for key, entry in pkgs.items():
         if key == "":
@@ -78,28 +111,52 @@ def check_lockfile(root: Path) -> None:
             raise _unsafe()
         if ".." in PurePosixPath(key).parts:
             raise _unsafe()
-        if entry.get("inBundle") is True and "resolved" not in entry:
+        if _from_registry(entry):
             continue
-        resolved, integrity = entry.get("resolved"), entry.get("integrity")
-        if not (isinstance(resolved, str) and resolved.startswith(NPM_REGISTRY)):
-            raise _unsafe()
-        if not (isinstance(integrity, str) and integrity.startswith("sha")):
-            raise _unsafe()
+        parent = key.rpartition("/node_modules/")[0]
+        if entry.get("inBundle") is True and "resolved" not in entry and parent:
+            if _from_registry(pkgs.get(parent)):
+                continue
+        raise _unsafe()
 
 
-def check_requirements(root: Path) -> None:
+def check_requirements(root: Path) -> list[str]:
     """
-    @brief Only exact pins `name[extras]==ver`, optional simple markers and
-    `--hash=sha256:` per line. No options, URLs, paths, includes or env vars.
+    @brief Parse requirements.txt strictly: only exact pins `name[extras]==ver`, optional
+    simple markers and `--hash=sha256:` per line. No backslashes (continuations), options,
+    URLs, paths, includes or env vars; hashes on all lines or none.
+    @return Canonical lines (comments stripped, whitespace normalised). uv only ever
+    sees these, never the package's own file.
     """
     try:
         text = (root / "requirements.txt").read_text("utf-8")
     except (OSError, UnicodeError) as e:
         raise InstallError("requirements_unsafe") from e
-    for line in re.sub(r"\\\r?\n", " ", text).splitlines():
-        line = re.sub(r"(^|\s)#.*$", "", line).strip()
-        if line and not _REQ.fullmatch(line):
+    if "\\" in text:
+        raise InstallError("requirements_unsafe")
+    reqs: list[str] = []
+    for raw in text.splitlines():
+        line = re.sub(r"(^|\s)#.*$", "", raw).strip()
+        if not line:
+            continue
+        if not _REQ.fullmatch(line):
             raise InstallError("requirements_unsafe")
+        reqs.append(" ".join(line.split()))
+    if len({"--hash=" in r for r in reqs}) > 1:
+        raise InstallError("requirements_unsafe")
+    return reqs
+
+
+def _write_canonical(cache: Path, reqs: list[str]) -> Path:
+    """@brief Write `reqs` to a fresh file under the plugin cache (never follows links)."""
+    cache.mkdir(parents=True, exist_ok=True)
+    path = cache / CANONICAL_REQS
+    if path.is_symlink() or path.exists():
+        path.unlink()
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+    with os.fdopen(fd, "w") as f:
+        f.write("".join(r + "\n" for r in reqs))
+    return path
 
 
 def install_env(cwd: Path) -> dict[str, str]:
@@ -161,14 +218,15 @@ async def install_deps(
             ]  # fmt: skip
             await runner(argv, root, uid)
         return
-    has_reqs = (root / "requirements.txt").exists()
-    if has_reqs:
-        check_requirements(root)
+    reqs = check_requirements(root) if (root / "requirements.txt").exists() else []
     await runner(["uv", "venv", "--no-config", "--python", PLUGIN_PYTHON, ".venv"], root, uid)
-    if has_reqs:
+    if reqs:
         argv = [
             "uv", "pip", "install", "--no-config", "--no-sources",
             "--only-binary", ":all:", "--index-url", PYPI_INDEX,
-            "--python", ".venv/bin/python", "-r", "requirements.txt",
+            "--python", ".venv/bin/python",
         ]  # fmt: skip
+        if all("--hash=" in r for r in reqs):
+            argv.append("--require-hashes")
+        argv += ["-r", str(_write_canonical(cache, reqs))]
         await runner(argv, root, uid)

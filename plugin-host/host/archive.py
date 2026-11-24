@@ -15,18 +15,15 @@ from host.errors import InstallError
 
 MAX_EXTRACT_BYTES = 200 * 1024 * 1024
 MAX_MEMBERS = 10_000
+# Tool config and alternate lockfiles: npm ci must only ever see the validated
+# package-lock.json (npm-shrinkwrap.json takes precedence over it).
 FORBIDDEN_FILES = frozenset(
-    {
-        ".npmrc",
-        ".yarnrc",
-        ".yarnrc.yml",
-        ".pnpmfile.cjs",
-        "pip.conf",
-        "pip.ini",
-        "uv.toml",
-        ".python-version",
-    }
-)
+    {".npmrc", ".yarnrc", ".yarnrc.yml", ".pnpmfile.cjs", "pip.conf", "pip.ini", "uv.toml",
+     ".python-version", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb",
+     "bun.lock"}
+)  # fmt: skip
+# Built by the installer; a shipped copy could plant an interpreter or modules.
+FORBIDDEN_TOP_DIRS = frozenset({".venv", "node_modules"})
 
 
 class _CappedReader(io.RawIOBase):
@@ -60,6 +57,8 @@ def _checked(tf: tarfile.TarFile) -> Iterator[tarfile.TarInfo]:
             raise InstallError("unsafe_archive")
         if name.name.lower() in FORBIDDEN_FILES:
             raise InstallError("forbidden_config_file")
+        if name.parts and name.parts[0].lower() in FORBIDDEN_TOP_DIRS:
+            raise InstallError("unsafe_archive")
         if name in seen:
             raise InstallError("unsafe_archive")
         seen.add(name)

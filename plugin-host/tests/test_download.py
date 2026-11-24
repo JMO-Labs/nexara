@@ -71,6 +71,45 @@ async def test_private_addresses_rejected(dns: dict, addr: str) -> None:
     assert await code_of(URL) == "download_blocked"
 
 
+@pytest.mark.parametrize(
+    "addr",
+    [
+        "::a00:1",
+        "::7f00:1",
+        "::ffff:0:a00:1",
+        "64:ff9b::a00:1",
+        "64:ff9b::7f00:1",
+        "64:ff9b::5db8:d822",
+        "64:ff9b:1::1",
+        "2002:a00:1::1",
+        "2002:5db8:d822::1",
+        "2001::1",
+        "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+    ],
+    ids=[
+        "v4compat-priv",
+        "v4compat-lo",
+        "siit",
+        "nat64-priv",
+        "nat64-lo",
+        "nat64-public",
+        "nat64-local",
+        "6to4-priv",
+        "6to4-public",
+        "teredo",
+        "teredo-2",
+    ],
+)
+async def test_ipv6_translation_ranges_rejected(dns: dict, addr: str) -> None:
+    dns["pkgs.example.com"] = [addr]
+    assert await code_of(URL) == "download_blocked"
+
+
+def test_public_ipv6_allowed() -> None:
+    assert download._public("2606:4700::6810:84e5")
+    assert download._public(PUBLIC)
+
+
 async def test_any_private_address_rejects(dns: dict) -> None:
     dns["pkgs.example.com"] = [PUBLIC, "10.0.0.1"]
     assert await code_of(URL) == "download_blocked"
