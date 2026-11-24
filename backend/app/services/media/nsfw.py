@@ -43,6 +43,9 @@ async def set_media_nsfw(
         raise NotFoundError(_("Media not found"))
     if media.uploader_id != user.id:
         raise AuthorizationError(_("Only the uploader can change this photo"))
+    if not value and await repo.nsfw_source_level(media_id):
+        # A moderator flagged a post/album holding it: locked until that is unflagged.
+        raise AuthorizationError(_("A moderator marked this NSFW"))
     if value != media.is_nsfw:
         await require_owner_may_flag(repo, service._community_id, user.id, value)
         apply_owner_flag(media, value)

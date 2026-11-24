@@ -100,6 +100,7 @@ class GalleryItemsMixin(GalleryServiceBase):
             raise NotFoundError(_("Gallery not found"))
         if not await self._can_contribute(gallery, user_id):
             raise AuthorizationError(_("You cannot add items to this gallery"))
+        await self._require_own_media({data.media_id}, user_id)
         existing = await self._repo.get_item(gallery_id, data.media_id)
         if existing is not None:
             return GalleryItemResponse.model_validate(existing)
@@ -129,6 +130,7 @@ class GalleryItemsMixin(GalleryServiceBase):
             raise NotFoundError(_("Gallery not found"))
         if not await self._can_contribute(gallery, user_id):
             raise AuthorizationError(_("You cannot add items to this gallery"))
+        await self._require_own_media(set(data.media_ids), user_id)
 
         position = gallery.item_count
         out: list[GalleryItemResponse] = []

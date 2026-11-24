@@ -1,8 +1,14 @@
 """
 @file nsfw_cascade.py
-@brief A moderator/admin NSFW flag on a post or album also flags and locks the
-       photos inside it at the same level, so a photo moved out stays NSFW.
-       Unflagging at that level clears exactly the photo locks at that level.
+@brief A moderator/admin NSFW flag on a post or album reaches the photos inside
+       it through ``media_nsfw_sources`` rows, so a photo moved out stays NSFW
+       (and locked at that level). Unflagging removes only that container's
+       rows; the photo's own flag and other containers' rows are untouched.
+
+A non-admin moderator's flag only reaches photos the container's author/owner
+uploaded (they could not otherwise flag someone else's photo used elsewhere).
+Effective NSFW = own ``is_nsfw`` OR any source row (``media_is_nsfw``);
+effective lock = max(own lock, source levels).
 """
 
 from __future__ import annotations
@@ -10,19 +16,16 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import delete, literal, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.gallery import GalleryItem
+from app.models.gallery import Gallery, GalleryItem
 from app.models.media import Media
-from app.models.post import PostMedia
+from app.models.media_nsfw_source import MediaNsfwSource
+from app.models.post import Post, PostMedia
 
-
-def _contained(kind: str, entity_id: uuid.UUID) -> Any:
-    """@brief Media ids inside the post or album."""
-    if kind == "posts":
-        return select(PostMedia.media_id).where(PostMedia.post_id == entity_id)
-    return select(GalleryItem.media_id).where(GalleryItem.gallery_id == entity_id)
+_SOURCE = {"posts": "post", "galleries": "gallery"}
 
 
 async def cascade_media_lock(
@@ -32,27 +35,50 @@ async def cascade_media_lock(
     community_id: uuid.UUID,
     *,
     value: bool,
-    level: str | None,
+    level: str,
+    actor_admin: bool,
 ) -> None:
     """
-    @brief Mirror a container flag change onto its photos.
+    @brief Add (flag) or remove (unflag) this container's source rows.
     @param kind "posts" or "galleries" (other kinds are ignored).
-    @param value New container flag.
-    @param level Setting: the container's lock level (never downgrades a stronger
-           photo lock). Clearing: the level the container held (None = nothing to clear).
+    @param level The container's lock level after the change.
+    @param actor_admin Admins reach every photo inside; moderators only the
+           author's/owner's own uploads.
     """
-    if kind not in ("posts", "galleries") or level is None:
+    source = _SOURCE.get(kind)
+    if source is None:
         return
-    scope = (Media.id.in_(_contained(kind, entity_id)), Media.community_id == community_id)
-    if value:
-        weaker = or_(Media.nsfw_lock_level.is_(None), Media.nsfw_lock_level == level)
-        if level == "admin":
-            weaker = or_(weaker, Media.nsfw_lock_level == "moderator")
-        stmt = update(Media).where(*scope, weaker).values(is_nsfw=True, nsfw_lock_level=level)
-    else:
-        stmt = (
-            update(Media)
-            .where(*scope, Media.nsfw_lock_level == level)
-            .values(is_nsfw=False, nsfw_lock_level=None)
+    rows = MediaNsfwSource
+    if not value:
+        await session.execute(
+            delete(rows).where(rows.source_kind == source, rows.source_id == entity_id)
         )
-    await session.execute(stmt, execution_options={"synchronize_session": False})
+        return
+    if kind == "posts":
+        owner: Any = Post.author_id
+        stmt = select(PostMedia.media_id).join(Post, Post.id == PostMedia.post_id)
+        stmt = stmt.where(PostMedia.post_id == entity_id)
+        stmt = stmt.join(Media, Media.id == PostMedia.media_id)
+    else:
+        owner = Gallery.owner_id
+        stmt = select(GalleryItem.media_id).join(Gallery, Gallery.id == GalleryItem.gallery_id)
+        stmt = stmt.where(GalleryItem.gallery_id == entity_id)
+        stmt = stmt.join(Media, Media.id == GalleryItem.media_id)
+    stmt = stmt.where(Media.community_id == community_id)
+    if not actor_admin:
+        stmt = stmt.where(Media.uploader_id == owner)
+    picked = stmt.add_columns(
+        literal(source), literal(entity_id), literal(community_id), literal(level)
+    )
+    ins = insert(rows).from_select(
+        ["media_id", "source_kind", "source_id", "community_id", "level"], picked
+    )
+    ins = ins.on_conflict_do_update(
+        index_elements=["media_id", "source_kind", "source_id"], set_={"level": level}
+    )
+    await session.execute(ins)
+
+
+async def clear_media_sources(session: AsyncSession, media_id: uuid.UUID) -> None:
+    """@brief Admin unflag of a photo: drop every container source on it too."""
+    await session.execute(delete(MediaNsfwSource).where(MediaNsfwSource.media_id == media_id))

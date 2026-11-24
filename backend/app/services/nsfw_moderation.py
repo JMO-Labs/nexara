@@ -79,6 +79,8 @@ class NsfwModerationService:
             # Own content: owner rules even for a group moderator (no lock, and a
             # moderator/admin lock cannot be cleared).
             await require_owner_may_flag(self._repo, self._cid, actor.id, value)
+            if kind == "media" and not value and await self._repo.nsfw_source_level(entity_id):
+                raise AuthorizationError(_("A moderator marked this NSFW"))
             if apply_owner_flag(entity, value):
                 await self._session.flush()
                 await self._record(kind, entity_id, actor, value, lock_level=entity.nsfw_lock_level)
@@ -96,7 +98,7 @@ class NsfwModerationService:
             raise AuthorizationError(_("An admin marked this NSFW"))
         # Never downgrade a stronger lock when re-flagging.
         level = mine if LOCK_RANK[mine] >= LOCK_RANK[current] else current
-        await self._repo.set_nsfw(kind, entity_id, self._cid, value, level)
+        await self._repo.set_nsfw(kind, entity_id, self._cid, value, level, actor_admin=admin)
         await self._record(kind, entity_id, actor, value, lock_level=level if value else None)
 
     async def _record(

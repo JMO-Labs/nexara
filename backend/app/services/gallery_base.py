@@ -11,6 +11,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AuthorizationError
+from app.core.i18n import _
 from app.models.gallery import Gallery
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
@@ -79,6 +81,17 @@ class GalleryServiceBase:
                 else:
                     o.cover_media_id = None
         return out
+
+    async def _require_own_media(self, media_ids: set[uuid.UUID], user_id: uuid.UUID) -> None:
+        """
+        @throws AuthorizationError when adding a photo someone else uploaded
+                (admins excepted): an album must not pull in, and a moderator
+                flag must not lock, another member's photo.
+        """
+        if await self._repo.foreign_media(media_ids, user_id) and not (
+            await self._repo.user_is_admin(user_id)
+        ):
+            raise AuthorizationError(_("You can only add photos you uploaded"))
 
     async def _can_view(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
         """@brief Audience check; NSFW albums are adults-only (owner included)."""

@@ -90,14 +90,21 @@ def nsfw_allowed(viewer_adult: Any, flag: Any = None) -> Any:
 
 
 def media_is_nsfw(media_col: Any) -> Any:
-    """@brief Photo is NSFW itself, attached to an NSFW post or in an NSFW album."""
+    """
+    @brief Photo is NSFW itself, attached to an NSFW post or in an NSFW album, or
+           reached by a moderator container flag (``media_nsfw_sources``).
+    """
+    from app.models.media_nsfw_source import MediaNsfwSource
+
+    src = aliased(MediaNsfwSource)
     pm, p = aliased(PostMedia), aliased(Post)
     gi, g = aliased(GalleryItem), aliased(Gallery)
     in_post = exists().where(pm.media_id == media_col, p.id == pm.post_id, p.is_nsfw.is_(True))
     in_album = exists().where(gi.media_id == media_col, g.id == gi.gallery_id, g.is_nsfw.is_(True))
     m = aliased(Media)
     flagged = exists().where(m.id == media_col, m.is_nsfw.is_(True))
-    return or_(flagged, in_post, in_album)
+    sourced = exists().where(src.media_id == media_col)
+    return or_(flagged, in_post, in_album, sourced)
 
 
 def media_nsfw_ok(

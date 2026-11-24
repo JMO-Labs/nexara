@@ -115,10 +115,37 @@ def upgrade() -> None:
             table,
             "nsfw_lock_level IS NULL OR nsfw_lock_level IN ('admin','moderator')",
         )
+    # Photos a moderator/admin NSFW flag on a post or album reaches: they stay
+    # NSFW (and locked) after moving out, until that container is unflagged.
+    op.create_table(
+        "media_nsfw_sources",
+        sa.Column(
+            "media_id",
+            pg.UUID(as_uuid=True),
+            sa.ForeignKey("media.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column("source_kind", sa.Text(), primary_key=True),
+        sa.Column("source_id", pg.UUID(as_uuid=True), primary_key=True),
+        sa.Column(
+            "community_id",
+            pg.UUID(as_uuid=True),
+            sa.ForeignKey("communities.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("level", sa.Text(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.CheckConstraint("source_kind IN ('post','gallery')", name="media_nsfw_src_kind"),
+        sa.CheckConstraint("level IN ('admin','moderator')", name="media_nsfw_src_level"),
+    )
+    op.create_index("media_nsfw_sources_source", "media_nsfw_sources", ["source_kind", "source_id"])
 
 
 def downgrade() -> None:
     """@brief Drop everything added by upgrade."""
+    op.drop_table("media_nsfw_sources")
     for table in _LOCKABLE:
         op.drop_column(table, "nsfw_lock_level")
     op.drop_column("user_settings", "profile_card_dismissed")

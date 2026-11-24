@@ -308,3 +308,27 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         stmt = stmt.where(author_column.notin_(blocked_by_viewer))
         stmt = stmt.where(author_column.notin_(blocked_viewer))
         return stmt
+
+    async def nsfw_source_level(self, media_id: uuid.UUID) -> str | None:
+        """@brief Strongest container lock reaching this photo (``nsfw_cascade``), if any."""
+        from app.models.media_nsfw_source import MediaNsfwSource
+
+        stmt = select(MediaNsfwSource.level).where(MediaNsfwSource.media_id == media_id)
+        levels = set((await self._session.execute(stmt)).scalars().all())
+        return "admin" if "admin" in levels else ("moderator" if levels else None)
+
+    async def foreign_media(self, media_ids: set[uuid.UUID], user_id: uuid.UUID) -> set[uuid.UUID]:
+        """@brief Which of these photos the user did not upload."""
+        from app.models.media import Media
+
+        if not media_ids:
+            return set()
+        stmt = select(Media.id).where(Media.id.in_(media_ids), Media.uploader_id != user_id)
+        return set((await self._session.execute(stmt)).scalars().all())
+
+    async def user_is_admin(self, user_id: uuid.UUID) -> bool:
+        """@brief Whether the user has the community admin role."""
+        from app.models.user import User
+
+        role = await self._session.scalar(select(User.role).where(User.id == user_id))
+        return role == "admin"

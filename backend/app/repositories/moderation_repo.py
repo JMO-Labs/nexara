@@ -27,7 +27,7 @@ from app.repositories.moderation_content import (
     decode_report_cursor,
     encode_report_cursor,
 )
-from app.repositories.nsfw_cascade import cascade_media_lock
+from app.repositories.nsfw_cascade import cascade_media_lock, clear_media_sources
 
 __all__ = ["ModerationRepository", "decode_report_cursor", "encode_report_cursor"]
 
@@ -305,6 +305,7 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         community_id: uuid.UUID,
         value: bool = True,
         level: str = "admin",
+        actor_admin: bool = True,
     ) -> bool:
         """
         @brief Moderator flag/unflag of a post, album or photo within a community.
@@ -315,13 +316,12 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         @param community_id Community scope.
         @param value New flag.
         @param level Lock level when setting ("admin" or "moderator"). A post or
-               album passes the flag and lock on to its photos (``nsfw_cascade``).
+               album passes the flag and lock on to its photos (``nsfw_cascade``);
+               an admin unflag of a photo also drops its container sources.
+        @param actor_admin Whether the actor is a community admin (reach of the cascade).
         @return True if a row was updated, False if missing/out of scope (or deleted post).
         """
         model = _flaggable(kind)
-        prev = await self._session.scalar(
-            select(model.nsfw_lock_level).where(model.id == entity_id)
-        )
         stmt = update(model).where(model.id == entity_id, model.community_id == community_id)
         if kind == "posts":
             stmt = stmt.where(Post.deleted_at.is_(None))
@@ -329,10 +329,12 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         stmt = stmt.returning(model.id)
         result = await self._session.execute(stmt, execution_options={"synchronize_session": False})
         updated = result.scalar_one_or_none() is not None
-        if updated:  # photos inside follow the container (see nsfw_cascade)
+        if updated and kind == "media" and not value:
+            await clear_media_sources(self._session, entity_id)
+        elif updated:  # photos inside follow the container (see nsfw_cascade)
             await cascade_media_lock(
                 self._session, kind, entity_id, community_id,
-                value=value, level=level if value else prev,
+                value=value, level=level, actor_admin=actor_admin,
             )  # fmt: skip
         await self._session.flush()
         return updated
