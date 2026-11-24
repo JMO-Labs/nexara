@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import AppError, AuthenticationError
+from app.core.i18n import _
 from app.core.security import hash_token
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.auth import UserBackupCode
+from app.models.user import User
 
 MAX_FAILURES = 5
 MAX_USER_FAILURES = 10
@@ -88,13 +91,23 @@ async def reserve_attempt(token: str, user_id: uuid.UUID, settings: Settings) ->
 
 
 async def finish_pending(
-    token: str, payload: dict[str, Any], user_id: uuid.UUID, settings: Settings
+    token: str,
+    payload: dict[str, Any],
+    user: User,
+    settings: Settings,
+    fail: Callable[..., Awaitable[None]],
+    method: str,
 ) -> None:
     """
     @brief Spend a verified ``2fa_pending`` token (single-use) and reset attempt counters.
 
     The token is denylisted in Valkey until its ``exp``.
 
+    Uses DB_CACHE like ``totp:used``; both assume the cache DB is not under an
+    ``allkeys-*`` eviction policy (an evicted key would reopen the replay window).
+
+    @param fail ``log_failure`` partial; a replay is logged as ``bad_2fa_session``.
+    @param method Sign-in method recorded on that failure row.
     @raises AuthenticationError If the token was already spent.
     @raises AppError 503 if Valkey is unavailable.
     """
@@ -105,8 +118,9 @@ async def finish_pending(
     except RedisError as exc:
         raise _unavailable() from exc
     if not fresh:
-        raise AuthenticationError(message="Invalid 2FA session")
-    await clear_user_attempts(user_id, settings)
+        await fail(user, user.email, method, "bad_2fa_session")
+        raise AuthenticationError(message=_("Invalid 2FA session"))
+    await clear_user_attempts(user.id, settings)
 
 
 async def clear_user_attempts(user_id: uuid.UUID, settings: Settings) -> None:

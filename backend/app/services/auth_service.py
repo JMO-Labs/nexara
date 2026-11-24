@@ -208,7 +208,7 @@ class AuthService:
         if not ok:
             await fail(user, user.email, method, "bad_code")
             raise AuthenticationError(message=_("Invalid 2FA code"))
-        await finish_pending(two_factor_token, payload, user.id, self._settings)
+        await finish_pending(two_factor_token, payload, user, self._settings, fail, method)
         await _pending_link.create_link(self._session, user.id, payload.get("oauth_link"))
 
         await self._user_repo.update_last_seen(user.id)

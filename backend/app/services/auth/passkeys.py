@@ -285,7 +285,7 @@ class PasskeyService:
             await fail(user, user.email, "passkey", "cloned")
             raise _bad("passkey_cloned", _("Passkey rejected: possible cloned authenticator"))
         if pending_token and pending_user:
-            await finish_pending(pending_token, pending_payload, pending_user, self._s)
+            await finish_pending(pending_token, pending_payload, user, self._s, fail, "passkey")
             await create_link(self._repo.session, pending_user, held_link)
         await self._users.update_last_seen(user.id)
         await log_success(self._repo.session, self._s, user, "passkey", request)
