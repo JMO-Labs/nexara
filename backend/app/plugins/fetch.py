@@ -67,3 +67,19 @@ async def fetch_manifest_text(url: str) -> str:
         return data.decode()
     except UnicodeDecodeError:
         raise _fail("manifest_fetch_failed", "Manifest is not valid UTF-8") from None
+
+
+def trusted_host(url: str) -> bool:
+    """@brief ``url`` has exactly the configured ``PLUGIN_HOST_URL`` origin (scheme + netloc)."""
+    host = get_settings().PLUGIN_HOST_URL
+    if not host:
+        return False
+    a, b = urlparse(url), urlparse(host)
+    return (a.scheme, a.netloc) == (b.scheme, b.netloc)
+
+
+def endpoint_allowed(url: str) -> bool:
+    """@brief Delivery would accept this endpoint: https, or the dev flag / plugin host."""
+    if urlparse(url).scheme == "https":
+        return True
+    return bool(get_settings().PLUGINS_ALLOW_INSECURE_URLS) or trusted_host(url)

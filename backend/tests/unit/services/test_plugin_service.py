@@ -65,7 +65,7 @@ def _body(scopes=None) -> UrlInstall:
     return UrlInstall(
         source="url",
         manifest_url="https://x.test/m.toml",
-        endpoint_url="http://echo:3000",
+        endpoint_url="https://echo.test/events",
         approved_scopes=scopes if scopes is not None else list(M.scopes),
     )
 
@@ -135,6 +135,32 @@ async def test_install_other_sources_not_supported(env):
     with pytest.raises(AppError) as e:
         await env[0].install(IndexInstall(source="index"))
     assert (e.value.code, e.value.status_code) == ("not_supported", 422)
+
+
+@pytest.mark.parametrize(
+    ("insecure", "host", "ok"),
+    [
+        (False, None, False),
+        (True, None, True),
+        (False, "http://echo:3000", True),
+        (False, "http://other:3000", False),
+    ],
+)
+async def test_install_http_endpoint_needs_flag_or_plugin_host(env, insecure, host, ok):
+    from unittest.mock import MagicMock, patch
+
+    s = MagicMock(PLUGINS_ALLOW_INSECURE_URLS=insecure, PLUGIN_HOST_URL=host)
+    body = _body().model_copy(update={"endpoint_url": "http://echo:3000/events"})
+    with (
+        patch("app.plugins.fetch.get_settings", return_value=s),
+        patch("app.services.plugin_service.fetch_manifest_text", AsyncMock(return_value=TOML)),
+    ):
+        if ok:
+            await env[0].install(body)
+        else:
+            with pytest.raises(AppError) as e:
+                await env[0].install(body)
+            assert (e.value.code, e.value.status_code) == ("endpoint_insecure", 422)
 
 
 async def test_install_bad_endpoint_scheme(env):

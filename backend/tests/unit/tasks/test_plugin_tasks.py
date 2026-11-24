@@ -74,7 +74,7 @@ def test_trusted_plugin_host_bypasses_ssrf_pin():
     from app.tasks import plugin_tasks
 
     s = MagicMock(PLUGIN_HOST_URL="http://plugin-host:9000", PLUGINS_ALLOW_INSECURE_URLS=False)
-    with patch.object(plugin_tasks, "get_settings", return_value=s):
+    with patch("app.plugins.fetch.get_settings", return_value=s):
         assert plugin_tasks._trusted_host("http://plugin-host:9000/plugins/x/events")
         assert not plugin_tasks._trusted_host("http://evil:9000/plugins/x/events")
         assert not plugin_tasks._trusted_host("https://plugin-host:9000/x")

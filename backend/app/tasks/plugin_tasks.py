@@ -9,7 +9,6 @@ import asyncio
 import time
 import uuid
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
 import structlog
@@ -17,6 +16,7 @@ import structlog
 from app.core.config import get_settings
 from app.core.encryption import decrypt_secret, derive_fernet_key
 from app.core.http_safe import UnsafeUrlError, safe_post
+from app.plugins.fetch import trusted_host as _trusted_host
 from app.plugins.signing import sign
 from app.tasks.celery_app import celery_app
 
@@ -29,14 +29,6 @@ _RETRY_4XX = {408, 429}
 
 class _RetryableStatusError(Exception):
     """@brief Plugin answered 5xx/408/429."""
-
-
-def _trusted_host(url: str) -> bool:
-    host = get_settings().PLUGIN_HOST_URL
-    if not host:
-        return False
-    a, b = urlparse(url), urlparse(host)
-    return (a.scheme, a.netloc) == (b.scheme, b.netloc)
 
 
 async def _post(url: str, body: bytes, headers: dict[str, str]) -> int:

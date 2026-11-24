@@ -18,7 +18,7 @@ from app.core.encryption import derive_fernet_key, encrypt_secret
 from app.core.exceptions import AppError, NotFoundError
 from app.models.plugin import PluginCommunity, PluginInstall
 from app.models.user import User
-from app.plugins.fetch import fetch_manifest_text
+from app.plugins.fetch import endpoint_allowed, fetch_manifest_text
 from app.plugins.manifest import PluginManifest, is_compatible, parse_manifest, validate_values
 from app.plugins.tokens import new_token
 from app.repositories.plugin_repo import PluginRepository
@@ -110,7 +110,8 @@ class PluginService:
         """
         @brief Install from a manifest URL after the admin approved every scope.
         @raises AppError ``not_supported`` (422) for package/index sources,
-            ``scopes_not_approved`` (422) with the review details, ``plugin_already_installed``.
+            ``scopes_not_approved`` (422) with the review details, ``plugin_already_installed``,
+            ``endpoint_insecure`` (422) for http unless dev flag or PLUGIN_HOST_URL origin.
         """
         if not isinstance(body, UrlInstall):
             raise AppError(
@@ -119,6 +120,12 @@ class PluginService:
         if urlparse(body.endpoint_url).scheme not in ("http", "https"):
             raise AppError(
                 code="invalid_endpoint_url", message="Endpoint must be http(s)", status_code=422
+            )
+        if not endpoint_allowed(body.endpoint_url):
+            raise AppError(
+                code="endpoint_insecure",
+                message="Endpoint must be https (or the configured plugin host)",
+                status_code=422,
             )
         m = parse_manifest(await fetch_manifest_text(body.manifest_url))
         if not is_compatible(m):
