@@ -38,6 +38,8 @@ export interface SsoProviderFormProps {
   onCancel: () => void;
   onSubmit: (values: OAuthProviderCreate, secretChanged: boolean) => void;
   onTest: (url: string) => Promise<unknown>;
+  /** Server rejected the slug (409 sso_slug_taken): shown on the slug field. */
+  slugError?: string | null;
 }
 
 const initialDiscovery = (p?: OAuthProviderResponse | null) =>
@@ -55,6 +57,7 @@ export function SsoProviderForm({
   onCancel,
   onSubmit,
   onTest,
+  slugError,
 }: SsoProviderFormProps) {
   const editing = !!provider;
   const { data: presets = [] } = useOauthPresets();
@@ -79,6 +82,7 @@ export function SsoProviderForm({
     allowed_domains: provider?.allowed_domains ?? [],
     required_group: provider?.required_group ?? "",
     sync_profile: provider?.sync_profile ?? true,
+    trust_email: provider?.trust_email ?? false,
   });
   const [rows, setRows] = useState<MappingRow[]>(() =>
     mappingToRows(provider?.claim_mapping?.group_mapping),
@@ -91,6 +95,15 @@ export function SsoProviderForm({
     if (mounted.current) heading.current?.focus();
     mounted.current = true;
   }, [step]);
+
+  // A new server slug error (409) jumps back to Connection (state adjusted
+  // during render, not in an effect).
+  const [seenSlugError, setSeenSlugError] = useState<string | null>(null);
+  if (slugError && slugError !== seenSlugError) {
+    setSeenSlugError(slugError);
+    setErrors((e) => ({ ...e, slug: slugError }));
+    setStep(1);
+  }
 
   const preset = presets.find((p) => p.key === presetKey);
   const kind = preset?.kind ?? provider?.provider_type ?? "oidc";
@@ -121,6 +134,7 @@ export function SsoProviderForm({
       display_name: c.display_name || p.label,
       slug: c.slug || p.key,
     }));
+    setRules((r) => ({ ...r, trust_email: p.trust_email }));
   };
 
   const validate = () => {

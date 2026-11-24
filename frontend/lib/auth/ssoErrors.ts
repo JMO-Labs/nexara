@@ -27,10 +27,16 @@ export function ssoErrorMessage(
     case "sso_domain_not_allowed":
     case "sso_group_required":
       return `Your ${name} account isn't allowed to sign in here.`;
+    case "sso_email_unverified":
+      return `Your ${name} account's email isn't verified. Ask an admin to check the provider settings.`;
+    case "sso_email_taken":
+      return "This email belongs to a removed account. Ask an admin for help.";
     case "sso_email_unverified_local":
       return "An account with this email exists but its email isn't confirmed. Sign in with your password and confirm your email first.";
     case "sso_provision_conflict":
       return "We couldn't finish setting up your account. Please try again.";
+    case "sso_failed":
+      return "Single sign-on didn't work. Please try again.";
     default:
       return GENERIC;
   }

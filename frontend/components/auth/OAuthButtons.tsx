@@ -34,7 +34,10 @@ export function OAuthButtons({
       </h2>
       {providers.map((p) => (
         <Button key={p.slug} asChild variant="outline" className="w-full">
-          <a href={oauthLoginUrl(p.slug, API_BASE)}>
+          <a
+            href={oauthLoginUrl(p.slug, API_BASE)}
+            aria-label={`Continue with ${p.display_name}`}
+          >
             {p.icon_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
               <img src={p.icon_url} alt="" className="size-5" />

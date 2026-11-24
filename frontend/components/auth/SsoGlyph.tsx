@@ -16,33 +16,36 @@ const MARKS: Record<string, { letter: string; color: string }> = {
 };
 
 /**
- * @brief Brand glyph for a preset; generic key icon otherwise. aria-hidden.
+ * @brief Inline SVG data URI for a mark (the letter lives in an image, so it
+ *        never joins the link's DOM text or accessible name).
+ * @param mark letter + brand colour
+ * @return CSS url() value
+ */
+function markUrl(mark: { letter: string; color: string }): string {
+  const size = mark.letter.length > 1 ? 9 : 12;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">` +
+    `<rect width="20" height="20" rx="4" fill="${mark.color}"/>` +
+    `<text x="10" y="14" text-anchor="middle" font-size="${size}" font-weight="700" ` +
+    `fill="#fff" font-family="system-ui, sans-serif">${mark.letter}</text></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/**
+ * @brief Brand glyph for a preset; generic key icon otherwise. aria-hidden,
+ *        no DOM text.
  * @param preset provider preset key (nullable)
- * @return decorative svg
+ * @return decorative span
  */
 export function SsoGlyph({ preset }: { preset?: string | null }) {
   const mark = preset ? MARKS[preset] : undefined;
   if (!mark) return <KeyRound aria-hidden="true" className="size-5" />;
   return (
-    <svg
+    <span
       aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 20 20"
-      className="size-5"
+      className="inline-block size-5 shrink-0 bg-contain bg-no-repeat"
+      style={{ backgroundImage: markUrl(mark) }}
       data-testid={`sso-glyph-${preset}`}
-    >
-      <rect width="20" height="20" rx="4" fill={mark.color} />
-      <text
-        x="10"
-        y="14"
-        textAnchor="middle"
-        fontSize={mark.letter.length > 1 ? 9 : 12}
-        fontWeight="700"
-        fill="#fff"
-        fontFamily="system-ui, sans-serif"
-      >
-        {mark.letter}
-      </text>
-    </svg>
+    />
   );
 }

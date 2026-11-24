@@ -16,6 +16,7 @@ const RULES: RulesValue = {
   allowed_domains: ["smith.family"],
   required_group: "",
   sync_profile: true,
+  trust_email: false,
 };
 
 describe("ProviderRules", () => {
@@ -49,5 +50,21 @@ describe("ProviderRules", () => {
       "viewer",
     );
     expect(onChange).toHaveBeenCalledWith({ ...RULES, default_role: "viewer" });
+  });
+
+  it("toggles email trust and explains the risk", async () => {
+    const onChange = vi.fn();
+    render(<ProviderRules value={RULES} onChange={onChange} />);
+    expect(
+      screen.getByText(
+        /cannot change their own email at the identity provider/i,
+      ),
+    ).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("switch", {
+        name: "Treat this provider's emails as verified",
+      }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ ...RULES, trust_email: true });
   });
 });

@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/admin/sso/ProviderRules.tsx
- * @brief SSO wizard step 3: sign-in rules (JIT create, default role, gates, profile sync).
+ * @brief SSO wizard step 3: sign-in rules (JIT create, default role, gates,
+ *        email trust, profile sync).
  */
 import { useId, useState } from "react";
 import { Button, Chip, Input, SettingsRow, Switch } from "@/components/ui";
@@ -18,6 +19,8 @@ export interface RulesValue {
   allowed_domains: string[];
   required_group: string;
   sync_profile: boolean;
+  /** Treat the IdP's emails as verified (preset default; see help text). */
+  trust_email: boolean;
 }
 
 /** @brief Props for ProviderRules. */
@@ -137,6 +140,16 @@ export function ProviderRules({ value, onChange }: ProviderRulesProps) {
           aria-label="Required group"
           value={value.required_group}
           onChange={(e) => set({ required_group: e.target.value })}
+        />
+      </SettingsRow>
+      <SettingsRow
+        label="Treat this provider's emails as verified"
+        description="Only turn on if users cannot change their own email at the identity provider — a verified email can sign in to the matching existing account."
+      >
+        <Switch
+          checked={value.trust_email}
+          onCheckedChange={(v) => set({ trust_email: v })}
+          aria-label="Treat this provider's emails as verified"
         />
       </SettingsRow>
       <SettingsRow

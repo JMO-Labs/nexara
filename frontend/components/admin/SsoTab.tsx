@@ -22,6 +22,7 @@ import type {
   OAuthProviderCreate,
   OAuthProviderResponse,
 } from "@/lib/api/adminOauth";
+import { ApiError } from "@/lib/api/errors";
 import { SsoProviderForm } from "./SsoProviderForm";
 
 /**
@@ -31,6 +32,7 @@ import { SsoProviderForm } from "./SsoProviderForm";
 export function SsoTab() {
   const [openModal, setOpenModal] = useState(false);
   const [editing, setEditing] = useState<OAuthProviderResponse | null>(null);
+  const [slugError, setSlugError] = useState<string | null>(null);
   const confirm = useConfirmDialog((s) => s.confirm);
 
   const { data: providers, isLoading, error } = useOauthProviders();
@@ -45,17 +47,30 @@ export function SsoTab() {
   const closeModal = () => {
     setOpenModal(false);
     setEditing(null);
+    setSlugError(null);
   };
 
-  const handleSubmit = (v: OAuthProviderCreate, secretChanged: boolean) => {
-    if (editing) {
-      const { client_secret, ...rest } = v;
-      updateMutation.mutate({
-        providerId: editing.id,
-        updates: secretChanged ? { ...rest, client_secret } : rest,
-      });
-    } else {
-      createMutation.mutate(v);
+  const handleSubmit = async (
+    v: OAuthProviderCreate,
+    secretChanged: boolean,
+  ) => {
+    setSlugError(null);
+    try {
+      if (editing) {
+        const { client_secret, ...rest } = v;
+        await updateMutation.mutateAsync({
+          providerId: editing.id,
+          updates: secretChanged ? { ...rest, client_secret } : rest,
+        });
+      } else {
+        await createMutation.mutateAsync(v);
+      }
+    } catch (err) {
+      // Slug taken: keep the wizard open and show it on the slug field.
+      if (err instanceof ApiError && err.code === "sso_slug_taken") {
+        setSlugError(err.message || "A provider with this slug already exists");
+        return;
+      }
     }
     closeModal();
   };
@@ -201,6 +216,7 @@ export function SsoTab() {
           onCancel={closeModal}
           onSubmit={handleSubmit}
           onTest={(url) => discoverMutation.mutateAsync(url)}
+          slugError={slugError}
         />
       </Modal>
     </div>

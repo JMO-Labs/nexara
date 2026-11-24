@@ -31,6 +31,7 @@ export interface OAuthProviderResponse {
   required_group: string | null;
   username_claim: string;
   sync_profile: boolean;
+  trust_email: boolean;
   enabled: boolean;
   auto_create_users: boolean;
   seeded_from_env: boolean;
@@ -67,6 +68,8 @@ export interface OAuthPreset {
   userinfo_endpoint: string | null;
   claim_mapping: Record<string, string>;
   username_claim: string;
+  /** Default for the provider's trust_email. */
+  trust_email: boolean;
 }
 
 /** @brief postMessage type the /sso-test popup sends to its opener. */
@@ -123,6 +126,7 @@ export interface OAuthProviderCreate {
   required_group?: string | null;
   username_claim?: string;
   sync_profile?: boolean;
+  trust_email?: boolean;
   enabled?: boolean;
   auto_create_users?: boolean;
 }
@@ -153,6 +157,7 @@ export interface OAuthProviderUpdate {
   required_group?: string | null;
   username_claim?: string;
   sync_profile?: boolean;
+  trust_email?: boolean;
   enabled?: boolean;
   auto_create_users?: boolean;
 }

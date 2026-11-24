@@ -89,6 +89,18 @@ describe("TestLoginPanel", () => {
     );
   });
 
+  it("shows a failure the popup reports instead of waiting", async () => {
+    render(<TestLoginPanel providerId="p1" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Run test sign-in" }),
+    );
+    post({ type: api.SSO_TEST_MESSAGE, error: "sso_failed" });
+    expect(
+      await screen.findByText("Test sign-in failed — see server log."),
+    ).toBeTruthy();
+    expect(api.readTestLogin).not.toHaveBeenCalled();
+  });
+
   it("ignores messages from other origins", async () => {
     render(<TestLoginPanel providerId="p1" />);
     post({ type: api.SSO_TEST_MESSAGE, result: "r1" }, "https://evil.example");

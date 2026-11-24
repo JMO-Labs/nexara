@@ -32,6 +32,27 @@ describe("OAuthButtons", () => {
     ).toBeInTheDocument();
   });
 
+  it("glyph letter never leaks into the link text or name (L6)", () => {
+    render(
+      <OAuthButtons
+        providers={[
+          {
+            slug: "ak",
+            display_name: "Authentik",
+            icon_url: null,
+            preset: "authentik",
+          },
+        ]}
+      />,
+    );
+    const link = screen.getByRole("link", {
+      name: /^Continue with Authentik$/,
+    });
+    expect(link.textContent).toBe("Continue with Authentik");
+    expect(link).toHaveAttribute("aria-label", "Continue with Authentik");
+    expect(screen.getByTestId("sso-glyph-authentik").textContent).toBe("");
+  });
+
   it("renders nothing without providers", () => {
     const { container } = render(<OAuthButtons providers={[]} />);
     expect(container).toBeEmptyDOMElement();

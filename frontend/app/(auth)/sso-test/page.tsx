@@ -10,23 +10,30 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { SSO_TEST_MESSAGE } from "@/lib/api/adminOauth";
 
 export default function SsoTestPage() {
-  const result = useSearchParams().get("result");
+  const params = useSearchParams();
+  const result = params.get("result");
+  // Only the fixed code is forwarded; never echo arbitrary params.
+  const error = params.get("error") === "sso_failed" ? "sso_failed" : null;
 
   useEffect(() => {
-    if (!result || !window.opener) return;
+    if ((!result && !error) || !window.opener) return;
     window.opener.postMessage(
-      { type: SSO_TEST_MESSAGE, result },
+      error
+        ? { type: SSO_TEST_MESSAGE, error }
+        : { type: SSO_TEST_MESSAGE, result },
       window.location.origin,
     );
     window.close();
-  }, [result]);
+  }, [result, error]);
 
   return (
     <AuthCard title="SSO test sign-in">
       <p role="status" className="text-sm text-muted">
-        {result
-          ? "Test finished. If this window stays open, close it and return to the admin page."
-          : "No test result."}
+        {error
+          ? "Test sign-in failed. Close this window; details are in the server log."
+          : result
+            ? "Test finished. If this window stays open, close it and return to the admin page."
+            : "No test result."}
       </p>
     </AuthCard>
   );

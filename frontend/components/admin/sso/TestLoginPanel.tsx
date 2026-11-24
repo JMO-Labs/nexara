@@ -26,7 +26,11 @@ const REFUSALS: Record<string, string> = {
   sso_email_unverified: "the IdP did not verify the email",
   sso_email_unverified_local:
     "the matching local account has an unverified email",
+  sso_email_taken: "the email belongs to a removed account",
 };
+
+/** @brief Shown when the popup reports a failed test (details in the server log). */
+export const FAILED_MSG = "Test sign-in failed — see server log.";
 
 /** @brief Give up waiting for the popup after this long (IdP error page, COOP). */
 export const TEST_TIMEOUT_MS = 3 * 60 * 1000;
@@ -88,8 +92,19 @@ export function TestLoginPanel({ providerId }: TestLoginPanelProps) {
   useEffect(() => {
     const onMessage = async (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      const data = e.data as { type?: string; result?: string } | null;
-      if (data?.type !== SSO_TEST_MESSAGE || !data.result) return;
+      const data = e.data as {
+        type?: string;
+        result?: string;
+        error?: string;
+      } | null;
+      if (data?.type !== SSO_TEST_MESSAGE) return;
+      if (data.error) {
+        stopWatch();
+        setRunning(false);
+        setError(FAILED_MSG);
+        return;
+      }
+      if (!data.result) return;
       stopWatch();
       try {
         setResult(await readTestLogin(data.result));

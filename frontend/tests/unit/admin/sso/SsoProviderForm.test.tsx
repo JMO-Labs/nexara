@@ -16,7 +16,10 @@ vi.mock("@/hooks/useSubgroups");
 
 const onSubmit = vi.fn();
 
-function setup(provider: Partial<OAuthProviderResponse> | null = null) {
+function setup(
+  provider: Partial<OAuthProviderResponse> | null = null,
+  slugError: string | null = null,
+) {
   vi.mocked(oauth.useOauthPresets).mockReturnValue({
     data: PRESETS,
   } as never);
@@ -33,6 +36,7 @@ function setup(provider: Partial<OAuthProviderResponse> | null = null) {
       onCancel={vi.fn()}
       onSubmit={onSubmit}
       onTest={vi.fn()}
+      slugError={slugError}
     />,
   );
 }
@@ -75,9 +79,38 @@ describe("SsoProviderForm wizard", () => {
         discovery_url:
           "https://auth.example.com/application/o/nexara/.well-known/openid-configuration",
         claim_mapping: { groups: "groups", group_mapping: {} },
+        trust_email: true, // authentik preset default
       }),
       true,
     );
+  });
+
+  it("email trust can be switched off before saving", async () => {
+    setup();
+    await fillAuthentik();
+    await next(); // rules
+    await userEvent.click(
+      screen.getByRole("switch", {
+        name: "Treat this provider's emails as verified",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Create provider" }),
+    );
+    expect(onSubmit.mock.calls[0][0].trust_email).toBe(false);
+  });
+
+  it("a server slug conflict lands on the slug field", () => {
+    setup(
+      { id: "p1", slug: "kc", preset: "custom", callback_url: "x" },
+      "A provider with this slug already exists",
+    );
+    expect(
+      screen.getByRole("heading", { name: /step 2 of 5: connection/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("A provider with this slug already exists"),
+    ).toBeTruthy();
   });
 
   it("moves focus to the step heading on step change", async () => {

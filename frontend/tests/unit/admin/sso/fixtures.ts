@@ -14,6 +14,7 @@ const base = {
   userinfo_endpoint: null,
   claim_mapping: {} as Record<string, string>,
   username_claim: "preferred_username",
+  trust_email: false,
 };
 
 export const PRESETS: OAuthPreset[] = [
@@ -26,6 +27,7 @@ export const PRESETS: OAuthPreset[] = [
       "https://{host}/application/o/{slug}/.well-known/openid-configuration",
     params: ["host", "slug"],
     claim_mapping: { groups: "groups" },
+    trust_email: true,
     help: "Create an OAuth2/OIDC provider + application.",
   },
   {
@@ -46,6 +48,7 @@ export const PRESETS: OAuthPreset[] = [
     label: "Custom OIDC",
     discovery_url: "{discovery_url}",
     params: ["discovery_url"],
+    trust_email: true,
   },
 ];
 
