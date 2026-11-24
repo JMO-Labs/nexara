@@ -242,7 +242,7 @@ class TestGetMetadata:
         mock_storage = AsyncMock()
         mock_user_repo = AsyncMock()
 
-        with patch("app.services.media_service.MediaResponse") as mock_resp:
+        with patch("app.services.media.serving.MediaResponse") as mock_resp:
             mock_resp.model_validate.return_value = MagicMock()
             service = MediaService(
                 media_repo=mock_repo,
