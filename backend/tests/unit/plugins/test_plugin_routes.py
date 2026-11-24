@@ -113,3 +113,34 @@ async def test_rotating_fake_nxp_tokens_share_ip_bucket(real_app) -> None:
             )
             codes.append(r.status_code)
     assert 429 in codes and codes.index(429) <= 10
+
+
+async def test_user_profile_shapes_human_vs_bot(real_app) -> None:
+    from datetime import UTC, datetime
+    from unittest.mock import patch as _patch
+
+    from app.core.dependencies import get_current_user
+    from app.schemas.profile import ProfileResponse
+
+    full = ProfileResponse(
+        id=uuid.uuid4(),
+        username="u",
+        display_name="U",
+        role="member",
+        created_at=datetime.now(UTC),
+        pronouns="she/her",
+    )
+    human = SimpleNamespace(id=uuid.uuid4(), community_id=CID, is_bot=False)
+    bot = SimpleNamespace(id=uuid.uuid4(), community_id=CID, is_bot=True)
+    with (
+        _patch("app.api.v1.users.ProfileService") as svc,
+        _patch("app.api.v1.users.ProfileRepository"),
+    ):
+        svc.return_value.view = AsyncMock(return_value=full)
+        async with AsyncClient(transport=ASGITransport(app=real_app), base_url="http://t") as c:
+            real_app.dependency_overrides[get_current_user] = lambda: human
+            h = (await c.get(f"/api/v1/users/{full.id}")).json()
+            real_app.dependency_overrides[get_current_user] = lambda: bot
+            b = (await c.get(f"/api/v1/users/{full.id}")).json()
+    assert h["pronouns"] == "she/her" and "role" in h
+    assert set(b) == {"id", "username", "display_name", "avatar_url"}

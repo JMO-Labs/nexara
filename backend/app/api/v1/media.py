@@ -203,7 +203,7 @@ async def get_media_metadata(
 ) -> MediaResponse:
     """@brief Return media metadata by ID (NSFW: adults only; bots own community)."""
     return await service.get_metadata(
-        media_id, user.id, user.community_id if user.is_bot else None
+        media_id, user.id, user.community_id if user.is_bot is True else None
     )
 
 

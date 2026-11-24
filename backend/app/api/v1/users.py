@@ -164,7 +164,7 @@ async def lookup_user(
     return await ProfileService(ProfileRepository(db), user.community_id).lookup(username, user)
 
 
-@router.get("/{user_id}", response_model=ProfileResponse | PluginUserResponse)
+@router.get("/{user_id}", response_model=None, responses={200: {"model": ProfileResponse}})
 async def get_user_profile(
     user_id: uuid.UUID,
     user: User = Depends(get_current_user),
@@ -172,7 +172,7 @@ async def get_user_profile(
 ) -> Any:
     """@brief A member's profile, with each field filtered by its privacy level."""
     profile = await ProfileService(ProfileRepository(db), user.community_id).view(user_id, user)
-    if user.is_bot:  # plugins get public fields only, never members-only ones
+    if user.is_bot is True:  # plugins get public fields only, never members-only ones
         return PluginUserResponse.model_validate(profile, from_attributes=True)
     return profile
 
