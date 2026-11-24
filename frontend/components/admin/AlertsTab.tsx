@@ -90,10 +90,6 @@ export function AlertsTab() {
 
   return (
     <Panel className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
-        Where Nexara sends admin alerts: repeated failed sign-ins, low disk,
-        stopped workers, email failures.
-      </p>
       <div className="flex max-w-[880px] flex-col">
         <SettingsRow label="Targets">
           {targets.data.length === 0 ? (

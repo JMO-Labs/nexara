@@ -39,7 +39,10 @@ function AdminNav({ activeId }: { activeId: string }) {
       className="flex flex-col gap-3 max-md:flex-row max-md:flex-wrap max-md:gap-2"
     >
       {ADMIN_GROUPS.map((g) => (
-        <div key={g.label} className="flex flex-col gap-1 max-md:shrink-0">
+        <div
+          key={g.label}
+          className="flex min-w-0 flex-col gap-1 max-md:max-w-full max-md:overflow-x-auto"
+        >
           <p
             aria-hidden="true"
             className="mt-1 px-3 text-[13px] font-medium text-muted max-md:hidden"

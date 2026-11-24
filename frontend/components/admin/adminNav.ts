@@ -141,7 +141,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       tab(
         "alerts",
         "Alerts",
-        "Where admin alerts are sent (ntfy, Discord and more).",
+        "Where Nexara sends admin alerts: repeated failed sign-ins, low disk, stopped workers, email failures.",
         BellRing,
       ),
       tab(
