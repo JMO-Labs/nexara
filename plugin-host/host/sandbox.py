@@ -1,35 +1,63 @@
 """
 @file
 @brief bubblewrap sandbox: argv builders for plugin processes and dependency installs,
-       per-plugin uid allocation, plugin env and the startup self-test.
+       plugin env, resource limits and the startup self-test.
 
 Every plugin sees a read-only host root with `/data` masked by a tmpfs, its own code
-read-only at /plugin and its state read-write at /state. The image must provide the
-empty mountpoints /plugin and /state (the root is mounted read-only, so bwrap cannot
-create them).
+read-only at /plugin and its state read-write at /state. /proc is the container's
+(masked) /proc inherited through `--ro-bind / /`: a fresh `--proc` would need docker
+`systempaths=unconfined`, which lets a compromised host write /proc/sys (decided: no).
+The pid namespace still hides/blocks other processes (signals ESRCH; environ/fd EACCES
+by uid). Nested user namespaces etc. are blocked by the seccomp filter (host.seccomp).
+The image must provide the empty mountpoints /plugin and /state.
 """
 
 import asyncio
-import json
 import logging
 import os
-import stat
 import subprocess
 from pathlib import Path
-from typing import TypedDict
 
+from host import seccomp
 from host.deps import DEPS_TIMEOUT_S, Runner, install_env
-from host.errors import InstallError
+from host.errors import InstallError, SandboxUnavailableError
 from host.models import PluginEnv
+from host.perms import PROBE_UID, as_user, chown_tree
 
 log = logging.getLogger(__name__)
 
 BWRAP = "bwrap"
-UID_BASE = 20000
-PROBE_UID = UID_BASE - 1  # self-test runs as this unprivileged uid
+PRLIMIT = "prlimit"
 MOUNTPOINTS = (Path("/plugin"), Path("/state"))
 PLUGIN_PATH = "/usr/local/bin:/usr/bin:/bin"
 _NS_FLAGS = ["--unshare-pid", "--unshare-ipc", "--die-with-parent", "--new-session"]
+MIB = 1024 * 1024
+# env var -> (prlimit option, default, unit multiplier)
+LIMITS = {
+    "PLUGIN_LIMIT_NPROC": ("--nproc", 256, 1),
+    "PLUGIN_LIMIT_AS_MB": ("--as", 4096, MIB),
+    "PLUGIN_LIMIT_FSIZE_MB": ("--fsize", 1024, MIB),
+    "PLUGIN_LIMIT_NOFILE": ("--nofile", 1024, 1),
+}
+TMPFS_ENV, TMPFS_DEFAULT_MB = "PLUGIN_TMPFS_MB", 64
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        value = int(os.environ.get(name, default))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def limits_prefix() -> list[str]:
+    """@brief `prlimit --nproc=… --as=… --fsize=… --nofile=…` (RLIMIT_NPROC is per uid)."""
+    opts = [f"{opt}={_env_int(env, d) * mult}" for env, (opt, d, mult) in LIMITS.items()]
+    return [PRLIMIT, *opts]
+
+
+def _tmpfs(path: str) -> list[str]:
+    return ["--size", str(_env_int(TMPFS_ENV, TMPFS_DEFAULT_MB) * MIB), "--tmpfs", path]
 
 
 def _within(path: Path, parent: Path) -> Path:
@@ -41,23 +69,23 @@ def _within(path: Path, parent: Path) -> Path:
 
 
 def _common(data_dir: Path) -> list[str]:
-    """@brief Read-only root, private /tmp, host data masked."""
+    """@brief Limits, read-only root, private sized /tmp, host data masked."""
     return [
-        BWRAP,
+        *limits_prefix(), BWRAP,
         "--ro-bind", "/", "/",
-        "--tmpfs", "/tmp",
-        "--tmpfs", str(data_dir),
+        *_tmpfs("/tmp"),
+        *_tmpfs(str(data_dir)),
     ]  # fmt: skip
 
 
-def _tail(uid: int) -> list[str]:
-    """@brief Fresh /proc and /dev, private namespaces, uid/gid inside, no capabilities."""
+def _tail(uid: int, seccomp_fd: int) -> list[str]:
+    """@brief /dev, private pid/ipc namespaces, uid/gid inside, no caps, seccomp filter."""
     return [
-        "--proc", "/proc",
         "--dev", "/dev",
         *_NS_FLAGS,
         "--unshare-user", "--uid", str(uid), "--gid", str(uid),
         "--cap-drop", "ALL",
+        "--seccomp", str(seccomp_fd),
     ]  # fmt: skip
 
 
@@ -69,12 +97,15 @@ def bwrap_argv(
     runtime: str,
     entrypoint: str,
     *,
+    seccomp_fd: int,
     data_dir: Path = Path("/data"),
 ) -> list[str]:
     """
-    @brief Full argv to run a plugin under bwrap.
+    @brief Full argv to run a plugin under bwrap. Code is read-only, the install cache is
+    never mounted; only /state is writable.
     @param root Version dir; must resolve to <data>/plugins/<plugin_id>/<version>.
     @param state Must resolve to <data>/plugin-state/<plugin_id>.
+    @param seccomp_fd fd holding the BPF filter (see host.seccomp.filter_fd).
     @raise ValueError if either dir belongs to another plugin.
     """
     root = _within(root, data_dir / "plugins" / plugin_id)
@@ -88,13 +119,15 @@ def bwrap_argv(
         *_common(data_dir),
         "--ro-bind", str(root), "/plugin",
         "--bind", str(state), "/state",
-        *_tail(uid),
+        *_tail(uid, seccomp_fd),
         "--chdir", "/plugin",
         "--", *cmd,
     ]  # fmt: skip
 
 
-def install_argv(argv: list[str], cwd: Path, uid: int, data_dir: Path) -> list[str]:
+def install_argv(
+    argv: list[str], cwd: Path, uid: int, data_dir: Path, *, seccomp_fd: int
+) -> list[str]:
     """
     @brief Wrap an install step: only the version dir and the plugin's cache are visible
     (at their real paths, which npm/uv args and install_env() refer to). Network allowed.
@@ -107,7 +140,7 @@ def install_argv(argv: list[str], cwd: Path, uid: int, data_dir: Path) -> list[s
         *_common(data_dir),
         "--bind", str(cwd), str(cwd),
         "--bind", str(cache), str(cache),
-        *_tail(uid),
+        *_tail(uid, seccomp_fd),
         "--chdir", str(cwd),
         "--", *argv,
     ]  # fmt: skip
@@ -124,127 +157,63 @@ def plugin_env(env: PluginEnv, port: int) -> dict[str, str]:
     return out
 
 
-def plugin_uid(data_dir: Path, plugin_id: str) -> int:
-    """@brief UID_BASE + stable index from <data>/uids.json (allocated on first use, kept)."""
-    path = data_dir / "uids.json"
-    uids: dict[str, int] = json.loads(path.read_text()) if path.exists() else {}
-    if plugin_id not in uids:
-        uids[plugin_id] = max(uids.values(), default=-1) + 1
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(uids))
-        os.replace(tmp, path)
-    return UID_BASE + uids[plugin_id]
-
-
-def is_root() -> bool:
-    return os.geteuid() == 0
-
-
-def _walk(path: Path) -> list[str]:
-    """@brief `path` and everything below it (symlinks not followed)."""
-    out = [str(path)]
-    for dirpath, dirnames, filenames in os.walk(path):
-        out += [os.path.join(dirpath, n) for n in dirnames + filenames]
-    return out
-
-
-def chown_tree(path: Path, uid: int) -> None:
-    """@brief chown -R uid:uid (install time: the plugin may write it). Root only."""
-    if not is_root() or not path.exists():
-        return
-    for p in _walk(path):
-        os.chown(p, uid, uid, follow_symlinks=False)
-
-
-def sealed_mode(mode: int) -> int:
-    """@brief Owner bits kept (no setuid/setgid/sticky); group r + x-if-owner-x; other none."""
-    owner = stat.S_IMODE(mode) & 0o700
-    return owner | 0o040 | (0o010 if owner & 0o100 else 0)
-
-
-def seal_tree(path: Path, uid: int) -> None:
-    """
-    @brief After install: root:uid, group read(+exec where owner has it), no group/other
-    write. The plugin can read its code and cache but never modify them. Root only.
-    """
-    if not is_root() or not path.exists():
-        return
-    for p in _walk(path):
-        st = os.lstat(p)
-        os.chown(p, 0, uid, follow_symlinks=False)
-        if stat.S_ISLNK(st.st_mode):
-            continue
-        os.chmod(p, sealed_mode(st.st_mode))
-
-
-def prepare_state(state: Path, uid: int) -> None:
-    """@brief Create the plugin's state dir, owned by its uid, mode 0700."""
-    state.mkdir(parents=True, exist_ok=True)
-    if is_root():
-        os.chown(state, uid, uid, follow_symlinks=False)
-    state.chmod(0o700)
-
-
-class Creds(TypedDict):
-    """@brief Popen kwargs that drop to a plugin uid (empty supplementary groups)."""
-
-    user: int | None
-    group: int | None
-    extra_groups: list[int] | None
-
-
-def as_user(uid: int | None) -> Creds:
-    """@brief Popen kwargs to drop to `uid` (only possible, and required, as root)."""
-    if uid is None or not is_root():
-        return Creds(user=None, group=None, extra_groups=None)
-    return Creds(user=uid, group=uid, extra_groups=[])
-
-
-def _bwrap_ok(args: list[str]) -> bool:
+def _probe(argv: list[str], fd: int | None = None) -> bool:
+    """@brief Run a probe as PROBE_UID; closes `fd` (the seccomp pipe) if given."""
     try:
         proc = subprocess.run(
-            [BWRAP, *args],
+            argv,
             env={"PATH": PLUGIN_PATH},
             stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=10,
+            pass_fds=(fd,) if fd is not None else (),
             **as_user(PROBE_UID),
         )
         return proc.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
+    finally:
+        if fd is not None:
+            os.close(fd)
 
 
-def self_test() -> bool:
+def self_test(data_dir: Path = Path("/data")) -> bool:
     """
-    @brief `bwrap --ro-bind / / true`, then the namespaces/mounts plugins actually use
-    (a fresh /proc needs e.g. docker `systempaths=unconfined`), both as an unprivileged
-    uid; the /plugin and /state mountpoints must exist.
+    @brief Mountpoints exist; `bwrap --ro-bind / / true`; then the exact limits,
+    namespaces, tmpfs sizes and seccomp filter plugins use — as an unprivileged uid.
     """
     missing = [str(p) for p in MOUNTPOINTS if not p.is_dir()]
     if missing:
         log.error("sandbox unavailable: missing mountpoints %s", missing)
         return False
-    if not _bwrap_ok(["--ro-bind", "/", "/", "true"]):
+    if not _probe([BWRAP, "--ro-bind", "/", "/", "true"]):
         log.error("sandbox unavailable: `bwrap --ro-bind / / true` failed")
         return False
-    if not _bwrap_ok(["--ro-bind", "/", "/", "--tmpfs", "/tmp", *_tail(PROBE_UID), "true"]):
-        log.error("sandbox unavailable: bwrap cannot create pid/ipc namespaces or mount /proc")
+    fd = seccomp.filter_fd()
+    if fd is None:
+        log.error("sandbox unavailable: no seccomp filter")
+        return False
+    if not _probe([*_common(data_dir), *_tail(PROBE_UID, fd), "true"], fd):
+        log.error("sandbox unavailable: bwrap cannot apply namespaces/limits/seccomp")
         return False
     return True
 
 
-async def _run(argv: list[str], env: dict[str, str], uid: int) -> None:
+async def _run(argv: list[str], env: dict[str, str], uid: int, fd: int) -> None:
     """@brief Run one wrapped install step with a timeout; output discarded, never logged."""
-    proc = await asyncio.create_subprocess_exec(
-        *argv,
-        cwd="/",
-        env=env,
-        stdin=asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.DEVNULL,
-        **as_user(uid),
-    )
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
+            cwd="/",
+            env=env,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+            pass_fds=(fd,),
+            **as_user(uid),
+        )
+    finally:
+        os.close(fd)
     try:
         rc = await asyncio.wait_for(proc.wait(), DEPS_TIMEOUT_S)
     except (TimeoutError, asyncio.CancelledError):
@@ -265,11 +234,18 @@ def bwrap_runner(data_dir: Path) -> Runner:
     async def run(argv: list[str], cwd: Path, uid: int | None) -> None:
         if uid is None:
             raise ValueError("install runner needs the plugin uid")
-        wrapped = install_argv(argv, cwd, uid, data_dir)
-        env = install_env(cwd)
-        Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
-        chown_tree(cwd, uid)
-        chown_tree(Path(env["HOME"]), uid)
-        await _run(wrapped, env, uid)
+        fd = seccomp.filter_fd()
+        if fd is None:
+            raise SandboxUnavailableError()
+        try:
+            wrapped = install_argv(argv, cwd, uid, data_dir, seccomp_fd=fd)
+            env = install_env(cwd)
+            Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
+            chown_tree(cwd, uid)
+            chown_tree(Path(env["HOME"]), uid)
+        except BaseException:
+            os.close(fd)
+            raise
+        await _run(wrapped, env, uid, fd)
 
     return run

@@ -11,8 +11,8 @@ import pytest
 import respx
 from fastapi import FastAPI
 
-from host import main
-from host.models import InstallSpec, ProcStatus
+from host import main, netstat, proxy
+from host.models import Endpoint, InstallSpec, ProcStatus
 
 PID = "dev.nexara.echo"
 UPSTREAM = "http://127.0.0.1:9107/events"
@@ -34,8 +34,32 @@ class PortSupervisor:
     def logs(self, plugin_id: str, lines: int) -> list[str]:
         return []
 
-    def port(self, plugin_id: str) -> int | None:
-        return self._port if plugin_id == PID else None
+    def endpoint(self, plugin_id: str) -> Endpoint | None:
+        if plugin_id != PID or self._port is None:
+            return None
+        return Endpoint(self._port, UID)
+
+
+UID = 20003
+TCP_HEAD = "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid\n"
+
+
+def tcp_line(port: int, uid: int, state: str = "0A", ip: str = "0100007F") -> str:
+    return (
+        f"   0: {ip}:{port:04X} 00000000:0000 {state} 00000000:00000000 00:00000000 "
+        f"00000000 {uid:>5}        0 12345 1 0000000000000000 100 0 0 10 0\n"
+    )
+
+
+@pytest.fixture(autouse=True)
+def proc_net(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """@brief Fake /proc/net with the plugin (uid UID) listening on 9107."""
+    net = tmp_path / "net"
+    net.mkdir()
+    (net / "tcp").write_text(TCP_HEAD + tcp_line(9107, UID) + tcp_line(9107, 0, state="01"))
+    (net / "tcp6").write_text(TCP_HEAD)
+    monkeypatch.setattr(netstat, "PROC_NET", net)
+    return net
 
 
 def make_app(tmp_path: Path, port: int | None = 9107) -> FastAPI:
@@ -106,3 +130,51 @@ async def test_plugin_response_capped(c: httpx.AsyncClient) -> None:
 async def test_bad_id_422_and_control_routes_still_need_auth(c: httpx.AsyncClient) -> None:
     assert (await c.post("/plugins/Bad_ID/events", content=b"{}")).status_code == 422
     assert (await c.get("/plugins")).status_code == 401
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "tcp,tcp6",
+    [
+        (tcp_line(9107, 20009), ""),  # another plugin's uid holds the port
+        ("", ""),  # nobody listens
+        (tcp_line(9107, UID), tcp_line(9107, 20009, ip="0" * 32)),  # foreign v6 listener too
+        (tcp_line(9108, UID), ""),  # plugin listens elsewhere
+    ],
+)
+async def test_port_hijack_refused(
+    c: httpx.AsyncClient, proc_net: Path, tcp: str, tcp6: str
+) -> None:
+    (proc_net / "tcp").write_text(TCP_HEAD + tcp)
+    (proc_net / "tcp6").write_text(TCP_HEAD + tcp6)
+    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(202))
+    r = await c.post(f"/plugins/{PID}/events", content=BODY, headers=HEADERS)
+    assert r.status_code == 503 and r.json() == {"detail": "port_hijacked"}
+    assert not route.called
+
+
+@respx.mock
+async def test_own_v6_listener_forwards(c: httpx.AsyncClient, proc_net: Path) -> None:
+    (proc_net / "tcp").write_text(TCP_HEAD)
+    (proc_net / "tcp6").write_text(TCP_HEAD + tcp_line(9107, UID, ip="0" * 32))
+    respx.post(UPSTREAM).mock(return_value=httpx.Response(204))
+    assert (await c.post(f"/plugins/{PID}/events", content=b"{}")).status_code == 204
+
+
+async def test_busy_when_all_slots_taken(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(proxy, "MAX_INFLIGHT", 1)
+    app = make_app(tmp_path)
+    px = proxy._proxy(app)
+    async with px.slots:
+        t = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=t, base_url="http://h") as cl:
+            r = await cl.post(f"/plugins/{PID}/events", content=b"{}")
+    assert r.status_code == 503 and r.json() == {"detail": "proxy_busy"}
+    assert proxy._proxy(app).client is px.client  # one shared client per app
+    await proxy.close_proxy(app)
+
+
+def test_netstat_parses_real_format(proc_net: Path) -> None:
+    assert netstat.listeners() == [(9107, UID)]
+    assert netstat.listener_uids(9107) == [UID]
+    assert netstat.listener_uids(1) == []

@@ -29,8 +29,9 @@ from host.models import (
     PluginRow,
     Supervisor,
 )
-from host.proxy import events_router
-from host.sandbox import bwrap_runner, plugin_uid
+from host.perms import plugin_uid
+from host.proxy import close_proxy, events_router
+from host.sandbox import bwrap_runner
 from host.supervisor import BwrapSupervisor
 
 log = logging.getLogger("plugin_host")
@@ -250,6 +251,7 @@ def create_app(
         yield
         for pid in list(host.records):
             await sup.stop(pid)
+        await close_proxy(app)
 
     app = FastAPI(
         title="Nexara plugin host",

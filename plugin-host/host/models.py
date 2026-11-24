@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, NamedTuple, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -103,6 +103,13 @@ class PluginRecord:
     last_error: str | None = None
 
 
+class Endpoint(NamedTuple):
+    """@brief Where a live plugin listens and the uid its listener must belong to."""
+
+    port: int
+    uid: int
+
+
 class Supervisor(Protocol):
     """@brief Process supervisor contract (implemented by the sandbox supervisor)."""
 
@@ -118,24 +125,5 @@ class Supervisor(Protocol):
     def logs(self, plugin_id: str, lines: int) -> list[str]:
         """@brief Last `lines` output lines."""
 
-    def port(self, plugin_id: str) -> int | None:
-        """@brief Local port of a running plugin (event proxy target), else None."""
-
-
-class NullSupervisor:
-    """@brief Placeholder until the bwrap supervisor lands; tracks nothing."""
-
-    async def start(self, plugin_id: str, root: Path, spec: InstallSpec) -> None:
-        return None
-
-    async def stop(self, plugin_id: str) -> None:
-        return None
-
-    def status(self, plugin_id: str) -> ProcStatus | None:
-        return None
-
-    def logs(self, plugin_id: str, lines: int) -> list[str]:
-        return []
-
-    def port(self, plugin_id: str) -> int | None:
-        return None
+    def endpoint(self, plugin_id: str) -> Endpoint | None:
+        """@brief Port + uid of a live plugin process (event proxy target), else None."""
