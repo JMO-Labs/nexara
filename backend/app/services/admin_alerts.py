@@ -1,5 +1,5 @@
 """@file admin_alerts.py
-@brief Alert admins (admin Apprise targets + in-app ``system`` notification).
+@brief Alert admins (in-app ``system`` notification inline; Apprise sends via Celery).
 
 Deduped per ``(kind, key)`` for 30 minutes in Valkey. If Valkey is unreachable the
 alert is sent anyway: a duplicate is better than a missed alert. Never raises.
@@ -40,7 +40,8 @@ def _message(kind: str, data: dict[str, Any]) -> str:
         return _MESSAGES.get(kind, kind)
 
 
-async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, msg: str) -> None:
+async def deliver_apprise(session: AsyncSession, community_id: uuid.UUID, msg: str) -> None:
+    """@brief Send ``msg`` to the community's admin Apprise targets (runs in a worker)."""
     for t in await AppriseRepository(session).list_admin_targets(community_id):
         try:
             apobj = build_apprise(t.apprise_url, allow_local=True)
@@ -51,6 +52,15 @@ async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, ms
             logger.warning(
                 "admin_alert.apprise_failed", target_id=str(t.id), error=type(exc).__name__
             )
+
+
+async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, msg: str) -> None:
+    from app.tasks.admin_alert_tasks import send_apprise_alert
+
+    try:
+        send_apprise_alert.delay(str(community_id), msg)
+    except Exception:
+        logger.warning("admin_alert.enqueue_failed", kind=kind, exc_info=True)
     svc = build_notification_service(session, community_id)
     admins = (
         (

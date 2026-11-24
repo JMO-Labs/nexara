@@ -162,5 +162,21 @@ async def test_admin_alert_logs_when_notify_returns_false() -> None:
         patch.object(admin_alerts, "build_notification_service", return_value=MagicMock()),
         patch.object(admin_alerts, "logger") as log,
     ):
-        await admin_alerts._deliver(session, uuid.uuid4(), "disk_high", "msg")
+        await admin_alerts.deliver_apprise(session, uuid.uuid4(), "msg")
     log.warning.assert_any_call("admin_alert.apprise_failed", target_id=str(target.id))
+
+
+async def test_admin_alert_enqueues_apprise_off_request_path() -> None:
+    from app.services import admin_alerts
+
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [])))
+    cid = uuid.uuid4()
+    with (
+        patch("app.tasks.admin_alert_tasks.send_apprise_alert.delay") as delay,
+        patch.object(admin_alerts, "build_notification_service", return_value=MagicMock()),
+        patch.object(admin_alerts, "deliver_apprise", AsyncMock()) as inline,
+    ):
+        await admin_alerts._deliver(session, cid, "disk_high", "msg")
+    delay.assert_called_once_with(str(cid), "msg")
+    inline.assert_not_awaited()
