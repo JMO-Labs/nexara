@@ -40,6 +40,13 @@ class Dispatcher:
         """@param ch Channel to register under its key."""
         self._channels[ch.key] = ch
 
+    async def _send(self, key: str, notification: Notification, push_on: bool) -> ChannelResult:
+        """@brief Send on one channel; in-app carries the push decision as os_notify."""
+        ch = self._channels[key]
+        if isinstance(ch, InAppChannel):
+            return await ch.send(notification, os_notify=push_on)
+        return await ch.send(notification)
+
     async def dispatch(
         self,
         notification: Notification,
@@ -55,8 +62,9 @@ class Dispatcher:
         """
         enabled = {**effective_channels, "fcm": effective_channels.get("push", False)}
         keys = [k for k, on in enabled.items() if on and k in self._channels]
+        push_on = bool(effective_channels.get("push", False))
         raw = await asyncio.gather(
-            *(self._channels[k].send(notification) for k in keys),
+            *(self._send(k, notification, push_on) for k in keys),
             return_exceptions=True,
         )
         results: list[ChannelResult] = []

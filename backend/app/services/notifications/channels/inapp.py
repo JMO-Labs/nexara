@@ -21,10 +21,11 @@ class InAppChannel:
         """@param event_bus Bus used to fan out realtime events."""
         self._bus = event_bus
 
-    async def send(self, notification: Notification) -> ChannelResult:
+    async def send(self, notification: Notification, *, os_notify: bool = False) -> ChannelResult:
         """@brief Emit a user_notification event; never raises.
 
         @param notification The notification to deliver.
+        @param os_notify Effective push decision (DnD, snooze, per-type prefs).
         @return ChannelResult(ok=True) or ok=False with error text.
         """
         try:
@@ -40,6 +41,7 @@ class InAppChannel:
                     ),
                     count=notification.count or 1,
                     actor_ids=notification.actor_ids or [],
+                    os_notify=os_notify,
                 )
             )
             return ChannelResult(ok=True)
