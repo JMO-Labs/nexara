@@ -24,6 +24,7 @@ def _row(user_id, community_id=CID) -> MagicMock:
     row = MagicMock(spec=AppriseURL)
     row.user_id = user_id
     row.community_id = community_id
+    row.is_admin_target = False
     return row
 
 

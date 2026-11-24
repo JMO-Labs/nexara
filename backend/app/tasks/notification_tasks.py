@@ -19,6 +19,7 @@ import structlog
 from celery import Task
 
 from app.core.config import get_settings
+from app.core.exceptions import AppError
 from app.db.session import async_session_factory
 from app.models.notification import Notification
 from app.models.user import User
@@ -29,6 +30,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.repositories.webhook_repo import WebhookRepository
 from app.services.notifications import registry
 from app.services.notifications import types as _notification_types  # noqa: F401
+from app.services.notifications.apprise_guard import check_apprise_url
 from app.services.notifications.digest import should_send_now
 from app.services.notifications.dnd import effective_tz
 from app.services.notifications.webhook_delivery import deliver_webhook
@@ -211,12 +213,20 @@ async def _apprise_deliver_async(
     permanent (4xx-style) failure; raised exceptions (timeouts, connection
     errors) are transient.
 
-    @return ``sent``, ``failed`` or ``skipped``.
+    @return ``sent``, ``failed``, ``blocked`` (SSRF guard) or ``skipped``.
     @raises TransientDeliveryError on timeout/connection errors.
     """
     row = await repo.get(url_id)
     if row is None or not row.enabled:
         return "skipped"
+    # Recheck at send time: DNS may have changed since the URL was saved.
+    allow = row.is_admin_target or await repo.allow_local(row.community_id)
+    try:
+        await asyncio.to_thread(check_apprise_url, row.apprise_url, allow_local=allow)
+    except AppError:
+        await repo.record_failure(url_id)
+        logger.warning("notif.channel.blocked", channel="apprise", url_id=str(url_id))
+        return "blocked"
     apobj = apprise.Apprise()
     apobj.add(row.apprise_url)
     try:

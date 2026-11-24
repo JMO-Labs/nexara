@@ -42,3 +42,9 @@ class AppriseTestResponse(BaseModel):
 
     status: str
     message: str
+
+
+class AdminAppriseSettings(BaseModel):
+    """@brief Community Apprise settings (admin)."""
+
+    allow_local: bool

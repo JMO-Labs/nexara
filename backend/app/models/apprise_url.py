@@ -28,8 +28,12 @@ class AppriseURL(Base):
         nullable=False,
         server_default=COMMUNITY_DEFAULT,
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    # NULL for admin targets (community-level alert destinations).
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    is_admin_target: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
     )
     apprise_url: Mapped[str] = mapped_column(Text, nullable=False)
     label: Mapped[str | None] = mapped_column(String(100))

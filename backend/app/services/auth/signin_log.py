@@ -21,6 +21,7 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.db.session import async_session_factory
 from app.models.signin_event import SigninEvent
 from app.repositories.signin_repo import SigninRepository
+from app.services.admin_alerts import admin_alert
 
 if TYPE_CHECKING:
     from fastapi import Request
@@ -92,15 +93,19 @@ def _default_notifier(session: AsyncSession, community_id: uuid.UUID) -> Notific
 
 
 async def _check_burst(
-    repo: SigninRepository, settings: Settings, community_id: uuid.UUID, ip: str
+    session: AsyncSession,
+    repo: SigninRepository,
+    settings: Settings,
+    community_id: uuid.UUID,
+    ip: str,
 ) -> None:
     """@brief Log ``security.signin_burst`` once per 10 min per IP at >=10 failures."""
     if await repo.count_failures(community_id, ip, BURST_WINDOW_MINUTES) < BURST_THRESHOLD:
         return
     redis = get_pool(settings, DB_CACHE)
     if await redis.set(f"signin:burst:{ip}", "1", nx=True, ex=BURST_WINDOW_MINUTES * 60):
-        # ponytail: swap for admin_alert("signin_burst", {"ip": ip}) once PR 2 lands it.
         logger.warning("security.signin_burst", ip=ip)
+        await admin_alert(session, community_id, "signin_burst", {"ip": ip})
 
 
 async def record_signin(
@@ -167,7 +172,7 @@ async def record_signin(
             svc = notifier or _default_notifier(session, community_id)
             await svc.notify(user_id, "new_signin", payload)
         elif not success and ip:
-            await _check_burst(repo, settings or get_settings(), community_id, ip)
+            await _check_burst(session, repo, settings or get_settings(), community_id, ip)
     except Exception:
         logger.warning("signin.alert_failed", exc_info=True)
     return event
