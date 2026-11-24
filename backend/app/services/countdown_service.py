@@ -175,7 +175,7 @@ class CountdownService:
                 data.pop("tz")
             else:
                 _valid_tz(data["tz"])
-        if "target_date" in data:
+        if "target_date" in data and data["target_date"] != c.target_date:
             self._check_not_past(
                 viewer, data["target_date"], data.get("repeat_yearly", c.repeat_yearly)
             )

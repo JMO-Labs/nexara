@@ -211,8 +211,12 @@ async def test_past_oneoff_rejected_yearly_allowed(session):
         await svc.create(a, CountdownCreate(title="x", target_date=past))
     r = await svc.create(a, CountdownCreate(title="y", target_date=past, repeat_yearly=True))
     with pytest.raises(ValidationError):
-        await svc.update(a, r.id, CountdownUpdate(target_date=past, repeat_yearly=False))
+        await svc.update(
+            a, r.id, CountdownUpdate(target_date=past - timedelta(days=1), repeat_yearly=False)
+        )
     await svc.update(a, r.id, CountdownUpdate(title="z"))
+    # re-sending an unchanged past date (edit modal) is fine
+    await svc.update(a, r.id, CountdownUpdate(target_date=past, repeat_yearly=True))
 
 
 async def test_update_null_clears_optional_fields(session):
@@ -302,3 +306,13 @@ async def test_reminder_scan_skips_far_oneoffs(session):
         await repo.follow(c.id, a.id)
     got = {c.title for c, uid, _ in await repo.reminder_targets(CID, _today()) if uid == a.id}
     assert got == {"y", "near"}
+
+
+async def test_edit_keeps_unchanged_past_date_of_ended_oneoff(session):
+    a = await _user(session)
+    past = _today() - timedelta(days=2)
+    c = Countdown(community_id=CID, author_id=a.id, title="old", target_date=past)
+    session.add(c)
+    await session.flush()
+    out = await _svc(session).update(a, c.id, CountdownUpdate(title="new", target_date=past))
+    assert out.title == "new"
