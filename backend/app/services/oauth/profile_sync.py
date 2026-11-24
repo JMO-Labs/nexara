@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.audit_repo import AuditRepository
+from app.services.oauth.email_change import notify_email_synced
 from app.services.oauth.sso_rules import clean_username, unique_username
 
 if TYPE_CHECKING:
@@ -19,16 +20,29 @@ if TYPE_CHECKING:
     from app.services.oauth.user_provisioner import OAuthAuthResult
 
 
-async def sync_profile(users: UserRepository, user: User, auth: OAuthAuthResult) -> None:
+async def sync_profile(
+    users: UserRepository,
+    user: User,
+    auth: OAuthAuthResult,
+    *,
+    session: AsyncSession,
+    community_id: uuid.UUID,
+    provider_id: uuid.UUID | None,
+) -> None:
     """
     @brief Copy IdP profile fields onto the user when they changed.
 
-    Email is only taken when the IdP verified it and no other user holds it.
+    Email is only taken when the IdP verified it and no other user holds it;
+    a change is audited, old-address credentials revoked and the old address told.
 
     @param users User repository.
     @param user Linked user.
     @param auth Mapped claims (username from the provider's username_claim).
+    @param session Request session (audit, token revocation).
+    @param community_id Community (notice branding).
+    @param provider_id Provider driving the sync.
     """
+    old_email = user.email
     updates: dict[str, Any] = {}
     if auth.display_name and auth.display_name != user.display_name:
         updates["display_name"] = auth.display_name
@@ -47,6 +61,15 @@ async def sync_profile(users: UserRepository, user: User, auth: OAuthAuthResult)
             updates["username"] = name
     if updates:
         await users.update(user, updates)
+    if "email" in updates:
+        await notify_email_synced(
+            session,
+            user_id=user.id,
+            community_id=community_id,
+            provider_id=provider_id,
+            old_email=old_email,
+            new_email=updates["email"],
+        )
 
 
 async def audit_role_synced(

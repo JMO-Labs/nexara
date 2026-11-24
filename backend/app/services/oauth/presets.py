@@ -23,6 +23,7 @@ class Preset:
     @param params Placeholder names the admin must supply (with defaults in ``defaults``).
     @param scopes Space-separated scopes.
     @param claim_mapping Nexara field -> provider claim.
+    @param username_claim Claim holding the username (applied on create).
     @param help Admin-facing setup hint.
     """
 
@@ -38,6 +39,7 @@ class Preset:
     userinfo_endpoint: str | None = None
     emails_endpoint: str | None = None
     claim_mapping: dict[str, Any] = field(default_factory=dict)
+    username_claim: str = "preferred_username"
 
     def to_dict(self, key: str) -> dict[str, Any]:
         """@brief JSON-serialisable form for the presets endpoint."""
@@ -124,6 +126,7 @@ PRESETS: dict[str, Preset] = {
         emails_endpoint="https://api.github.com/user/emails",
         scopes="read:user user:email read:org",
         claim_mapping={"sub": "id", "name": "name", "picture": "avatar_url"},
+        username_claim="login",
         help="GitHub OAuth app. Only verified primary emails are trusted.",
     ),
     "discord": Preset(
@@ -134,6 +137,7 @@ PRESETS: dict[str, Preset] = {
         userinfo_endpoint="https://discord.com/api/users/@me",
         scopes="identify email",
         claim_mapping={"sub": "id", "name": "global_name"},
+        username_claim="username",
         help="Discord application. The 'verified' flag gates email trust.",
     ),
     "custom": Preset(

@@ -87,3 +87,33 @@ async def test_owner_lookups_include_soft_deleted(session: AsyncSession):
     assert await users.email_owner_id(f"gone_{tag}@nexara.dev") == gone.id
     assert await users.username_owner_id(f"gone_{tag}") == gone.id
     assert await users.username_owner_id(f"free_{tag}") is None
+
+
+async def test_try_create_savepoint_and_magic_link_revoke(session: AsyncSession):
+    """Username race: unique violation returns None, outer txn stays usable."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.models.auth import MagicLinkToken
+    from app.repositories.token_repo import TokenRepository
+    from app.repositories.user_repo import UserRepository
+
+    tag = uuid.uuid4().hex[:8]
+    users = UserRepository(session)
+
+    def mk(email: str) -> User:
+        return User(community_id=CID, email=email, username=f"race_{tag}", display_name="R")
+
+    first = await users.try_create(mk(f"r1_{tag}@nexara.dev"))
+    assert first is not None
+    assert await users.try_create(mk(f"r2_{tag}@nexara.dev")) is None
+    assert await users.username_owner_id(f"race_{tag}") == first.id  # txn still usable
+
+    session.add(
+        MagicLinkToken(
+            user_id=first.id,
+            token_hash=uuid.uuid4().hex,
+            expires_at=datetime.now(UTC) + timedelta(minutes=5),
+        )
+    )
+    await session.flush()
+    assert await TokenRepository(session).revoke_magic_links_for_user(first.id) == 1

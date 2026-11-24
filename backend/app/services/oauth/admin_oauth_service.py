@@ -31,9 +31,17 @@ from app.schemas.oauth import (
 from app.services.auth import sso_only
 from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
 from app.services.oauth.group_mapper import preview_group_mapping
+from app.services.oauth.presets import PRESETS
 from app.services.oauth.provider_manager import ProviderManager
 
 logger = structlog.get_logger(__name__)
+
+
+def _username_claim(body: OAuthProviderCreate) -> str:
+    """@brief Explicit username_claim wins; else the preset's (github login, ...)."""
+    if "username_claim" not in body.model_fields_set and body.preset in PRESETS:
+        return PRESETS[body.preset].username_claim
+    return body.username_claim
 
 
 class AdminOAuthService:
@@ -117,7 +125,7 @@ class AdminOAuthService:
             preset=body.preset,
             allowed_domains=body.allowed_domains,
             required_group=body.required_group,
-            username_claim=body.username_claim,
+            username_claim=_username_claim(body),
             sync_profile=body.sync_profile,
             enabled=body.enabled,
             auto_create_users=body.auto_create_users,

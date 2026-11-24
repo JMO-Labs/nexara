@@ -50,7 +50,10 @@ def clean_username(raw: str | None) -> str | None:
 
 
 async def unique_username(
-    users: UserRepository, base: str, self_id: uuid.UUID | None = None
+    users: UserRepository,
+    base: str,
+    self_id: uuid.UUID | None = None,
+    exclude: set[str] | None = None,
 ) -> str:
     """
     @brief First free name among base, base-2, base-3, ...
@@ -60,11 +63,14 @@ async def unique_username(
     @param users User repository.
     @param base Cleaned username.
     @param self_id The user being synced (None on create).
+    @param exclude Names to skip (lost an insert race).
     @return Available username.
     """
     for n in range(1, 100):
         suffix = "" if n == 1 else f"-{n}"
         candidate = base[: USERNAME_MAX - len(suffix)] + suffix
+        if exclude and candidate in exclude:
+            continue
         owner = await users.username_owner_id(candidate)  # incl. soft-deleted
         if owner is not None:
             if owner == self_id:

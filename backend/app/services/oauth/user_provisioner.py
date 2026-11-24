@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AuthenticationError, SsoRefusedError
+from app.core.exceptions import AppError, AuthenticationError, SsoRefusedError
 from app.models.user import User
 from app.models.user_oauth_link import UserOAuthLink
 from app.plugins.hooks import HookRegistry
@@ -79,6 +79,10 @@ def _derive_username(display_name: str | None, email: str | None) -> str:
     return "user_" + secrets.token_hex(4)
 
 
+CREATE_ATTEMPTS = 5
+"""@brief Bounded retries of the JIT insert when a username race is lost."""
+
+
 class UserProvisioner:
     """
     @brief Provisions users from OAuth authentication results.
@@ -107,11 +111,25 @@ class UserProvisioner:
         self._link_repo = UserOAuthLinkRepository(db)
         self._user_repo = UserRepository(db)
 
-    async def _refuse(self, code: str, user: User | None = None) -> SsoRefusedError:
+    async def _refuse(self, code: str, user_id: uuid.UUID | None = None) -> SsoRefusedError:
         """@brief Build a refusal; a known (linked) user is signed out everywhere."""
-        if user is not None:
-            await TokenRepository(self._db).revoke_all_for_user(user.id)
+        if user_id is not None:
+            await TokenRepository(self._db).revoke_all_for_user(user_id)
         return SsoRefusedError(code)
+
+    async def _sync_profile(
+        self, user: User, auth_result: OAuthAuthResult, provider: OAuthProvider
+    ) -> None:
+        """@brief Profile sync when the provider enables it."""
+        if provider.sync_profile:
+            await sync_profile(
+                self._user_repo,
+                user,
+                auth_result,
+                session=self._db,
+                community_id=self._community_id,
+                provider_id=provider.id,
+            )
 
     async def provision_user(
         self,
@@ -129,14 +147,18 @@ class UserProvisioner:
         @raises SsoRefusedError sso_domain_not_allowed / sso_group_required /
                 sso_no_account / sso_account_disabled.
         """
-        gate = gate_refusal(provider, auth_result.email, auth_result.groups)
+        # Only an IdP-verified email can satisfy allowed_domains.
+        trusted_email = auth_result.email if auth_result.email_verified else None
+        gate = gate_refusal(provider, trusted_email, auth_result.groups)
         link = await self._link_repo.find_by_provider_and_sub(provider.id, auth_result.sub)
-        linked = await self._user_repo.get_by_id(link.user_id) if link else None
+        linked_id = link.user_id if link else None
         if gate:
-            raise await self._refuse(gate, linked)
+            raise await self._refuse(gate, linked_id)
+        linked = await self._user_repo.get_by_id(link.user_id) if link else None
+        if link is not None and (linked is None or not linked.is_active):
+            # Disabled, or the link points at a soft-deleted account.
+            raise await self._refuse("sso_account_disabled", linked_id)
         if linked is not None and link is not None:
-            if not linked.is_active:
-                raise await self._refuse("sso_account_disabled", linked)
             await self._sync_returning(linked, link, auth_result, provider, role)
             user = linked
         else:
@@ -186,8 +208,7 @@ class UserProvisioner:
     ) -> None:
         """@brief Login over an existing link: role, profile and link-data sync."""
         await self._sync_role(user, role, provider)
-        if provider.sync_profile:
-            await sync_profile(self._user_repo, user, auth_result)
+        await self._sync_profile(user, auth_result, provider)
         link_updates: dict[str, object] = {}
         if auth_result.email and auth_result.email != link.email_from_provider:
             link_updates["email_from_provider"] = auth_result.email
@@ -216,6 +237,9 @@ class UserProvisioner:
         if user is not None:
             if not user.is_active:
                 raise await self._refuse("sso_account_disabled")
+            if not user.email_verified:
+                # Pre-account hijack guard: never adopt an unproven local signup.
+                raise await self._refuse("sso_email_unverified_local")
             if await factor_methods(self._db, user):
                 self.pending_link = {
                     "provider_id": str(provider.id),
@@ -226,8 +250,7 @@ class UserProvisioner:
                 }
                 return user
             await self._sync_role(user, role, provider)
-            if provider.sync_profile:
-                await sync_profile(self._user_repo, user, auth_result)
+            await self._sync_profile(user, auth_result, provider)
             await self._create_link(user, provider, auth_result)
             return user
 
@@ -260,17 +283,31 @@ class UserProvisioner:
         base = clean_username(auth_result.username) or _derive_username(
             auth_result.display_name, auth_result.email
         )
-        username = await unique_username(self._user_repo, base)
-        user = User(
-            community_id=self._community_id,
-            email=email,
-            username=username,
-            display_name=auth_result.display_name or username,
-            role=role,
-            email_verified=True,
-            avatar_url=auth_result.avatar_url,
-        )
-        user = await self._user_repo.create(user)
+        lost: set[str] = set()
+        created: User | None = None
+        for _attempt in range(CREATE_ATTEMPTS):
+            username = await unique_username(self._user_repo, base, exclude=lost)
+            created = await self._user_repo.try_create(
+                User(
+                    community_id=self._community_id,
+                    email=email,
+                    username=username,
+                    display_name=auth_result.display_name or username,
+                    role=role,
+                    email_verified=True,
+                    avatar_url=auth_result.avatar_url,
+                )
+            )
+            if created is not None:
+                break
+            lost.add(username)  # lost a concurrent race for this name
+        if created is None:
+            raise AppError(
+                code="sso_provision_conflict",
+                message="Could not create account, try again",
+                status_code=409,
+            )
+        user = created
         await self._create_link(user, provider, auth_result)
         await CalendarRepository(self._db).ensure_personal(self._community_id, user.id)
         await HookRegistry.emit(

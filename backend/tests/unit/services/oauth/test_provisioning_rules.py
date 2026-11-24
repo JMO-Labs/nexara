@@ -26,6 +26,7 @@ def _user(**kw):
     u.id = uuid.uuid4()
     u.role = "member"
     u.is_active = True
+    u.email_verified = True
     u.display_name = "Ruth"
     u.email = "ruth@example.com"
     u.avatar_url = None
@@ -51,9 +52,10 @@ class Env:
         self.users.username_owner_id.return_value = None
         self.users.email_owner_id.return_value = None
         self.users.username_exists.side_effect = lambda n: n in taken
-        self.users.create.side_effect = lambda u: u
+        self.users.try_create.side_effect = lambda u: u
         self.tokens = AsyncMock()
         self.audit = AsyncMock()
+        self.notify = AsyncMock()
 
     async def run(self, auth, provider, role="member"):
         with (
@@ -64,6 +66,7 @@ class Env:
             patch(UP + "CalendarRepository", return_value=AsyncMock()),
             patch(UP + "HookRegistry.emit", AsyncMock()),
             patch(UP + "audit_role_synced", self.audit),
+            patch("app.services.oauth.profile_sync.notify_email_synced", self.notify),
         ):
             return await UserProvisioner(AsyncMock(), uuid.uuid4()).provision_user(
                 auth, provider, role
@@ -80,7 +83,7 @@ async def test_domain_not_allowed_rejected():
     with pytest.raises(AuthorizationError) as exc:
         await env.run(_auth(email="a@other.com"), sso_provider(allowed_domains=["example.com"]))
     assert exc.value.code == "sso_domain_not_allowed"
-    env.users.create.assert_not_called()
+    env.users.try_create.assert_not_called()
 
 
 async def test_domain_allowed_case_insensitive():
@@ -112,7 +115,7 @@ async def test_unknown_user_refused_without_auto_create():
     with pytest.raises(SsoRefusedError) as exc:
         await env.run(_auth(), sso_provider(auto_create_users=False))
     assert exc.value.code == "sso_no_account"
-    env.users.create.assert_not_called()
+    env.users.try_create.assert_not_called()
     env.link_repo.create.assert_not_called()
 
 

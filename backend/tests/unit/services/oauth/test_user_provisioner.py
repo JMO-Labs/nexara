@@ -182,7 +182,7 @@ class TestProvisionUser:
 
         new_user = MagicMock(spec=User)
         new_user.id = uuid.uuid4()
-        mock_user_repo.create = AsyncMock(return_value=new_user)
+        mock_user_repo.try_create = AsyncMock(return_value=new_user)
         mock_link_repo.create = AsyncMock()
 
         auth_result = OAuthAuthResult(
@@ -207,8 +207,8 @@ class TestProvisionUser:
                 result = await provisioner.provision_user(auth_result, mock_provider, "member")
 
         assert result is new_user
-        mock_user_repo.create.assert_called_once()
-        user_created = mock_user_repo.create.call_args[0][0]
+        mock_user_repo.try_create.assert_called_once()
+        user_created = mock_user_repo.try_create.call_args[0][0]
         assert user_created.email == "newuser@example.com"
         assert user_created.community_id == community_id
         assert user_created.role == "member"
@@ -245,7 +245,7 @@ class TestEmailVerification:
         coro, link_repo, user_repo = _run(OAuthAuthResult(sub="s", email="a@x.com"))
         with pytest.raises(AuthenticationError, match="Email not verified"):
             await coro
-        user_repo.create.assert_not_called()
+        user_repo.try_create.assert_not_called()
         link_repo.create.assert_not_called()
 
     @pytest.mark.asyncio
@@ -262,7 +262,7 @@ class TestEmailVerification:
         coro, _, user_repo = _run(OAuthAuthResult(sub="s", email=None, email_verified=True))
         with pytest.raises(AuthenticationError, match="Email not verified"):
             await coro
-        user_repo.create.assert_not_called()
+        user_repo.try_create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_verified_email_lookup_is_case_insensitive(self):

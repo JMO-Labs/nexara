@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.household import HouseholdMember
@@ -116,6 +117,23 @@ class UserRepository(BaseRepository[User]):
             HouseholdMember.handle == username.lower(), HouseholdMember.deleted_at.is_(None)
         )
         return (await self._session.execute(stmt.limit(1))).first() is not None
+
+    async def try_create(self, user: User) -> User | None:
+        """
+        @brief Insert ``user`` inside a savepoint.
+
+        @param user New (transient) user.
+        @return The persisted user, or None on a unique violation (the outer
+                transaction stays usable).
+        """
+        try:
+            async with self._session.begin_nested():
+                self._session.add(user)
+                await self._session.flush()
+        except IntegrityError:
+            return None
+        await self._session.refresh(user)
+        return user
 
     async def email_owner_id(self, email: str) -> uuid.UUID | None:
         """
