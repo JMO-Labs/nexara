@@ -27,12 +27,12 @@ export interface NsfwCoverProps {
  * @param itemId session-reveal key
  * @return children, covered if needed
  */
-export function NsfwCover({
-  nsfw,
-  itemId,
-  children,
-  className,
-}: NsfwCoverProps) {
+export function NsfwCover(props: NsfwCoverProps) {
+  // Outer gate keeps non-NSFW content free of query hooks/providers.
+  return props.nsfw ? <Covered {...props} /> : <>{props.children}</>;
+}
+
+function Covered({ nsfw, itemId, children, className }: NsfwCoverProps) {
   const { data } = useUserSettings();
   const [shown, setShown] = React.useState(() => revealed.has(itemId));
   if (!nsfw || shown || data?.always_show_nsfw) return <>{children}</>;

@@ -4,6 +4,7 @@
  * @brief Full-screen modal viewer for gallery items: focus trap, arrows, Esc.
  */
 import * as React from "react";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { PhotoTags } from "./PhotoTags";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui";
@@ -15,6 +16,8 @@ export interface LightboxProps {
   index: number;
   onClose: () => void;
   onIndexChange: (i: number) => void;
+  /** Whole gallery is NSFW. */
+  nsfw?: boolean;
 }
 
 /**
@@ -30,6 +33,7 @@ export function Lightbox({
   index,
   onClose,
   onIndexChange,
+  nsfw,
 }: LightboxProps) {
   const item = items[index];
   const ref = React.useRef<HTMLDivElement>(null);
@@ -137,13 +141,18 @@ export function Lightbox({
           <ChevronLeft className="size-7 text-white" aria-hidden="true" />
         </IconButton>
         {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
-        <img
-          src={src}
-          alt={label}
-          onLoad={() => setSettledSrc(src)}
-          onError={() => setSettledSrc(src)}
-          className={`max-h-[80vh] max-w-[90vw] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
-        />
+        <NsfwCover
+          nsfw={nsfw || item.is_nsfw}
+          itemId={`media:${item.media_id}`}
+        >
+          <img
+            src={src}
+            alt={label}
+            onLoad={() => setSettledSrc(src)}
+            onError={() => setSettledSrc(src)}
+            className={`max-h-[80vh] max-w-[90vw] object-contain transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+          />
+        </NsfwCover>
         <IconButton
           variant="ghost"
           aria-label="Next"

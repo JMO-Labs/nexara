@@ -19,6 +19,8 @@ export interface Gallery {
   is_default: boolean;
   is_event_gallery: boolean;
   is_nsfw?: boolean;
+  /** Moderator-locked: owner cannot clear NSFW. */
+  nsfw_locked?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +33,7 @@ export interface GalleryItem {
   caption: string | null;
   position: number;
   created_at: string;
+  is_nsfw?: boolean;
 }
 
 export interface Collaborator {

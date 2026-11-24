@@ -7,6 +7,7 @@
 import * as React from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { useIsGroupMod } from "@/hooks/useGroupMod";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import {
@@ -61,6 +62,7 @@ export function PostCard({
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
   const nsfwMut = useSetPostNsfw();
+  const groupMod = useIsGroupMod(post.subgroup_id);
 
   if (post.recipient_id && post.recipient) {
     return (
@@ -89,7 +91,7 @@ export function PostCard({
           isAuthor={isAuthor}
           isAdmin={isAdmin}
           onToggleNsfw={
-            isAdmin
+            isAdmin || groupMod
               ? () => nsfwMut.mutate({ id: post.id, value: !post.is_nsfw })
               : undefined
           }

@@ -11,6 +11,7 @@ import messages from "@/i18n/en-US.json";
 import { PostCard } from "@/components/feed/PostCard";
 import type { Post } from "@/lib/api/posts";
 
+vi.mock("@/hooks/useGroupMod", () => ({ useIsGroupMod: () => false }));
 vi.mock("next/link", () => ({
   default: ({
     children,

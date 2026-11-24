@@ -5,7 +5,7 @@
  * Multipart raw-bytes PUT bypasses apiClient (which JSON-encodes bodies)
  * and uses fetch + bearer-from-session directly.
  */
-import { apiGet, apiPost, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 import { API_BASE, getAccessToken } from "@/lib/auth/session";
 
 export interface MediaItem {
@@ -159,3 +159,7 @@ export async function waitUntilReady(id: string, tries = 60) {
   }
   throw new Error("Processing timed out");
 }
+
+/** @brief Uploader: mark/unmark one media item NSFW (adults only). */
+export const setMediaNsfw = (id: string, isNsfw: boolean) =>
+  apiPatch<MediaItem>(`${BASE}/${seg(id)}`, { is_nsfw: isNsfw });

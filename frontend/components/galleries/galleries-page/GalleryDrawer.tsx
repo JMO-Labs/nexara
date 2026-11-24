@@ -11,6 +11,7 @@ import {
   Avatar,
   Drawer,
   EmptyState,
+  Button,
   IconButton,
   Skeleton,
 } from "@/components/ui";
@@ -25,6 +26,10 @@ import {
   useDeleteGallery,
   useRemoveItem,
 } from "@/hooks/useGalleries";
+import { useSetGalleryNsfw, useSetMediaNsfw } from "@/hooks/useNsfw";
+import { NsfwCover } from "@/components/feed/NsfwCover";
+import { NsfwToggle } from "@/components/compose/NsfwToggle";
+import { useIsGroupMod } from "@/hooks/useGroupMod";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { API_BASE } from "@/lib/auth/session";
@@ -164,9 +169,15 @@ export function GalleryDrawer({
   const updateMut = useUpdateGallery();
   const deleteMut = useDeleteGallery();
   const removeItemMut = useRemoveItem(galleryId ?? "");
+  const galleryNsfwMut = useSetGalleryNsfw();
+  const mediaNsfwMut = useSetMediaNsfw();
+  const groupMod = useIsGroupMod(gallery?.subgroup_id);
+  const isAdult = sessionUser?.age_group === "adult";
 
   const isOwner =
     !!gallery && !!sessionUser && gallery.owner_id === sessionUser.id;
+  const isMod =
+    sessionUser?.role === "admin" || sessionUser?.role === "owner" || groupMod;
   const canContribute =
     isOwner ||
     (!!gallery &&
@@ -235,6 +246,32 @@ export function GalleryDrawer({
             <p className="text-muted text-sm">{gallery.description}</p>
           )}
 
+          {isOwner || isMod ? (
+            isOwner ? (
+              <NsfwToggle
+                checked={!!gallery.is_nsfw}
+                locked={gallery.nsfw_locked}
+                onChange={(v) =>
+                  updateMut.mutate({ id: gallery.id, body: { is_nsfw: v } })
+                }
+              />
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onClick={() =>
+                  galleryNsfwMut.mutate({
+                    id: gallery.id,
+                    value: !gallery.is_nsfw,
+                  })
+                }
+              >
+                {gallery.is_nsfw ? "Remove NSFW" : "Mark NSFW"}
+              </Button>
+            )
+          ) : null}
+
           <div className="flex flex-col gap-4">
             <OptionPills
               label="Visibility"
@@ -300,17 +337,42 @@ export function GalleryDrawer({
                     key={it.id}
                     className="group bg-bg relative aspect-square overflow-hidden rounded-[18px]"
                   >
-                    <button
-                      type="button"
-                      onClick={() => onOpenItem(idx)}
-                      aria-label={it.caption ?? `Item ${idx + 1}`}
-                      className="focus-visible:outline-accent absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    <NsfwCover
+                      nsfw={gallery.is_nsfw || it.is_nsfw}
+                      itemId={`media:${it.media_id}`}
+                      className="absolute inset-0"
                     >
-                      <MediaThumb
-                        mediaId={it.media_id}
-                        alt={it.caption ?? `Item ${idx + 1}`}
-                      />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenItem(idx)}
+                        aria-label={it.caption ?? `Item ${idx + 1}`}
+                        className="focus-visible:outline-accent absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                      >
+                        <MediaThumb
+                          mediaId={it.media_id}
+                          alt={it.caption ?? `Item ${idx + 1}`}
+                        />
+                      </button>
+                    </NsfwCover>
+                    {isAdult && it.added_by === sessionUser?.id && (
+                      <IconButton
+                        size="sm"
+                        variant="glass"
+                        aria-label={
+                          it.is_nsfw ? "Remove NSFW from item" : "Mark as NSFW"
+                        }
+                        aria-pressed={!!it.is_nsfw}
+                        onClick={() =>
+                          mediaNsfwMut.mutate({
+                            id: it.media_id,
+                            value: !it.is_nsfw,
+                          })
+                        }
+                        className="absolute top-1.5 left-1.5 text-xs font-bold"
+                      >
+                        18+
+                      </IconButton>
+                    )}
                     {isOwner && (
                       <IconButton
                         size="sm"
