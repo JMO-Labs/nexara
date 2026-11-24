@@ -165,6 +165,11 @@ pluginHost:
     pullPolicy: IfNotPresent
   # Existing Secret with key "plugin-host-secret"; otherwise generated and kept.
   existingSecret: ""
+  # Cluster DNS the host may query (egress is limited to it). Override if your
+  # DNS runs elsewhere (e.g. NodeLocal DNS, k3s uses the same kube-dns labels).
+  dns:
+    namespaceLabels: {kubernetes.io/metadata.name: kube-system}
+    podLabels: {k8s-app: kube-dns}
   # Ports plugins may use to reach the internet.
   egressPorts: [443, 80]
   persistence:
@@ -225,6 +230,8 @@ env:
   ALLOWED_ORIGINS: ""
   # Proxies whose X-Forwarded-For is believed (bundled nginx = loopback).
   # Add your ingress controller pod CIDR, e.g. "127.0.0.1/32,::1/128,10.42.0.0/16".
+  # NEVER include the plugin-host pod/network CIDR: plugins could then spoof
+  # X-Forwarded-For when calling the API pod-to-pod.
   TRUSTED_PROXIES: "127.0.0.1/32,::1/128"
   # Web Push: public key pairs with secrets.vapidPrivateKey.
   VAPID_PUBLIC_KEY: ""

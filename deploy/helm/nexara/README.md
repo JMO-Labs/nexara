@@ -51,7 +51,10 @@ effect on a CNI that enforces NetworkPolicy): only api/worker may reach the host
 the host may reach DNS, the API and the internet except `networkPolicy.privateCidrs`
 (IPv4) and `networkPolicy.privateCidrs6` (IPv6). That exclusion is what blocks
 Postgres/Valkey: add your pod/service CIDRs if they are outside the defaults, or the
-deny is incomplete. The api/worker egress-to-host and api ingress-from-host rules
+deny is incomplete. Host DNS egress is limited to cluster DNS
+(`pluginHost.dns.*` selectors, default kube-system `k8s-app=kube-dns`). Never add the
+plugin-host pod/network CIDR to `env.TRUSTED_PROXIES`, or plugins can spoof
+`X-Forwarded-For` when calling the API. The api/worker egress-to-host and api ingress-from-host rules
 (beat gets none) additionally need `networkPolicy.enabled`. `appArmorProfile` needs
 k8s 1.30+; older clusters use the annotation fallback. The image tag defaults to
 `appVersion`, matching the tags CI pushes (`build:plugin-host`).

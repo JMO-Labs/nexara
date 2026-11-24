@@ -101,7 +101,12 @@ spec:
         {{- end }}
       ports: [{port: {{ .Values.pluginHost.port }}}]
   egress:
-    - ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {{- toYaml .Values.pluginHost.dns.namespaceLabels | nindent 14 }}
+          podSelector:
+            matchLabels: {{- toYaml .Values.pluginHost.dns.podLabels | nindent 14 }}
+      ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
     - to:
         - podSelector:
             matchLabels: {{- include "nexara.selector" (dict "root" . "component" "api") | nindent 14 }}
