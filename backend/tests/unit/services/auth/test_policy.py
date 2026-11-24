@@ -34,7 +34,13 @@ def _user(**kw):
 
 @pytest.mark.parametrize(
     "path",
-    ["/api/v1/posts", "/api/v1/sse", "/ws", "/api/v1/users/me/password", "/api/v1/auth/passkeys"],
+    [
+        "/api/v1/posts",
+        "/api/v1/sse",
+        "/ws",
+        "/api/v1/users/me/password",
+        "/api/v1/auth/passkeys/1234",
+    ],
 )
 def test_blocks_outside_allowlist(path):
     with pytest.raises(AppError) as e:
@@ -50,6 +56,7 @@ def test_blocks_outside_allowlist(path):
         "/api/v1/auth/passkeys/register/options",
         "/api/v1/users/me",
         "/api/v1/auth/logout",
+        "/api/v1/auth/passkeys",
     ],
 )
 def test_allowlist_passes(path):

@@ -28,7 +28,7 @@ GRACE = timedelta(days=7)
 
 SETUP_PREFIXES = ("/api/v1/auth/2fa/", "/api/v1/auth/passkeys/register/")
 """@brief Routes still reachable once the grace period has ended without a factor."""
-SETUP_PATHS = frozenset({"/api/v1/users/me", "/api/v1/auth/logout"})
+SETUP_PATHS = frozenset({"/api/v1/users/me", "/api/v1/auth/logout", "/api/v1/auth/passkeys"})
 
 
 def covers(policy: str, user: User) -> bool:
