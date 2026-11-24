@@ -16,6 +16,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
+from app.core.deps_age import get_community
 
 
 def _make_settings() -> Settings:
@@ -48,6 +49,8 @@ def _mock_user(**overrides) -> MagicMock:
     user.location = None
     user.website_url = None
     user.birthday = None
+    user.age_group = None
+    user.age_group_source = None
     user.banner_media_id = None
     for f in ("phone", "contact_email", "address", "emergency_contact", "availability", "dietary"):
         setattr(user, f, None)
@@ -74,6 +77,7 @@ class TestGetMe:
             return user
 
         test_app.dependency_overrides[get_current_user] = _override_user
+        test_app.dependency_overrides[get_community] = lambda: None
 
         try:
             transport = ASGITransport(app=test_app)
@@ -109,6 +113,7 @@ class TestPatchMe:
             return user
 
         test_app.dependency_overrides[get_current_user] = _override_user
+        test_app.dependency_overrides[get_community] = lambda: None
 
         try:
             with patch("app.api.v1.users.UserService") as mock_svc_cls:
@@ -142,6 +147,7 @@ class TestDeleteMe:
             return user
 
         test_app.dependency_overrides[get_current_user] = _override_user
+        test_app.dependency_overrides[get_community] = lambda: None
 
         try:
             with patch("app.api.v1.users.UserService") as mock_svc_cls:
@@ -176,6 +182,7 @@ class TestGetUserById:
             return current_user
 
         test_app.dependency_overrides[get_current_user] = _override_user
+        test_app.dependency_overrides[get_community] = lambda: None
 
         try:
             with patch("app.api.v1.users.ProfileService") as mock_svc_cls:

@@ -148,6 +148,7 @@ class TestCreatePost:
             reply_to_prompt_id=None,
             subgroup_id=None,
             private=False,
+            is_nsfw=False,
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
 
@@ -267,6 +268,7 @@ class TestCreatePost:
             reply_to_prompt_id=None,
             subgroup_id=subgroup_id,
             private=False,
+            is_nsfw=False,
         )
 
 

@@ -238,10 +238,13 @@ class TestGetMetadata:
         mock_media = _make_media()
         mock_repo = AsyncMock()
         mock_repo.get.return_value = mock_media
+        mock_repo.nsfw_hidden.return_value = False
         mock_storage = AsyncMock()
         mock_user_repo = AsyncMock()
 
-        with patch("app.services.media_service.MediaResponse") as mock_resp:
+        mock_repo.nsfw_media_among.return_value = set()
+        mock_repo.media_nsfw_state.return_value = {}
+        with patch("app.services.media.serving.MediaResponse") as mock_resp:
             mock_resp.model_validate.return_value = MagicMock()
             service = MediaService(
                 media_repo=mock_repo,

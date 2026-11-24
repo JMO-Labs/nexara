@@ -13,6 +13,8 @@ import { importMediaUrl } from "@/lib/api/media";
 
 export interface CoverPickerProps {
   mediaId: string | null;
+  /** Selected cover is NSFW (blurred with a badge). */
+  nsfw?: boolean;
   onChange: (mediaId: string | null) => void;
   label?: string;
 }
@@ -24,6 +26,7 @@ export interface CoverPickerProps {
  */
 export function CoverPicker({
   mediaId,
+  nsfw,
   onChange,
   label = "Cover image",
 }: CoverPickerProps) {
@@ -71,7 +74,7 @@ export function CoverPicker({
       <span className="text-sm font-semibold">{label}</span>
       {mediaId && (
         <div className="relative h-36 w-full overflow-hidden rounded-2xl bg-surface">
-          <MediaThumb mediaId={mediaId} alt={`${label} preview`} />
+          <MediaThumb mediaId={mediaId} alt={`${label} preview`} nsfw={nsfw} />
         </div>
       )}
       <div className="flex flex-wrap gap-2">

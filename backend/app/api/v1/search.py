@@ -16,9 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.core.deps_age import get_community
 from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.core.valkey import DB_CACHE, get_pool
+from app.models.community import Community
 from app.models.user import User
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import SearchResponse
@@ -37,6 +39,7 @@ def _build_service(
     db: AsyncSession = Depends(get_db),
     community_id: uuid.UUID = Depends(_community_id),
     settings: Settings = Depends(get_settings),
+    community: Community | None = Depends(get_community),
 ) -> SearchService:
     """@brief Build the SearchService with injected dependencies."""
     try:
@@ -47,6 +50,7 @@ def _build_service(
         search_repo=SearchRepository(db),
         community_id=community_id,
         cache_client=cache,
+        community=community,
     )
 
 

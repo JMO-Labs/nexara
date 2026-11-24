@@ -4,6 +4,7 @@
 """
 
 from app.services.notifications.types import (  # noqa: F401
+    age_suggestion,
     album_reminder,
     birthday_reminder,
     capsule_opened,
@@ -42,6 +43,7 @@ from app.services.notifications.types import (  # noqa: F401
 )
 
 __all__ = [
+    "age_suggestion",
     "album_reminder",
     "birthday_reminder",
     "capsule_opened",

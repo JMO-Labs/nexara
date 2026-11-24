@@ -15,6 +15,7 @@ from zoneinfo import available_timezones
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from app.schemas.auth import SelfHostEmail
+from app.schemas.profile import plausible_birthday
 
 
 class UserResponse(BaseModel):
@@ -73,6 +74,9 @@ class UserDetailResponse(BaseModel):
     updated_at: datetime
     last_seen_at: datetime | None = None
     tour_completed_at: datetime | None = None
+    age_group: str | None = None  # effective (read-only); set by /users/me
+    # admin | birthday | approval_pending | unknown (read-only); set by /users/me
+    age_group_source: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -88,6 +92,12 @@ class UserUpdateRequest(BaseModel):
     website_url: HttpUrl | None = None
     birthday: date | None = None
     timezone: str | None = Field(None, max_length=64, description="IANA timezone")
+
+    @field_validator("birthday")
+    @classmethod
+    def _birthday(cls, v: date | None) -> date | None:
+        """@brief 1900 or later, not in the future."""
+        return plausible_birthday(v)
 
     @field_validator("timezone")
     @classmethod

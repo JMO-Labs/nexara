@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 GalleryVisibility = Literal["private", "subgroup", "community"]
 ContributionPolicy = Literal["owner_only", "collaborators", "community"]
@@ -25,6 +25,7 @@ class GalleryCreate(BaseModel):
     subgroup_id: UUID | None = None
     event_id: UUID | None = None
     cover_media_id: UUID | None = None
+    is_nsfw: bool = False
 
 
 class GalleryUpdate(BaseModel):
@@ -36,6 +37,7 @@ class GalleryUpdate(BaseModel):
     contribution_policy: ContributionPolicy | None = None
     cover_media_id: UUID | None = None
     is_featured: bool | None = None
+    is_nsfw: bool | None = None
 
 
 class GalleryItemCreate(BaseModel):
@@ -69,6 +71,22 @@ class GalleryItemResponse(BaseModel):
     caption: str | None
     position: int
     created_at: datetime
+    is_nsfw: bool = False  # photo is NSFW (own flag, NSFW post or album)
+    is_nsfw_own: bool = False  # the photo's own flag only (uploader toggle)
+    nsfw_locked: bool = False  # own or container lock applies
+    nsfw_lock_level: str | None = None
+
+    @field_validator("nsfw_lock_level", mode="before")
+    @classmethod
+    def _lock_level(cls, v: object) -> str | None:
+        """@brief Only the known levels (the service fills the real one)."""
+        return v if isinstance(v, str) and v in ("admin", "moderator") else None
+
+    @field_validator("is_nsfw", "is_nsfw_own", "nsfw_locked", mode="before")
+    @classmethod
+    def _flags(cls, v: object) -> bool:
+        """@brief Non-bool attrs (unset/unflushed) are False."""
+        return v is True
 
     model_config = {"from_attributes": True}
 
@@ -88,6 +106,23 @@ class GalleryResponse(BaseModel):
     item_count: int
     is_featured: bool
     is_default: bool
+    is_nsfw: bool = False
+    nsfw_locked: bool = False
+    nsfw_lock_level: str | None = None
+    cover_is_nsfw: bool = False  # adults only; non-adults get no NSFW cover
+
+    @field_validator("nsfw_lock_level", mode="before")
+    @classmethod
+    def _lock_level(cls, v: object) -> str | None:
+        """@brief Only the known levels; anything else (unflushed row) is None."""
+        return v if isinstance(v, str) and v in ("admin", "moderator") else None
+
+    @field_validator("is_nsfw", "nsfw_locked", mode="before")
+    @classmethod
+    def _unflushed_nsfw(cls, v: object) -> bool:
+        """@brief A not-yet-flushed row has None (server default): treat as False."""
+        return v is True
+
     is_event_gallery: bool
     created_at: datetime
     updated_at: datetime

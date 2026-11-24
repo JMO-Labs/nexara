@@ -17,7 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
+from app.core.deps_age import get_community
 from app.core.i18n import _
+from app.models.community import Community
 from app.models.user import User
 from app.repositories.profile_repo import ProfileRepository
 from app.schemas.common import MessageResponse, PaginatedResponse
@@ -29,6 +31,7 @@ from app.schemas.user import (
     UserDetailResponse,
     UserUpdateRequest,
 )
+from app.services.age_service import age_group_source, effective_age_group
 from app.services.profiles.service import ProfileService
 from app.services.storage.usage_service import StorageUsageService
 from app.services.user_service import UserService
@@ -51,12 +54,21 @@ def _build_storage_service(db: AsyncSession = Depends(get_db)) -> StorageUsageSe
     return StorageUsageService.from_session(db)
 
 
+def _detail(user: User, community: Community | None) -> UserDetailResponse:
+    """@brief Detail response with the effective (derived) age group."""
+    out = UserDetailResponse.model_validate(user)
+    out.age_group = effective_age_group(user, community)
+    out.age_group_source = age_group_source(user, community)
+    return out
+
+
 @router.get("/me", response_model=UserDetailResponse)
 async def get_current_user_profile(
     user: User = Depends(get_current_user),
+    community: Community | None = Depends(get_community),
 ) -> Any:
-    """@brief Return the full profile of the authenticated user."""
-    return user
+    """@brief Return the full profile of the authenticated user (age_group is effective)."""
+    return _detail(user, community)
 
 
 @router.patch("/me", response_model=UserDetailResponse)
@@ -65,13 +77,14 @@ async def update_profile(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    community: Community | None = Depends(get_community),
 ) -> Any:
     """@brief Update profile fields for the authenticated user."""
     svc = UserService(db, settings)
     data = body.model_dump(exclude_unset=True)
     if "website_url" in data and data["website_url"] is not None:
         data["website_url"] = str(data["website_url"])
-    return await svc.update_profile(user, data)
+    return _detail(await svc.update_profile(user, data), community)
 
 
 @router.post("/me/password", response_model=MessageResponse)
@@ -91,9 +104,10 @@ async def change_password(
 async def complete_onboarding(
     user: User = Depends(get_current_user),
     svc: UserService = Depends(_build_service),
+    community: Community | None = Depends(get_community),
 ) -> Any:
     """@brief Mark the onboarding tour as completed for the authenticated user."""
-    return await svc.complete_onboarding(user)
+    return _detail(await svc.complete_onboarding(user), community)
 
 
 @router.post("/me/email", response_model=UserDetailResponse)
@@ -102,10 +116,11 @@ async def change_email(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
+    community: Community | None = Depends(get_community),
 ) -> Any:
     """@brief Change the authenticated user's email address."""
     svc = UserService(db, settings)
-    return await svc.change_email(user, body.new_email, body.password)
+    return _detail(await svc.change_email(user, body.new_email, body.password), community)
 
 
 @router.delete("/me", response_model=MessageResponse)

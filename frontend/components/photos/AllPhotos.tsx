@@ -8,6 +8,7 @@ import { Fragment } from "react";
 import { format, isSameWeek, parseISO } from "date-fns";
 import { Images } from "lucide-react";
 import { EmptyState } from "@/components/ui";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { photoTitle } from "@/lib/photoTitle";
 import type { HomeMediaItem } from "@/lib/api/home";
@@ -107,23 +108,29 @@ export function AllPhotos({
             const title = photoTitle(it);
             return (
               <li key={`${it.source}-${it.source_id}-${it.media_id}`}>
-                <button
-                  type="button"
-                  aria-label={`Open photo${title ? `: ${title}` : ""}`}
-                  onClick={() => onOpen(i)}
-                  className="group bg-bg relative block aspect-square w-full overflow-hidden rounded-[22px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                <NsfwCover
+                  nsfw={it.media.is_nsfw}
+                  itemId={`media:${it.media_id}`}
+                  className="rounded-[22px]"
                 >
-                  <MediaThumb
-                    mediaId={it.media_id}
-                    alt={it.media.alt_text || title || "Photo"}
-                    zoomOnHover
-                  />
-                  {title && (
-                    <span className="glass-item pointer-events-none absolute inset-x-2 bottom-2 hidden rounded-[18px] px-3 py-1.5 text-left text-xs font-medium text-ink group-hover:block group-focus-visible:block">
-                      {title}
-                    </span>
-                  )}
-                </button>
+                  <button
+                    type="button"
+                    aria-label={`Open photo${title ? `: ${title}` : ""}`}
+                    onClick={() => onOpen(i)}
+                    className="group bg-bg relative block aspect-square w-full overflow-hidden rounded-[22px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <MediaThumb
+                      mediaId={it.media_id}
+                      alt={it.media.alt_text || title || "Photo"}
+                      zoomOnHover
+                    />
+                    {title && (
+                      <span className="glass-item pointer-events-none absolute inset-x-2 bottom-2 hidden rounded-[18px] px-3 py-1.5 text-left text-xs font-medium text-ink group-hover:block group-focus-visible:block">
+                        {title}
+                      </span>
+                    )}
+                  </button>
+                </NsfwCover>
               </li>
             );
           })}

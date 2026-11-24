@@ -8,6 +8,7 @@ import * as React from "react";
 import { Images } from "lucide-react";
 import { Button, EmptyState } from "@/components/ui";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import type { Gallery } from "@/lib/api/galleries";
@@ -94,59 +95,65 @@ export function AlbumGrid({
                 : "md:basis-[170px] md:grow",
             )}
           >
-            <button
-              type="button"
-              aria-label={g.title}
-              aria-expanded={open}
-              onMouseEnter={() => !mobile && setActive(g.id)}
-              onMouseLeave={() =>
-                !mobile && setActive((a) => (a === g.id ? null : a))
-              }
-              onFocus={() => !mobile && setActive(g.id)}
-              onBlur={() =>
-                !mobile && setActive((a) => (a === g.id ? null : a))
-              }
-              onClick={() => {
-                if (mobile && !open) setActive(g.id);
-                else onSelect(g.id);
-              }}
-              className={cn(CARD, open ? "h-72" : "h-36")}
+            <NsfwCover
+              nsfw={g.is_nsfw || g.cover_is_nsfw}
+              itemId={`gallery:${g.id}`}
+              className="rounded-[28px]"
             >
-              {g.cover_media_id ? (
-                <span className="absolute inset-0 block">
-                  <MediaThumb
-                    mediaId={g.cover_media_id}
-                    alt={`${g.title} cover`}
-                    objectPosition="50% 30%"
-                  />
-                </span>
-              ) : (
-                <span
-                  data-testid="album-placeholder"
-                  className="absolute inset-0 flex items-start justify-start bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)] p-3"
-                >
-                  <span className="glass-item flex size-14 items-center justify-center rounded-full">
-                    <Images className="size-6" aria-hidden="true" />
+              <button
+                type="button"
+                aria-label={g.title}
+                aria-expanded={open}
+                onMouseEnter={() => !mobile && setActive(g.id)}
+                onMouseLeave={() =>
+                  !mobile && setActive((a) => (a === g.id ? null : a))
+                }
+                onFocus={() => !mobile && setActive(g.id)}
+                onBlur={() =>
+                  !mobile && setActive((a) => (a === g.id ? null : a))
+                }
+                onClick={() => {
+                  if (mobile && !open) setActive(g.id);
+                  else onSelect(g.id);
+                }}
+                className={cn(CARD, open ? "h-72" : "h-36")}
+              >
+                {g.cover_media_id ? (
+                  <span className="absolute inset-0 block">
+                    <MediaThumb
+                      mediaId={g.cover_media_id}
+                      alt={`${g.title} cover`}
+                      objectPosition="50% 30%"
+                    />
                   </span>
-                </span>
-              )}
-              <span className="absolute inset-x-3 bottom-3 flex flex-col gap-0.5 rounded-[20px] bg-[var(--nx-scrim)] px-3 py-2 text-[var(--nx-on-scrim)] backdrop-blur-md">
-                <span
-                  className={cn(
-                    "font-semibold",
-                    open ? "text-lg" : "truncate text-sm",
-                  )}
-                >
-                  {g.title}
-                </span>
-                <span className="text-xs opacity-80">{count}</span>
-                {open && (
-                  <span className="mt-1 inline-flex w-fit rounded-full bg-surface-strong px-3 py-1 text-sm font-semibold text-bg">
-                    Open album
+                ) : (
+                  <span
+                    data-testid="album-placeholder"
+                    className="absolute inset-0 flex items-start justify-start bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)] p-3"
+                  >
+                    <span className="glass-item flex size-14 items-center justify-center rounded-full">
+                      <Images className="size-6" aria-hidden="true" />
+                    </span>
                   </span>
                 )}
-              </span>
-            </button>
+                <span className="absolute inset-x-3 bottom-3 flex flex-col gap-0.5 rounded-[20px] bg-[var(--nx-scrim)] px-3 py-2 text-[var(--nx-on-scrim)] backdrop-blur-md">
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      open ? "text-lg" : "truncate text-sm",
+                    )}
+                  >
+                    {g.title}
+                  </span>
+                  <span className="text-xs opacity-80">{count}</span>
+                  {open && (
+                    <span className="mt-1 inline-flex w-fit rounded-full bg-surface-strong px-3 py-1 text-sm font-semibold text-bg">
+                      Open album
+                    </span>
+                  )}
+                </span>
+              </button>
+            </NsfwCover>
           </li>
         );
       })}

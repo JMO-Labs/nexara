@@ -52,6 +52,7 @@ def client_setup(test_app):
     service = MagicMock()
     service.update_subgroup = AsyncMock()
     service.get_pinned_post_id = AsyncMock(return_value=None)
+    service.apply_cover_nsfw = AsyncMock()
     service._member_repo.count_members = AsyncMock(return_value=1)
     service._member_repo.get_membership = AsyncMock(return_value=None)
     service._subgroup_repo.get_chat_channel = AsyncMock(return_value=None)

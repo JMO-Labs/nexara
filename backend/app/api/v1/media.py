@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,16 +23,19 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
 from app.repositories.media_repo import MediaRepository
+from app.repositories.tag_repo import TagRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import (
     MediaResponse,
+    MediaUpdate,
     MultipartCompleteResponse,
     MultipartInitRequest,
     MultipartInitResponse,
     MultipartPartResponse,
 )
 from app.schemas.post import ReactionResponse, ReactionToggle
+from app.services.media import nsfw as media_nsfw
 from app.services.media.url_import import import_image_from_url
 from app.services.media_service import MediaService
 from app.services.storage.factory import get_storage_backend
@@ -62,6 +65,7 @@ def _build_service(
         community_id=community_id,
         valkey_client=valkey,
         capsule_repo=TimeCapsuleRepository(db),
+        tag_repo=TagRepository(db),
     )
 
 
@@ -108,20 +112,27 @@ async def upload_part(
 @router.post("/upload/{upload_id}/complete", response_model=MultipartCompleteResponse)
 async def complete_multipart_upload(
     upload_id: str,
+    is_nsfw: bool = Query(False),
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MultipartCompleteResponse:
-    """@brief Complete multipart upload, assemble parts, create media record."""
+    """@brief Complete multipart upload, assemble parts, create media record.
+    ``is_nsfw``: flag it in the same transaction (adults only, feature on)."""
+    if is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
     media = await service.complete_multipart_upload(
         upload_id=upload_id,
         user=user,
     )
+    if is_nsfw:
+        await media_nsfw.set_media_nsfw(service, user, media.id, True)
     return MultipartCompleteResponse(media_id=media.id)
 
 
 @router.post("/upload", response_model=MediaResponse, status_code=201)
 async def upload_media(
     file: UploadFile,
+    is_nsfw: bool = Form(False),
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
@@ -129,24 +140,42 @@ async def upload_media(
     @brief Upload an image file (multipart/form-data).
 
     Accepts JPEG, PNG, GIF, WebP up to 20 MB. Enqueues thumbnail generation.
+    ``is_nsfw`` (form field): adults only, ``nsfw`` feature on.
     """
+    if is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
     content_type = file.content_type or "application/octet-stream"
     file_data = await file.read()
     size = len(file_data)
     filename = file.filename or "upload"
-    return await service.upload(
+    out = await service.upload(
         user=user,
         file_data=file_data,
         filename=filename,
         content_type=content_type,
         size=size,
     )
+    if is_nsfw:
+        out = await media_nsfw.set_media_nsfw(service, user, out.id, True)
+    return out
+
+
+@router.patch("/{media_id}", response_model=MediaResponse)
+async def update_media(
+    media_id: uuid.UUID,
+    body: MediaUpdate,
+    user: User = Depends(get_current_user),
+    service: MediaService = Depends(_build_service),
+) -> MediaResponse:
+    """@brief Uploader flags/unflags a photo NSFW (cannot clear a moderator lock)."""
+    return await media_nsfw.set_media_nsfw(service, user, media_id, body.is_nsfw)
 
 
 class ImportUrlRequest(BaseModel):
     """@brief Body for importing an image from a public URL."""
 
     url: str = Field(..., min_length=8, max_length=2000, pattern=r"^https?://")
+    is_nsfw: bool = False
 
 
 @router.post("/import-url", response_model=MediaResponse, status_code=201)
@@ -157,8 +186,13 @@ async def import_media_url(
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
-    """@brief Download an image from a public URL and store it as media."""
-    return await import_image_from_url(service, user, body.url)
+    """@brief Download an image from a public URL and store it as media (optionally NSFW)."""
+    if body.is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
+    out = await import_image_from_url(service, user, body.url)
+    if body.is_nsfw:
+        out = await media_nsfw.set_media_nsfw(service, user, out.id, True)
+    return out
 
 
 @router.get("/{media_id}", response_model=MediaResponse)
@@ -167,8 +201,23 @@ async def get_media_metadata(
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
-    """@brief Return media metadata by ID."""
-    return await service.get_metadata(media_id)
+    """@brief Return media metadata by ID (NSFW: adults only)."""
+    return await service.get_metadata(media_id, user.id)
+
+
+async def _cache_headers(
+    service: MediaService, media_id: uuid.UUID, max_age: int
+) -> dict[str, str]:
+    """
+    @brief Per-viewer bytes (NSFW/capsule gating): vary on auth so a shared
+           browser never replays one member's copy to another; NSFW is never stored.
+    """
+    nsfw = await service.is_nsfw(media_id)
+    return {
+        "Cache-Control": "private, no-store" if nsfw else f"private, max-age={max_age}",
+        "Vary": "Authorization, Cookie",
+        "Content-Disposition": "inline",
+    }
 
 
 @router.get("/{media_id}/file")
@@ -187,10 +236,7 @@ async def get_media_file(
     return StreamingResponse(
         iter([content]),
         media_type=content_type,
-        headers={
-            "Cache-Control": "private, max-age=86400",
-            "Content-Disposition": "inline",
-        },
+        headers=await _cache_headers(service, media_id, 86400),
     )
 
 
@@ -209,11 +255,7 @@ async def get_media_thumbnail(
     return StreamingResponse(
         iter([content]),
         media_type="image/webp",
-        headers={
-            "Cache-Control": "private, max-age=604800",
-            "Vary": "Authorization, Cookie",
-            "Content-Disposition": "inline",
-        },
+        headers=await _cache_headers(service, media_id, 604800),
     )
 
 
@@ -241,7 +283,7 @@ async def toggle_media_reaction(
 
     Validates media exists. Uses ReactionRepository.toggle with target_type="media".
     """
-    await service.get_metadata(media_id)
+    await service.get_metadata(media_id, user.id)
     reaction_repo = ReactionRepository(db)
     action, count = await reaction_repo.toggle(
         user_id=user.id,

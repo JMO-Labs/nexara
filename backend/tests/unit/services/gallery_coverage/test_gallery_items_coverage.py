@@ -356,3 +356,23 @@ class TestAutoAdd:
         repo.get_default_for_user.return_value = None
         repo.get_by_id.return_value = None
         assert await service.auto_add_to_default(uuid.uuid4(), uuid.uuid4()) is None
+
+
+class TestEventGalleryNsfw:
+    async def test_non_adult_gets_404(self, service: GalleryService, repo: AsyncMock) -> None:
+        g = _gallery()
+        g.is_nsfw = True
+        repo.get_event_gallery.return_value = g
+        repo.viewer_adult.return_value = False
+        with pytest.raises(NotFoundError):
+            await service.ensure_event_gallery(uuid.uuid4(), uuid.uuid4(), "t")
+
+    async def test_adult_gets_cover_flag(self, service: GalleryService, repo: AsyncMock) -> None:
+        g = _gallery()
+        g.is_nsfw = True
+        g.cover_media_id = uuid.uuid4()
+        repo.get_event_gallery.return_value = g
+        repo.viewer_adult.return_value = True
+        repo.nsfw_media_among.return_value = {g.cover_media_id}
+        res = await service.ensure_event_gallery(uuid.uuid4(), uuid.uuid4(), "t")
+        assert res.cover_is_nsfw is True and res.cover_media_id == g.cover_media_id

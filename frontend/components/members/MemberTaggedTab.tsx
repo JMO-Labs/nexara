@@ -37,6 +37,7 @@ export function MemberTaggedTab({
   });
   const posts = q.data?.pages.flatMap((p) => p.posts) ?? [];
   const media = q.data?.pages.flatMap((p) => p.media_ids) ?? [];
+  const nsfw = q.data?.pages.flatMap((p) => p.nsfw_media_ids ?? []);
   const empty = kind === "posts" ? !posts.length : !media.length;
 
   return (
@@ -65,7 +66,7 @@ export function MemberTaggedTab({
           ))}
         </div>
       ) : (
-        <PhotoGrid mediaIds={media} />
+        <PhotoGrid mediaIds={media} nsfwIds={nsfw} />
       )}
       {q.hasNextPage && (
         <Button

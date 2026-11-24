@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.gallery import Gallery
 from app.models.media import Media
 from app.models.moderation import ContentReport, UserBlock
 from app.models.post import Post
@@ -25,6 +27,7 @@ from app.repositories.moderation_content import (
     decode_report_cursor,
     encode_report_cursor,
 )
+from app.repositories.nsfw_cascade import cascade_media_lock, clear_media_sources
 
 __all__ = ["ModerationRepository", "decode_report_cursor", "encode_report_cursor"]
 
@@ -295,34 +298,63 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
 
         return rows, next_cursor
 
-    async def set_nsfw(self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID) -> bool:
+    async def set_nsfw(
+        self,
+        kind: str,
+        entity_id: uuid.UUID,
+        community_id: uuid.UUID,
+        value: bool = True,
+        level: str = "admin",
+        actor_admin: bool = True,
+    ) -> bool:
         """
-        @brief Flag a post or media item as NSFW within a community.
+        @brief Moderator flag/unflag of a post, album or photo within a community.
+               Setting locks the flag (the author may not clear it); clearing unlocks.
 
-        Posts must not be soft-deleted. Media has no soft-delete column.
-
-        @param kind "posts" or "media".
+        @param kind "posts", "galleries" or "media".
         @param entity_id Target UUID.
         @param community_id Community scope.
-        @return True if a row was updated, False if missing/out of scope.
+        @param value New flag.
+        @param level Lock level when setting ("admin" or "moderator"). A post or
+               album passes the flag and lock on to its photos (``nsfw_cascade``);
+               an admin unflag of a photo also drops its container sources.
+        @param actor_admin Whether the actor is a community admin (reach of the cascade).
+        @return True if a row was updated, False if missing/out of scope (or deleted post).
         """
+        model = _flaggable(kind)
+        stmt = update(model).where(model.id == entity_id, model.community_id == community_id)
         if kind == "posts":
-            stmt = (
-                update(Post)
-                .where(Post.id == entity_id, Post.community_id == community_id)
-                .where(Post.deleted_at.is_(None))
-                .values(is_nsfw=True)
-                .returning(Post.id)
-            )
-        elif kind == "media":
-            stmt = (
-                update(Media)
-                .where(Media.id == entity_id, Media.community_id == community_id)
-                .values(is_nsfw=True)
-                .returning(Media.id)
-            )
-        else:
-            raise ValueError(f"unsupported kind: {kind}")
+            stmt = stmt.where(Post.deleted_at.is_(None))
+        stmt = stmt.values(is_nsfw=value, nsfw_lock_level=level if value else None)
+        stmt = stmt.returning(model.id)
         result = await self._session.execute(stmt, execution_options={"synchronize_session": False})
+        updated = result.scalar_one_or_none() is not None
+        if updated and kind == "media" and not value:
+            await clear_media_sources(self._session, entity_id)
+        elif updated:  # photos inside follow the container (see nsfw_cascade)
+            await cascade_media_lock(
+                self._session, kind, entity_id, community_id,
+                value=value, level=level, actor_admin=actor_admin,
+            )  # fmt: skip
         await self._session.flush()
-        return result.scalar_one_or_none() is not None
+        return updated
+
+    async def get_flaggable(self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID) -> Any:
+        """@brief The post (live), album or photo to flag, scoped to the community."""
+        model = _flaggable(kind)
+        stmt = select(model).where(model.id == entity_id, model.community_id == community_id)
+        if kind == "posts":
+            stmt = stmt.where(Post.deleted_at.is_(None))
+        # Fresh row: set_nsfw updates bypass the identity map.
+        stmt = stmt.execution_options(populate_existing=True)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+
+_FLAGGABLE: dict[str, Any] = {"posts": Post, "galleries": Gallery, "media": Media}
+
+
+def _flaggable(kind: str) -> Any:
+    """@throws ValueError for a kind that has no NSFW flag."""
+    if kind not in _FLAGGABLE:
+        raise ValueError(f"unsupported kind: {kind}")
+    return _FLAGGABLE[kind]

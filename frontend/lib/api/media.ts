@@ -5,7 +5,7 @@
  * Multipart raw-bytes PUT bypasses apiClient (which JSON-encodes bodies)
  * and uses fetch + bearer-from-session directly.
  */
-import { apiGet, apiPost, apiDelete, seg } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 import { API_BASE, getAccessToken } from "@/lib/auth/session";
 
 export interface MediaItem {
@@ -21,6 +21,7 @@ export interface MediaItem {
   alt_text: string | null;
   status: "processing" | "ready" | "error" | "rejected";
   created_at: string;
+  is_nsfw?: boolean;
 }
 
 export interface MultipartInit {
@@ -57,9 +58,11 @@ export const deleteMedia = (id: string) =>
 export async function singleUpload(
   file: File,
   altText?: string,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   const fd = new FormData();
   fd.append("file", file);
+  if (isNsfw) fd.append("is_nsfw", "true");
   if (altText) fd.append("alt_text", altText);
   const token = getAccessToken();
   const res = await fetch(`${API_BASE}${BASE}/upload`, {
@@ -106,12 +109,15 @@ export async function putPart(
   return (await res.json()) as { part_number: number; etag: string };
 }
 
-export const completeMultipart = (uploadId: string) =>
-  apiPost<{ media_id: string }>(`${BASE}/upload/${seg(uploadId)}/complete`);
+export const completeMultipart = (uploadId: string, isNsfw?: boolean) =>
+  apiPost<{ media_id: string }>(
+    `${BASE}/upload/${seg(uploadId)}/complete${isNsfw ? "?is_nsfw=true" : ""}`,
+  );
 
 export async function multipartUpload(
   file: File,
   onProgress?: (pct: number) => void,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   const init = await initMultipart(file.name, file.type, file.size);
   const totalParts = Math.ceil(file.size / init.part_size);
@@ -122,21 +128,22 @@ export async function multipartUpload(
     await putPart(init.upload_id, i + 1, new Uint8Array(buf));
     onProgress?.(((i + 1) / totalParts) * 100);
   }
-  const result = await completeMultipart(init.upload_id);
+  const result = await completeMultipart(init.upload_id, isNsfw);
   return await getMedia(result.media_id);
 }
 
 export async function uploadFile(
   file: File,
   onProgress?: (pct: number) => void,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   if (file.size <= SINGLE_SHOT_LIMIT) {
     onProgress?.(0);
-    const m = await singleUpload(file);
+    const m = await singleUpload(file, undefined, isNsfw);
     onProgress?.(100);
     return m;
   }
-  return await multipartUpload(file, onProgress);
+  return await multipartUpload(file, onProgress, isNsfw);
 }
 
 /**
@@ -155,3 +162,7 @@ export async function waitUntilReady(id: string, tries = 60) {
   }
   throw new Error("Processing timed out");
 }
+
+/** @brief Uploader: mark/unmark one media item NSFW (adults only). */
+export const setMediaNsfw = (id: string, isNsfw: boolean) =>
+  apiPatch<MediaItem>(`${BASE}/${seg(id)}`, { is_nsfw: isNsfw });

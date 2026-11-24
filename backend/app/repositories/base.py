@@ -194,6 +194,87 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
+    async def viewer_adult(self, viewer_id: uuid.UUID | None) -> bool:
+        """@brief Whether the viewer may see NSFW content (unknown/no viewer = False)."""
+        from app.repositories.visibility_preds import viewer_is_adult
+
+        return bool((await self._session.execute(select(viewer_is_adult(viewer_id)))).scalar())
+
+    async def feature_on(self, community_id: uuid.UUID, key: str) -> bool:
+        """@brief Whether a community feature flag is on (see ``core.features``)."""
+        from app.core.features import is_enabled
+        from app.models.community import Community
+
+        community = await self._session.get(Community, community_id)
+        return community is None or is_enabled(community, key)
+
+    async def nsfw_media_among(self, media_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+        """@brief Which of these photos are NSFW (own flag, NSFW post or album)."""
+        from app.models.media import Media
+        from app.repositories.visibility_preds import media_is_nsfw
+
+        if not media_ids:
+            return set()
+        stmt = select(Media.id).where(Media.id.in_(media_ids), media_is_nsfw(Media.id))
+        return set((await self._session.execute(stmt)).scalars().all())
+
+    async def media_nsfw_state(
+        self, media_ids: set[uuid.UUID]
+    ) -> dict[uuid.UUID, tuple[bool, str | None]]:
+        """
+        @brief Per photo: (own flag, effective lock level). The level is the
+               strongest of the photo's own lock and its container source rows.
+        """
+        from app.models.media import Media
+        from app.models.media_nsfw_source import MediaNsfwSource
+
+        if not media_ids:
+            return {}
+        rows = await self._session.execute(
+            select(Media.id, Media.is_nsfw, Media.nsfw_lock_level).where(Media.id.in_(media_ids))
+        )
+        own = {r[0]: (bool(r[1]), r[2]) for r in rows.all()}
+        src = await self._session.execute(
+            select(MediaNsfwSource.media_id, MediaNsfwSource.level).where(
+                MediaNsfwSource.media_id.in_(media_ids)
+            )
+        )
+        levels: dict[uuid.UUID, set[str]] = {}
+        for mid, lvl in src.all():
+            levels.setdefault(mid, set()).add(lvl)
+        out: dict[uuid.UUID, tuple[bool, str | None]] = {}
+        for mid, (flag, lvl) in own.items():
+            all_lvls = levels.get(mid, set()) | ({lvl} if lvl else set())
+            out[mid] = (
+                flag,
+                "admin" if "admin" in all_lvls else ("moderator" if all_lvls else None),
+            )
+        return out
+
+    async def nsfw_hidden(
+        self,
+        viewer_id: uuid.UUID | None,
+        *,
+        post_id: uuid.UUID | None = None,
+        gallery_id: uuid.UUID | None = None,
+        media_id: uuid.UUID | None = None,
+    ) -> bool:
+        """
+        @brief A referenced post/album/photo is NSFW (a photo also via its post or
+               album) and the viewer is not an adult (anonymous/unknown included).
+        """
+        from sqlalchemy import and_, literal
+        from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
+        from app.repositories.visibility_preds import target_is_nsfw, viewer_is_adult
+
+        if post_id is None and gallery_id is None and media_id is None:
+            return False
+        t = PG_UUID(as_uuid=True)
+        nsfw = target_is_nsfw(literal(post_id, t), literal(gallery_id, t), literal(media_id, t))
+        stmt = select(and_(nsfw, ~viewer_is_adult(viewer_id)))
+        return bool((await self._session.execute(stmt)).scalar())
+
     @staticmethod
     def apply_block_filter(
         stmt: Select[Any],
@@ -260,3 +341,27 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         stmt = stmt.where(author_column.notin_(blocked_by_viewer))
         stmt = stmt.where(author_column.notin_(blocked_viewer))
         return stmt
+
+    async def nsfw_source_level(self, media_id: uuid.UUID) -> str | None:
+        """@brief Strongest container lock reaching this photo (``nsfw_cascade``), if any."""
+        from app.models.media_nsfw_source import MediaNsfwSource
+
+        stmt = select(MediaNsfwSource.level).where(MediaNsfwSource.media_id == media_id)
+        levels = set((await self._session.execute(stmt)).scalars().all())
+        return "admin" if "admin" in levels else ("moderator" if levels else None)
+
+    async def foreign_media(self, media_ids: set[uuid.UUID], user_id: uuid.UUID) -> set[uuid.UUID]:
+        """@brief Which of these photos the user did not upload."""
+        from app.models.media import Media
+
+        if not media_ids:
+            return set()
+        stmt = select(Media.id).where(Media.id.in_(media_ids), Media.uploader_id != user_id)
+        return set((await self._session.execute(stmt)).scalars().all())
+
+    async def user_is_admin(self, user_id: uuid.UUID) -> bool:
+        """@brief Whether the user has the community admin role."""
+        from app.models.user import User
+
+        role = await self._session.scalar(select(User.role).where(User.id == user_id))
+        return role == "admin"

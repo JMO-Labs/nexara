@@ -25,6 +25,7 @@ from app.services.ai.sassybot_service import wants_sassybot
 from app.services.group_tag_service import GroupTagService
 from app.services.household_mentions import sync_household_tags
 from app.services.notification_service import NotificationService
+from app.services.nsfw_rules import require_owner_may_flag
 from app.services.poll_service import PollService
 from app.services.realtime import events
 from app.services.realtime.audience import emit_to_audience, resolve_audience
@@ -113,6 +114,11 @@ class PostServiceBase:
         except Exception:
             logger.warning("sassybot_enqueue_failed", post_id=str(post_id))
 
+    async def _require_adult_for_nsfw(self, is_nsfw: bool, user: User) -> None:
+        """@throws AuthorizationError/AppError when the author may not flag (nsfw_rules)."""
+        if is_nsfw:
+            await require_owner_may_flag(self._post_repo, self._community_id, user.id, True)
+
     @property
     def _target(self) -> CommunityTarget:
         """@brief Nominal target for builders; real routing is per-user via audience."""
@@ -128,6 +134,7 @@ class PostServiceBase:
             visibility=post.visibility,
             subgroup_id=post.subgroup_id,
             author_id=post.author_id,
+            adults_only=post.is_nsfw is True,
         )
         await emit_to_audience(self._event_bus, audience, event.type, event.payload)
 

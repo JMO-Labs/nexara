@@ -14,6 +14,8 @@ export interface PrivacyAppearanceSettings {
   allow_sassybot: boolean;
   font_size: "small" | "medium" | "large";
   compact_feed: boolean;
+  /** Adults: show NSFW content without the blur cover. */
+  always_show_nsfw?: boolean;
 }
 
 export interface UserSettings extends PrivacyAppearanceSettings {
@@ -37,6 +39,8 @@ export interface UserSettings extends PrivacyAppearanceSettings {
   simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
+  /** Home "complete your profile" card dismissed. */
+  profile_card_dismissed?: boolean;
   /** Owner-only override for the Gravatar hash. */
   gravatar_email?: string | null;
 }
@@ -83,6 +87,7 @@ export interface UserSettingsUpdate extends Partial<PrivacyAppearanceSettings> {
   simple_mode?: boolean;
   receive_nudges?: boolean;
   receive_gentle_nudges?: boolean;
+  profile_card_dismissed?: boolean;
 }
 
 export interface ProfileUpdate {

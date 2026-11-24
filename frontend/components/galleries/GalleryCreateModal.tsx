@@ -12,6 +12,7 @@ import {
   ScopeSelect,
   type ScopeValue,
 } from "@/components/ui";
+import { NsfwToggle } from "@/components/compose/NsfwToggle";
 import { useCreateGallery } from "@/hooks/useGalleries";
 import { useCalendars } from "@/hooks/useCalendars";
 
@@ -40,6 +41,7 @@ export function GalleryCreateModal({
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [scope, setScope] = React.useState<ScopeValue>(initialScope);
+  const [nsfw, setNsfw] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const myGroups = React.useMemo(
@@ -62,16 +64,19 @@ export function GalleryCreateModal({
       description: string | null;
       visibility: "community" | "subgroup" | "private";
       subgroup_id?: string | null;
+      is_nsfw?: boolean;
     } = {
       title,
       description: description || null,
       visibility: scope.visibility,
     };
+    if (nsfw) payload.is_nsfw = true;
     if (scope.visibility === "subgroup" && scope.subgroup_id) {
       payload.subgroup_id = scope.subgroup_id;
     }
     await create.mutateAsync(payload);
     setTitle("");
+    setNsfw(false);
     setDescription("");
     setScope(initialScope());
     onClose();
@@ -95,6 +100,7 @@ export function GalleryCreateModal({
         {!defaultSubgroupId && (
           <ScopeSelect value={scope} onChange={setScope} subgroups={myGroups} />
         )}
+        <NsfwToggle checked={nsfw} onChange={setNsfw} />
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}

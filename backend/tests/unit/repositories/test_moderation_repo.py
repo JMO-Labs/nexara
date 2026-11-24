@@ -205,7 +205,7 @@ class TestSetNsfw:
     async def test_posts_update_excludes_soft_deleted(self):
         session = self._session(True)
         assert await ModerationRepository(session).set_nsfw("posts", uuid.uuid4(), COMMUNITY_ID)
-        sql = str(session.execute.await_args.args[0])
+        sql = str(session.execute.await_args_list[0].args[0])
         assert "UPDATE posts" in sql
         assert "deleted_at IS NULL" in sql
         session.flush.assert_awaited_once()

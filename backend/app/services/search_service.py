@@ -15,10 +15,9 @@ import hashlib
 import json
 import re
 import uuid
-from datetime import date
 from typing import TYPE_CHECKING, Any
 
-from app.core.cache import cache_get, cache_set
+from app.core.cache import cache_get, cache_set, get_search_version
 from app.core.metrics import search_cache_hits_total, search_cache_misses_total
 from app.repositories.search_repo import SearchRepository
 from app.schemas.search import (
@@ -26,10 +25,12 @@ from app.schemas.search import (
     SearchResultItem,
     SearchTypeResults,
 )
+from app.services.age_service import effective_age_group, is_adult
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
+    from app.models.community import Community
     from app.models.user import User
 
 _UNSAFE_CHARS = re.compile(r"[^\w\s]", re.UNICODE)
@@ -44,39 +45,30 @@ def search_cache_key(
     content_types: list[str],
     user_id: uuid.UUID,
     cursor: str | None,
+    age_group: str = "unknown",
+    version: int = 0,
 ) -> str:
     """
     @brief Build the deterministic cache key ``search:{sha256}:{cursor}``.
 
     The hash covers the normalized query, community, sorted types and the
-    viewer id (results are visibility/block filtered per user).
+    viewer id (results are visibility/block filtered per user), the viewer's
+    effective age group (NSFW gate) and the community cache version.
 
     @return Cache key; cursor defaults to ``0`` for the first page.
     """
     normalized = " ".join(query.lower().split())
-    raw = "|".join([normalized, str(community_id), ",".join(sorted(content_types)), str(user_id)])
+    raw = "|".join(
+        [
+            normalized,
+            str(community_id),
+            ",".join(sorted(content_types)),
+            str(user_id),
+            age_group,
+            str(version),
+        ]
+    )
     return f"search:{hashlib.sha256(raw.encode()).hexdigest()}:{cursor or '0'}"
-
-
-ADULT_AGE: int = 18
-"""@brief Minimum age (years) to view NSFW content."""
-
-
-def is_adult(user: User) -> bool:
-    """
-    @brief Whether the user may view NSFW content (age >= 18 from birthday).
-
-    Users without a birthday are treated as non-adult (safe default).
-
-    @param user Viewer.
-    @return True if the user is an adult.
-    """
-    b = user.birthday
-    if b is None:
-        return False
-    today = date.today()
-    age = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
-    return age >= ADULT_AGE
 
 
 def build_prefix_tsquery(raw: str) -> str:
@@ -132,10 +124,12 @@ class SearchService:
         search_repo: SearchRepository,
         community_id: uuid.UUID,
         cache_client: Redis | None = None,
+        community: Community | None = None,
     ) -> None:
         self._repo = search_repo
         self._community_id = community_id
         self._cache = cache_client
+        self._community = community
 
     async def search(
         self,
@@ -167,7 +161,11 @@ class SearchService:
 
         cache_key: str | None = None
         if self._cache is not None and cursor in (None, "0"):
-            cache_key = search_cache_key(q, self._community_id, content_types, user.id, cursor)
+            version = await get_search_version(self._cache, self._community_id)
+            group = effective_age_group(user, self._community)
+            cache_key = search_cache_key(
+                q, self._community_id, content_types, user.id, cursor, group, version
+            )
             cached = await cache_get(self._cache, cache_key)
             if cached is not None:
                 try:
@@ -204,7 +202,7 @@ class SearchService:
     ) -> SearchResponse:
         """@brief Run the repository searches and build the response."""
         prefix_q = build_prefix_tsquery(q)
-        adult = is_adult(user)
+        adult = is_adult(user, self._community)
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:
@@ -283,7 +281,7 @@ class SearchService:
                 (
                     "galleries",
                     self._repo.search_galleries(
-                        q, prefix_q, self._community_id, user.id, cursor, limit
+                        q, prefix_q, self._community_id, user.id, cursor, limit, include_nsfw=adult
                     ),
                 )
             )

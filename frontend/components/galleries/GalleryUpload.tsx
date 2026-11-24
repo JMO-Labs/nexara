@@ -7,6 +7,7 @@ import * as React from "react";
 import { Image as ImageIcon, Check, X, RotateCw, Loader2 } from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { NsfwToggle } from "@/components/compose/NsfwToggle";
 import { useGalleryUpload } from "@/hooks/useGalleryUpload";
 
 export interface GalleryUploadProps {
@@ -21,7 +22,8 @@ export interface GalleryUploadProps {
 export function GalleryUpload({ galleryId }: GalleryUploadProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = React.useState(false);
-  const { jobs, enqueue, retry } = useGalleryUpload(galleryId);
+  const [nsfw, setNsfw] = React.useState(false);
+  const { jobs, enqueue, retry } = useGalleryUpload(galleryId, nsfw);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -36,6 +38,7 @@ export function GalleryUpload({ galleryId }: GalleryUploadProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <NsfwToggle checked={nsfw} onChange={setNsfw} />
       <div
         data-testid="upload-dropzone"
         onDragOver={(e) => {

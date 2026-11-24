@@ -7,6 +7,7 @@ which Alembic needs for autogenerate to detect all tables.
 """
 
 from app.models.activity_event import ActivityEvent  # noqa: F401
+from app.models.age_suggestion import AgeSuggestion  # noqa: F401
 from app.models.apprise_url import AppriseURL  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.auth import MagicLinkToken, RefreshToken, UserBackupCode  # noqa: F401
@@ -51,6 +52,7 @@ from app.models.list_template import (  # noqa: F401
 )
 from app.models.media import Media  # noqa: F401
 from app.models.media_ai import MediaAIMetadata  # noqa: F401
+from app.models.media_nsfw_source import MediaNsfwSource  # noqa: F401
 from app.models.moderation import ContentReport, UserBlock  # noqa: F401
 from app.models.newsletter import NewsletterOverride  # noqa: F401
 from app.models.notification import Notification, PushSubscription  # noqa: F401

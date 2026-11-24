@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage
@@ -80,7 +80,11 @@ class ModerationContentMixin:
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def content_exists(
-        self, target_type: str, target_id: uuid.UUID, community_id: uuid.UUID
+        self,
+        target_type: str,
+        target_id: uuid.UUID,
+        community_id: uuid.UUID,
+        viewer_id: uuid.UUID | None = None,
     ) -> bool:
         """
         @brief Check that reportable content exists in the community.
@@ -88,12 +92,27 @@ class ModerationContentMixin:
         @param target_type post, comment, message or media.
         @param target_id Content UUID.
         @param community_id Community scope.
+        @param viewer_id Reporter; NSFW content (or a comment on it) counts as
+               missing unless they are an adult.
         @return True if the row exists (and is not soft-deleted).
         """
+        from app.repositories.visibility_preds import (
+            media_nsfw_ok,
+            target_is_nsfw,
+            viewer_is_adult,
+        )
+
         model, _col = CONTENT_AUTHORS[target_type]
         stmt = select(model.id).where(model.id == target_id, model.community_id == community_id)
         if hasattr(model, "deleted_at"):
             stmt = stmt.where(model.deleted_at.is_(None))
+        if viewer_id is not None:
+            adult = viewer_is_adult(viewer_id)
+            if target_type in ("post", "comment"):
+                post_col = Post.id if target_type == "post" else Comment.post_id
+                stmt = stmt.where(or_(~target_is_nsfw(post_col, None, None), adult))
+            elif target_type == "media":
+                stmt = stmt.where(media_nsfw_ok(Media.id, viewer_id))
         return (await self._session.execute(stmt)).scalar_one_or_none() is not None
 
     async def user_exists(self, user_id: uuid.UUID, community_id: uuid.UUID) -> bool:

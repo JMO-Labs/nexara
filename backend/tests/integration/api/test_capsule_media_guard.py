@@ -36,6 +36,7 @@ def _media_service(sealed_for: set[uuid.UUID | None]) -> MediaService:
     m = MagicMock(spec=Media)
     m.storage_key, m.content_type, m.thumbnail_key = "k", "image/png", "t"
     repo.get.return_value = m
+    repo.nsfw_hidden.return_value = False
     storage = AsyncMock(spec=StorageBackend)
     storage.get.return_value = b"PNG"
     caps = AsyncMock(spec=TimeCapsuleRepository)

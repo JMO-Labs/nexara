@@ -34,6 +34,7 @@ class Invite(Base):
     )
     email: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default="member")
+    age_group: Mapped[str | None] = mapped_column(Text)
     token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

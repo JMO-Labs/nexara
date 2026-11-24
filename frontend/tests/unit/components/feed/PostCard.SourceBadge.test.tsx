@@ -29,8 +29,12 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/stores/session", () => ({
   useSession: vi.fn((sel) => sel({ user: { id: "u1", role: "member" } })),
 }));
+vi.mock("@/components/feed/NsfwCover", () => ({
+  NsfwCover: ({ children }: { children: unknown }) => children,
+}));
 vi.mock("@/hooks/usePosts", () => ({
   useDeletePost: () => ({ mutate: vi.fn() }),
+  useSetPostNsfw: () => ({ mutate: () => {} }),
   useTogglePostReaction: () => ({ mutate: vi.fn() }),
 }));
 

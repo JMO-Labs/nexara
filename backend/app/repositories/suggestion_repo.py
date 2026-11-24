@@ -87,6 +87,7 @@ class SuggestionRepository(BaseRepository[Suggestion]):
                 Post.deleted_at.is_(None),
                 Post.visibility == "community",
                 Post.recipient_id.is_(None),
+                Post.is_nsfw.is_(False),
             )
             .order_by(Post.created_at.desc())
             .limit(limit)

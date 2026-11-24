@@ -86,7 +86,9 @@ class ModerationService:
         @throws NotFoundError If the target is not in this community.
         @throws ConflictError If the user already reported this target.
         """
-        if not await self._repo.content_exists(target_type, target_id, self._community_id):
+        if not await self._repo.content_exists(
+            target_type, target_id, self._community_id, reporter_id
+        ):
             raise NotFoundError(_("Reported content not found"))
         try:
             report = await self._repo.create_report(
@@ -278,12 +280,27 @@ class ModerationService:
         @param admin_id Acting admin.
         @throws NotFoundError if missing, deleted, or in another community.
         """
-        if not await self._repo.set_nsfw(kind, entity_id, self._community_id):
+        await self.set_nsfw(kind, entity_id, admin_id, True)
+
+    async def set_nsfw(
+        self, kind: str, entity_id: uuid.UUID, admin_id: uuid.UUID, value: bool
+    ) -> None:
+        """
+        @brief Flag or unflag a post/media item as NSFW; audited either way.
+
+        @param kind "posts" or "media".
+        @param entity_id Target UUID.
+        @param admin_id Acting admin.
+        @param value New flag.
+        @throws NotFoundError if missing, deleted, or in another community.
+        """
+        if not await self._repo.set_nsfw(kind, entity_id, self._community_id, value):
             raise NotFoundError(_("Content not found"))
         await self._audit.append(
             actor_id=admin_id,
-            action=f"{kind}.marked_nsfw",
+            action=f"{kind}.marked_nsfw" if value else f"{kind}.unmarked_nsfw",
             target_type=kind,
             target_id=entity_id,
+            extra_data={"value": value},
         )
         await self._invalidate(self._community_id)

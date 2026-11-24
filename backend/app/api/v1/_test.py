@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, get_dispatcher
+from app.core.exceptions import NotFoundError
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -64,4 +65,6 @@ async def notify(
     @return The created notification id.
     """
     n = await svc.notify(user.id, body.type, body.payload)
+    if n is None:
+        raise NotFoundError("Target not found")
     return NotifyResponse(id=n.id)

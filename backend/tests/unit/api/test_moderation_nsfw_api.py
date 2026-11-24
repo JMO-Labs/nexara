@@ -14,9 +14,10 @@ from httpx import ASGITransport, AsyncClient
 from app.api.v1 import moderation as mod
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AuthorizationError, NotFoundError
 from app.models.user import User
 from app.services.moderation_service import ModerationService
+from app.services.nsfw_moderation import NsfwModerationService
 
 BASE = "/api/v1/admin/moderation"
 
@@ -82,3 +83,42 @@ def test_build_service_wires_dependencies() -> None:
     audit_cls.assert_called_once_with(db)
     assert isinstance(service, ModerationService)
     assert service._community_id == uuid.UUID(settings.COMMUNITY_ID)
+
+
+@pytest.fixture
+async def nsfw_client(test_app, admin):
+    nsvc = AsyncMock(spec=NsfwModerationService)
+    test_app.dependency_overrides[get_current_user] = lambda: admin
+    test_app.dependency_overrides[mod._build_nsfw_service] = lambda: nsvc
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
+        yield c, nsvc
+    test_app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("kind", ["posts", "galleries", "media"])
+@pytest.mark.parametrize("value", [True, False])
+async def test_put_nsfw_delegates_to_service(nsfw_client, admin, kind, value) -> None:
+    client, nsvc = nsfw_client
+    target = uuid.uuid4()
+    resp = await client.put(f"/api/v1/moderation/{kind}/{target}/nsfw", json={"value": value})
+    assert resp.status_code == 200
+    nsvc.set_flag.assert_awaited_once_with(kind, target, admin, value)
+
+
+async def test_put_nsfw_unknown_kind_is_422(nsfw_client) -> None:
+    client, nsvc = nsfw_client
+    resp = await client.put(f"/api/v1/moderation/users/{uuid.uuid4()}/nsfw", json={"value": True})
+    assert resp.status_code == 422
+    nsvc.set_flag.assert_not_awaited()
+
+
+async def test_put_nsfw_maps_errors(nsfw_client) -> None:
+    client, nsvc = nsfw_client
+    nsvc.set_flag.side_effect = AuthorizationError("no")
+    assert (
+        await client.put(f"/api/v1/moderation/posts/{uuid.uuid4()}/nsfw", json={"value": True})
+    ).status_code == 403
+    nsvc.set_flag.side_effect = NotFoundError("Content not found")
+    assert (
+        await client.put(f"/api/v1/moderation/posts/{uuid.uuid4()}/nsfw", json={"value": True})
+    ).status_code == 404

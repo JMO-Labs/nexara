@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 #: Valid subgroup roles.
 SUBGROUP_ROLES = ("owner", "moderator", "member")
@@ -92,6 +92,8 @@ class SubgroupResponse(BaseModel):
     description: str | None = None
     avatar_url: str | None = None
     cover_media_id: UUID | None = None
+    # Cover photo is NSFW (adults only; non-adults get no cover instead).
+    cover_is_nsfw: bool = False
     accent_color: str | None = None
     is_private: bool
     join_policy: str
@@ -107,6 +109,12 @@ class SubgroupResponse(BaseModel):
     member_count: int = 0
 
     model_config = {"from_attributes": True}
+
+    @field_validator("cover_is_nsfw", mode="before")
+    @classmethod
+    def _cover_flag(cls, v: object) -> bool:
+        """@brief Not an ORM column: anything but True (e.g. absent) is False."""
+        return v is True
 
 
 class SubgroupDetailResponse(SubgroupResponse):

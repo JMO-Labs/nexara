@@ -7,13 +7,19 @@
 import * as React from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { useIsGroupMod } from "@/hooks/useGroupMod";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
-import { useDeletePost, useTogglePostReaction } from "@/hooks/usePosts";
+import {
+  useDeletePost,
+  useSetPostNsfw,
+  useTogglePostReaction,
+} from "@/hooks/usePosts";
 import { PostHeader } from "./PostHeader";
 import { PostBody } from "./PostBody";
 import { CelebrateHero } from "./CelebrateHero";
 import { PostMedia } from "./PostMedia";
+import { NsfwCover } from "./NsfwCover";
 import { PollCard } from "./PollCard";
 import { ReactionRow } from "./ReactionRow";
 import { CommentThread } from "./CommentThread";
@@ -55,6 +61,8 @@ export function PostCard({
   const reactMut = useTogglePostReaction(post.id);
   const delMut = useDeletePost();
   const confirm = useConfirmDialog((s) => s.confirm);
+  const nsfwMut = useSetPostNsfw();
+  const groupMod = useIsGroupMod(post.subgroup_id);
 
   if (post.recipient_id && post.recipient) {
     return (
@@ -82,6 +90,11 @@ export function PostCard({
           post={post}
           isAuthor={isAuthor}
           isAdmin={isAdmin}
+          onToggleNsfw={
+            isAdmin || groupMod
+              ? () => nsfwMut.mutate({ id: post.id, value: !post.is_nsfw })
+              : undefined
+          }
           onDelete={async () => {
             const ok = await confirm({
               title: "Delete post?",
@@ -103,29 +116,36 @@ export function PostCard({
         replyToPromptId={post.reply_to_prompt_id}
       />
       {post.celebration ? <CelebrateHero c={post.celebration} /> : null}
-      <PostBody content={post.content} truncate={truncateBody} />
-      {post.link_previews && post.link_previews.length > 0 ? (
-        <div
-          data-testid="post-previews"
-          className="mt-3 min-w-0 max-w-full space-y-2"
-        >
-          {post.link_previews.map((preview) =>
-            preview.provider_type && embedUrl(preview) ? (
-              <VideoEmbed key={preview.id} preview={preview} />
-            ) : (
-              <LinkPreviewCard key={preview.id} preview={preview} />
-            ),
-          )}
-        </div>
-      ) : null}
-      {post.poll ? <PollCard poll={post.poll} /> : null}
-      {post.media.length > 0 ? (
-        <PostMedia
-          media={post.media}
-          canReport={!isAuthor}
-          onClick={() => onOpen?.(post.id)}
-        />
-      ) : null}
+      <NsfwCover
+        nsfw={post.is_nsfw}
+        itemId={`post:${post.id}`}
+        className="rounded-xl"
+      >
+        <PostBody content={post.content} truncate={truncateBody} />
+        {post.link_previews && post.link_previews.length > 0 ? (
+          <div
+            data-testid="post-previews"
+            className="mt-3 min-w-0 max-w-full space-y-2"
+          >
+            {post.link_previews.map((preview) =>
+              preview.provider_type && embedUrl(preview) ? (
+                <VideoEmbed key={preview.id} preview={preview} />
+              ) : (
+                <LinkPreviewCard key={preview.id} preview={preview} />
+              ),
+            )}
+          </div>
+        ) : null}
+        {post.poll ? <PollCard poll={post.poll} /> : null}
+        {post.media.length > 0 ? (
+          <PostMedia
+            media={post.media}
+            canReport={!isAuthor}
+            skipCover={post.is_nsfw}
+            onClick={() => onOpen?.(post.id)}
+          />
+        ) : null}
+      </NsfwCover>
       <ReactionRow
         reactions={post.reactions}
         commentCount={post.comment_count}

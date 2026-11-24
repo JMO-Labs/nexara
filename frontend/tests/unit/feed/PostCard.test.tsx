@@ -11,6 +11,7 @@ import messages from "@/i18n/en-US.json";
 import { PostCard } from "@/components/feed/PostCard";
 import type { Post } from "@/lib/api/posts";
 
+vi.mock("@/hooks/useGroupMod", () => ({ useIsGroupMod: () => false }));
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -32,7 +33,11 @@ vi.mock("@/stores/session", () => ({
 }));
 vi.mock("@/hooks/usePosts", () => ({
   useDeletePost: () => ({ mutate: vi.fn() }),
+  useSetPostNsfw: () => ({ mutate: vi.fn() }),
   useTogglePostReaction: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("@/components/feed/NsfwCover", () => ({
+  NsfwCover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/feed/CommentThread", () => ({
   CommentThread: () => null,

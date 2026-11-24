@@ -74,6 +74,17 @@ class Gallery(Base):
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_event_gallery: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # NSFW album: every photo in it is hidden from non-adults.
+    is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Who locked the NSFW flag: "admin" > "moderator" (group); None = unlocked.
+    # The author/owner may not clear a locked flag; a moderator may not clear an admin lock.
+    nsfw_lock_level: Mapped[str | None] = mapped_column(Text)
+
+    @property
+    def nsfw_locked(self) -> bool:
+        """@brief A moderator or admin locked the NSFW flag."""
+        return self.nsfw_lock_level is not None
+
     search_fts = mapped_column(
         TSVECTOR,
         Computed(

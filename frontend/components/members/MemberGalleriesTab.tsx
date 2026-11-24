@@ -7,6 +7,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Images } from "lucide-react";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { EmptyState, Skeleton, Button } from "@/components/ui";
 import { useGalleryList } from "@/hooks/useGalleries";
@@ -60,34 +61,40 @@ export function MemberGalleriesTab({ userId }: MemberGalleriesTabProps) {
     >
       {items.map((g) => (
         <li key={g.id}>
-          <Link
-            href={`/app/photos?${new URLSearchParams({ gallery: g.id })}`}
-            className="glass glass-lift group block overflow-hidden rounded-[24px] outline-none focus-visible:outline-2 focus-visible:outline-accent"
+          <NsfwCover
+            nsfw={g.is_nsfw || g.cover_is_nsfw}
+            itemId={`gallery:${g.id}`}
+            className="rounded-[24px]"
           >
-            <span className="relative block aspect-[4/3] bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)]">
-              {g.cover_media_id ? (
-                <span className="absolute inset-0 block">
-                  <MediaThumb
-                    mediaId={g.cover_media_id}
-                    alt=""
-                    objectPosition="50% 30%"
-                    zoomOnHover
+            <Link
+              href={`/app/photos?${new URLSearchParams({ gallery: g.id })}`}
+              className="glass glass-lift group block overflow-hidden rounded-[24px] outline-none focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <span className="relative block aspect-[4/3] bg-[color-mix(in_srgb,var(--nx-blue)_18%,transparent)]">
+                {g.cover_media_id ? (
+                  <span className="absolute inset-0 block">
+                    <MediaThumb
+                      mediaId={g.cover_media_id}
+                      alt=""
+                      objectPosition="50% 30%"
+                      zoomOnHover
+                    />
+                  </span>
+                ) : (
+                  <Images
+                    aria-hidden
+                    className="absolute inset-0 m-auto size-8 text-muted"
                   />
-                </span>
-              ) : (
-                <Images
-                  aria-hidden
-                  className="absolute inset-0 m-auto size-8 text-muted"
-                />
-              )}
-            </span>
-            <span className="block px-4 py-3">
-              <span className="block truncate font-medium">{g.title}</span>
-              <span className="block text-xs text-muted">
-                {g.item_count} {g.item_count === 1 ? "photo" : "photos"}
+                )}
               </span>
-            </span>
-          </Link>
+              <span className="block px-4 py-3">
+                <span className="block truncate font-medium">{g.title}</span>
+                <span className="block text-xs text-muted">
+                  {g.item_count} {g.item_count === 1 ? "photo" : "photos"}
+                </span>
+              </span>
+            </Link>
+          </NsfwCover>
         </li>
       ))}
     </ul>

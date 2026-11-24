@@ -6,6 +6,7 @@ import {
   Activity,
   BarChart3,
   BellRing,
+  Cake,
   Bot,
   Brush,
   Database,
@@ -57,7 +58,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (18 tabs + 4 route links). */
+/** @brief Grouped admin sections (19 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -80,6 +81,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Invites",
         "Invite new members to the community.",
         MailPlus,
+      ),
+      tab(
+        "age-groups",
+        "Age groups",
+        "Review age group suggestions and set approval rules.",
+        Cake,
       ),
       tab("sso", "SSO", "Single sign-on providers.", KeyRound),
       tab(

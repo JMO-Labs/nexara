@@ -7,16 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useUI } from "@/stores/ui";
-import {
-  Check,
-  Flower2,
-  Loader2,
-  Trash2,
-  Users,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import { Check, Flower2, Loader2, Trash2, Users, X } from "lucide-react";
 import {
   useAdminUsersInfinite,
   useSuspendUser,
@@ -31,6 +22,8 @@ import { MemorializeDialog } from "@/components/memorials/MemorializeDialog";
 import { Badge, Button, EmptyState, IconButton, Modal } from "@/components/ui";
 import { Segmented, SearchField, Toolbar } from "@/components/ui/page";
 import { AdminNotice } from "./AdminState";
+import { SimpleModeButtons } from "./SimpleModeButtons";
+import { UserAgeCell } from "./UserAgeSelect";
 import { ResetTwoFactorButton } from "./ResetTwoFactorButton";
 import { cn } from "@/lib/utils";
 import {
@@ -211,6 +204,7 @@ export function UsersTab() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Age group</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -241,6 +235,11 @@ export function UsersTab() {
                       {ROLE_LABEL[user.role] ?? user.role}
                     </Badge>
                   </TableCell>
+                  <UserAgeCell
+                    className={`${cell} max-md:col-span-2`}
+                    user={user}
+                    onSaved={refetch}
+                  />
                   <TableCell className={cell}>
                     <Badge
                       tone={user.status === "active" ? "accent" : "neutral"}
@@ -289,36 +288,15 @@ export function UsersTab() {
                         </IconButton>
                       )}
                       {simpleOn && user.status === "active" && (
-                        <>
-                          <IconButton
-                            variant="glass"
-                            aria-label="Turn on simple mode"
-                            tooltip="Turn on simple mode"
-                            onClick={() =>
-                              toggleSimple(
-                                user.id,
-                                user.display_name || user.username,
-                                true,
-                              )
-                            }
-                          >
-                            <ZoomIn className="size-4" aria-hidden="true" />
-                          </IconButton>
-                          <IconButton
-                            variant="glass"
-                            aria-label="Turn off simple mode"
-                            tooltip="Turn off simple mode"
-                            onClick={() =>
-                              toggleSimple(
-                                user.id,
-                                user.display_name || user.username,
-                                false,
-                              )
-                            }
-                          >
-                            <ZoomOut className="size-4" aria-hidden="true" />
-                          </IconButton>
-                        </>
+                        <SimpleModeButtons
+                          onToggle={(on) =>
+                            toggleSimple(
+                              user.id,
+                              user.display_name || user.username,
+                              on,
+                            )
+                          }
+                        />
                       )}
                       <ResetTwoFactorButton
                         userId={user.id}

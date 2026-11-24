@@ -5,6 +5,7 @@
  *        by "N years ago". Renders nothing when there is nothing to show or
  *        the feature is off.
  */
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { History } from "lucide-react";
@@ -62,29 +63,37 @@ export function OnThisDayTile({ open, onToggle }: TileSlotProps) {
                 );
                 return (
                   <li key={p.id}>
-                    <Link
-                      href={`/app/post/${p.id}`}
-                      className="glass-item flex items-center gap-3 rounded-[20px] p-2 outline-none focus-visible:outline-2 focus-visible:outline-accent"
+                    <NsfwCover
+                      nsfw={p.is_nsfw || photo?.is_nsfw}
+                      itemId={`post:${p.id}`}
+                      compact
+                      hideWhenCovered
+                      className="rounded-[20px]"
                     >
-                      {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- API-served thumbnails, not optimizable by next/image
-                        <img
-                          src={photo.thumbnail_url ?? photo.url}
-                          alt=""
-                          loading="lazy"
-                          className="size-12 shrink-0 rounded-xl object-cover"
-                        />
-                      ) : null}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {p.author.display_name}
+                      <Link
+                        href={`/app/post/${p.id}`}
+                        className="glass-item flex items-center gap-3 rounded-[20px] p-2 outline-none focus-visible:outline-2 focus-visible:outline-accent"
+                      >
+                        {photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- API-served thumbnails, not optimizable by next/image
+                          <img
+                            src={photo.thumbnail_url ?? photo.url}
+                            alt=""
+                            loading="lazy"
+                            className="size-12 shrink-0 rounded-xl object-cover"
+                          />
+                        ) : null}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            {p.author.display_name}
+                          </span>
+                          <span className="block truncate text-sm text-[var(--nx-muted)]">
+                            {p.content ||
+                              (photo ? "Shared a photo" : "Shared a post")}
+                          </span>
                         </span>
-                        <span className="block truncate text-sm text-[var(--nx-muted)]">
-                          {p.content ||
-                            (photo ? "Shared a photo" : "Shared a post")}
-                        </span>
-                      </span>
-                    </Link>
+                      </Link>
+                    </NsfwCover>
                   </li>
                 );
               })}

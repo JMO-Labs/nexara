@@ -8,6 +8,7 @@ import { Image as ImageIcon } from "lucide-react";
 import { HomeTile, type TileSlotProps } from "@/components/home/HomeTile";
 import { useHomeMedia } from "@/hooks/useHomeMedia";
 import { mediaThumbUrl } from "@/lib/mediaUrl";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,27 +44,39 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
       ) : (
         <div className="grid grid-cols-3 gap-1.5">
           {items.map((it, i) => (
-            <Link
+            <div
               key={it.media_id}
-              href="/app/photos"
               className={cn(
-                "relative block overflow-hidden rounded-xl",
+                "relative",
                 i === 0 ? "col-span-2 row-span-2" : "aspect-square",
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- API-served thumbnails, not optimizable by next/image */}
-              <img
-                src={mediaThumbUrl(it.media)}
-                alt={it.media.alt_text ?? ""}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-              {i === 5 && more ? (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-lg font-medium text-white">
-                  +
-                </span>
-              ) : null}
-            </Link>
+              <NsfwCover
+                nsfw={it.media.is_nsfw}
+                itemId={`media:${it.media_id}`}
+                compact
+                hideWhenCovered
+                className="absolute inset-0 rounded-xl"
+              >
+                <Link
+                  href="/app/photos"
+                  className="relative block h-full w-full overflow-hidden rounded-xl"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- API-served thumbnails, not optimizable by next/image */}
+                  <img
+                    src={mediaThumbUrl(it.media)}
+                    alt={it.media.alt_text ?? ""}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                  />
+                  {i === 5 && more ? (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-lg font-medium text-white">
+                      +
+                    </span>
+                  ) : null}
+                </Link>
+              </NsfwCover>
+            </div>
           ))}
         </div>
       )}

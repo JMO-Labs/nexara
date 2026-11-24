@@ -15,6 +15,12 @@ const detail = vi.hoisted(() => ({
   current: {} as Record<string, unknown>,
 }));
 
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => false }));
+vi.mock("@/hooks/useNsfw", () => ({
+  useSetGalleryNsfw: () => ({ mutate: vi.fn() }),
+  useSetMediaNsfw: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("@/hooks/useGroupMod", () => ({ useIsGroupMod: () => false }));
 vi.mock("@/hooks/useGalleries", () => {
   const mut = () => ({ mutate: vi.fn(), isPending: false });
   return {

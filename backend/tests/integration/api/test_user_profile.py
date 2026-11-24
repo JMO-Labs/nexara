@@ -29,7 +29,8 @@ def _user(pronouns: str | None = None) -> MagicMock:
     u.totp_enabled = False
     u.email_verified = True
     u.avatar_url = u.bio = u.title = u.location = u.website_url = None
-    u.birthday = u.last_seen_at = u.tour_completed_at = u.deleted_at = None
+    u.age_group = u.birthday = u.last_seen_at = u.tour_completed_at = u.deleted_at = None
+    u.age_group_source = None
     u.timezone = u.banner_media_id = u.phone = u.contact_email = None
     u.address = u.emergency_contact = u.availability = u.dietary = None
     u.links = []

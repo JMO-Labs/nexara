@@ -51,4 +51,6 @@ class TaggedPage(BaseModel):
     kind: Literal["posts", "photos"]
     posts: list[dict[str, Any]] = []
     media_ids: list[UUID] = []
+    # Photos in this page that are NSFW (blur them); only ever non-empty for adults.
+    nsfw_media_ids: list[str] = []
     next_before: datetime | None = None

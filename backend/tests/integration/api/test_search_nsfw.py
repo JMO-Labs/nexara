@@ -15,8 +15,9 @@ from app.models.media import Media
 from app.models.post import Post
 from app.models.user import User
 from app.repositories.moderation_repo import ModerationRepository
+from app.services.age_service import is_adult
 from app.services.moderation_service import ModerationService
-from app.services.search_service import SearchService, is_adult
+from app.services.search_service import SearchService
 
 CID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
@@ -25,6 +26,7 @@ def _user(birthday: date | None) -> MagicMock:
     u = MagicMock(spec=User)
     u.id = uuid.uuid4()
     u.birthday = birthday
+    u.age_group = None
     return u
 
 
@@ -49,13 +51,13 @@ class TestModels:
 
 class TestIsAdult:
     def test_adult(self):
-        assert is_adult(_user(ADULT)) is True
+        assert is_adult(_user(ADULT), None) is True
 
     def test_minor(self):
-        assert is_adult(_user(MINOR)) is False
+        assert is_adult(_user(MINOR), None) is False
 
     def test_no_birthday_not_adult(self):
-        assert is_adult(_user(None)) is False
+        assert is_adult(_user(None), None) is False
 
 
 class TestSearchNsfw:
@@ -94,7 +96,7 @@ class TestModerationService:
         svc = ModerationService(repo, audit, CID, invalidate=invalidate)
         target, admin = uuid.uuid4(), uuid.uuid4()
         await svc.mark_nsfw(kind, target, admin)
-        repo.set_nsfw.assert_awaited_once_with(kind, target, CID)
+        repo.set_nsfw.assert_awaited_once_with(kind, target, CID, True)
         audit.append.assert_awaited_once()
         assert audit.append.await_args.kwargs["action"] == f"{kind}.marked_nsfw"
         invalidate.assert_awaited_once()

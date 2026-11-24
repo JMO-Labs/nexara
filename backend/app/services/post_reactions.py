@@ -31,7 +31,7 @@ class ReactionsMixin(PostServiceBase):
             post_id,
             community_id=self._community_id,
         )
-        if not post:
+        if not post or not await self._post_repo.is_visible(post_id, user.id, self._community_id):
             raise NotFoundError(_("Post not found"))
 
         action, count = await self._reaction_repo.toggle(
@@ -104,7 +104,7 @@ class ReactionsMixin(PostServiceBase):
             post_id,
             community_id=self._community_id,
         )
-        if not post:
+        if not post or not await self._post_repo.is_visible(post_id, user.id, self._community_id):
             raise NotFoundError(_("Post not found"))
 
         comment = await self._comment_repo.get_by_id(comment_id)

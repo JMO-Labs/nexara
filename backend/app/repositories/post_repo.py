@@ -23,9 +23,12 @@ from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.post_enrichment import enrich_posts
 from app.repositories.visibility_preds import (
+    media_is_nsfw,
     my_subgroup_ids,
+    nsfw_allowed,
     outside_daily_question,
     post_visible,
+    viewer_is_adult,
 )
 
 logger = structlog.get_logger(__name__)
@@ -83,7 +86,9 @@ class PostRepository(BaseRepository[Post]):
                 pass
 
         if subgroup_id is not None:
-            stmt = stmt.where(Post.subgroup_id == subgroup_id)
+            stmt = stmt.where(
+                Post.subgroup_id == subgroup_id, nsfw_allowed(viewer_is_adult(viewer_id))
+            )
         elif viewer_id is not None:
             stmt = stmt.where(post_visible(viewer_id, list(subgroup_ids or []), community_id))
 
@@ -148,6 +153,7 @@ class PostRepository(BaseRepository[Post]):
                 pass
         if viewer_id:
             stmt = self.apply_block_filter(stmt, viewer_id)
+        stmt = stmt.where(nsfw_allowed(viewer_is_adult(viewer_id)))
 
         result = await self._session.execute(stmt.limit(limit + 1))
         rows = list(result.scalars().all())
@@ -219,7 +225,11 @@ class PostRepository(BaseRepository[Post]):
         @param viewer_id Current user for reaction state.
         @return Enriched post dict or None.
         """
-        stmt = self._base_query().where(Post.id == post_id, Post.community_id == community_id)
+        stmt = self._base_query().where(
+            Post.id == post_id,
+            Post.community_id == community_id,
+            nsfw_allowed(viewer_is_adult(viewer_id)),
+        )
         result = await self._session.execute(stmt)
         post = result.scalar_one_or_none()
         if not post:
@@ -244,6 +254,7 @@ class PostRepository(BaseRepository[Post]):
         reply_to_prompt_id: uuid.UUID | None = None,
         subgroup_id: uuid.UUID | None = None,
         private: bool = False,
+        is_nsfw: bool = False,
     ) -> Post:
         """
         @brief Insert a new post row.
@@ -253,6 +264,7 @@ class PostRepository(BaseRepository[Post]):
         @param community_id Community scope.
         @param reply_to_prompt_id Optional prompt post UUID for reply tracking.
         @param subgroup_id Optional subgroup UUID to scope the post.
+        @param is_nsfw Adults-only post.
         @return The created Post ORM instance.
         """
         post = Post(
@@ -262,6 +274,7 @@ class PostRepository(BaseRepository[Post]):
             reply_to_prompt_id=reply_to_prompt_id,
             subgroup_id=None if private else subgroup_id,
             visibility="private" if private else ("subgroup" if subgroup_id else "community"),
+            is_nsfw=is_nsfw,
         )
         return await self.create(post)
 
@@ -315,7 +328,7 @@ class PostRepository(BaseRepository[Post]):
         """
         stmt = (
             self._base_query()
-            .where(Post.reply_to_prompt_id == prompt_id)
+            .where(Post.reply_to_prompt_id == prompt_id, Post.is_nsfw.is_(False))
             .order_by(Post.created_at.asc())
             .limit(limit)
         )
@@ -330,7 +343,7 @@ class PostRepository(BaseRepository[Post]):
         media_stmt = (
             select(PostMedia.post_id, Media.id)
             .join(Media, PostMedia.media_id == Media.id)
-            .where(PostMedia.post_id.in_(post_ids))
+            .where(PostMedia.post_id.in_(post_ids), ~media_is_nsfw(Media.id))
             .order_by(PostMedia.position)
         )
         media_result = await self._session.execute(media_stmt)

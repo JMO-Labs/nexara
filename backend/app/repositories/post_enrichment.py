@@ -23,6 +23,12 @@ from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.post_extras import post_extras
+from app.repositories.visibility_preds import (
+    media_is_nsfw,
+    media_nsfw_ok,
+    nsfw_allowed,
+    viewer_is_adult,
+)
 
 
 async def enrich_posts(
@@ -35,11 +41,15 @@ async def enrich_posts(
 
     @param session Async SQLAlchemy session.
     @param post_ids List of post UUIDs.
-    @param viewer_id Current user for ``reacted_by_me`` flag.
+    @param viewer_id Current user for ``reacted_by_me``; NSFW posts are dropped
+           unless the viewer is an adult.
     @return Dict mapping post_id -> enriched dict.
     """
+    # Last line of defence: NSFW posts never leave here for a non-adult viewer.
     posts_stmt = (
-        select(Post, User).join(User, Post.author_id == User.id).where(Post.id.in_(post_ids))
+        select(Post, User)
+        .join(User, Post.author_id == User.id)
+        .where(Post.id.in_(post_ids), nsfw_allowed(viewer_is_adult(viewer_id)))
     )
     posts_result = await session.execute(posts_stmt)
     post_rows = posts_result.all()
@@ -56,15 +66,17 @@ async def enrich_posts(
             subgroup_name_map[sg_id] = sg_name
             subgroup_slug_map[sg_id] = sg_slug
 
+    # Photos NSFW on their own (flag or NSFW album) are dropped for non-adults;
+    # adults get ``is_nsfw`` per photo so the client can blur it.
     media_stmt = (
-        select(PostMedia.post_id, Media)
+        select(PostMedia.post_id, Media, media_is_nsfw(Media.id))
         .join(Media, PostMedia.media_id == Media.id)
-        .where(PostMedia.post_id.in_(post_ids))
+        .where(PostMedia.post_id.in_(post_ids), media_nsfw_ok(Media.id, viewer_id))
         .order_by(PostMedia.position)
     )
     media_result = await session.execute(media_stmt)
     media_map: dict[uuid.UUID, list[dict[str, Any]]] = {}
-    for pm_post_id, media in media_result.all():
+    for pm_post_id, media, media_nsfw in media_result.all():
         media_map.setdefault(pm_post_id, []).append(
             {
                 "id": str(media.id),
@@ -75,6 +87,7 @@ async def enrich_posts(
                 "mime_type": media.content_type,
                 "width": media.width,
                 "height": media.height,
+                "is_nsfw": bool(media_nsfw),
             }
         )
 
@@ -232,6 +245,9 @@ async def enrich_posts(
         enriched[post.id] = {
             "id": str(post.id),
             "content": post.content,
+            "is_nsfw": post.is_nsfw,
+            "nsfw_locked": post.nsfw_lock_level is not None,
+            "nsfw_lock_level": post.nsfw_lock_level,
             "author": {
                 "id": str(author.id),
                 "username": author.username,

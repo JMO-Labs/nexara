@@ -37,6 +37,7 @@ def client_setup(test_app):
     user.community_id = COMMUNITY_ID
     service = MagicMock()
     service.list_subgroup_cards = AsyncMock()
+    service.apply_cover_nsfw = AsyncMock()
 
     async def _override_user():
         return user

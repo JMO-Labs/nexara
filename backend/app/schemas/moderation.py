@@ -100,3 +100,9 @@ class ReportResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class NsfwFlag(BaseModel):
+    """@brief Body for ``PUT /moderation/posts/{id}/nsfw``: the new flag."""
+
+    value: bool

@@ -89,6 +89,7 @@ describe("useInvites hooks", () => {
       expect(invitesApi.createInvite).toHaveBeenCalledWith(
         "test@example.com",
         "member",
+        undefined,
       );
     });
   });

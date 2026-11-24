@@ -12,6 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.dependencies import get_current_user
+from app.core.deps_age import get_community
 from app.core.features import FEATURE_DEFAULTS
 
 
@@ -41,6 +42,7 @@ def _login(test_app, role):
     user.id = uuid.uuid4()
     user.role = role
     test_app.dependency_overrides[get_current_user] = lambda: user
+    test_app.dependency_overrides[get_community] = lambda: None
     return user
 
 
@@ -48,6 +50,7 @@ def _login(test_app, role):
 def _cleanup(test_app):
     yield
     test_app.dependency_overrides.pop(get_current_user, None)
+    test_app.dependency_overrides.pop(get_community, None)
 
 
 async def _req(test_app, method, url, **kw):

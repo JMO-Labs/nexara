@@ -17,6 +17,7 @@ from app.models.post import Post
 from app.models.prompt import Prompt, PromptPost
 from app.models.user import User
 from app.models.user_settings import UserSettings
+from app.repositories.visibility_preds import nsfw_allowed, viewer_is_adult
 
 
 class RecapCandidate(NamedTuple):
@@ -66,11 +67,12 @@ class RecapRepository:
         )
 
     async def yesterday_daily(
-        self, community_id: uuid.UUID, day: date
+        self, community_id: uuid.UUID, day: date, viewer_id: uuid.UUID | None = None
     ) -> tuple[uuid.UUID, str, int] | None:
         """
         @param community_id Community scope.
         @param day Date the question was fired.
+        @param viewer_id Recap recipient; an NSFW question is shown to adults only.
         @return ``(post_id, question text, response_count)`` of the community-wide
                 daily question, or None. Group-scoped questions are never returned.
         """
@@ -84,6 +86,7 @@ class RecapRepository:
                 Prompt.prompt_type == "daily_question",
                 Prompt.scope == "community",
                 Post.deleted_at.is_(None),
+                nsfw_allowed(viewer_is_adult(viewer_id)),
             )
             .limit(1)
         )

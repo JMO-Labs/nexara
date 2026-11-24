@@ -57,6 +57,7 @@ const GROUPS: { title: string; items: [FeatureKey, string, string][] }[] = [
     items: [
       ["simple_mode", "Simple mode", "Larger text and fewer menus."],
       ["newsletter", "Monthly newsletter", "A printable monthly page."],
+      ["nsfw", "NSFW content", "Let adults mark posts and photos as NSFW."],
       [
         "reply_by_email",
         "Reply by email",

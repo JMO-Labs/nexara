@@ -11,6 +11,7 @@ import { SettingsRow, Input, Button } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { useUpdateEmail } from "@/hooks/useSettings";
 import { useSession } from "@/stores/session";
+import { AGE_LABEL, type AgeGroup } from "@/lib/api/ageGroups";
 import { DataExportSection } from "./DataExportSection";
 
 const Schema = z.object({
@@ -18,12 +19,31 @@ const Schema = z.object({
 });
 type FormData = z.infer<typeof Schema>;
 
+const SOURCE_COPY: Record<string, string> = {
+  admin: " \u2014 set by your admin",
+  birthday: " \u2014 from your birthday",
+  approval_pending: " \u2014 waiting for admin approval",
+};
+
+/**
+ * @brief Read-only age group line text.
+ * @param group effective group
+ * @param source where it came from
+ * @return label plus source copy
+ */
+function ageText(group?: string | null, source?: string) {
+  if (!group || source === "unknown") return AGE_LABEL.unknown;
+  const name = (AGE_LABEL[group as AgeGroup] ?? group).split(" (")[0];
+  return name + (SOURCE_COPY[source ?? ""] ?? "");
+}
+
 /**
  * @brief Email change form.
  * @return account tab content
  */
 export function AccountTab() {
   const currentEmail = useSession((s) => s.user?.email ?? "");
+  const user = useSession((s) => s.user);
   const { mutate, isPending } = useUpdateEmail();
   const { register, handleSubmit, formState, reset } = useForm<FormData>({
     resolver: zodResolver(Schema),
@@ -60,6 +80,11 @@ export function AccountTab() {
             </Button>
           </div>
         </form>
+      </Panel>
+      <Panel title="Age group">
+        <p className="text-sm">
+          Age group: {ageText(user?.age_group, user?.age_group_source)}
+        </p>
       </Panel>
       <DataExportSection />
     </div>

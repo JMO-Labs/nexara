@@ -21,6 +21,7 @@ import { BlockButton } from "@/components/common/BlockButton";
 import { MemorialHeader } from "@/components/memorials/MemorialHeader";
 import { GroupChips } from "@/components/members/GroupChips";
 import { FavoriteButton } from "@/components/home/FavoriteButton";
+import { SuggestAgeGroupDialog } from "@/components/profile/SuggestAgeGroupDialog";
 import { useCreateDm } from "@/hooks/useChat";
 import type { DirectoryPerson, UserProfile } from "@/lib/api/users";
 import { groupColor } from "@/lib/groupColor";
@@ -49,6 +50,8 @@ export function MemberHeader({
 }: MemberHeaderProps) {
   const router = useRouter();
   const dm = useCreateDm();
+  const [suggesting, setSuggesting] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const groups = connection?.shared_groups ?? [];
   const accent = groups.find(
     (g) => g.id === connection?.primary_group_id,
@@ -142,7 +145,7 @@ export function MemberHeader({
                   className="size-11"
                 />
                 <NudgeButton userId={profile.id} />
-                <Popover>
+                <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
@@ -153,12 +156,28 @@ export function MemberHeader({
                     </button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-48 p-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setSuggesting(true);
+                      }}
+                      className="min-h-11 w-full rounded-xl px-3 text-left text-sm hover:bg-[var(--nx-glass-solid)]"
+                    >
+                      Suggest age group
+                    </button>
                     <BlockButton
                       userId={profile.id}
                       displayName={profile.display_name}
                     />
                   </PopoverContent>
                 </Popover>
+                <SuggestAgeGroupDialog
+                  open={suggesting}
+                  onClose={() => setSuggesting(false)}
+                  subjectId={profile.id}
+                  name={profile.display_name}
+                />
               </>
             )}
           </div>

@@ -361,6 +361,19 @@ class TestRegisterInvites:
         svc._invite_repo.mark_used.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_invite_age_group_copied_to_user(self):
+        svc = self._svc(False)
+        invite = MagicMock(
+            role="member", id=uuid.uuid4(), created_by=uuid.uuid4(), age_group="teen"
+        )
+        with patch(
+            "app.services.auth.registration._validate_invite_impl",
+            AsyncMock(return_value=invite),
+        ):
+            await svc.register(**self._kwargs(invite_token="tok"))
+        assert svc._user_repo.create.call_args.args[0].age_group == "teen"
+
+    @pytest.mark.asyncio
     async def test_optional_invite_marks_used_and_notifies_creator(self):
         svc = self._svc(False)
         svc._notification_service = AsyncMock()

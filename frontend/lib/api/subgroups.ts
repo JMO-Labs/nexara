@@ -11,6 +11,8 @@ export interface Subgroup {
   description: string | null;
   avatar_url: string | null;
   cover_media_id: string | null;
+  /** Cover media is NSFW (when the API reports it). */
+  cover_is_nsfw?: boolean;
   accent_color?: string | null;
   is_private: boolean;
   join_policy: "open" | "invite_only" | "admin_approval";
@@ -119,6 +121,7 @@ export interface MediaMetadata {
   alt_text: string | null;
   status: "processing" | "ready" | "error";
   created_at: string;
+  is_nsfw?: boolean;
 }
 
 export interface MediaItem {

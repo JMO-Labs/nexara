@@ -6,6 +6,10 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const gate = vi.hoisted(() => ({ hold: false }));
+vi.mock("@/components/onboarding/OnboardingGate", () => ({
+  useOnboardingGate: () => ({ pending: false, loaded: true, hold: gate.hold }),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/app",
   useRouter: () => ({ replace: vi.fn() }),
@@ -70,6 +74,14 @@ describe("Shell", () => {
     expect(screen.queryByText("content")).toBeNull();
     expect(screen.queryByRole("banner")).toBeNull();
     expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+  });
+
+  it("shows the loader, not page content, while onboarding state loads", () => {
+    gate.hold = true;
+    setup();
+    expect(screen.queryByText("content")).toBeNull();
+    expect(screen.getByLabelText("Loading")).toBeInTheDocument();
+    gate.hold = false;
   });
 
   it("has no side rail, only the tab bar and backdrop", () => {

@@ -25,6 +25,8 @@ export interface TaggedPage {
   kind: "posts" | "photos";
   posts: Post[];
   media_ids: string[];
+  /** Subset of media_ids that are NSFW (adults only). */
+  nsfw_media_ids?: string[];
   next_before: string | null;
 }
 

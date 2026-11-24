@@ -4,7 +4,7 @@
  * @brief Lightbox wired to a gallery's items query.
  */
 import { Lightbox } from "@/components/galleries/Lightbox";
-import { useGalleryItems } from "@/hooks/useGalleries";
+import { useGalleryDetail, useGalleryItems } from "@/hooks/useGalleries";
 
 /**
  * @brief Render the lightbox once items load.
@@ -26,10 +26,12 @@ export function LightboxConnected({
   onIndexChange: (i: number) => void;
 }) {
   const { data: items } = useGalleryItems(galleryId);
+  const { data: gallery } = useGalleryDetail(galleryId);
   if (!items || items.length === 0) return null;
   return (
     <Lightbox
       items={items}
+      nsfw={gallery?.is_nsfw}
       index={index}
       onClose={onClose}
       onIndexChange={onIndexChange}

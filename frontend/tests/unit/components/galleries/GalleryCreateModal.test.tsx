@@ -11,6 +11,7 @@ const mutateAsync = vi.fn().mockResolvedValue({});
 vi.mock("@/hooks/useGalleries", () => ({
   useCreateGallery: () => ({ mutateAsync, isPending: false }),
 }));
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => false }));
 vi.mock("@/hooks/useCalendars", () => ({
   useCalendars: () => ({
     data: [{ id: "c", kind: "subgroup", name: "G", subgroup_id: "sg-1" }],

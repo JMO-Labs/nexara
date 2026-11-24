@@ -22,6 +22,8 @@ export interface PostHeaderProps {
   isAdmin?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Moderator action; shown as Mark/Remove NSFW. */
+  onToggleNsfw?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function PostHeader({
   isAdmin,
   onEdit,
   onDelete,
+  onToggleNsfw,
 }: PostHeaderProps) {
   const [reportOpen, setReportOpen] = React.useState(false);
   const time = React.useMemo(() => {
@@ -85,6 +88,11 @@ export function PostHeader({
           {onDelete ? (
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>
               Delete
+            </DropdownMenuItem>
+          ) : null}
+          {onToggleNsfw ? (
+            <DropdownMenuItem onSelect={onToggleNsfw}>
+              {post.is_nsfw ? "Remove NSFW" : "Mark NSFW"}
             </DropdownMenuItem>
           ) : null}
           {!isAuthor ? (

@@ -22,6 +22,7 @@ from app.core.i18n import _
 from app.models.user import User
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.media_repo import MediaRepository
+from app.repositories.tag_repo import TagRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import MediaResponse
@@ -36,6 +37,7 @@ from app.services.media.multipart import (
 from app.services.media.multipart import (
     upload_part as _upload_part_impl,
 )
+from app.services.media.serving import MediaServingMixin
 from app.services.storage.base import StorageBackend
 from app.services.storage.quota import (
     QuotaExceededError,
@@ -76,7 +78,7 @@ def enqueue_ocr(media_id: uuid.UUID, community_id: uuid.UUID, content_type: str)
         logger.warning("ocr_enqueue_failed", media_id=str(media_id))
 
 
-class MediaService:
+class MediaService(MediaServingMixin):
     """
     @brief Service layer for media upload, retrieval, and attachment.
 
@@ -96,6 +98,7 @@ class MediaService:
         valkey_client: Redis | None = None,
         activity_repo: ActivityRepository | None = None,
         capsule_repo: TimeCapsuleRepository | None = None,
+        tag_repo: TagRepository | None = None,
     ) -> None:
         self._repo = media_repo
         self._storage = storage_backend
@@ -104,6 +107,7 @@ class MediaService:
         self._valkey = valkey_client
         self._activity_repo = activity_repo
         self._capsule_repo = capsule_repo
+        self._tag_repo = tag_repo
 
     def _session(self) -> AsyncSession:
         """@brief Get the session from the media repo for quota operations."""
@@ -195,75 +199,6 @@ class MediaService:
         enqueue_ocr(media.id, self._community_id, media.content_type)
 
         return MediaResponse.model_validate(media)
-
-    async def get_metadata(self, media_id: uuid.UUID) -> MediaResponse:
-        """
-        @brief Return media metadata by ID.
-
-        @param media_id UUID of the media.
-        @return MediaResponse with metadata.
-        @raises NotFoundError If media does not exist.
-        """
-        media = await self._repo.get(media_id)
-        if media is None:
-            raise NotFoundError(_("Media not found"))
-        return MediaResponse.model_validate(media)
-
-    async def _guard_sealed(self, media_id: uuid.UUID, viewer_id: uuid.UUID | None) -> None:
-        """@brief 404 for media in an unopened time capsule (author bypasses)."""
-        if self._capsule_repo and await self._capsule_repo.is_sealed_media(
-            media_id, self._community_id, viewer_id
-        ):
-            raise NotFoundError(_("Media not found"))
-
-    async def get_file(
-        self,
-        media_id: uuid.UUID,
-        user: User,
-    ) -> tuple[bytes, str]:
-        """
-        @brief Retrieve the original file content and content type (authenticated).
-
-        @param media_id UUID of the media.
-        @param user Requesting user (for access control).
-        @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media does not exist.
-        """
-        return await self.get_file_public(media_id, user.id)
-
-    async def get_file_public(
-        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
-    ) -> tuple[bytes, str]:
-        """
-        @brief Retrieve the original file content without auth.
-        @param media_id UUID of the media.
-        @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media does not exist or is sealed in a capsule.
-        """
-        await self._guard_sealed(media_id, viewer_id)
-        media = await self._repo.get(media_id)
-        if media is None:
-            raise NotFoundError(_("Media not found"))
-        data = await self._storage.get(media.storage_key)
-        return data, media.content_type
-
-    async def get_thumbnail(
-        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
-    ) -> tuple[bytes, str]:
-        """
-        @brief Retrieve the thumbnail content and content type.
-        @param media_id UUID of the media.
-        @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media or thumbnail does not exist, or is sealed.
-        """
-        await self._guard_sealed(media_id, viewer_id)
-        media = await self._repo.get(media_id)
-        if media is None:
-            raise NotFoundError(_("Media not found"))
-        if not media.thumbnail_key:
-            raise NotFoundError(_("Thumbnail not available"))
-        data = await self._storage.get(media.thumbnail_key)
-        return data, "image/webp"
 
     async def delete(self, media_id: uuid.UUID, user: User) -> None:
         """

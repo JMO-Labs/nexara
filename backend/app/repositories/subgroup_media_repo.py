@@ -20,6 +20,7 @@ from app.models.media import Media
 from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.subgroup_media_aggregate_repo import SubgroupMediaAggregateMixin
+from app.repositories.visibility_preds import media_nsfw_ok
 
 
 class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
@@ -174,6 +175,9 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
             )
             queries.append(event_q)
 
+        # NSFW photos (own flag, NSFW post or album) are adults-only.
+        adult_ok = media_nsfw_ok(Media.id, viewer_id)
+        queries = [q.where(adult_ok) for q in queries]
         if not queries:
             return [], None
 
@@ -203,7 +207,8 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
         has_next = len(rows) > limit
         items = rows[:limit]
 
-        # Build response
+        # Build response; ``is_nsfw`` lets the UI blur NSFW photos for adults.
+        nsfw = await self._base_repo.nsfw_media_among({row.id for row in items})
         items_data = []
         for row in items:
             items_data.append(
@@ -222,6 +227,7 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
                         "alt_text": row.alt_text,
                         "status": row.status,
                         "created_at": row.created_at.isoformat(),
+                        "is_nsfw": row.id in nsfw,
                     },
                     "source": row.source,
                     "source_id": str(row.source_id),

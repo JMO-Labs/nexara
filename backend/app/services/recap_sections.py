@@ -102,7 +102,7 @@ async def daily_question(ctx: RecapContext) -> RecapSection | None:
     if not is_enabled(ctx.community, "daily_question"):
         return None
     found = await RecapRepository(ctx.session).yesterday_daily(
-        ctx.community.id, ctx.today - timedelta(days=1)
+        ctx.community.id, ctx.today - timedelta(days=1), ctx.user.id
     )
     if found is None:
         return None

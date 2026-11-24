@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.post_repo import PostRepository
@@ -50,3 +51,22 @@ class SubgroupService(
         self._community_id = community_id
         self._max_memberships = max_memberships_per_user
         self._activity_repo = activity_repo
+
+    async def apply_cover_nsfw(self, items: list[Any], viewer_id: uuid.UUID) -> None:
+        """
+        @brief Set ``cover_is_nsfw`` for adults; for non-adults drop a cover that
+               points at NSFW media (own flag, NSFW album or NSFW post).
+        """
+        covers = {i.cover_media_id for i in items if i.cover_media_id is not None}
+        if not covers:
+            return
+        nsfw = await self._subgroup_repo.nsfw_media_among(covers)
+        if not nsfw:
+            return
+        adult = await self._subgroup_repo.viewer_adult(viewer_id)
+        for i in items:
+            if i.cover_media_id in nsfw:
+                if adult:
+                    i.cover_is_nsfw = True
+                else:
+                    i.cover_media_id = None

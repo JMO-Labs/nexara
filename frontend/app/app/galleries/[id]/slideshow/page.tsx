@@ -7,7 +7,7 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { EmptyState, Skeleton } from "@/components/ui";
 import { Slideshow } from "@/components/galleries/Slideshow";
-import { useGalleryItems } from "@/hooks/useGalleries";
+import { useGalleryDetail, useGalleryItems } from "@/hooks/useGalleries";
 
 /**
  * @brief Load the gallery's items and play them.
@@ -16,6 +16,7 @@ import { useGalleryItems } from "@/hooks/useGalleries";
 export default function SlideshowPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { data: gallery } = useGalleryDetail(id);
   const { data: items, isLoading, isError } = useGalleryItems(id);
   const exit = React.useCallback(
     () => router.push(`/app/photos?gallery=${encodeURIComponent(id)}`),
@@ -33,5 +34,5 @@ export default function SlideshowPage() {
     return (
       <EmptyState title="Nothing to show" description="Add photos first." />
     );
-  return <Slideshow items={items} onExit={exit} />;
+  return <Slideshow items={items} onExit={exit} nsfw={gallery?.is_nsfw} />;
 }

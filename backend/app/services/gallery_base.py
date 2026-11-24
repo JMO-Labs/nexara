@@ -11,10 +11,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.gallery import Gallery
+from app.core.exceptions import AuthorizationError
+from app.core.i18n import _
+from app.models.gallery import Gallery, GalleryItem
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.gallery_repo import GalleryRepository
+from app.schemas.gallery import GalleryItemResponse, GalleryResponse
+from app.services.nsfw_rules import require_owner_may_flag
 
 
 class GalleryServiceBase:
@@ -50,7 +54,63 @@ class GalleryServiceBase:
         direct = list(result.scalars().all())
         return await expand_with_descendants(self._session, direct)
 
+    async def _nsfw_ok(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
+        """@brief NSFW albums are adults-only (owner included)."""
+        return gallery.is_nsfw is False or await self._repo.viewer_adult(user_id)
+
+    async def _require_adult_for_nsfw(self, is_nsfw: bool | None, user_id: uuid.UUID) -> None:
+        """@throws AuthorizationError/AppError when the owner may not flag (nsfw_rules)."""
+        if is_nsfw:
+            await require_owner_may_flag(self._repo, self._community_id, user_id, True)
+
+    async def _out(self, rows: list[Gallery], viewer_id: uuid.UUID) -> list[GalleryResponse]:
+        """
+        @brief Responses; an NSFW cover is marked ``cover_is_nsfw`` for adults and
+               dropped for non-adults.
+        """
+        out = [GalleryResponse.model_validate(r) for r in rows]
+        covers = {o.cover_media_id for o in out if o.cover_media_id is not None}
+        nsfw = await self._repo.nsfw_media_among(covers) if covers else set()
+        if not nsfw:
+            return out
+        adult = await self._repo.viewer_adult(viewer_id)
+        for o in out:
+            if o.cover_media_id in nsfw:
+                if adult:
+                    o.cover_is_nsfw = True
+                else:
+                    o.cover_media_id = None
+        return out
+
+    async def _item_out(self, items: list[GalleryItem]) -> list[GalleryItemResponse]:
+        """@brief Item responses with the effective NSFW flag and lock info."""
+        out = [GalleryItemResponse.model_validate(i) for i in items]
+        ids = {o.media_id for o in out}
+        nsfw = await self._repo.nsfw_media_among(ids)
+        state = await self._repo.media_nsfw_state(ids)
+        for o in out:
+            own, level = state.get(o.media_id, (False, None))
+            o.is_nsfw = o.media_id in nsfw
+            o.is_nsfw_own = own
+            o.nsfw_lock_level = level
+            o.nsfw_locked = level is not None
+        return out
+
+    async def _require_own_media(self, media_ids: set[uuid.UUID], user_id: uuid.UUID) -> None:
+        """
+        @throws AuthorizationError when adding a photo someone else uploaded
+                (admins excepted): an album must not pull in, and a moderator
+                flag must not lock, another member's photo.
+        """
+        if await self._repo.foreign_media(media_ids, user_id) and not (
+            await self._repo.user_is_admin(user_id)
+        ):
+            raise AuthorizationError(_("You can only add photos you uploaded"))
+
     async def _can_view(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
+        """@brief Audience check; NSFW albums are adults-only (owner included)."""
+        if not await self._nsfw_ok(gallery, user_id):
+            return False
         if gallery.visibility == "community":
             return True
         if gallery.visibility == "private":

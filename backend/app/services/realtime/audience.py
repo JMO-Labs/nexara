@@ -13,6 +13,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.moderation import UserBlock
 from app.models.subgroup import SubgroupMember
@@ -27,6 +28,7 @@ async def resolve_audience(
     visibility: str,
     subgroup_id: UUID | None,
     author_id: UUID,
+    adults_only: bool = False,
 ) -> list[UUID]:
     """
     @brief Compute the user ids allowed to receive events for content.
@@ -35,9 +37,30 @@ async def resolve_audience(
     @param community_id Community scope.
     @param visibility ``community``, ``subgroup`` or ``private``.
     @param subgroup_id Subgroup for ``subgroup`` visibility.
-    @param author_id Content author; always included.
+    @param author_id Content author; always included (unless ``adults_only``).
+    @param adults_only NSFW content: keep effective adults only.
     @return Distinct user ids, author first; blocked relations excluded.
     """
+    ids = await _audience(session, community_id, visibility, subgroup_id, author_id)
+    if not adults_only:
+        return ids
+    from app.models.community import Community
+    from app.repositories.visibility_preds import adult_cond
+
+    u, c = aliased(User), aliased(Community)
+    stmt = select(u.id).join(c, c.id == u.community_id).where(u.id.in_(ids), adult_cond(u, c))
+    adults = set((await session.execute(stmt)).scalars().all())
+    return [i for i in ids if i in adults]
+
+
+async def _audience(
+    session: AsyncSession,
+    community_id: UUID,
+    visibility: str,
+    subgroup_id: UUID | None,
+    author_id: UUID,
+) -> list[UUID]:
+    """@brief Audience before the age filter (see ``resolve_audience``)."""
     if visibility == "community":
         stmt = select(User.id).where(
             User.community_id == community_id,

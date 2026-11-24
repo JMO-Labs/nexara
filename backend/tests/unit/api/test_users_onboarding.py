@@ -17,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.v1 import users as users_module
 from app.core.dependencies import get_current_user
+from app.core.deps_age import get_community
 
 
 def _mock_user(**overrides) -> MagicMock:
@@ -42,6 +43,8 @@ def _mock_user(**overrides) -> MagicMock:
     user.location = ""
     user.website_url = ""
     user.birthday = None
+    user.age_group = None
+    user.age_group_source = None
     user.banner_media_id = None
     user.timezone = None
     for f in ("phone", "contact_email", "address", "emergency_contact", "availability", "dietary"):
@@ -62,6 +65,7 @@ def _setup_auth_and_service(test_app, mock_service: AsyncMock):
         return mock_service
 
     test_app.dependency_overrides[get_current_user] = _override_user
+    test_app.dependency_overrides[get_community] = lambda: None
     test_app.dependency_overrides[users_module._build_service] = _override_service
     return user
 

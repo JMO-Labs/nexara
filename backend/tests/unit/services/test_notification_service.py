@@ -27,6 +27,7 @@ PAYLOAD = {"message": "Hi", "actor_name": "Bob"}
 
 def _build(prefs: dict | None = None, cadence: dict | None = None):
     repo = AsyncMock(spec=NotificationRepository)
+    repo.nsfw_blocked.return_value = False
     settings_repo = AsyncMock(spec=SettingsRepository)
     row = MagicMock()
     row.notification_prefs = prefs or {}
@@ -121,6 +122,7 @@ class TestWrappers:
 
     async def test_default_dispatcher_used_without_event_bus(self):
         repo = AsyncMock(spec=NotificationRepository)
+        repo.nsfw_blocked.return_value = False
         settings_repo = AsyncMock(spec=SettingsRepository)
         row = MagicMock()
         row.notification_prefs = {}

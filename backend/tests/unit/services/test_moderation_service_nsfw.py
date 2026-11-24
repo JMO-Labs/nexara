@@ -26,9 +26,33 @@ async def test_mark_nsfw_audits_and_invalidates(kind) -> None:
 
     await ModerationService(repo, audit, CID, invalidate=invalidate).mark_nsfw(kind, target, admin)
 
-    repo.set_nsfw.assert_awaited_once_with(kind, target, CID)
+    repo.set_nsfw.assert_awaited_once_with(kind, target, CID, True)
     audit.append.assert_awaited_once_with(
-        actor_id=admin, action=f"{kind}.marked_nsfw", target_type=kind, target_id=target
+        actor_id=admin,
+        action=f"{kind}.marked_nsfw",
+        target_type=kind,
+        target_id=target,
+        extra_data={"value": True},
+    )
+    invalidate.assert_awaited_once_with(CID)
+
+
+async def test_unflag_audits_unmarked() -> None:
+    repo = AsyncMock(spec=ModerationRepository)
+    repo.set_nsfw.return_value = True
+    audit, invalidate = AsyncMock(), AsyncMock()
+    target, admin = uuid.uuid4(), uuid.uuid4()
+
+    svc = ModerationService(repo, audit, CID, invalidate=invalidate)
+    await svc.set_nsfw("posts", target, admin, False)
+
+    repo.set_nsfw.assert_awaited_once_with("posts", target, CID, False)
+    audit.append.assert_awaited_once_with(
+        actor_id=admin,
+        action="posts.unmarked_nsfw",
+        target_type="posts",
+        target_id=target,
+        extra_data={"value": False},
     )
     invalidate.assert_awaited_once_with(CID)
 

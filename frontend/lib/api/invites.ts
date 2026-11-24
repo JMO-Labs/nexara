@@ -47,8 +47,12 @@ export const listInvites = () =>
  * @param role Role to assign (admin, member, viewer)
  * @return InviteCreateResponse
  */
-export const createInvite = (email: string, role: string) =>
-  apiPost<InviteCreateResponse>("/api/v1/admin/invites", { email, role });
+export const createInvite = (email: string, role: string, age_group?: string) =>
+  apiPost<InviteCreateResponse>("/api/v1/admin/invites", {
+    email,
+    role,
+    ...(age_group ? { age_group } : {}),
+  });
 
 /**
  * @brief Revoke an invite.

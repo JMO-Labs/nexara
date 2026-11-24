@@ -11,6 +11,7 @@ import {
   Avatar,
   Drawer,
   EmptyState,
+  Button,
   IconButton,
   Skeleton,
 } from "@/components/ui";
@@ -25,6 +26,12 @@ import {
   useDeleteGallery,
   useRemoveItem,
 } from "@/hooks/useGalleries";
+import { useSetGalleryNsfw } from "@/hooks/useNsfw";
+import { PhotoNsfwToggle } from "./PhotoNsfwToggle";
+import { NsfwCover } from "@/components/feed/NsfwCover";
+import { NsfwToggle } from "@/components/compose/NsfwToggle";
+import { useFeature } from "@/hooks/useFeature";
+import { useIsGroupMod } from "@/hooks/useGroupMod";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 import { API_BASE } from "@/lib/auth/session";
@@ -164,9 +171,15 @@ export function GalleryDrawer({
   const updateMut = useUpdateGallery();
   const deleteMut = useDeleteGallery();
   const removeItemMut = useRemoveItem(galleryId ?? "");
+  const galleryNsfwMut = useSetGalleryNsfw();
+  const groupMod = useIsGroupMod(gallery?.subgroup_id);
+  const nsfwOn = useFeature("nsfw");
+  const isAdult = sessionUser?.age_group === "adult";
 
   const isOwner =
     !!gallery && !!sessionUser && gallery.owner_id === sessionUser.id;
+  const isMod =
+    sessionUser?.role === "admin" || sessionUser?.role === "owner" || groupMod;
   const canContribute =
     isOwner ||
     (!!gallery &&
@@ -235,6 +248,32 @@ export function GalleryDrawer({
             <p className="text-muted text-sm">{gallery.description}</p>
           )}
 
+          {isOwner || isMod ? (
+            isOwner ? (
+              <NsfwToggle
+                checked={!!gallery.is_nsfw}
+                locked={gallery.nsfw_locked}
+                onChange={(v) =>
+                  updateMut.mutate({ id: gallery.id, body: { is_nsfw: v } })
+                }
+              />
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onClick={() =>
+                  galleryNsfwMut.mutate({
+                    id: gallery.id,
+                    value: !gallery.is_nsfw,
+                  })
+                }
+              >
+                {gallery.is_nsfw ? "Remove NSFW" : "Mark NSFW"}
+              </Button>
+            )
+          ) : null}
+
           <div className="flex flex-col gap-4">
             <OptionPills
               label="Visibility"
@@ -300,17 +339,26 @@ export function GalleryDrawer({
                     key={it.id}
                     className="group bg-bg relative aspect-square overflow-hidden rounded-[18px]"
                   >
-                    <button
-                      type="button"
-                      onClick={() => onOpenItem(idx)}
-                      aria-label={it.caption ?? `Item ${idx + 1}`}
-                      className="focus-visible:outline-accent absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    <NsfwCover
+                      nsfw={gallery.is_nsfw || it.is_nsfw}
+                      itemId={`media:${it.media_id}`}
+                      className="absolute inset-0"
                     >
-                      <MediaThumb
-                        mediaId={it.media_id}
-                        alt={it.caption ?? `Item ${idx + 1}`}
-                      />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenItem(idx)}
+                        aria-label={it.caption ?? `Item ${idx + 1}`}
+                        className="focus-visible:outline-accent absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                      >
+                        <MediaThumb
+                          mediaId={it.media_id}
+                          alt={it.caption ?? `Item ${idx + 1}`}
+                        />
+                      </button>
+                    </NsfwCover>
+                    {isAdult && nsfwOn && it.added_by === sessionUser?.id && (
+                      <PhotoNsfwToggle item={it} />
+                    )}
                     {isOwner && (
                       <IconButton
                         size="sm"

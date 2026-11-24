@@ -24,6 +24,7 @@ from app.schemas.gallery import (
 from app.services.activity_publish import record_activity
 from app.services.gallery_admin import GalleryAdminMixin
 from app.services.gallery_items import GalleryItemsMixin
+from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 
 
 class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
@@ -38,6 +39,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
                 message=_("Subgroup is required for subgroup-scoped galleries"),
                 status_code=400,
             )
+        await self._require_adult_for_nsfw(data.is_nsfw, user_id)
 
         gallery = Gallery(
             community_id=self._community_id,
@@ -49,6 +51,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             subgroup_id=data.subgroup_id,
             event_id=data.event_id,
             cover_media_id=data.cover_media_id,
+            is_nsfw=data.is_nsfw,
         )
         gallery = await self._repo.create(gallery)
 
@@ -81,7 +84,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="create", user_id=user_id
         )
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def get_or_create_for_event(
         self, event_id: uuid.UUID, *, viewer_id: uuid.UUID
@@ -96,7 +99,9 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         # Check for existing gallery first
         existing = await self._repo.get_event_gallery(self._community_id, event_id)
         if existing is not None:
-            return GalleryResponse.model_validate(existing)
+            if not await self._nsfw_ok(existing, viewer_id):
+                raise NotFoundError(_("Gallery not found"))
+            return (await self._out([existing], viewer_id))[0]
 
         # Fetch the event to verify visibility and extract properties
         event = await self._session.get(Event, event_id)
@@ -137,26 +142,32 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
         if gallery is None:
             raise NotFoundError(_("Gallery not found"))
+        if not await self._nsfw_ok(gallery, user_id):
+            raise NotFoundError(_("Gallery not found"))
         if not await self._can_view(gallery, user_id):
             raise AuthorizationError(_("You cannot view this gallery"))
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def update_gallery(
         self, gallery_id: uuid.UUID, user_id: uuid.UUID, data: GalleryUpdate
     ) -> GalleryResponse:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
-        if gallery is None:
+        # NSFW albums are adults-only, owner included (same as every read path).
+        if gallery is None or not await self._nsfw_ok(gallery, user_id):
             raise NotFoundError(_("Gallery not found"))
         if gallery.owner_id != user_id:
             raise AuthorizationError(_("Only the gallery owner can edit this gallery"))
-
         update_data = data.model_dump(exclude_unset=True)
+        nsfw = update_data.pop("is_nsfw", None)
+        if nsfw is not None and nsfw != gallery.is_nsfw:
+            await require_owner_may_flag(self._repo, self._community_id, user_id, nsfw)
+            apply_owner_flag(gallery, nsfw)
         update_data["updated_at"] = datetime.now(UTC)
         gallery = await self._repo.update(gallery, update_data)
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="update", user_id=user_id
         )
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def delete_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> None:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
@@ -194,7 +205,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             if await self._can_view(gallery, viewer_id):
                 visible_rows.append(gallery)
         return GalleryList(
-            items=[GalleryResponse.model_validate(r) for r in visible_rows],
+            items=await self._out(visible_rows, viewer_id),
             next_cursor=None,
             has_more=False,
         )
@@ -225,7 +236,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             cursor=cursor,
         )
         return GalleryList(
-            items=[GalleryResponse.model_validate(r) for r in rows],
+            items=await self._out(rows, user_id),
             next_cursor=next_cursor,
             has_more=next_cursor is not None,
         )

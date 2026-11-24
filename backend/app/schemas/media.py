@@ -38,6 +38,22 @@ class MediaResponse(BaseModel):
     alt_text: str | None = None
     status: MediaStatus
     created_at: datetime
+    is_nsfw: bool = False  # effective (own flag or container)
+    is_nsfw_own: bool = False  # the photo's own flag only
+    nsfw_locked: bool = False
+    nsfw_lock_level: str | None = None
+
+    @field_validator("nsfw_lock_level", mode="before")
+    @classmethod
+    def _lock_level(cls, v: object) -> str | None:
+        """@brief Only the known levels; anything else (unflushed row) is None."""
+        return v if isinstance(v, str) and v in ("admin", "moderator") else None
+
+    @field_validator("is_nsfw", "is_nsfw_own", "nsfw_locked", mode="before")
+    @classmethod
+    def _unflushed_nsfw(cls, v: object) -> bool:
+        """@brief A not-yet-flushed row has None (server default): treat as False."""
+        return v is True
 
     @field_validator("duration_secs", mode="before")
     @classmethod
@@ -49,6 +65,12 @@ class MediaResponse(BaseModel):
         return v  # type: ignore[return-value] # validator returns narrowed runtime type
 
     model_config = {"from_attributes": True}
+
+
+class MediaUpdate(BaseModel):
+    """@brief Uploader edit of a photo (``PATCH /api/v1/media/{id}``)."""
+
+    is_nsfw: bool
 
 
 class MultipartInitRequest(BaseModel):

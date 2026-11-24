@@ -167,9 +167,19 @@ class TagService:
         rows = await self._repo.tagged_media(
             self._community_id, member_id, viewer.id, before, PAGE, subject_type="household"
         )
+        return await self._photos_page(rows)
+
+    async def _photos_page(self, rows: list[tuple[uuid.UUID, datetime]]) -> dict[str, Any]:
+        """
+        @brief A photos page. ``nsfw_media_ids``: NSFW photos in it (for blurring);
+               only adults ever get any, since ``tagged_media`` drops them otherwise.
+        """
+        ids = [m for m, _at in rows]
+        nsfw = await self._repo.nsfw_media_among(ids)
         return {
             "kind": "photos",
-            "media_ids": [m for m, _at in rows],
+            "media_ids": ids,
+            "nsfw_media_ids": [str(m) for m in ids if m in nsfw],
             "next_before": rows[-1][1] if len(rows) == PAGE else None,
         }
 
@@ -186,11 +196,7 @@ class TagService:
             rows = await self._repo.tagged_media(
                 self._community_id, subject_id, viewer.id, before, PAGE
             )
-            return {
-                "kind": "photos",
-                "media_ids": [m for m, _at in rows],
-                "next_before": rows[-1][1] if len(rows) == PAGE else None,
-            }
+            return await self._photos_page(rows)
         return await self._posts_page(subject_id, viewer, before, "user")
 
     async def group_posts(

@@ -7,6 +7,8 @@
 import { useState } from "react";
 import { Button, Option, Select, SettingsRow, Switch } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
+import { useFeature } from "@/hooks/useFeature";
+import { useSession } from "@/stores/session";
 import { useUpdateSettings, useUserSettings } from "@/hooks/useSettings";
 import type { PrivacyAppearanceSettings } from "@/lib/api/settings";
 
@@ -20,6 +22,8 @@ export function PrivacyTab() {
   const { data: settings } = useUserSettings();
   const { mutate, isPending } = useUpdateSettings();
   const [draft, setDraft] = useState<Draft>({});
+  const adult = useSession((s) => s.user?.age_group === "adult");
+  const nsfwOn = useFeature("nsfw");
 
   if (!settings) {
     return (
@@ -42,7 +46,7 @@ export function PrivacyTab() {
     <SettingsRow label={label} description={description}>
       <Switch
         aria-label={label}
-        checked={value[k] as boolean}
+        checked={!!value[k]}
         onCheckedChange={(v) => set(k, v as never)}
       />
     </SettingsRow>
@@ -89,6 +93,16 @@ export function PrivacyTab() {
           "Let Sassybot interact with you.",
         )}
       </Panel>
+
+      {adult && nsfwOn ? (
+        <Panel title="Content">
+          {toggle(
+            "always_show_nsfw",
+            "Always show NSFW content",
+            "Skip the blur cover on NSFW posts and photos.",
+          )}
+        </Panel>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         {dirty && (

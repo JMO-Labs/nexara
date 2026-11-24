@@ -10,6 +10,10 @@ const nav = vi.hoisted(() => ({
   search: "",
   replace: vi.fn(),
 }));
+const gate = vi.hoisted(() => ({ pending: false }));
+vi.mock("@/components/onboarding/OnboardingGate", () => ({
+  useOnboardingGate: () => ({ pending: gate.pending, loaded: true }),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.path,
   useSearchParams: () => new URLSearchParams(nav.search),
@@ -77,6 +81,12 @@ describe("Shell 2fa_setup_required", () => {
   it("redirects from other pages", () => {
     fire("/app", "");
     expect(nav.replace).toHaveBeenCalledWith("/app/settings?tab=security");
+  });
+  it("routes to the wizard's security step while onboarding is pending", () => {
+    gate.pending = true;
+    fire("/app", "");
+    gate.pending = false;
+    expect(nav.replace).toHaveBeenCalledWith("/app/welcome");
   });
   it("stays on Settings > Security", () => {
     fire("/app/settings", "tab=security");

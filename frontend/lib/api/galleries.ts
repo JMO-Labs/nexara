@@ -18,6 +18,11 @@ export interface Gallery {
   is_featured: boolean;
   is_default: boolean;
   is_event_gallery: boolean;
+  is_nsfw?: boolean;
+  /** Moderator-locked: owner cannot clear NSFW. */
+  nsfw_locked?: boolean;
+  /** Adults only: the cover photo is NSFW (blur it). */
+  cover_is_nsfw?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +35,12 @@ export interface GalleryItem {
   caption: string | null;
   position: number;
   created_at: string;
+  is_nsfw?: boolean;
+  /** The photo's own flag only (the uploader toggle). */
+  is_nsfw_own?: boolean;
+  /** Own or container lock applies. */
+  nsfw_locked?: boolean;
+  nsfw_lock_level?: "admin" | "moderator" | null;
 }
 
 export interface Collaborator {
@@ -53,6 +64,7 @@ export interface CreateGalleryBody {
   subgroup_id?: string | null;
   event_id?: string | null;
   cover_media_id?: string | null;
+  is_nsfw?: boolean;
 }
 
 const BASE = "/api/v1/galleries";

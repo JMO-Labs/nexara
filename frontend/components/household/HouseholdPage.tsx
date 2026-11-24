@@ -78,6 +78,7 @@ export function HouseholdPage({ id }: { id: string }) {
     enabled: !!m,
   });
   const media = photos.data?.pages.flatMap((p) => p.media_ids) ?? [];
+  const nsfw = photos.data?.pages.flatMap((p) => p.nsfw_media_ids ?? []);
 
   if (isLoading) return <Skeleton height={240} rounded="lg" />;
   if (isError || !m)
@@ -182,7 +183,7 @@ export function HouseholdPage({ id }: { id: string }) {
         {photos.isLoading ? (
           <Skeleton height={120} rounded="lg" />
         ) : media.length ? (
-          <PhotoGrid mediaIds={media} />
+          <PhotoGrid mediaIds={media} nsfwIds={nsfw} />
         ) : (
           <EmptyState
             compact

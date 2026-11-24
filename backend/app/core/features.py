@@ -28,6 +28,7 @@ FEATURE_DEFAULTS: dict[str, bool] = {
     "simple_mode": True,
     "newsletter": True,
     "reply_by_email": False,
+    "nsfw": True,
 }
 """@brief Every flag key with its default (all on except ``reply_by_email``)."""
 

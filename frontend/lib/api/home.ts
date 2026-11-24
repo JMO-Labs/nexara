@@ -34,6 +34,7 @@ export interface HomeMediaItem {
     alt_text: string | null;
     status: string;
     created_at: string;
+    is_nsfw?: boolean;
   };
   source: string;
   source_id: string | null;

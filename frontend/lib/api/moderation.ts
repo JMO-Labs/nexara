@@ -2,7 +2,7 @@
  * @file lib/api/moderation.ts
  * @brief Moderation endpoints: reports, admin queue, user blocking.
  */
-import { apiDelete, apiGet, apiPost, seg } from "./client";
+import { apiDelete, apiGet, apiPost, apiPut, seg } from "./client";
 
 export type ReportTarget = "post" | "comment" | "message" | "media";
 export type ReportReason =
@@ -70,3 +70,11 @@ export const reportAction = (
     `/api/v1/admin/moderation/reports/${seg(id)}/action`,
     { action, note: note || undefined },
   );
+
+/** @brief Moderator: mark/unmark a post NSFW (locks the author out). */
+export const setPostNsfw = (id: string, value: boolean) =>
+  apiPut<unknown>(`/api/v1/moderation/posts/${seg(id)}/nsfw`, { value });
+
+/** @brief Moderator: mark/unmark a gallery NSFW. */
+export const setGalleryNsfw = (id: string, value: boolean) =>
+  apiPut<unknown>(`/api/v1/moderation/galleries/${seg(id)}/nsfw`, { value });

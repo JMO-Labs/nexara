@@ -173,6 +173,26 @@ def send_email_notification(
         raise
 
 
+def digest_notes_stmt(user_id: uuid.UUID, notification_ids: list[uuid.UUID]) -> Any:
+    """
+    @brief The recipient's digest notifications, minus any whose post, album or
+           photo is NSFW (possibly flagged after storing) for a non-adult.
+    """
+    from sqlalchemy import select
+
+    from app.repositories.visibility_preds import payload_nsfw_ok
+
+    return (
+        select(Notification)
+        .where(
+            Notification.id.in_(notification_ids),
+            Notification.user_id == user_id,
+            payload_nsfw_ok(Notification.payload, user_id),
+        )
+        .order_by(Notification.created_at)
+    )
+
+
 async def _send_digest_email_async(
     user_id: uuid.UUID, type_key: str, notification_ids: list[uuid.UUID]
 ) -> dict[str, str]:
@@ -184,18 +204,12 @@ async def _send_digest_email_async(
     @param notification_ids Notifications to include.
     @return Dict with status (sent or skipped).
     """
-    from sqlalchemy import select
-
     async with async_session_factory() as session:
         user = await session.get(User, user_id)
         if user is None:
             logger.warning("send_digest_email_user_not_found", user_id=str(user_id))
             return {"status": "skipped"}
-        res = await session.execute(
-            select(Notification)
-            .where(Notification.id.in_(notification_ids), Notification.user_id == user_id)
-            .order_by(Notification.created_at)
-        )
+        res = await session.execute(digest_notes_stmt(user_id, notification_ids))
         notes = list(res.scalars().all())
         if not notes:
             return {"status": "skipped"}

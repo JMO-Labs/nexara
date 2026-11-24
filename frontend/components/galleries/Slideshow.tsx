@@ -5,6 +5,7 @@
  */
 import * as React from "react";
 import { Pause, Play, X } from "lucide-react";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { IconButton } from "@/components/ui";
 import { useMemberProfile } from "@/hooks/useMembers";
 import { API_BASE } from "@/lib/auth/session";
@@ -18,6 +19,8 @@ export interface SlideshowProps {
   startIndex?: number;
   /** Called on Esc / close button. */
   onExit?: () => void;
+  /** Whole gallery is NSFW. */
+  nsfw?: boolean;
 }
 
 /** @brief Caption line: item caption plus uploader name. */
@@ -41,11 +44,17 @@ function Caption({ item }: { item: GalleryItem }) {
  * @param onExit exit handler
  * @return full-screen region
  */
-export function Slideshow({ items, startIndex = 0, onExit }: SlideshowProps) {
+export function Slideshow({
+  items,
+  startIndex = 0,
+  onExit,
+  nsfw,
+}: SlideshowProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [index, setIndex] = React.useState(startIndex);
   const [paused, setPaused] = React.useState(false);
   const [videoIds, setVideoIds] = React.useState<Set<string>>(new Set());
+  const [covered, setCovered] = React.useState(false);
   const n = items.length;
   const item = items[index];
   const isVideo = !!item && videoIds.has(item.media_id);
@@ -73,10 +82,10 @@ export function Slideshow({ items, startIndex = 0, onExit }: SlideshowProps) {
   }, []);
 
   React.useEffect(() => {
-    if (paused || isVideo || n < 2) return;
+    if (paused || isVideo || covered || n < 2) return;
     const t = setTimeout(() => go(1), SLIDE_MS);
     return () => clearTimeout(t);
-  }, [paused, isVideo, n, index, go]);
+  }, [paused, isVideo, covered, n, index, go]);
 
   React.useEffect(() => {
     if (n > 1) new Image().src = fileUrl(items[(index + 1) % n].media_id);
@@ -106,26 +115,34 @@ export function Slideshow({ items, startIndex = 0, onExit }: SlideshowProps) {
       aria-label="Photo slideshow"
       className="fixed inset-0 z-[1500] flex items-center justify-center bg-black outline-none"
     >
-      {isVideo ? (
-        <video
-          key={item.id}
-          src={fileUrl(item.media_id)}
-          muted
-          autoPlay
-          aria-label={label}
-          onEnded={() => go(1)}
-          className="max-h-full max-w-full"
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- API media URL
-        <img
-          key={item.id}
-          src={fileUrl(item.media_id)}
-          alt={label}
-          onError={() => setVideoIds((s) => new Set(s).add(item.media_id))}
-          className="max-h-full max-w-full object-contain motion-safe:transition-opacity motion-safe:duration-500"
-        />
-      )}
+      <NsfwCover
+        nsfw={nsfw || item.is_nsfw}
+        itemId={`media:${item.media_id}`}
+        hideWhenCovered
+        onCovered={setCovered}
+        className="size-full"
+      >
+        {isVideo ? (
+          <video
+            key={item.id}
+            src={fileUrl(item.media_id)}
+            muted
+            autoPlay
+            aria-label={label}
+            onEnded={() => go(1)}
+            className="max-h-full max-w-full"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- API media URL
+          <img
+            key={item.id}
+            src={fileUrl(item.media_id)}
+            alt={label}
+            onError={() => setVideoIds((s) => new Set(s).add(item.media_id))}
+            className="max-h-full max-w-full object-contain motion-safe:transition-opacity motion-safe:duration-500"
+          />
+        )}
+      </NsfwCover>
       <Caption item={item} />
       <div className="absolute top-4 right-4 flex gap-2">
         <IconButton

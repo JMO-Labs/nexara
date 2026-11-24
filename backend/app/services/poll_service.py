@@ -45,6 +45,12 @@ class PollService:
         self._community_id = community_id
         self._event_bus = event_bus
 
+    async def _nsfw_hidden(self, poll: Poll, user_id: uuid.UUID | None) -> bool:
+        """@brief Poll on an NSFW post and the viewer is not an adult (404 like missing)."""
+        if poll.post_id is None:
+            return False
+        return await self._poll_repo.nsfw_hidden(user_id, post_id=poll.post_id)
+
     def _build_options_with_counts(
         self,
         options: list[PollOption],
@@ -128,7 +134,7 @@ class PollService:
         @raises AppError If poll is closed/expired, invalid option, or wrong count.
         """
         poll = await self._poll_repo.get_by_id(poll_id, community_id=self._community_id)
-        if not poll:
+        if not poll or await self._nsfw_hidden(poll, user_id):
             raise NotFoundError(_("Poll not found"))
 
         if poll.closed:
@@ -199,6 +205,7 @@ class PollService:
                 visibility=post.visibility if post else "community",
                 subgroup_id=post.subgroup_id if post else None,
                 author_id=post.author_id if post else (poll.created_by or user_id),
+                adults_only=bool(post and post.is_nsfw),
             )
             await emit_to_audience(self._event_bus, audience, event.type, event.payload)
 
@@ -221,7 +228,7 @@ class PollService:
         @raises NotFoundError If poll not found.
         """
         poll = await self._poll_repo.get_by_id(poll_id, community_id=self._community_id)
-        if not poll:
+        if not poll or await self._nsfw_hidden(poll, user_id):
             raise NotFoundError(_("Poll not found"))
 
         options = await self._poll_repo.get_options(poll_id)
@@ -261,16 +268,19 @@ class PollService:
             created_at=poll.created_at,
         )
 
-    async def get_results(self, poll_id: uuid.UUID) -> PollResultsResponse:
+    async def get_results(
+        self, poll_id: uuid.UUID, user_id: uuid.UUID | None = None
+    ) -> PollResultsResponse:
         """
         @brief Fetch poll results (vote counts per option).
 
         @param poll_id Poll UUID.
+        @param user_id Viewer (polls on NSFW posts are adults-only).
         @return PollResultsResponse.
         @raises NotFoundError If poll not found.
         """
         poll = await self._poll_repo.get_by_id(poll_id, community_id=self._community_id)
-        if not poll:
+        if not poll or await self._nsfw_hidden(poll, user_id):
             raise NotFoundError(_("Poll not found"))
 
         options = await self._poll_repo.get_options(poll_id)

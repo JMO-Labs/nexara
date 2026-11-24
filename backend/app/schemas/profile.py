@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
 
@@ -15,6 +15,17 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 Level = Literal["private", "groups", "community"]
 
 _URL = r"^https?://\S+$"
+
+
+def plausible_birthday(v: date | None) -> date | None:
+    """
+    @brief Reject birthdays before 1900 or in the future (a day of slack for
+           time zones), e.g. a half-typed year like 0020 from a date input.
+    @throws ValueError when implausible.
+    """
+    if v is not None and (v.year < 1900 or v > datetime.now(UTC).date() + timedelta(days=1)):
+        raise ValueError("Birthday must be between 1900 and today")
+    return v
 
 
 class LinkItem(BaseModel):
@@ -60,6 +71,12 @@ class ProfileUpdate(BaseModel):
     use_gravatar: bool | None = None
     # Private email used only for the Gravatar hash ("" clears it).
     gravatar_email: EmailStr | Literal[""] | None = Field(default=None, max_length=254)
+
+    @field_validator("birthday")
+    @classmethod
+    def _birthday(cls, v: date | None) -> date | None:
+        """@brief 1900 or later, not in the future."""
+        return plausible_birthday(v)
 
     @field_validator("skills")
     @classmethod

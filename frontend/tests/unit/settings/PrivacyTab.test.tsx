@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { PrivacyTab } from "@/components/settings/PrivacyTab";
 import * as hooks from "@/hooks/useSettings";
 
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => false }));
 vi.mock("@/hooks/useSettings");
 
 const settings = {
