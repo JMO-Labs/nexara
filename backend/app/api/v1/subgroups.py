@@ -72,7 +72,7 @@ async def _detail_response(
     channel = await service._subgroup_repo.get_chat_channel(subgroup.id)  # noqa: SLF001
     pinned_post_id = await service.get_pinned_post_id(subgroup.id)
 
-    return SubgroupDetailResponse(
+    out = SubgroupDetailResponse(
         id=subgroup.id,
         name=subgroup.name,
         slug=subgroup.slug,
@@ -92,6 +92,8 @@ async def _detail_response(
         chat_channel_id=channel.id if channel else None,
         pinned_post_id=pinned_post_id,
     )
+    await service.apply_cover_nsfw([out], user.id)
+    return out
 
 
 @router.get("", response_model=list[SubgroupResponse])
@@ -109,6 +111,7 @@ async def list_subgroups(
         resp.member_preview = [MemberPreview(**p) for p in previews]
         resp.member_count = count
         out.append(resp)
+    await service.apply_cover_nsfw(out, user.id)
     return out
 
 

@@ -163,3 +163,42 @@ class TestTaggedPhotos:
         assert set(adult_page["nsfw_media_ids"]) == {str(flagged.id), str(in_album.id)}
         assert set(adult_page["media_ids"]) == {safe.id, flagged.id, in_album.id}
         assert teen_page["media_ids"] == [safe.id] and teen_page["nsfw_media_ids"] == []
+
+
+class TestSubgroupCover:
+    async def test_nsfw_cover_flagged_for_adults_dropped_for_teens(self, session) -> None:
+        from app.repositories.post_repo import PostRepository
+        from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+        from app.schemas.subgroup import SubgroupResponse
+        from app.services.subgroups.service import SubgroupService
+
+        owner, grown, kid = await adult(session), await adult(session), await teen(session)
+        nsfw_cover, safe_cover = await make_media(session, owner), await make_media(session, owner)
+        await attach(session, await make_post(session, owner, nsfw=True), nsfw_cover)
+        groups = []
+        for cover in (nsfw_cover, safe_cover):
+            sg = Subgroup(
+                community_id=CID,
+                name="C",
+                slug=f"cov-{cover.id.hex[:10]}",
+                cover_media_id=cover.id,
+            )
+            session.add(sg)
+            groups.append(sg)
+        await session.flush()
+        for sg in groups:
+            await session.refresh(sg)
+        svc = SubgroupService(
+            SubgroupRepository(session),
+            SubgroupMemberRepository(session),
+            PostRepository(session),
+            CID,
+        )
+
+        async def view(u: User) -> list[tuple[object, bool]]:
+            items = [SubgroupResponse.model_validate(g) for g in groups]
+            await svc.apply_cover_nsfw(items, u.id)
+            return [(i.cover_media_id, i.cover_is_nsfw) for i in items]
+
+        assert await view(grown) == [(nsfw_cover.id, True), (safe_cover.id, False)]
+        assert await view(kid) == [(None, False), (safe_cover.id, False)]
