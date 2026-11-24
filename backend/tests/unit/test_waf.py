@@ -26,7 +26,7 @@ def waf_app() -> TestClient:
     async def ok_post():
         return {"status": "ok"}
 
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def waf_disabled_app() -> TestClient:
     async def ok():
         return {"status": "ok"}
 
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 class TestWAFBlocking:

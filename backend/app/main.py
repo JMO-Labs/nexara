@@ -5,14 +5,16 @@
 Creates the FastAPI application instance used by Uvicorn.  Middleware is
 registered in a specific order to ensure correct request processing:
 
-  1. Cloudflare Real IP (must run before WAF / rate limiter)
-  2. Request ID
-  3. Structured Logging
-  4. WAF
-  5. CORS
-  6. Rate Limiting
-  7. Gzip
-  8. Security Headers
+  1. Request ID
+  2. Structured Logging
+  3. WAF
+  4. CORS
+  5. Rate Limiting
+  6. Gzip
+  7. Security Headers
+
+Client IPs (incl. Cloudflare) are resolved by ``core.client_ip`` against
+TRUSTED_PROXIES.
 """
 
 from __future__ import annotations
@@ -36,7 +38,6 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import (
-    CloudflareRealIPMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
     StructuredLoggingMiddleware,
@@ -204,7 +205,7 @@ def _register_middleware(app: FastAPI, settings: Settings) -> None:
     Starlette middleware wraps in reverse registration order, so the first
     middleware to process a request must be registered **last**.
     We register bottom-up so the execution order is top-down:
-      CF Real IP -> Request ID -> Logging -> WAF -> CORS -> Rate Limit -> Gzip -> Security Headers
+      Request ID -> Logging -> WAF -> CORS -> Rate Limit -> Gzip -> Security Headers
 
     @param app The FastAPI application instance.
     @param settings Application settings.
@@ -237,10 +238,6 @@ def _register_middleware(app: FastAPI, settings: Settings) -> None:
     )
     app.add_middleware(StructuredLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(
-        CloudflareRealIPMiddleware,  # type: ignore[arg-type]  # Starlette _MiddlewareFactory protocol vs class __init__
-        settings=settings,
-    )
 
 
 def _register_routers(app: FastAPI) -> None:

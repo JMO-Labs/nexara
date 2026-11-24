@@ -163,6 +163,9 @@ env:
   ENABLE_REGISTRATION: "true"
   REQUIRE_INVITE: "false"
   ALLOWED_ORIGINS: ""
+  # Proxies whose X-Forwarded-For is believed (bundled nginx = loopback).
+  # Add your ingress controller pod CIDR, e.g. "127.0.0.1/32,::1/128,10.42.0.0/16".
+  TRUSTED_PROXIES: "127.0.0.1/32,::1/128"
 
 # -- Media storage: "local" (PVC) or "s3"
 storage:

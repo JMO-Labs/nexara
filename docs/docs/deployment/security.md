@@ -101,7 +101,14 @@ there.
 The API rate limits per client IP: `RATE_LIMIT_DEFAULT` (default
 `600/minute`) and a stricter `RATE_LIMIT_AUTH` (default `10/minute`) for
 authentication endpoints. Override them through the environment (`.env`, or
-`env.RATE_LIMIT_AUTH` in Helm values). Behind a proxy make sure the real
-client IP is forwarded, otherwise all users share one bucket; with Cloudflare
-set `CF_ACCESS_ENABLED=true` so `CF-Connecting-IP` is used. Add proxy-level
-limits for extra protection.
+`env.RATE_LIMIT_AUTH` in Helm values). Add proxy-level limits for extra
+protection.
+
+The client IP comes from `X-Forwarded-For`, believed only from addresses in
+`TRUSTED_PROXIES` (default `127.0.0.1/32,::1/128`, the bundled nginx). Behind
+your own reverse proxy, ingress controller or cloudflared, add its IP or CIDR
+(`env.TRUSTED_PROXIES` in Helm, e.g. the ingress pod CIDR), otherwise every
+member shares the proxy's IP and its rate-limit bucket. `*` is not supported.
+Do not set uvicorn's `FORWARDED_ALLOW_IPS` wider than `TRUSTED_PROXIES`.
+With Cloudflare also set `CF_ACCESS_ENABLED=true` so `CF-Connecting-IP` is
+used; the origin must then only be reachable through Cloudflare.

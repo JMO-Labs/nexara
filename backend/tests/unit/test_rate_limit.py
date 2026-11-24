@@ -33,7 +33,11 @@ class TestRateLimitConfig:
 def _req(headers: dict[str, str], host: str | None = "127.0.0.1"):
     from types import SimpleNamespace
 
-    return SimpleNamespace(headers=headers, client=SimpleNamespace(host=host) if host else None)
+    from starlette.datastructures import Headers
+
+    return SimpleNamespace(
+        headers=Headers(headers), client=SimpleNamespace(host=host) if host else None
+    )
 
 
 def test_rate_limit_key_uses_rightmost_forwarded_ip():
@@ -55,7 +59,7 @@ def test_different_clients_behind_proxy_get_separate_buckets():
     async def x(request: Request) -> dict[str, bool]:
         return {"ok": True}
 
-    c = TestClient(app)
+    c = TestClient(app, client=("127.0.0.1", 50000))
     a = {"X-Forwarded-For": "198.51.100.1"}
     b = {"X-Forwarded-For": "198.51.100.2"}
     assert c.get("/x", headers=a).status_code == 200

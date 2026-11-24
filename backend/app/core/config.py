@@ -6,9 +6,11 @@ All settings are loaded from environment variables (with optional .env file supp
 Pydantic BaseSettings handles validation, type coercion, and defaults.
 """
 
-from functools import lru_cache
+import ipaddress
+from functools import cached_property, lru_cache
 from urllib.parse import urlsplit
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -138,6 +140,15 @@ class Settings(BaseSettings):
     CF_ACCESS_ENABLED: bool = False
     CF_ACCESS_TEAM_DOMAIN: str = ""
 
+    # --- Reverse proxies ---
+    TRUSTED_PROXIES: str = "127.0.0.1/32,::1/128"
+    """
+    @brief Comma-separated IPs/CIDRs whose X-Forwarded-For / X-Real-IP /
+    CF-Connecting-IP are believed (bundled nginx = loopback). Add your outer
+    reverse proxy, ingress pod CIDR or cloudflared address. ``*`` is NOT
+    supported. Do not set uvicorn's FORWARDED_ALLOW_IPS wider than this.
+    """
+
     # --- Rate Limiting ---
     RATE_LIMIT_DEFAULT: str = "600/minute"
     RATE_LIMIT_AUTH: str = "10/minute"
@@ -151,6 +162,24 @@ class Settings(BaseSettings):
     # --- Webhooks ---
     WEBHOOK_ALLOWED_HOSTS: str = ""
     """@brief Comma-separated hosts exempt from the SSRF guard (LAN targets)."""
+
+    @field_validator("TRUSTED_PROXIES")
+    @classmethod
+    def _validate_trusted_proxies(cls, v: str) -> str:
+        """@brief Fail at startup on an unparseable TRUSTED_PROXIES entry."""
+        for item in v.split(","):
+            if item.strip():
+                ipaddress.ip_network(item.strip(), strict=False)
+        return v
+
+    @cached_property
+    def trusted_proxy_networks(self) -> tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...]:
+        """@brief Parsed TRUSTED_PROXIES networks."""
+        return tuple(
+            ipaddress.ip_network(x.strip(), strict=False)
+            for x in self.TRUSTED_PROXIES.split(",")
+            if x.strip()
+        )
 
     @property
     def allowed_origins_list(self) -> list[str]:
