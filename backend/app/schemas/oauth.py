@@ -61,7 +61,8 @@ class GroupMappingRule(BaseModel):
         return self
 
 
-_RULES = TypeAdapter(dict[str, GroupMappingRule])
+#: A group maps to one rule, or a list (e.g. a community role plus several subgroups).
+_RULES = TypeAdapter(dict[str, GroupMappingRule | list[GroupMappingRule]])
 
 
 def validate_claim_mapping(value: dict[str, Any]) -> dict[str, Any]:
@@ -76,7 +77,14 @@ def validate_claim_mapping(value: dict[str, Any]) -> dict[str, Any]:
     for key, val in value.items():
         if key == "group_mapping":
             rules = _RULES.validate_python(val)
-            out[key] = {g: r.model_dump(mode="json") for g, r in rules.items()}
+            out[key] = {
+                g: (
+                    [x.model_dump(mode="json") for x in r]
+                    if isinstance(r, list)
+                    else r.model_dump(mode="json")
+                )
+                for g, r in rules.items()
+            }
         elif isinstance(val, str):
             out[key] = val
         else:

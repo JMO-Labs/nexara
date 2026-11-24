@@ -56,31 +56,46 @@ def map_groups_to_role(
     return best_role if best_role is not None else default_role
 
 
-def _rules(claim_mapping: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
-    """@brief Extract the optional group_mapping section (group -> rule dict)."""
+def _rules(claim_mapping: dict[str, Any] | None) -> dict[str, list[dict[str, Any]]]:
+    """
+    @brief Extract the optional group_mapping section as group -> list of rules.
+
+    A stored value is one rule dict or a list of them (role + several subgroups).
+    """
     section = (claim_mapping or {}).get("group_mapping")
     if not isinstance(section, dict):
         return {}
-    return {g: r for g, r in section.items() if isinstance(r, dict)}
+    out: dict[str, list[dict[str, Any]]] = {}
+    for group, value in section.items():
+        items = value if isinstance(value, list) else [value]
+        rules = [r for r in items if isinstance(r, dict)]
+        if rules:
+            out[group] = rules
+    return out
 
 
 def global_role_mappings(claim_mapping: dict[str, Any] | None) -> dict[str, str]:
     """
     @brief Group -> community role for rules without a subgroup_id.
 
+    When one group lists several community roles the highest wins.
+
     @param claim_mapping Provider claim_mapping (may hold group_mapping).
     @return Dict usable as group_mappings for map_groups_to_role.
     """
-    return {
-        g: str(r["role"])
-        for g, r in _rules(claim_mapping).items()
-        if not r.get("subgroup_id") and r.get("role")
-    }
+    out: dict[str, str] = {}
+    for g, rules in _rules(claim_mapping).items():
+        roles = [str(r["role"]) for r in rules if not r.get("subgroup_id") and r.get("role")]
+        if roles:
+            out[g] = max(
+                roles, key=lambda x: _ROLE_PRIORITY.index(x) if x in _ROLE_PRIORITY else -1
+            )
+    return out
 
 
 def has_subgroup_rules(claim_mapping: dict[str, Any] | None) -> bool:
     """@brief True when any group_mapping rule targets a subgroup (sync is active)."""
-    return any(r.get("subgroup_id") for r in _rules(claim_mapping).values())
+    return any(r.get("subgroup_id") for rules in _rules(claim_mapping).values() for r in rules)
 
 
 async def resolve_subgroup_mappings(
@@ -105,25 +120,25 @@ async def resolve_subgroup_mappings(
     if not rules:
         return mapped
     for group in groups:
-        rule = rules.get(group)
-        if rule is None:
+        if group not in rules:
             logger.warning("oauth_group_unmapped", group=group)
             continue
-        if not rule.get("subgroup_id"):
-            continue
-        role = str(rule.get("role") or "member")
-        if role not in SUBGROUP_ROLES:
-            logger.warning("oauth_group_invalid_role", group=group, role=role)
-            continue
-        try:
-            sub_id = uuid.UUID(str(rule["subgroup_id"]))
-        except ValueError:
-            logger.warning("oauth_group_bad_subgroup_id", group=group)
-            continue
-        if await subgroup_repo.get_by_id(sub_id, community_id) is None:
-            logger.warning("oauth_group_subgroup_missing", group=group, subgroup_id=str(sub_id))
-            continue
-        mapped[sub_id] = role
+        for rule in rules[group]:
+            if not rule.get("subgroup_id"):
+                continue
+            role = str(rule.get("role") or "member")
+            if role not in SUBGROUP_ROLES:
+                logger.warning("oauth_group_invalid_role", group=group, role=role)
+                continue
+            try:
+                sub_id = uuid.UUID(str(rule["subgroup_id"]))
+            except ValueError:
+                logger.warning("oauth_group_bad_subgroup_id", group=group)
+                continue
+            if await subgroup_repo.get_by_id(sub_id, community_id) is None:
+                logger.warning("oauth_group_subgroup_missing", group=group, subgroup_id=str(sub_id))
+                continue
+            mapped[sub_id] = role
     return mapped
 
 
@@ -204,7 +219,8 @@ async def preview_group_mapping(
     """
     sample = set(sample_groups or [])
     out: list[dict[str, Any]] = []
-    for group, rule in _rules(claim_mapping).items():
+    pairs = [(g, r) for g, rules in _rules(claim_mapping).items() for r in rules]
+    for group, rule in pairs:
         raw = rule.get("subgroup_id")
         exists: bool | None = None
         if raw:
