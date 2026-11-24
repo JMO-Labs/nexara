@@ -29,6 +29,7 @@ import {
 import { useSetGalleryNsfw, useSetMediaNsfw } from "@/hooks/useNsfw";
 import { NsfwCover } from "@/components/feed/NsfwCover";
 import { NsfwToggle } from "@/components/compose/NsfwToggle";
+import { useFeature } from "@/hooks/useFeature";
 import { useIsGroupMod } from "@/hooks/useGroupMod";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
@@ -172,6 +173,7 @@ export function GalleryDrawer({
   const galleryNsfwMut = useSetGalleryNsfw();
   const mediaNsfwMut = useSetMediaNsfw();
   const groupMod = useIsGroupMod(gallery?.subgroup_id);
+  const nsfwOn = useFeature("nsfw");
   const isAdult = sessionUser?.age_group === "adult";
 
   const isOwner =
@@ -354,12 +356,14 @@ export function GalleryDrawer({
                         />
                       </button>
                     </NsfwCover>
-                    {isAdult && it.added_by === sessionUser?.id && (
+                    {isAdult && nsfwOn && it.added_by === sessionUser?.id && (
                       <IconButton
                         size="sm"
                         variant="glass"
                         aria-label={
-                          it.is_nsfw ? "Remove NSFW from item" : "Mark as NSFW"
+                          it.is_nsfw
+                            ? "Remove NSFW from photo"
+                            : "Mark photo NSFW"
                         }
                         aria-pressed={!!it.is_nsfw}
                         onClick={() =>
@@ -370,7 +374,7 @@ export function GalleryDrawer({
                         }
                         className="absolute top-1.5 left-1.5 text-xs font-bold"
                       >
-                        18+
+                        NSFW
                       </IconButton>
                     )}
                     {isOwner && (

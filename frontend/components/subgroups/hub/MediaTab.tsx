@@ -6,6 +6,7 @@
 import * as React from "react";
 import { EmptyState, Skeleton } from "@/components/ui";
 import { Segmented } from "@/components/ui/page";
+import { NsfwCover } from "@/components/feed/NsfwCover";
 import { MediaThumb } from "@/components/galleries/MediaThumb";
 import { useSubgroupMedia } from "@/hooks/useSubgroupMedia";
 import type { SubgroupDetail } from "@/lib/api/subgroups";
@@ -102,11 +103,19 @@ export function MediaTab({ subgroup }: MediaTabProps) {
                 key={item.media_id}
                 className="bg-bg relative aspect-square overflow-hidden rounded-2xl"
               >
-                <MediaThumb
-                  mediaId={item.media_id}
-                  alt={item.media.alt_text || `${item.source_title || "Media"}`}
-                  zoomOnHover
-                />
+                <NsfwCover
+                  nsfw={item.media.is_nsfw}
+                  itemId={`media:${item.media_id}`}
+                  className="absolute inset-0"
+                >
+                  <MediaThumb
+                    mediaId={item.media_id}
+                    alt={
+                      item.media.alt_text || `${item.source_title || "Media"}`
+                    }
+                    zoomOnHover
+                  />
+                </NsfwCover>
               </div>
             ))}
           </div>

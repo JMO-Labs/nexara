@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { GalleryDrawer } from "@/components/galleries/galleries-page/GalleryDrawer";
 
+vi.mock("@/hooks/useFeature", () => ({ useFeature: () => false }));
 vi.mock("@/hooks/useNsfw", () => ({
   useSetGalleryNsfw: () => ({ mutate: vi.fn() }),
   useSetMediaNsfw: () => ({ mutate: vi.fn() }),

@@ -119,6 +119,7 @@ export interface MediaMetadata {
   alt_text: string | null;
   status: "processing" | "ready" | "error";
   created_at: string;
+  is_nsfw?: boolean;
 }
 
 export interface MediaItem {
