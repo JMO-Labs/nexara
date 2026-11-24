@@ -74,7 +74,14 @@ async function doFetch(
   url: string,
   init: any = {},
 ) {
-  const req = { url, method: "GET", mode: "no-cors", ...init };
+  const { headers: h = {}, ...rest } = init;
+  const req = {
+    url,
+    method: "GET",
+    mode: "no-cors",
+    headers: { get: (k: string) => h[k] ?? null },
+    ...rest,
+  };
   let p: Promise<any> | undefined;
   const waits: Promise<any>[] = [];
   env.handlers.fetch({
@@ -139,5 +146,73 @@ describe("sw.js", () => {
       mode: "navigate",
     });
     expect(await res.text()).toBe("pg");
+  });
+
+  const pages = (e: ReturnType<typeof makeEnv>) =>
+    [...e.stores.entries()].find(([k]) => k.includes("pages"))?.[1];
+
+  it("RSC requests fail fast offline and are never cached", async () => {
+    env.fetchMock.mockResolvedValueOnce(new Response("flight"));
+    await doFetch(env, "https://x.test/app/chat?_rsc=abc", {
+      headers: { RSC: "1" },
+      mode: "cors",
+    });
+    expect(pages(env)).toBeUndefined();
+    env.fetchMock.mockRejectedValue(new Error("offline"));
+    const res = await doFetch(env, "https://x.test/app/chat?_rsc=abc", {
+      headers: { RSC: "1" },
+      mode: "cors",
+    });
+    expect(res.type).toBe("error");
+  });
+
+  it("keys pages by pathname only", async () => {
+    env.fetchMock.mockResolvedValue(new Response("pg"));
+    await doFetch(env, "https://x.test/app/chat?token=1", { mode: "navigate" });
+    expect([...pages(env)!.keys()]).toEqual(["https://x.test/app/chat"]);
+  });
+
+  it.each([
+    ["/login"],
+    ["/callback"],
+    ["/sso-test"],
+    ["/reset-password"],
+    ["/magic-link"],
+    ["/register"],
+    ["/two-factor"],
+    ["/other"],
+  ])("never caches %s", async (p) => {
+    env.fetchMock.mockResolvedValue(new Response("x"));
+    await doFetch(env, "https://x.test" + p, { mode: "navigate" });
+    expect(pages(env)).toBeUndefined();
+  });
+
+  it("skips no-store/private, non-ok and redirected responses", async () => {
+    const bad = [
+      new Response("a", { headers: { "Cache-Control": "no-store" } }),
+      new Response("b", { headers: { "Cache-Control": "private, max-age=0" } }),
+      new Response("c", { status: 500 }),
+    ];
+    const redirected = new Response("d");
+    Object.defineProperty(redirected, "redirected", { value: true });
+    bad.push(redirected);
+    for (const r of bad) {
+      env.fetchMock.mockResolvedValueOnce(r);
+      await doFetch(env, "https://x.test/app/x", { mode: "navigate" });
+    }
+    expect(pages(env)).toBeUndefined();
+  });
+
+  it("CLEAR_USER_CACHE deletes the pages cache", async () => {
+    env.fetchMock.mockResolvedValue(new Response("pg"));
+    await doFetch(env, "https://x.test/app/a", { mode: "navigate" });
+    expect(pages(env)).toBeDefined();
+    const waits: Promise<any>[] = [];
+    env.handlers.message({
+      data: { type: "CLEAR_USER_CACHE" },
+      waitUntil: (x: any) => waits.push(x),
+    });
+    await Promise.all(waits);
+    expect(pages(env)).toBeUndefined();
   });
 });

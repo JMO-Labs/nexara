@@ -15,6 +15,7 @@ export default function UpdatePrompt() {
       typeof navigator !== "undefined" ? navigator.serviceWorker : undefined;
     if (!sw?.getRegistration) return;
     let shown = false;
+    let reloading = false;
     const show = (worker: ServiceWorker) => {
       if (shown) return;
       shown = true;
@@ -26,8 +27,12 @@ export default function UpdatePrompt() {
         action: {
           label: "Reload",
           onClick: () => {
-            sw.addEventListener("controllerchange", () =>
-              window.location.reload(),
+            if (reloading) return;
+            reloading = true;
+            sw.addEventListener(
+              "controllerchange",
+              () => window.location.reload(),
+              { once: true },
             );
             worker.postMessage({ type: "SKIP_WAITING" });
           },

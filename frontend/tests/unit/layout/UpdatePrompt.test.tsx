@@ -15,11 +15,12 @@ describe("UpdatePrompt", () => {
 
   it("offers Reload and posts SKIP_WAITING", async () => {
     const postMessage = vi.fn();
+    const swAdd = vi.fn();
     const reg = { waiting: { postMessage }, addEventListener: vi.fn() };
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
         getRegistration: vi.fn().mockResolvedValue(reg),
-        addEventListener: vi.fn(),
+        addEventListener: swAdd,
       },
       configurable: true,
     });
@@ -29,6 +30,10 @@ describe("UpdatePrompt", () => {
     expect(t.message).toBe("New version available");
     expect(t.action?.label).toBe("Reload");
     t.action!.onClick();
+    t.action!.onClick();
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(swAdd).toHaveBeenCalledTimes(1);
+    expect(swAdd.mock.calls[0][2]).toEqual({ once: true });
     expect(postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
   });
 });

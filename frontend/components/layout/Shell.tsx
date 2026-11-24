@@ -5,6 +5,7 @@
  *        BottomTabBar. Bootstraps the session and gates rendering on it.
  *        Global ? listener opens keyboard shortcuts modal.
  */
+import { clearUserCache } from "@/lib/pwa/clearUserCache";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,6 +47,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
+      clearUserCache();
       router.replace("/login");
     }
   }, [status, router]);

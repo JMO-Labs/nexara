@@ -29,7 +29,10 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  const type = event.data && event.data.type;
+  if (type === "SKIP_WAITING") self.skipWaiting();
+  // Sign-out / account switch: drop saved authenticated pages.
+  if (type === "CLEAR_USER_CACHE") event.waitUntil(caches.delete(PAGES));
 });
 
 self.addEventListener("activate", (event) => {
@@ -56,11 +59,37 @@ async function cacheFirst(req) {
   return res;
 }
 
+/** Auth/one-time-token routes are never stored (and are outside /app anyway). */
+const NEVER = [
+  "/login",
+  "/callback",
+  "/sso-test",
+  "/reset-password",
+  "/magic-link",
+  "/register",
+  "/two-factor",
+];
+
+/** @brief Cache key: pathname only (query allow-list is empty for now). */
+function pageKey(url) {
+  return url.origin + url.pathname;
+}
+
+/** @brief Only plain, non-sensitive /app HTML responses may be stored. */
+function cacheable(url, res) {
+  const p = url.pathname;
+  if (p !== "/app" && !p.startsWith("/app/")) return false;
+  if (NEVER.some((n) => p === n || p.startsWith(n + "/"))) return false;
+  if (!res.ok || res.redirected) return false;
+  const cc = (res.headers && res.headers.get("Cache-Control")) || "";
+  return !/no-store|private/i.test(cc);
+}
+
 /** @brief Store page as most-recent (delete+put) and evict oldest over cap. */
-async function storePage(req, res) {
+async function storePage(key, res) {
   const cache = await caches.open(PAGES);
-  await cache.delete(req);
-  await cache.put(req, res);
+  await cache.delete(key);
+  await cache.put(key, res);
   const keys = await cache.keys();
   for (const k of keys.slice(0, Math.max(0, keys.length - MAX_PAGES)))
     await cache.delete(k);
@@ -68,20 +97,31 @@ async function storePage(req, res) {
 
 /** @brief Network-first navigation; falls back to saved page, then /offline. */
 async function navigate(event, req) {
+  const url = new URL(req.url);
+  const key = pageKey(url);
   try {
     const res = await fetch(req);
-    if (res.ok) event.waitUntil(storePage(req, res.clone()).catch(() => {}));
+    if (cacheable(url, res))
+      event.waitUntil(storePage(key, res.clone()).catch(() => {}));
     return res;
   } catch {
     const cache = await caches.open(PAGES);
-    const cached = await cache.match(req);
+    const cached = await cache.match(key);
     if (cached) {
-      event.waitUntil(storePage(req, cached.clone()).catch(() => {}));
+      event.waitUntil(storePage(key, cached.clone()).catch(() => {}));
       return cached;
     }
     const offline = await caches.match("/offline");
     return offline || Response.error();
   }
+}
+
+/** @brief True for Next App Router RSC payload fetches (in-app navigation). */
+function isRsc(req, url) {
+  return (
+    (req.headers && req.headers.get("RSC") === "1") ||
+    url.searchParams.has("_rsc")
+  );
 }
 
 self.addEventListener("fetch", (event) => {
@@ -97,6 +137,12 @@ self.addEventListener("fetch", (event) => {
     /\.(woff2?|ttf|otf)$/.test(url.pathname)
   ) {
     event.respondWith(cacheFirst(req));
+  } else if (isRsc(req, url)) {
+    // RSC payloads are never cached (user data, Vary). Offline they must fail
+    // fast: Next's client router treats a failed RSC fetch as an MPA
+    // navigation (router-reducer/fetch-server-response), i.e. a hard
+    // navigation that the navigate handler then serves from the page cache.
+    event.respondWith(fetch(req).catch(() => Response.error()));
   } else if (req.mode === "navigate") {
     event.respondWith(navigate(event, req));
   }
