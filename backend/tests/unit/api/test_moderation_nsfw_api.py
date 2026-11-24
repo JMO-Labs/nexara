@@ -82,3 +82,30 @@ def test_build_service_wires_dependencies() -> None:
     audit_cls.assert_called_once_with(db)
     assert isinstance(service, ModerationService)
     assert service._community_id == uuid.UUID(settings.COMMUNITY_ID)
+
+
+@pytest.mark.parametrize("value", [True, False])
+async def test_put_post_nsfw_sets_flag(client, svc, admin, value) -> None:
+    target = uuid.uuid4()
+    resp = await client.put(f"/api/v1/moderation/posts/{target}/nsfw", json={"value": value})
+    assert resp.status_code == 200
+    svc.set_nsfw.assert_awaited_once_with("posts", target, admin.id, value)
+
+
+async def test_put_post_nsfw_requires_admin(test_app, svc) -> None:
+    member = MagicMock(spec=User)
+    member.id = uuid.uuid4()
+    member.role = "member"
+    test_app.dependency_overrides[get_current_user] = lambda: member
+    test_app.dependency_overrides[mod._build_service] = lambda: svc
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
+        resp = await c.put(f"/api/v1/moderation/posts/{uuid.uuid4()}/nsfw", json={"value": True})
+    test_app.dependency_overrides.clear()
+    assert resp.status_code == 403
+    svc.set_nsfw.assert_not_awaited()
+
+
+async def test_put_post_nsfw_missing_maps_to_404(client, svc) -> None:
+    svc.set_nsfw.side_effect = NotFoundError("Content not found")
+    resp = await client.put(f"/api/v1/moderation/posts/{uuid.uuid4()}/nsfw", json={"value": True})
+    assert resp.status_code == 404

@@ -295,15 +295,18 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
 
         return rows, next_cursor
 
-    async def set_nsfw(self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID) -> bool:
+    async def set_nsfw(
+        self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID, value: bool = True
+    ) -> bool:
         """
-        @brief Flag a post or media item as NSFW within a community.
+        @brief Flag (or unflag) a post or media item as NSFW within a community.
 
         Posts must not be soft-deleted. Media has no soft-delete column.
 
         @param kind "posts" or "media".
         @param entity_id Target UUID.
         @param community_id Community scope.
+        @param value New flag.
         @return True if a row was updated, False if missing/out of scope.
         """
         if kind == "posts":
@@ -311,14 +314,14 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
                 update(Post)
                 .where(Post.id == entity_id, Post.community_id == community_id)
                 .where(Post.deleted_at.is_(None))
-                .values(is_nsfw=True)
+                .values(is_nsfw=value)
                 .returning(Post.id)
             )
         elif kind == "media":
             stmt = (
                 update(Media)
                 .where(Media.id == entity_id, Media.community_id == community_id)
-                .values(is_nsfw=True)
+                .values(is_nsfw=value)
                 .returning(Media.id)
             )
         else:

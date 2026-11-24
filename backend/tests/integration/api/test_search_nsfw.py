@@ -96,7 +96,7 @@ class TestModerationService:
         svc = ModerationService(repo, audit, CID, invalidate=invalidate)
         target, admin = uuid.uuid4(), uuid.uuid4()
         await svc.mark_nsfw(kind, target, admin)
-        repo.set_nsfw.assert_awaited_once_with(kind, target, CID)
+        repo.set_nsfw.assert_awaited_once_with(kind, target, CID, True)
         audit.append.assert_awaited_once()
         assert audit.append.await_args.kwargs["action"] == f"{kind}.marked_nsfw"
         invalidate.assert_awaited_once()

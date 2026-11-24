@@ -22,6 +22,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.moderation import (
     BlockResponse,
+    NsfwFlag,
     ReportAction,
     ReportActionResponse,
     ReportCreate,
@@ -147,6 +148,18 @@ async def mark_post_nsfw(
     """@brief Flag a post as NSFW (admin only)."""
     await service.mark_nsfw("posts", post_id, user.id)
     return MessageResponse(message=_("Post marked NSFW"))
+
+
+@router.put("/moderation/posts/{post_id}/nsfw", response_model=MessageResponse)
+async def set_post_nsfw(
+    post_id: uuid.UUID,
+    body: NsfwFlag,
+    user: User = Depends(require_role("admin")),
+    service: ModerationService = Depends(_build_service),
+) -> MessageResponse:
+    """@brief Flag or unflag a post as NSFW (admin/moderator only, audited)."""
+    await service.set_nsfw("posts", post_id, user.id, body.value)
+    return MessageResponse(message=_("Post marked NSFW") if body.value else _("NSFW flag removed"))
 
 
 @router.post("/admin/moderation/media/{media_id}/mark-nsfw", response_model=MessageResponse)
