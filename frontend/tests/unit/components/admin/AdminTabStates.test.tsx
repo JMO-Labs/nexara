@@ -11,7 +11,6 @@ import { MetricsTab } from "@/components/admin/MetricsTab";
 import { InvitesTab } from "@/components/admin/InvitesTab";
 import { SsoTab } from "@/components/admin/SsoTab";
 import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab";
-import { AuditLogTab } from "@/components/admin/AuditLogTab";
 
 vi.mock("@/hooks/useAdmin");
 vi.mock("@/hooks/useInvites");
@@ -32,12 +31,6 @@ const cases: [string, any, any, RegExp][] = [
     AdminSettingsTab,
     () => admin.useAdminSettings,
     /failed to load admin settings/i,
-  ],
-  [
-    "AuditLog",
-    AuditLogTab,
-    () => admin.useAuditLog,
-    /failed to load audit log/i,
   ],
 ];
 

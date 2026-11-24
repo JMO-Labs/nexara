@@ -84,6 +84,7 @@ def client(test_app, user, repo, redis, enqueue):
     test_app.dependency_overrides[export._get_repo] = lambda: repo
     test_app.dependency_overrides[export._get_redis] = lambda: redis
     test_app.dependency_overrides[export._get_enqueue] = lambda: enqueue
+    test_app.dependency_overrides[export._get_audit] = lambda: AsyncMock()
     yield AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test")
     test_app.dependency_overrides.clear()
 

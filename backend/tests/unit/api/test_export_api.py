@@ -55,7 +55,7 @@ async def test_request_export_creates_and_enqueues() -> None:
     repo, redis, enqueue = AsyncMock(), AsyncMock(), MagicMock()
     repo.create.return_value = row
     redis.set.return_value = True
-    out = await api.request_export(user, repo, redis, enqueue)
+    out = await api.request_export(MagicMock(), user, repo, redis, enqueue, AsyncMock())
     assert out.export_id == row.id
     repo.commit.assert_awaited_once()
     enqueue.assert_called_once_with(str(user.id), str(row.id))
@@ -65,7 +65,7 @@ async def test_request_export_rate_limited() -> None:
     redis, repo = AsyncMock(), AsyncMock()
     redis.set.return_value = None
     with pytest.raises(RateLimitError):
-        await api.request_export(_user(), repo, redis, MagicMock())
+        await api.request_export(MagicMock(), _user(), repo, redis, MagicMock(), AsyncMock())
     repo.create.assert_not_awaited()
 
 
@@ -74,7 +74,7 @@ async def test_request_export_failure_releases_key() -> None:
     redis.set.return_value = True
     repo.create.side_effect = RuntimeError("boom")
     with pytest.raises(RuntimeError):
-        await api.request_export(_user(), repo, redis, MagicMock())
+        await api.request_export(MagicMock(), _user(), repo, redis, MagicMock(), AsyncMock())
     redis.delete.assert_awaited_once()
 
 

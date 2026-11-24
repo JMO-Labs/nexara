@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_ai import router as admin_ai_router
 from app.api.v1.admin_apprise import router as admin_apprise_router
+from app.api.v1.admin_audit import router as admin_audit_router
 from app.api.v1.admin_email import callback_router as admin_email_callback_router
 from app.api.v1.admin_email import router as admin_email_router
 from app.api.v1.admin_email_reply import router as admin_email_reply_router
@@ -89,6 +90,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
+api_v1_router.include_router(admin_audit_router)
 api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_oauth_tools_router)
 api_v1_router.include_router(admin_storage_router)

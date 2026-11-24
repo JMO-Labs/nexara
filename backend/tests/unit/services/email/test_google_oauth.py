@@ -10,7 +10,7 @@ import base64
 import json
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -335,7 +335,7 @@ class TestCallbackRoute:
             r.status_code == 303
             and r.headers["location"] == "/app/admin?tab=email&google=connected"
         )
-        svc.complete.assert_awaited_once_with("c", "s", None)
+        svc.complete.assert_awaited_once_with("c", "s", None, ANY)
 
     async def test_bad_state_and_denied_redirect_with_error(self, test_app):
         r, _ = await self._get(test_app, "?code=c&state=s", AuthorizationError())
@@ -370,7 +370,7 @@ class TestNonceCookie:
                 )
         finally:
             test_app.dependency_overrides.clear()
-        svc.complete.assert_awaited_once_with("c", "s", "N1")
+        svc.complete.assert_awaited_once_with("c", "s", "N1", ANY)
         assert (
             "nx_gmail_nonce" in r.headers["set-cookie"] and "Max-Age=0" in r.headers["set-cookie"]
         )
