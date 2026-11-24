@@ -16,7 +16,7 @@ from cryptography.fernet import InvalidToken
 
 from app.core.config import Settings
 from app.core.encryption import decrypt_secret, derive_fernet_key, encrypt_secret
-from app.core.exceptions import AppError, AuthorizationError
+from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.core.security import (
     generate_backup_codes,
@@ -74,6 +74,12 @@ def _manage_key(user_id: uuid.UUID) -> uuid.UUID:
 
 def _bad_code() -> AppError:
     return AppError(code="invalid_code", message=_("Invalid code"), status_code=400)
+
+
+def _already_enabled() -> AppError:
+    return AppError(
+        code="2fa_already_enabled", message=_("Two-factor is already on"), status_code=409
+    )
 
 
 class TwoFactorService:
@@ -135,10 +141,10 @@ class TwoFactorService:
         @brief Begin enrolment: store a pending secret (not yet active).
 
         @return ``secret`` and ``otpauth_uri``.
-        @raises AuthorizationError 2fa_already_enabled if TOTP is on.
+        @raises AppError 409 2fa_already_enabled if TOTP is on.
         """
         if self._user.totp_enabled:
-            raise AuthorizationError(message="2fa_already_enabled")
+            raise _already_enabled()
         secret = generate_totp_secret()
         await self._users.update_totp(
             self._user.id, totp_pending_secret=seal_secret(secret, self._settings)
@@ -153,7 +159,7 @@ class TwoFactorService:
         @raises AppError 400 on a wrong code or when enrolment was not started.
         """
         if self._user.totp_enabled:
-            raise AuthorizationError(message="2fa_already_enabled")
+            raise _already_enabled()
         pending = self._user.totp_pending_secret
         if not pending:
             raise AppError(
@@ -176,8 +182,12 @@ class TwoFactorService:
         """
         @brief Turn TOTP off after proof of the password or a valid code.
 
-        @raises AppError 400 when neither proof is valid.
+        @raises AppError 400 ``2fa_not_enabled`` when TOTP is off, or when neither proof is valid.
         """
+        if not self._user.totp_enabled:
+            raise AppError(
+                code="2fa_not_enabled", message=_("Two-factor is not on"), status_code=400
+            )
         ok = False
         await self._reserve()
         if password and self._user.password_hash:

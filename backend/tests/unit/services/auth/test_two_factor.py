@@ -14,7 +14,7 @@ import pyotp
 import pytest
 
 from app.core.config import Settings
-from app.core.exceptions import AppError, AuthorizationError, NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.security import hash_password
 from app.services.admin_security_service import AdminSecurityService
 from app.services.auth.two_factor import TwoFactorService, open_secret, seal_secret
@@ -61,8 +61,10 @@ async def test_start_stores_pending_encrypted_not_active():
 
 async def test_start_refused_when_enabled():
     svc, *_ = _svc(_user(totp_enabled=True))
-    with pytest.raises(AuthorizationError, match="2fa_already_enabled"):
+    with pytest.raises(AppError) as e:
         await svc.start()
+    assert e.value.status_code == 409 and e.value.code == "2fa_already_enabled"
+    assert e.value.message != "2fa_already_enabled"
 
 
 async def test_confirm_wrong_code_400_not_enabled():
@@ -95,6 +97,15 @@ async def test_confirm_without_start_400():
     with pytest.raises(AppError) as e:
         await svc.confirm("123456")
     assert e.value.status_code == 400
+
+
+async def test_disable_when_off_is_400_and_not_audited():
+    svc, users, _, audit = _svc(_user())
+    with pytest.raises(AppError) as e:
+        await svc.disable("right-password1", None)
+    assert e.value.status_code == 400 and e.value.code == "2fa_not_enabled"
+    users.update_totp.assert_not_called()
+    audit.append.assert_not_called()
 
 
 async def test_disable_needs_valid_proof():
