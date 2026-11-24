@@ -168,19 +168,18 @@ async def test_sso_sync_events_are_system_actions(world):
     await audit_role_synced(w.s, w.member.id, "member", "admin")
     r = await one(w, "sso.role_synced", actor=None, target_id=w.member.id, target_type="user")
     assert r.extra_data["new_role"] == "admin"
-    with patch("app.services.oauth.email_change.send_email", create=True):
-        try:
-            await notify_email_synced(
-                w.s,
-                user_id=w.member.id,
-                community_id=CID,
-                provider_id=None,
-                old_email="a@x.dev",
-                new_email="b@x.dev",
-            )
-        except Exception:  # mail/token side effects are out of scope here
-            pass
-    await one(w, "sso.email_synced", actor=None, target_id=w.member.id, target_type="user")
+    with patch("app.services.oauth.email_change.send_email") as mail:
+        await notify_email_synced(
+            w.s,
+            user_id=w.member.id,
+            community_id=CID,
+            provider_id=None,
+            old_email="a@x.dev",
+            new_email="b@x.dev",
+        )
+    assert mail.delay.call_args.kwargs["to"] == "a@x.dev"
+    r = await one(w, "sso.email_synced", actor=None, target_id=w.member.id, target_type="user")
+    assert (r.extra_data["old_email"], r.extra_data["new_email"]) == ("a@x.dev", "b@x.dev")
 
 
 async def test_data_export_started(world):
