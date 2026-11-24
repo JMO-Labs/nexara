@@ -36,6 +36,11 @@ export interface GalleryItem {
   position: number;
   created_at: string;
   is_nsfw?: boolean;
+  /** The photo's own flag only (the uploader toggle). */
+  is_nsfw_own?: boolean;
+  /** Own or container lock applies. */
+  nsfw_locked?: boolean;
+  nsfw_lock_level?: "admin" | "moderator" | null;
 }
 
 export interface Collaborator {

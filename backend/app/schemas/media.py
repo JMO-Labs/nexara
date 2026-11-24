@@ -38,7 +38,8 @@ class MediaResponse(BaseModel):
     alt_text: str | None = None
     status: MediaStatus
     created_at: datetime
-    is_nsfw: bool = False
+    is_nsfw: bool = False  # effective (own flag or container)
+    is_nsfw_own: bool = False  # the photo's own flag only
     nsfw_locked: bool = False
     nsfw_lock_level: str | None = None
 
@@ -48,7 +49,7 @@ class MediaResponse(BaseModel):
         """@brief Only the known levels; anything else (unflushed row) is None."""
         return v if isinstance(v, str) and v in ("admin", "moderator") else None
 
-    @field_validator("is_nsfw", "nsfw_locked", mode="before")
+    @field_validator("is_nsfw", "is_nsfw_own", "nsfw_locked", mode="before")
     @classmethod
     def _unflushed_nsfw(cls, v: object) -> bool:
         """@brief A not-yet-flushed row has None (server default): treat as False."""

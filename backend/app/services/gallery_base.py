@@ -13,11 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AuthorizationError
 from app.core.i18n import _
-from app.models.gallery import Gallery
+from app.models.gallery import Gallery, GalleryItem
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.gallery_repo import GalleryRepository
-from app.schemas.gallery import GalleryResponse
+from app.schemas.gallery import GalleryItemResponse, GalleryResponse
 from app.services.nsfw_rules import require_owner_may_flag
 
 
@@ -80,6 +80,20 @@ class GalleryServiceBase:
                     o.cover_is_nsfw = True
                 else:
                     o.cover_media_id = None
+        return out
+
+    async def _item_out(self, items: list[GalleryItem]) -> list[GalleryItemResponse]:
+        """@brief Item responses with the effective NSFW flag and lock info."""
+        out = [GalleryItemResponse.model_validate(i) for i in items]
+        ids = {o.media_id for o in out}
+        nsfw = await self._repo.nsfw_media_among(ids)
+        state = await self._repo.media_nsfw_state(ids)
+        for o in out:
+            own, level = state.get(o.media_id, (False, None))
+            o.is_nsfw = o.media_id in nsfw
+            o.is_nsfw_own = own
+            o.nsfw_lock_level = level
+            o.nsfw_locked = level is not None
         return out
 
     async def _require_own_media(self, media_ids: set[uuid.UUID], user_id: uuid.UUID) -> None:

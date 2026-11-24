@@ -72,6 +72,21 @@ class GalleryItemResponse(BaseModel):
     position: int
     created_at: datetime
     is_nsfw: bool = False  # photo is NSFW (own flag, NSFW post or album)
+    is_nsfw_own: bool = False  # the photo's own flag only (uploader toggle)
+    nsfw_locked: bool = False  # own or container lock applies
+    nsfw_lock_level: str | None = None
+
+    @field_validator("nsfw_lock_level", mode="before")
+    @classmethod
+    def _lock_level(cls, v: object) -> str | None:
+        """@brief Only the known levels (the service fills the real one)."""
+        return v if isinstance(v, str) and v in ("admin", "moderator") else None
+
+    @field_validator("is_nsfw", "is_nsfw_own", "nsfw_locked", mode="before")
+    @classmethod
+    def _flags(cls, v: object) -> bool:
+        """@brief Non-bool attrs (unset/unflushed) are False."""
+        return v is True
 
     model_config = {"from_attributes": True}
 

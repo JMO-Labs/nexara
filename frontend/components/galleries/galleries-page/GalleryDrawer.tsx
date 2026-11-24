@@ -26,7 +26,8 @@ import {
   useDeleteGallery,
   useRemoveItem,
 } from "@/hooks/useGalleries";
-import { useSetGalleryNsfw, useSetMediaNsfw } from "@/hooks/useNsfw";
+import { useSetGalleryNsfw } from "@/hooks/useNsfw";
+import { PhotoNsfwToggle } from "./PhotoNsfwToggle";
 import { NsfwCover } from "@/components/feed/NsfwCover";
 import { NsfwToggle } from "@/components/compose/NsfwToggle";
 import { useFeature } from "@/hooks/useFeature";
@@ -171,7 +172,6 @@ export function GalleryDrawer({
   const deleteMut = useDeleteGallery();
   const removeItemMut = useRemoveItem(galleryId ?? "");
   const galleryNsfwMut = useSetGalleryNsfw();
-  const mediaNsfwMut = useSetMediaNsfw();
   const groupMod = useIsGroupMod(gallery?.subgroup_id);
   const nsfwOn = useFeature("nsfw");
   const isAdult = sessionUser?.age_group === "adult";
@@ -357,25 +357,7 @@ export function GalleryDrawer({
                       </button>
                     </NsfwCover>
                     {isAdult && nsfwOn && it.added_by === sessionUser?.id && (
-                      <IconButton
-                        size="sm"
-                        variant="glass"
-                        aria-label={
-                          it.is_nsfw
-                            ? "Remove NSFW from photo"
-                            : "Mark photo NSFW"
-                        }
-                        aria-pressed={!!it.is_nsfw}
-                        onClick={() =>
-                          mediaNsfwMut.mutate({
-                            id: it.media_id,
-                            value: !it.is_nsfw,
-                          })
-                        }
-                        className="absolute top-1.5 left-1.5 text-xs font-bold"
-                      >
-                        NSFW
-                      </IconButton>
+                      <PhotoNsfwToggle item={it} />
                     )}
                     {isOwner && (
                       <IconButton

@@ -20,6 +20,7 @@ const api = vi.hoisted(() => ({
   completeOnboarding: vi.fn(),
 }));
 vi.mock("@/lib/api/onboarding", () => api);
+const h = vi.hoisted(() => ({ save: null as Promise<unknown> | null }));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
     sel({ status: "authenticated" }),
@@ -32,7 +33,10 @@ vi.mock("@/components/settings/AvatarPicker", () => ({
   AvatarPicker: () => <div />,
 }));
 vi.mock("@/components/onboarding/steps/BirthdayStep", () => ({
-  BirthdayStep: () => <p>birthday-editor</p>,
+  BirthdayStep: ({ onSave }: { onSave?: (p: Promise<unknown>) => void }) => {
+    if (h.save) onSave?.(h.save);
+    return <p>birthday-editor</p>;
+  },
 }));
 vi.mock("@/components/onboarding/steps/ContactStep", () => ({
   ContactStep: () => <p>contact-editor</p>,
@@ -145,6 +149,19 @@ describe("wizard", () => {
     expect(screen.getByText("contact-editor")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByText("birthday-editor")).toBeInTheDocument();
+  });
+
+  it("Continue waits for the pending birthday save", async () => {
+    let done!: () => void;
+    h.save = new Promise<void>((r) => (done = r));
+    api.putOnboardingStep.mockClear();
+    wrap(<WelcomeWizard state={state({ step: 1 })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await Promise.resolve();
+    expect(api.putOnboardingStep).not.toHaveBeenCalled();
+    done();
+    await waitFor(() => expect(api.putOnboardingStep).toHaveBeenCalledWith(2));
+    h.save = null;
   });
 
   it("Continue on an incomplete required step stays put with the server error", async () => {

@@ -7,12 +7,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const mutate = vi.fn();
+const mutate = vi.fn().mockResolvedValue({});
 vi.mock("@/hooks/useSettings", () => ({
   useMyProfile: () => ({
     data: { display_name: "Sam", avatar_url: null, birthday: null },
   }),
-  useUpdateProfile: () => ({ mutate }),
+  useUpdateProfile: () => ({ mutate, mutateAsync: mutate }),
 }));
 vi.mock("@/components/settings/AvatarPicker", () => ({
   AvatarPicker: () => <div />,
@@ -38,7 +38,10 @@ const wrap = (ui: React.ReactNode) =>
     <QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>,
   );
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mutate.mockResolvedValue({});
+});
 
 describe("BirthdayStep", () => {
   it("does not save while typing, saves a complete date on blur", () => {
@@ -49,6 +52,15 @@ describe("BirthdayStep", () => {
     expect(mutate).not.toHaveBeenCalled();
     fireEvent.blur(input);
     expect(mutate).toHaveBeenCalledWith({ birthday: "1990-05-01" });
+  });
+  it("exposes the pending save to the wizard", async () => {
+    const onSave = vi.fn();
+    wrap(<BirthdayStep onSave={onSave} />);
+    const input = screen.getByLabelText("Birthday");
+    fireEvent.change(input, { target: { value: "1990-05-01" } });
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledWith(expect.any(Promise));
+    await onSave.mock.calls[0][0];
   });
   it("rejects an implausible year on blur", () => {
     wrap(<BirthdayStep />);

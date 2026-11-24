@@ -54,7 +54,9 @@ class GalleryItemsMixin(GalleryServiceBase):
         """@brief Get-or-create the auto gallery for an event."""
         existing = await self._repo.get_event_gallery(self._community_id, event_id)
         if existing is not None:
-            return GalleryResponse.model_validate(existing)
+            if not await self._nsfw_ok(existing, owner_id):
+                raise NotFoundError(_("Gallery not found"))
+            return (await self._out([existing], owner_id))[0]
 
         gallery = Gallery(
             community_id=self._community_id,
@@ -86,11 +88,7 @@ class GalleryItemsMixin(GalleryServiceBase):
         rows, _next = await self._repo.list_items(
             gallery_id, limit=limit, cursor=cursor, viewer_id=user_id
         )
-        out = [GalleryItemResponse.model_validate(r) for r in rows]
-        nsfw = await self._repo.nsfw_media_among({o.media_id for o in out})
-        for o in out:
-            o.is_nsfw = o.media_id in nsfw
-        return out
+        return await self._item_out(rows)
 
     async def add_item(
         self, gallery_id: uuid.UUID, user_id: uuid.UUID, data: GalleryItemCreate
@@ -103,7 +101,7 @@ class GalleryItemsMixin(GalleryServiceBase):
         await self._require_own_media({data.media_id}, user_id)
         existing = await self._repo.get_item(gallery_id, data.media_id)
         if existing is not None:
-            return GalleryItemResponse.model_validate(existing)
+            return (await self._item_out([existing]))[0]
 
         item = GalleryItem(
             community_id=self._community_id,
@@ -117,7 +115,7 @@ class GalleryItemsMixin(GalleryServiceBase):
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="add_item", user_id=user_id
         )
-        return GalleryItemResponse.model_validate(item)
+        return (await self._item_out([item]))[0]
 
     async def bulk_add_items(
         self,
@@ -133,11 +131,11 @@ class GalleryItemsMixin(GalleryServiceBase):
         await self._require_own_media(set(data.media_ids), user_id)
 
         position = gallery.item_count
-        out: list[GalleryItemResponse] = []
+        items: list[GalleryItem] = []
         for media_id in data.media_ids:
             existing = await self._repo.get_item(gallery_id, media_id)
             if existing is not None:
-                out.append(GalleryItemResponse.model_validate(existing))
+                items.append(existing)
                 continue
             item = GalleryItem(
                 community_id=self._community_id,
@@ -148,11 +146,11 @@ class GalleryItemsMixin(GalleryServiceBase):
             )
             item = await self._repo.add_item(item)
             position += 1
-            out.append(GalleryItemResponse.model_validate(item))
+            items.append(item)
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="add_item", user_id=user_id
         )
-        return out
+        return await self._item_out(items)
 
     async def update_item(
         self,

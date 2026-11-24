@@ -16,9 +16,17 @@ export function plausibleBirthday(v: string): boolean {
   return v >= "1900-01-01" && v <= today;
 }
 
-export function BirthdayStep() {
+/**
+ * @param onSave receives the in-flight save so the wizard can await it before
+ *        leaving the step (Next never races the blur save)
+ */
+export function BirthdayStep({
+  onSave,
+}: {
+  onSave?: (p: Promise<unknown>) => void;
+}) {
   const { data: me } = useMyProfile();
-  const { mutate } = useUpdateProfile();
+  const { mutateAsync } = useUpdateProfile();
   const [value, setValue] = React.useState<string | null>(null);
   const [error, setError] = React.useState(false);
   const shown = value ?? me?.birthday ?? "";
@@ -26,7 +34,9 @@ export function BirthdayStep() {
     if (value === null || value === (me?.birthday ?? "") || !value) return;
     const ok = plausibleBirthday(value);
     setError(!ok);
-    if (ok) mutate({ birthday: value });
+    if (!ok) return;
+    const p = mutateAsync({ birthday: value }).catch(() => {});
+    onSave?.(p);
   };
   return (
     <div>

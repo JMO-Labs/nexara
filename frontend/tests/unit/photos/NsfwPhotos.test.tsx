@@ -12,7 +12,11 @@ import { GalleryDrawer } from "@/components/galleries/galleries-page/GalleryDraw
 import { resetRevealed } from "@/components/feed/NsfwCover";
 import { useSession } from "@/stores/session";
 
-const h = vi.hoisted(() => ({ always: false, feature: true }));
+const h = vi.hoisted(() => ({
+  always: false,
+  feature: true,
+  item: {} as Record<string, unknown>,
+}));
 vi.mock("@/hooks/useSettings", () => ({
   useUserSettings: () => ({ data: { always_show_nsfw: h.always } }),
 }));
@@ -54,6 +58,7 @@ vi.mock("@/hooks/useGalleries", () => {
           added_by: "me",
           caption: null,
           is_nsfw: false,
+          ...h.item,
         },
       ],
       isLoading: false,
@@ -72,6 +77,7 @@ const wrap = (ui: React.ReactNode) =>
 beforeEach(() => {
   h.always = false;
   h.feature = true;
+  h.item = {};
   resetRevealed();
   useSession.setState({
     user: { id: "me", role: "member", age_group: "adult" } as never,
@@ -146,5 +152,21 @@ describe("uploader tile NSFW button", () => {
     expect(
       screen.queryByRole("button", { name: "Mark photo NSFW" }),
     ).toBeNull();
+  });
+  it("is disabled with the moderator note when a lock applies", () => {
+    h.item = { is_nsfw: true, is_nsfw_own: false, nsfw_locked: true };
+    open();
+    const btn = screen.getByRole("button", {
+      name: "A moderator marked this NSFW.",
+    });
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute("aria-pressed", "false");
+  });
+  it("shows only the own flag, not an inherited album flag", () => {
+    h.item = { is_nsfw: true, is_nsfw_own: false, nsfw_locked: false };
+    open();
+    expect(
+      screen.getByRole("button", { name: "Mark photo NSFW" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 });

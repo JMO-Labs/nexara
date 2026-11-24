@@ -12,6 +12,7 @@ from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
 from app.schemas.media import MediaResponse
+from app.services.media.serving import effective_response
 from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 
 if TYPE_CHECKING:
@@ -50,4 +51,4 @@ async def set_media_nsfw(
         await require_owner_may_flag(repo, service._community_id, user.id, value)
         apply_owner_flag(media, value)
         await repo.session.flush()
-    return MediaResponse.model_validate(media)
+    return await effective_response(repo, media)

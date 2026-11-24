@@ -218,6 +218,39 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         stmt = select(Media.id).where(Media.id.in_(media_ids), media_is_nsfw(Media.id))
         return set((await self._session.execute(stmt)).scalars().all())
 
+    async def media_nsfw_state(
+        self, media_ids: set[uuid.UUID]
+    ) -> dict[uuid.UUID, tuple[bool, str | None]]:
+        """
+        @brief Per photo: (own flag, effective lock level). The level is the
+               strongest of the photo's own lock and its container source rows.
+        """
+        from app.models.media import Media
+        from app.models.media_nsfw_source import MediaNsfwSource
+
+        if not media_ids:
+            return {}
+        rows = await self._session.execute(
+            select(Media.id, Media.is_nsfw, Media.nsfw_lock_level).where(Media.id.in_(media_ids))
+        )
+        own = {r[0]: (bool(r[1]), r[2]) for r in rows.all()}
+        src = await self._session.execute(
+            select(MediaNsfwSource.media_id, MediaNsfwSource.level).where(
+                MediaNsfwSource.media_id.in_(media_ids)
+            )
+        )
+        levels: dict[uuid.UUID, set[str]] = {}
+        for mid, lvl in src.all():
+            levels.setdefault(mid, set()).add(lvl)
+        out: dict[uuid.UUID, tuple[bool, str | None]] = {}
+        for mid, (flag, lvl) in own.items():
+            all_lvls = levels.get(mid, set()) | ({lvl} if lvl else set())
+            out[mid] = (
+                flag,
+                "admin" if "admin" in all_lvls else ("moderator" if all_lvls else None),
+            )
+        return out
+
     async def nsfw_hidden(
         self,
         viewer_id: uuid.UUID | None,

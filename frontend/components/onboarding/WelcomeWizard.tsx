@@ -55,6 +55,7 @@ export function WelcomeWizard({ state }: { state: OnboardingState }) {
   const [busy, setBusy] = React.useState(false);
   const heading = React.useRef<HTMLHeadingElement>(null);
   const first = React.useRef(true);
+  const pending = React.useRef<Promise<unknown> | null>(null);
   React.useEffect(() => {
     if (first.current) first.current = false;
     else heading.current?.focus();
@@ -67,6 +68,8 @@ export function WelcomeWizard({ state }: { state: OnboardingState }) {
   /** Forward moves wait for the server, which refuses to skip a required step. */
   const go = async (next: number) => {
     setError(null);
+    await pending.current;
+    pending.current = null;
     try {
       await putOnboardingStep(next);
     } catch (e) {
@@ -81,6 +84,8 @@ export function WelcomeWizard({ state }: { state: OnboardingState }) {
     if (!last) return go(i + 1);
     setBusy(true);
     try {
+      await pending.current;
+      pending.current = null;
       await completeOnboarding();
       await qc.invalidateQueries({ queryKey: ONBOARDING_KEY });
       router.replace("/app");
@@ -109,7 +114,13 @@ export function WelcomeWizard({ state }: { state: OnboardingState }) {
       </h1>
       <Panel as="div">
         {id === "profile" && <ProfileStep prefill={state.prefill} />}
-        {id === "birthday" && <BirthdayStep />}
+        {id === "birthday" && (
+          <BirthdayStep
+            onSave={(p) => {
+              pending.current = p;
+            }}
+          />
+        )}
         {id === "contact" && <ContactStep />}
         {id === "family" && <FamilyStep />}
         {id === "notify" && <NotifyStep />}

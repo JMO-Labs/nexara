@@ -17,9 +17,22 @@ from app.models.user import User
 from app.schemas.media import MediaResponse
 
 if TYPE_CHECKING:
+    from app.models.media import Media
     from app.repositories.media_repo import MediaRepository
     from app.repositories.time_capsule_repo import TimeCapsuleRepository
     from app.services.storage.base import StorageBackend
+
+
+async def effective_response(repo: MediaRepository, media: Media) -> MediaResponse:
+    """@brief Response with the effective NSFW flag and lock (own or container rows)."""
+    out = MediaResponse.model_validate(media)
+    out.is_nsfw_own = out.is_nsfw
+    out.is_nsfw = bool(await repo.nsfw_media_among({media.id}))
+    state = (await repo.media_nsfw_state({media.id})).get(media.id)
+    level = state[1] if state else None
+    out.nsfw_lock_level = level
+    out.nsfw_locked = level is not None
+    return out
 
 
 class MediaServingMixin:
@@ -42,7 +55,7 @@ class MediaServingMixin:
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
-        return MediaResponse.model_validate(media)
+        return await effective_response(self._repo, media)
 
     async def _guard_sealed(self, media_id: uuid.UUID, viewer_id: uuid.UUID | None) -> None:
         """@brief 404 for NSFW media and a non-adult viewer, or for media in an

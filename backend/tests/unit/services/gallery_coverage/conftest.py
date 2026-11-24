@@ -73,6 +73,8 @@ def repo() -> AsyncMock:
     r = AsyncMock(spec=GalleryRepository)
     r.is_collaborator.return_value = False
     r.list_collaborators.return_value = []
+    r.nsfw_media_among.return_value = set()
+    r.media_nsfw_state.return_value = {}
     r.add_item.side_effect = _fill_item
     r.create.side_effect = _fill_gallery
     return r
