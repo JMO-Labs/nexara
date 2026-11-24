@@ -109,12 +109,15 @@ export async function putPart(
   return (await res.json()) as { part_number: number; etag: string };
 }
 
-export const completeMultipart = (uploadId: string) =>
-  apiPost<{ media_id: string }>(`${BASE}/upload/${seg(uploadId)}/complete`);
+export const completeMultipart = (uploadId: string, isNsfw?: boolean) =>
+  apiPost<{ media_id: string }>(
+    `${BASE}/upload/${seg(uploadId)}/complete${isNsfw ? "?is_nsfw=true" : ""}`,
+  );
 
 export async function multipartUpload(
   file: File,
   onProgress?: (pct: number) => void,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   const init = await initMultipart(file.name, file.type, file.size);
   const totalParts = Math.ceil(file.size / init.part_size);
@@ -125,7 +128,7 @@ export async function multipartUpload(
     await putPart(init.upload_id, i + 1, new Uint8Array(buf));
     onProgress?.(((i + 1) / totalParts) * 100);
   }
-  const result = await completeMultipart(init.upload_id);
+  const result = await completeMultipart(init.upload_id, isNsfw);
   return await getMedia(result.media_id);
 }
 
@@ -140,7 +143,7 @@ export async function uploadFile(
     onProgress?.(100);
     return m;
   }
-  return await multipartUpload(file, onProgress);
+  return await multipartUpload(file, onProgress, isNsfw);
 }
 
 /**
