@@ -15,7 +15,7 @@ from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
-from app.plugins.events import dispatch_plugin_event
+from app.plugins.events import schedule_plugin_dispatch
 from app.repositories.celebration_repo import CelebrationRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import CelebrateIn
@@ -192,9 +192,7 @@ class PostService(CommentsMixin, ReactionsMixin):
                 events.post_created(self._target, enriched),
                 post,
             )
-        await dispatch_plugin_event(
-            self._post_repo._session, self._community_id, post=post, comment=None, author=user
-        )
+        schedule_plugin_dispatch(self._post_repo._session, self._community_id, post.id, None)
 
         return enriched or {}
 

@@ -4,7 +4,7 @@
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -61,3 +61,27 @@ def test_plugins_queue_routed_and_consumed():
     helm = (ROOT / "deploy/helm/nexara/values.yaml").read_text()
     assert "plugins" in next(line for line in sup.splitlines() if "-Q" in line)
     assert "plugins" in next(line for line in helm.splitlines() if "queues:" in line)
+
+
+def test_redirect_is_rejected_without_retry():
+    post = AsyncMock(return_value=302)
+    with patch("app.tasks.plugin_tasks._post", post):
+        deliver_plugin_event.apply(args=_args())
+    assert post.call_count == 1
+
+
+def test_trusted_plugin_host_bypasses_ssrf_pin():
+    from app.tasks import plugin_tasks
+
+    s = MagicMock(PLUGIN_HOST_URL="http://plugin-host:9000", PLUGINS_ALLOW_INSECURE_URLS=False)
+    with patch.object(plugin_tasks, "get_settings", return_value=s):
+        assert plugin_tasks._trusted_host("http://plugin-host:9000/plugins/x/events")
+        assert not plugin_tasks._trusted_host("http://evil:9000/plugins/x/events")
+        assert not plugin_tasks._trusted_host("https://plugin-host:9000/x")
+
+
+async def test_safe_post_requires_https():
+    from app.core.http_safe import UnsafeUrlError, safe_post
+
+    with pytest.raises(UnsafeUrlError):
+        await safe_post("http://example.com/x", content=b"", headers={})

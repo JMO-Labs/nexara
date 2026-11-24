@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.models.media import Media
 from app.models.plugin import PluginCommunity, PluginInstall, PluginToken, PluginUserPref
 from app.models.post import Comment, Post, PostMedia, Reaction
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 REMOVED_COMMENT = "This comment was removed."
@@ -203,3 +204,10 @@ class PluginRepository(BaseRepository[PluginInstall]):
             .order_by(PostMedia.position)
         )
         return [(r[0], r[1]) for r in res.all()]
+
+    async def get_usernames(self, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+        """@brief Real usernames of the given (bot) users."""
+        res = await self._session.execute(
+            select(User.id, User.username).where(User.id.in_(user_ids))
+        )
+        return {r[0]: r[1] for r in res.all()}

@@ -12,7 +12,7 @@ from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.models.user import User
-from app.plugins.events import dispatch_plugin_event
+from app.plugins.events import schedule_plugin_dispatch
 from app.services.activity_publish import record_activity
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.post_service_base import PostServiceBase
@@ -71,12 +71,10 @@ class CommentsMixin(PostServiceBase):
         if not post or not await self._post_repo.is_visible(post_id, user.id, self._community_id):
             raise NotFoundError(_("Post not found"))
 
-        parent_author_id: uuid.UUID | None = None
         if parent_id:
             parent = await self._comment_repo.get_by_id(parent_id)
             if not parent or parent.post_id != post_id:
                 raise NotFoundError(_("Parent comment not found"))
-            parent_author_id = parent.author_id
 
         comment = await self._comment_repo.create_comment(
             post_id=post_id,
@@ -141,13 +139,6 @@ class CommentsMixin(PostServiceBase):
                 events.comment_created(self._target, post_id, comment_dict, user.id),
                 post,
             )
-        await dispatch_plugin_event(
-            self._post_repo._session,
-            self._community_id,
-            post=post,
-            comment=comment,
-            author=user,
-            parent_author_id=parent_author_id,
-        )
+        schedule_plugin_dispatch(self._post_repo._session, self._community_id, post_id, comment.id)
 
         return comment_dict

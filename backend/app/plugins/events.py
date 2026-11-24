@@ -15,7 +15,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models.post import Comment, Post
 from app.models.user import User
@@ -58,6 +60,51 @@ def _comment_dict(comment: Comment, parent_author_id: uuid.UUID | None) -> dict[
     }
 
 
+def schedule_plugin_dispatch(
+    session: AsyncSession, community_id: uuid.UUID, post_id: uuid.UUID, comment_id: uuid.UUID | None
+) -> None:
+    """
+    @brief Enqueue plugin dispatch only AFTER the request transaction commits.
+
+    Registers a SQLAlchemy ``after_commit`` hook on the session (once); a rollback
+    discards pending jobs, so a failed request never announces content. Enqueue
+    errors are logged and never reach the request.
+    @param post_id Post that was created (or commented on).
+    @param comment_id New comment, or None for a new post.
+    """
+    try:
+        _register(session, community_id, post_id, comment_id)
+    except Exception:
+        logger.warning("plugin_dispatch_schedule_failed", exc_info=True)
+
+
+def _register(
+    session: AsyncSession, community_id: uuid.UUID, post_id: uuid.UUID, comment_id: uuid.UUID | None
+) -> None:
+    sync: Session = session.sync_session
+    pending: list[tuple[str, ...]] = sync.info.setdefault("plugin_dispatch", [])
+    pending.append((str(community_id), str(post_id), str(comment_id) if comment_id else ""))
+    if sync.info.get("plugin_dispatch_hooked"):
+        return
+    sync.info["plugin_dispatch_hooked"] = True
+
+    def _flush(_: Session) -> None:
+        jobs, sync.info["plugin_dispatch"] = list(sync.info.get("plugin_dispatch", [])), []
+        from app.tasks.plugin_tasks import dispatch_plugin_event_task
+
+        for job in jobs:
+            try:
+                dispatch_plugin_event_task.apply_async(args=job, countdown=1)
+            except Exception:
+                logger.warning("plugin_dispatch_enqueue_failed", exc_info=True)
+
+    def _drop(_: Session) -> None:
+        sync.info["plugin_dispatch"] = []
+
+    event.listen(sync, "after_commit", _flush)
+    event.listen(sync, "after_rollback", _drop)
+
+
 async def dispatch_plugin_event(
     session: AsyncSession,
     community_id: uuid.UUID,
@@ -68,7 +115,7 @@ async def dispatch_plugin_event(
     parent_author_id: uuid.UUID | None = None,
 ) -> None:
     """
-    @brief Enqueue signed webhooks for a new post or comment; never raises.
+    @brief Select receiving plugins and enqueue signed webhooks (worker side); never raises.
     @param post The post (the parent post for a comment).
     @param comment The new comment, or None for a new post.
     @param author Author of the post/comment.
@@ -77,7 +124,21 @@ async def dispatch_plugin_event(
     try:
         await _dispatch(session, community_id, post, comment, author, parent_author_id)
     except Exception:
-        logger.warning("plugin_dispatch_failed", post_id=str(post.id))
+        logger.warning("plugin_dispatch_failed", post_id=str(post.id), exc_info=True)
+
+
+async def _audience(
+    session: AsyncSession, community_id: uuid.UUID, post: Post, author_id: uuid.UUID
+) -> set[uuid.UUID]:
+    return set(
+        await resolve_audience(
+            session,
+            community_id,
+            visibility=post.visibility,
+            subgroup_id=post.subgroup_id,
+            author_id=author_id,
+        )
+    )
 
 
 async def _dispatch(
@@ -95,33 +156,30 @@ async def _dispatch(
     kind = "comment" if comment else "post"
     content = comment.content if comment else post.content
     mentioned = {u.lower() for u in mentions.extract(content)}
-    events = [f"{kind}.created"]
     repo = PluginRepository(session)
     audience: set[uuid.UUID] | None = None
     post_data: dict[str, Any] | None = None
-    for event in events + ["mention"]:
-        for inst, pc in await repo.list_enabled_for_event(community_id, event):
+    for ev in (f"{kind}.created", "mention"):
+        for inst, pc in await repo.list_enabled_for_event(community_id, ev):
             m = PluginManifest.model_validate(inst.manifest)
             if (
                 f"{kind}s:read" not in inst.granted_scopes
                 or not inst.endpoint_url
                 or not pc.webhook_secret
                 or pc.bot_user_id is None
-                or (event == "mention" and m.bot_username.lower() not in mentioned)
             ):
                 continue
+            if ev == "mention":
+                name = (await repo.get_usernames([pc.bot_user_id])).get(pc.bot_user_id, "")
+                if name.lower() not in mentioned:
+                    continue
             if audience is None:
-                audience = set(
-                    await resolve_audience(
-                        session,
-                        community_id,
-                        visibility=post.visibility,
-                        subgroup_id=post.subgroup_id,
-                        author_id=post.author_id,
-                    )
-                )
+                audience = await _audience(session, community_id, post, post.author_id)
+                if comment and author.id != post.author_id:
+                    audience &= await _audience(session, community_id, post, author.id)
             if pc.bot_user_id not in audience:
                 continue
+            can_post = "posts:read" in inst.granted_scopes
             if post_data is None:
                 post_data = await _post_dict(repo, post)
             prefs = prefs_with_defaults(
@@ -129,7 +187,7 @@ async def _dispatch(
             )
             delivery_id = str(uuid.uuid4())
             data: dict[str, Any] = {
-                "post": post_data,
+                "post": post_data if can_post else {"id": str(post.id)},
                 "author": {
                     "id": str(author.id),
                     "username": author.username,
@@ -143,7 +201,7 @@ async def _dispatch(
             body = json.dumps(
                 {
                     "delivery_id": delivery_id,
-                    "event": event,
+                    "event": ev,
                     "community_id": str(community_id),
                     "occurred_at": datetime.now(UTC).isoformat(),
                     "data": data,

@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     """@brief Dev/eval only: allow http and private/localhost hosts in OIDC discovery."""
     PLUGINS_ALLOW_INSECURE_URLS: bool = False
     """@brief Dev/eval only: allow http and private hosts when fetching plugin manifests."""
+    PLUGIN_HOST_URL: str = ""
+    """@brief Trusted internal plugin host origin; webhooks to it skip the private-IP block."""
     LOG_LEVEL: str = "INFO"
 
     # --- Database ---

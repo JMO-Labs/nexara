@@ -137,12 +137,14 @@ async def safe_post(
     timeout: float = 10.0,
 ) -> int:
     """
-    @brief POST to a public URL with the same SSRF pinning as ``safe_fetch``.
+    @brief POST to a public https URL with the same SSRF pinning as ``safe_fetch``.
 
     Redirects are never followed; the response body is discarded.
     @return HTTP status code.
-    @raises UnsafeUrlError for disallowed targets; TimeoutError past the deadline.
+    @raises UnsafeUrlError for disallowed targets or non-https; TimeoutError past the deadline.
     """
+    if urlparse(url).scheme != "https":
+        raise UnsafeUrlError("https required")
     async with (
         asyncio.timeout(timeout),
         httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client,

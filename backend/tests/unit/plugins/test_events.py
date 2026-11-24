@@ -56,7 +56,11 @@ def _post(**kw):
 
 def _comment(content="hi"):
     return SimpleNamespace(
-        id=uuid.uuid4(), content=content, parent_id=None, created_at=datetime.now(UTC)
+        id=uuid.uuid4(),
+        content=content,
+        parent_id=None,
+        created_at=datetime.now(UTC),
+        author_id=AUTHOR_ID,
     )
 
 
@@ -78,17 +82,31 @@ def _pc():
     return SimpleNamespace(bot_user_id=BOT, webhook_secret="enc")
 
 
-async def _run(*, post=None, comment=None, author=None, audience=(BOT,), pref=None, inst=None):
+async def _run(
+    *,
+    post=None,
+    comment=None,
+    author=None,
+    audience=(BOT,),
+    pref=None,
+    inst=None,
+    bot_name="echo",
+    audience_fn=None,
+):
     repo = MagicMock()
     repo.list_enabled_for_event = AsyncMock(
         side_effect=lambda cid, ev: [(inst or _inst(), _pc())] if ev in MANIFEST["events"] else []
     )
     repo.get_user_pref = AsyncMock(return_value=pref or {})
     repo.list_post_media = AsyncMock(return_value=[])
+    repo.get_usernames = AsyncMock(return_value={BOT: bot_name})
     delay = MagicMock()
     with (
         patch("app.plugins.events.PluginRepository", return_value=repo),
-        patch("app.plugins.events.resolve_audience", AsyncMock(return_value=list(audience))),
+        patch(
+            "app.plugins.events.resolve_audience",
+            audience_fn or AsyncMock(return_value=list(audience)),
+        ),
         patch("app.tasks.plugin_tasks.deliver_plugin_event.delay", delay),
     ):
         await dispatch_plugin_event(
@@ -143,3 +161,37 @@ async def test_payload_includes_flags_slice():
 async def test_dispatch_error_swallowed():
     with patch("app.plugins.events.PluginRepository", side_effect=RuntimeError("boom")):
         await dispatch_plugin_event(MagicMock(), CID, post=_post(), comment=None, author=_author())
+
+
+async def test_mention_not_fired_for_suffixed_bot_name():
+    out = await _run(post=_post(content="hey @echo"), bot_name="echo-bot")
+    assert [b["event"] for _, b in out] == ["post.created"]
+
+
+async def test_mention_fires_for_real_suffixed_name():
+    out = await _run(post=_post(content="hey @echo-bot"), bot_name="echo-bot")
+    assert [b["event"] for _, b in out] == ["post.created", "mention"]
+
+
+async def test_comment_author_block_excludes_bot():
+    commenter = uuid.uuid4()
+
+    async def fn(session, cid, *, visibility, subgroup_id, author_id):
+        return [BOT] if author_id == AUTHOR_ID else []  # commenter blocked the bot
+
+    c = SimpleNamespace(
+        id=uuid.uuid4(),
+        content="hi",
+        parent_id=None,
+        created_at=datetime.now(UTC),
+        author_id=commenter,
+    )
+    a = SimpleNamespace(id=commenter, username="c", display_name="C", is_bot=False)
+    out = await _run(comment=c, author=a, audience_fn=fn)
+    assert out == []
+
+
+async def test_comment_event_without_posts_read_hides_post_content():
+    out = await _run(comment=_comment(), inst=_inst(scopes=("comments:read",)))
+    assert out[0][1]["data"]["post"] == {"id": out[0][1]["data"]["post"]["id"]}
+    assert "content" not in out[0][1]["data"]["post"]
