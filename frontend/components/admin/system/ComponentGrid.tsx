@@ -16,6 +16,17 @@ const STATUS = {
  * @param components components to show
  * @return list element
  */
+
+/** @brief Friendly names for health components. */
+const LABELS: Record<string, string> = {
+  database: "Database",
+  valkey: "Cache (Valkey)",
+  workers: "Background workers",
+  queues: "Job queues",
+  beat: "Scheduler",
+  email: "Email",
+  push: "Push notifications",
+};
 export function ComponentGrid({
   components,
 }: {
@@ -30,7 +41,9 @@ export function ComponentGrid({
         const { Icon, label, cls } = STATUS[c.status] ?? STATUS.warn;
         return (
           <li key={c.name} className="glass-item min-w-0 rounded-[22px] p-3">
-            <p className="truncate text-sm font-medium">{c.name}</p>
+            <p className="truncate text-sm font-medium">
+              {LABELS[c.name] ?? c.name}
+            </p>
             <p className="mt-1 flex items-center gap-1.5 text-sm">
               <Icon aria-hidden="true" className={`size-4 shrink-0 ${cls}`} />
               {label}
