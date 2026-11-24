@@ -6,10 +6,12 @@
 
 import {
   useInfiniteQuery,
+  useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
+import { setPostNsfw } from "@/lib/api/moderation";
 import { qk } from "@/lib/query-keys";
 import {
   listFeed,
@@ -94,6 +96,16 @@ export function useUpdatePost() {
       qc.setQueryData(qk.feed.post(post.id), post);
       qc.invalidateQueries({ queryKey: qk.feed.all() });
     },
+  });
+}
+
+/** @brief Moderator toggle of a post's NSFW flag; refreshes feed + post. */
+export function useSetPostNsfw() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+      setPostNsfw(id, value),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.feed.all() }),
   });
 }
 

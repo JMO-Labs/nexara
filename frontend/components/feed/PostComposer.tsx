@@ -25,6 +25,7 @@ import { CelebrateComposer } from "./CelebrateComposer";
 import { InterestPrompt } from "./InterestPrompt";
 import { Recorder } from "@/components/audio/Recorder";
 import { CapsuleComposer } from "@/components/capsules/CapsuleComposer";
+import { NsfwToggle } from "@/components/compose/NsfwToggle";
 import { useFeature } from "@/hooks/useFeature";
 import {
   MediaTray,
@@ -81,6 +82,7 @@ export function PostComposer({
     : undefined;
   const [showInterest, setShowInterest] = React.useState(false);
   const [addingInterest, setAddingInterest] = React.useState(false);
+  const [nsfw, setNsfw] = React.useState(false);
   const [poll, setPoll] = React.useState<PollDraft | null>(null);
   const uploads = useMediaUploads();
   const fileRef = React.useRef<HTMLInputElement>(null);
@@ -168,6 +170,7 @@ export function PostComposer({
       if (replyToPromptId) {
         payload.reply_to_prompt_id = replyToPromptId;
       }
+      if (nsfw) payload.is_nsfw = true;
       payload.visibility = scope.visibility;
       if (scope.visibility === "subgroup" && scope.subgroup_id) {
         payload.subgroup_id = scope.subgroup_id;
@@ -177,6 +180,7 @@ export function PostComposer({
       await createMut.mutateAsync(payload);
       editor.commands.clearContent();
       setPoll(null);
+      setNsfw(false);
       uploads.reset();
       setExpanded(false);
       useToasts.getState().push({ variant: "success", message: "Posted" });
@@ -199,6 +203,7 @@ export function PostComposer({
     interestCategorySlug,
     scope,
     poll,
+    nsfw,
     uploads,
   ]);
 
@@ -354,6 +359,9 @@ export function PostComposer({
               />
             </div>
           )}
+          <div className="mb-2">
+            <NsfwToggle checked={nsfw} onChange={setNsfw} />
+          </div>
           <ComposerToolbar
             posting={createMut.isPending}
             onKudos={() => setKudosOpen(true)}

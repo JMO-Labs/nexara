@@ -113,7 +113,10 @@ export function AlbumGrid({
               className={cn(CARD, open ? "h-72" : "h-36")}
             >
               {g.cover_media_id ? (
-                <span className="absolute inset-0 block">
+                <span
+                  className="absolute inset-0 block"
+                  style={g.is_nsfw ? { filter: "blur(24px)" } : undefined}
+                >
                   <MediaThumb
                     mediaId={g.cover_media_id}
                     alt={`${g.title} cover`}
@@ -138,6 +141,7 @@ export function AlbumGrid({
                   )}
                 >
                   {g.title}
+                  {g.is_nsfw ? " (NSFW)" : ""}
                 </span>
                 <span className="text-xs opacity-80">{count}</span>
                 {open && (

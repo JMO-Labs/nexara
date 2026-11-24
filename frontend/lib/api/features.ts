@@ -23,6 +23,7 @@ export const FEATURE_KEYS = [
   "simple_mode",
   "newsletter",
   "reply_by_email",
+  "nsfw",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];

@@ -5,6 +5,7 @@
  */
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { ReportButton } from "@/components/common/ReportButton";
+import { NsfwCover } from "./NsfwCover";
 import type { PostMedia as Media } from "@/lib/api/posts";
 
 export interface PostMediaProps {
@@ -12,6 +13,8 @@ export interface PostMediaProps {
   onClick?: (index: number) => void;
   /** Show a per-tile Report action (viewer is not the owner). */
   canReport?: boolean;
+  /** Parent already covers the whole post; skip per-tile covers. */
+  skipCover?: boolean;
 }
 
 function isImage(m: Media) {
@@ -27,7 +30,12 @@ const isAudio = (m: Media) => m.mime_type.startsWith("audio/");
  * @param canReport show Report on each tile
  * @return grid element or null
  */
-export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
+export function PostMedia({
+  media,
+  onClick,
+  canReport,
+  skipCover,
+}: PostMediaProps) {
   if (!media || media.length === 0) return null;
   const audio = media.filter(isAudio);
   const visual = media.filter((m) => !isAudio(m));
@@ -57,21 +65,27 @@ export function PostMedia({ media, onClick, canReport }: PostMediaProps) {
                 onClick ? "cursor-pointer" : ""
               } ${visible.length === 1 ? "aspect-[16/10]" : "aspect-square"}`}
             >
-              {isImage(m) ? (
-                // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
-                <img
-                  src={m.thumbnail_url ?? m.url}
-                  alt=""
-                  loading="lazy"
-                  className="size-full object-cover"
-                />
-              ) : (
-                <video
-                  src={m.url}
-                  controls
-                  className="size-full object-cover"
-                />
-              )}
+              <NsfwCover
+                nsfw={m.is_nsfw && !skipCover}
+                itemId={`media:${m.id}`}
+                className="size-full"
+              >
+                {isImage(m) ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image
+                  <img
+                    src={m.thumbnail_url ?? m.url}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={m.url}
+                    controls
+                    className="size-full object-cover"
+                  />
+                )}
+              </NsfwCover>
               {i === 3 && overflow > 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-2xl font-black text-white">
                   +{overflow}

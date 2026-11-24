@@ -21,6 +21,7 @@ export interface MediaItem {
   alt_text: string | null;
   status: "processing" | "ready" | "error" | "rejected";
   created_at: string;
+  is_nsfw?: boolean;
 }
 
 export interface MultipartInit {
@@ -57,9 +58,11 @@ export const deleteMedia = (id: string) =>
 export async function singleUpload(
   file: File,
   altText?: string,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   const fd = new FormData();
   fd.append("file", file);
+  if (isNsfw) fd.append("is_nsfw", "true");
   if (altText) fd.append("alt_text", altText);
   const token = getAccessToken();
   const res = await fetch(`${API_BASE}${BASE}/upload`, {
@@ -129,10 +132,11 @@ export async function multipartUpload(
 export async function uploadFile(
   file: File,
   onProgress?: (pct: number) => void,
+  isNsfw?: boolean,
 ): Promise<MediaItem> {
   if (file.size <= SINGLE_SHOT_LIMIT) {
     onProgress?.(0);
-    const m = await singleUpload(file);
+    const m = await singleUpload(file, undefined, isNsfw);
     onProgress?.(100);
     return m;
   }

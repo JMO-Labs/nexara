@@ -32,7 +32,11 @@ vi.mock("@/stores/session", () => ({
 }));
 vi.mock("@/hooks/usePosts", () => ({
   useDeletePost: () => ({ mutate: vi.fn() }),
+  useSetPostNsfw: () => ({ mutate: vi.fn() }),
   useTogglePostReaction: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("@/components/feed/NsfwCover", () => ({
+  NsfwCover: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/feed/CommentThread", () => ({
   CommentThread: () => null,

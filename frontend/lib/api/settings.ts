@@ -14,6 +14,8 @@ export interface PrivacyAppearanceSettings {
   allow_sassybot: boolean;
   font_size: "small" | "medium" | "large";
   compact_feed: boolean;
+  /** Adults: show NSFW content without the blur cover. */
+  always_show_nsfw?: boolean;
 }
 
 export interface UserSettings extends PrivacyAppearanceSettings {

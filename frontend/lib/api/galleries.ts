@@ -18,6 +18,7 @@ export interface Gallery {
   is_featured: boolean;
   is_default: boolean;
   is_event_gallery: boolean;
+  is_nsfw?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +54,7 @@ export interface CreateGalleryBody {
   subgroup_id?: string | null;
   event_id?: string | null;
   cover_media_id?: string | null;
+  is_nsfw?: boolean;
 }
 
 const BASE = "/api/v1/galleries";

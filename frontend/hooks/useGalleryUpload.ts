@@ -30,7 +30,7 @@ const errMsg = (err: unknown) =>
  * @param galleryId Target gallery.
  * @return jobs list, enqueue(files) and retry(jobId).
  */
-export function useGalleryUpload(galleryId: string) {
+export function useGalleryUpload(galleryId: string, isNsfw = false) {
   const qc = useQueryClient();
   const { mutateAsync: upload } = useMediaUpload();
   const [jobs, setJobs] = useState<UploadJob[]>([]);
@@ -55,7 +55,10 @@ export function useGalleryUpload(galleryId: string) {
           const ids = new Set([job.id]);
           patch(ids, { status: "uploading" });
           try {
-            uploaded.push({ jobId: job.id, mediaId: await upload(job.file) });
+            uploaded.push({
+              jobId: job.id,
+              mediaId: await upload(job.file, isNsfw),
+            });
           } catch (err) {
             patch(ids, { status: "error", error: errMsg(err) });
           }
@@ -96,7 +99,7 @@ export function useGalleryUpload(galleryId: string) {
       qc.invalidateQueries({ queryKey: qk.galleries.detail(galleryId) });
       qc.invalidateQueries({ queryKey: qk.galleries.all() });
     },
-    [galleryId, qc, upload, patch],
+    [galleryId, qc, upload, patch, isNsfw],
   );
 
   const enqueue = useCallback(

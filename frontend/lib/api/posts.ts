@@ -18,6 +18,8 @@ export interface PostMedia {
   mime_type: string;
   width: number | null;
   height: number | null;
+  /** Adults only receive/see this; never sent to non-adults. */
+  is_nsfw?: boolean;
 }
 
 export interface ReactionSummary {
@@ -97,6 +99,9 @@ export interface Post {
   reply_to_prompt_id?: string | null;
   source_prompt_post_id?: string | null;
   link_previews?: LinkPreview[];
+  is_nsfw?: boolean;
+  /** Moderator-locked: the author cannot clear NSFW. */
+  nsfw_locked?: boolean;
 }
 
 export interface Comment {
@@ -146,6 +151,7 @@ export interface CreatePostBody {
   };
   reply_to_prompt_id?: string;
   subgroup_id?: string | null;
+  is_nsfw?: boolean;
   /** Make it a Celebrate post for a person or pet's occasion. */
   celebrate?: CelebrateIn;
 }
