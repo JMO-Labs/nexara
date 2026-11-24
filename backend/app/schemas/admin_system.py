@@ -54,3 +54,4 @@ class SystemHealth(BaseModel):
     components: list[Component]
     disk: DiskInfo
     runtime: RuntimeInfo
+    grafana_url: str | None = None

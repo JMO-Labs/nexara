@@ -188,3 +188,13 @@ async def test_valkey_hang_is_bounded() -> None:
     assert time.monotonic() - t0 < 5
     v = next(x for x in h.components if x.name == "valkey")
     assert (v.status, v.detail) == ("down", "Timed out")
+
+
+def test_grafana_link_only_http_urls() -> None:
+    assert sh.grafana_link(_settings()) is None
+    assert sh.grafana_link(_settings(GRAFANA_URL="")) is None
+    assert sh.grafana_link(_settings(GRAFANA_URL="javascript:alert(1)")) is None
+    assert (
+        sh.grafana_link(_settings(GRAFANA_URL="https://g.example/d/1")) == "https://g.example/d/1"
+    )
+    assert sh.grafana_link(_settings(GRAFANA_URL=" http://g:3000 ")) == "http://g:3000"

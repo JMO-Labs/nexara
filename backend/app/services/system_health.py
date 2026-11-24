@@ -47,6 +47,12 @@ _lock = asyncio.Lock()
 psutil.cpu_percent(None)  # prime: first call is meaningless
 
 
+def grafana_link(settings: Settings) -> str | None:
+    """@brief Configured ``GRAFANA_URL`` when it is http(s), else None."""
+    url = (getattr(settings, "GRAFANA_URL", "") or "").strip()
+    return url if url.lower().startswith(("http://", "https://")) else None
+
+
 def app_version() -> str:
     """@brief Backend package version (``unknown`` when not installed)."""
     try:
@@ -308,7 +314,9 @@ async def collect(
         mem_total_bytes=0,
         mem_used_bytes=0,
     )
-    return SystemHealth(components=comps, disk=disk, runtime=runtime)
+    return SystemHealth(
+        components=comps, disk=disk, runtime=runtime, grafana_url=grafana_link(settings)
+    )
 
 
 async def collect_cached(session: AsyncSession, settings: Settings) -> SystemHealth:
