@@ -34,11 +34,12 @@ class Settings(BaseSettings):
     # --- Application ---
     APP_NAME: str = "Nexara"
     APP_BASE_URL: str = DEFAULT_BASE_URL
-    GRAFANA_URL: str = ""  # optional admin link to a Grafana dashboard (http/https)
     """
     @brief External URL members open (links in emails, push, WebAuthn origin/RP id).
     Empty means the dev default; production must set it.
     """
+    GRAFANA_URL: str = ""
+    """@brief Optional admin link to a Grafana dashboard (http/https only)."""
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "production"
     DEBUG: bool = False
