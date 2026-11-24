@@ -45,7 +45,7 @@ describe("LoginPage", () => {
       oidc_enabled: true,
       registration_enabled: true,
       local_auth_enabled: true,
-      oauth_providers: [{ slug: "g", display_name: "Continue with Google", icon_url: null }],
+      oauth_providers: [{ slug: "g", display_name: "Google", icon_url: null }],
     });
   });
 
@@ -78,7 +78,9 @@ describe("LoginPage", () => {
 
   it("renders OAuth providers from config", async () => {
     render(<LoginPage />);
-    const link = await screen.findByRole("link", { name: "Continue with Google" });
+    const link = await screen.findByRole("link", {
+      name: "Continue with Google",
+    });
     expect(link.getAttribute("href")).toBe("/oauth/g");
   });
 
@@ -103,7 +105,7 @@ describe("LoginPage", () => {
       registration_enabled: false,
       local_auth_enabled: false,
       sso_only: true,
-      oauth_providers: [{ slug: "g", display_name: "Continue with Google", icon_url: null }],
+      oauth_providers: [{ slug: "g", display_name: "Google", icon_url: null }],
     });
     render(<LoginPage />);
     expect(await screen.findByRole("link", { name: /Google/ })).toBeTruthy();
