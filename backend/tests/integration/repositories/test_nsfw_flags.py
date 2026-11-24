@@ -31,6 +31,7 @@ from tests.integration.repositories.nsfw_fixtures import (
     CID,
     adult,
     attach,
+    group_repos,
     make_album,
     make_media,
     make_post,
@@ -48,7 +49,9 @@ def _posts(s: AsyncSession) -> PostService:
 
 def _mod(s: AsyncSession) -> tuple[NsfwModerationService, AsyncMock]:
     audit = AsyncMock()
-    return NsfwModerationService(ModerationRepository(s), audit, CID, s, AsyncMock()), audit
+    return NsfwModerationService(
+        ModerationRepository(s), audit, CID, s, AsyncMock(), **group_repos(s)
+    ), audit
 
 
 async def _group(s: AsyncSession, **roles: User) -> Subgroup:

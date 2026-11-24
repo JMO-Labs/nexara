@@ -20,6 +20,7 @@ from app.repositories.audit_repo import AuditRepository
 from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.moderation import (
     BlockResponse,
@@ -158,7 +159,12 @@ def _build_nsfw_service(
 ) -> NsfwModerationService:
     """@brief Build the moderator NSFW flag service."""
     return NsfwModerationService(
-        ModerationRepository(db), AuditRepository(db), uuid.UUID(settings.COMMUNITY_ID), db
+        ModerationRepository(db),
+        AuditRepository(db),
+        uuid.UUID(settings.COMMUNITY_ID),
+        db,
+        groups=SubgroupRepository(db),
+        members=SubgroupMemberRepository(db),
     )
 
 

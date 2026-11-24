@@ -27,6 +27,7 @@ from app.repositories.moderation_content import (
     decode_report_cursor,
     encode_report_cursor,
 )
+from app.repositories.nsfw_cascade import cascade_media_lock
 
 __all__ = ["ModerationRepository", "decode_report_cursor", "encode_report_cursor"]
 
@@ -313,18 +314,28 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         @param entity_id Target UUID.
         @param community_id Community scope.
         @param value New flag.
-        @param level Lock level when setting ("admin" or "moderator").
+        @param level Lock level when setting ("admin" or "moderator"). A post or
+               album passes the flag and lock on to its photos (``nsfw_cascade``).
         @return True if a row was updated, False if missing/out of scope (or deleted post).
         """
         model = _flaggable(kind)
+        prev = await self._session.scalar(
+            select(model.nsfw_lock_level).where(model.id == entity_id)
+        )
         stmt = update(model).where(model.id == entity_id, model.community_id == community_id)
         if kind == "posts":
             stmt = stmt.where(Post.deleted_at.is_(None))
         stmt = stmt.values(is_nsfw=value, nsfw_lock_level=level if value else None)
         stmt = stmt.returning(model.id)
         result = await self._session.execute(stmt, execution_options={"synchronize_session": False})
+        updated = result.scalar_one_or_none() is not None
+        if updated:  # photos inside follow the container (see nsfw_cascade)
+            await cascade_media_lock(
+                self._session, kind, entity_id, community_id,
+                value=value, level=level if value else prev,
+            )  # fmt: skip
         await self._session.flush()
-        return result.scalar_one_or_none() is not None
+        return updated
 
     async def get_flaggable(self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID) -> Any:
         """@brief The post (live), album or photo to flag, scoped to the community."""

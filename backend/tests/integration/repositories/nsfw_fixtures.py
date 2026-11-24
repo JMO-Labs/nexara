@@ -132,3 +132,10 @@ async def make_album(s: AsyncSession, owner: User, *, nsfw: bool, media: Media) 
 def ids(items: list[dict[str, Any]]) -> set[str]:
     """@brief String ids of enriched post dicts."""
     return {str(i["id"]) for i in items}
+
+
+def group_repos(s: AsyncSession) -> dict[str, Any]:
+    """@brief Subgroup repos ``NsfwModerationService`` takes by injection."""
+    from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
+
+    return {"groups": SubgroupRepository(s), "members": SubgroupMemberRepository(s)}

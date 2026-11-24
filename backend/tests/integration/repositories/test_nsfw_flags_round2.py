@@ -20,6 +20,7 @@ from app.models.user import User
 from app.repositories.gallery_repo import GalleryRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.moderation_repo import ModerationRepository
+from app.repositories.tag_repo import TagRepository
 from app.services.gallery_service import GalleryService
 from app.services.media import nsfw as media_nsfw
 from app.services.media_service import MediaService
@@ -28,6 +29,7 @@ from tests.integration.repositories.nsfw_fixtures import (
     CID,
     adult,
     attach,
+    group_repos,
     make_album,
     make_media,
     make_post,
@@ -38,7 +40,9 @@ from tests.integration.repositories.nsfw_fixtures import (
 
 
 def _mod(s: AsyncSession) -> NsfwModerationService:
-    return NsfwModerationService(ModerationRepository(s), AsyncMock(), CID, s, AsyncMock())
+    return NsfwModerationService(
+        ModerationRepository(s), AsyncMock(), CID, s, AsyncMock(), **group_repos(s)
+    )
 
 
 async def _admin(s: AsyncSession) -> User:
@@ -93,7 +97,9 @@ class TestAuthorAsGroupOwnerAttack:
 
 class TestPhotoPatchExistence:
     def _svc(self, s: AsyncSession) -> MediaService:
-        return MediaService(MediaRepository(s), AsyncMock(), MagicMock(), CID)
+        return MediaService(
+            MediaRepository(s), AsyncMock(), MagicMock(), CID, tag_repo=TagRepository(s)
+        )
 
     async def test_hidden_photo_is_404_visible_not_mine_is_403(self, session) -> None:
         owner, other, kid = await adult(session), await adult(session), await teen(session)

@@ -8,7 +8,8 @@ Authors, uploaders and album owners acting on their own content always get owner
 rules (no lock; cannot clear a moderator lock), even when they moderate the group.
 A non-admin moderator must be an adult to clear a flag (they must be able to
 see what they unflag). Lock levels: admin flag -> 'admin', group moderator ->
-'moderator'; clearing needs the actor's level >= the stored level.
+'moderator'; clearing needs the actor's level >= the stored level. A moderator
+flag on a post or album also flags and locks its photos at the same level.
 Every change is audited and busts the search cache.
 """
 
@@ -43,8 +44,13 @@ class NsfwModerationService:
         community_id: uuid.UUID,
         session: AsyncSession,
         invalidate: Callable[[uuid.UUID], Awaitable[Any]] = invalidate_search_cache_for_community,
+        *,
+        groups: SubgroupRepository,
+        members: SubgroupMemberRepository,
     ) -> None:
         self._repo = repo
+        self._groups = groups
+        self._members = members
         self._audit = audit_repo
         self._cid = community_id
         self._session = session
@@ -54,11 +60,10 @@ class NsfwModerationService:
         """@brief User is owner/moderator of the group (directly or via a parent)."""
         if subgroup_id is None:
             return False
-        groups = SubgroupRepository(self._session)
-        group = await groups.get_by_id(subgroup_id, community_id=self._cid)
+        group = await self._groups.get_by_id(subgroup_id, community_id=self._cid)
         if group is None:
             return False
-        m = await effective_membership(SubgroupMemberRepository(self._session), groups, group, user)
+        m = await effective_membership(self._members, self._groups, group, user)
         return m is not None and m.role in _MOD_ROLES
 
     async def set_flag(self, kind: str, entity_id: uuid.UUID, actor: User, value: bool) -> None:

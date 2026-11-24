@@ -23,6 +23,7 @@ from app.services.nsfw_moderation import NsfwModerationService
 from tests.integration.repositories.nsfw_fixtures import (
     CID,
     adult,
+    group_repos,
     make_album,
     make_media,
     make_post,
@@ -33,7 +34,9 @@ from tests.integration.repositories.nsfw_fixtures import (
 
 def _mod(s: AsyncSession) -> tuple[NsfwModerationService, AsyncMock]:
     audit = AsyncMock()
-    return NsfwModerationService(ModerationRepository(s), audit, CID, s, AsyncMock()), audit
+    return NsfwModerationService(
+        ModerationRepository(s), audit, CID, s, AsyncMock(), **group_repos(s)
+    ), audit
 
 
 async def _admin(s: AsyncSession) -> User:
