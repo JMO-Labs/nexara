@@ -1,14 +1,17 @@
 /**
  * @file tests/unit/admin/SsoTab.test.tsx
- * @brief SsoTab: list, SSO-only toggle/warning, add/edit/delete, test connection.
+ * @brief SsoTab: list, SSO-only toggle/warning, wizard add/edit, delete, test connection.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as oauth from "@/hooks/useAdminOauth";
 import { SsoTab } from "@/components/admin/SsoTab";
+import * as subgroups from "@/hooks/useSubgroups";
+import { PRESETS } from "./sso/fixtures";
 
 vi.mock("@/hooks/useAdminOauth");
+vi.mock("@/hooks/useSubgroups");
 const confirmFn = vi.fn();
 vi.mock("@/stores/confirmDialog", () => ({
   useConfirmDialog: (sel: (s: unknown) => unknown) =>
@@ -21,6 +24,10 @@ const provider = (over = {}) => ({
   display_name: "Keycloak",
   provider_type: "oidc",
   issuer: "https://kc.example.com",
+  discovery_url: "https://kc.example.com/.well-known/openid-configuration",
+  callback_url: "https://h.example/api/v1/oauth/kc/callback",
+  claim_mapping: {},
+  allowed_domains: [],
   client_id: "cid",
   scopes: "openid profile email",
   enabled: true,
@@ -52,6 +59,11 @@ function setup(providers: unknown[], ssoOnly = false) {
   vi.mocked(oauth.useDeleteOauthProvider).mockReturnValue(m(del) as never);
   vi.mocked(oauth.useToggleOauthProvider).mockReturnValue(m(toggle) as never);
   vi.mocked(oauth.useDiscoverIssuer).mockReturnValue(m(discover) as never);
+  vi.mocked(oauth.useOauthPresets).mockReturnValue({ data: PRESETS } as never);
+  vi.mocked(oauth.useCallbackTemplate).mockReturnValue({
+    data: { template: "https://h.example/api/v1/oauth/{slug}/callback" },
+  } as never);
+  vi.mocked(subgroups.useSubgroupList).mockReturnValue({ data: [] } as never);
   render(<SsoTab />);
 }
 
@@ -85,17 +97,29 @@ describe("SsoTab", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  async function openCustom() {
+    await userEvent.click(screen.getByRole("button", { name: /add sso/i }));
+    const dlg = screen.getByRole("dialog");
+    await userEvent.click(
+      within(dlg).getByRole("radio", { name: /custom oidc/i }),
+    );
+    await userEvent.click(within(dlg).getByRole("button", { name: "Next" }));
+    await userEvent.clear(within(dlg).getByLabelText("Slug"));
+    await userEvent.type(within(dlg).getByLabelText("Slug"), "okta");
+    await userEvent.clear(within(dlg).getByLabelText("Display name"));
+    await userEvent.type(within(dlg).getByLabelText("Display name"), "Okta");
+    await userEvent.type(within(dlg).getByLabelText("Client ID"), "a");
+    await userEvent.type(within(dlg).getByLabelText("Client secret"), "b");
+    return dlg;
+  }
+
   it("rejects non-HTTPS discovery url", async () => {
     setup([]);
-    await userEvent.click(screen.getByRole("button", { name: /add oidc/i }));
-    const dlg = screen.getByRole("dialog");
-    await userEvent.type(within(dlg).getByLabelText("Provider name"), "okta");
+    const dlg = await openCustom();
     await userEvent.type(
       within(dlg).getByLabelText("Discovery URL"),
       "http://x.example.com",
     );
-    await userEvent.type(within(dlg).getByLabelText("Client ID"), "a");
-    await userEvent.type(within(dlg).getByLabelText("Client secret"), "b");
     await userEvent.click(
       within(dlg).getByRole("button", { name: "Create provider" }),
     );
@@ -103,39 +127,36 @@ describe("SsoTab", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("creates a provider with default scopes", async () => {
+  it("creates a provider from the custom preset", async () => {
     setup([]);
-    await userEvent.click(screen.getByRole("button", { name: /add oidc/i }));
-    const dlg = screen.getByRole("dialog");
-    await userEvent.type(within(dlg).getByLabelText("Provider name"), "okta");
+    const dlg = await openCustom();
     await userEvent.type(
       within(dlg).getByLabelText("Discovery URL"),
-      "https://o.example.com",
+      "https://o.example.com/.well-known/openid-configuration",
     );
-    await userEvent.type(within(dlg).getByLabelText("Client ID"), "a");
-    await userEvent.type(within(dlg).getByLabelText("Client secret"), "b");
     await userEvent.click(
       within(dlg).getByRole("button", { name: "Create provider" }),
     );
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         slug: "okta",
-        issuer: "https://o.example.com",
+        display_name: "Okta",
+        preset: "custom",
+        discovery_url: "https://o.example.com/.well-known/openid-configuration",
         client_id: "a",
         client_secret: "b",
-        scopes: "openid profile email",
+        scopes: "openid email profile",
       }),
     );
   });
 
-  it("test connection calls discovery", async () => {
+  it("test connection calls discovery with the issuer", async () => {
     discover.mockResolvedValue({});
     setup([]);
-    await userEvent.click(screen.getByRole("button", { name: /add oidc/i }));
-    const dlg = screen.getByRole("dialog");
+    const dlg = await openCustom();
     await userEvent.type(
       within(dlg).getByLabelText("Discovery URL"),
-      "https://o.example.com",
+      "https://o.example.com/.well-known/openid-configuration",
     );
     await userEvent.click(
       within(dlg).getByRole("button", { name: "Test connection" }),
@@ -146,13 +167,12 @@ describe("SsoTab", () => {
     expect(await within(dlg).findByText(/connection ok/i)).toBeTruthy();
   });
 
-  it("edit omits secret unless checkbox ticked", async () => {
+  it("edit omits secret when left blank", async () => {
     setup([provider()]);
     await userEvent.click(
       screen.getByRole("button", { name: "Edit Keycloak" }),
     );
     const dlg = screen.getByRole("dialog");
-    expect(within(dlg).queryByLabelText("Client secret")).toBeNull();
     expect(
       (within(dlg).getByLabelText("Client ID") as HTMLInputElement).value,
     ).toBe("cid");
@@ -165,15 +185,12 @@ describe("SsoTab", () => {
     expect(arg.updates).not.toHaveProperty("client_secret");
   });
 
-  it("edit sends secret when 'Update client secret' ticked", async () => {
+  it("edit sends secret when one is typed", async () => {
     setup([provider()]);
     await userEvent.click(
       screen.getByRole("button", { name: "Edit Keycloak" }),
     );
     const dlg = screen.getByRole("dialog");
-    await userEvent.click(
-      within(dlg).getByRole("checkbox", { name: /update client secret/i }),
-    );
     await userEvent.type(within(dlg).getByLabelText("Client secret"), "new");
     await userEvent.click(
       within(dlg).getByRole("button", { name: "Save changes" }),

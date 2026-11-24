@@ -111,7 +111,7 @@ export function SsoTab() {
         {hasProviders && (
           <Button onClick={() => setOpenModal(true)}>
             <Plus className="size-4" aria-hidden="true" />
-            Add OIDC provider
+            Add SSO provider
           </Button>
         )}
       </div>
@@ -177,11 +177,11 @@ export function SsoTab() {
             compact
             icon={KeyRound}
             title="No providers yet"
-            description="Connect an OIDC provider to let members sign in with SSO."
+            description="Connect an identity provider to let members sign in with SSO."
             action={
               <Button onClick={() => setOpenModal(true)}>
                 <Plus className="size-4" aria-hidden="true" />
-                Add OIDC provider
+                Add SSO provider
               </Button>
             }
           />
@@ -191,7 +191,8 @@ export function SsoTab() {
       <Modal
         open={openModal || !!editing}
         onClose={closeModal}
-        title={editing ? "Edit OIDC provider" : "Add OIDC provider"}
+        title={editing ? "Edit SSO provider" : "Add SSO provider"}
+        size="lg"
       >
         <SsoProviderForm
           key={editing?.id ?? "new"}
