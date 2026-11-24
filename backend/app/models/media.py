@@ -62,8 +62,15 @@ class Media(Base):
     alt_text: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="processing")
     is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    # Moderator-set NSFW flag: the author/owner may not clear it.
-    nsfw_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Who locked the NSFW flag: "admin" > "moderator" (group); None = unlocked.
+    # The author/owner may not clear a locked flag; a moderator may not clear an admin lock.
+    nsfw_lock_level: Mapped[str | None] = mapped_column(Text)
+
+    @property
+    def nsfw_locked(self) -> bool:
+        """@brief A moderator or admin locked the NSFW flag."""
+        return self.nsfw_lock_level is not None
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

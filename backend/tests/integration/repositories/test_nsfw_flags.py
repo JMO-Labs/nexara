@@ -83,7 +83,7 @@ class TestAuthorLock:
         await svc.set_flag("posts", p.id, admin, True)
         await session.refresh(p)
         assert p.is_nsfw is True and p.nsfw_locked is True
-        assert audit.append.call_args.kwargs["extra_data"] == {"value": True, "locked": True}
+        assert audit.append.call_args.kwargs["extra_data"] == {"value": True, "lock_level": "admin"}
         with pytest.raises(AuthorizationError):
             await _posts(session).update_post(p.id, me, "x", is_nsfw=False)
         await svc.set_flag("posts", p.id, admin, False)  # moderator unflag clears the lock

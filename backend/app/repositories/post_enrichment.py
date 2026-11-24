@@ -246,6 +246,8 @@ async def enrich_posts(
             "id": str(post.id),
             "content": post.content,
             "is_nsfw": post.is_nsfw,
+            "nsfw_locked": post.nsfw_lock_level is not None,
+            "nsfw_lock_level": post.nsfw_lock_level,
             "author": {
                 "id": str(author.id),
                 "username": author.username,

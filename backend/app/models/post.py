@@ -62,8 +62,15 @@ class Post(Base):
     is_prompt_post: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_prompt_summary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    # Moderator-set NSFW flag: the author/owner may not clear it.
-    nsfw_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Who locked the NSFW flag: "admin" > "moderator" (group); None = unlocked.
+    # The author/owner may not clear a locked flag; a moderator may not clear an admin lock.
+    nsfw_lock_level: Mapped[str | None] = mapped_column(Text)
+
+    @property
+    def nsfw_locked(self) -> bool:
+        """@brief A moderator or admin locked the NSFW flag."""
+        return self.nsfw_lock_level is not None
+
     reply_to_prompt_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("prompt_posts.id", ondelete="SET NULL", use_alter=True),

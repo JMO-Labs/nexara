@@ -40,13 +40,11 @@ def apply_owner_flag(entity: Any, value: bool | None) -> bool:
     """
     if value is None or value == entity.is_nsfw:
         return False
-    if not value and entity.nsfw_locked:
+    if not value and entity.nsfw_lock_level is not None:
         raise AuthorizationError(_("A moderator marked this NSFW"))
     entity.is_nsfw = value
     return True
 
 
-def apply_moderator_flag(entity: Any, value: bool) -> None:
-    """@brief Moderator change: set locks the flag, clear unlocks it."""
-    entity.is_nsfw = value
-    entity.nsfw_locked = value
+LOCK_RANK = {None: 0, "moderator": 1, "admin": 2}
+"""@brief Lock strength: an actor may clear only a lock at or below their own level."""

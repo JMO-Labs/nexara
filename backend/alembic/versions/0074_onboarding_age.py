@@ -108,14 +108,19 @@ def upgrade() -> None:
     for table in _LOCKABLE:
         op.add_column(
             table,
-            sa.Column("nsfw_locked", sa.Boolean(), nullable=False, server_default="false"),
+            sa.Column("nsfw_lock_level", sa.Text(), nullable=True),
+        )
+        op.create_check_constraint(
+            f"{table}_nsfw_lock_level_check",
+            table,
+            "nsfw_lock_level IS NULL OR nsfw_lock_level IN ('admin','moderator')",
         )
 
 
 def downgrade() -> None:
     """@brief Drop everything added by upgrade."""
     for table in _LOCKABLE:
-        op.drop_column(table, "nsfw_locked")
+        op.drop_column(table, "nsfw_lock_level")
     op.drop_column("user_settings", "profile_card_dismissed")
     op.drop_column("user_settings", "always_show_nsfw")
     op.drop_column("galleries", "is_nsfw")

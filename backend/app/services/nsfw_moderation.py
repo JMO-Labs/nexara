@@ -7,7 +7,9 @@ parent group): posts and albums in their group. Album owners use this endpoint
 Authors, uploaders and album owners acting on their own content always get owner
 rules (no lock; cannot clear a moderator lock), even when they moderate the group.
 A non-admin moderator must be an adult to clear a flag (they must be able to
-see what they unflag). Every change is audited and busts the search cache.
+see what they unflag). Lock levels: admin flag -> 'admin', group moderator ->
+'moderator'; clearing needs the actor's level >= the stored level.
+Every change is audited and busts the search cache.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from app.core.i18n import _
 from app.models.user import User
 from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
-from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
+from app.services.nsfw_rules import LOCK_RANK, apply_owner_flag, require_owner_may_flag
 from app.services.subgroups.helpers import effective_membership, is_admin
 
 _MOD_ROLES = {"moderator", "owner"}
@@ -74,7 +76,7 @@ class NsfwModerationService:
             await require_owner_may_flag(self._repo, self._cid, actor.id, value)
             if apply_owner_flag(entity, value):
                 await self._session.flush()
-                await self._record(kind, entity_id, actor, value, locked=False)
+                await self._record(kind, entity_id, actor, value, lock_level=entity.nsfw_lock_level)
             return
         moderator = admin or (
             kind != "media" and await self._group_moderator(entity.subgroup_id, actor)
@@ -83,17 +85,29 @@ class NsfwModerationService:
             raise AuthorizationError(_("Only moderators can change the NSFW flag"))
         if not value and not admin and not await self._repo.viewer_adult(actor.id):
             raise AuthorizationError(_("Only adults can remove the NSFW flag"))
-        await self._repo.set_nsfw(kind, entity_id, self._cid, value)
-        await self._record(kind, entity_id, actor, value, locked=value)
+        mine = "admin" if admin else "moderator"
+        current = entity.nsfw_lock_level
+        if not value and LOCK_RANK[current] > LOCK_RANK[mine]:
+            raise AuthorizationError(_("An admin marked this NSFW"))
+        # Never downgrade a stronger lock when re-flagging.
+        level = mine if LOCK_RANK[mine] >= LOCK_RANK[current] else current
+        await self._repo.set_nsfw(kind, entity_id, self._cid, value, level)
+        await self._record(kind, entity_id, actor, value, lock_level=level if value else None)
 
     async def _record(
-        self, kind: str, entity_id: uuid.UUID, actor: User, value: bool, *, locked: bool
+        self,
+        kind: str,
+        entity_id: uuid.UUID,
+        actor: User,
+        value: bool,
+        *,
+        lock_level: str | None,
     ) -> None:
         await self._audit.append(
             actor_id=actor.id,
             action=f"{kind}.marked_nsfw" if value else f"{kind}.unmarked_nsfw",
             target_type=kind,
             target_id=entity_id,
-            extra_data={"value": value, "locked": locked},
+            extra_data={"value": value, "lock_level": lock_level},
         )
         await self._invalidate(self._cid)

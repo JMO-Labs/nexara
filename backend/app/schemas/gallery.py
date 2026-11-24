@@ -91,8 +91,16 @@ class GalleryResponse(BaseModel):
     is_featured: bool
     is_default: bool
     is_nsfw: bool = False
+    nsfw_locked: bool = False
+    nsfw_lock_level: str | None = None
 
-    @field_validator("is_nsfw", mode="before")
+    @field_validator("nsfw_lock_level", mode="before")
+    @classmethod
+    def _lock_level(cls, v: object) -> str | None:
+        """@brief Only the known levels; anything else (unflushed row) is None."""
+        return v if isinstance(v, str) and v in ("admin", "moderator") else None
+
+    @field_validator("is_nsfw", "nsfw_locked", mode="before")
     @classmethod
     def _unflushed_nsfw(cls, v: object) -> bool:
         """@brief A not-yet-flushed row has None (server default): treat as False."""

@@ -298,7 +298,12 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         return rows, next_cursor
 
     async def set_nsfw(
-        self, kind: str, entity_id: uuid.UUID, community_id: uuid.UUID, value: bool = True
+        self,
+        kind: str,
+        entity_id: uuid.UUID,
+        community_id: uuid.UUID,
+        value: bool = True,
+        level: str = "admin",
     ) -> bool:
         """
         @brief Moderator flag/unflag of a post, album or photo within a community.
@@ -308,13 +313,15 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         @param entity_id Target UUID.
         @param community_id Community scope.
         @param value New flag.
+        @param level Lock level when setting ("admin" or "moderator").
         @return True if a row was updated, False if missing/out of scope (or deleted post).
         """
         model = _flaggable(kind)
         stmt = update(model).where(model.id == entity_id, model.community_id == community_id)
         if kind == "posts":
             stmt = stmt.where(Post.deleted_at.is_(None))
-        stmt = stmt.values(is_nsfw=value, nsfw_locked=value).returning(model.id)
+        stmt = stmt.values(is_nsfw=value, nsfw_lock_level=level if value else None)
+        stmt = stmt.returning(model.id)
         result = await self._session.execute(stmt, execution_options={"synchronize_session": False})
         await self._session.flush()
         return result.scalar_one_or_none() is not None
