@@ -276,27 +276,6 @@ class AdminService:
             cursor=cursor,
         )
 
-    async def list_audit_entries(
-        self,
-        *,
-        action_filter: str | None = None,
-        limit: int = 20,
-        cursor: str | None = None,
-    ) -> tuple[list[Any], str | None]:
-        """
-        @brief List audit log entries with optional filter.
-
-        @param action_filter Optional action prefix filter.
-        @param limit Max items per page.
-        @param cursor Pagination cursor.
-        @return Tuple of (entries, next_cursor).
-        """
-        return await self._audit_repo.list_entries(
-            action_filter=action_filter,
-            limit=limit,
-            cursor=cursor,
-        )
-
     def get_admin_settings(self) -> AdminSettingsResponse:
         """
         @brief Return admin settings from app config (Phase 1: not persisted to DB).

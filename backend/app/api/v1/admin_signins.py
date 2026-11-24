@@ -28,7 +28,7 @@ async def list_signins(
     svc: AdminSigninService = Depends(get_admin_signin_service),
 ) -> SigninPage:
     """@brief Filtered sign-in attempts, newest first (q matches email, IP, device)."""
-    return await svc.list(q=q, success=success, method=method, since=since, cursor=cursor)
+    return await svc.list_page(q=q, success=success, method=method, since=since, cursor=cursor)
 
 
 @router.get("/signins.csv")

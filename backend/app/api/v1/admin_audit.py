@@ -62,7 +62,7 @@ async def get_audit_log(
     svc: AdminAuditService = Depends(get_admin_audit_service),
 ) -> PaginatedResponse[AuditLogEntry]:
     """@brief Filtered audit entries, newest first, with actor display names."""
-    return await svc.list(limit=limit, cursor=cursor, **filters)
+    return await svc.list_page(limit=limit, cursor=cursor, **filters)
 
 
 @router.get("/audit.csv")

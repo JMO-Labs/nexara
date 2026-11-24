@@ -12,11 +12,10 @@ import uuid
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
+from app.repositories.user_repo import UserRepository
 from app.schemas.admin import AuditLogEntry
 from app.schemas.common import PaginatedResponse
 from app.services.admin_signin_service import csv_safe
@@ -30,10 +29,7 @@ async def _enrich(db: AsyncSession, rows: list[Any]) -> list[AuditLogEntry]:
     """@brief Attach actor and (user) target display names to rows."""
     ids = {r.actor_id for r in rows if r.actor_id}
     ids |= {r.target_id for r in rows if r.target_id and r.target_type == "user"}
-    names: dict[uuid.UUID, str] = {}
-    if ids:
-        res = await db.execute(select(User.id, User.display_name).where(User.id.in_(ids)))
-        names = {r.id: r.display_name for r in res}
+    names = await UserRepository(db).display_names(ids)
     items: list[AuditLogEntry] = []
     for e in rows:
         item = AuditLogEntry.model_validate(e)
@@ -60,7 +56,7 @@ class AdminAuditService:
         self._ip = ip_address
         self._reader = reader
 
-    async def list(
+    async def list_page(
         self, *, limit: int, cursor: str | None, **filters: Any
     ) -> PaginatedResponse[AuditLogEntry]:
         """@brief One newest-first page; ``filters`` as for ``list_entries``."""

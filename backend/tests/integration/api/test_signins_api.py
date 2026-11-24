@@ -129,15 +129,15 @@ async def test_signin_search_filters_and_cursor(session, world):
         SigninRepository(session), c.id, MagicMock(), a.id, None, AsyncMock(), None
     )
     kw = dict(q=None, success=None, method=None, since=None)
-    p1 = await svc.list(**kw, cursor=None, limit=2)
+    p1 = await svc.list_page(**kw, cursor=None, limit=2)
     assert len(p1.items) == 2 and p1.next_cursor
-    p2 = await svc.list(**kw, cursor=p1.next_cursor, limit=10)
+    p2 = await svc.list_page(**kw, cursor=p1.next_cursor, limit=10)
     assert len(p2.items) == 3 and p2.next_cursor is None
     assert p1.items[0].user == a.username
-    assert len((await svc.list(**{**kw, "success": False}, cursor=None)).items) == 2
-    assert len((await svc.list(**{**kw, "q": "192.168"}, cursor=None)).items) == 5
-    assert len((await svc.list(**{**kw, "q": "who3"}, cursor=None)).items) == 1
-    assert len((await svc.list(**{**kw, "q": "100%"}, cursor=None)).items) == 0
+    assert len((await svc.list_page(**{**kw, "success": False}, cursor=None)).items) == 2
+    assert len((await svc.list_page(**{**kw, "q": "192.168"}, cursor=None)).items) == 5
+    assert len((await svc.list_page(**{**kw, "q": "who3"}, cursor=None)).items) == 1
+    assert len((await svc.list_page(**{**kw, "q": "100%"}, cursor=None)).items) == 0
 
 
 def test_csv_safe_prefixes_formulas():

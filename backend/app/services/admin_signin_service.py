@@ -86,7 +86,7 @@ class AdminSigninService:
         if method and method not in SIGNIN_METHODS:
             raise AppError(code="INVALID_METHOD", message=_("Unknown method"), status_code=400)
 
-    async def list(
+    async def list_page(
         self,
         *,
         q: str | None,
