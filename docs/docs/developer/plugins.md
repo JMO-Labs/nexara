@@ -80,9 +80,11 @@ needs the same read scope as the underlying content. For comment events
 unless `posts:read` is also granted. The mention is matched against the bot's real
 username, which gets a `-bot` suffix if the manifest username was taken.
 
-Never delivered: private posts, NSFW posts, content authored by a bot, content the bot
-could not see (subgroup posts when the bot is not a member), and authors who blocked
-the bot or are blocked by it.
+Never delivered: anything the bot could not read over the REST API (private posts,
+subgroup posts when the bot is not a member, daily-question answers not yet revealed,
+authors who blocked the bot or are blocked by it), NSFW posts and NSFW media, and
+content authored by a bot. Bots are never treated as adults: the REST API hides NSFW
+posts and media from bot tokens too.
 
 ### Request
 
@@ -149,6 +151,8 @@ function verify(secret, ts, rawBody, sig) {
 The endpoint URL must be https and resolve to a public host. Otherwise core refuses to
 connect and the delivery is silently dropped (a warning in the worker log, no retry),
 unless `PLUGINS_ALLOW_INSECURE_URLS` (dev) or the trusted `PLUGIN_HOST_URL` applies.
+Install already refuses a plain `http://` endpoint outside those two cases
+(`422 endpoint_insecure`).
 
 Timeout 10 s per attempt. Any 2xx (and 3xx, which are not followed) ends the delivery;
 other 4xx are dropped without retry. Network errors, timeouts, `5xx`, `408` and `429`
@@ -192,7 +196,10 @@ set by admins per community.
 3. Enable the plugin in a community. Core creates the bot, a token and a webhook
    secret, shown once. Give them to the plugin (for example `NEXARA_TOKEN`,
    `WEBHOOK_SECRET`).
-4. Configure settings if any. Posts and comments now trigger deliveries.
+4. Configure settings if any. Settings are delivered to the plugin by the plugin host
+   (PR 10); in URL mode they are stored but not sent, so configure the plugin directly
+   (for example with environment variables). Posts and comments now trigger deliveries.
 
 Errors: `plugin_already_installed` (409), `plugin_incompatible` (422, core older than
-`min_core_version`), `manifest_url_invalid` / `manifest_fetch_failed` (422).
+`min_core_version`), `manifest_url_invalid` / `manifest_fetch_failed` (422),
+`endpoint_insecure` (422, http endpoint without the dev flag or plugin host origin).
