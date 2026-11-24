@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.core.security import hash_token
 from app.repositories.token_repo import TokenRepository
@@ -27,7 +28,8 @@ class SessionService:
         if not raw_refresh:
             return None
         tok = await self._repo.find_by_hash(hash_token(raw_refresh))
-        return tok.family_id if tok and tok.user_id == self._uid else None
+        live = tok and tok.revoked_at is None and tok.expires_at > datetime.now(UTC)
+        return tok.family_id if tok and live and tok.user_id == self._uid else None
 
     async def list(self, raw_refresh: str | None) -> list[SessionOut]:
         """@brief Active devices, newest first; ``current`` marks this request's family."""
@@ -50,6 +52,11 @@ class SessionService:
 
     async def revoke_others(self, raw_refresh: str | None) -> int:
         """@brief Sign out every device except the current one. @return tokens revoked."""
-        return await self._repo.revoke_other_families(
-            self._uid, await self.current_family(raw_refresh)
-        )
+        keep = await self.current_family(raw_refresh)
+        if keep is None:
+            raise AppError(
+                code="NO_CURRENT_SESSION",
+                message=_("Current session not found; sign in again"),
+                status_code=400,
+            )
+        return await self._repo.revoke_other_families(self._uid, keep)

@@ -46,6 +46,7 @@ export function SigninsTab() {
     q: "",
     success: "",
     method: "",
+    since: "",
   });
   const [busy, setBusy] = useState(false);
   const log = useInfiniteQuery({
@@ -110,6 +111,16 @@ export function SigninsTab() {
             </Option>
           ))}
         </Select>
+        <label className="flex items-center gap-2 text-sm">
+          Since
+          <input
+            type="date"
+            value={f.since}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setF((s) => ({ ...s, since: e.target.value }))}
+            className="h-11 rounded-full border border-[color-mix(in_srgb,var(--nx-ink)_14%,transparent)] bg-transparent px-4"
+          />
+        </label>
         <Button variant="glass" size="sm" onClick={download} loading={busy}>
           <Download className="size-4" aria-hidden="true" />
           Export CSV

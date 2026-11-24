@@ -18,6 +18,8 @@ import { useConfirmDialog } from "@/stores/confirmDialog";
 import { useToasts } from "@/stores/toasts";
 
 const KEY = ["sessions"];
+// ponytail: mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES default; no config endpoint exposes it.
+const ACCESS_MINUTES = 15;
 
 /** @brief Device list for Settings › Security. */
 export function YourDevices() {
@@ -83,6 +85,9 @@ export function YourDevices() {
           </li>
         ))}
       </ul>
+      <p className="text-xs text-muted">
+        Signed-out devices stop working within {ACCESS_MINUTES} minutes.
+      </p>
       {rows.some((d) => !d.current) && (
         <div>
           <Button

@@ -65,9 +65,17 @@ describe("SigninsTab", () => {
 
 describe("signinQuery", () => {
   it("drops empty filters", () => {
-    expect(api.signinQuery({ q: "", success: "", method: "" })).toBe("");
+    expect(api.signinQuery({ q: "", success: "", method: "", since: "" })).toBe(
+      "",
+    );
     expect(
-      api.signinQuery({ q: " a b ", success: "false", method: "sso" }, "c"),
+      api.signinQuery(
+        { q: " a b ", success: "false", method: "sso", since: "" },
+        "c",
+      ),
     ).toBe("?q=a+b&success=false&method=sso&cursor=c");
+    expect(
+      api.signinQuery({ q: "", success: "", method: "", since: "2026-01-02" }),
+    ).toMatch(/^\?since=2026-01-0[12]T/);
   });
 });

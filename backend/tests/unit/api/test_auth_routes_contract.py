@@ -35,6 +35,9 @@ EXPECTED = {
     ("GET", "/api/v1/auth/.well-known/jwks.json"),
     ("POST", "/api/v1/auth/magic-link/request"),
     ("GET", "/api/v1/auth/magic-link/verify"),
+    ("GET", "/api/v1/auth/sessions"),
+    ("DELETE", "/api/v1/auth/sessions/{family_id}"),
+    ("POST", "/api/v1/auth/sessions/revoke-others"),
 }
 
 

@@ -21,13 +21,15 @@ from app.schemas.signin import SigninPage, SigninRow
 CSV_HEADER = ("time", "email", "user", "method", "success", "reason", "ip", "device")
 CSV_MAX_ROWS = 50_000
 _BATCH = 1000
-_DANGEROUS = ("=", "+", "-", "@", "\t", "\r")
+_DANGEROUS = ("=", "+", "-", "@")
+_WS = ("\t", "\r", "\n")
 
 
 def csv_safe(value: object) -> str:
     """@brief Stringify a cell and prefix a single quote when a spreadsheet would run it."""
     text = "" if value is None else str(value)
-    return "'" + text if text.startswith(_DANGEROUS) else text
+    risky = text.startswith(_WS) or text.lstrip(" ").startswith(_DANGEROUS)
+    return "'" + text if risky else text
 
 
 def _row(ev: Any, username: str | None) -> SigninRow:
@@ -131,7 +133,12 @@ class AdminSigninService:
             actor_id=self._actor,
             action="signins.exported",
             target_type="signin_log",
-            extra_data={"q": q, "success": success, "method": method},
+            extra_data={
+                "q": q,
+                "success": success,
+                "method": method,
+                "since": since.isoformat() if since else None,
+            },
             ip_address=self._ip,
         )
         await self._commit()

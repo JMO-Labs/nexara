@@ -1,6 +1,8 @@
 """
 @file sessions.py
-@brief Member device list: GET/DELETE /sessions, POST /sessions/revoke-others.
+@brief Member device list: GET/DELETE /auth/sessions, POST /auth/sessions/revoke-others.
+
+Mounted under /auth so the path-scoped refresh cookie (/api/v1/auth) is sent.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.signin import SessionOut
 from app.services.session_service import SessionService
 
-router = APIRouter(prefix="/sessions", tags=["sessions"])
+router = APIRouter(prefix="/auth/sessions", tags=["sessions"])
 
 REFRESH_COOKIE = "refresh_token"
 

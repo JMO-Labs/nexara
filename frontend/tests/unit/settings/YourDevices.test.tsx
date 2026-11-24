@@ -44,6 +44,11 @@ describe("YourDevices", () => {
     expect(screen.getByLabelText("Sign out Safari on iOS")).toBeTruthy();
   });
 
+  it("states the sign-out delay", async () => {
+    render(<YourDevices />);
+    expect(await screen.findByText(/within 15 minutes/)).toBeTruthy();
+  });
+
   it("confirms before signing out everywhere else", async () => {
     render(
       <>

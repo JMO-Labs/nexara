@@ -10,16 +10,12 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
-from app.core.dependencies import require_role
 from app.core.deps_signins import get_admin_signin_service
 from app.schemas.signin import SigninPage
 from app.services.admin_signin_service import AdminSigninService
 
-router = APIRouter(
-    prefix="/admin",
-    tags=["admin-signins"],
-    dependencies=[Depends(require_role("admin"))],
-)
+# Admin gate comes from get_admin_signin_service (require_role("admin")).
+router = APIRouter(prefix="/admin", tags=["admin-signins"])
 
 
 @router.get("/signins", response_model=SigninPage)

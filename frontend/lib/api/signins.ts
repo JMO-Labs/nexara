@@ -26,6 +26,8 @@ export interface SigninFilters {
   q: string;
   success: "" | "true" | "false";
   method: string;
+  /** yyyy-mm-dd (local start of day), or empty. */
+  since: string;
 }
 
 export interface DeviceSession {
@@ -37,6 +39,8 @@ export interface DeviceSession {
 }
 
 const BASE = "/api/v1/admin/signins";
+/** Under /auth so the path-scoped refresh cookie is sent (current-device detection). */
+const SESS = "/api/v1/auth/sessions";
 
 /** @brief Query string for the active filters (empty ones are dropped). */
 export function signinQuery(f: SigninFilters, cursor?: string | null): string {
@@ -44,6 +48,7 @@ export function signinQuery(f: SigninFilters, cursor?: string | null): string {
   if (f.q.trim()) p.set("q", f.q.trim());
   if (f.success) p.set("success", f.success);
   if (f.method) p.set("method", f.method);
+  if (f.since) p.set("since", new Date(`${f.since}T00:00:00`).toISOString());
   if (cursor) p.set("cursor", cursor);
   const s = p.toString();
   return s ? `?${s}` : "";
@@ -56,10 +61,10 @@ export const listSignins = (f: SigninFilters, cursor?: string | null) =>
 export const exportSigninsCsv = (f: SigninFilters) =>
   apiGet<string>(`${BASE}.csv${signinQuery(f)}`);
 
-export const listSessions = () => apiGet<DeviceSession[]>("/api/v1/sessions");
+export const listSessions = () => apiGet<DeviceSession[]>(SESS);
 
 export const revokeSession = (familyId: string) =>
-  apiDelete<MessageResponse>(`/api/v1/sessions/${seg(familyId)}`);
+  apiDelete<MessageResponse>(`${SESS}/${seg(familyId)}`);
 
 export const revokeOtherSessions = () =>
-  apiPost<MessageResponse>("/api/v1/sessions/revoke-others");
+  apiPost<MessageResponse>(`${SESS}/revoke-others`);

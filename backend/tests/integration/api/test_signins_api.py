@@ -17,9 +17,9 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.models  # noqa: F401
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_db
 from app.core.deps_signins import get_admin_signin_service
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.security import hash_token
 from app.models.auth import RefreshToken
 from app.models.community import Community
@@ -145,6 +145,8 @@ def test_csv_safe_prefixes_formulas():
     assert csv_safe("-2") == "'-2"
     assert csv_safe("@a") == "'@a"
     assert csv_safe("+1") == "'+1"
+    assert csv_safe(" =1") == "' =1"
+    assert csv_safe("\n=1") == "'\n=1"
     assert csv_safe(None) == "" and csv_safe("ok") == "ok"
 
 
@@ -200,3 +202,48 @@ async def test_signin_routes_forbid_members(test_app):
         assert (await c.get("/api/v1/admin/signins")).status_code == 403
         assert (await c.get("/api/v1/admin/signins.csv")).status_code == 403
     test_app.dependency_overrides.clear()
+
+
+async def test_sessions_http_cookie_marks_current_and_keeps_family(test_app, session, world):
+    _, a, _ = world
+    f1 = await _family(session, a, "raw1")
+    f2 = await _family(session, a, "raw2")
+    user = SimpleNamespace(id=a.id, role="member", community_id=a.community_id)
+
+    async def _db():
+        yield session
+
+    test_app.dependency_overrides[get_current_user] = lambda: user
+    test_app.dependency_overrides[get_db] = _db
+    base = "/api/v1/auth/sessions"
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as c:
+        c.cookies.set("refresh_token", "raw1")
+        r = await c.get(base)
+        assert {x["family_id"]: x["current"] for x in r.json()} == {str(f1): True, str(f2): False}
+        assert (await c.post(f"{base}/revoke-others")).status_code == 200
+        assert [x["family_id"] for x in (await c.get(base)).json()] == [str(f1)]
+        c.cookies.set("refresh_token", "unknown")
+        r = await c.post(f"{base}/revoke-others")
+        assert r.status_code == 400 and r.json()["error"]["code"] == "NO_CURRENT_SESSION"
+        assert (await c.delete(f"{base}/{uuid.uuid4()}")).status_code == 404
+    test_app.dependency_overrides.clear()
+    assert [
+        r.family_id for r in await SessionService(TokenRepository(session), a.id).list("raw1")
+    ] == [f1]
+
+
+async def test_revoke_others_rejects_revoked_or_missing_cookie(session, world):
+    _, a, _ = world
+    await _family(session, a, "raw1")
+    await _family(session, a, "raw2")
+    svc = SessionService(TokenRepository(session), a.id)
+    await svc.revoke((await svc.list("raw1"))[0].family_id)
+    for raw in (None, "nope"):
+        with pytest.raises(AppError) as e:
+            await svc.revoke_others(raw)
+        assert e.value.code == "NO_CURRENT_SESSION"
+    assert len(await svc.list(None)) == 1  # nothing else was revoked
+    revoked = (await TokenRepository(session).list_active_families(a.id))[0]
+    await svc.revoke(revoked.family_id)
+    with pytest.raises(AppError):  # a dead cookie is no current session
+        await svc.revoke_others("raw1")
