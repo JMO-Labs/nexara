@@ -120,3 +120,18 @@ class TestReactionNotFound:
         comment_repo.get_by_id.return_value = _comment(post_id=uuid.uuid4())
         with pytest.raises(NotFoundError):
             await service.toggle_comment_reaction(POST_ID, uuid.uuid4(), _make_user(), "👍")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("on_comment", [False, True])
+    async def test_reaction_on_invisible_post_404(
+        self, service, post_repo, comment_repo, reaction_repo, on_comment
+    ):
+        post_repo.get_by_id.return_value = _make_post()
+        post_repo.is_visible.return_value = False
+        comment_repo.get_by_id.return_value = _comment()
+        with pytest.raises(NotFoundError):
+            if on_comment:
+                await service.toggle_comment_reaction(POST_ID, uuid.uuid4(), _make_user(), "👍")
+            else:
+                await service.toggle_reaction(POST_ID, _make_user(), "👍")
+        reaction_repo.toggle.assert_not_awaited()
