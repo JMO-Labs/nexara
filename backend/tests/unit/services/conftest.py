@@ -168,3 +168,15 @@ def _no_plugin_flags():
 
     with patch("app.services.post_service.validate_plugin_flags", AsyncMock(return_value={})):
         yield
+
+
+@pytest.fixture(autouse=True)
+def plugin_dispatch():
+    """@brief Stub after-commit plugin dispatch; yields (post_mock, comment_mock)."""
+    from unittest.mock import patch
+
+    with (
+        patch("app.services.post_service.schedule_plugin_dispatch") as p,
+        patch("app.services.post_comments.schedule_plugin_dispatch") as c,
+    ):
+        yield p, c

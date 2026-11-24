@@ -70,12 +70,18 @@ class TestAddCommentParent:
             await service.add_comment(POST_ID, _make_user(), "hi", parent_id=uuid.uuid4())
 
     @pytest.mark.asyncio
-    async def test_reply_notifies_parent_author(self, service, post_repo, comment_repo):
+    async def test_reply_notifies_parent_author(
+        self, service, post_repo, comment_repo, plugin_dispatch
+    ):
         parent = _comment(author_id=AUTHOR_ID)
         post_repo.get_by_id.return_value = _make_post(author_id=uuid.uuid4())
         comment_repo.get_by_id.return_value = parent
-        comment_repo.create_comment.return_value = _comment()
+        new = _comment()
+        comment_repo.create_comment.return_value = new
         await service.add_comment(POST_ID, _make_user(user_id=VIEWER_ID), "re", parent.id)
+        plugin_dispatch[1].assert_called_once_with(
+            post_repo._session, service._community_id, POST_ID, new.id
+        )
         calls = service._notification.notify.await_args_list
         assert any(
             c.kwargs["user_id"] == AUTHOR_ID and "replied" in c.kwargs["payload"]["message"]

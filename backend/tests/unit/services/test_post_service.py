@@ -131,7 +131,7 @@ class TestCreatePost:
     """@brief Tests for create_post()."""
 
     @pytest.mark.asyncio
-    async def test_create_post_basic(self, service, post_repo, sassybot_delay):
+    async def test_create_post_basic(self, service, post_repo, sassybot_delay, plugin_dispatch):
         """create_post() creates post and returns enriched dict."""
         user = _make_user()
         post = _make_post()
@@ -152,6 +152,7 @@ class TestCreatePost:
             plugin_flags={},
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
+        plugin_dispatch[0].assert_called_once_with(post_repo._session, COMMUNITY_ID, post.id, None)
 
     @pytest.mark.asyncio
     async def test_create_post_with_media(self, service_with_media, post_repo, media_attacher):

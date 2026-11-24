@@ -41,6 +41,16 @@ def _mock_member() -> MagicMock:
 
 
 @pytest.fixture(autouse=True)
+def _no_plugins():
+    """@brief The DB here is an AsyncMock; plugin flag lookup/dispatch need a real one."""
+    with (
+        patch("app.services.post_service.validate_plugin_flags", AsyncMock(return_value={})),
+        patch("app.services.post_service.schedule_plugin_dispatch"),
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _setup_dependencies(test_app):
     """@brief Inject mock dependencies for all tests."""
     from app.core.dependencies import get_current_user, get_db
