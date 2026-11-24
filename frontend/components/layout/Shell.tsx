@@ -70,8 +70,12 @@ export function Shell({ children }: { children: ReactNode }) {
   // Past the 2FA grace period the API 403s everything but setup routes.
   useEffect(() => {
     function onSetupRequired() {
-      // The wizard's security step handles enrolment.
-      if (gate.pending) return;
+      // Unfinished onboarding hosts the security step; otherwise Settings.
+      if (gate.pending) {
+        if (!pathname.startsWith("/app/welcome"))
+          router.replace("/app/welcome");
+        return;
+      }
       const tab = new URLSearchParams(window.location.search).get("tab");
       if (pathname !== "/app/settings" || tab !== "security")
         router.replace("/app/settings?tab=security");

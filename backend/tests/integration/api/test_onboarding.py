@@ -141,3 +141,14 @@ async def test_unknown_step_422(env):
     async with env.client("admin") as c:
         r = await c.put("/api/v1/admin/onboarding", json={"required": ["nope"]})
     assert r.status_code == 422
+
+
+async def test_put_step_past_required_incomplete_400(env):
+    env.repo.get_community.return_value = SimpleNamespace(onboarding_required=["birthday"])
+    async with env.client() as c:
+        blocked = await c.put("/api/v1/onboarding", json={"step": 2})
+        ok = await c.put("/api/v1/onboarding", json={"step": 1})
+    assert blocked.status_code == 400
+    assert blocked.json()["error"]["code"] == "onboarding_step_incomplete"
+    assert blocked.json()["error"]["details"]["missing"] == ["birthday"]
+    assert ok.status_code == 200

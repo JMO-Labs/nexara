@@ -18,7 +18,8 @@ export function BirthdayStep() {
         Birthday
       </label>
       <p className="mb-2 text-xs text-muted">
-        Used for birthday reminders and to pick the right age group.
+        Used for birthday reminders and to pick the right age group. Only the
+        day and month are shown unless you choose to show the year.
       </p>
       <Input
         id="ob-birthday"

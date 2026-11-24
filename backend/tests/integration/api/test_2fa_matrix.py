@@ -355,3 +355,14 @@ async def test_first_link_held_until_totp(client, factory):
     assert await _links(factory, u["id"]) == 1
     r = await _sso_link(client, factory, u, pid)  # (d)
     assert r.status_code == 200 and r.json()["access_token"] and not r.json()["requires_2fa"]
+
+
+async def test_onboarding_reachable_past_grace_but_not_posts(client, factory):
+    await _policy(factory, "everyone")
+    u = await _user(factory, since=datetime.now(UTC) - timedelta(days=8))
+    h = await _access(await _start(client, factory, "password", u))
+    assert (await client.get("/api/v1/posts", headers=h)).status_code == 403
+    r = await client.get("/api/v1/onboarding", headers=h)
+    assert r.status_code == 200 and r.json()["done"] is False
+    assert "security" in r.json()["required"]
+    assert (await client.put("/api/v1/onboarding", json={"step": 1}, headers=h)).status_code == 200

@@ -15,7 +15,7 @@ from app.core.i18n import _
 from app.models.user import User
 from app.repositories.onboarding_repo import OnboardingRepository
 from app.repositories.two_factor_repo import TwoFactorRepository
-from app.schemas.onboarding import STEPS, OnboardingState, Prefill
+from app.schemas.onboarding import ADMIN_REQUIRABLE, STEPS, OnboardingState, Prefill
 from app.services.auth.policy import covers, factor_methods
 
 
@@ -59,7 +59,19 @@ class OnboardingService:
         return [s for s in STEPS if s in (community.onboarding_required if community else [])]
 
     async def set_step(self, step: int) -> OnboardingState:
-        """@brief Persist the wizard position (resume point)."""
+        """
+        @brief Persist the wizard position (resume point).
+        @throws AppError 400 ``onboarding_step_incomplete`` when advancing past an
+                unfinished required step.
+        """
+        missing = [s for s in await self._missing(await self._required()) if STEPS.index(s) < step]
+        if missing:
+            raise AppError(
+                code="onboarding_step_incomplete",
+                message=_("Finish this required step first"),
+                status_code=400,
+                details={"missing": missing},
+            )
         await self._repo.set_step(self._user, step)
         return await self.state()
 
@@ -97,8 +109,6 @@ class OnboardingService:
 
     async def set_required(self, actor_id: uuid.UUID, required: list[str]) -> list[str]:
         """@brief Admin: choose the steps new members cannot skip (audited)."""
-        from app.schemas.onboarding import ADMIN_REQUIRABLE
-
         clean = [s for s in ADMIN_REQUIRABLE if s in required]
         if await self._repo.get_community(self._cid) is None:
             raise NotFoundError(_("Community not found"))

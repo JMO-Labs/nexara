@@ -53,14 +53,18 @@ export function WelcomeWizard({ state }: { state: OnboardingState }) {
   const required = state.required.includes(id);
   const last = i === steps.length - 1;
 
+  /** Forward moves wait for the server, which refuses to skip a required step. */
   const go = async (next: number) => {
     setError(null);
-    setI(next);
     try {
       await putOnboardingStep(next);
-    } catch {
-      /* resume point is best effort */
+    } catch (e) {
+      if (next > i) {
+        setError(formatApiError(e));
+        return;
+      }
     }
+    setI(next);
   };
   const advance = async () => {
     if (!last) return go(i + 1);

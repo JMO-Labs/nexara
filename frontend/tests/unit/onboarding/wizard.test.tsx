@@ -129,6 +129,21 @@ describe("wizard", () => {
     expect(await screen.findByText("birthday-editor")).toBeInTheDocument();
   });
 
+  it("Continue on an incomplete required step stays put with the server error", async () => {
+    api.putOnboardingStep.mockRejectedValueOnce(
+      new ApiError(
+        400,
+        "onboarding_step_incomplete",
+        "Finish this required step first",
+      ),
+    );
+    wrap(<WelcomeWizard state={state({ step: 1, required: ["birthday"] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/required step/);
+    expect(screen.getByText("birthday-editor")).toBeInTheDocument();
+    expect(screen.getByText("Step 2 of 6")).toBeInTheDocument();
+  });
+
   it("hides Skip on a required step", () => {
     wrap(<WelcomeWizard state={state({ step: 1, required: ["birthday"] })} />);
     expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
