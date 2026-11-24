@@ -66,7 +66,7 @@ class PostRepository(BaseRepository[Post]):
         @param viewer_id Current user UUID for block filter, reaction state, and visibility.
         @param cursor Opaque cursor (ISO timestamp of last seen post).
         @param limit Number of posts to return.
-        @param subgroup_id Optional single subgroup ID filter (overrides visibility predicate).
+        @param subgroup_id Optional single subgroup filter (ANDed with visibility).
         @param subgroup_ids Subgroup IDs the viewer belongs to (for visibility scoping).
         @return Tuple of (enriched post dicts, next_cursor).
         """
@@ -86,9 +86,11 @@ class PostRepository(BaseRepository[Post]):
                 pass
 
         if subgroup_id is not None:
-            stmt = stmt.where(
-                Post.subgroup_id == subgroup_id, nsfw_allowed(viewer_is_adult(viewer_id))
-            )
+            stmt = stmt.where(Post.subgroup_id == subgroup_id)
+            if viewer_id is not None:  # a group id never bypasses membership
+                stmt = stmt.where(post_visible(viewer_id, my_subgroup_ids(viewer_id), community_id))
+            else:  # no viewer: never adult
+                stmt = stmt.where(nsfw_allowed(viewer_is_adult(None)))
         elif viewer_id is not None:
             stmt = stmt.where(post_visible(viewer_id, list(subgroup_ids or []), community_id))
 

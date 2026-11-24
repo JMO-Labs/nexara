@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from types import SimpleNamespace
@@ -27,7 +28,7 @@ DB_URL = os.environ.get(
 CID = uuid.UUID(COMMUNITY_DEFAULT)
 
 
-def _toml(pid: str) -> str:
+def _toml(pid: str, scopes: tuple[str, ...] = ("posts:read",)) -> str:
     return f"""
 [plugin]
 id = "{pid}"
@@ -39,7 +40,7 @@ entrypoint = "index.js"
 display_name = "Echo Bot"
 username = "echo"
 [permissions]
-scopes = ["posts:read"]
+scopes = {json.dumps(list(scopes))}
 events = ["post.created"]
 [settings.api_key]
 type = "secret"
@@ -108,18 +109,19 @@ async def env(test_app, session):
     test_app.dependency_overrides.clear()
 
 
-async def _install(e):
+async def _install(e, scopes: tuple[str, ...] = ("posts:read",)):
     e.who["u"] = e.u.owner
     with patch(
-        "app.services.plugin_service.fetch_manifest_text", AsyncMock(return_value=_toml(e.pid))
+        "app.services.plugin_service.fetch_manifest_text",
+        AsyncMock(return_value=_toml(e.pid, scopes)),
     ):
         return await e.c.post(
             "/api/v1/plugins/install",
             json={
                 "source": "url",
                 "manifest_url": "https://x.test/m.toml",
-                "endpoint_url": "http://echo:3000",
-                "approved_scopes": ["posts:read"],
+                "endpoint_url": "https://echo.test/events",
+                "approved_scopes": list(scopes),
             },
         )
 
