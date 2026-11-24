@@ -78,6 +78,7 @@ async def register_user(
         display_name=display_name,
         password_hash=hash_password(password),
         role=role,
+        age_group=invite.age_group if invite else None,
     )
     user = await svc._user_repo.create(user)
 

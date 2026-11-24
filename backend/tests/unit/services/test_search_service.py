@@ -299,23 +299,24 @@ class TestIsAdult:
     def _user(birthday):
         u = MagicMock()
         u.birthday = birthday
+        u.age_group = None
         return u
 
     def test_no_birthday_is_not_adult(self):
-        from app.services.search_service import is_adult
+        from app.services.age_service import is_adult
 
-        assert is_adult(self._user(None)) is False
+        assert is_adult(self._user(None), None) is False
 
     def test_old_enough_is_adult(self):
         from datetime import date
 
-        from app.services.search_service import is_adult
+        from app.services.age_service import is_adult
 
-        assert is_adult(self._user(date(1980, 1, 1))) is True
+        assert is_adult(self._user(date(1980, 1, 1)), None) is True
 
     def test_ten_year_old_is_not_adult(self):
         from datetime import date
 
-        from app.services.search_service import is_adult
+        from app.services.age_service import is_adult
 
-        assert is_adult(self._user(date(date.today().year - 10, 1, 1))) is False
+        assert is_adult(self._user(date(date.today().year - 10, 1, 1)), None) is False

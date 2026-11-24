@@ -15,7 +15,6 @@ import hashlib
 import json
 import re
 import uuid
-from datetime import date
 from typing import TYPE_CHECKING, Any
 
 from app.core.cache import cache_get, cache_set
@@ -26,10 +25,12 @@ from app.schemas.search import (
     SearchResultItem,
     SearchTypeResults,
 )
+from app.services.age_service import is_adult
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
+    from app.models.community import Community
     from app.models.user import User
 
 _UNSAFE_CHARS = re.compile(r"[^\w\s]", re.UNICODE)
@@ -56,27 +57,6 @@ def search_cache_key(
     normalized = " ".join(query.lower().split())
     raw = "|".join([normalized, str(community_id), ",".join(sorted(content_types)), str(user_id)])
     return f"search:{hashlib.sha256(raw.encode()).hexdigest()}:{cursor or '0'}"
-
-
-ADULT_AGE: int = 18
-"""@brief Minimum age (years) to view NSFW content."""
-
-
-def is_adult(user: User) -> bool:
-    """
-    @brief Whether the user may view NSFW content (age >= 18 from birthday).
-
-    Users without a birthday are treated as non-adult (safe default).
-
-    @param user Viewer.
-    @return True if the user is an adult.
-    """
-    b = user.birthday
-    if b is None:
-        return False
-    today = date.today()
-    age = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
-    return age >= ADULT_AGE
 
 
 def build_prefix_tsquery(raw: str) -> str:
@@ -132,10 +112,12 @@ class SearchService:
         search_repo: SearchRepository,
         community_id: uuid.UUID,
         cache_client: Redis | None = None,
+        community: Community | None = None,
     ) -> None:
         self._repo = search_repo
         self._community_id = community_id
         self._cache = cache_client
+        self._community = community
 
     async def search(
         self,
@@ -204,7 +186,7 @@ class SearchService:
     ) -> SearchResponse:
         """@brief Run the repository searches and build the response."""
         prefix_q = build_prefix_tsquery(q)
-        adult = is_adult(user)
+        adult = is_adult(user, self._community)
 
         tasks: list[tuple[str, object]] = []
         if "posts" in content_types:

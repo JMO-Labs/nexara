@@ -70,6 +70,7 @@ async def create_invite(
             community_id=community_id,
             email=body.email,
             role=body.role,
+            age_group=body.age_group,
             token_hash=hash_token(raw_token),
             created_by=admin.id,
             expires_at=datetime.now(UTC) + timedelta(days=settings.INVITE_EXPIRE_DAYS),

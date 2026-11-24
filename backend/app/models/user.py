@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Text,
     func,
 )
@@ -60,6 +61,10 @@ class User(Base):
     location: Mapped[str | None] = mapped_column(Text)
     website_url: Mapped[str | None] = mapped_column(Text)
     birthday: Mapped[date | None] = mapped_column(Date)
+    # Admin-set age group; None = derive from birthday (see age_service).
+    age_group: Mapped[str | None] = mapped_column(Text)
+    onboarding_step: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    onboarding_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     banner_media_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("media.id", ondelete="SET NULL", use_alter=True),

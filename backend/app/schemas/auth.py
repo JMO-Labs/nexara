@@ -9,7 +9,7 @@ OIDC callback, password reset, and invite management.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, Field
@@ -175,6 +175,7 @@ class InviteCreateRequest(BaseModel):
 
     email: SelfHostEmail
     role: str = Field(default="member", pattern=r"^(admin|member|viewer)$")
+    age_group: Literal["child", "teen", "adult"] | None = None
 
 
 class InviteResponse(BaseModel):

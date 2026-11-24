@@ -37,6 +37,7 @@ class InviteRepository:
         token_hash: str,
         created_by: uuid.UUID,
         expires_at: datetime,
+        age_group: str | None = None,
     ) -> Invite:
         """
         @brief Persist a new invite record.
@@ -56,6 +57,7 @@ class InviteRepository:
             token_hash=token_hash,
             created_by=created_by,
             expires_at=expires_at,
+            age_group=age_group,
         )
         self._session.add(invite)
         await self._session.flush()

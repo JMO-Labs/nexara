@@ -64,6 +64,7 @@ def _user():
     u = MagicMock()
     u.id = uuid.uuid4()
     u.birthday = None
+    u.age_group = None
     return u
 
 

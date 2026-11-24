@@ -73,6 +73,7 @@ class UserDetailResponse(BaseModel):
     updated_at: datetime
     last_seen_at: datetime | None = None
     tour_completed_at: datetime | None = None
+    age_group: str | None = None  # effective (read-only); set by /users/me
 
     model_config = {"from_attributes": True}
 

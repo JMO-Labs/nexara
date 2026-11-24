@@ -26,6 +26,8 @@ from app.api.v1.admin_shop import router as admin_shop_router
 from app.api.v1.admin_signins import router as admin_signins_router
 from app.api.v1.admin_storage import router as admin_storage_router
 from app.api.v1.admin_system import router as admin_system_router
+from app.api.v1.age_groups import admin_router as admin_age_groups_router
+from app.api.v1.age_groups import router as age_groups_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
@@ -98,6 +100,8 @@ api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
+api_v1_router.include_router(age_groups_router)
+api_v1_router.include_router(admin_age_groups_router)
 api_v1_router.include_router(admin_system_router)
 api_v1_router.include_router(admin_signins_router)
 api_v1_router.include_router(sessions_router)
