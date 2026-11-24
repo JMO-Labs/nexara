@@ -148,7 +148,16 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
             aria-busy={isBooting || undefined}
           >
-            {children}
+            {gate.hold ? (
+              <div className="flex justify-center py-16">
+                <Loader2
+                  aria-label="Loading"
+                  className="size-6 motion-safe:animate-spin"
+                />
+              </div>
+            ) : (
+              children
+            )}
             {isBooting && (
               <div className="bg-bg absolute inset-0 z-10 flex items-center justify-center">
                 <Loader2

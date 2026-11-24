@@ -17,9 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.config import get_settings
+from app.models.household import HouseholdMember
 from app.models.relation import Relation
 from app.models.user import User
 from app.repositories.onboarding_repo import OnboardingRepository
+from app.repositories.two_factor_repo import TwoFactorRepository
 from app.services.onboarding_service import OnboardingService
 
 DB_URL = os.environ.get(
@@ -65,7 +67,7 @@ async def test_missing_and_complete_against_real_rows(session):
     me = await _user(session, cid)
     other = await _user(session, cid)
     repo = OnboardingRepository(session)
-    svc = OnboardingService(repo, cid, session, me)
+    svc = OnboardingService(repo, cid, session, me, two_factor_repo=TwoFactorRepository(session))
 
     assert await repo.has_relation(cid, me.id) is False
     required = await svc._required()
@@ -103,3 +105,15 @@ async def test_backfill_marks_existing_users_done(session):
     assert new.onboarding_done_at is not None
     pending = await session.scalar(select(func.count()).where(User.onboarding_done_at.is_(None)))
     assert pending == 0
+
+
+async def test_has_family_counts_household_and_pets(session):
+    cid = uuid.UUID(get_settings().COMMUNITY_ID)
+    repo = OnboardingRepository(session)
+    me, pet_owner = await _user(session, cid), await _user(session, cid)
+    assert await repo.has_family(cid, me.id) is False
+    session.add(HouseholdMember(community_id=cid, owner_id=me.id, kind="person", name="Kid"))
+    session.add(HouseholdMember(community_id=cid, owner_id=pet_owner.id, kind="pet", name="Rex"))
+    await session.flush()
+    assert await repo.has_family(cid, me.id) is True
+    assert await repo.has_family(cid, pet_owner.id) is True

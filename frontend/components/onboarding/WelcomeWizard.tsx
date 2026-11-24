@@ -34,12 +34,23 @@ const TITLES: Record<OnboardingStepId, string> = {
   security: "Keep your account safe",
 };
 
+/**
+ * @brief First step to show: security past the 2FA grace period (other step
+ *        editors are blocked), the start for a finished member revisiting,
+ *        else the saved resume point.
+ */
+function startAt(state: OnboardingState): number {
+  if (state.security_now) return state.steps.indexOf("security");
+  if (state.done) return 0;
+  return Math.min(state.step, state.steps.length - 1);
+}
+
 /** @param state server wizard state (resume point, required steps, prefill) */
 export function WelcomeWizard({ state }: { state: OnboardingState }) {
   const router = useRouter();
   const qc = useQueryClient();
   const steps = state.steps;
-  const [i, setI] = React.useState(Math.min(state.step, steps.length - 1));
+  const [i, setI] = React.useState(() => startAt(state));
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const heading = React.useRef<HTMLHeadingElement>(null);

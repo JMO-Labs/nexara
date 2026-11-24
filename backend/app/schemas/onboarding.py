@@ -30,6 +30,7 @@ class OnboardingState(BaseModel):
     step: int
     done: bool
     required: list[str]
+    security_now: bool = False  # past 2FA grace without a factor: open on security
     steps: list[str] = list(STEPS)
     prefill: Prefill
 

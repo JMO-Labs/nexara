@@ -11,11 +11,19 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 
 export const WELCOME_PATH = "/app/welcome";
 
-/** @return whether onboarding is pending (false while loading) and the redirect side effect */
-export function useOnboardingGate(): { pending: boolean; loaded: boolean } {
+/**
+ * @return ``pending`` (false while loading), ``loaded``, and ``hold``: show a
+ *         loader instead of page content while the state loads or a redirect
+ *         to the wizard is due (no content flash). Errors release the hold.
+ */
+export function useOnboardingGate(): {
+  pending: boolean;
+  loaded: boolean;
+  hold: boolean;
+} {
   const router = useRouter();
   const pathname = usePathname();
-  const { data } = useOnboarding();
+  const { data, isLoading } = useOnboarding();
   const pending = !!data && !data.done;
   const exempt =
     !pathname.startsWith("/app") ||
@@ -24,5 +32,9 @@ export function useOnboardingGate(): { pending: boolean; loaded: boolean } {
   useEffect(() => {
     if (pending && !exempt) router.replace(WELCOME_PATH);
   }, [pending, exempt, router]);
-  return { pending, loaded: !!data };
+  return {
+    pending,
+    loaded: !!data,
+    hold: !exempt && (isLoading || pending),
+  };
 }

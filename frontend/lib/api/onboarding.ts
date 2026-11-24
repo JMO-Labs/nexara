@@ -16,6 +16,8 @@ export interface OnboardingState {
   step: number;
   done: boolean;
   required: OnboardingStepId[];
+  /** Past the 2FA grace period without a factor: only security works. */
+  security_now?: boolean;
   steps: OnboardingStepId[];
   prefill: { display_name: string; avatar_url: string | null; email: string };
 }

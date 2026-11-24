@@ -12,6 +12,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.community import Community
+from app.models.household import HouseholdMember
 from app.models.relation import Relation
 from app.models.user import User
 
@@ -53,6 +54,21 @@ class OnboardingRepository:
             .where(
                 Relation.community_id == community_id,
                 or_(Relation.from_user_id == user_id, Relation.to_user_id == user_id),
+            )
+            .limit(1)
+        )
+        return (await self._session.execute(stmt)).first() is not None
+
+    async def has_family(self, community_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        """@brief A relation, or a household member or pet the user owns."""
+        if await self.has_relation(community_id, user_id):
+            return True
+        stmt = (
+            select(HouseholdMember.id)
+            .where(
+                HouseholdMember.community_id == community_id,
+                HouseholdMember.owner_id == user_id,
+                HouseholdMember.deleted_at.is_(None),
             )
             .limit(1)
         )

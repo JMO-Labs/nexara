@@ -35,7 +35,7 @@ export function CompleteProfileCard() {
         <h2 className="text-sm font-semibold">Complete your profile</h2>
         <p className="mt-0.5 text-xs text-muted">
           Add {todo.join(", ")} so people can find and recognise you.{" "}
-          <Link href="/app/welcome" className="font-medium underline">
+          <Link href="/app/welcome?resume=1" className="font-medium underline">
             Finish setup
           </Link>
         </p>

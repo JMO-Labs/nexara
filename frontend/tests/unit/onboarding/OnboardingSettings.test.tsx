@@ -13,6 +13,10 @@ const api = vi.hoisted(() => ({
     .mockResolvedValue({ required: ["profile", "birthday"] }),
 }));
 vi.mock("@/lib/api/onboarding", () => api);
+const feature = vi.hoisted(() => ({ relations: true }));
+vi.mock("@/hooks/useFeature", () => ({
+  useFeature: () => feature.relations,
+}));
 
 import { OnboardingSettings } from "@/components/admin/OnboardingSettings";
 
@@ -32,5 +36,24 @@ describe("OnboardingSettings", () => {
         "birthday",
       ]),
     );
+  });
+  it("family cannot be required while relations are off", async () => {
+    feature.relations = false;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <OnboardingSettings />
+      </QueryClientProvider>,
+    );
+    const sw = await screen.findByRole("switch", {
+      name: "Require family or relations",
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", { name: "Require birthday" }),
+      ).not.toBeDisabled(),
+    );
+    expect(sw).toBeDisabled();
+    expect(screen.getByText(/Turn on relations/)).toBeInTheDocument();
+    feature.relations = true;
   });
 });

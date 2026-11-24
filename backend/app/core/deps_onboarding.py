@@ -29,6 +29,7 @@ def get_onboarding_service(
     """@brief OnboardingService for the current user (admin routes add a role guard)."""
     from app.repositories.audit_repo import AuditRepository
     from app.repositories.onboarding_repo import OnboardingRepository
+    from app.repositories.two_factor_repo import TwoFactorRepository
     from app.services.onboarding_service import OnboardingService
 
     return OnboardingService(
@@ -38,4 +39,5 @@ def get_onboarding_service(
         user,
         AuditRepository(db),
         client_ip(request),
+        two_factor_repo=TwoFactorRepository(db),
     )

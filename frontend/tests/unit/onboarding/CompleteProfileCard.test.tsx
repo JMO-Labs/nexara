@@ -36,6 +36,13 @@ describe("CompleteProfileCard", () => {
     );
     expect(hooks.mutate).toHaveBeenCalledWith({ profile_card_dismissed: true });
   });
+  it("Finish setup reopens the wizard for finished members", () => {
+    render(<CompleteProfileCard />);
+    expect(screen.getByRole("link", { name: "Finish setup" })).toHaveAttribute(
+      "href",
+      "/app/welcome?resume=1",
+    );
+  });
   it("hides when dismissed or complete", () => {
     hooks.settings.profile_card_dismissed = true;
     const { container, rerender } = render(<CompleteProfileCard />);

@@ -74,8 +74,8 @@ const wrap = (ui: React.ReactNode) =>
   );
 
 function Probe() {
-  useOnboardingGate();
-  return null;
+  const { hold } = useOnboardingGate();
+  return <p>{hold ? "holding" : "free"}</p>;
 }
 
 beforeEach(() => {
@@ -95,6 +95,14 @@ describe("gate", () => {
     wrap(<Probe />);
     await waitFor(() => expect(api.getOnboarding).toHaveBeenCalled());
     expect(replace).not.toHaveBeenCalled();
+  });
+  it("holds content while loading and while redirecting", async () => {
+    let resolve: (s: OnboardingState) => void = () => {};
+    api.getOnboarding.mockReturnValue(new Promise((r) => (resolve = r)));
+    wrap(<Probe />);
+    expect(screen.getByText("holding")).toBeInTheDocument();
+    resolve(state({ done: true }));
+    expect(await screen.findByText("free")).toBeInTheDocument();
   });
   it("does not redirect when done", async () => {
     api.getOnboarding.mockResolvedValue(state({ done: true }));
@@ -120,6 +128,16 @@ describe("wizard", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1 })).toHaveFocus(),
     );
+  });
+
+  it("opens on the security step past the 2FA grace period", () => {
+    wrap(<WelcomeWizard state={state({ step: 1, security_now: true })} />);
+    expect(screen.getByText("security-editor")).toBeInTheDocument();
+  });
+
+  it("a finished member revisiting starts at the first step", () => {
+    wrap(<WelcomeWizard state={state({ step: 6, done: true })} />);
+    expect(screen.getByText("Step 1 of 6")).toBeInTheDocument();
   });
 
   it("resumes at the saved step and goes back", async () => {
