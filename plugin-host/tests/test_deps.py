@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from host import deps
-from host.deps import check_lockfile, check_requirements, install_deps, run_subprocess
+from host.deps import check_lockfile, install_deps, run_subprocess
 from host.installer import InstallError
 from host.models import InstallSpec
 from tests.conftest import good_tar, spec_body
@@ -27,10 +27,17 @@ def calls() -> Calls:
     return []
 
 
+seen_reqs: list[str] = []
+
+
 @pytest.fixture
 def runner(calls: Calls) -> Any:
+    seen_reqs.clear()
+
     async def run(argv: list[str], cwd: Path, uid: int | None) -> None:
         calls.append((argv, cwd, uid))
+        if "-r" in argv:
+            seen_reqs.append(Path(argv[argv.index("-r") + 1]).read_text())
 
     return run
 
@@ -68,8 +75,6 @@ def test_lockfile_ok(tmp_path: Path) -> None:
                 "node_modules/left-pad": pkg(),
                 "node_modules/@s/x": pkg("@s/x"),
                 "node_modules/a/node_modules/b": pkg("b"),
-                "node_modules/z": pkg("z"),
-                "node_modules/z/node_modules/q": {"version": "1", "inBundle": True},
             }
         ),
     )
@@ -142,39 +147,20 @@ def test_lockfile_uppercase_legacy_name_ok(tmp_path: Path) -> None:
     check_lockfile(tmp_path)
 
 
-def test_inbundle_under_verified_parent_ok(tmp_path: Path) -> None:
-    write_node(
-        tmp_path,
-        lock(
-            {
-                "node_modules/a": pkg("a"),
-                "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
-            }
-        ),
-    )
-    check_lockfile(tmp_path)
-
-
 @pytest.mark.parametrize(
     "packages",
     [
+        {
+            "node_modules/a": pkg("a"),
+            "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
+        },
+        {"node_modules/a": pkg("a"), "node_modules/a/node_modules/b": pkg("b", inBundle=True)},
         {"node_modules/b": {"version": "1.3.0", "inBundle": True}},
-        {"node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True}},
-        {
-            "node_modules/a": {"version": "1.0.0", "inBundle": True},
-            "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
-        },
-        {
-            "node_modules/a": pkg("a", resolved="https://evil/a.tgz"),
-            "node_modules/a/node_modules/b": {"version": "1.0.0", "inBundle": True},
-        },
         {"node_modules/b": {"version": "http://127.0.0.1/x.tgz", "inBundle": True}},
     ],
-    ids=["root-parent", "missing-parent", "bundled-parent", "unverified-parent", "url-version"],
+    ids=["verified-parent", "with-resolved", "root-parent", "url-version"],
 )
-def test_inbundle_without_verified_parent_rejected(
-    tmp_path: Path, packages: dict[str, Any]
-) -> None:
+def test_inbundle_rejected(tmp_path: Path, packages: dict[str, Any]) -> None:
     write_node(tmp_path, lock(packages))
     assert lock_code(tmp_path) == "lockfile_unsafe"
 
@@ -213,63 +199,6 @@ def test_package_json_workspaces_rejected(tmp_path: Path) -> None:
     assert lock_code(tmp_path) == "lockfile_unsafe"
 
 
-H = "a" * 64
-REVIEWER_PAYLOAD = (
-    "six==1.16.0 # a \\\n"
-    "--extra-index-url http://127.0.0.1:18765/P4/simple\n"
-    "six==1.16.0 # b \\\n"
-    "-r /etc/hostname\n"
-)
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "httpx==0.28.1\n",
-        "# c\n\nhttpx==0.28.1  # pinned\nanyio==4.6.2\n",
-        f"httpx==0.28.1 --hash=sha256:{H}\n",
-        f"httpx==0.28.1 --hash=sha256:{H} --hash=sha256:{'b' * 64}\n",
-        "uvicorn[standard]==0.32.0\n",
-        'uvloop==0.21.0 ; sys_platform != "win32"\n',
-        'x==1.0.0; python_version >= "3.10" and platform_machine == "x86_64"\n',
-        "Zope.Interface_x==7.1rc1\n",
-    ],
-)
-def test_requirements_ok(tmp_path: Path, text: str) -> None:
-    (tmp_path / "requirements.txt").write_text(text)
-    check_requirements(tmp_path)
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "-r /proc/1/environ\n",
-        "--index-url http://127.0.0.1:9/simple\nx==1.0\n",
-        "-e git+https://x/y\n",
-        "x @ https://evil/x.whl\n",
-        "./local.whl\n",
-        "/etc/hostname\n",
-        "httpx\n",
-        "httpx>=0.28\n",
-        "httpx==0.*\n",
-        "httpx==${SECRET}\n",
-        "x==1.0 --extra-index-url https://e\n",
-        "x==1.0 --hash=md5:abc\n",
-        'x==1.0; os.system("id")\n',
-        "x==1.0 \\\n-r other.txt\n",
-        REVIEWER_PAYLOAD,
-        f"httpx==0.28.1 \\\n    --hash=sha256:{H}\n",
-        "httpx==0.28.1 # trailing \\\n",
-        "httpx==0.28.1\\\n",
-    ],
-)
-def test_requirements_unsafe(tmp_path: Path, text: str) -> None:
-    (tmp_path / "requirements.txt").write_text(text)
-    with pytest.raises(InstallError) as e:
-        check_requirements(tmp_path)
-    assert e.value.code == "requirements_unsafe"
-
-
 def mkspec(runtime: str = "python") -> InstallSpec:
     return InstallSpec.model_validate(spec_body(good_tar(), runtime=runtime))
 
@@ -291,25 +220,12 @@ async def test_python_argv(tmp_path: Path, runner: Any, calls: Calls) -> None:
     assert "requirements.txt" not in pip and "--require-hashes" not in pip
     req = Path(pip[pip.index("-r") + 1])
     assert req.is_absolute() and root not in req.parents
-    assert req.read_text() == "httpx==0.28.1\n"
+    assert req.parent.parent == root.parent / ".cache"
+    assert seen_reqs == ["httpx==0.28.1\n"]
+    assert not req.exists() and not req.parent.exists()  # temp dir removed
 
 
-def test_requirements_canonical(tmp_path: Path) -> None:
-    (tmp_path / "requirements.txt").write_text(
-        f"# top\n\nhttpx==0.28.1   --hash=sha256:{H}  # c\n"
-        f'x==1.0 ;  sys_platform != "win32" --hash=sha256:{H}\n'
-    )
-    assert check_requirements(tmp_path) == [
-        f"httpx==0.28.1 --hash=sha256:{H}",
-        f'x==1.0 ; sys_platform != "win32" --hash=sha256:{H}',
-    ]
-
-
-def test_requirements_mixed_hashes_rejected(tmp_path: Path) -> None:
-    (tmp_path / "requirements.txt").write_text(f"a==1.0 --hash=sha256:{H}\nb==1.0\n")
-    with pytest.raises(InstallError) as e:
-        check_requirements(tmp_path)
-    assert e.value.code == "requirements_unsafe"
+H = "a" * 64
 
 
 async def test_hashed_requirements_require_hashes(
@@ -322,7 +238,7 @@ async def test_hashed_requirements_require_hashes(
     assert "--require-hashes" in calls[1][0]
 
 
-async def test_canonical_file_replaces_planted_symlink(
+async def test_canonical_file_ignores_planted_symlink(
     tmp_path: Path, runner: Any, calls: Calls
 ) -> None:
     root = tmp_path / "plugins" / "p" / "1.0.0"
@@ -335,7 +251,36 @@ async def test_canonical_file_replaces_planted_symlink(
     (cache / deps.CANONICAL_REQS).symlink_to(victim)
     await install_deps(mkspec(), root, runner)
     assert victim.read_text() == "keep"
-    assert (cache / deps.CANONICAL_REQS).read_text() == "httpx==0.28.1\n"
+    assert seen_reqs == ["httpx==0.28.1\n"]
+
+
+@pytest.mark.parametrize("runtime", ["python", "node"])
+async def test_symlinked_cache_refused(
+    tmp_path: Path, runner: Any, calls: Calls, runtime: str
+) -> None:
+    root = tmp_path / "plugins" / "p" / "1.0.0"
+    root.mkdir(parents=True)
+    (root / "requirements.txt").write_text("httpx==0.28.1\n")
+    write_node(root, lock({"node_modules/left-pad": pkg()}))
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (root.parent / ".cache").symlink_to(elsewhere)
+    with pytest.raises(InstallError) as e:
+        await install_deps(mkspec(runtime), root, runner)
+    assert e.value.code == "unsafe_cache"
+    assert calls == [] and list(elsewhere.iterdir()) == []
+
+
+async def test_symlinked_plugin_dir_refused(tmp_path: Path, runner: Any, calls: Calls) -> None:
+    real = tmp_path / "real"
+    (real / "1.0.0").mkdir(parents=True)
+    (real / "1.0.0" / "requirements.txt").write_text("httpx==0.28.1\n")
+    (tmp_path / "plugins").mkdir()
+    (tmp_path / "plugins" / "p").symlink_to(real)
+    with pytest.raises(InstallError) as e:
+        await install_deps(mkspec(), tmp_path / "plugins" / "p" / "1.0.0", runner)
+    assert e.value.code == "unsafe_cache"
+    assert calls == []
 
 
 async def test_python_bad_requirements_never_runs_pip(

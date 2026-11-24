@@ -105,6 +105,13 @@ async def test_ipv6_translation_ranges_rejected(dns: dict, addr: str) -> None:
     assert await code_of(URL) == "download_blocked"
 
 
+@pytest.mark.parametrize(
+    "addr", ["fec0::1", "fc00::1", "4000::1", "100::1", "2001:db8::1", "ff02::1", "3fff::1"]
+)
+def test_ipv6_outside_global_unicast_rejected(addr: str) -> None:
+    assert not download._public(addr)
+
+
 def test_public_ipv6_allowed() -> None:
     assert download._public("2606:4700::6810:84e5")
     assert download._public(PUBLIC)

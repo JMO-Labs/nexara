@@ -35,12 +35,18 @@ _BLOCKED_V6 = tuple(
 )  # fmt: skip
 
 
+_GLOBAL_UNICAST_V6 = ipaddress.IPv6Network("2000::/3")
+
+
 def _public(addr: str) -> bool:
     """@brief True only for globally routable unicast (rejects private, loopback,
     link-local, CGNAT, ULA, multicast, reserved, unspecified and IPv6 ranges that
-    embed/translate IPv4: IPv4-compatible/mapped, SIIT, NAT64, 6to4, Teredo)."""
+    embed/translate IPv4: IPv4-compatible/mapped, SIIT, NAT64, 6to4, Teredo).
+    IPv6 must also be inside 2000::/3 (allowlist; blocks e.g. site-local fec0::/10)."""
     ip = ipaddress.ip_address(addr.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and any(ip in n for n in _BLOCKED_V6):
+    if isinstance(ip, ipaddress.IPv6Address) and (
+        ip not in _GLOBAL_UNICAST_V6 or any(ip in n for n in _BLOCKED_V6)
+    ):
         return False
     return ip.is_global and not ip.is_multicast
 

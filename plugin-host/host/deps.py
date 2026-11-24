@@ -9,6 +9,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -75,8 +77,8 @@ def _from_registry(entry: Any) -> bool:
 def check_lockfile(root: Path) -> None:
     """
     @brief Require package-lock.json v>=2 whose every package resolves to the npm
-    registry over https with an integrity hash. An `inBundle` entry without `resolved`
-    is allowed only inside a non-root parent that itself passed that check.
+    registry over https with an integrity hash. Bundled (`inBundle`) entries are rejected:
+    their contents ship inside another tarball and cannot be verified here.
     package.json may only use plain semver ranges (deps and overrides); workspaces
     and bundle(d)Dependencies are rejected.
     """
@@ -111,13 +113,8 @@ def check_lockfile(root: Path) -> None:
             raise _unsafe()
         if ".." in PurePosixPath(key).parts:
             raise _unsafe()
-        if _from_registry(entry):
-            continue
-        parent = key.rpartition("/node_modules/")[0]
-        if entry.get("inBundle") is True and "resolved" not in entry and parent:
-            if _from_registry(pkgs.get(parent)):
-                continue
-        raise _unsafe()
+        if entry.get("inBundle") or not _from_registry(entry):
+            raise _unsafe()
 
 
 def check_requirements(root: Path) -> list[str]:
@@ -147,16 +144,48 @@ def check_requirements(root: Path) -> list[str]:
     return reqs
 
 
+def _plugin_cache(root: Path) -> Path:
+    """
+    @brief <pdir>/.cache for version dir `root`, created if missing.
+    Refuses a symlinked plugin dir or cache (`unsafe_cache`).
+    """
+    pdir, cache = root.parent, root.parent / ".cache"
+    if pdir.is_symlink() or cache.is_symlink():
+        raise InstallError("unsafe_cache")
+    try:
+        os.mkdir(cache, 0o755)
+    except FileExistsError:
+        pass
+    if cache.is_symlink() or not cache.is_dir():
+        raise InstallError("unsafe_cache")
+    return cache
+
+
 def _write_canonical(cache: Path, reqs: list[str]) -> Path:
-    """@brief Write `reqs` to a fresh file under the plugin cache (never follows links)."""
-    cache.mkdir(parents=True, exist_ok=True)
-    path = cache / CANONICAL_REQS
-    if path.is_symlink() or path.exists():
-        path.unlink()
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
-    with os.fdopen(fd, "w") as f:
-        f.write("".join(r + "\n" for r in reqs))
-    return path
+    """
+    @brief Write `reqs` into a fresh `reqs-<random>/` dir under `cache`, never following
+    links (dir fds opened with O_NOFOLLOW, file created O_EXCL). Caller removes the dir.
+    @return Absolute path of the canonical requirements file.
+    """
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    name = f"reqs-{uuid.uuid4().hex}"
+    try:
+        cfd = os.open(cache, flags)
+    except OSError as e:
+        raise InstallError("unsafe_cache") from e
+    try:
+        os.mkdir(name, 0o755, dir_fd=cfd)
+        dfd = os.open(name, flags, dir_fd=cfd)
+        try:
+            wflags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+            fd = os.open(CANONICAL_REQS, wflags, 0o644, dir_fd=dfd)
+            with os.fdopen(fd, "w") as f:
+                f.write("".join(r + "\n" for r in reqs))
+        finally:
+            os.close(dfd)
+    finally:
+        os.close(cfd)
+    return cache / name / CANONICAL_REQS
 
 
 def install_env(cwd: Path) -> dict[str, str]:
@@ -204,7 +233,7 @@ async def install_deps(
     spec: InstallSpec, root: Path, runner: Runner = run_subprocess, uid: int | None = None
 ) -> None:
     """@brief Validate then install: node via npm ci, python via uv venv + wheel-only pip."""
-    cache = root.parent / ".cache"
+    cache = _plugin_cache(root)
     if spec.runtime == "node":
         if (root / "package.json").exists():
             check_lockfile(root)
@@ -228,5 +257,8 @@ async def install_deps(
         ]  # fmt: skip
         if all("--hash=" in r for r in reqs):
             argv.append("--require-hashes")
-        argv += ["-r", str(_write_canonical(cache, reqs))]
-        await runner(argv, root, uid)
+        req_file = _write_canonical(cache, reqs)
+        try:
+            await runner([*argv, "-r", str(req_file)], root, uid)
+        finally:
+            shutil.rmtree(req_file.parent, ignore_errors=True)
