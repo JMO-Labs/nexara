@@ -8,7 +8,7 @@ import { Button, Input, Modal, Switch } from "@/components/ui";
 import { ScopeSelect, type ScopeValue } from "@/components/ui/ScopeSelect";
 import { useSubgroupList } from "@/hooks/useSubgroups";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
-import { useCreateCountdown } from "@/hooks/useCountdowns";
+import { useCreateCountdown, useUpdateCountdown } from "@/hooks/useCountdowns";
 import type { Countdown } from "@/lib/api/countdowns";
 
 const EMOJIS = ["🎉", "🎂", "✈️", "🎄", "🏖️", "💍", "🎓", "⭐"];
@@ -17,6 +17,8 @@ export interface CountdownComposerProps {
   open: boolean;
   onClose: () => void;
   onCreated?: (c: Countdown) => void;
+  /** Edit mode: prefill; scope is fixed after creation. */
+  countdown?: Countdown;
 }
 
 /**
@@ -30,13 +32,19 @@ export function CountdownComposer({
   open,
   onClose,
   onCreated,
+  countdown,
 }: CountdownComposerProps) {
-  const [title, setTitle] = React.useState("");
-  const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
-  const [emoji, setEmoji] = React.useState("");
-  const [cover, setCover] = React.useState<string | null>(null);
-  const [yearly, setYearly] = React.useState(false);
+  const [title, setTitle] = React.useState(countdown?.title ?? "");
+  const [date, setDate] = React.useState(countdown?.target_date ?? "");
+  const [time, setTime] = React.useState(
+    countdown?.target_time?.slice(0, 5) ?? "",
+  );
+  const [emoji, setEmoji] = React.useState(countdown?.emoji ?? "");
+  const [cover, setCover] = React.useState<string | null>(
+    countdown?.cover_media_id ?? null,
+  );
+  const [coverErr, setCoverErr] = React.useState(false);
+  const [yearly, setYearly] = React.useState(countdown?.repeat_yearly ?? false);
   const [scope, setScope] = React.useState<ScopeValue>({
     visibility: "community",
     subgroup_id: null,
@@ -44,44 +52,56 @@ export function CountdownComposer({
   const groups = useSubgroupList().data ?? [];
   const upload = useMediaUpload();
   const create = useCreateCountdown();
+  const save = useUpdateCountdown(countdown?.id ?? "");
+  const editing = !!countdown;
+  const busy = create.isPending || save.isPending || upload.isPending;
   const valid =
     title.trim() &&
     date &&
-    (scope.visibility !== "subgroup" || scope.subgroup_id);
+    (editing || scope.visibility !== "subgroup" || scope.subgroup_id);
 
-  const submit = () =>
-    create.mutate(
-      {
-        title: title.trim(),
-        target_date: date,
-        ...(time ? { target_time: time } : {}),
-        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        ...(emoji ? { emoji } : {}),
-        ...(cover ? { cover_media_id: cover } : {}),
-        repeat_yearly: yearly,
-        visibility: scope.visibility,
-        subgroup_id: scope.subgroup_id,
+  const submit = () => {
+    const body = {
+      title: title.trim(),
+      target_date: date,
+      ...(time ? { target_time: time } : {}),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ...(emoji ? { emoji } : {}),
+      ...(cover ? { cover_media_id: cover } : {}),
+      repeat_yearly: yearly,
+    };
+    const done = {
+      onSuccess: (c: Countdown) => {
+        onCreated?.(c);
+        onClose();
       },
-      {
-        onSuccess: (c) => {
-          onCreated?.(c);
-          onClose();
+    };
+    if (countdown) {
+      save.mutate(body, done);
+    } else {
+      create.mutate(
+        {
+          ...body,
+          visibility: scope.visibility,
+          subgroup_id: scope.subgroup_id,
         },
-      },
-    );
+        done,
+      );
+    }
+  };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="New countdown"
+      title={editing ? "Edit countdown" : "New countdown"}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={!valid || create.isPending}>
-            Create
+          <Button onClick={submit} disabled={!valid || busy}>
+            {editing ? "Save" : "Create"}
           </Button>
         </>
       }
@@ -123,6 +143,7 @@ export function CountdownComposer({
                 variant="ghost"
                 size="sm"
                 aria-label={`Use ${e}`}
+                aria-pressed={emoji === e}
                 onClick={() => setEmoji(e)}
               >
                 {e}
@@ -140,12 +161,30 @@ export function CountdownComposer({
             accept="image/*"
             onChange={async (e) => {
               const f = e.target.files?.[0];
-              if (f) setCover(await upload.mutateAsync(f));
+              if (!f) return;
+              setCoverErr(false);
+              try {
+                setCover(await upload.mutateAsync(f));
+              } catch {
+                setCoverErr(true);
+              }
             }}
           />
-          {cover ? <span className="text-sm">Cover attached</span> : null}
+          {upload.isPending ? (
+            <span className="text-sm">Uploading...</span>
+          ) : null}
+          {coverErr ? (
+            <span role="alert" className="text-sm text-red-700">
+              Cover upload failed. Try again.
+            </span>
+          ) : null}
+          {cover && !upload.isPending ? (
+            <span className="text-sm">Cover attached</span>
+          ) : null}
         </div>
-        <ScopeSelect value={scope} onChange={setScope} subgroups={groups} />
+        {editing ? null : (
+          <ScopeSelect value={scope} onChange={setScope} subgroups={groups} />
+        )}
         <label className="flex items-center justify-between gap-2 text-sm">
           Repeats every year
           <Switch

@@ -6,13 +6,10 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { CountdownComposer } from "@/components/countdowns/CountdownComposer";
 import { CountdownCard } from "@/components/countdowns/CountdownCard";
-import {
-  useCountdown,
-  useDeleteCountdown,
-  useUpdateCountdown,
-} from "@/hooks/useCountdowns";
+import { useCountdown, useDeleteCountdown } from "@/hooks/useCountdowns";
 import { useSession } from "@/stores/session";
 import { useConfirmDialog } from "@/stores/confirmDialog";
 
@@ -26,11 +23,8 @@ export default function CountdownRoute({
   const me = useSession((s) => s.user);
   const confirm = useConfirmDialog((s) => s.confirm);
   const { data: c, isError } = useCountdown(id);
-  const update = useUpdateCountdown(id);
   const del = useDeleteCountdown();
   const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
 
   if (isError) return <p role="alert">Countdown not found.</p>;
   if (!c) return null;
@@ -50,57 +44,25 @@ export default function CountdownRoute({
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-4">
       <CountdownCard c={c} />
+      <div className="flex gap-2">
+        {mine ? (
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        ) : null}
+        {mine || admin ? (
+          <Button variant="destructive" onClick={remove}>
+            Delete
+          </Button>
+        ) : null}
+      </div>
       {editing ? (
-        <div className="flex flex-col gap-3">
-          <Input
-            label="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <Input
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button
-              disabled={!title.trim() || !date || update.isPending}
-              onClick={() =>
-                update.mutate(
-                  { title: title.trim(), target_date: date },
-                  { onSuccess: () => setEditing(false) },
-                )
-              }
-            >
-              Save
-            </Button>
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          {mine ? (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setTitle(c.title);
-                setDate(c.target_date);
-                setEditing(true);
-              }}
-            >
-              Edit
-            </Button>
-          ) : null}
-          {mine || admin ? (
-            <Button variant="destructive" onClick={remove}>
-              Delete
-            </Button>
-          ) : null}
-        </div>
-      )}
+        <CountdownComposer
+          open
+          countdown={c}
+          onClose={() => setEditing(false)}
+        />
+      ) : null}
     </main>
   );
 }

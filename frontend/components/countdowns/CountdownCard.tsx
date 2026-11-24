@@ -25,11 +25,11 @@ export function CountdownCard({ c, now }: { c: Countdown; now?: Date }) {
   return (
     <Card
       data-testid="countdown-card"
-      className="flex flex-col gap-3 p-4"
+      className={`flex flex-col gap-3 p-4 ${today ? "ring-accent ring-2" : ""}`}
       style={
         c.cover_media_id
           ? {
-              backgroundImage: `linear-gradient(rgb(0 0 0 / .55), rgb(0 0 0 / .55)), url(${mediaThumbUrl(c.cover_media_id)})`,
+              backgroundImage: `linear-gradient(rgb(0 0 0 / .65), rgb(0 0 0 / .65)), url(${mediaThumbUrl(c.cover_media_id)})`,
               backgroundSize: "cover",
               color: "#fff",
             }
@@ -50,10 +50,9 @@ export function CountdownCard({ c, now }: { c: Countdown; now?: Date }) {
         </Link>
       </div>
       <div
-        aria-live="polite"
         className={
           today
-            ? "motion-safe:animate-pulse text-accent text-4xl font-bold"
+            ? "text-4xl font-bold motion-safe:animate-pulse"
             : "text-4xl font-bold"
         }
       >
