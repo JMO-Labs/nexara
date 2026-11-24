@@ -13,7 +13,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-import apprise
 import httpx
 import structlog
 from celery import Task
@@ -30,7 +29,7 @@ from app.repositories.settings_repo import SettingsRepository
 from app.repositories.webhook_repo import WebhookRepository
 from app.services.notifications import registry
 from app.services.notifications import types as _notification_types  # noqa: F401
-from app.services.notifications.apprise_guard import check_apprise_url
+from app.services.notifications.apprise_guard import build_apprise, check_apprise_url
 from app.services.notifications.digest import should_send_now
 from app.services.notifications.dnd import effective_tz
 from app.services.notifications.webhook_delivery import deliver_webhook
@@ -227,8 +226,9 @@ async def _apprise_deliver_async(
         await repo.record_failure(url_id)
         logger.warning("notif.channel.blocked", channel="apprise", url_id=str(url_id))
         return "blocked"
-    apobj = apprise.Apprise()
-    apobj.add(row.apprise_url)
+    # ponytail: DNS-rebind TOCTOU between the check above and the connect is not
+    # pinned; upgrade path is routing member sends through an egress proxy.
+    apobj = build_apprise(row.apprise_url, allow_local=allow)
     try:
         ok = await asyncio.to_thread(apobj.notify, body=body, title=title)
     except Exception as exc:

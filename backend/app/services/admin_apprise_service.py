@@ -13,7 +13,6 @@ from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.apprise_url import AppriseURL
 from app.repositories.apprise_repo import AppriseRepository
-from app.services.notifications.apprise_guard import check_apprise_url
 
 
 class AdminAppriseService:
@@ -64,7 +63,6 @@ class AdminAppriseService:
             raise AppError(
                 code="INVALID_APPRISE_URL", message=_("Invalid Apprise URL"), status_code=400
             )
-        check_apprise_url(url, allow_local=True)
         row = await self._repo.create(self._cid, None, url, label, is_admin_target=True)
         await self._log("apprise.target.created", row.id, {"label": label})
         return row
@@ -89,5 +87,5 @@ class AdminAppriseService:
     async def set_allow_local(self, value: bool) -> bool:
         """@brief Toggle whether members may target private/local hosts."""
         await self._repo.set_allow_local(self._cid, value)
-        await self._log("apprise.target.settings", None, {"allow_local": value})
+        await self._log("apprise.settings.updated", None, {"allow_local": value})
         return value

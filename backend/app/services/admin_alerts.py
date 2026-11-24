@@ -11,7 +11,6 @@ import asyncio
 import uuid
 from typing import Any
 
-import apprise
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +19,8 @@ from app.core.config import get_settings
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.apprise_repo import AppriseRepository
+from app.services.notifications.apprise_guard import build_apprise
+from app.services.notifications.factory import build_notification_service
 
 logger = structlog.get_logger(__name__)
 
@@ -42,14 +43,11 @@ def _message(kind: str, data: dict[str, Any]) -> str:
 async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, msg: str) -> None:
     for t in await AppriseRepository(session).list_admin_targets(community_id):
         try:
-            apobj = apprise.Apprise()
-            apobj.add(t.apprise_url)
+            apobj = build_apprise(t.apprise_url, allow_local=True)
             await asyncio.to_thread(apobj.notify, body=msg, title="Nexara alert")
         except Exception as exc:
             logger.warning("admin_alert.apprise_failed", error=type(exc).__name__)
-    from app.services.auth.signin_log import _default_notifier  # lazy: avoids cycles
-
-    svc = _default_notifier(session, community_id)
+    svc = build_notification_service(session, community_id)
     admins = (
         (
             await session.execute(

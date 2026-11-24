@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.api.v1.admin_apprise import _service
 from app.core.dependencies import get_current_user
+from app.core.deps_apprise import get_admin_apprise_service
 from app.services.admin_apprise_service import AdminAppriseService
 
 CID = uuid.uuid4()
@@ -64,7 +64,7 @@ class FakeRepo:
 def env(test_app):
     repo, audit = FakeRepo(), MagicMock(append=AsyncMock())
     svc = AdminAppriseService(repo, CID, audit, uuid.uuid4(), "10.0.0.1")
-    test_app.dependency_overrides[_service] = lambda: svc
+    test_app.dependency_overrides[get_admin_apprise_service] = lambda: svc
 
     def client(role="admin"):
         user = SimpleNamespace(id=uuid.uuid4(), role=role, community_id=CID)

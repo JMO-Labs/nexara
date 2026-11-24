@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions import AppError
-from app.services.notifications.apprise_guard import check_apprise_url
+from app.services.notifications.apprise_guard import build_apprise, check_apprise_url
 
 
 def test_member_loopback_blocked() -> None:
@@ -100,3 +100,40 @@ async def test_admin_alert_sends_when_valkey_down() -> None:
     ):
         await admin_alerts.admin_alert(MagicMock(), uuid.uuid4(), "disk_high", {})
     send.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "addr,blocked",
+    [
+        ("100.64.0.1", True),
+        ("::ffff:127.0.0.1", True),
+        ("2002:7f00:1::1", True),
+        ("64:ff9b::a00:5", True),
+        ("8.8.8.8", False),
+    ],
+)
+def test_ip_classification(addr: str, blocked: bool) -> None:
+    from app.services.notifications.apprise_guard import _blocked
+
+    assert _blocked(addr) is blocked
+
+
+def test_mailto_smtp_param_blocked() -> None:
+    info = [(socket.AF_INET, 0, 0, "", ("93.184.216.34", 0))]
+    with patch(
+        "socket.getaddrinfo",
+        side_effect=lambda h, *a: info if h == "example.com" else [(2, 0, 0, "", ("127.0.0.1", 0))],
+    ):
+        with pytest.raises(AppError):
+            check_apprise_url("mailto://u:p@example.com?smtp=127.0.0.1", allow_local=False)
+
+
+def test_unparsable_url_blocked() -> None:
+    with pytest.raises(AppError):
+        check_apprise_url("notascheme://x", allow_local=False)
+
+
+def test_member_sender_has_redirects_off_even_with_url_param() -> None:
+    a = build_apprise("json://example.com/x?redirect=yes", allow_local=False)
+    assert all(p.redirects is False for p in a)
+    assert all(p.redirects for p in build_apprise("json://example.com/x", allow_local=True))

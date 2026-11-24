@@ -8,12 +8,12 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 
-import apprise
 from sqlalchemy import Select, select
 
 from app.models.apprise_url import AppriseURL
 from app.models.community import Community
 from app.repositories.base import BaseRepository
+from app.services.notifications.apprise_guard import build_apprise
 from app.services.notifications.secrets import decrypt_url, encrypt_url
 
 AUTO_DISABLE_THRESHOLD = 10
@@ -161,8 +161,9 @@ class AppriseRepository(BaseRepository[AppriseURL]):
         if row is None:
             return False, "URL not found"
         try:
-            apobj = apprise.Apprise()
-            if not apobj.add(row.apprise_url):
+            allow = row.is_admin_target or await self.allow_local(row.community_id)
+            apobj = build_apprise(row.apprise_url, allow_local=allow)
+            if len(apobj) != 1:
                 return False, "Invalid Apprise URL"
             ok = await asyncio.to_thread(apobj.notify, body=body, title=title)
         except Exception as exc:
