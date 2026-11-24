@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.models.media import Media
@@ -218,6 +218,19 @@ class PluginRepository(BaseRepository[PluginInstall]):
             .order_by(PostMedia.position)
         )
         return [(r[0], r[1]) for r in res.all()]
+
+    async def is_live_bot(self, user_id: uuid.UUID, community_id: uuid.UUID) -> bool:
+        """@brief User is an active, undeleted bot of this community."""
+        stmt = select(
+            exists().where(
+                User.id == user_id,
+                User.community_id == community_id,
+                User.is_bot.is_(True),
+                User.is_active.is_(True),
+                User.deleted_at.is_(None),
+            )
+        )
+        return bool((await self._session.execute(stmt)).scalar())
 
     async def get_usernames(self, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
         """@brief Real usernames of the given (bot) users."""

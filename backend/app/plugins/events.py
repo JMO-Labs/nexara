@@ -137,7 +137,9 @@ async def _bot_can_see(
     comment: Comment | None,
     bot_id: uuid.UUID,
 ) -> bool:
-    """@brief Same rule as REST reads, plus no block between commenter and bot."""
+    """@brief Live bot of this community, same rule as REST reads, no commenter block."""
+    if not await PluginRepository(session).is_live_bot(bot_id, community_id):
+        return False
     if not await PostRepository(session).is_visible(post.id, bot_id, community_id):
         return False
     return not (

@@ -11,6 +11,8 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.core.dependencies import get_current_user
 from app.models.media import Media
 from app.models.post import Post, PostMedia
@@ -163,6 +165,25 @@ async def test_group_post_pushed_only_when_bot_is_member(env):
     env.s.add(SubgroupMember(community_id=CID, subgroup_id=g.id, user_id=bot.id))
     await env.s.flush()
     assert len(await _dispatch(env, p, env.u.member)) == 1
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"is_active": False},
+        {"deleted_at": datetime.now(UTC)},
+        {"is_bot": False},
+        {"community_id": "other"},
+    ],
+)
+async def test_no_webhook_for_dead_or_foreign_bot(env, change):
+    bot, _h = await _bot_client(env)
+    p = await _post(env.s, env.u.member)
+    assert len(await _dispatch(env, p, env.u.member)) == 1
+    for k, v in change.items():
+        setattr(bot, k, env.u.other_admin.community_id if v == "other" else v)
+    await env.s.flush()
+    assert await _dispatch(env, p, env.u.member) == []
 
 
 # --- I3: ?subgroup_id= never bypasses visibility ----------------------------------------

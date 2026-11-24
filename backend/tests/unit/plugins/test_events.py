@@ -89,6 +89,7 @@ async def _run(
     author=None,
     visible=True,
     blocked=False,
+    live=True,
     pref=None,
     inst=None,
     bot_name="echo",
@@ -98,6 +99,7 @@ async def _run(
         side_effect=lambda cid, ev: [(inst or _inst(), _pc())] if ev in MANIFEST["events"] else []
     )
     repo.get_user_pref = AsyncMock(return_value=pref or {})
+    repo.is_live_bot = AsyncMock(return_value=live)
     repo.list_post_media = AsyncMock(return_value=[])
     repo.get_usernames = AsyncMock(return_value={BOT: bot_name})
     posts = MagicMock(is_visible=AsyncMock(return_value=visible))
@@ -134,6 +136,7 @@ async def test_comment_created_has_comment_data():
         {"author": _author(is_bot=True)},
         {"post": _post(visibility="private")},
         {"post": _post(visibility="subgroup", subgroup_id=uuid.uuid4()), "visible": False},
+        {"live": False},  # inactive, deleted or foreign bot
         {"visible": False},  # REST is_visible says no (blocks, hidden answer, ...)
         {"post": _post(is_nsfw=True)},
         {"inst": _inst(scopes=("comments:read",))},
