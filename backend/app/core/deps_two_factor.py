@@ -18,6 +18,7 @@ from app.core.dependencies import get_current_user, get_db, require_role
 if TYPE_CHECKING:
     from app.models.user import User
     from app.services.admin_security_service import AdminSecurityService
+    from app.services.auth.passkeys import PasskeyService
     from app.services.auth.two_factor import TwoFactorService
 
 
@@ -61,5 +62,28 @@ def get_admin_security_service(
         AuditRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),
         user.id,
+        client_ip(request),
+    )
+
+
+def get_passkey_service(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PasskeyService:
+    """@brief Provide a PasskeyService (no auth; routes add ``get_current_user`` themselves)."""
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.passkey_repo import PasskeyRepository
+    from app.repositories.token_repo import TokenRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.auth.passkeys import PasskeyService
+
+    return PasskeyService(
+        PasskeyRepository(db, uuid.UUID(settings.COMMUNITY_ID)),
+        UserRepository(db),
+        TokenRepository(db),
+        AuditRepository(db),
+        settings,
+        uuid.UUID(settings.COMMUNITY_ID),
         client_ip(request),
     )

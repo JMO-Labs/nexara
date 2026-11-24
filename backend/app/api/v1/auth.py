@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth_2fa import router as auth_2fa_router
 from app.api.v1.auth_magic_link import router as magic_link_router
 from app.api.v1.auth_oidc import router as oidc_router
+from app.api.v1.auth_passkeys import router as auth_passkeys_router
 from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
 from app.core.cookies import should_secure_cookie
@@ -253,6 +254,7 @@ async def logout(
 
 
 router.include_router(auth_2fa_router)
+router.include_router(auth_passkeys_router)
 router.include_router(magic_link_router, prefix="/magic-link")
 router.include_router(password_reset_router)
 router.include_router(oidc_router)

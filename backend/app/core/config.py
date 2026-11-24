@@ -7,6 +7,7 @@ Pydantic BaseSettings handles validation, type coercion, and defaults.
 """
 
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -141,6 +142,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_DEFAULT: str = "600/minute"
     RATE_LIMIT_AUTH: str = "10/minute"
 
+    # --- WebAuthn (passkeys) ---
+    WEBAUTHN_RP_ID: str = ""
+    """@brief Relying-party id; defaults to the hostname of APP_BASE_URL."""
+    WEBAUTHN_ORIGIN: str = ""
+    """@brief Comma-separated expected origins; defaults to the APP_BASE_URL origin."""
+
     # --- Webhooks ---
     WEBHOOK_ALLOWED_HOSTS: str = ""
     """@brief Comma-separated hosts exempt from the SSRF guard (LAN targets)."""
@@ -151,6 +158,20 @@ class Settings(BaseSettings):
         if not self.ALLOWED_ORIGINS:
             return []
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+
+    @property
+    def webauthn_rp_id(self) -> str:
+        """@brief Effective WebAuthn RP id (explicit setting, else APP_BASE_URL hostname)."""
+        return self.WEBAUTHN_RP_ID.strip() or urlsplit(self.APP_BASE_URL).hostname or "localhost"
+
+    @property
+    def webauthn_origins(self) -> list[str]:
+        """@brief Effective expected origins (explicit list, else APP_BASE_URL origin)."""
+        explicit = [o.strip().rstrip("/") for o in self.WEBAUTHN_ORIGIN.split(",") if o.strip()]
+        if explicit:
+            return explicit
+        u = urlsplit(self.APP_BASE_URL)
+        return [f"{u.scheme}://{u.netloc}"]
 
     @property
     def webhook_allowed_hosts(self) -> frozenset[str]:
