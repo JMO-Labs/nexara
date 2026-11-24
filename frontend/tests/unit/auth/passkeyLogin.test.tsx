@@ -71,6 +71,21 @@ describe("login passkey", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
   });
 
+  it("passkey sign-in does not validate the optional email hint", async () => {
+    vi.mocked(pk.authenticateWithPasskey).mockResolvedValue({} as never);
+    vi.mocked(flow.completeLogin).mockResolvedValue({ kind: "authenticated" });
+    render(<LoginPage />);
+    await userEvent.click(screen.getByLabelText("Email"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Sign in with a passkey" }),
+    );
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app"));
+    expect(screen.queryByText("Enter a valid email address")).toBeNull();
+    expect(pk.authenticateWithPasskey).toHaveBeenCalledWith({
+      email: undefined,
+    });
+  });
+
   it("hides the passkey button on insecure context", async () => {
     vi.mocked(pk.passkeysAvailable).mockReturnValue(false);
     render(<LoginPage />);

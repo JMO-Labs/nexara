@@ -120,7 +120,7 @@ describe("LoginPage", () => {
 });
 
 describe("LoginPage validation", () => {
-  it("shows inline email format error on blur and does not submit", async () => {
+  it("shows inline email format error on submit and does not submit", async () => {
     vi.mocked(api.getAuthConfig).mockResolvedValue({
       oidc_enabled: false,
       registration_enabled: true,
@@ -130,6 +130,10 @@ describe("LoginPage validation", () => {
     render(<LoginPage />);
     await userEvent.type(screen.getByLabelText("Email"), "not-an-email");
     await userEvent.tab();
+    // No blur validation (the passkey button leaves the field too).
+    expect(screen.queryByText("Enter a valid email address")).toBeNull();
+    await userEvent.type(screen.getByLabelText("Password"), "pw");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByText("Enter a valid email address")).toBeTruthy();
     expect(api.login).not.toHaveBeenCalled();
   });

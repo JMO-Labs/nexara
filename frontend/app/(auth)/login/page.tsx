@@ -55,7 +55,9 @@ export default function LoginPage() {
 
   const { register, handleSubmit, formState, getValues } = useForm<FormData>({
     resolver: zodResolver(Schema),
-    mode: "onTouched",
+    // Validate on submit only: leaving the email field for the passkey button
+    // (email is an optional hint there) must not flag it as invalid.
+    mode: "onSubmit",
     defaultValues: { email: "", password: "" },
   });
 
