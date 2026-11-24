@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { safePath } from "@/lib/notifications/pushTag";
 
-/** @brief Mount once in the authenticated shell. @return null */
+/** @brief Mount once in the root layout. @return null */
 export function SwNavigateBridge() {
   const router = useRouter();
   useEffect(() => {

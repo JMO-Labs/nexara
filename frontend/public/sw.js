@@ -31,8 +31,19 @@ self.addEventListener("install", (event) => {
 self.addEventListener("message", (event) => {
   const type = event.data && event.data.type;
   if (type === "SKIP_WAITING") self.skipWaiting();
-  // Sign-out / account switch: drop saved authenticated pages.
-  if (type === "CLEAR_USER_CACHE") event.waitUntil(caches.delete(PAGES));
+  // Sign-out / account switch: drop saved pages, shown notifications, badge.
+  if (type === "CLEAR_USER_CACHE")
+    event.waitUntil(
+      Promise.all([
+        caches.delete(PAGES),
+        Promise.resolve(self.registration.getNotifications?.())
+          .then((ns) => (ns || []).forEach((n) => n.close()))
+          .catch(() => {}),
+        Promise.resolve(self.navigator?.clearAppBadge?.()).catch(() => {}),
+      ]),
+    );
+  // First load ran before the SW controlled the page: cache what it fetched.
+  if (type === "CACHE_URLS") event.waitUntil(precache(event.data.urls));
 });
 
 self.addEventListener("activate", (event) => {
@@ -48,6 +59,38 @@ self.addEventListener("activate", (event) => {
       .then(() => self.clients.claim()),
   );
 });
+
+/** @brief Static asset (build chunk or font) served cache-first. */
+function isStatic(url) {
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    /\.(woff2?|ttf|otf)$/.test(url.pathname)
+  );
+}
+
+/** @brief Cache same-origin static assets and /app pages the page reports. */
+async function precache(urls) {
+  if (!Array.isArray(urls)) return;
+  const statics = await caches.open(STATIC);
+  for (const raw of urls.slice(0, 300)) {
+    try {
+      const url = new URL(raw, self.location.origin);
+      if (url.origin !== self.location.origin) continue;
+      if (isStatic(url)) {
+        if (await statics.match(url.href)) continue;
+        const res = await fetch(url.href);
+        if (res.ok) await statics.put(url.href, res);
+      } else {
+        const p = url.pathname;
+        if (p !== "/app" && !p.startsWith("/app/")) continue;
+        const res = await fetch(url.href, { credentials: "same-origin" });
+        if (cacheable(url, res)) await storePage(pageKey(url), res);
+      }
+    } catch {
+      /* best effort */
+    }
+  }
+}
 
 /** @brief Cache-first lookup, storing successful network responses. */
 async function cacheFirst(req) {
@@ -138,11 +181,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/ws/"))
     return;
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    req.destination === "font" ||
-    /\.(woff2?|ttf|otf)$/.test(url.pathname)
-  ) {
+  if (isStatic(url) || req.destination === "font") {
     event.respondWith(cacheFirst(req));
   } else if (isRsc(req, url)) {
     // RSC payloads are never cached (user data, Vary). Offline they must fail
@@ -182,12 +221,15 @@ self.addEventListener("push", (event) => {
   event.waitUntil(Promise.all(jobs));
 });
 
-/** @brief Same-origin path+query+hash of raw, else "/app". */
+/** @brief Same-origin path+query+hash of raw, else "/app". The normalised
+ *         path must also pass lib safePath's rule: "/.//evil.com" normalises
+ *         to "//evil.com", which openWindow would resolve off-origin. */
 function safeTarget(raw) {
   try {
     const u = new URL(raw, self.location.origin);
-    if (u.origin === self.location.origin)
-      return u.pathname + u.search + u.hash;
+    const out = u.pathname + u.search + u.hash;
+    if (u.origin === self.location.origin && /^\/(?![/\\])/.test(out))
+      return out;
   } catch {
     /* fall through */
   }

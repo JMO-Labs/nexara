@@ -7,6 +7,7 @@ import type { Metadata, Viewport } from "next";
 import { outfit } from "@/theme/font";
 import UpdatePrompt from "@/components/layout/UpdatePrompt";
 import ServiceWorkerRegistrar from "@/components/layout/ServiceWorkerRegistrar";
+import { SwNavigateBridge } from "@/components/layout/SwNavigateBridge";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -41,6 +42,8 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <ServiceWorkerRegistrar />
         <UpdatePrompt />
+        {/* Root-mounted so notification clicks navigate from any page. */}
+        <SwNavigateBridge />
       </body>
     </html>
   );
