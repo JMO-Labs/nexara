@@ -21,6 +21,20 @@ import { TotpSetup } from "./security/TotpSetup";
 
 const STATUS = ["2fa", "status"];
 
+/**
+ * @brief Disable-dialog body: a code-shaped value (6 digits or an 8-char
+ *        recovery code) is sent as both password and code; the server tries
+ *        the password first, then the code.
+ * @param v trimmed input
+ * @return totpDisable body
+ */
+export const disableProof = (v: string) => {
+  const code = v.replace(/[\s-]/g, "");
+  return /^(\d{6}|[A-Za-z0-9]{8})$/.test(code)
+    ? { password: v, code }
+    : { password: v };
+};
+
 /** @brief Security settings tab. */
 export function SecurityTab() {
   const qc = useQueryClient();
@@ -86,7 +100,7 @@ export function SecurityTab() {
       <ProofDialog
         open={proof === "regen"}
         title="Regenerate recovery codes"
-        label="6-digit code"
+        label="Code or recovery code"
         confirmLabel="Regenerate"
         onClose={() => setProof(null)}
         onSubmit={async (code) => {
@@ -98,12 +112,12 @@ export function SecurityTab() {
       <ProofDialog
         open={proof === "disable"}
         title="Turn off authenticator"
-        label="Password or 6-digit code"
+        label="Password, code or recovery code"
         confirmLabel="Turn off"
         type="password"
         onClose={() => setProof(null)}
         onSubmit={async (v) => {
-          await totpDisable(/^\d{6}$/.test(v) ? { code: v } : { password: v });
+          await totpDisable(disableProof(v));
           await refreshAccessToken();
           refresh();
         }}

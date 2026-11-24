@@ -16,7 +16,7 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 vi.mock("@/lib/api/twoFactor");
 
-import { SecurityTab } from "@/components/settings/SecurityTab";
+import { SecurityTab, disableProof } from "@/components/settings/SecurityTab";
 import { ResetTwoFactorButton } from "@/components/admin/ResetTwoFactorButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import * as api from "@/lib/api/twoFactor";
@@ -90,6 +90,43 @@ describe("SecurityTab", () => {
     await userEvent.click(screen.getByRole("button", { name: "Turn on" }));
     await userEvent.click(await screen.findByRole("button", { name: "Copy" }));
     expect(await screen.findByText(/Copy failed/)).toBeTruthy();
+  });
+
+  it("disable dialog accepts a recovery code", async () => {
+    vi.mocked(api.getTwoFactorStatus).mockResolvedValue({
+      totp: true,
+      passkeys: 0,
+      recovery_left: 3,
+      required: false,
+      grace_until: null,
+    });
+    vi.mocked(api.totpDisable).mockResolvedValue({ message: "ok" } as never);
+    render(<SecurityTab />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Turn off" }),
+    );
+    await userEvent.type(
+      await screen.findByLabelText("Password, code or recovery code"),
+      "abcd-1234",
+    );
+    const buttons = screen.getAllByRole("button", { name: "Turn off" });
+    await userEvent.click(buttons[buttons.length - 1]);
+    await waitFor(() =>
+      expect(api.totpDisable).toHaveBeenCalledWith({
+        password: "abcd-1234",
+        code: "abcd1234",
+      }),
+    );
+  });
+
+  it("disableProof sends plain passwords as password only", () => {
+    expect(disableProof("correct horse battery")).toEqual({
+      password: "correct horse battery",
+    });
+    expect(disableProof("123456")).toEqual({
+      password: "123456",
+      code: "123456",
+    });
   });
 
   it("hides passkey controls on insecure context", async () => {
