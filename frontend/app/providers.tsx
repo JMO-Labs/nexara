@@ -4,16 +4,11 @@
  * @brief Client-side provider tree. Wraps children with next-themes (class-based,
  *        system default), next-intl, and TanStack Query. Server state lives here; UI state lives in Zustand.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import {
-  PERSIST_BUSTER,
-  PERSIST_MAX_AGE,
-  createPersister,
-  shouldPersist,
-} from "@/lib/pwa/queryPersist";
+import { PERSIST_MAX_AGE, persistOptionsFor } from "@/lib/pwa/queryPersist";
 import { CLEAR_EVENT } from "@/lib/pwa/clearUserCache";
 import { NextIntlClientProvider } from "next-intl";
 import { loadPlugins } from "@/lib/plugins/plugin-loader";
@@ -37,11 +32,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               return failures < 2;
             },
           },
+          // Offline mutations fail fast (UI also blocks via useOnline).
+          mutations: { networkMode: "always" },
         },
       }),
   );
 
-  const [persister] = useState(createPersister);
+  const userId = useSession((s) => s.user?.id);
+  const persistOptions = useMemo(() => persistOptionsFor(userId), [userId]);
   useEffect(() => {
     const clear = () => queryClient.clear();
     window.addEventListener(CLEAR_EVENT, clear);
@@ -67,18 +65,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
         <PersistQueryClientProvider
           client={queryClient}
-          persistOptions={{
-            persister: persister ??
-              // No IndexedDB (SSR/old browsers): in-memory no-op persister.
-              {
-                persistClient: async () => {},
-                restoreClient: async () => undefined,
-                removeClient: async () => {},
-              },
-            maxAge: PERSIST_MAX_AGE,
-            buster: PERSIST_BUSTER,
-            dehydrateOptions: { shouldDehydrateQuery: shouldPersist },
-          }}
+          persistOptions={persistOptions}
         >
           {children}
         </PersistQueryClientProvider>

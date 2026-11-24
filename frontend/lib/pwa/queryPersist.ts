@@ -6,6 +6,7 @@
  */
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import type { Query } from "@tanstack/react-query";
+import type { Persister } from "@tanstack/react-query-persist-client";
 import { del, get, set } from "idb-keyval";
 
 export const PERSIST_KEY = "nx-rq-cache";
@@ -30,13 +31,23 @@ const DENY = new Set([
   "oauth",
 ]);
 
+/** Key paths (first two segments) that carry secrets/tokens: never persisted. */
+const DENY_PATH = new Set([
+  "notifications/apprise",
+  "notifications/webhooks",
+  "notifications/preferences",
+  "events/subscriptions",
+  "users/sso",
+]);
+
 /** @brief Only successful, non-sensitive queries are dehydrated. */
 export function shouldPersist(
   query: Pick<Query, "queryKey" | "state">,
 ): boolean {
   if (query.state.status !== "success") return false;
-  const head = query.queryKey[0];
-  return !(typeof head === "string" && DENY.has(head));
+  const [head, second] = query.queryKey;
+  if (typeof head === "string" && DENY.has(head)) return false;
+  return !DENY_PATH.has(`${String(head)}/${String(second)}`);
 }
 
 const hasIdb = () => typeof indexedDB !== "undefined";
@@ -59,4 +70,29 @@ export function createPersister() {
 export function clearPersistedQueries(): Promise<void> {
   if (!hasIdb()) return Promise.resolve();
   return del(PERSIST_KEY).catch(() => {});
+}
+
+const NOOP: Persister = {
+  persistClient: async () => {},
+  restoreClient: async () => undefined,
+  removeClient: async () => {},
+};
+
+/**
+ * @brief Persist options scoped to one user. Without a user id (or without
+ *        IndexedDB) nothing is restored or persisted; the buster embeds the
+ *        user id so another user never hydrates this user's blob.
+ * @param userId session user id, if known
+ */
+export function persistOptionsFor(userId?: string | null) {
+  return {
+    persister: (userId && createPersister()) || NOOP,
+    maxAge: PERSIST_MAX_AGE,
+    buster: `${PERSIST_BUSTER}:${userId ?? "anon"}`,
+    dehydrateOptions: {
+      shouldDehydrateQuery: shouldPersist,
+      // Never persist mutations (paused ones carry variables like passwords).
+      shouldDehydrateMutation: () => false,
+    },
+  };
 }

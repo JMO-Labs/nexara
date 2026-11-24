@@ -21,6 +21,7 @@ describe("Providers", () => {
       </Providers>,
     );
     expect(qc.getDefaultOptions().queries?.networkMode).toBe("offlineFirst");
+    expect(qc.getDefaultOptions().mutations?.networkMode).toBe("always");
     qc.setQueryData(["feed"], 1);
     act(() => void window.dispatchEvent(new Event(CLEAR_EVENT)));
     expect(qc.getQueryData(["feed"])).toBeUndefined();

@@ -12,18 +12,13 @@ import {
 import { get } from "idb-keyval";
 import {
   PERSIST_KEY,
-  createPersister,
+  persistOptionsFor,
   shouldPersist,
   clearPersistedQueries,
 } from "@/lib/pwa/queryPersist";
 import { clearUserCache } from "@/lib/pwa/clearUserCache";
 
-const opts = () => ({
-  persister: createPersister()!,
-  maxAge: 86_400_000,
-  buster: "t",
-  dehydrateOptions: { shouldDehydrateQuery: shouldPersist },
-});
+const opts = (user = "a") => persistOptionsFor(user);
 
 afterEach(() => clearPersistedQueries());
 
@@ -67,6 +62,62 @@ describe("query persistence", () => {
     expect(await get(PERSIST_KEY)).toBeDefined();
     clearUserCache();
     await new Promise((r) => setTimeout(r, 50));
+    expect(await get(PERSIST_KEY)).toBeUndefined();
+  });
+
+  it.each([
+    ["notifications", "apprise"],
+    ["notifications", "webhooks"],
+    ["notifications", "preferences"],
+    ["events", "subscriptions"],
+    ["users", "sso"],
+  ])("denies %s/%s but not siblings", (h, sec) => {
+    const st = { status: "success" };
+    expect(shouldPersist({ queryKey: [h, sec], state: st } as never)).toBe(
+      false,
+    );
+    expect(shouldPersist({ queryKey: [h, "list"], state: st } as never)).toBe(
+      true,
+    );
+  });
+
+  it("never persists paused/offline mutations", async () => {
+    const a = new QueryClient();
+    a.getMutationCache().build(a, {
+      mutationFn: async () => 1,
+      mutationKey: ["pw"],
+    });
+    const m = a.getMutationCache().getAll()[0];
+    m.state = {
+      ...m.state,
+      isPaused: true,
+      variables: { password: "hunter2" },
+    } as never;
+    await persistQueryClientSave({ queryClient: a, ...opts() });
+    expect(JSON.stringify(await get(PERSIST_KEY))).not.toContain("hunter2");
+  });
+
+  it("scopes by user: B never hydrates A's blob, A restores", async () => {
+    const a = new QueryClient();
+    a.setQueryData(["feed"], "secretA");
+    await persistQueryClientSave({ queryClient: a, ...opts("a") });
+    const b = new QueryClient();
+    await persistQueryClientRestore({ queryClient: b, ...opts("b") });
+    expect(b.getQueryData(["feed"])).toBeUndefined();
+    const a2 = new QueryClient();
+    a.setQueryData(["feed"], "secretA");
+    await persistQueryClientSave({ queryClient: a, ...opts("a") });
+    await persistQueryClientRestore({ queryClient: a2, ...opts("a") });
+    expect(a2.getQueryData(["feed"])).toBe("secretA");
+  });
+
+  it("no user: nothing persisted", async () => {
+    const a = new QueryClient();
+    a.setQueryData(["feed"], 1);
+    await persistQueryClientSave({
+      queryClient: a,
+      ...persistOptionsFor(null),
+    });
     expect(await get(PERSIST_KEY)).toBeUndefined();
   });
 });
