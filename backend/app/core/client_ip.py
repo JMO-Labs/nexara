@@ -53,7 +53,8 @@ def client_ip(request: Request) -> str | None:
     headers = request.headers
     if get_settings().CF_ACCESS_ENABLED and (cf := _ip(headers.get("cf-connecting-ip"))):
         return str(cf)
-    xff = ",".join(headers.getlist("x-forwarded-for"))
+    getlist = getattr(headers, "getlist", None)  # plain mappings carry one value
+    xff = ",".join(getlist("x-forwarded-for")) if getlist else headers.get("x-forwarded-for", "")
     hops = [h.strip() for h in xff.split(",") if h.strip()]
     if not hops and (real := headers.get("x-real-ip")):
         hops = [real.strip()]
