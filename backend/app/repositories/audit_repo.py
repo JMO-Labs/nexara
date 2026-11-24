@@ -95,7 +95,7 @@ class AuditRepository(BaseRepository[AuditLog]):
         stmt = select(AuditLog).order_by(AuditLog.created_at.desc())
 
         if action_filter:
-            stmt = stmt.where(AuditLog.action.startswith(action_filter))
+            stmt = stmt.where(AuditLog.action.startswith(action_filter, autoescape=True))
         if actor_filter:
             stmt = stmt.where(AuditLog.actor_id == actor_filter)
         if since:

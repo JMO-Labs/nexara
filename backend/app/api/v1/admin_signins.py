@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from app.core.deps_signins import get_admin_signin_service
+from app.schemas.common import UtcDatetime
 from app.schemas.signin import SigninPage
 from app.services.admin_signin_service import AdminSigninService
 
@@ -23,7 +22,7 @@ async def list_signins(
     q: str | None = Query(None, max_length=100),
     success: bool | None = None,
     method: str | None = None,
-    since: datetime | None = None,
+    since: UtcDatetime | None = None,
     cursor: str | None = None,
     svc: AdminSigninService = Depends(get_admin_signin_service),
 ) -> SigninPage:
@@ -36,7 +35,7 @@ async def export_signins(
     q: str | None = Query(None, max_length=100),
     success: bool | None = None,
     method: str | None = None,
-    since: datetime | None = None,
+    since: UtcDatetime | None = None,
     svc: AdminSigninService = Depends(get_admin_signin_service),
 ) -> StreamingResponse:
     """@brief Stream the filtered log as CSV (max 50 000 rows); audited."""

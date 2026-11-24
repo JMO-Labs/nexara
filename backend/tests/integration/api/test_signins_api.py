@@ -197,6 +197,18 @@ async def test_csv_route_header_injection_and_audit(test_app, monkeypatch):
     assert audit.append.await_args.kwargs["action"] == "signins.exported"
 
 
+async def test_signin_naive_since_is_utc(test_app):
+    from app.schemas.signin import SigninPage
+
+    svc = MagicMock()
+    svc.list_page = AsyncMock(return_value=SigninPage(items=[]))
+    async with _client(test_app, "admin", svc) as c:
+        r = await c.get("/api/v1/admin/signins?since=2026-01-02T03:04:05")
+    test_app.dependency_overrides.clear()
+    assert r.status_code == 200, r.text
+    assert svc.list_page.await_args.kwargs["since"] == datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+
 async def test_signin_routes_forbid_members(test_app):
     async with _client(test_app, "member") as c:
         assert (await c.get("/api/v1/admin/signins")).status_code == 403

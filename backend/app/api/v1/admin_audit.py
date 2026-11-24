@@ -8,7 +8,6 @@ There is deliberately no DELETE/PUT/PATCH: the log is append-only (retention asi
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -20,7 +19,7 @@ from app.core.dependencies import get_db, require_role
 from app.db.session import async_session_factory
 from app.models.user import User
 from app.schemas.admin import AuditLogEntry
-from app.schemas.common import PaginatedResponse
+from app.schemas.common import PaginatedResponse, UtcDatetime
 from app.services.admin_audit_service import AdminAuditService
 
 router = APIRouter(prefix="/admin", tags=["admin-audit"])
@@ -40,8 +39,8 @@ def _filters(
     actor_id: uuid.UUID | None = None,
     action_prefix: str | None = Query(None, max_length=100),
     action_filter: str | None = Query(None, max_length=100),
-    since: datetime | None = None,
-    until: datetime | None = None,
+    since: UtcDatetime | None = None,
+    until: UtcDatetime | None = None,
 ) -> dict[str, Any]:
     """@brief Shared filter query params (``action_filter`` is the legacy name)."""
     return {

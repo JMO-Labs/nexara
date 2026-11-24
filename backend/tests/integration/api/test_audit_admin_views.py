@@ -71,7 +71,13 @@ async def test_audit_list_filters(world):
     w = world
     repo = AuditRepository(w.s)
     now = datetime.now(UTC)
-    for action, age in (("zz.old", 10), ("zz.new", 1), ("yy.other", 1)):
+    for action, age in (
+        ("zz.old", 10),
+        ("zz.new", 1),
+        ("yy.other", 1),
+        ("qq_x.a", 1),
+        ("qqyx.b", 1),
+    ):
         e = await repo.append(actor_id=w.member.id, action=action, ip_address="10.1.2.3")
         await w.s.execute(
             text("update audit_log set created_at=:t where id=:i"),
@@ -90,10 +96,16 @@ async def test_audit_list_filters(world):
         assert await get(f"actor_id={w.member.id}&q=10.1.2") != []
         assert await get(f"actor_id={w.member.id}&q={w.member.display_name[:6]}") != []
         since = (now - timedelta(days=5)).isoformat().replace("+", "%2B")
-        assert sorted(await get(f"actor_id={w.member.id}&since={since}")) == ["yy.other", "zz.new"]
+        assert sorted(await get(f"actor_id={w.member.id}&since={since}&action_prefix=z")) == [
+            "zz.new"
+        ]
         until = (now - timedelta(days=5)).isoformat().replace("+", "%2B")
         assert await get(f"actor_id={w.member.id}&until={until}") == ["zz.old"]
         assert await get(f"actor_id={w.member.id}&q=%25") == []  # literal percent
+        assert await get("action_prefix=qq_x.") == ["qq_x.a"]  # "_" is not a wildcard
+        naive = (now - timedelta(days=5)).replace(tzinfo=None).isoformat()
+        got = await get(f"actor_id={w.member.id}&since={naive}")  # naive = UTC
+        assert sorted(got) == ["qq_x.a", "qqyx.b", "yy.other", "zz.new"]
         async with w.client(w.member) as m:
             assert (await m.get(f"{base}")).status_code == 403
             assert (await m.get(f"{base}.csv")).status_code == 403
