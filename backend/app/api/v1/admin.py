@@ -15,6 +15,7 @@ import structlog
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.i18n import _
@@ -59,14 +60,6 @@ def _build_service(
         community_id=community_id,
         settings=settings,
     )
-
-
-def _client_ip(request: Request) -> str | None:
-    """@brief Extract client IP from request headers or connection."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else None
 
 
 @router.get("/metrics", response_model=MetricsResponse)
@@ -131,7 +124,7 @@ async def change_user_role(
     service: AdminService = Depends(_build_service),
 ) -> dict[str, Any]:
     """@brief Change a user's role."""
-    await service.change_role(user, user_id, body.role, _client_ip(request))
+    await service.change_role(user, user_id, body.role, client_ip(request))
     return {"message": _("Role updated")}
 
 
@@ -144,7 +137,7 @@ async def update_user_settings(
     service: AdminService = Depends(_build_service),
 ) -> dict[str, Any]:
     """@brief Turn simple mode on/off for a user (admin only, audited)."""
-    await service.set_simple_mode(user, user_id, body.simple_mode, _client_ip(request))
+    await service.set_simple_mode(user, user_id, body.simple_mode, client_ip(request))
     return {"message": _("Settings updated")}
 
 
@@ -156,7 +149,7 @@ async def suspend_user(
     service: AdminService = Depends(_build_service),
 ) -> dict[str, Any]:
     """@brief Suspend (deactivate) a user."""
-    await service.suspend_user(user, user_id, _client_ip(request))
+    await service.suspend_user(user, user_id, client_ip(request))
     return {"message": _("User suspended")}
 
 
@@ -168,7 +161,7 @@ async def restore_user(
     service: AdminService = Depends(_build_service),
 ) -> dict[str, Any]:
     """@brief Restore a soft-deleted user."""
-    await service.restore_user(user, user_id, _client_ip(request))
+    await service.restore_user(user, user_id, client_ip(request))
     return {"message": _("User restored")}
 
 
@@ -180,7 +173,7 @@ async def delete_user(
     service: AdminService = Depends(_build_service),
 ) -> MessageResponse:
     """@brief Soft-delete a user (set deleted_at and is_active=False)."""
-    await service.delete_user(user, user_id, _client_ip(request))
+    await service.delete_user(user, user_id, client_ip(request))
     return MessageResponse(message=_("User deleted"))
 
 
@@ -201,7 +194,7 @@ async def update_admin_settings(
     service: AdminService = Depends(_build_service),
 ) -> AdminSettingsResponse:
     """@brief Update admin settings (Phase 1: audit log only)."""
-    return await service.update_admin_settings(user, data, _client_ip(request))
+    return await service.update_admin_settings(user, data, client_ip(request))
 
 
 @router.get("/audit-log", response_model=PaginatedResponse[AuditLogEntry])

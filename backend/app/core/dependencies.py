@@ -19,6 +19,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AuthenticationError, AuthorizationError
 from app.core.i18n import _
@@ -306,10 +307,7 @@ def get_admin_ai_service(
     from app.services.ai.budget_service import BudgetService
     from app.services.ai.provider import get_ai_provider
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     redis = get_pool(settings, DB_CACHE)
     budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
     return AdminAIService(
@@ -336,10 +334,7 @@ def get_amazon_admin_service(
     from app.repositories.community_repo import CommunityRepository
     from app.services.shop.amazon_admin_service import AmazonAdminService
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     return AmazonAdminService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 
@@ -50,10 +51,7 @@ def get_admin_email_service(
     from app.repositories.community_repo import CommunityRepository
     from app.services.admin_email_service import AdminEmailService
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     return AdminEmailService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),
@@ -75,10 +73,7 @@ def get_email_reply_admin_service(
     from app.repositories.community_repo import CommunityRepository
     from app.services.email_reply_admin_service import EmailReplyAdminService
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     return EmailReplyAdminService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

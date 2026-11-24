@@ -223,7 +223,7 @@ class TestGetAdminAIService:
         assert isinstance(svc._communities, CommunityRepository)
         assert isinstance(svc._audit, AuditRepository)
         assert svc._actor_id == user.id
-        assert svc._ip == "9.9.9.9"
+        assert svc._ip == "10.0.0.1"
         assert svc._provider_factory() is None  # AI_PROVIDER unset
 
     def test_falls_back_to_client_host(self):

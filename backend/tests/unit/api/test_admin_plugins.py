@@ -118,13 +118,13 @@ async def test_list_unknown_plugin_404(test_app, admin_override, repos):
 
 
 @pytest.mark.asyncio
-async def test_audit_uses_first_forwarded_ip(test_app, admin_override, repos):
+async def test_audit_uses_rightmost_forwarded_ip(test_app, admin_override, repos):
     keys, audit = repos
     keys.list_for_plugin = AsyncMock(return_value=[])
     async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
         resp = await c.get(BASE, headers={"x-forwarded-for": "203.0.113.7, 10.0.0.1"})
     assert resp.status_code == 200
-    assert audit.append.call_args.kwargs["ip_address"] == "203.0.113.7"
+    assert audit.append.call_args.kwargs["ip_address"] == "10.0.0.1"
 
 
 # --- Lifecycle routes --------------------------------------------------------

@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.admin_oauth import _client_ip, _community_id
+from app.api.v1.admin_oauth import _community_id
+from app.core.client_ip import client_ip
 from app.core.dependencies import get_db, require_role
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
@@ -49,7 +50,7 @@ async def set_sso_only(
         target_type="community",
         target_id=community_id,
         extra_data={"enabled": body.enabled},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return SsoOnlyResponse(
         sso_only=body.enabled,
