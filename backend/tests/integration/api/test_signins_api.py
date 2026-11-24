@@ -259,3 +259,32 @@ async def test_revoke_others_rejects_revoked_or_missing_cookie(session, world):
     await svc.revoke(revoked.family_id)
     with pytest.raises(AppError):  # a dead cookie is no current session
         await svc.revoke_others("raw1")
+
+
+async def test_session_revocations_are_audited(session, world):
+    from sqlalchemy import select
+
+    from app.models.audit import AuditLog
+    from app.repositories.audit_repo import AuditRepository
+
+    _, a, _ = world
+    f1 = await _family(session, a, "keep")
+    f2 = await _family(session, a, "gone")
+    await _family(session, a, "other")
+    svc = SessionService(TokenRepository(session), a.id, AuditRepository(session), "5.6.7.8")
+    await svc.revoke(f2)
+    assert await svc.revoke_others("keep") >= 1
+    rows = (
+        (
+            await session.execute(
+                select(AuditLog)
+                .where(AuditLog.actor_id == a.id, AuditLog.action.startswith("session."))
+                .order_by(AuditLog.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    got = {(r.action, r.target_id, str(r.ip_address)) for r in rows}
+    assert ("session.revoked", f2, "5.6.7.8") in got
+    assert ("session.revoked_others", f1, "5.6.7.8") in got

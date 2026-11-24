@@ -1,16 +1,21 @@
 """
 @file session_service.py
 @brief A member's signed-in devices (refresh-token families): list and revoke.
+
+Revocations are audited (``session.revoked`` / ``session.revoked_others``) when an
+audit repository is supplied.
 """
 
 from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.core.security import hash_token
+from app.repositories.audit_repo import AuditRepository
 from app.repositories.token_repo import TokenRepository
 from app.schemas.signin import SessionOut
 from app.services.auth.device import parse_device
@@ -19,9 +24,30 @@ from app.services.auth.device import parse_device
 class SessionService:
     """@brief Session management for one user; never touches other users' tokens."""
 
-    def __init__(self, repo: TokenRepository, user_id: uuid.UUID) -> None:
+    def __init__(
+        self,
+        repo: TokenRepository,
+        user_id: uuid.UUID,
+        audit: AuditRepository | None = None,
+        ip_address: str | None = None,
+    ) -> None:
         self._repo = repo
         self._uid = user_id
+        self._audit = audit
+        self._ip = ip_address
+
+    async def _record(
+        self, action: str, family_id: uuid.UUID, extra: dict[str, Any] | None = None
+    ) -> None:
+        if self._audit is not None:
+            await self._audit.append(
+                actor_id=self._uid,
+                action=action,
+                target_type="session",
+                target_id=family_id,
+                extra_data=extra,
+                ip_address=self._ip,
+            )
 
     async def current_family(self, raw_refresh: str | None) -> uuid.UUID | None:
         """@return Family of the presented refresh cookie if it is this user's, else None."""
@@ -49,6 +75,7 @@ class SessionService:
         """@raises NotFoundError If the family is not an active session of this user."""
         if not await self._repo.revoke_user_family(self._uid, family_id):
             raise NotFoundError(_("Session not found"))
+        await self._record("session.revoked", family_id)
 
     async def revoke_others(self, raw_refresh: str | None) -> int:
         """@brief Sign out every device except the current one. @return tokens revoked."""
@@ -59,4 +86,6 @@ class SessionService:
                 message=_("Current session not found; sign in again"),
                 status_code=400,
             )
-        return await self._repo.revoke_other_families(self._uid, keep)
+        n = await self._repo.revoke_other_families(self._uid, keep)
+        await self._record("session.revoked_others", keep, {"tokens": n})
+        return n

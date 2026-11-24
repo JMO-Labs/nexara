@@ -10,11 +10,8 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Cookie, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db
-from app.models.user import User
-from app.repositories.token_repo import TokenRepository
+from app.core.deps_signins import get_session_service
 from app.schemas.common import MessageResponse
 from app.schemas.signin import SessionOut
 from app.services.session_service import SessionService
@@ -22,13 +19,6 @@ from app.services.session_service import SessionService
 router = APIRouter(prefix="/auth/sessions", tags=["sessions"])
 
 REFRESH_COOKIE = "refresh_token"
-
-
-def get_session_service(
-    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-) -> SessionService:
-    """@brief SessionService for the authenticated user."""
-    return SessionService(TokenRepository(db), user.id)
 
 
 @router.get("", response_model=list[SessionOut])
