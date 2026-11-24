@@ -41,7 +41,10 @@ class FakeRedis:
 @pytest.fixture
 def redis():
     r = FakeRedis()
-    with patch(PR + "get_pool", return_value=r):
+    with (
+        patch(PR + "get_pool", return_value=r),
+        patch(PR + "assert_password_auth_allowed", AsyncMock()),
+    ):
         yield r
 
 

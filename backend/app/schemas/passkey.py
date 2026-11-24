@@ -38,9 +38,10 @@ class RegisterVerifyBody(BaseModel):
 
 
 class LoginOptionsBody(BaseModel):
-    """@brief Optional email to narrow allowCredentials."""
+    """@brief Optional email, or a 2FA ``pending_token``, to narrow allowCredentials."""
 
     email: str | None = None
+    pending_token: str | None = None
 
 
 class LoginVerifyBody(BaseModel):

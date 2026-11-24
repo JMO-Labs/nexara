@@ -57,10 +57,10 @@ export const passkeyRegisterOptions = () =>
 export const passkeyRegisterVerify = (credential: unknown, name: string) =>
   apiPost<PasskeyInfo>(`${PK}/register/verify`, { credential, name });
 
-export const passkeyLoginOptions = (email?: string) =>
+export const passkeyLoginOptions = (email?: string, pending_token?: string) =>
   apiPost<Record<string, unknown>>(
     `${PK}/login/options`,
-    email ? { email } : {},
+    pending_token ? { pending_token } : email ? { email } : {},
     { anonymous: true },
   );
 

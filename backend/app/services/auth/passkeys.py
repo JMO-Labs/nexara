@@ -44,6 +44,7 @@ from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth.signin_log import log_failure, log_success
+from app.services.auth.sso_only import assert_password_auth_allowed
 from app.services.auth.token_utils import issue_tokens
 from app.services.auth.totp_replay import clear_user_attempts, reserve_attempt
 
@@ -169,10 +170,19 @@ class PasskeyService:
 
     # -- login -------------------------------------------------------------
 
-    async def login_options(self, email: str | None) -> dict[str, Any]:
-        """@brief Assertion options; empty allowCredentials = discoverable login."""
+    async def login_options(
+        self, email: str | None, pending_token: str | None = None
+    ) -> dict[str, Any]:
+        """
+        @brief Assertion options; empty allowCredentials = discoverable login.
+
+        A valid ``pending_token`` (first factor done) lists that user's passkeys so
+        non-discoverable security keys work for the 2FA step.
+        """
         allow: list[PublicKeyCredentialDescriptor] = []
-        user = await self._users.find_by_email(email) if email else None
+        user = await self._pending_user(pending_token) if pending_token else None
+        if user is None and email:
+            user = await self._users.find_by_email(email)
         if user and user.community_id == self._cid:
             allow = [
                 PublicKeyCredentialDescriptor(id=p.credential_id)
@@ -185,6 +195,14 @@ class PasskeyService:
         )
         await self._put(opts.challenge, "login", None)
         return dict(json.loads(options_to_json(opts)))
+
+    async def _pending_user(self, token: str) -> User | None:
+        """@brief Owner of a valid ``2fa_pending`` token, else None."""
+        try:
+            payload = decode_token(token, expected_type="2fa_pending", settings=self._s)
+            return await self._users.get_by_id(uuid.UUID(payload["sub"]), self._cid)
+        except (ValueError, KeyError):
+            return None
 
     async def login_verify(
         self, credential: dict[str, Any], pending_token: str | None, request: Request | None
@@ -208,6 +226,12 @@ class PasskeyService:
             if not await reserve_attempt(pending_token, pending_user, self._s):
                 await fail(None, None, "passkey", "bad_2fa_session")
                 raise AuthenticationError(message=_("Invalid 2FA session"))
+        else:
+            try:
+                await assert_password_auth_allowed(self._repo.session, self._cid)
+            except AppError:
+                await fail(None, None, "passkey", "sso_only")
+                raise
         try:
             challenge, _owner = await self._take(credential, "login")
             raw_id = base64url_to_bytes(str(credential.get("rawId") or credential.get("id")))
@@ -245,6 +269,13 @@ class PasskeyService:
             logger.info("passkey.login_rejected", reason=str(exc))
             await fail(user, user.email, "passkey", "bad_assertion")
             raise _bad("invalid_passkey", _("Passkey could not be verified")) from exc
+        if pending_user is None and user.password_hash is None:
+            await fail(user, user.email, "passkey", "sso_user")
+            raise AppError(
+                code="sso_login_required",
+                message=_("Sign in with single sign-on"),
+                status_code=403,
+            )
         if not await self._repo.touch(pk, v.new_sign_count):
             await fail(user, user.email, "passkey", "cloned")
             raise _bad("passkey_cloned", _("Passkey rejected: possible cloned authenticator"))

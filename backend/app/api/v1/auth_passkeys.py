@@ -56,7 +56,7 @@ async def login_options(
     svc: PasskeyService = Depends(get_passkey_service),
 ) -> dict[str, Any]:
     """@brief WebAuthn request options (discoverable when no email)."""
-    return await svc.login_options(body.email)
+    return await svc.login_options(body.email, body.pending_token)
 
 
 @router.post("/login/verify", response_model=LoginResponse)

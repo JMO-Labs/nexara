@@ -78,6 +78,7 @@ def env():
     ok, fail = AsyncMock(), AsyncMock()
     with (
         patch(PR + "get_pool", return_value=r),
+        patch(PR + "assert_password_auth_allowed", AsyncMock()),
         patch(PR + "log_success", ok),
         patch(PR + "log_failure", fail),
         patch(PR + "reserve_attempt", AsyncMock(return_value=True)),

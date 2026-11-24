@@ -46,6 +46,7 @@ import LoginPage from "@/app/(auth)/login/page";
 import TwoFactorPage from "@/app/(auth)/two-factor/page";
 import * as pk from "@/lib/passkeys";
 import * as flow from "@/lib/auth/flow";
+import * as authApi from "@/lib/api/auth";
 import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 
 beforeEach(() => {
@@ -74,6 +75,21 @@ describe("login passkey", () => {
     vi.mocked(pk.passkeysAvailable).mockReturnValue(false);
     render(<LoginPage />);
     await screen.findByLabelText("Email");
+    expect(
+      screen.queryByRole("button", { name: "Sign in with a passkey" }),
+    ).toBeNull();
+  });
+});
+
+describe("login passkey gating", () => {
+  it("hides the passkey button in SSO-only mode", async () => {
+    vi.mocked(authApi.getAuthConfig).mockResolvedValueOnce({
+      local_auth_enabled: true,
+      sso_only: true,
+      oauth_providers: [],
+    } as never);
+    render(<LoginPage />);
+    await waitFor(() => expect(screen.queryByLabelText("Email")).toBeNull());
     expect(
       screen.queryByRole("button", { name: "Sign in with a passkey" }),
     ).toBeNull();

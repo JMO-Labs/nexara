@@ -39,7 +39,7 @@ export async function registerPasskey(name: string) {
 export async function authenticateWithPasskey(
   opts: { email?: string; pendingToken?: string } = {},
 ): Promise<LoginResponse> {
-  const options = await api.passkeyLoginOptions(opts.email);
+  const options = await api.passkeyLoginOptions(opts.email, opts.pendingToken);
   const credential = await startAuthentication({
     optionsJSON: options as unknown as Parameters<
       typeof startAuthentication
