@@ -13,7 +13,7 @@ vi.mock("@/lib/api/auditLog", async (orig) => ({
   exportAuditCsv: vi.fn(),
 }));
 import * as api from "@/lib/api/auditLog";
-import { AuditLogTab } from "@/components/admin/AuditLogTab";
+import { AREAS, AuditLogTab } from "@/components/admin/AuditLogTab";
 
 const entry = {
   id: "a1",
@@ -43,11 +43,18 @@ describe("AuditLogTab", () => {
     expect(screen.queryByText("invite.created")).toBeNull();
   });
 
-  it("shows a relative timestamp with the full date in title", async () => {
+  it("shows a relative timestamp and the visible absolute date", async () => {
     render(<AuditLogTab />);
     const time = await screen.findByText("5 minutes ago");
     expect(time.tagName).toBe("TIME");
     expect(time.getAttribute("title")).toBeTruthy();
+    const abs = time.querySelector("span");
+    expect(abs?.textContent).toMatch(/\d{4}/); // absolute date, not hover-only
+  });
+
+  it("offers every audited area in the filter", () => {
+    for (const p of ["settings.", "session.", "plugin.", "moderation.", "ai."])
+      expect(AREAS).toContain(p);
   });
 
   it("shows loading, error and empty states", async () => {

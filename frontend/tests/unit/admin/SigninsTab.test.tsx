@@ -31,7 +31,11 @@ const row = (id: string, over = {}) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.listSignins).mockResolvedValue({
-    items: [row("1"), row("2", { success: false, reason: "bad_password" })],
+    items: [
+      row("1"),
+      row("2", { success: false, reason: "bad_password" }),
+      row("3", { success: false, reason: "bad_2fa_session" }),
+    ],
     next_cursor: "c1",
   });
   URL.createObjectURL = vi.fn(() => "blob:x");
@@ -42,6 +46,7 @@ describe("SigninsTab", () => {
   it("lists rows with failure reason and pages on demand", async () => {
     render(<SigninsTab />);
     expect(await screen.findByText("Failed (bad password)")).toBeTruthy();
+    expect(screen.getByText("Failed (bad 2fa session)")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() =>
       expect(vi.mocked(api.listSignins).mock.calls.at(-1)?.[1]).toBe("c1"),

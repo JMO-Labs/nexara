@@ -5,7 +5,7 @@
  *        and "Sign out everywhere else".
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
 import { Button, IconButton } from "@/components/ui";
 import { formatApiError } from "@/lib/api/errors";
 import {
@@ -35,6 +35,7 @@ export function YourDevices() {
   const remove = useMutation({ mutationFn: revokeSession, ...opts });
   const others = useMutation({ mutationFn: revokeOtherSessions, ...opts });
   const rows = list.data ?? [];
+  const busyId = remove.isPending ? remove.variables : undefined;
 
   const signOut = async (d: DeviceSession) => {
     const ok = await confirm({
@@ -56,7 +57,17 @@ export function YourDevices() {
   };
 
   if (list.isError)
-    return <p className="text-sm text-destructive">Could not load devices.</p>;
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        Could not load devices.
+      </p>
+    );
+  if (list.isPending)
+    return (
+      <p role="status" className="text-sm text-muted">
+        Loading devices…
+      </p>
+    );
   return (
     <div className="flex flex-col gap-3">
       <ul className="space-y-2">
@@ -77,9 +88,15 @@ export function YourDevices() {
             {!d.current && (
               <IconButton
                 aria-label={`Sign out ${d.device}`}
+                aria-busy={busyId === d.family_id || undefined}
+                disabled={busyId === d.family_id}
                 onClick={() => signOut(d)}
               >
-                <LogOut className="size-4" aria-hidden="true" />
+                {busyId === d.family_id ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <LogOut className="size-4" aria-hidden="true" />
+                )}
               </IconButton>
             )}
           </li>

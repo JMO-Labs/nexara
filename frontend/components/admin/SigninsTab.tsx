@@ -107,7 +107,7 @@ export function SigninsTab() {
           <Option value={ANY}>All methods</Option>
           {METHODS.map((m) => (
             <Option key={m} value={m}>
-              {m.replace("_", " ")}
+              {m.replaceAll("_", " ")}
             </Option>
           ))}
         </Select>
@@ -161,7 +161,7 @@ export function SigninsTab() {
                     {r.user ?? r.email ?? "unknown"}
                   </TableCell>
                   <TableCell data-label="Method" className={stackTable.cell}>
-                    {r.method.replace("_", " ")}
+                    {r.method.replaceAll("_", " ")}
                   </TableCell>
                   <TableCell data-label="Result" className={stackTable.cell}>
                     {r.success ? (
@@ -169,7 +169,7 @@ export function SigninsTab() {
                     ) : (
                       <span className="font-medium text-destructive">
                         Failed
-                        {r.reason ? ` (${r.reason.replace("_", " ")})` : ""}
+                        {r.reason ? ` (${r.reason.replaceAll("_", " ")})` : ""}
                       </span>
                     )}
                   </TableCell>

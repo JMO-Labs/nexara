@@ -37,6 +37,37 @@ beforeEach(() => {
 });
 
 describe("YourDevices", () => {
+  it("shows a loading status, then an alert on error", async () => {
+    vi.mocked(api.listSessions).mockReturnValue(new Promise(() => {}));
+    const { unmount } = render(<YourDevices />);
+    expect(screen.getByRole("status").textContent).toMatch(/Loading devices/);
+    unmount();
+    vi.mocked(api.listSessions).mockRejectedValue(new Error("boom"));
+    render(<YourDevices />);
+    expect((await screen.findByRole("alert")).textContent).toMatch(
+      /Could not load devices/,
+    );
+  });
+
+  it("disables a device's sign-out button while it is pending", async () => {
+    vi.mocked(api.revokeSession).mockReturnValue(new Promise(() => {}));
+    render(
+      <>
+        <YourDevices />
+        <ConfirmDialog />
+      </>,
+    );
+    const btn = await screen.findByLabelText("Sign out Safari on iOS");
+    await userEvent.click(btn);
+    await userEvent.click(await screen.findByTestId("confirm-dialog-confirm"));
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("Sign out Safari on iOS") as HTMLButtonElement)
+          .disabled,
+      ).toBe(true),
+    );
+  });
+
   it("marks the current device and offers sign-out only for others", async () => {
     render(<YourDevices />);
     expect(await screen.findByText("This device")).toBeTruthy();

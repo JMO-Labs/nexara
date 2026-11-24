@@ -37,15 +37,26 @@ const actionLabel = (code: string) => {
 };
 
 const ANY = "any";
-/** Action prefixes the backend writes, for the filter. */
-const AREAS = [
+/** Action prefixes the backend writes, for the filter (keep in sync with audit appends). */
+export const AREAS = [
   "admin.",
-  "email.",
-  "apprise.",
+  "settings.",
+  "features.",
+  "branding.",
+  "invite.",
+  "session.",
   "2fa.",
   "passkey.",
   "oauth.",
   "sso.",
+  "email.",
+  "email_reply.",
+  "apprise.",
+  "moderation.",
+  "plugin.",
+  "plugin_api_key.",
+  "ai.",
+  "shop.",
   "signins.",
   "audit.",
   "data_export.",
@@ -192,6 +203,9 @@ export function AuditLogTab() {
                       {formatDistanceToNowStrict(new Date(entry.created_at), {
                         addSuffix: true,
                       })}
+                      <span className="block text-xs text-muted">
+                        {format(new Date(entry.created_at), "PPp")}
+                      </span>
                     </time>
                   </TableCell>
                 </TableRow>
