@@ -9,7 +9,6 @@ Never stores the attempted password. Recording must never break login: use
 from __future__ import annotations
 
 import ipaddress
-import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -23,6 +22,7 @@ from app.db.session import async_session_factory
 from app.models.signin_event import SigninEvent
 from app.repositories.signin_repo import SigninRepository
 from app.services.admin_alerts import admin_alert
+from app.services.auth.device import parse_device
 from app.services.notifications.factory import build_notification_service
 
 if TYPE_CHECKING:
@@ -36,36 +36,6 @@ logger = structlog.get_logger(__name__)
 BURST_THRESHOLD = 10
 BURST_WINDOW_MINUTES = 10
 _UA_MAX = 512
-
-# Order matters: Edge UAs contain "Chrome"; Chrome UAs contain "Safari".
-_BROWSERS = (
-    ("Edge", re.compile(r"Edg(?:e|A|iOS)?/")),
-    ("Firefox", re.compile(r"Firefox/|FxiOS/")),
-    ("Chrome", re.compile(r"Chrome/|CriOS/")),
-    ("Safari", re.compile(r"Safari/")),
-)
-# Order matters: iOS UAs contain "like Mac OS X"; Android UAs contain "Linux".
-_OSES = (
-    ("iOS", re.compile(r"iPhone|iPad|iPod")),
-    ("Android", re.compile(r"Android")),
-    ("Windows", re.compile(r"Windows")),
-    ("macOS", re.compile(r"Macintosh|Mac OS X")),
-    ("Linux", re.compile(r"Linux|X11")),
-)
-
-
-def parse_device(user_agent: str | None) -> str:
-    """
-    @brief Reduce a User-Agent to ``"{browser} on {os}"`` via a small regex table.
-
-    @param user_agent Raw header value.
-    @return Label, or ``"Unknown device"`` when browser or OS is unrecognised.
-    """
-    if not user_agent:
-        return "Unknown device"
-    browser = next((n for n, rx in _BROWSERS if rx.search(user_agent)), None)
-    os_ = next((n for n, rx in _OSES if rx.search(user_agent)), None)
-    return f"{browser} on {os_}" if browser and os_ else "Unknown device"
 
 
 def _client_ip(request: Request | None) -> str | None:

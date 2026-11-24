@@ -38,9 +38,11 @@ class TestSendPushAsync:
             patch("app.tasks.notification_tasks.PushSubscriptionRepository") as repo,
             patch("app.tasks.notification_tasks.SettingsRepository"),
             patch("app.tasks.notification_tasks.PushService") as svc,
+            patch("app.tasks.notification_tasks.NotificationRepository") as nrepo,
         ):
             repo.return_value.list_for_user = AsyncMock(return_value=[object()])
             svc.return_value.send_push = AsyncMock()
+            nrepo.return_value.get_unread_count = AsyncMock(return_value=0)
             result = await _send_push_async(uid, {"title": "t"})
         assert result == {"status": "sent", "count": 1}
         session.commit.assert_awaited_once()

@@ -24,6 +24,7 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.repositories.apprise_repo import AppriseRepository
 from app.repositories.digest_repo import DigestRepository
+from app.repositories.notification_repo import NotificationRepository
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.webhook_repo import WebhookRepository
@@ -74,6 +75,8 @@ async def _send_push_async(user_id: uuid.UUID, payload: dict[str, Any]) -> dict[
             payload.get("title", ""),
             payload.get("body", ""),
             payload.get("url") or "/",
+            tag=payload.get("tag"),
+            badge_count=await NotificationRepository(session).get_unread_count(user_id),
         )
         await session.commit()
         return {"status": "sent", "count": len(subs)}

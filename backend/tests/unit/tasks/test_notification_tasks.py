@@ -28,6 +28,11 @@ def _run(
         patch.object(nt, "async_session_factory", return_value=session_cm),
         patch.object(nt, "PushSubscriptionRepository", return_value=repo),
         patch.object(nt, "PushService", return_value=service),
+        patch.object(
+            nt,
+            "NotificationRepository",
+            return_value=MagicMock(get_unread_count=AsyncMock(return_value=2)),
+        ),
         patch.object(nt, "get_settings", return_value=MagicMock()),
     ):
         result = nt.send_push_notification(str(uid), PAYLOAD)

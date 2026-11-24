@@ -23,6 +23,8 @@ from app.schemas.common import MessageResponse
 from app.schemas.push import (
     DeviceRegisterRequest,
     DeviceTokenResponse,
+    PushDeviceRename,
+    PushDeviceResponse,
     PushSubscribeRequest,
     PushSubscriptionResponse,
     PushUnsubscribeRequest,
@@ -101,6 +103,26 @@ async def list_subscriptions(
     return await service.list_subscriptions(user.id)
 
 
+@router.get("/devices", response_model=list[PushDeviceResponse])
+async def list_devices(
+    user: User = Depends(get_current_user),
+    service: PushService = Depends(_build_service),
+) -> list[PushDeviceResponse]:
+    """@brief List the caller's push devices (no endpoint or keys)."""
+    return await service.list_devices(user.id)
+
+
+@router.patch("/devices/{device_id}", response_model=PushDeviceResponse)
+async def rename_device(
+    device_id: uuid.UUID,
+    body: PushDeviceRename,
+    user: User = Depends(get_current_user),
+    service: PushService = Depends(_build_service),
+) -> PushDeviceResponse:
+    """@brief Rename one of the caller's push devices."""
+    return await service.rename_device(user.id, device_id, body.name)
+
+
 @router.post("/devices", response_model=DeviceTokenResponse, status_code=201)
 async def register_device(
     body: DeviceRegisterRequest,
@@ -118,6 +140,15 @@ async def unregister_device(
     user: User = Depends(get_current_user),
     service: PushService = Depends(_build_service),
 ) -> MessageResponse:
-    """@brief Soft-delete the caller's device token; 404 if not theirs."""
-    await service.unregister_device(user.id, token)
-    return MessageResponse(message=_("Device unregistered"))
+    """@brief Remove the caller's device; 404 if not theirs.
+
+    A UUID path removes a Web Push device by id; anything else is a native
+    (FCM) token, which is soft-deleted.
+    """
+    try:
+        device_id = uuid.UUID(token)
+    except ValueError:
+        await service.unregister_device(user.id, token)
+        return MessageResponse(message=_("Device unregistered"))
+    await service.delete_device(user.id, device_id)
+    return MessageResponse(message=_("Device removed"))

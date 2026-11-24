@@ -25,7 +25,7 @@ async def test_send_enqueues_task() -> None:
         result = await PushChannel().send(n)
     assert result == ChannelResult(ok=True)
     task.delay.assert_called_once_with(
-        str(n.user_id), {"title": "New Post", "body": "hi", "url": "/p/1"}
+        str(n.user_id), {"title": "New Post", "body": "hi", "url": "/p/1", "tag": "new_post"}
     )
 
 
