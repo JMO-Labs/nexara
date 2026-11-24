@@ -15,6 +15,7 @@ import pytest
 
 from app.core.dependencies import get_current_user
 from app.models.media import Media
+from app.models.media_nsfw_source import MediaNsfwSource
 from app.models.post import Post, PostMedia
 from app.models.prompt import Prompt, PromptPost
 from app.models.subgroup import Subgroup, SubgroupMember
@@ -92,10 +93,54 @@ async def test_bot_token_cannot_read_nsfw_post_or_comments(env):
     assert str(nsfw.id) not in ids and str(ok.id) in ids
 
 
-async def test_human_feed_nsfw_unchanged(env):
+async def _aged(s, group: str) -> User:
+    u = await _user(s, "member")
+    u.age_group = group
+    await s.flush()
+    return u
+
+
+async def test_nsfw_post_adults_only_for_humans(env):
+    """@brief PR 7 gating is THE predicate: teen 404, adult 200 (REST + feed)."""
     nsfw = await _post(env.s, env.u.owner, is_nsfw=True)
-    env.who["u"] = env.u.member
-    assert (await env.c.get(f"/api/v1/posts/{nsfw.id}")).status_code == 200
+    for group, code in (("teen", 404), ("child", 404), ("adult", 200)):
+        env.who["u"] = await _aged(env.s, group)
+        assert (await env.c.get(f"/api/v1/posts/{nsfw.id}")).status_code == code, group
+        ids = {i["id"] for i in (await env.c.get("/api/v1/posts?limit=50")).json()["items"]}
+        assert (str(nsfw.id) in ids) is (code == 200), group
+
+
+async def test_bot_marked_adult_still_never_sees_nsfw(env):
+    """@brief A bot never resolves as adult in SQL either (REST + webhook)."""
+    bot, h = await _bot_client(env)
+    bot.age_group = "adult"
+    await env.s.flush()
+    nsfw = await _post(env.s, env.u.member, is_nsfw=True)
+    assert (await env.c.get(f"/api/v1/posts/{nsfw.id}", headers=h)).status_code == 404
+    ids = {i["id"] for i in (await env.c.get("/api/v1/posts?limit=50", headers=h)).json()["items"]}
+    assert str(nsfw.id) not in ids
+    assert await _dispatch(env, nsfw, env.u.member) == []
+
+
+async def test_webhook_omits_photo_nsfw_via_album_source_row(env):
+    """@brief A photo NSFW only through a media_nsfw_sources row is never pushed."""
+    await _bot_client(env)
+    p = await _post(env.s, env.u.member)
+    good, bad = await _media(env.s, env.u.member, False), await _media(env.s, env.u.member, False)
+    env.s.add_all(
+        [
+            PostMedia(post_id=p.id, media_id=good.id, position=0),
+            PostMedia(post_id=p.id, media_id=bad.id, position=1),
+            MediaNsfwSource(
+                media_id=bad.id, source_kind="gallery", source_id=uuid.uuid4(),
+                community_id=CID, level="admin",
+            ),
+        ]
+    )  # fmt: skip
+    await env.s.flush()
+    out = [b for b in await _dispatch(env, p, env.u.member) if b["event"] == "post.created"]
+    assert len(out) == 1
+    assert [m["id"] for m in out[0]["data"]["post"]["media"]] == [str(good.id)]
 
 
 async def test_bot_feed_hides_nsfw_media(env):

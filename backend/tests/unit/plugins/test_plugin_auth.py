@@ -189,6 +189,8 @@ async def test_media_metadata_nsfw_hidden_from_bots() -> None:
     svc = MediaService.__new__(MediaService)
     media = SimpleNamespace(community_id=CID, is_nsfw=True)
     # nsfw_hidden is the SQL predicate (bots never adult); see integration tests.
-    svc._repo = MagicMock(get=AsyncMock(return_value=media), nsfw_hidden=AsyncMock(return_value=True))
+    svc._repo = MagicMock(
+        get=AsyncMock(return_value=media), nsfw_hidden=AsyncMock(return_value=True)
+    )
     with pytest.raises(NotFoundError):
         await svc.get_metadata(uuid.uuid4(), uuid.uuid4(), CID)
