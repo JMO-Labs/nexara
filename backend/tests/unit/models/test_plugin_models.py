@@ -30,6 +30,10 @@ def test_table_names() -> None:
 def test_post_plugin_flags_and_pks() -> None:
     assert "plugin_flags" in Post.__table__.c
     assert [c.name for c in PluginCommunity.__table__.primary_key] == ["install_id", "community_id"]
-    assert [c.name for c in PluginUserPref.__table__.primary_key] == ["install_id", "user_id"]
+    assert [c.name for c in PluginUserPref.__table__.primary_key] == [
+        "install_id",
+        "user_id",
+        "community_id",
+    ]
     assert PluginInstall.__table__.c.plugin_id.unique
     assert PluginToken.__table__.c.token_hash.unique

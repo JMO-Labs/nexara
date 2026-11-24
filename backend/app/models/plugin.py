@@ -116,7 +116,7 @@ class PluginUserPref(Base):
     """@brief Per-user plugin preference values."""
 
     __tablename__ = "plugin_user_prefs"
-    __table_args__ = (PrimaryKeyConstraint("install_id", "user_id"),)
+    __table_args__ = (PrimaryKeyConstraint("install_id", "user_id", "community_id"),)
 
     install_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False

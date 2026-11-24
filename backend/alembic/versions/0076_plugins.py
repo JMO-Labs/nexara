@@ -171,7 +171,7 @@ def upgrade() -> None:
                   sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         _community_col(),
         sa.Column("values", pg.JSONB(), nullable=False, server_default=_EMPTY_OBJ),
-        sa.PrimaryKeyConstraint("install_id", "user_id"),
+        sa.PrimaryKeyConstraint("install_id", "user_id", "community_id"),
     )  # fmt: skip
     op.create_table(
         "plugin_indexes",

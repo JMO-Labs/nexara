@@ -16,6 +16,8 @@ from app.models.plugin import PluginCommunity, PluginInstall, PluginToken, Plugi
 from app.models.post import Comment, Post, Reaction
 from app.repositories.base import BaseRepository
 
+REMOVED_COMMENT = "This comment was removed."
+
 
 class PluginRepository(BaseRepository[PluginInstall]):
     """@brief Plugin persistence. Tokens are compared by sha256 hex hash only."""
@@ -153,8 +155,8 @@ class PluginRepository(BaseRepository[PluginInstall]):
             install_id=install_id, user_id=user_id, community_id=community_id, values=values
         )
         stmt = stmt.on_conflict_do_update(
-            index_elements=["install_id", "user_id"],
-            set_={"values": values, "community_id": community_id},
+            index_elements=["install_id", "user_id", "community_id"],
+            set_={"values": values},
         )
         await self._session.execute(stmt)
         await self._session.flush()
@@ -163,8 +165,8 @@ class PluginRepository(BaseRepository[PluginInstall]):
         """
         @brief Hide a bot's content in all communities.
 
-        Posts are soft-deleted; comments have no ``deleted_at`` column so are
-        removed; reactions are deleted.
+        Posts are soft-deleted; comments are tombstoned (row and human replies
+        kept, content replaced); reactions are deleted.
         @return Total rows affected.
         """
         now = datetime.now(UTC)
@@ -174,7 +176,9 @@ class PluginRepository(BaseRepository[PluginInstall]):
             .values(deleted_at=now)
         )
         comments = await self._session.execute(
-            delete(Comment).where(Comment.author_id == bot_user_id)
+            update(Comment)
+            .where(Comment.author_id == bot_user_id, Comment.content != REMOVED_COMMENT)
+            .values(content=REMOVED_COMMENT)
         )
         reactions = await self._session.execute(
             delete(Reaction).where(Reaction.user_id == bot_user_id)

@@ -13,10 +13,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.models  # noqa: F401
+from app.models.community import Community
 from app.models.plugin import PluginCommunity
 from app.models.post import Comment, Post, Reaction
 from app.models.user import User
-from app.repositories.plugin_repo import PluginRepository
+from app.repositories.plugin_repo import REMOVED_COMMENT, PluginRepository
 
 TEST_DB_URL = os.environ.get(
     "DATABASE_URL",
@@ -48,6 +49,13 @@ async def _user(session: AsyncSession, name: str) -> User:
     session.add(u)
     await session.flush()
     return u
+
+
+async def _community(session: AsyncSession) -> uuid.UUID:
+    c = Community(name=f"pl-{uuid.uuid4().hex[:6]}")
+    session.add(c)
+    await session.flush()
+    return c.id
 
 
 async def _setup(
@@ -126,6 +134,52 @@ async def test_user_pref_roundtrip(session: AsyncSession) -> None:
     assert await repo.get_user_pref(inst.id, u.id, CID) == {"a": 2}
 
 
+async def test_user_pref_isolated_per_community(session: AsyncSession) -> None:
+    repo, inst, _ = await _setup(session)
+    u = await _user(session, "p")
+    other = await _community(session)
+    await repo.set_user_pref(inst.id, u.id, CID, {"a": 1})
+    await repo.set_user_pref(inst.id, u.id, other, {"a": 2})
+    assert await repo.get_user_pref(inst.id, u.id, CID) == {"a": 1}
+    assert await repo.get_user_pref(inst.id, u.id, other) == {"a": 2}
+
+
+async def test_resolve_token_scoped_to_its_community(session: AsyncSession) -> None:
+    repo, inst, _ = await _setup(session)
+    other = await _community(session)
+    await repo.upsert_community(
+        PluginCommunity(install_id=inst.id, community_id=other, enabled=False)
+    )
+    h = uuid.uuid4().hex
+    await repo.add_token(inst.id, other, h)  # community B disabled
+    assert await repo.resolve_token(h) is None
+    await repo.upsert_community(
+        PluginCommunity(install_id=inst.id, community_id=other, enabled=True)
+    )
+    res = await repo.resolve_token(h)
+    assert res is not None and res[0].community_id == other and res[2].community_id == other
+
+
+async def test_soft_delete_bot_content_keeps_human_replies(session: AsyncSession) -> None:
+    repo = PluginRepository(session)
+    bot, human = await _user(session, "bot"), await _user(session, "human")
+    hp = Post(community_id=CID, author_id=human.id, content="hi")
+    session.add(hp)
+    await session.flush()
+    bc = Comment(community_id=CID, post_id=hp.id, author_id=bot.id, content="roast")
+    session.add(bc)
+    await session.flush()
+    reply = Comment(
+        community_id=CID, post_id=hp.id, author_id=human.id, parent_id=bc.id, content="lol"
+    )
+    session.add(reply)
+    await session.flush()
+    await repo.soft_delete_bot_content(bot.id)
+    await session.refresh(reply)
+    await session.refresh(bc)
+    assert reply.content == "lol" and bc.content == REMOVED_COMMENT
+
+
 async def test_soft_delete_bot_content_hides_posts_and_comments(session: AsyncSession) -> None:
     repo = PluginRepository(session)
     bot, human = await _user(session, "bot"), await _user(session, "human")
@@ -151,6 +205,6 @@ async def test_soft_delete_bot_content_hides_posts_and_comments(session: AsyncSe
     await session.refresh(hp)
     assert bp.deleted_at is not None and hp.deleted_at is None
     comments = (await session.execute(select(Comment.content))).scalars().all()
-    assert "c" not in comments and "keep" in comments
+    assert "c" not in comments and "keep" in comments and REMOVED_COMMENT in comments
     reacts = (await session.execute(select(Reaction.user_id))).scalars().all()
     assert bot.id not in reacts and human.id in reacts
