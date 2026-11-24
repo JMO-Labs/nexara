@@ -32,7 +32,7 @@ from app.services.oauth.group_mapper import (
     resolve_subgroup_mappings,
 )
 from app.services.oauth.public_url import callback_url
-from app.services.oauth.sso_rules import gate_refusal
+from app.services.oauth.sso_rules import evaluate_gates
 from app.services.oauth.user_provisioner import OAuthAuthResult
 
 CONTEXT_TTL = 600
@@ -106,33 +106,24 @@ async def preview_outcome(
     db: AsyncSession, provider: OAuthProvider, auth_result: OAuthAuthResult
 ) -> dict[str, Any]:
     """
-    @brief What a real sign-in would do, mirroring UserProvisioner (reads only).
+    @brief What a real sign-in would do: same lookups and evaluate_gates as
+           UserProvisioner, reads only.
 
     @return {allowed, action: sign_in|link|link_after_2fa|create|None, code: refusal|None}.
     """
-    trusted = auth_result.email if auth_result.email_verified else None
-    gate = gate_refusal(provider, trusted, auth_result.groups)
-    if gate:
-        return _outcome(False, code=gate)
     users = UserRepository(db)
     link = await UserOAuthLinkRepository(db).find_by_provider_and_sub(provider.id, auth_result.sub)
-    if link is not None:
-        linked = await users.get_by_id(link.user_id)
-        if linked is None or not linked.is_active:
-            return _outcome(False, code="sso_account_disabled")
-        return _outcome(True, "sign_in")
-    if not auth_result.email or not auth_result.email_verified:
-        return _outcome(False, code="sso_email_unverified")
-    user = await users.find_by_email(auth_result.email.strip().lower())
-    if user is not None:
-        if not user.is_active:
-            return _outcome(False, code="sso_account_disabled")
-        if not user.email_verified:
-            return _outcome(False, code="sso_email_unverified_local")
-        return _outcome(True, "link_after_2fa" if await factor_methods(db, user) else "link")
-    if not provider.auto_create_users:
-        return _outcome(False, code="sso_no_account")
-    return _outcome(True, "create")
+    linked = await users.get_by_id(link.user_id) if link else None
+    email_user = None
+    if link is None and auth_result.email and auth_result.email_verified:
+        email_user = await users.find_by_email(auth_result.email.strip().lower())
+    decision = evaluate_gates(provider, auth_result, link, linked, email_user)
+    if decision.code:
+        return _outcome(False, code=decision.code)
+    action: str | None = decision.action
+    if action == "link" and email_user is not None and await factor_methods(db, email_user):
+        action = "link_after_2fa"
+    return _outcome(True, action)
 
 
 async def build_result(

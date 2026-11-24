@@ -33,7 +33,7 @@ from app.services.oauth.group_mapper import (
     resolve_subgroup_mappings,
 )
 from app.services.oauth.profile_sync import audit_role_synced, sync_profile
-from app.services.oauth.sso_rules import clean_username, gate_refusal, unique_username
+from app.services.oauth.sso_rules import clean_username, evaluate_gates, unique_username
 
 if TYPE_CHECKING:
     from app.models.oauth_provider import OAuthProvider
@@ -147,22 +147,25 @@ class UserProvisioner:
         @raises SsoRefusedError sso_domain_not_allowed / sso_group_required /
                 sso_no_account / sso_account_disabled.
         """
-        # Only an IdP-verified email can satisfy allowed_domains.
-        trusted_email = auth_result.email if auth_result.email_verified else None
-        gate = gate_refusal(provider, trusted_email, auth_result.groups)
         link = await self._link_repo.find_by_provider_and_sub(provider.id, auth_result.sub)
-        linked_id = link.user_id if link else None
-        if gate:
-            raise await self._refuse(gate, linked_id)
         linked = await self._user_repo.get_by_id(link.user_id) if link else None
-        if link is not None and (linked is None or not linked.is_active):
-            # Disabled, or the link points at a soft-deleted account.
-            raise await self._refuse("sso_account_disabled", linked_id)
+        email_user = None
+        if link is None and auth_result.email and auth_result.email_verified:
+            email_user = await self._user_repo.find_by_email(auth_result.email.strip().lower())
+        decision = evaluate_gates(provider, auth_result, link, linked, email_user)
+        if decision.code == "sso_email_unverified":
+            raise AuthenticationError(message="Email not verified by identity provider")
+        if decision.code:
+            # A refused linked user is signed out everywhere.
+            raise await self._refuse(decision.code, link.user_id if link else None)
         if linked is not None and link is not None:
             await self._sync_returning(linked, link, auth_result, provider, role)
             user = linked
+        elif email_user is not None:
+            user = await self._link_existing(email_user, auth_result, provider, role)
         else:
-            user = await self._first_login(auth_result, provider, role)
+            email = (auth_result.email or "").strip().lower()
+            user = await self._create_user(email, auth_result, provider, role)
         if not has_subgroup_rules(provider.claim_mapping):
             return user
         if self.pending_link is not None:
@@ -217,46 +220,32 @@ class UserProvisioner:
         if link_updates:
             await self._link_repo.update(link, link_updates)
 
-    async def _first_login(
+    async def _link_existing(
         self,
+        user: User,
         auth_result: OAuthAuthResult,
         provider: OAuthProvider,
         role: str,
     ) -> User:
         """
-        @brief No link yet: link an existing account by verified email, or create one.
+        @brief First SSO login for an existing account (gates already passed): link it.
 
         A first link to an account with a local factor is held (pending_link)
         until that factor passes; nothing is written here in that case.
         """
-        if not auth_result.email or not auth_result.email_verified:
-            raise AuthenticationError(message="Email not verified by identity provider")
-        email = auth_result.email.strip().lower()
-
-        user = await self._user_repo.find_by_email(email)
-        if user is not None:
-            if not user.is_active:
-                raise await self._refuse("sso_account_disabled")
-            if not user.email_verified:
-                # Pre-account hijack guard: never adopt an unproven local signup.
-                raise await self._refuse("sso_email_unverified_local")
-            if await factor_methods(self._db, user):
-                self.pending_link = {
-                    "provider_id": str(provider.id),
-                    "sub": auth_result.sub,
-                    "email_from_provider": auth_result.email,
-                    "avatar_url": auth_result.avatar_url,
-                    "role": role if self._maps_roles(provider) and user.role != role else None,
-                }
-                return user
-            await self._sync_role(user, role, provider)
-            await self._sync_profile(user, auth_result, provider)
-            await self._create_link(user, provider, auth_result)
+        if await factor_methods(self._db, user):
+            self.pending_link = {
+                "provider_id": str(provider.id),
+                "sub": auth_result.sub,
+                "email_from_provider": auth_result.email,
+                "avatar_url": auth_result.avatar_url,
+                "role": role if self._maps_roles(provider) and user.role != role else None,
+            }
             return user
-
-        if not provider.auto_create_users:
-            raise await self._refuse("sso_no_account")
-        return await self._create_user(email, auth_result, provider, role)
+        await self._sync_role(user, role, provider)
+        await self._sync_profile(user, auth_result, provider)
+        await self._create_link(user, provider, auth_result)
+        return user
 
     async def _create_link(
         self, user: User, provider: OAuthProvider, auth_result: OAuthAuthResult

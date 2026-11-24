@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 import secrets
 import uuid
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from app.repositories.user_repo import UserRepository
@@ -34,6 +35,62 @@ def gate_refusal(provider: Any, email: str | None, groups: list[str] | None) -> 
     if required and required not in (groups or []):
         return "sso_group_required"
     return None
+
+
+@dataclass(frozen=True)
+class GateDecision:
+    """
+    @brief Outcome of the SSO sign-in gate sequence.
+
+    Exactly one of ``code`` (refusal) or ``action`` is set.
+    """
+
+    code: str | None = None
+    action: Literal["sign_in", "link", "create"] | None = None
+
+
+def evaluate_gates(
+    provider: Any,
+    auth_result: Any,
+    link: Any = None,
+    linked_user: Any = None,
+    email_user: Any = None,
+) -> GateDecision:
+    """
+    @brief The SSO gate sequence (pure); used by provisioning and admin test login.
+
+    Order: domain gate -> group gate -> existing (provider, sub) link (disabled?)
+    -> verified email required -> existing account by email (disabled /
+    unverified local?) -> auto-create allowed?
+
+    @param provider OAuthProvider (allowed_domains, required_group, auto_create_users).
+    @param auth_result OAuthAuthResult (email, email_verified, groups).
+    @param link Existing UserOAuthLink for (provider, sub), or None.
+    @param linked_user The link's user (None when missing/soft-deleted).
+    @param email_user Account matching the verified email (only looked up without a link).
+    @return GateDecision. ``sso_email_unverified`` means the IdP did not verify
+            the email (the provisioner raises AuthenticationError for it).
+    """
+    trusted = auth_result.email if auth_result.email_verified else None
+    gate = gate_refusal(provider, trusted, auth_result.groups)
+    if gate:
+        return GateDecision(code=gate)
+    if link is not None:
+        if linked_user is None or not linked_user.is_active:
+            return GateDecision(code="sso_account_disabled")
+        return GateDecision(action="sign_in")
+    if not auth_result.email or not auth_result.email_verified:
+        return GateDecision(code="sso_email_unverified")
+    if email_user is not None:
+        if not email_user.is_active:
+            return GateDecision(code="sso_account_disabled")
+        if not email_user.email_verified:
+            # Pre-account hijack guard: never adopt an unproven local signup.
+            return GateDecision(code="sso_email_unverified_local")
+        return GateDecision(action="link")
+    if not provider.auto_create_users:
+        return GateDecision(code="sso_no_account")
+    return GateDecision(action="create")
 
 
 def clean_username(raw: str | None) -> str | None:
