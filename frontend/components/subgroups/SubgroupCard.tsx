@@ -92,7 +92,12 @@ export function SubgroupCard({
           }}
         >
           {subgroup.cover_media_id ? (
-            <MediaThumb mediaId={subgroup.cover_media_id} alt="" zoomOnHover />
+            <MediaThumb
+              mediaId={subgroup.cover_media_id}
+              alt=""
+              zoomOnHover
+              nsfw={subgroup.cover_is_nsfw}
+            />
           ) : (
             <span
               aria-hidden

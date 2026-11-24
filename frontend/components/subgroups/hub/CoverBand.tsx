@@ -37,7 +37,11 @@ export function CoverBand({ subgroup, right }: CoverBandProps) {
       }}
     >
       {hasCover && (
-        <MediaThumb mediaId={subgroup.cover_media_id} alt={subgroup.name} />
+        <MediaThumb
+          mediaId={subgroup.cover_media_id}
+          alt={subgroup.name}
+          nsfw={subgroup.cover_is_nsfw}
+        />
       )}
       <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3 md:inset-x-4 md:bottom-4">
         <div className="glass min-w-0 rounded-[24px] px-4 py-2.5">

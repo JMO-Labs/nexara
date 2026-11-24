@@ -73,7 +73,7 @@ function Gallery({ onPick }: { onPick: (m: MediaItem) => void }) {
               type="button"
               aria-label={m.filename}
               onClick={() => onPick(m)}
-              className="aspect-square min-h-11 w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-accent"
+              className="relative aspect-square min-h-11 w-full overflow-hidden rounded-lg focus-visible:ring-2 focus-visible:ring-accent"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- user/external URL, unknown host for next/image */}
               <img
@@ -81,7 +81,13 @@ function Gallery({ onPick }: { onPick: (m: MediaItem) => void }) {
                 alt=""
                 loading="lazy"
                 className="h-full w-full object-cover"
+                style={m.is_nsfw ? { filter: "blur(24px)" } : undefined}
               />
+              {m.is_nsfw ? (
+                <span className="absolute top-1 left-1 rounded-full bg-[var(--nx-glass-solid)] px-1.5 py-0.5 text-[10px] font-semibold text-ink">
+                  NSFW
+                </span>
+              ) : null}
             </button>
           </li>
         ))}
