@@ -3,12 +3,13 @@
 @brief Plugin manifest (nexara-plugin.toml) parser and field validation.
 """
 
+import math
 import re
 import tomllib
 from typing import Any, Literal
 
 from packaging.version import InvalidVersion, Version
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
@@ -18,8 +19,11 @@ KNOWN_SCOPES = frozenset(
     "media:read users:read notifications:send".split()
 )
 KNOWN_EVENTS = frozenset({"post.created", "comment.created", "mention"})
-_ID_RE = re.compile(r"^[a-z0-9]+(\.[a-z0-9-]+)+$")
-_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
+_ID_RE = re.compile(r"[a-z0-9]+(\.[a-z0-9-]+)+", re.ASCII)
+_SEMVER_RE = re.compile(r"\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?", re.ASCII)
+_KEY_RE = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
+MAX_MANIFEST_BYTES = 64 * 1024
+MAX_STR_LEN = 1024
 
 
 class FieldSpec(BaseModel):
@@ -33,6 +37,24 @@ class FieldSpec(BaseModel):
     min: float | None = None
     max: float | None = None
     max_length: int | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _self_consistent(self) -> "FieldSpec":
+        for b in (self.min, self.max):
+            if b is not None and not math.isfinite(b):
+                raise ValueError("min/max must be finite")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("min > max")
+        if self.type in ("string", "secret"):
+            if self.max_length is None:
+                self.max_length = MAX_STR_LEN
+            elif not 0 < self.max_length <= MAX_STR_LEN:
+                raise ValueError(f"max_length must be 1..{MAX_STR_LEN}")
+        if self.default is not None and not _check(self, self.default):
+            raise ValueError("default does not fit field type")
+        return self
 
 
 class PluginManifest(BaseModel):
@@ -76,10 +98,19 @@ def parse_manifest(text: str) -> PluginManifest:
     @return Validated manifest.
     @throws AppError invalid_manifest (422) on any problem.
     """
+    if len(text.encode()) > MAX_MANIFEST_BYTES:
+        raise _fail(["manifest too large"])
     try:
         raw = tomllib.loads(text)
-    except tomllib.TOMLDecodeError as exc:
+    except (tomllib.TOMLDecodeError, RecursionError) as exc:
         raise _fail([f"toml: {exc}"]) from exc
+    bad = [
+        k
+        for k in ("plugin", "bot", "permissions", "settings", "user_prefs", "composer_flags")
+        if not isinstance(raw.get(k, {}), dict)
+    ]
+    if bad:
+        raise _fail([f"{k}: must be a table" for k in bad])
     p, bot, perm = raw.get("plugin", {}), raw.get("bot", {}), raw.get("permissions", {})
     try:
         m = PluginManifest(
@@ -102,11 +133,22 @@ def parse_manifest(text: str) -> PluginManifest:
         )
         raise _fail(errs) from exc
     errors: list[str] = []
-    if not _ID_RE.match(m.id):
+    if not _ID_RE.fullmatch(m.id):
         errors.append(f"id: invalid '{m.id}'")
     for label, ver in (("version", m.version), ("min_core_version", m.min_core_version)):
-        if not _SEMVER_RE.match(ver):
+        if not _SEMVER_RE.fullmatch(ver):
             errors.append(f"{label}: not semver '{ver}'")
+    for label, path in (
+        ("entrypoint", m.entrypoint),
+        ("icon", m.icon),
+        ("bot_avatar", m.bot_avatar),
+    ):
+        if path is not None and not _safe_path(path):
+            errors.append(f"{label}: must be a relative path without '..'")
+    for group in ("settings", "user_prefs", "composer_flags"):
+        errors += [
+            f"{group}.{k}: invalid key" for k in getattr(m, group) if not _KEY_RE.fullmatch(k)
+        ]
     errors += [f"scopes: unknown '{s}'" for s in m.scopes if s not in KNOWN_SCOPES]
     errors += [f"events: unknown '{e}'" for e in m.events if e not in KNOWN_EVENTS]
     for group in ("user_prefs", "composer_flags"):
@@ -120,6 +162,11 @@ def parse_manifest(text: str) -> PluginManifest:
     if errors:
         raise _fail(errors)
     return m
+
+
+def _safe_path(p: str) -> bool:
+    parts = p.replace("\\", "/").split("/")
+    return bool(p) and not p.startswith(("/", "\\")) and ".." not in parts and ":" not in parts[0]
 
 
 def core_version() -> str:

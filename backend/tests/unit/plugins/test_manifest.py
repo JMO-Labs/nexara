@@ -128,3 +128,46 @@ def test_compat() -> None:
     assert core_version()
     m2 = parse_manifest(_bad('min_core_version = "0.1.0"', 'min_core_version = "999.0.0"'))
     assert not is_compatible(m2)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ('id = "io.jmolabs.sassybot"', 'id = "io.a\\n"'),
+        ('version = "1.0.0"', 'version = "١.0.0"'),
+        ('version = "1.0.0"', 'version = "1.0.0\\n"'),
+        ('entrypoint = "dist/index.js"', 'entrypoint = "../x.js"'),
+        ('entrypoint = "dist/index.js"', 'entrypoint = "/etc/x"'),
+        ('icon = "assets/icon.png"', 'icon = "a/../../b"'),
+        ("[settings.daily_cap]", '[settings."é k"]'),
+        ("min = 0\nmax = 500", "min = 9\nmax = 5"),
+        ("min = 0", "min = nan"),
+        ("default = 30", 'default = "x"'),
+        ('default = "off"', "default = 5"),
+        ('default = "off"', 'default = "zzz"'),
+        ('label = "Cap"', 'label = "Cap"\nmax_lenght = 3'),
+    ],
+)
+def test_hardening_rejects(old: str, new: str) -> None:
+    with pytest.raises(AppError) as e:
+        parse_manifest(_bad(old, new))
+    assert e.value.code == "invalid_manifest"
+
+
+def test_structural_abuse() -> None:
+    for text in (
+        "[[permissions]]\na=1",
+        "[[bot]]\na=1",
+        "settings = 1",
+        "a=" + "[" * 5000 + "]" * 5000,
+        "#" + "x" * 70000,
+    ):
+        with pytest.raises(AppError) as e:
+            parse_manifest(text)
+        assert e.value.code == "invalid_manifest"
+
+
+def test_string_cap() -> None:
+    m = parse_manifest(TOML)
+    with pytest.raises(AppError):
+        validate_values(m.settings, {"claude_token": "x" * 2000})
