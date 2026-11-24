@@ -6,25 +6,29 @@ import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 
 export interface AppriseUrl {
   id: string;
-  label: string;
-  service: string | null;
+  label: string | null;
   enabled: boolean;
+  failure_count: number;
+  last_failure_at: string | null;
+  created_at: string;
 }
 
 export interface AppriseCreate {
-  url: string;
-  label: string;
-  enabled: boolean;
+  apprise_url: string;
+  label?: string;
 }
 
-export type AppriseUpdate = Partial<AppriseCreate>;
+export interface AppriseUpdate {
+  label?: string;
+  enabled?: boolean;
+}
 
 export interface AppriseTestResult {
   status: string;
   message: string;
 }
 
-const BASE = "/api/v1/apprise/urls";
+const BASE = "/api/v1/notifications/apprise";
 const SCHEME = /^([a-z][a-z0-9+.-]*):\/\/\S+$/i;
 
 /**

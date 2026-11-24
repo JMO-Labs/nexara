@@ -2,7 +2,13 @@
  * @file lib/notifications/types.ts
  * @brief Frontend mirror of the backend notification registry / API schemas.
  */
-export type Channel = "inapp" | "email" | "push" | "webhook" | "toast";
+export type Channel =
+  | "inapp"
+  | "email"
+  | "push"
+  | "webhook"
+  | "toast"
+  | "apprise";
 
 export type Category =
   | "social"

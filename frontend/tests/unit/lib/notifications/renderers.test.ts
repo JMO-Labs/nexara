@@ -21,6 +21,7 @@ const type: NotificationTypeDescriptor = {
     email: false,
     push: false,
     webhook: false,
+    apprise: false,
     toast: false,
   },
   user_configurable: [],
