@@ -131,6 +131,24 @@ async def _load_plugins(app: FastAPI, settings: Settings) -> None:
         logger.warning("plugins_load_failed", exc_info=True)
 
 
+def _warn_base_url(settings: Settings) -> None:
+    """
+    @brief Warn loudly when production runs on the default APP_BASE_URL.
+
+    Email links would point at localhost:8000 and passkeys fail with an origin
+    mismatch.
+
+    @param settings Application settings.
+    """
+    if settings.APP_ENV == "production" and settings.base_url_unset:
+        logger.warning(
+            "app_base_url_unset",
+            app_base_url=settings.APP_BASE_URL,
+            hint="Set APP_BASE_URL to the URL members open (e.g. https://nexara.example.com); "
+            "email links and passkeys depend on it.",
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
@@ -156,6 +174,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env=settings.APP_ENV,
     )
 
+    _warn_base_url(settings)
     await _seed_oauth_from_env(settings)
     await _seed_default_chat_channel(settings)
     await _load_plugins(app, settings)

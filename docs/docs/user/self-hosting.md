@@ -59,7 +59,7 @@ values file that is committed to version control.
 | `ENABLE_REGISTRATION` | Allow new sign-ups (`true`/`false`) |
 | `REQUIRE_INVITE` | Require an invite token to register |
 | `REDIS_URL` | Valkey/Redis connection string (set by Compose; override for external Valkey) |
-| `APP_BASE_URL` | External URL used in links, emails, and push notifications |
+| `APP_BASE_URL` | External URL used in links, emails, push notifications and as the passkey origin (required) |
 
 Consult `deploy/.env.example` for the complete, current list.
 

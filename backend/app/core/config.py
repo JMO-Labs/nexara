@@ -13,6 +13,8 @@ from urllib.parse import urlsplit
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_BASE_URL = "http://localhost:8000"
+
 
 class Settings(BaseSettings):
     """
@@ -31,7 +33,11 @@ class Settings(BaseSettings):
 
     # --- Application ---
     APP_NAME: str = "Nexara"
-    APP_BASE_URL: str = "http://localhost:8000"
+    APP_BASE_URL: str = DEFAULT_BASE_URL
+    """
+    @brief External URL members open (links in emails, push, WebAuthn origin/RP id).
+    Empty means the dev default; production must set it.
+    """
     APP_VERSION: str = "0.1.0"
     APP_ENV: str = "production"
     DEBUG: bool = False
@@ -163,6 +169,17 @@ class Settings(BaseSettings):
     WEBHOOK_ALLOWED_HOSTS: str = ""
     """@brief Comma-separated hosts exempt from the SSRF guard (LAN targets)."""
 
+    @field_validator("APP_BASE_URL")
+    @classmethod
+    def _default_base_url(cls, v: str) -> str:
+        """@brief Empty (e.g. compose ``${APP_BASE_URL:-}``) falls back to the dev default."""
+        return v.strip().rstrip("/") or DEFAULT_BASE_URL
+
+    @property
+    def base_url_unset(self) -> bool:
+        """@brief True while APP_BASE_URL is still the dev default."""
+        return self.APP_BASE_URL == DEFAULT_BASE_URL
+
     @field_validator("TRUSTED_PROXIES")
     @classmethod
     def _validate_trusted_proxies(cls, v: str) -> str:
@@ -195,12 +212,20 @@ class Settings(BaseSettings):
 
     @property
     def webauthn_origins(self) -> list[str]:
-        """@brief Effective expected origins (explicit list, else APP_BASE_URL origin)."""
+        """
+        @brief Effective expected origins: explicit WEBAUTHN_ORIGIN list, else the
+        APP_BASE_URL origin plus every ALLOWED_ORIGINS entry.
+        """
         explicit = [o.strip().rstrip("/") for o in self.WEBAUTHN_ORIGIN.split(",") if o.strip()]
         if explicit:
             return explicit
         u = urlsplit(self.APP_BASE_URL)
-        return [f"{u.scheme}://{u.netloc}"]
+        out = [f"{u.scheme}://{u.netloc}"]
+        for o in self.allowed_origins_list:
+            o = o.rstrip("/")
+            if o and o != "*" and o not in out:
+                out.append(o)
+        return out
 
     @property
     def webhook_allowed_hosts(self) -> frozenset[str]:
