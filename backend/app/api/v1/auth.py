@@ -101,6 +101,7 @@ async def get_auth_config(
                 slug=p.slug,
                 display_name=p.display_name,
                 icon_url=p.icon_url,
+                preset=p.preset,
             )
             for p in providers
         ]

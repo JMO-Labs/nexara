@@ -12,6 +12,7 @@ import json
 import secrets
 import uuid
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 import structlog
@@ -214,7 +215,8 @@ async def oauth_callback(
     except SsoRefusedError as exc:
         # Return normally so the session commits any token revocation.
         logger.info("sso_refused", provider=slug, code=exc.code)
-        refused = RedirectResponse(url=f"{frontend_url}/login?error={exc.code}", status_code=302)
+        query = urlencode({"error": exc.code, "provider": provider.display_name})
+        refused = RedirectResponse(url=f"{frontend_url}/login?{query}", status_code=302)
         _clear_oauth_cookies(refused)
         return refused
 

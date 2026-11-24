@@ -11,9 +11,10 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 const push = vi.fn();
+const replace = vi.fn();
 let search = "";
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => new URLSearchParams(search),
 }));
 vi.mock("next/link", () => ({
@@ -44,7 +45,7 @@ describe("LoginPage", () => {
       oidc_enabled: true,
       registration_enabled: true,
       local_auth_enabled: true,
-      oauth_providers: [{ slug: "g", display_name: "Google", icon_url: null }],
+      oauth_providers: [{ slug: "g", display_name: "Continue with Google", icon_url: null }],
     });
   });
 
@@ -77,7 +78,7 @@ describe("LoginPage", () => {
 
   it("renders OAuth providers from config", async () => {
     render(<LoginPage />);
-    const link = await screen.findByRole("link", { name: "Google" });
+    const link = await screen.findByRole("link", { name: "Continue with Google" });
     expect(link.getAttribute("href")).toBe("/oauth/g");
   });
 
@@ -102,7 +103,7 @@ describe("LoginPage", () => {
       registration_enabled: false,
       local_auth_enabled: false,
       sso_only: true,
-      oauth_providers: [{ slug: "g", display_name: "Google", icon_url: null }],
+      oauth_providers: [{ slug: "g", display_name: "Continue with Google", icon_url: null }],
     });
     render(<LoginPage />);
     expect(await screen.findByRole("link", { name: /Google/ })).toBeTruthy();
@@ -150,5 +151,48 @@ describe("LoginPage validation", () => {
     expect(btn.querySelector("svg")).not.toBeNull();
     expect(screen.getByLabelText("Email")).toBeDisabled();
     expect(screen.getByLabelText("Password")).toBeDisabled();
+  });
+});
+
+describe("LoginPage SSO errors", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.getAuthConfig).mockResolvedValue({
+      oidc_enabled: true,
+      registration_enabled: true,
+      local_auth_enabled: true,
+      oauth_providers: [],
+    });
+  });
+
+  it("shows mapped alert and clears the param", async () => {
+    search = "error=sso_domain_not_allowed&provider=Acme&next=%2Fapp%2Fx";
+    render(<LoginPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your Acme account isn't allowed to sign in here.",
+    );
+    expect(replace).toHaveBeenCalledWith("/login?next=%2Fapp%2Fx");
+  });
+
+  it("maps no_account, falls back on unknown, never echoes raw code", async () => {
+    search = "error=sso_no_account";
+    const { unmount } = render(<LoginPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your account isn't set up here yet. Ask an admin for an invite.",
+    );
+    unmount();
+    search = "error=<img src=x>";
+    render(<LoginPage />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Sign-in didn't work. Please try again.");
+    expect(alert.innerHTML).not.toContain("<img");
+  });
+
+  it("uses provider fallback name", async () => {
+    search = "error=sso_group_required";
+    render(<LoginPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your sign-in provider account isn't allowed",
+    );
   });
 });

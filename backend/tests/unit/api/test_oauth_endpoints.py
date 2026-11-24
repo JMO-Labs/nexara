@@ -126,6 +126,7 @@ class TestOAuthCallbackEndpoint:
         from app.core.exceptions import SsoRefusedError
 
         provider = MagicMock(id=uuid.uuid4(), provider_type="oidc", preset=None)
+        provider.display_name = "Acme SSO&x"
         with (
             patch("app.api.v1.oauth.ProviderManager") as manager_cls,
             patch("app.api.v1.oauth.OAuthFlow") as flow_cls,
@@ -157,7 +158,9 @@ class TestOAuthCallbackEndpoint:
             ) as client:
                 resp = await client.get("/api/v1/oauth/oidc/callback?code=c&state=st")
         assert resp.status_code == 302
-        assert resp.headers["location"].endswith("/login?error=sso_domain_not_allowed")
+        assert resp.headers["location"].endswith(
+            "/login?error=sso_domain_not_allowed&provider=Acme+SSO%26x"
+        )
         valkey.return_value.setex.assert_not_called()
 
 
@@ -249,6 +252,7 @@ class TestAuthConfigWithOAuthProviders:
         mock_provider.slug = "oidc"
         mock_provider.display_name = "OIDC"
         mock_provider.icon_url = "https://example.com/icon.png"
+        mock_provider.preset = "google"
 
         with patch("app.services.oauth.provider_manager.ProviderManager") as mock_manager_cls:
             mock_manager = AsyncMock()
@@ -263,5 +267,6 @@ class TestAuthConfigWithOAuthProviders:
             data = resp.json()
             assert "oauth_providers" in data
             assert len(data["oauth_providers"]) == 1
+            assert data["oauth_providers"][0]["preset"] == "google"
             assert data["oauth_providers"][0]["slug"] == "oidc"
             assert data["oauth_providers"][0]["display_name"] == "OIDC"

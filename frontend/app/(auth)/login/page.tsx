@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/auth";
 import { completeLogin, twoFactorUrl } from "@/lib/auth/flow";
 import { authenticateWithPasskey, passkeysAvailable } from "@/lib/passkeys";
+import { ssoErrorMessage } from "@/lib/auth/ssoErrors";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 
 const Schema = z.object({
@@ -38,6 +39,20 @@ export default function LoginPage() {
   const isClient = useIsClient();
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
   const [localAuth, setLocalAuth] = useState(true);
+  // Captured once from the initial URL; the param is then stripped below.
+  const [ssoError] = useState<string | null>(() => {
+    const code = params.get("error");
+    return code ? ssoErrorMessage(code, params.get("provider")) : null;
+  });
+
+  useEffect(() => {
+    if (!params.get("error")) return;
+    const rest = new URLSearchParams(params.toString());
+    rest.delete("error");
+    rest.delete("provider");
+    const qs = rest.toString();
+    router.replace(qs ? `/login?${qs}` : "/login");
+  }, [params, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +118,14 @@ export default function LoginPage() {
         </>
       }
     >
+      {ssoError && (
+        <p
+          role="alert"
+          className="rounded-md border border-current/30 p-3 text-sm"
+        >
+          {ssoError}
+        </p>
+      )}
       {localAuth && (
         <form
           onSubmit={handleSubmit(onSubmit)}

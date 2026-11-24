@@ -135,12 +135,13 @@ class OAuthProviderListItem(BaseModel):
     """
     @brief Minimal provider info for login page buttons.
 
-    slug, display_name, icon_url only.
+    slug, display_name, icon_url, preset only.
     """
 
     slug: str
     display_name: str
     icon_url: str | None = None
+    preset: str | None = None
 
 
 class AuthConfigResponse(BaseModel):
