@@ -153,7 +153,11 @@ class SearchRepository(GalleryPollSearchMixin, SubgroupCommentSearchMixin):
         stmt = (
             select(User, rank_expr.label("rank"))
             .where(User.community_id == community_id)
-            .where(User.deleted_at.is_(None), User.memorialized_at.is_(None))
+            .where(
+                User.deleted_at.is_(None),
+                User.memorialized_at.is_(None),
+                User.is_bot.is_(False),
+            )
             .where(match_expr)
             .order_by(rank_expr.desc(), User.created_at.desc())
         )
@@ -162,7 +166,11 @@ class SearchRepository(GalleryPollSearchMixin, SubgroupCommentSearchMixin):
             select(func.count())
             .select_from(User)
             .where(User.community_id == community_id)
-            .where(User.deleted_at.is_(None), User.memorialized_at.is_(None))
+            .where(
+                User.deleted_at.is_(None),
+                User.memorialized_at.is_(None),
+                User.is_bot.is_(False),
+            )
             .where(match_expr)
         )
 

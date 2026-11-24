@@ -73,6 +73,7 @@ class CelebrationRepository:
             User.community_id == community_id,
             User.deleted_at.is_(None),
             User.is_active.is_(True),
+            User.is_bot.is_(False),
             User.memorialized_at.is_(None),
             not_blocked(User.id, actor_id),
         )

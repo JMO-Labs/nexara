@@ -32,7 +32,9 @@ class StorageRepository:
         return list((await self._session.execute(stmt)).scalars().all())
 
     def _users(self, community_id: uuid.UUID) -> Select[tuple[User]]:
-        return select(User).where(User.community_id == community_id, User.deleted_at.is_(None))
+        return select(User).where(
+            User.community_id == community_id, User.deleted_at.is_(None), User.is_bot.is_(False)
+        )
 
     async def top_users(self, community_id: uuid.UUID, limit: int) -> list[User]:
         """@brief Users with the highest storage_used."""

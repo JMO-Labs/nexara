@@ -160,6 +160,7 @@ class ChatContextRepository:
             User.community_id == community_id,
             User.deleted_at.is_(None),
             User.is_active.is_(True),
+            User.is_bot.is_(False),
             or_(User.id == viewer_id, not_blocked(User.id, viewer_id)),
         ]
         if subgroup_id is not None:

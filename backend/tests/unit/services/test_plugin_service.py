@@ -269,10 +269,30 @@ async def test_notify_skips_bots():
     from app.services.notification_service import NotificationService
 
     svc = NotificationService.__new__(NotificationService)
-    svc._notification_repo = AsyncMock()
-    svc._notification_repo.is_bot.return_value = True
     svc._settings_repo = AsyncMock()
+    svc._settings_repo.user_tz_and_bot.return_value = (None, True)
     with patch("app.services.notification_service.registry") as reg:
         reg.get.return_value = MagicMock()
         assert await svc.notify(uuid.uuid4(), "system", {"message": "x"}) is None
     svc._settings_repo.get_or_create.assert_not_called()
+
+
+@pytest.mark.parametrize("op", ["change_role", "restore_user"])
+async def test_admin_refuses_bot_targets(op):
+    from app.services.admin_service import AdminService
+
+    svc = AdminService.__new__(AdminService)
+    svc._community_id = CID
+    svc._user_repo = AsyncMock()
+    bot = SimpleNamespace(is_bot=True, role="member")
+    svc._user_repo.get_by_id.return_value = bot
+    svc._user_repo.get_by_id_include_deleted.return_value = bot
+    args = (SimpleNamespace(id=uuid.uuid4()), uuid.uuid4())
+    call = (
+        svc.change_role(*args, "admin", None)
+        if op == "change_role"
+        else svc.restore_user(*args, None)
+    )
+    with pytest.raises(AppError) as e:
+        await call
+    assert (e.value.code, e.value.status_code) == ("bot_account", 422)

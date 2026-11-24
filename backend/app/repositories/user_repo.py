@@ -12,7 +12,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -206,12 +206,22 @@ class UserRepository(BaseRepository[User]):
         """
         @brief List users belonging to a community with cursor pagination.
 
+        Feeds @mention autocomplete, so active plugin bots are included
+        (disabled bots are not); directory/search/admin lists exclude them.
+
         @param community_id Community scope.
         @param limit Max items to return.
         @param cursor Opaque cursor from previous page.
         @return Tuple of (users, next_cursor).
         """
-        return await self.list_by_community_search(community_id, limit=limit, cursor=cursor)
+        return await self._page(
+            self._base_query().where(
+                User.community_id == community_id,
+                or_(User.is_bot.is_(False), User.is_active.is_(True)),
+            ),
+            limit,
+            cursor,
+        )
 
     async def list_by_community_search(
         self,
@@ -230,8 +240,6 @@ class UserRepository(BaseRepository[User]):
         @param cursor Opaque cursor from previous page.
         @return Tuple of (users, next_cursor).
         """
-        from sqlalchemy import or_
-
         stmt = self._base_query().where(User.community_id == community_id, User.is_bot.is_(False))
         if search and search.strip():
             term = f"%{search.strip()}%"
@@ -242,6 +250,12 @@ class UserRepository(BaseRepository[User]):
                     User.email.ilike(term),
                 ),
             )
+        return await self._page(stmt, limit, cursor)
+
+    async def _page(
+        self, stmt: Any, limit: int, cursor: str | None
+    ) -> tuple[list[User], str | None]:
+        """@brief Newest-first keyset page (``limit`` + 1 probe row)."""
         stmt = stmt.order_by(User.created_at.desc())
         if cursor:
             try:

@@ -187,13 +187,12 @@ class NotificationService:
                 details={"errors": exc.errors(include_url=False, include_context=False)},
             ) from exc
 
-        if await self._notification_repo.is_bot(user_id) is True or (
-            await self._notification_repo.nsfw_blocked(user_id, payload)
-        ):
+        user_tz, is_bot = await self._settings_repo.user_tz_and_bot(user_id)
+        if is_bot or await self._notification_repo.nsfw_blocked(user_id, payload):
             return None
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
         eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})
-        tz = await self.effective_timezone(user_id, settings.dnd_timezone)
+        tz = dnd.effective_tz(user_tz, settings.dnd_timezone)
         in_dnd_now = dnd.in_dnd(settings.dnd_schedule, settings.dnd_until, tz, datetime.now(UTC))
         eff = dnd.gate_channels(eff, type_, in_dnd_now)
         notification = await self._notification_repo.upsert_grouped(

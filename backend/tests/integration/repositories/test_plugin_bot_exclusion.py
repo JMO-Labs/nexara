@@ -47,8 +47,62 @@ async def test_bot_hidden_from_lists_and_auth_lookups(session: AsyncSession) -> 
     repo = UserRepository(session)
     listed, _ = await repo.list_by_community(CID, limit=500)
     searched, _ = await repo.list_by_community_search(CID, search=f"zbot{tag}")
-    assert bot.id not in {u.id for u in listed} and searched == []
+    assert bot.id in {u.id for u in listed}  # active bots stay @mentionable
+    assert searched == []
     assert await repo.find_by_email(bot.email) is None
     assert await repo.find_by_oidc_sub(f"sub{tag}") is None
     assert await repo.email_exists(bot.email) is True  # still reserved
     assert (await repo.find_by_username(bot.username)) is not None  # profile/mention/uniqueness
+
+
+async def _bot(session: AsyncSession, active: bool = True) -> User:
+    tag = uuid.uuid4().hex[:6]
+    bot = User(
+        community_id=CID,
+        email=f"b{tag}+x@plugins.invalid",
+        username=f"qbot{tag}",
+        display_name=f"Qbot {tag}",
+        is_bot=True,
+        is_active=active,
+    )
+    session.add(bot)
+    await session.flush()
+    return bot
+
+
+async def test_mention_list_keeps_active_bots_only(session: AsyncSession) -> None:
+    on, off = await _bot(session), await _bot(session, active=False)
+    ids = {u.id for u in (await UserRepository(session).list_by_community(CID, limit=1000))[0]}
+    assert on.id in ids and off.id not in ids
+
+
+async def test_user_search_excludes_bots(session: AsyncSession) -> None:
+    from app.repositories.search_repo import SearchRepository
+
+    bot = await _bot(session)
+    rows, _, total = await SearchRepository(session).search_users(
+        bot.username, bot.username, CID, None, 20
+    )
+    assert bot.id not in {u.id for u, _ in rows}
+
+
+async def test_chat_picker_and_others_exclude_bots(session: AsyncSession) -> None:
+    from app.repositories.celebration_repo import CelebrationRepository
+    from app.repositories.chat_context_repo import ChatContextRepository
+    from app.repositories.storage_repo import StorageRepository
+
+    bot = await _bot(session)
+    viewer = User(
+        community_id=CID,
+        email=f"v{uuid.uuid4().hex[:6]}@x.dev",
+        username=f"v{uuid.uuid4().hex[:6]}",
+        display_name="V",
+    )
+    session.add(viewer)
+    await session.flush()
+    members, _ = await ChatContextRepository(session).members(viewer.id, CID, None, limit=500)
+    assert bot.id not in {u.id for u in members}
+    assert viewer.id in {u.id for u in members}
+    assert await CelebrationRepository(session).celebratable_user(CID, viewer.id, bot.id) is None
+    top = await StorageRepository(session).top_users(CID, 1000)
+    assert bot.id not in {u.id for u in top}

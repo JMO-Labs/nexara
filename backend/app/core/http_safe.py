@@ -68,7 +68,9 @@ def _pin(url: str) -> tuple[str, str, str]:
     return urlunparse(parsed._replace(netloc=ip_netloc)), host_header, host
 
 
-async def _fetch(client: httpx.AsyncClient, url: str, max_bytes: int, strict: bool) -> bytes:
+async def _fetch(
+    client: httpx.AsyncClient, url: str, max_bytes: int, strict: bool = False
+) -> bytes:
     current = url
     for _ in range(_MAX_REDIRECTS + 1):
         if strict and urlparse(current).scheme != "https":
