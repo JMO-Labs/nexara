@@ -21,6 +21,10 @@ spec:
   template:
     metadata:
       labels: {{- include "nexara.selector" $ctx | nindent 8 }}
+      {{- if $.Values.pluginHost.enabled }}
+      annotations:
+        checksum/plugin-host: {{ include "nexara.pluginHostChecksum" $ }}
+      {{- end }}
     spec:
       securityContext: {{- toYaml $.Values.securityContext.pod | nindent 8 }}
       {{- with $.Values.imagePullSecrets }}

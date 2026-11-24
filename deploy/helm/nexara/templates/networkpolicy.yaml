@@ -22,12 +22,6 @@
   {{- range .Values.networkPolicy.externalEgressPorts }}
     - {port: {{ . }}}
   {{- end }}
-{{- if .Values.pluginHost.enabled }}
-- to:
-    - podSelector:
-        matchLabels: {{- include "nexara.selector" (dict "root" . "component" "plugin-host") | nindent 10 }}
-  ports: [{port: {{ .Values.pluginHost.port }}}]
-{{- end }}
 {{- end }}
 {{- if .Values.networkPolicy.enabled }}
 {{- $np := .Values.networkPolicy }}
@@ -57,6 +51,12 @@ spec:
     {{- end }}
   {{- end }}
   egress: {{- include "nexara.egress" $ | indent 4 }}
+  {{- if and $.Values.pluginHost.enabled (ne $name "beat") }}
+    - to:
+        - podSelector:
+            matchLabels: {{- include "nexara.selector" (dict "root" $ "component" "plugin-host") | nindent 14 }}
+      ports: [{port: {{ $.Values.pluginHost.port }}}]
+  {{- end }}
 {{- end }}
 {{- range $name, $port := dict "postgresql" 5432 "valkey" 6379 }}
 {{- if index $.Values $name "enabled" }}
@@ -110,6 +110,14 @@ spec:
         - ipBlock:
             cidr: 0.0.0.0/0
             except: {{- toYaml .Values.networkPolicy.privateCidrs | nindent 14 }}
+      ports:
+      {{- range .Values.pluginHost.egressPorts }}
+        - {port: {{ . }}}
+      {{- end }}
+    - to:
+        - ipBlock:
+            cidr: ::/0
+            except: {{- toYaml .Values.networkPolicy.privateCidrs6 | nindent 14 }}
       ports:
       {{- range .Values.pluginHost.egressPorts }}
         - {port: {{ . }}}

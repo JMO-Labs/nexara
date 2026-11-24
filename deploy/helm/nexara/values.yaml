@@ -144,13 +144,18 @@ networkPolicy:
     - 192.168.0.0/16
     - 100.64.0.0/10
     - 169.254.0.0/16
+  # IPv6 equivalents (loopback, ULA, link-local) for the host's ::/0 egress rule.
+  privateCidrs6:
+    - ::1/128
+    - fc00::/7
+    - fe80::/10
 
 # -- Plugin host (optional): runs untrusted plugin code in bubblewrap sandboxes.
 # Needs seccomp/AppArmor Unconfined + SETUID/SETGID/CHOWN/KILL for user namespaces;
 # runs as root in-container with no DB creds, no SA token, read-only rootfs.
 # Enforce NetworkPolicies (networkPolicy.enabled) so it cannot reach Postgres/Valkey.
-# Cluster must allow Unconfined seccomp (PSA "privileged"/"baseline" namespace label;
-# "restricted" will reject the pod). pids limit is a kubelet setting (--pod-max-pids).
+# Cluster must allow Unconfined seccomp (PSA "privileged" namespace label;
+# "baseline" and "restricted" both reject Unconfined seccomp/AppArmor). pids limit is a kubelet setting (--pod-max-pids).
 pluginHost:
   enabled: false
   port: 8700
@@ -179,7 +184,8 @@ pluginHost:
     capabilities:
       drop: [ALL]
       add: [SETUID, SETGID, CHOWN, KILL]
-    # k8s >= 1.30 field; the annotation in the template covers older clusters.
+    # Needs k8s >= 1.30 (older API servers may warn/drop it); the pod annotation in
+    # the template provides the fallback there.
     appArmorProfile: {type: Unconfined}
 
 # -- Pod/container security for worker/beat (data stores keep image defaults)
