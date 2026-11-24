@@ -98,23 +98,11 @@ class TwoFactorEnrollResponse(BaseModel):
     otpauth_uri: str = Field(description="otpauth:// URI for QR code generation")
 
 
-class TwoFactorVerifyRequest(BaseModel):
-    """@brief Payload to verify a TOTP code (enrollment or login)."""
-
-    code: str = Field(..., min_length=6, max_length=8, description="TOTP or backup code")
-
-
 class TwoFactorLoginRequest(BaseModel):
     """@brief Payload to complete a 2FA-pending login."""
 
     two_factor_token: str
     code: str = Field(..., min_length=6, max_length=8)
-
-
-class TwoFactorVerifyResponse(BaseModel):
-    """@brief Response after successful 2FA enrollment verification."""
-
-    backup_codes: list[str] = Field(description="One-time recovery codes")
 
 
 class MagicLinkRequestPayload(BaseModel):

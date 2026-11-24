@@ -26,8 +26,6 @@ from app.schemas.auth import (
     TokenResponse,
     TwoFactorEnrollResponse,
     TwoFactorLoginRequest,
-    TwoFactorVerifyRequest,
-    TwoFactorVerifyResponse,
 )
 
 
@@ -181,25 +179,9 @@ class TestTwoFactorSchemas:
         resp = TwoFactorEnrollResponse(secret="BASE32SECRET", otpauth_uri="otpauth://...")
         assert resp.secret == "BASE32SECRET"
 
-    def test_verify_request_valid(self):
-        req = TwoFactorVerifyRequest(code="123456")
-        assert len(req.code) == 6
-
-    def test_verify_request_too_short(self):
-        with pytest.raises(ValidationError):
-            TwoFactorVerifyRequest(code="12345")
-
-    def test_verify_request_too_long(self):
-        with pytest.raises(ValidationError):
-            TwoFactorVerifyRequest(code="123456789")
-
     def test_login_request(self):
         req = TwoFactorLoginRequest(two_factor_token="jwt", code="123456")
         assert req.two_factor_token == "jwt"
-
-    def test_verify_response(self):
-        resp = TwoFactorVerifyResponse(backup_codes=["code1", "code2"])
-        assert len(resp.backup_codes) == 2
 
 
 class TestPasswordResetSchemas:
