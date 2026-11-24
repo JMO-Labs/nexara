@@ -12,7 +12,10 @@ import { ComponentGrid } from "./ComponentGrid";
 import { DiskPanel } from "./DiskPanel";
 import { RuntimePanel } from "./RuntimePanel";
 
-/** @brief System health tab. */
+/**
+ * @brief System health tab.
+ * @return tab body
+ */
 export function SystemTab() {
   const q = useQuery({
     queryKey: ["admin", "system"],
@@ -30,7 +33,7 @@ export function SystemTab() {
         <DiskPanel disk={disk} />
         <RuntimePanel runtime={runtime} />
       </div>
-      {grafana_url && (
+      {grafana_url && /^https?:\/\//i.test(grafana_url) && (
         <a
           href={grafana_url}
           target="_blank"
@@ -38,6 +41,7 @@ export function SystemTab() {
           className="inline-flex items-center gap-1.5 self-start text-sm text-accent underline"
         >
           Open Grafana
+          <span className="sr-only"> (opens in a new tab)</span>
           <ExternalLink aria-hidden="true" className="size-4" />
         </a>
       )}

@@ -5,6 +5,9 @@
 import { formatBytes } from "@/lib/formatBytes";
 import type { DiskInfo } from "@/lib/api/adminSystem";
 
+/** Usage at or above this percent is drawn in the danger colour. */
+export const DISK_WARN_PCT = 85;
+
 /**
  * @brief Storage usage card.
  * @param disk disk info
@@ -12,6 +15,12 @@ import type { DiskInfo } from "@/lib/api/adminSystem";
  */
 export function DiskPanel({ disk }: { disk: DiskInfo }) {
   const pct = disk.used_pct == null ? null : Math.round(disk.used_pct);
+  const valueText =
+    pct == null
+      ? undefined
+      : disk.used_bytes != null && disk.total_bytes != null
+        ? `${pct}% used, ${formatBytes(disk.used_bytes)} of ${formatBytes(disk.total_bytes)}`
+        : `${pct}% used`;
   return (
     <section
       aria-labelledby="sys-disk"
@@ -32,10 +41,11 @@ export function DiskPanel({ disk }: { disk: DiskInfo }) {
             aria-valuenow={pct}
             aria-valuemin={0}
             aria-valuemax={100}
-            className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2"
+            aria-valuetext={valueText}
+            className="h-2.5 w-full overflow-hidden rounded-full bg-border"
           >
             <div
-              className={`h-full ${pct >= 85 ? "bg-danger" : "bg-accent"}`}
+              className={`h-full ${pct >= DISK_WARN_PCT ? "bg-danger" : "bg-accent"}`}
               style={{ width: `${Math.min(pct, 100)}%` }}
             />
           </div>

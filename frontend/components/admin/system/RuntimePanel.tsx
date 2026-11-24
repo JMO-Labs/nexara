@@ -5,7 +5,11 @@
 import { formatBytes } from "@/lib/formatBytes";
 import type { RuntimeInfo } from "@/lib/api/adminSystem";
 
-/** @brief Human uptime, e.g. "2d 3h 4m". */
+/**
+ * @brief Human uptime, e.g. "2d 3h 4m".
+ * @param s uptime in seconds
+ * @return formatted text
+ */
 export function formatUptime(s: number): string {
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
