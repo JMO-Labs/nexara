@@ -92,7 +92,7 @@ describe("AdminShell", () => {
         .getAllByRole("link")
         .map((a) => a.getAttribute("href"));
     const all = GROUPS.flatMap(hrefs);
-    expect(all).toHaveLength(18);
+    expect(all).toHaveLength(19);
     for (const t of [
       "metrics",
       "users",
@@ -101,6 +101,7 @@ describe("AdminShell", () => {
       "shopping",
       "email",
       "email-reply",
+      "alerts",
       "features",
       "interests",
       "prompts",

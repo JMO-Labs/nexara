@@ -4,6 +4,7 @@
  */
 import {
   BarChart3,
+  BellRing,
   Bot,
   Brush,
   Database,
@@ -53,7 +54,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (14 tabs + 4 route links). */
+/** @brief Grouped admin sections (15 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -136,6 +137,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Email",
         "Outgoing mail server (SMTP) for invites and notifications.",
         Send,
+      ),
+      tab(
+        "alerts",
+        "Alerts",
+        "Where admin alerts are sent (ntfy, Discord and more).",
+        BellRing,
       ),
       tab(
         "email-reply",
