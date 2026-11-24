@@ -9,7 +9,6 @@ import { ApiError } from "@/lib/api/errors";
 import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 
 let accessToken: string | null = null;
-let refreshPromise: Promise<string | null> | null = null;
 const listeners = new Set<(token: string | null) => void>();
 
 /** Non-sensitive cookie used by the edge proxy to soft-gate /app vs /login.
@@ -47,11 +46,23 @@ export function onAuthChange(fn: (token: string | null) => void): () => void {
  *  NEXT_PUBLIC_API_BASE_URL only if pointing at a remote API directly. */
 export const API_BASE: string = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
+/** Outcome of a refresh attempt. `transient` = network/server trouble, so the
+ *  session was left untouched (only a 401/403 answer ends a session). */
+export interface RefreshResult {
+  token: string | null;
+  transient: boolean;
+}
+
+let refreshPromise: Promise<RefreshResult> | null = null;
+
 /**
- * Exchange the HttpOnly refresh cookie for a new access token.
- * De-duplicated: concurrent 401s share one in-flight refresh.
+ * @brief Exchange the HttpOnly refresh cookie for a new access token.
+ *        De-duplicated: concurrent 401s share one in-flight refresh.
+ *        Clears the session only on a 401/403 response; a network error,
+ *        timeout or 5xx keeps it (offline must never sign the user out).
+ * @return the new token, or null with `transient` telling why
  */
-export async function refreshAccessToken(): Promise<string | null> {
+export async function refreshSession(): Promise<RefreshResult> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     const ctrl = new AbortController();
@@ -62,17 +73,17 @@ export async function refreshAccessToken(): Promise<string | null> {
         credentials: "include",
         signal: ctrl.signal,
       });
-      if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
         setAccessToken(null);
-        return null;
+        return { token: null, transient: false };
       }
+      if (!res.ok) return { token: null, transient: true };
       const data = (await res.json()) as { access_token?: string };
       const next = data.access_token ?? null;
       setAccessToken(next);
-      return next;
+      return { token: next, transient: false };
     } catch {
-      setAccessToken(null);
-      return null;
+      return { token: null, transient: true };
     } finally {
       clearTimeout(timer);
       refreshPromise = null;
@@ -81,8 +92,34 @@ export async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-/** Best-effort logout: clears access token and any pending 2FA step, asks backend to revoke refresh cookie. */
+/** @brief Token-only form of {@link refreshSession}; null on any failure. */
+export async function refreshAccessToken(): Promise<string | null> {
+  return (await refreshSession()).token;
+}
+
+/** @brief Unregister this device's push subscription (needs the token, so it
+ *         runs before it is cleared). Best effort, capped at 3s. */
+async function dropPushSubscription(): Promise<void> {
+  const work = (async () => {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const sub = await reg?.pushManager?.getSubscription();
+    if (!sub) return;
+    const { unsubscribePush } = await import("@/lib/api/push");
+    await unsubscribePush(sub.endpoint).catch(() => {});
+    await sub.unsubscribe().catch(() => false);
+  })().catch(() => {});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    work,
+    new Promise((r) => (timer = setTimeout(r, 3_000))),
+  ]);
+  clearTimeout(timer);
+}
+
+/** Best-effort logout: drops this device's push subscription, clears access
+ *  token and any pending 2FA step, asks backend to revoke refresh cookie. */
 export async function logout(): Promise<void> {
+  if (typeof navigator !== "undefined") await dropPushSubscription();
   setAccessToken(null);
   usePendingTwoFactor.getState().clear();
   try {

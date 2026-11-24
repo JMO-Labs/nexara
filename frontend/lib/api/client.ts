@@ -8,7 +8,7 @@ import { ApiError } from "./errors";
 import {
   API_BASE,
   getAccessToken,
-  refreshAccessToken,
+  refreshSession,
   setAccessToken,
 } from "@/lib/auth/session";
 
@@ -75,7 +75,10 @@ export async function api<T = unknown>(
   let res = await doFetch(path, opts);
 
   if (res.status === 401 && !opts.noRetry && !opts.anonymous) {
-    const next = await refreshAccessToken();
+    const { token: next, transient } = await refreshSession();
+    // Offline / server trouble: fail this call but keep the session.
+    if (transient)
+      throw new ApiError(0, "network_error", "Network unavailable.");
     if (next) {
       res = await doFetch(path, { ...opts, noRetry: true });
     } else {

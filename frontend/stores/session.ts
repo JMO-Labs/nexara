@@ -6,6 +6,7 @@
  */
 import { create } from "zustand";
 import { clearUserCache } from "@/lib/pwa/clearUserCache";
+import { clearLastUser, saveLastUser } from "@/lib/auth/lastUser";
 import type { CurrentUser } from "@/lib/api/users";
 
 export type SessionStatus =
@@ -29,11 +30,14 @@ export const useSession = create<SessionState>((set, get) => ({
     // Sign-out (incl. forced 401) or account switch: purge saved pages.
     const prev = get().user;
     if (!user ? prev : prev && prev.id !== user.id) clearUserCache();
+    if (user) saveLastUser(user);
+    else clearLastUser();
     set({ user, status: user ? "authenticated" : "unauthenticated" });
   },
   setStatus: (status) => set({ status }),
   reset: () => {
     clearUserCache();
+    clearLastUser();
     set({ user: null, status: "unauthenticated" });
   },
 }));

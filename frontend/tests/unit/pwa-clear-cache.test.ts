@@ -40,6 +40,25 @@ describe("clearUserCache", () => {
     expect(del).not.toHaveBeenCalledWith("nexara-x-static");
   });
 
+  it("clears the app badge itself without a controller", () => {
+    const clearAppBadge = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "serviceWorker", {
+      value: { controller: null },
+      configurable: true,
+    });
+    (navigator as any).clearAppBadge = clearAppBadge;
+    clearUserCache();
+    expect(clearAppBadge).toHaveBeenCalled();
+    delete (navigator as any).clearAppBadge;
+  });
+
+  it("forgets the last-user snapshot", () => {
+    controller(true);
+    localStorage.setItem("nx_last_user", "{}");
+    clearUserCache();
+    expect(localStorage.getItem("nx_last_user")).toBeNull();
+  });
+
   it("session reset (sign-out) and setUser(null) purge", () => {
     controller(true);
     useSession.setState({ user: { id: "a" } as never });

@@ -1,8 +1,10 @@
 /**
  * @file lib/pwa/clearUserCache.ts
- * @brief Drop SW-saved authenticated pages on sign-out / login / account switch.
+ * @brief Drop SW-saved authenticated pages, the last-user snapshot and the
+ *        app badge on sign-out / login / account switch.
  */
 import { clearPersistedQueries } from "./queryPersist";
+import { clearLastUser } from "@/lib/auth/lastUser";
 
 /** Window event telling Providers to empty the in-memory query cache. */
 export const CLEAR_EVENT = "nx:clear-user-cache";
@@ -20,6 +22,7 @@ export function clearUserCache(): void {
     /* no window */
   }
   void clearPersistedQueries();
+  clearLastUser();
   try {
     const ctl =
       typeof navigator !== "undefined"
@@ -29,6 +32,9 @@ export function clearUserCache(): void {
       ctl.postMessage({ type: "CLEAR_USER_CACHE" });
       return;
     }
+    // No SW to do it: clear the previous user's app badge here.
+    if (typeof navigator !== "undefined")
+      void navigator.clearAppBadge?.().catch(() => {});
     if (typeof caches !== "undefined") {
       caches
         .keys()
