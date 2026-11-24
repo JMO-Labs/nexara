@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -16,8 +17,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -90,6 +92,9 @@ class Post(Base):
     )
     countdown_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("countdowns.id", ondelete="SET NULL", use_alter=True)
+    )
+    plugin_flags: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
     # Celebrate post: whose occasion ('user' or 'household' member/pet).
     celebrate_type: Mapped[str | None] = mapped_column(Text)
