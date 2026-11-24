@@ -149,11 +149,12 @@ def upgrade() -> None:
         _community_col(),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("bot_user_id", pg.UUID(as_uuid=True),
-                  sa.ForeignKey("users.id", ondelete="SET NULL")),
+                  sa.ForeignKey("users.id", ondelete="SET NULL"), unique=True),
         sa.Column("settings", pg.JSONB(), nullable=False, server_default=_EMPTY_OBJ),
         sa.Column("webhook_secret", sa.Text()),
         sa.PrimaryKeyConstraint("install_id", "community_id"),
     )  # fmt: skip
+    op.create_index("ix_plugin_communities_community", "plugin_communities", ["community_id"])
     op.create_table(
         "plugin_tokens",
         _uuid_pk(),
@@ -164,6 +165,13 @@ def upgrade() -> None:
         _ts("revoked_at", nullable=True),
     )
     op.create_index("ix_plugin_tokens_install", "plugin_tokens", ["install_id", "community_id"])
+    op.create_index(
+        "uq_plugin_tokens_active",
+        "plugin_tokens",
+        ["install_id", "community_id"],
+        unique=True,
+        postgresql_where=sa.text("revoked_at IS NULL"),
+    )
     op.create_table(
         "plugin_user_prefs",
         _install_fk(),
@@ -173,6 +181,7 @@ def upgrade() -> None:
         sa.Column("values", pg.JSONB(), nullable=False, server_default=_EMPTY_OBJ),
         sa.PrimaryKeyConstraint("install_id", "user_id", "community_id"),
     )  # fmt: skip
+    op.create_index("ix_plugin_user_prefs_user", "plugin_user_prefs", ["user_id"])
     op.create_table(
         "plugin_indexes",
         _uuid_pk(),
@@ -191,9 +200,12 @@ def downgrade() -> None:
     """@brief Drop new tables; recreate legacy plugin tables empty."""
     op.drop_column("posts", "plugin_flags")
     op.drop_table("plugin_indexes")
+    op.drop_index("ix_plugin_user_prefs_user", table_name="plugin_user_prefs")
     op.drop_table("plugin_user_prefs")
+    op.drop_index("uq_plugin_tokens_active", table_name="plugin_tokens")
     op.drop_index("ix_plugin_tokens_install", table_name="plugin_tokens")
     op.drop_table("plugin_tokens")
+    op.drop_index("ix_plugin_communities_community", table_name="plugin_communities")
     op.drop_table("plugin_communities")
     op.drop_table("plugin_installs")
     _recreate_old()

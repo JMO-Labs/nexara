@@ -12,6 +12,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     PrimaryKeyConstraint,
     Text,
     func,
@@ -67,7 +68,10 @@ class PluginCommunity(Base):
     """@brief Per-community plugin enablement, bot account and settings."""
 
     __tablename__ = "plugin_communities"
-    __table_args__ = (PrimaryKeyConstraint("install_id", "community_id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("install_id", "community_id"),
+        Index("ix_plugin_communities_community", "community_id"),
+    )
 
     install_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False
@@ -80,7 +84,7 @@ class PluginCommunity(Base):
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     bot_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), unique=True
     )
     settings: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
@@ -92,6 +96,16 @@ class PluginToken(Base):
     """@brief Scoped bot API token (sha256 hash only)."""
 
     __tablename__ = "plugin_tokens"
+    __table_args__ = (
+        Index("ix_plugin_tokens_install", "install_id", "community_id"),
+        Index(
+            "uq_plugin_tokens_active",
+            "install_id",
+            "community_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
@@ -116,7 +130,10 @@ class PluginUserPref(Base):
     """@brief Per-user plugin preference values."""
 
     __tablename__ = "plugin_user_prefs"
-    __table_args__ = (PrimaryKeyConstraint("install_id", "user_id", "community_id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("install_id", "user_id", "community_id"),
+        Index("ix_plugin_user_prefs_user", "user_id"),
+    )
 
     install_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False
