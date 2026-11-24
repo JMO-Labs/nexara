@@ -120,6 +120,46 @@ class TestOAuthCallbackEndpoint:
             assert resp.status_code == 302
             assert "location" in resp.headers
 
+    @pytest.mark.asyncio
+    async def test_callback_refusal_redirects_to_login_with_code(self, test_app):
+        """SSO refusal: no exchange code, redirect to /login?error=<code>."""
+        from app.core.exceptions import SsoRefusedError
+
+        provider = MagicMock(id=uuid.uuid4(), provider_type="oidc", preset=None)
+        with (
+            patch("app.api.v1.oauth.ProviderManager") as manager_cls,
+            patch("app.api.v1.oauth.OAuthFlow") as flow_cls,
+            patch(
+                "app.api.v1.oauth.verify_id_token",
+                new_callable=AsyncMock,
+                return_value={"sub": "u1", "email": "a@other.com"},
+            ),
+            patch("app.api.v1.oauth.UserProvisioner") as prov_cls,
+            patch("app.api.v1.oauth._get_valkey_client") as valkey,
+        ):
+            manager_cls.return_value.get_provider = AsyncMock(return_value=provider)
+            flow_cls.return_value.exchange_code = AsyncMock(
+                return_value={"access_token": "at", "id_token": "id"}
+            )
+            prov_cls.return_value.provision_user = AsyncMock(
+                side_effect=SsoRefusedError("sso_domain_not_allowed")
+            )
+            async with AsyncClient(
+                transport=ASGITransport(app=test_app),
+                base_url="http://test",
+                follow_redirects=False,
+                cookies={
+                    "oauth_state": "st",
+                    "oauth_verifier": "v",
+                    "oauth_provider": "oidc",
+                    "oauth_nonce": "n",
+                },
+            ) as client:
+                resp = await client.get("/api/v1/oauth/oidc/callback?code=c&state=st")
+        assert resp.status_code == 302
+        assert resp.headers["location"].endswith("/login?error=sso_domain_not_allowed")
+        valkey.return_value.setex.assert_not_called()
+
 
 class TestOAuthExchangeEndpoint:
     """@brief POST /api/v1/oauth/exchange tests."""

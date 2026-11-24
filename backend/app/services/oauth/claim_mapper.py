@@ -35,12 +35,17 @@ def _lookup(claims: dict[str, Any], path: str) -> Any:
     return cur
 
 
-def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> OAuthAuthResult:
+def map_claims(
+    claims: dict[str, Any],
+    claim_mapping: dict[str, Any] | None,
+    username_claim: str | None = "preferred_username",
+) -> OAuthAuthResult:
     """
     @brief Transform provider claims into an OAuthAuthResult.
 
     @param claims Verified ID token claims.
     @param claim_mapping Nexara field -> provider claim overrides (merged over defaults).
+    @param username_claim Provider claim (dotted path) holding the username.
     @return OAuthAuthResult (sub, email, display_name, avatar_url, groups).
     @raises AuthenticationError when no subject resolves (mapped or standard `sub`).
     """
@@ -61,6 +66,7 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> 
     if not sub:
         raise AuthenticationError(message="OAuth identity missing subject")
     email, name, pic = get("email"), get("name"), get("picture")
+    uname = _lookup(claims, username_claim) if username_claim else None
     return OAuthAuthResult(
         sub=str(sub),
         email=str(email) if email else None,
@@ -68,4 +74,5 @@ def map_claims(claims: dict[str, Any], claim_mapping: dict[str, Any] | None) -> 
         avatar_url=str(pic) if pic else None,
         groups=groups,
         email_verified=_lookup(claims, "email_verified") in _VERIFIED,
+        username=str(uname) if uname else None,
     )

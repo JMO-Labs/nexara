@@ -81,6 +81,19 @@ class AuthorizationError(AppError):
         )
 
 
+class SsoRefusedError(AuthorizationError):
+    """
+    @brief SSO sign-in refused by a provisioning rule.
+
+    @param code One of sso_no_account, sso_account_disabled,
+                sso_domain_not_allowed, sso_group_required (frontend-mapped).
+    """
+
+    def __init__(self, code: str) -> None:
+        super().__init__(message=code)
+        self.code = code
+
+
 class NotFoundError(AppError):
     """@brief Raised when a requested resource does not exist."""
 

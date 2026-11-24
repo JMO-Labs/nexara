@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+from tests.unit.services.oauth.helpers import sso_provider
 
 _P = "app.services.oauth.user_provisioner"
 
@@ -30,11 +31,7 @@ def _provisioner(link, new_user):
 
 
 def _provider():
-    p = MagicMock()
-    p.id = uuid.uuid4()
-    p.group_mappings = None
-    p.claim_mapping = None
-    return p
+    return sso_provider(group_mappings=None, claim_mapping=None)
 
 
 async def test_new_oauth_user_emits_on_user_joined():

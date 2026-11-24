@@ -17,6 +17,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+from tests.unit.services.oauth.helpers import sso_provider
 from tests.unit.services.test_auth_security_fixes import _fake_redis, _make_service, _make_user
 
 UP = "app.services.oauth.user_provisioner."
@@ -43,7 +44,7 @@ class World:
         return link
 
 
-PROVIDER = MagicMock(id=uuid.uuid4(), group_mappings={}, claim_mapping={})
+PROVIDER = sso_provider()
 
 
 async def _sso(world: World, methods: list[str]) -> UserProvisioner:

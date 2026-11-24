@@ -101,4 +101,8 @@ def extract_claims(
     @param provider OAuth provider with claim_mapping.
     @return OAuthAuthResult with extracted values.
     """
-    return map_claims(claims, getattr(provider, "claim_mapping", None))
+    return map_claims(
+        claims,
+        getattr(provider, "claim_mapping", None),
+        getattr(provider, "username_claim", None) or "preferred_username",
+    )

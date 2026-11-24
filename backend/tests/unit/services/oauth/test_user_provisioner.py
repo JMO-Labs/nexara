@@ -15,6 +15,7 @@ from app.services.oauth.user_provisioner import (
     UserProvisioner,
     _derive_username,
 )
+from tests.unit.services.oauth.helpers import sso_provider
 
 
 @pytest.fixture(autouse=True)
@@ -72,7 +73,7 @@ class TestProvisionUser:
         mock_user_repo.get_by_id = AsyncMock(return_value=mock_user)
 
         auth_result = OAuthAuthResult(sub="oidc-123", email="u@x.com", display_name="User")
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -110,7 +111,7 @@ class TestProvisionUser:
         mock_user_repo.update = AsyncMock(return_value=mock_user)
 
         auth_result = OAuthAuthResult(sub="oidc-123", email="u@x.com")
-        mock_provider = MagicMock()
+        mock_provider = sso_provider(group_mappings={"ops": "admin"})
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -147,7 +148,7 @@ class TestProvisionUser:
             avatar_url="https://x.com/a.png",
             email_verified=True,
         )
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
 
         with patch(
@@ -177,7 +178,7 @@ class TestProvisionUser:
 
         mock_link_repo.find_by_provider_and_sub = AsyncMock(return_value=None)
         mock_user_repo.find_by_email = AsyncMock(return_value=None)
-        mock_user_repo.find_by_username = AsyncMock(return_value=None)
+        mock_user_repo.username_owner_id = AsyncMock(return_value=None)
 
         new_user = MagicMock(spec=User)
         new_user.id = uuid.uuid4()
@@ -190,7 +191,7 @@ class TestProvisionUser:
             display_name="New User",
             email_verified=True,
         )
-        mock_provider = MagicMock()
+        mock_provider = sso_provider()
         mock_provider.id = uuid.uuid4()
         community_id = uuid.uuid4()
 
@@ -219,8 +220,7 @@ def _run(auth_result, *, link=None, user=None):
     link_repo, user_repo = AsyncMock(), AsyncMock()
     link_repo.find_by_provider_and_sub = AsyncMock(return_value=link)
     user_repo.find_by_email = AsyncMock(return_value=user)
-    provider = MagicMock()
-    provider.id = uuid.uuid4()
+    provider = sso_provider()
 
     async def go():
         with (
@@ -268,11 +268,12 @@ class TestEmailVerification:
     async def test_verified_email_lookup_is_case_insensitive(self):
         existing = MagicMock(spec=User)
         existing.id = uuid.uuid4()
+        existing.email = "mixed@x.com"
         coro, link_repo, user_repo = _run(
             OAuthAuthResult(sub="s", email="Mixed@X.com", email_verified=True), user=existing
         )
         assert await coro is existing
-        user_repo.find_by_email.assert_called_once_with("mixed@x.com")
+        user_repo.find_by_email.assert_called_once_with("mixed@x.com")  # no email re-sync
         link_repo.create.assert_called_once()
 
     @pytest.mark.asyncio

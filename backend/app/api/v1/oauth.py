@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.cookies import should_secure_cookie
 from app.core.dependencies import get_db
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AuthenticationError, SsoRefusedError
 from app.core.i18n import _
 from app.core.valkey import DB_CACHE, get_pool
 from app.repositories.user_repo import UserRepository
@@ -32,7 +32,7 @@ from app.schemas.oauth import OAuthExchangeRequest
 from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth_service import AuthService
 from app.services.oauth.claim_mapper import map_claims
-from app.services.oauth.flow import OAuthFlow
+from app.services.oauth.flow import OAuthFlow, apply_verified_email
 from app.services.oauth.group_mapper import global_role_mappings, map_groups_to_role
 from app.services.oauth.provider_manager import ProviderManager
 from app.services.oauth.token_verifier import extract_claims, verify_id_token
@@ -184,7 +184,7 @@ async def oauth_callback(
             raise AuthenticationError(message=_("Missing OAuth session"))
         claims = await verify_id_token(token_data["id_token"], provider, nonce=oauth_nonce)
     elif provider.userinfo_endpoint and token_data.get("access_token"):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 provider.userinfo_endpoint,
                 headers={"Authorization": f"Bearer {token_data['access_token']}"},
@@ -195,16 +195,28 @@ async def oauth_callback(
         raise AuthenticationError(message=_("OAuth response missing identity"))
 
     if isinstance(provider.claim_mapping, dict) and provider.claim_mapping:
-        auth_result = map_claims(claims, provider.claim_mapping)
+        auth_result = map_claims(
+            claims, provider.claim_mapping, provider.username_claim or "preferred_username"
+        )
     else:
         auth_result = extract_claims(claims, provider)
+    await apply_verified_email(provider, token_data, auth_result)
     role = map_groups_to_role(
         auth_result.groups or [],
         {**(provider.group_mappings or {}), **global_role_mappings(provider.claim_mapping)},
         provider.default_role or "member",
     )
+    origins = settings.allowed_origins_list
+    frontend_url = origins[0] if origins else str(request.base_url).rstrip("/")
     provisioner = UserProvisioner(db, community_id)
-    user = await provisioner.provision_user(auth_result, provider, role)
+    try:
+        user = await provisioner.provision_user(auth_result, provider, role)
+    except SsoRefusedError as exc:
+        # Return normally so the session commits any token revocation.
+        logger.info("sso_refused", provider=slug, code=exc.code)
+        refused = RedirectResponse(url=f"{frontend_url}/login?error={exc.code}", status_code=302)
+        _clear_oauth_cookies(refused)
+        return refused
 
     exchange_code = secrets.token_urlsafe(48)
     valkey = _get_valkey_client(settings)
@@ -221,8 +233,6 @@ async def oauth_callback(
     await valkey.setex(f"oauth_exchange:{exchange_code}", 60, payload)
 
     _clear_oauth_cookies(response)
-    origins = settings.allowed_origins_list
-    frontend_url = origins[0] if origins else str(request.base_url).rstrip("/")
     redirect_url = f"{frontend_url}/auth/callback?code={exchange_code}"
     return RedirectResponse(url=redirect_url, status_code=302)
 

@@ -8,9 +8,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.user import User
 from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+from tests.unit.services.oauth.helpers import sso_provider
 
 MOD = "app.services.oauth.user_provisioner"
-CM = {"group_mapping": {"ops": {"subgroup_id": None, "role": "admin"}}}
+CM = {
+    "group_mapping": {
+        "ops": {"subgroup_id": None, "role": "admin"},
+        "eng": {"subgroup_id": str(uuid.uuid4()), "role": "member"},
+    }
+}
 
 
 def _link_and_user(role="member"):
@@ -29,7 +35,7 @@ async def _provision(claim_mapping, groups, role="admin", legacy=None):
     link_repo, user_repo = AsyncMock(), AsyncMock()
     link_repo.find_by_provider_and_sub = AsyncMock(return_value=link)
     user_repo.get_by_id = AsyncMock(return_value=user)
-    provider = MagicMock()
+    provider = sso_provider()
     provider.id = uuid.uuid4()
     provider.group_mappings = legacy or {}
     provider.claim_mapping = claim_mapping

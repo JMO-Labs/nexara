@@ -16,6 +16,29 @@ import httpx
 from app.core.encryption import decrypt_secret, derive_fernet_key
 from app.core.exceptions import AuthenticationError
 from app.models.oauth_provider import OAuthProvider
+from app.services.oauth.oauth2_email import OAUTH2_EMAIL_PRESETS, fetch_verified_email
+from app.services.oauth.user_provisioner import OAuthAuthResult
+
+
+async def apply_verified_email(
+    provider: OAuthProvider, token_data: dict[str, Any], auth_result: OAuthAuthResult
+) -> None:
+    """
+    @brief For GitHub/Discord presets, replace the profile email with the verified one.
+
+    The profile email is untrusted: without a verified address the result carries
+    no email, so it can neither link nor create an account.
+
+    @param provider OAuth provider (preset).
+    @param token_data Token response (access_token).
+    @param auth_result Mapped claims; email/email_verified updated in place.
+    """
+    if provider.preset not in OAUTH2_EMAIL_PRESETS:
+        return
+    token = token_data.get("access_token")
+    email = await fetch_verified_email(provider.preset, str(token)) if token else None
+    auth_result.email = email
+    auth_result.email_verified = email is not None
 
 
 class OAuthFlow:
@@ -100,8 +123,11 @@ class OAuthFlow:
         if client_secret:
             data["client_secret"] = client_secret
 
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(token_endpoint, data=data)
+        # Accept: GitHub answers form-encoded otherwise.
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                token_endpoint, data=data, headers={"Accept": "application/json"}
+            )
             if resp.status_code != 200:
                 raise AuthenticationError("token exchange failed")
             return cast(dict[str, Any], resp.json())
