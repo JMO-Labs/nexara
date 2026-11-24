@@ -17,6 +17,8 @@ interface StreamEvent {
   type: string;
   id?: string;
   payload?: Record<string, unknown>;
+  /** Server's push decision after DnD/snooze/per-type prefs. */
+  os_notify?: boolean;
 }
 
 /** @brief Mount once inside the authenticated shell. @return null */
@@ -33,6 +35,7 @@ export function ForegroundNotifier() {
       if (typeof Notification === "undefined") return;
       if (Notification.permission !== "granted") return;
       const evt = data as StreamEvent;
+      if (evt?.os_notify !== true) return;
       const desc = byKey.get(evt?.type);
       if (!desc) return;
       const r = renderNotif(desc, evt.payload ?? {}, t as unknown as Translate);

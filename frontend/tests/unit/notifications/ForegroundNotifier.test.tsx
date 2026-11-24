@@ -35,7 +35,7 @@ vi.mock("@/lib/notifications/renderers", () => ({
 import { ForegroundNotifier } from "@/components/notifications/ForegroundNotifier";
 
 const show = vi.fn().mockResolvedValue(undefined);
-const evt = { type: "mention", id: "1", payload: {} };
+const evt = { type: "mention", id: "1", payload: {}, os_notify: true };
 
 function setup(visibility: string, perm = "granted") {
   Object.defineProperty(document, "visibilityState", {
@@ -96,6 +96,15 @@ describe("ForegroundNotifier", () => {
       expect.objectContaining({ tag: "mention:p9" }),
     );
   });
+
+  it.each([false, undefined])(
+    "is silent when the server suppressed push (os_notify=%s)",
+    async (os_notify) => {
+      setup("hidden");
+      await m.onMessage!({ ...evt, os_notify });
+      expect(show).not.toHaveBeenCalled();
+    },
+  );
 
   it("is silent without permission", async () => {
     setup("hidden", "default");
