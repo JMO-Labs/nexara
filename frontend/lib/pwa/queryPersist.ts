@@ -52,15 +52,22 @@ export function shouldPersist(
 
 const hasIdb = () => typeof indexedDB !== "undefined";
 
-/** @brief IndexedDB-backed persister, or null where IndexedDB is missing. */
-export function createPersister() {
+const always = () => true;
+
+/**
+ * @brief IndexedDB-backed persister, or null where IndexedDB is missing.
+ * @param isLive gate: once false, reads return nothing (a stale restore is
+ *        dropped) and writes are skipped (a late throttled save is dropped).
+ */
+export function createPersister(isLive: () => boolean = always) {
   if (!hasIdb()) return null;
   return createAsyncStoragePersister({
     key: PERSIST_KEY,
     throttleTime: 2000,
     storage: {
-      getItem: (k) => get<string>(k).then((v) => v ?? null),
-      setItem: (k, v) => set(k, v),
+      getItem: (k) =>
+        get<string>(k).then((v) => (isLive() ? (v ?? null) : null)),
+      setItem: (k, v) => (isLive() ? set(k, v) : Promise.resolve()),
       removeItem: (k) => del(k),
     },
   });
@@ -83,10 +90,14 @@ const NOOP: Persister = {
  *        IndexedDB) nothing is restored or persisted; the buster embeds the
  *        user id so another user never hydrates this user's blob.
  * @param userId session user id, if known
+ * @param isLive see createPersister
  */
-export function persistOptionsFor(userId?: string | null) {
+export function persistOptionsFor(
+  userId?: string | null,
+  isLive: () => boolean = always,
+) {
   return {
-    persister: (userId && createPersister()) || NOOP,
+    persister: (userId && createPersister(isLive)) || NOOP,
     maxAge: PERSIST_MAX_AGE,
     buster: `${PERSIST_BUSTER}:${userId ?? "anon"}`,
     dehydrateOptions: {

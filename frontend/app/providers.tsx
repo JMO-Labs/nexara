@@ -4,12 +4,15 @@
  * @brief Client-side provider tree. Wraps children with next-themes (class-based,
  *        system default), next-intl, and TanStack Query. Server state lives here; UI state lives in Zustand.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { PERSIST_MAX_AGE, persistOptionsFor } from "@/lib/pwa/queryPersist";
-import { CLEAR_EVENT } from "@/lib/pwa/clearUserCache";
+import {
+  IsRestoringProvider,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { PERSIST_MAX_AGE } from "@/lib/pwa/queryPersist";
+import { usePersistedCache } from "@/lib/pwa/usePersistedCache";
 import { NextIntlClientProvider } from "next-intl";
 import { loadPlugins } from "@/lib/plugins/plugin-loader";
 import { useSession } from "@/stores/session";
@@ -39,12 +42,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   const userId = useSession((s) => s.user?.id);
-  const persistOptions = useMemo(() => persistOptionsFor(userId), [userId]);
-  useEffect(() => {
-    const clear = () => queryClient.clear();
-    window.addEventListener(CLEAR_EVENT, clear);
-    return () => window.removeEventListener(CLEAR_EVENT, clear);
-  }, [queryClient]);
+  // Restores + persists per signed-in user; also empties memory on purge.
+  const isRestoring = usePersistedCache(queryClient, userId);
 
   // The plugin manifest needs auth: load once, after the session is restored.
   const authed = useSession((s) => s.status === "authenticated");
@@ -63,12 +62,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={persistOptions}
-        >
-          {children}
-        </PersistQueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <IsRestoringProvider value={isRestoring}>
+            {children}
+          </IsRestoringProvider>
+        </QueryClientProvider>
       </NextIntlClientProvider>
     </NextThemesProvider>
   );
