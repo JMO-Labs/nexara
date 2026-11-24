@@ -1,6 +1,6 @@
 /**
  * @file tests/unit/settings/SettingsPage.test.tsx
- * @brief Settings tabs: Plugins tab stub.
+ * @brief Settings tabs: Plugins tab visibility.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -26,15 +26,8 @@ vi.mock("@/components/settings/StorageTab", () => ({ StorageTab: () => null }));
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
 
 describe("Settings Plugins tab", () => {
-  it("lists Plugins in the nav", () => {
+  it("is hidden when no plugin has member prefs", () => {
     render(<SettingsTabs />);
-    expect(screen.getByRole("link", { name: /^Plugins/ })).toBeTruthy();
-  });
-
-  it("renders the stub", () => {
-    render(<SettingsTabs />);
-    expect(
-      screen.getByText("Plugins are coming in this release."),
-    ).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /^Plugins/ })).toBeNull();
   });
 });

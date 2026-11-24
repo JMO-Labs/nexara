@@ -77,3 +77,17 @@ describe("PostHeader", () => {
     );
   });
 });
+
+describe("PostHeader bot badge", () => {
+  it("shows Bot for bot authors only", () => {
+    const { rerender } = render(<PostHeader post={post} isAuthor={false} />);
+    expect(screen.queryByText("Bot")).toBeNull();
+    rerender(
+      <PostHeader
+        post={{ ...post, author: { ...post.author, is_bot: true } }}
+        isAuthor={false}
+      />,
+    );
+    expect(screen.getByText("Bot")).toBeInTheDocument();
+  });
+});

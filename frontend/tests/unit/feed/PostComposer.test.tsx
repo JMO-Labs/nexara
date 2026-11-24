@@ -38,6 +38,18 @@ vi.mock("@/stores/session", () => ({
 
 vi.mock("@/lib/api/users", () => ({ addInterest: vi.fn(async () => {}) }));
 
+vi.mock("@/hooks/usePluginUi", () => ({
+  usePluginUi: () => ({
+    data: [
+      {
+        plugin_id: "sassy",
+        name: "Sassybot",
+        user_prefs: {},
+        composer_flags: { roast: { type: "boolean", label: "Roast me" } },
+      },
+    ],
+  }),
+}));
 vi.mock("@/hooks/useFeature", () => ({ useFeature: () => true }));
 vi.mock("@/hooks/useCalendars", () => ({
   useCalendars: () => ({
@@ -76,6 +88,21 @@ describe("PostComposer", () => {
     await user.click(editor);
     await user.keyboard("hello tiptap");
     expect(editor).toHaveTextContent("hello tiptap");
+  });
+
+  it("sends plugin_flags in the post payload", async () => {
+    const user = userEvent.setup();
+    wrap(<PostComposer />);
+    await user.click(screen.getByText(/Share something with everyone/i));
+    await user.click(await screen.findByRole("textbox"));
+    await user.keyboard("hi");
+    await user.click(screen.getByRole("switch", { name: "Roast me" }));
+    await user.click(screen.getByRole("button", { name: "Post" }));
+    await waitFor(() =>
+      expect(mockCreatePost).toHaveBeenCalledWith(
+        expect.objectContaining({ plugin_flags: { sassy: { roast: true } } }),
+      ),
+    );
   });
 
   describe("reply-to-prompt banner", () => {

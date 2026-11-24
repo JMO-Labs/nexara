@@ -91,3 +91,8 @@ vi.mock("@/hooks/useMembersList", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/useMembersList")>()),
   useMembersList: () => ({ data: [] }),
 }));
+
+// Plugin UI specs need a QueryClient; default to none enabled.
+vi.mock("@/hooks/usePluginUi", () => ({
+  usePluginUi: () => ({ data: [] }),
+}));

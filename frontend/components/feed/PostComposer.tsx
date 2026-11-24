@@ -22,6 +22,7 @@ import { AudiencePicker } from "./AudiencePicker";
 import { ComposerIcons, ComposerToolbar } from "./ComposerToolbar";
 import { KudosComposer } from "./KudosComposer";
 import { CelebrateComposer } from "./CelebrateComposer";
+import { PluginComposerFlags, type PluginFlags } from "./PluginComposerFlags";
 import { InterestPrompt } from "./InterestPrompt";
 import { Recorder } from "@/components/audio/Recorder";
 import { CapsuleComposer } from "@/components/capsules/CapsuleComposer";
@@ -84,6 +85,7 @@ export function PostComposer({
   const [addingInterest, setAddingInterest] = React.useState(false);
   const [nsfw, setNsfw] = React.useState(false);
   const [poll, setPoll] = React.useState<PollDraft | null>(null);
+  const [flags, setFlags] = React.useState<PluginFlags>({});
   const uploads = useMediaUploads();
   const fileRef = React.useRef<HTMLInputElement>(null);
   const openPhotos = () => {
@@ -171,6 +173,7 @@ export function PostComposer({
         payload.reply_to_prompt_id = replyToPromptId;
       }
       if (nsfw) payload.is_nsfw = true;
+      if (Object.keys(flags).length) payload.plugin_flags = flags;
       payload.visibility = scope.visibility;
       if (scope.visibility === "subgroup" && scope.subgroup_id) {
         payload.subgroup_id = scope.subgroup_id;
@@ -181,6 +184,7 @@ export function PostComposer({
       editor.commands.clearContent();
       setPoll(null);
       setNsfw(false);
+      setFlags({});
       uploads.reset();
       setExpanded(false);
       useToasts.getState().push({ variant: "success", message: "Posted" });
@@ -205,6 +209,7 @@ export function PostComposer({
     poll,
     nsfw,
     uploads,
+    flags,
   ]);
 
   React.useEffect(() => {
@@ -350,6 +355,7 @@ export function PostComposer({
               {error}
             </p>
           ) : null}
+          <PluginComposerFlags value={flags} onChange={setFlags} />
           {!defaultSubgroupId && (
             <div className="mt-3 mb-2">
               <AudiencePicker

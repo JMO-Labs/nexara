@@ -26,7 +26,7 @@ interface MenuState {
  * @return { extension, menu } (menu is null when closed)
  */
 export function useComposerMention() {
-  const { data: members = [] } = useMembersList();
+  const { data: members = [] } = useMembersList({ bots: true });
   const groups = useTaggableGroups();
   const membersRef = React.useRef<{ people: UserSummary[]; groups: Item[] }>({
     people: members,

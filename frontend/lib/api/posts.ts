@@ -9,6 +9,7 @@ export interface PostAuthor {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  is_bot?: boolean;
 }
 
 export interface PostMedia {
@@ -155,6 +156,8 @@ export interface CreatePostBody {
   is_nsfw?: boolean;
   /** Make it a Celebrate post for a person or pet's occasion. */
   celebrate?: CelebrateIn;
+  /** {plugin_id: {flag: value}} from plugin composer flags. */
+  plugin_flags?: Record<string, Record<string, unknown>>;
 }
 
 export interface ReactionResponse {

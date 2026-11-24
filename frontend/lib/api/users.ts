@@ -43,6 +43,7 @@ export interface UserSummary {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  is_bot?: boolean;
 }
 
 export interface UserListPage {
@@ -82,6 +83,7 @@ export interface UserProfile {
   location: string | null;
   website_url: string | null;
   role: string;
+  is_bot?: boolean;
   created_at: string;
   last_seen_at: string | null;
   /** Fields below are null/empty when the viewer may not see them. */

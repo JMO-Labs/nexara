@@ -3,7 +3,7 @@
  * @brief Admin plugin endpoints: list, install, uninstall, per-community
  *        enable/settings. Secret settings come back masked as {set: boolean}.
  */
-import { apiDelete, apiGet, apiPatch, apiPost, seg } from "./client";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, seg } from "./client";
 
 export type FieldType = "boolean" | "select" | "number" | "string" | "secret";
 
@@ -73,3 +73,22 @@ export const setPluginCommunity = (
   );
 export const getPluginSettings = (pluginId: string) =>
   apiGet<Record<string, unknown>>(`${BASE}/${seg(pluginId)}/settings`);
+
+export interface PluginUi {
+  plugin_id: string;
+  name: string;
+  user_prefs: Record<string, FieldSpec>;
+  composer_flags: Record<string, FieldSpec>;
+}
+
+/** Plugins enabled for the viewer's community (member-facing specs). */
+export const listPluginUi = () => apiGet<PluginUi[]>(`${BASE}/ui`);
+export const getPluginPrefs = (pluginId: string) =>
+  apiGet<Record<string, unknown>>(`/api/v1/me/plugin-prefs/${seg(pluginId)}`);
+export const putPluginPrefs = (
+  pluginId: string,
+  values: Record<string, unknown>,
+) =>
+  apiPut<Record<string, unknown>>(`/api/v1/me/plugin-prefs/${seg(pluginId)}`, {
+    values,
+  });

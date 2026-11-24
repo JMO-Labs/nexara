@@ -7,10 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import { listUsers, type UserSummary } from "@/lib/api/users";
 
 // ponytail: one page of 100 covers a family community; page it if that grows.
-export function useMembersList() {
+/**
+ * @param opts.bots include bot users (only @mention autocomplete/links want them)
+ */
+export function useMembersList({ bots = false }: { bots?: boolean } = {}) {
   return useQuery({
     queryKey: ["members", "all"],
     queryFn: async () => (await listUsers(null, 100)).items,
+    select: (items) => (bots ? items : items.filter((u) => !u.is_bot)),
     staleTime: 5 * 60_000,
   });
 }

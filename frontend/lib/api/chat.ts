@@ -9,6 +9,7 @@ export interface ChatAuthor {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  is_bot?: boolean;
 }
 
 export type ChannelType = "community" | "subgroup" | "direct";
