@@ -30,7 +30,7 @@ api/v1/<router>.py -> services/<x>_service.py -> repositories/<x>_repo.py -> mod
 - Repositories own all queries; every query filters on `community_id` (multi-tenancy) and soft-deleted rows.
 - Errors use `core/exceptions.py` and are returned in the `{ "error": { "code", "message", "details" } }` envelope.
 - Migrations are managed with alembic; always set `down_revision` to the current head (`alembic heads`).
-- Celery queues: `default`, `maintenance`, `notifications`, `email`, `media`.
+- Celery queues: `default`, `maintenance`, `notifications`, `email`, `media`, `plugins`.
 
 ### Frontend
 
