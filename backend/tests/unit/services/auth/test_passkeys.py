@@ -145,6 +145,7 @@ async def _login_setup(redis, sign_stored, sign_new, pending=False):
 
 async def test_sign_count_regression_rejected(redis):
     svc, repo, _, cred, _, ver = await _login_setup(redis, 5, 5)
+    repo.touch.return_value = False
     with (
         patch(PR + "verify_authentication_response", return_value=ver),
         patch(PR + "log_failure", AsyncMock()),
@@ -152,7 +153,7 @@ async def test_sign_count_regression_rejected(redis):
     ):
         await svc.login_verify(cred, None, None)
     assert e.value.status_code == 400 and e.value.code == "passkey_cloned"
-    repo.touch.assert_not_awaited()
+    repo.touch.assert_awaited_once()
 
 
 async def test_passwordless_requires_uv_and_succeeds(redis):
@@ -221,3 +222,18 @@ async def test_remove_audits():
     repo.get_owned.return_value = _pk(u)
     await svc.remove(u, uuid.uuid4())
     assert audit.append.await_args.kwargs["action"] == "passkey.removed"
+
+
+async def test_duplicate_credential_race_409(redis):
+    from sqlalchemy.exc import IntegrityError
+
+    svc, repo, _, _ = _svc()
+    u = _user()
+    opts = await svc.register_options(u)
+    cred = _cred(base64.urlsafe_b64decode(opts["challenge"] + "=="))
+    repo.add.side_effect = IntegrityError("x", {}, Exception())
+    ver = MagicMock(credential_id=b"c2", credential_public_key=b"k", sign_count=0)
+    with patch(PR + "verify_registration_response", return_value=ver):
+        with pytest.raises(AppError) as e:
+            await svc.register_verify(u, cred, "n")
+    assert e.value.status_code == 409 and e.value.code == "passkey_exists"

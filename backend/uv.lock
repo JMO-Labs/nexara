@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -1741,7 +1741,7 @@ requires-dist = [
     { name = "types-python-dateutil", specifier = ">=2.9.0" },
     { name = "types-python-jose", marker = "extra == 'dev'", specifier = ">=3.3.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
-    { name = "webauthn", specifier = ">=2.2" },
+    { name = "webauthn", specifier = ">=3.0" },
 ]
 provides-extras = ["dev"]
 

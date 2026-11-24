@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from redis.exceptions import RedisError
+from sqlalchemy.exc import IntegrityError
 from webauthn import (
     generate_authentication_options,
     generate_registration_options,
@@ -23,7 +24,7 @@ from webauthn import (
     verify_registration_response,
 )
 from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
-from webauthn.helpers.exceptions import InvalidAuthenticationResponse, InvalidRegistrationResponse
+from webauthn.helpers.exceptions import WebAuthnException
 from webauthn.helpers.structs import (
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialDescriptor,
@@ -140,22 +141,29 @@ class PasskeyService:
                 expected_rp_id=self._s.webauthn_rp_id,
                 expected_origin=self._s.webauthn_origins,
             )
-        except (InvalidRegistrationResponse, ValueError, KeyError) as exc:
+        except (WebAuthnException, ValueError, KeyError) as exc:
             logger.info("passkey.register_rejected", reason=str(exc))
             raise _bad("invalid_passkey", _("Passkey could not be verified")) from exc
         if await self._repo.get_by_credential(v.credential_id):
-            raise _bad("invalid_passkey", _("Passkey already registered"))
-        transports = credential.get("response", {}).get("transports") or []
-        pk = await self._repo.add(
-            Passkey(
-                user_id=user.id,
-                credential_id=v.credential_id,
-                public_key=v.credential_public_key,
-                sign_count=v.sign_count,
-                transports=[str(t) for t in transports],
-                name=name.strip()[:100] or "Passkey",
+            raise AppError(
+                code="passkey_exists", message=_("Passkey already registered"), status_code=409
             )
-        )
+        transports = credential.get("response", {}).get("transports") or []
+        try:
+            pk = await self._repo.add(
+                Passkey(
+                    user_id=user.id,
+                    credential_id=v.credential_id,
+                    public_key=v.credential_public_key,
+                    sign_count=v.sign_count,
+                    transports=[str(t) for t in transports],
+                    name=name.strip()[:100] or "Passkey",
+                )
+            )
+        except IntegrityError as exc:
+            raise AppError(
+                code="passkey_exists", message=_("Passkey already registered"), status_code=409
+            ) from exc
         await self._log(user.id, "passkey.added", pk.id)
         return pk
 
@@ -194,6 +202,7 @@ class PasskeyService:
             try:
                 payload = decode_token(pending_token, expected_type="2fa_pending", settings=self._s)
             except ValueError as exc:
+                await fail(None, None, "passkey", "bad_2fa_session")
                 raise AuthenticationError(message=str(exc)) from exc
             pending_user = uuid.UUID(payload["sub"])
             if not await reserve_attempt(pending_token, pending_user, self._s):
@@ -218,7 +227,10 @@ class PasskeyService:
         if not user.is_active:
             await fail(user, user.email, "passkey", "inactive")
             raise _bad("invalid_passkey", _("Passkey could not be verified"))
+        handle = credential.get("response", {}).get("userHandle")
         try:
+            if handle and base64url_to_bytes(str(handle)) != user.id.bytes:
+                raise ValueError("userHandle mismatch")
             v = verify_authentication_response(
                 credential=credential,
                 expected_challenge=challenge,
@@ -229,15 +241,13 @@ class PasskeyService:
                 credential_current_sign_count=0,
                 require_user_verification=pending_user is None,
             )
-        except (InvalidAuthenticationResponse, ValueError, KeyError) as exc:
+        except (WebAuthnException, ValueError, KeyError) as exc:
             logger.info("passkey.login_rejected", reason=str(exc))
             await fail(user, user.email, "passkey", "bad_assertion")
             raise _bad("invalid_passkey", _("Passkey could not be verified")) from exc
-        new = v.new_sign_count
-        if not (new > pk.sign_count or new == pk.sign_count == 0):
+        if not await self._repo.touch(pk, v.new_sign_count):
             await fail(user, user.email, "passkey", "cloned")
             raise _bad("passkey_cloned", _("Passkey rejected: possible cloned authenticator"))
-        await self._repo.touch(pk, new)
         if pending_token and pending_user:
             await clear_user_attempts(pending_user, self._s)
         await self._users.update_last_seen(user.id)

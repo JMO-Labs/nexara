@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.passkey import Passkey
@@ -51,20 +51,41 @@ class PasskeyRepository:
     async def add(self, passkey: Passkey) -> Passkey:
         """@brief Persist a new passkey."""
         passkey.community_id = self._cid
-        self._session.add(passkey)
-        await self._session.flush()
+        async with self._session.begin_nested():
+            self._session.add(passkey)
+            await self._session.flush()
         await self._session.refresh(passkey)
         return passkey
 
     async def delete(self, passkey: Passkey) -> None:
         """@brief Remove a passkey."""
-        await self._session.execute(delete(Passkey).where(Passkey.id == passkey.id))
+        await self._session.execute(
+            delete(Passkey).where(Passkey.id == passkey.id, Passkey.community_id == self._cid)
+        )
 
-    async def touch(self, passkey: Passkey, sign_count: int) -> None:
-        """@brief Record a successful use (sign counter + last_used_at)."""
-        passkey.sign_count = sign_count
-        passkey.last_used_at = datetime.now(UTC)
-        await self._session.flush()
+    async def touch(self, passkey: Passkey, sign_count: int) -> bool:
+        """
+        @brief Atomically record a use; False when the counter did not advance.
+
+        Single conditional UPDATE so concurrent assertions with the same counter
+        cannot both win (counter must increase, or stay 0 on both sides).
+        """
+        now = datetime.now(UTC)
+        advance = Passkey.sign_count == 0 if sign_count == 0 else Passkey.sign_count < sign_count
+        stmt = (
+            update(Passkey)
+            .where(
+                Passkey.id == passkey.id,
+                Passkey.community_id == self._cid,
+                advance,
+            )
+            .values(sign_count=sign_count, last_used_at=now)
+            .returning(Passkey.id)
+        )
+        if (await self._session.execute(stmt)).first() is None:
+            return False
+        passkey.sign_count, passkey.last_used_at = sign_count, now
+        return True
 
     async def rename(self, passkey: Passkey, name: str) -> Passkey:
         """@brief Change the display name."""
