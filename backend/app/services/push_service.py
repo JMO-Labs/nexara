@@ -8,7 +8,8 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from typing import TYPE_CHECKING
+from email.utils import parseaddr
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -25,6 +26,27 @@ if TYPE_CHECKING:
     from app.repositories.settings_repo import SettingsRepository
 
 logger = structlog.get_logger(__name__)
+
+
+def vapid_subject(s: Any) -> str:
+    """
+    @brief Resolve the VAPID JWT ``sub`` claim (mailto: or https: URL).
+    @param s Settings object.
+    @return Explicit VAPID_SUBJECT, else https APP_BASE_URL, else SMTP_FROM address.
+    """
+
+    def _str(name: str) -> str:
+        v = getattr(s, name, "")
+        return v.strip() if isinstance(v, str) else ""
+
+    sub = _str("VAPID_SUBJECT")
+    if sub.startswith(("mailto:", "https://")):
+        return sub
+    base = _str("APP_BASE_URL")
+    if base.startswith("https://"):
+        return base.rstrip("/")
+    addr = parseaddr(_str("SMTP_FROM"))[1]
+    return f"mailto:{addr}" if "@" in addr else "mailto:noreply@example.com"
 
 
 def endpoint_hash(endpoint: str) -> str:
@@ -206,7 +228,6 @@ class PushService:
 
         vapid_private = getattr(self._settings, "VAPID_PRIVATE_KEY", "")
         vapid_public = getattr(self._settings, "VAPID_PUBLIC_KEY", "")
-        smtp_from = getattr(self._settings, "SMTP_FROM", "") or "noreply@example.com"
         if not vapid_private or not vapid_public:
             logger.warning("push_vapid_not_configured")
             return
@@ -217,7 +238,7 @@ class PushService:
         if badge_count is not None:
             data["badge_count"] = badge_count
         payload = json.dumps(data)
-        vapid_sub = f"mailto:{smtp_from}" if smtp_from else "mailto:noreply@example.com"
+        vapid_sub = vapid_subject(self._settings)
 
         from pywebpush import WebPushException, webpush
 

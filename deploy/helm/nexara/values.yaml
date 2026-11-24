@@ -149,12 +149,15 @@ securityContext:
 
 # -- Secrets (generated on first install when empty; reused on upgrade and kept on uninstall)
 secrets:
-  existingSecret: ""   # secret with keys "secret-key" (JWT/signing) and optional "apprise-encryption-key"; overrides below
+  existingSecret: ""   # secret with keys "secret-key" (JWT/signing) and optional "apprise-encryption-key"/"vapid-private-key"; overrides below
   jwtSecret: ""
   # Fernet key encrypting users' Apprise URLs at rest. Required for the Apprise
   # notification channel (not auto-generated; must be a valid Fernet key).
   # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
   appriseEncryptionKey: ""
+  # Web Push VAPID private key (stored as key "vapid-private-key"; optional).
+  # Generate a pair with: npx web-push generate-vapid-keys
+  vapidPrivateKey: ""
 
 # -- Application environment variables
 env:
@@ -168,6 +171,10 @@ env:
   # Proxies whose X-Forwarded-For is believed (bundled nginx = loopback).
   # Add your ingress controller pod CIDR, e.g. "127.0.0.1/32,::1/128,10.42.0.0/16".
   TRUSTED_PROXIES: "127.0.0.1/32,::1/128"
+  # Web Push: public key pairs with secrets.vapidPrivateKey.
+  VAPID_PUBLIC_KEY: ""
+  # Contact for push services (mailto: or https: URL). Defaults to APP_BASE_URL when https.
+  VAPID_SUBJECT: ""
 
 # -- Media storage: "local" (PVC) or "s3"
 storage:

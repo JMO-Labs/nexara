@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +14,7 @@ from app.core.exceptions import NotFoundError
 from app.models.notification import Notification, PushSubscription
 from app.repositories.push_repo import PushSubscriptionRepository
 from app.services.notifications.channels.push import build_push_payload
-from app.services.push_service import PushService, endpoint_hash
+from app.services.push_service import PushService, endpoint_hash, vapid_subject
 
 USER_ID = uuid.uuid4()
 COMMUNITY_ID = uuid.uuid4()
@@ -218,3 +219,24 @@ async def test_rename_flushes() -> None:
 
 def test_tag_falls_back_to_target_id() -> None:
     assert build_push_payload(_notif("x", {"message": "m", "target_id": "t9"}))["tag"] == "x:t9"
+
+
+def test_vapid_subject_explicit_wins() -> None:
+    s = SimpleNamespace(
+        VAPID_SUBJECT="mailto:ops@x.org", APP_BASE_URL="https://n.x", SMTP_FROM="a@b.c"
+    )
+    assert vapid_subject(s) == "mailto:ops@x.org"
+
+
+def test_vapid_subject_https_base_fallback() -> None:
+    s = SimpleNamespace(VAPID_SUBJECT="ops", APP_BASE_URL="https://n.x/", SMTP_FROM="a@b.c")
+    assert vapid_subject(s) == "https://n.x"
+
+
+def test_vapid_subject_parses_display_name() -> None:
+    s = SimpleNamespace(VAPID_SUBJECT="", APP_BASE_URL="http://n", SMTP_FROM="Nexara <a@b.c>")
+    assert vapid_subject(s) == "mailto:a@b.c"
+
+
+def test_vapid_subject_default() -> None:
+    assert vapid_subject(SimpleNamespace()) == "mailto:noreply@example.com"
