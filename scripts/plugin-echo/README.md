@@ -14,3 +14,7 @@ Stdlib-only example. Replies `echo: <text>` when someone mentions `@echo`.
 6. Post `@echo hello` in a community post: the Echo bot comments `echo: @echo hello`.
 
 See `docs/docs/developer/plugins.md` for the full contract.
+
+Note: mentions match the bot's real username. If `echo` is already taken, the bot is
+named `echo-bot` (then `echo-bot2`, ...); mention that name instead. Without a
+`WEBHOOK_SECRET` the plugin rejects every webhook.

@@ -75,8 +75,10 @@ Rate limit: 120 requests/minute per token (denied calls count); over it returns 
 Declare them under `[permissions] events`. Known: `post.created`, `comment.created`,
 `mention`. Receiving `post.*` needs `posts:read`; `comment.*` needs `comments:read`.
 `mention` fires when the bot's username is `@mentioned` in the post or comment, and
-needs the same read scope as the underlying content (without `posts:read` the post
-object is reduced to `{"id": ...}`).
+needs the same read scope as the underlying content. For comment events
+(`comment.created` and comment `mention`), `data.post` is reduced to `{"id": ...}`
+unless `posts:read` is also granted. The mention is matched against the bot's real
+username, which gets a `-bot` suffix if the manifest username was taken.
 
 Never delivered: private posts, NSFW posts, content authored by a bot, content the bot
 could not see (subgroup posts when the bot is not a member), and authors who blocked
@@ -105,7 +107,8 @@ the bot or are blocked by it.
 }
 ```
 
-`comment` is present only for comment events. `author_prefs` is the author's user prefs
+`post` is the full object only with `posts:read`; otherwise (comment events without
+it) just `{"id": "uuid"}`. `comment` is present only for comment events. `author_prefs` is the author's user prefs
 with defaults filled in; `flags` is this plugin's composer flags on the post.
 
 Headers: `X-Nexara-Delivery` (same as `delivery_id`; use for idempotency),
@@ -127,7 +130,25 @@ def verify(secret: str, ts: str, body: bytes, sig: str) -> bool:
     return hmac.compare_digest(f"sha256={mac.hexdigest()}", sig)
 ```
 
+Node (`node:crypto`):
+
+```js
+const crypto = require("node:crypto");
+
+function verify(secret, ts, rawBody, sig) {
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+  const mac = crypto.createHmac("sha256", secret)
+    .update(`${ts}.`).update(rawBody).digest("hex");
+  const a = Buffer.from(`sha256=${mac}`), b = Buffer.from(sig);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
 ## Delivery and retries
+
+The endpoint URL must be https and resolve to a public host. Otherwise core refuses to
+connect and the delivery is silently dropped (a warning in the worker log, no retry),
+unless `PLUGINS_ALLOW_INSECURE_URLS` (dev) or the trusted `PLUGIN_HOST_URL` applies.
 
 Timeout 10 s per attempt. Any 2xx (and 3xx, which are not followed) ends the delivery;
 other 4xx are dropped without retry. Network errors, timeouts, `5xx`, `408` and `429`

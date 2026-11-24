@@ -27,3 +27,7 @@ def test_rejects_tamper_wrong_secret_and_stale() -> None:
     assert not echo.verify("x", "1000", BODY, sig, now=1000)
     assert not echo.verify("s", "1000", BODY, sig, now=1301)
     assert not echo.verify("s", "bad", BODY, sig, now=1000)
+
+
+def test_empty_secret_fails_closed() -> None:
+    assert not echo.verify("", "1000", BODY, sign("", 1000, BODY), now=1000)
