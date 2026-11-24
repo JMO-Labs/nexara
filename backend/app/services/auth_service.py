@@ -332,14 +332,20 @@ class AuthService:
         await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
-    async def login_sso(self, user: User, request: Request | None = None) -> dict[str, Any]:
+    async def login_sso(
+        self, user: User, request: Request | None = None, *, first_link: bool = False
+    ) -> dict[str, Any]:
         """
         @brief Record an SSO sign-in and issue tokens for the already-verified user.
 
         @param user Authenticated (active, non-memorialized) user.
         @param request Current request (sign-in log IP / User-Agent).
-        @return Dict with token data and ``raw_refresh_token``.
+        @param first_link The provider was just linked to a pre-existing account:
+               its local factor (if any) is still required.
+        @return Token dict with ``raw_refresh_token``, or the pending-2FA dict.
         """
+        if first_link and (pending := await self._pending_2fa(user)):
+            return pending
         await log_success(self._session, self._settings, user, "sso", request)
         return await self._issue_tokens(user)
 

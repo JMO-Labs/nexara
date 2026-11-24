@@ -88,6 +88,8 @@ class UserProvisioner:
         """
         self._db = db
         self._community_id = community_id
+        self.linked_existing = False
+        """@brief True after provision_user linked a provider to a pre-existing account."""
         self._link_repo = UserOAuthLinkRepository(db)
         self._user_repo = UserRepository(db)
 
@@ -184,6 +186,7 @@ class UserProvisioner:
                 avatar_url=auth_result.avatar_url,
             )
             await self._link_repo.create(new_link)
+            self.linked_existing = True
             return user
 
         username = _derive_username(auth_result.display_name, auth_result.email)

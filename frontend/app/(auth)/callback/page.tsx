@@ -3,7 +3,8 @@
  * @file app/(auth)/callback/page.tsx
  * @brief OAuth callback landing. Backend redirects here with `?code=...`
  *        after exchanging with the IdP; we POST that code to /oauth/exchange
- *        to claim a Nexara session.
+ *        to claim a Nexara session. A first link to an existing account
+ *        with a local factor continues on the two-factor page.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -11,7 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { oauthExchange } from "@/lib/api/auth";
-import { completeLogin } from "@/lib/auth/flow";
+import { completeLogin, twoFactorUrl } from "@/lib/auth/flow";
 import { formatApiError } from "@/lib/api/errors";
 
 export default function OAuthCallbackPage() {
@@ -27,8 +28,10 @@ export default function OAuthCallbackPage() {
       try {
         const resp = await oauthExchange(code);
         if (cancelled) return;
-        await completeLogin(resp);
-        router.replace("/app");
+        const out = await completeLogin(resp);
+        router.replace(
+          out.kind === "two_factor" ? twoFactorUrl("/app") : "/app",
+        );
       } catch (e) {
         if (!cancelled) setError(formatApiError(e, "Sign-in failed."));
       }
