@@ -25,8 +25,13 @@ import { formatApiError } from "@/lib/api/errors";
 const Schema = z.object({
   code: z
     .string()
-    .min(6, "Enter the 6-digit code")
-    .max(8, "Codes are 6–8 characters"),
+    .transform((v) => v.replace(/[\s-]/g, ""))
+    .pipe(
+      z
+        .string()
+        .min(6, "Enter the 6-digit code")
+        .max(8, "Codes are 6–8 characters"),
+    ),
 });
 type FormData = z.infer<typeof Schema>;
 
