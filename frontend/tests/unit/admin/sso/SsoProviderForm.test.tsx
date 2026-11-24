@@ -203,7 +203,7 @@ describe("SsoProviderForm wizard", () => {
     expect(secretChanged).toBe(false);
     expect(v).not.toHaveProperty("discovery_url"); // unchanged: no re-discovery
     expect(v.claim_mapping.group_mapping).toEqual({
-      ops: [{ subgroup_id: "g-club", role: "member" }],
+      ops: { subgroup_id: "g-club", role: "member" }, // stored shape kept
     });
   });
 });

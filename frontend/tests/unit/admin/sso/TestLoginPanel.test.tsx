@@ -3,10 +3,17 @@
  * @brief Test-login popup flow: start, receive result id via postMessage, render report.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as api from "@/lib/api/adminOauth";
 import {
+  TEST_TIMEOUT_MS,
   TestLoginPanel,
   describeResult,
 } from "@/components/admin/sso/TestLoginPanel";
@@ -35,7 +42,7 @@ const RESULT: TestLoginResult = {
   outcome: { allowed: true, action: "create", code: null },
 };
 
-const popup = { location: { href: "" }, close: vi.fn() };
+const popup = { location: { href: "" }, close: vi.fn(), closed: false };
 
 function post(data: unknown, origin = window.location.origin) {
   act(() => {
@@ -47,6 +54,7 @@ describe("TestLoginPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     popup.location.href = "";
+    popup.closed = false;
     vi.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
     vi.mocked(api.startTestLogin).mockResolvedValue({
       authorize_url: "https://idp.example/authorize?state=s",
@@ -96,6 +104,69 @@ describe("TestLoginPanel", () => {
     );
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(popup.close).toHaveBeenCalled();
+  });
+});
+
+describe("TestLoginPanel popup watch", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    popup.closed = false;
+    vi.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
+    vi.mocked(api.startTestLogin).mockResolvedValue({
+      authorize_url: "https://idp.example/authorize",
+    });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const start = async () => {
+    render(<TestLoginPanel providerId="p1" />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Run test sign-in" }));
+    });
+  };
+
+  it("reports a popup closed before finishing", async () => {
+    await start();
+    popup.closed = true;
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /test window closed before finishing/i,
+    );
+    expect(
+      (
+        screen.getByRole("button", {
+          name: /run test sign-in/i,
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("times out after 3 minutes (IdP error page or COOP)", async () => {
+    await start();
+    await act(async () => {
+      vi.advanceTimersByTime(TEST_TIMEOUT_MS);
+    });
+    expect(screen.getByRole("alert").textContent).toMatch(/after 3 minutes/i);
+  });
+
+  it("a result arriving in the close grace period wins", async () => {
+    vi.mocked(api.readTestLogin).mockResolvedValue(RESULT);
+    await start();
+    popup.closed = true;
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+    post({ type: api.SSO_TEST_MESSAGE, result: "r1" });
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(/would be: member of smith family/i)).toBeTruthy();
   });
 });
 

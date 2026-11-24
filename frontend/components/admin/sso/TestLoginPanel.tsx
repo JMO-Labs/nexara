@@ -28,6 +28,17 @@ const REFUSALS: Record<string, string> = {
     "the matching local account has an unverified email",
 };
 
+/** @brief Give up waiting for the popup after this long (IdP error page, COOP). */
+export const TEST_TIMEOUT_MS = 3 * 60 * 1000;
+/** @brief How often to check whether the popup was closed. */
+export const POLL_MS = 500;
+/** @brief Grace after the popup closes for its postMessage to arrive. */
+const CLOSE_GRACE_MS = 1500;
+
+const CLOSED_MSG = "Test window closed before finishing.";
+const TIMEOUT_MSG =
+  "No result after 3 minutes. The identity provider may have shown an error, or blocked the reply to this page (Cross-Origin-Opener-Policy). Check the popup, then try again.";
+
 const ACTIONS: Record<string, string> = {
   sign_in: "signs in to the linked account",
   link: "links to the existing account with this email",
@@ -66,12 +77,20 @@ export function TestLoginPanel({ providerId }: TestLoginPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TestLoginResult | null>(null);
   const popup = useRef<Window | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  /** Stop watching the popup (result arrived, failed or gave up). */
+  const stopWatch = () => {
+    timers.current.forEach((t) => clearTimeout(t));
+    timers.current = [];
+  };
 
   useEffect(() => {
     const onMessage = async (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       const data = e.data as { type?: string; result?: string } | null;
       if (data?.type !== SSO_TEST_MESSAGE || !data.result) return;
+      stopWatch();
       try {
         setResult(await readTestLogin(data.result));
         setError(null);
@@ -82,8 +101,34 @@ export function TestLoginPanel({ providerId }: TestLoginPanelProps) {
       }
     };
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      stopWatch();
+    };
   }, []);
+
+  /** Fail with msg (no result arrived in time). */
+  const giveUp = (msg: string) => {
+    stopWatch();
+    setRunning(false);
+    setError(msg);
+  };
+
+  /** Poll popup.closed and arm the overall timeout. */
+  const watch = () => {
+    stopWatch();
+    const poll = () => {
+      if (popup.current?.closed) {
+        timers.current.push(
+          setTimeout(() => giveUp(CLOSED_MSG), CLOSE_GRACE_MS),
+        );
+        return;
+      }
+      timers.current.push(setTimeout(poll, POLL_MS));
+    };
+    timers.current.push(setTimeout(poll, POLL_MS));
+    timers.current.push(setTimeout(() => giveUp(TIMEOUT_MSG), TEST_TIMEOUT_MS));
+  };
 
   if (!providerId) {
     return (
@@ -106,8 +151,10 @@ export function TestLoginPanel({ providerId }: TestLoginPanelProps) {
     try {
       const { authorize_url } = await startTestLogin(providerId);
       if (popup.current) popup.current.location.href = authorize_url;
-      else window.open(authorize_url, "nexara-sso-test");
+      else popup.current = window.open(authorize_url, "nexara-sso-test");
+      watch();
     } catch (err) {
+      stopWatch();
       popup.current?.close();
       setRunning(false);
       setError(formatApiError(err, "Could not start the test sign-in."));
@@ -117,8 +164,9 @@ export function TestLoginPanel({ providerId }: TestLoginPanelProps) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted">
-        Sign in at the identity provider in a popup. Nothing is created or
-        changed; you see the claims and what Nexara would do.
+        Tests the saved settings: save your changes first. Sign in at the
+        identity provider in a popup. Nothing is created or changed; you see the
+        claims and what Nexara would do.
       </p>
       <div>
         <Button type="button" onClick={run} loading={running}>
