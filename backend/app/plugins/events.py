@@ -69,7 +69,8 @@ def schedule_plugin_dispatch(
     @brief Enqueue plugin dispatch only AFTER the request transaction commits.
 
     Registers a SQLAlchemy ``after_commit`` hook on the session (once); a rollback
-    discards pending jobs, so a failed request never announces content. Enqueue
+    discards pending jobs, so a failed request never announces content (a savepoint
+    rollback keeps them; the worker re-reads the rows, so a vanished post is a no-op). Enqueue
     errors are logged and never reach the request.
     @param post_id Post that was created (or commented on).
     @param comment_id New comment, or None for a new post.
@@ -96,15 +97,17 @@ def _register(
 
         for job in jobs:
             try:
-                dispatch_plugin_event_task.apply_async(args=job, countdown=1)
+                # retry=False: a down broker fails fast instead of stalling commit().
+                dispatch_plugin_event_task.apply_async(args=job, countdown=1, retry=False)
             except Exception:
                 logger.warning("plugin_dispatch_enqueue_failed", exc_info=True)
 
-    def _drop(_: Session) -> None:
-        sync.info["plugin_dispatch"] = []
+    def _drop(_: Session, previous: Any) -> None:
+        if previous.parent is None:  # outer rollback only; a savepoint keeps jobs
+            sync.info["plugin_dispatch"] = []
 
     event.listen(sync, "after_commit", _flush)
-    event.listen(sync, "after_rollback", _drop)
+    event.listen(sync, "after_soft_rollback", _drop)
 
 
 async def dispatch_plugin_event(
