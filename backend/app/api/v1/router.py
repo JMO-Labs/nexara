@@ -35,6 +35,7 @@ from app.api.v1.calendars import router as calendars_router
 from app.api.v1.celebrations import router as celebrations_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.communities import router as communities_router
+from app.api.v1.countdowns import router as countdowns_router
 from app.api.v1.daily_questions import router as daily_questions_router
 from app.api.v1.events import router as events_router
 from app.api.v1.events import subs_router as calendar_subscriptions_router
@@ -103,6 +104,7 @@ api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
 api_v1_router.include_router(age_groups_router)
+api_v1_router.include_router(countdowns_router)
 api_v1_router.include_router(admin_age_groups_router)
 api_v1_router.include_router(onboarding_router)
 api_v1_router.include_router(admin_onboarding_router)

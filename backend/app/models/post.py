@@ -88,6 +88,9 @@ class Post(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    countdown_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("countdowns.id", ondelete="SET NULL", use_alter=True)
+    )
     # Celebrate post: whose occasion ('user' or 'household' member/pet).
     celebrate_type: Mapped[str | None] = mapped_column(Text)
     celebrate_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

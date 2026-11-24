@@ -31,6 +31,7 @@ celery_app = Celery(
         "app.tasks.birthday_tasks",
         "app.tasks.capsule_tasks",
         "app.tasks.chore_tasks",
+        "app.tasks.countdown_tasks",
         "app.tasks.email_tasks",
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
@@ -83,6 +84,7 @@ celery_app.conf.update(
         "app.tasks.admin_alert_tasks.*": {"queue": "notifications"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
         "app.tasks.birthday_tasks.*": {"queue": "notifications"},
+        "app.tasks.countdown_tasks.*": {"queue": "notifications"},
         "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
         "app.tasks.event_tasks.sync_subscriptions": {"queue": "maintenance"},
         "app.tasks.prompt_tasks.*": {"queue": "maintenance"},
@@ -144,6 +146,10 @@ celery_app.conf.update(
         "cleanup-orphaned-media": {
             "task": "app.tasks.media_tasks.delete_orphaned_media",
             "schedule": crontab(hour="*/6"),
+        },
+        "countdown-reminders": {
+            "task": "app.tasks.countdown_tasks.send_countdown_reminders",
+            "schedule": crontab(minute="0"),
         },
         "dispatch-event-reminders": {
             "task": "app.tasks.event_tasks.dispatch_event_reminders",

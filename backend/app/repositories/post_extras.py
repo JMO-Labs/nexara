@@ -56,6 +56,7 @@ async def post_extras(
             "recipient_id": str(p.recipient_id) if p.recipient_id else None,
             "recipient": person(users.get(p.recipient_id)) if p.recipient_id else None,
             "celebration": None,
+            "countdown_id": str(p.countdown_id) if p.countdown_id else None,
         }
         if p.celebrate_type == "user" and p.celebrate_id in users:
             u = users[p.celebrate_id]

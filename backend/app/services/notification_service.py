@@ -96,6 +96,7 @@ PREF_MAP = {
     "story_request": ("notif_mention_inapp", "notif_mention_email"),
     "story_answered": ("notif_mention_inapp", "notif_mention_email"),
     "group_tag": ("notif_mention_inapp", "notif_mention_email"),
+    "countdown_reminder": ("notif_event_reminder_inapp", "notif_event_reminder_email"),
     "nudge_received": ("notif_nudge_inapp", "notif_nudge_email"),
     "gentle_nudge": ("notif_nudge_inapp", "notif_nudge_email"),
     "list.item": ("notif_list_item_inapp", "notif_list_item_email"),
