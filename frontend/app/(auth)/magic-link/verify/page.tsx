@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { verifyMagicLink } from "@/lib/api/auth";
-import { completeLogin } from "@/lib/auth/flow";
+import { completeLogin, twoFactorUrl } from "@/lib/auth/flow";
 import { formatApiError } from "@/lib/api/errors";
 
 export default function MagicLinkVerifyPage() {
@@ -28,9 +28,7 @@ export default function MagicLinkVerifyPage() {
         if (cancelled) return;
         const out = await completeLogin(resp);
         if (out.kind === "two_factor") {
-          router.replace(
-            `/two-factor?token=${encodeURIComponent(out.two_factor_token)}&next=${encodeURIComponent("/app")}`,
-          );
+          router.replace(twoFactorUrl("/app"));
           return;
         }
         router.replace("/app");

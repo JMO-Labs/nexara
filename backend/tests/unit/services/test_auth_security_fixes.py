@@ -12,29 +12,12 @@ import pyotp
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.core.exceptions import AuthenticationError, AuthorizationError
+from app.core.exceptions import AuthenticationError
 from tests.unit.services.test_auth_service import (  # noqa: F401
     _make_service,
     _make_user,
     _sso_only_off,
 )
-
-
-class TestEnrollWhileEnabled:
-    @pytest.mark.asyncio
-    async def test_enroll_refused_when_enabled(self):
-        svc = _make_service()
-        user = _make_user(totp_enabled=True, totp_secret="SECRET")
-        with pytest.raises(AuthorizationError, match="2fa_already_enabled"):
-            await svc.enroll_2fa(user)
-        svc._user_repo.update_totp.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_enroll_ok_when_disabled(self):
-        svc = _make_service()
-        result = await svc.enroll_2fa(_make_user(totp_enabled=False))
-        assert result["secret"]
-        svc._user_repo.update_totp.assert_awaited_once()
 
 
 class TestMagicLink2FA:
@@ -112,7 +95,9 @@ class Test2FALoginRateLimit:
             AsyncMock(side_effect=AuthenticationError(message="bad")),
         ):
             transport = ASGITransport(app=test_app)
-            async with AsyncClient(transport=transport, base_url="http://test") as c:
+            # Fresh bucket per run: the route limit is keyed by client IP in shared Valkey.
+            ip = {"X-Forwarded-For": f"198.19.{uuid.uuid4().int % 256}.{uuid.uuid4().int % 256}"}
+            async with AsyncClient(transport=transport, base_url="http://test", headers=ip) as c:
                 codes = []
                 for _ in range(11):
                     r = await c.post(
@@ -274,3 +259,39 @@ class TestAccountCap:
                 await svc.verify_2fa_login(two_factor_token=tok, code="000000")
             await svc.verify_2fa_login(two_factor_token=tok, code=pyotp.TOTP(secret).now())
         assert f"totp:fail:user:{user.id}" not in redis.store
+
+
+class TestLogin2FAHardening:
+    @pytest.mark.asyncio
+    async def test_login_rejects_totp_when_not_enabled(self):
+        secret = pyotp.random_base32()
+        svc = _make_service()
+        user = _make_user(totp_enabled=False, totp_secret=secret)
+        svc._user_repo.get_by_id.return_value = user
+        svc._issue_tokens = AsyncMock(return_value={"access_token": "a"})
+        from app.core.security import create_2fa_pending_token
+
+        tok = create_2fa_pending_token(user.id, settings=svc._settings)
+        with patch("app.services.auth.totp_replay.get_pool", return_value=_fake_redis()):
+            with pytest.raises(AuthenticationError):
+                await svc.verify_2fa_login(two_factor_token=tok, code=pyotp.TOTP(secret).now())
+        svc._issue_tokens.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_login_unreadable_secret_fails_closed(self):
+        from app.core.config import Settings
+        from app.core.exceptions import AppError
+        from app.core.security import create_2fa_pending_token
+        from app.services.auth.two_factor import seal_secret
+
+        svc = _make_service()
+        user = _make_user(totp_enabled=True)
+        user.totp_secret = seal_secret("JBSWY3DPEHPK3PXP", Settings(SECRET_KEY="old"))
+        svc._user_repo.get_by_id.return_value = user
+        svc._issue_tokens = AsyncMock()
+        tok = create_2fa_pending_token(user.id, settings=svc._settings)
+        with patch("app.services.auth.totp_replay.get_pool", return_value=_fake_redis()):
+            with pytest.raises(AppError) as e:
+                await svc.verify_2fa_login(two_factor_token=tok, code="123456")
+        assert e.value.code == "2fa_secret_unreadable"
+        svc._issue_tokens.assert_not_called()

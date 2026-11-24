@@ -5,8 +5,9 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { completeLogin } from "@/lib/auth/flow";
+import { usePendingTwoFactor } from "@/stores/pendingTwoFactor";
 import { useSession } from "@/stores/session";
-import { setAccessToken, getAccessToken } from "@/lib/auth/session";
+import { setAccessToken, getAccessToken, logout } from "@/lib/auth/session";
 import * as authApi from "@/lib/api/auth";
 
 describe("completeLogin", () => {
@@ -24,9 +25,29 @@ describe("completeLogin", () => {
       requires_2fa: true,
       two_factor_token: "tft-123",
     });
-    expect(result).toEqual({ kind: "two_factor", two_factor_token: "tft-123" });
+    expect(result).toEqual({
+      kind: "two_factor",
+      two_factor_token: "tft-123",
+      methods: ["totp", "recovery"],
+    });
     expect(getAccessToken()).toBeNull();
     expect(useSession.getState().user).toBeNull();
+  });
+
+  it("passes through two_factor_methods", async () => {
+    const result = await completeLogin({
+      access_token: null,
+      token_type: "bearer",
+      expires_in: null,
+      requires_2fa: true,
+      two_factor_token: "t",
+      two_factor_methods: ["passkey"],
+    });
+    expect(result).toMatchObject({ methods: ["passkey"] });
+    expect(usePendingTwoFactor.getState()).toMatchObject({
+      token: "t",
+      methods: ["passkey"],
+    });
   });
 
   it("sets access token and hydrates user on success", async () => {
@@ -72,6 +93,16 @@ describe("completeLogin", () => {
         two_factor_token: null,
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("logout", () => {
+  it("clears a pending 2FA step", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
+    usePendingTwoFactor.getState().set("tft", ["totp"]);
+    await logout();
+    expect(usePendingTwoFactor.getState().token).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
 

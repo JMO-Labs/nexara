@@ -19,6 +19,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AuthenticationError, AuthorizationError
 from app.core.i18n import _
@@ -58,6 +59,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+def _enforce_2fa_setup(payload: dict[str, Any], request: Request) -> None:
+    """@brief 403 ``2fa_setup_required`` past the grace period (claims only, no query)."""
+    from app.services.auth.policy import enforce_setup
+
+    enforce_setup(payload, request.url.path)
+
+
 async def get_current_user(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
@@ -73,6 +81,7 @@ async def get_current_user(
     @param settings Application settings.
     @return The authenticated :class:`User` ORM instance.
     @raises AuthenticationError If the token is missing, invalid, or the user is not found.
+    @raises AppError 403 ``2fa_setup_required`` once the community 2FA grace period has ended.
     """
     from app.models.user import User
 
@@ -83,6 +92,7 @@ async def get_current_user(
         payload = decode_token(token, expected_type="access", settings=settings)
     except ValueError as exc:
         raise AuthenticationError(message=str(exc)) from exc
+    _enforce_2fa_setup(payload, request)
 
     user_id = payload.get("sub")
     if not user_id:
@@ -168,6 +178,7 @@ async def get_current_user_sse(
         payload = decode_token(resolved_token, expected_type="access", settings=settings)
     except ValueError as exc:
         raise AuthenticationError(message=str(exc)) from exc
+    _enforce_2fa_setup(payload, request)
 
     user_id = payload.get("sub")
     if not user_id:
@@ -192,6 +203,7 @@ async def get_current_user_sse(
 
 
 async def get_optional_user(
+    request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -205,6 +217,7 @@ async def get_optional_user(
     @param db Async database session.
     @param settings Application settings.
     @return The authenticated :class:`User` instance, or None if unauthenticated.
+    @raises AppError 403 ``2fa_setup_required`` for a valid token past its 2FA grace period.
     """
     if token is None:
         return None
@@ -216,6 +229,7 @@ async def get_optional_user(
         user_id = UUID(payload["sub"])
     except (ValueError, KeyError, TypeError):
         return None
+    _enforce_2fa_setup(payload, request)
 
     result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
     return result.scalar_one_or_none()
@@ -306,10 +320,7 @@ def get_admin_ai_service(
     from app.services.ai.budget_service import BudgetService
     from app.services.ai.provider import get_ai_provider
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     redis = get_pool(settings, DB_CACHE)
     budget = BudgetService(redis, settings.AI_DAILY_BUDGET_CENTS, settings.AI_BUDGET_RESET_HOUR)
     return AdminAIService(
@@ -336,10 +347,7 @@ def get_amazon_admin_service(
     from app.repositories.community_repo import CommunityRepository
     from app.services.shop.amazon_admin_service import AmazonAdminService
 
-    forwarded = request.headers.get("x-forwarded-for")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if ip is None and request.client:
-        ip = request.client.host
+    ip = client_ip(request)
     return AmazonAdminService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

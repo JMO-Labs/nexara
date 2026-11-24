@@ -19,6 +19,7 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.repositories.token_repo import TokenRepository
+from app.services.auth.policy import setup_claims
 
 
 async def issue_tokens(
@@ -33,6 +34,9 @@ async def issue_tokens(
     """
     @brief Create an access token + opaque refresh token pair.
 
+    The single mint point for sessions: ``require_2fa`` enrolment claims are
+    (re-)evaluated here on login and on every refresh.
+
     @param token_repo Token repository for storing refresh tokens.
     @param user The authenticated user ORM instance.
     @param settings Application settings.
@@ -43,7 +47,11 @@ async def issue_tokens(
     """
     access = create_access_token(
         user.id,
-        extra_claims={"role": user.role, "community_id": str(user.community_id)},
+        extra_claims={
+            "role": user.role,
+            "community_id": str(user.community_id),
+            **await setup_claims(token_repo.session, user),
+        },
         settings=settings,
     )
     raw_refresh = generate_refresh_token()

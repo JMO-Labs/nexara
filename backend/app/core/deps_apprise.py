@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 
@@ -30,8 +31,7 @@ def get_admin_apprise_service(
     from app.repositories.audit_repo import AuditRepository
     from app.services.admin_apprise_service import AdminAppriseService
 
-    fwd = request.headers.get("x-forwarded-for")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
+    ip = client_ip(request)
     return AdminAppriseService(
         AppriseRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

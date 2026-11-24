@@ -49,6 +49,8 @@ dependencies = [
     "pywebpush>=2.3.0",
     "apprise>=1.9.0",
     "cryptography>=43.0.0",
+    # Passkeys (WebAuthn)
+    "webauthn>=3.0",
     # Calendar / events
     "python-dateutil>=2.9.0",
     "icalendar>=6.0.0",

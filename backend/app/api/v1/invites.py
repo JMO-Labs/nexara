@@ -18,6 +18,7 @@ import structlog
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.exceptions import ConflictError, NotFoundError
@@ -33,14 +34,6 @@ from app.tasks.email_tasks import send_invite_email
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/admin/invites", tags=["admin-invites"])
-
-
-def _client_ip(request: Request) -> str | None:
-    """@brief Extract client IP from request headers or connection."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else None
 
 
 class InviteCreateResponse(InviteResponse):
@@ -91,7 +84,7 @@ async def create_invite(
         target_type="invite",
         target_id=invite.id,
         extra_data={"email": body.email, "role": body.role},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
 
     logger.info(
@@ -142,7 +135,7 @@ async def revoke_invite(
         target_type="invite",
         target_id=invite_id,
         extra_data=None,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
 
     logger.info("invite_revoked", invite_id=str(invite_id), revoked_by=str(admin.id))

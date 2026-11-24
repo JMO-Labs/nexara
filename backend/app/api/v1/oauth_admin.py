@@ -12,7 +12,8 @@ import structlog
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.admin_oauth import _client_ip, _community_id
+from app.api.v1.admin_oauth import _community_id
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.encryption import derive_fernet_key, encrypt_secret
@@ -71,7 +72,7 @@ async def create_oidc_provider(
         target_type="oauth_provider",
         target_id=provider.id,
         extra_data={"slug": provider.slug, "type": "oidc"},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return OAuthProviderResponse.model_validate(provider)
 

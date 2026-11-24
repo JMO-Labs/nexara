@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.relations import build_relation_service
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.models.user import User
@@ -45,10 +46,6 @@ def _service(
     )
 
 
-def _ip(request: Request) -> str | None:
-    return request.client.host if request.client else None
-
-
 @router.put("/household/{member_id}/passed-on", response_model=HouseholdResponse)
 async def set_passed_on(
     member_id: uuid.UUID,
@@ -71,7 +68,7 @@ async def memorialize_user(
     svc: MemorialService = Depends(_service),
 ) -> dict[str, str]:
     """@brief Memorialize an account (admin)."""
-    await svc.memorialize_user(user_id, admin, body.passed_on, _ip(request))
+    await svc.memorialize_user(user_id, admin, body.passed_on, client_ip(request))
     return {"message": "User memorialized"}
 
 
@@ -83,5 +80,5 @@ async def unmemorialize_user(
     svc: MemorialService = Depends(_service),
 ) -> dict[str, str]:
     """@brief Restore a memorialized account (admin)."""
-    await svc.unmemorialize_user(user_id, admin, _ip(request))
+    await svc.unmemorialize_user(user_id, admin, client_ip(request))
     return {"message": "User restored"}

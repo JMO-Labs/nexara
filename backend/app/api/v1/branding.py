@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Request
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.valkey import DB_CACHE, get_pool
@@ -114,7 +115,7 @@ async def apply_preset(
     return await service.apply_preset_theme(
         theme_name,
         user_id=admin.id,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
     )
 
 
@@ -143,5 +144,5 @@ async def update_branding(
     return await service.update_branding(
         user_id=admin.id,
         data=data,
-        ip_address=request.client.host if request.client else None,
+        ip_address=client_ip(request),
     )

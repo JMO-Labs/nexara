@@ -31,6 +31,11 @@ class TokenRepository:
         """@param session Async SQLAlchemy session (injected per-request)."""
         self._session = session
 
+    @property
+    def session(self) -> AsyncSession:
+        """@brief The underlying session (token minting reads 2FA policy through it)."""
+        return self._session
+
     async def create(
         self,
         *,

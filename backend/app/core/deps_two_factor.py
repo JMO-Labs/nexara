@@ -1,0 +1,89 @@
+"""
+@file deps_two_factor.py
+@brief FastAPI dependencies for the 2FA services (keeps repos out of routes).
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import TYPE_CHECKING
+
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.client_ip import client_ip
+from app.core.config import Settings, get_settings
+from app.core.dependencies import get_current_user, get_db, require_role
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.services.admin_security_service import AdminSecurityService
+    from app.services.auth.passkeys import PasskeyService
+    from app.services.auth.two_factor import TwoFactorService
+
+
+def get_two_factor_service(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> TwoFactorService:
+    """@brief Provide a TwoFactorService for the signed-in user."""
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.two_factor_repo import TwoFactorRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.auth.two_factor import TwoFactorService
+
+    return TwoFactorService(
+        UserRepository(db),
+        TwoFactorRepository(db),
+        AuditRepository(db),
+        settings,
+        user,
+        client_ip(request),
+    )
+
+
+def get_admin_security_service(
+    request: Request,
+    user: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AdminSecurityService:
+    """@brief Provide an AdminSecurityService (admin only) with audit logging."""
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.two_factor_repo import TwoFactorRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.admin_security_service import AdminSecurityService
+
+    return AdminSecurityService(
+        UserRepository(db),
+        TwoFactorRepository(db),
+        AuditRepository(db),
+        uuid.UUID(settings.COMMUNITY_ID),
+        user.id,
+        client_ip(request),
+    )
+
+
+def get_passkey_service(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> PasskeyService:
+    """@brief Provide a PasskeyService (no auth; routes add ``get_current_user`` themselves)."""
+    from app.repositories.audit_repo import AuditRepository
+    from app.repositories.passkey_repo import PasskeyRepository
+    from app.repositories.token_repo import TokenRepository
+    from app.repositories.user_repo import UserRepository
+    from app.services.auth.passkeys import PasskeyService
+
+    return PasskeyService(
+        PasskeyRepository(db, uuid.UUID(settings.COMMUNITY_ID)),
+        UserRepository(db),
+        TokenRepository(db),
+        AuditRepository(db),
+        settings,
+        uuid.UUID(settings.COMMUNITY_ID),
+        client_ip(request),
+    )

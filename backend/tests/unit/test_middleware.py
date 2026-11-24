@@ -7,9 +7,7 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from app.core.config import Settings
 from app.core.middleware import (
-    CloudflareRealIPMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
     StructuredLoggingMiddleware,
@@ -69,35 +67,16 @@ class TestStructuredLoggingMiddleware:
         assert resp.json() == {"ok": True}
 
 
-class TestCloudflareRealIPMiddleware:
-    """@brief Verify CF-Connecting-IP header is respected when enabled."""
+def test_request_log_uses_real_client_ip(_base_app):
+    from unittest.mock import patch
 
-    def test_replaces_client_ip_when_enabled(self):
-        from starlette.requests import Request as StarletteRequest
+    from starlette.testclient import TestClient
 
-        settings = Settings(CF_ACCESS_ENABLED=True, SECRET_KEY="test")
-        test_app = FastAPI()
-        test_app.add_middleware(CloudflareRealIPMiddleware, settings=settings)
+    from app.core.middleware import StructuredLoggingMiddleware
 
-        @test_app.get("/ip")
-        async def get_ip(request: StarletteRequest):
-            return {"ip": request.client.host if request.client else "none"}
-
-        client = TestClient(test_app)
-        resp = client.get("/ip", headers={"CF-Connecting-IP": "1.2.3.4"})
-        assert resp.json()["ip"] == "1.2.3.4"
-
-    def test_no_replacement_when_disabled(self):
-        from starlette.requests import Request as StarletteRequest
-
-        settings = Settings(CF_ACCESS_ENABLED=False, SECRET_KEY="test")
-        test_app = FastAPI()
-        test_app.add_middleware(CloudflareRealIPMiddleware, settings=settings)
-
-        @test_app.get("/ip")
-        async def get_ip(request: StarletteRequest):
-            return {"ip": request.client.host if request.client else "none"}
-
-        client = TestClient(test_app)
-        resp = client.get("/ip", headers={"CF-Connecting-IP": "1.2.3.4"})
-        assert resp.json()["ip"] != "1.2.3.4"
+    _base_app.add_middleware(StructuredLoggingMiddleware)
+    with patch("app.core.middleware.logger") as log:
+        TestClient(_base_app, client=("127.0.0.1", 50000)).get(
+            "/echo", headers={"X-Forwarded-For": "198.51.100.5"}
+        )
+    assert log.info.call_args.kwargs["client_ip"] == "198.51.100.5"

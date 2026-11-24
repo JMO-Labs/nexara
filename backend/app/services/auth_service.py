@@ -31,11 +31,12 @@ from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth import pending_link as _pending_link
 from app.services.auth import sso_only as _sso_only
-from app.services.auth import two_factor
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
-from app.services.auth.memorial_guard import reject_memorialized
+from app.services.auth.memorial_guard import assert_usable, reject_memorialized
+from app.services.auth.policy import factor_methods
 from app.services.auth.registration import register_user
 from app.services.auth.signin_log import log_failure, log_success
 from app.services.auth.token_utils import issue_tokens as _issue_tokens_impl
@@ -46,6 +47,7 @@ from app.services.auth.totp_replay import (
     normalize_totp,
     reserve_attempt,
 )
+from app.services.auth.two_factor import read_secret
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
@@ -144,18 +146,10 @@ class AuthService:
         if not verify_password(password, user.password_hash):
             await fail(user, email, "password", "bad_password")
             raise AuthenticationError(message=_("Invalid email or password"))
-        try:
-            reject_memorialized(user)
-        except AppError:
-            await fail(user, email, "password", "memorialized")
-            raise
-        if not user.is_active:
-            await fail(user, email, "password", "inactive")
-            raise AuthenticationError(message=_("Account is deactivated"))
+        await assert_usable(user, partial(fail, user, email, "password"))
 
-        if user.totp_enabled:
-            pending = create_2fa_pending_token(user.id, settings=self._settings)
-            return {"requires_2fa": True, "two_factor_token": pending}
+        if pending := await self._pending_2fa(user):
+            return pending
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_logged_in", user_id=str(user.id))
@@ -194,12 +188,15 @@ class AuthService:
             await fail(user, user.email if user else None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
-        if not user or not user.totp_secret:
+        if not user or not user.totp_enabled or not user.totp_secret:
             await fail(user, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
+        # Suspended / memorialised during the pending window: no tokens.
+        await assert_usable(user, partial(fail, user, user.email, "totp"))
 
         canonical = normalize_totp(code)
-        if canonical and verify_totp(user.totp_secret, canonical):
+        secret = read_secret(user.totp_secret, self._settings, user.id)
+        if canonical and verify_totp(secret, canonical):
             method = "totp"
             ok = await claim_totp_code(user.id, canonical, self._settings)
         else:
@@ -211,6 +208,7 @@ class AuthService:
             await fail(user, user.email, method, "bad_code")
             raise AuthenticationError(message=_("Invalid 2FA code"))
         await clear_user_attempts(user.id, self._settings)
+        await _pending_link.create_link(self._session, user.id, payload.get("oauth_link"))
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))
@@ -277,24 +275,6 @@ class AuthService:
             await self._token_repo.revoke(stored.id)
             logger.info("user_logged_out", user_id=str(stored.user_id))
 
-    async def enroll_2fa(self, user: User, current_code: str | None = None) -> dict[str, str]:
-        """
-        @brief Start 2FA enrollment (see :func:`app.services.auth.two_factor.enroll`).
-
-        @return Dict with ``secret`` and ``otpauth_uri``.
-        @raises AuthorizationError If 2FA is already enabled.
-        """
-        return await two_factor.enroll(self._user_repo, self._settings, user)
-
-    async def verify_2fa_enrollment(self, user: User, code: str) -> list[str]:
-        """
-        @brief Finish 2FA enrollment (see :func:`app.services.auth.two_factor.verify_enrollment`).
-
-        @return One-time backup codes.
-        @raises AuthenticationError If the code is invalid.
-        """
-        return await two_factor.verify_enrollment(self._session, self._user_repo, user, code)
-
     async def check_hibp(self, password: str) -> bool:
         """@brief Delegate to PasswordService.check_hibp."""
         return await self._password_svc.check_hibp(password)
@@ -344,24 +324,45 @@ class AuthService:
             reason = "memorialized" if exc.code == "ACCOUNT_MEMORIALIZED" else "invalid_token"
             await log_failure(self._settings, None, None, "magic_link", reason, request)
             raise
-        if user.totp_enabled:
-            pending = create_2fa_pending_token(user.id, settings=self._settings)
-            return {"requires_2fa": True, "two_factor_token": pending}
+        if pending := await self._pending_2fa(user):
+            return pending
         await log_success(self._session, self._settings, user, "magic_link", request)
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
-    async def login_sso(self, user: User, request: Request | None = None) -> dict[str, Any]:
+    async def login_sso(
+        self,
+        user: User,
+        request: Request | None = None,
+        *,
+        pending_link: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         @brief Record an SSO sign-in and issue tokens for the already-verified user.
 
         @param user Authenticated (active, non-memorialized) user.
         @param request Current request (sign-in log IP / User-Agent).
-        @return Dict with token data and ``raw_refresh_token``.
+        @param pending_link First link to a pre-existing account, not yet persisted:
+               with a local factor it is held until 2FA passes, else created now.
+        @return Token dict with ``raw_refresh_token``, or the pending-2FA dict.
         """
+        if pending_link is not None:
+            if pending := await self._pending_2fa(user, oauth_link=pending_link):
+                return pending
+            await _pending_link.create_link(self._session, user.id, pending_link)
         await log_success(self._session, self._settings, user, "sso", request)
         return await self._issue_tokens(user)
 
     # ── Helpers ───────────────────────────────────────────────────────────
+
+    async def _pending_2fa(
+        self, user: User, oauth_link: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
+        """@brief Pending-2FA response (token + usable methods), or None if no factor is set."""
+        methods = await factor_methods(self._session, user)
+        if not methods:
+            return None
+        pending = create_2fa_pending_token(user.id, settings=self._settings, oauth_link=oauth_link)
+        return {"requires_2fa": True, "two_factor_token": pending, "two_factor_methods": methods}
 
     async def _issue_tokens(
         self,

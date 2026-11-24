@@ -12,12 +12,11 @@ import time
 import uuid
 
 import structlog
-from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.config import Settings
+from app.core.client_ip import client_ip
 
 logger = structlog.get_logger(__name__)
 
@@ -66,7 +65,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             status=response.status_code,
             duration_ms=duration_ms,
-            client_ip=request.client.host if request.client else None,
+            client_ip=client_ip(request),
         )
         return response
 
@@ -88,26 +87,3 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
         return response
-
-
-class CloudflareRealIPMiddleware(BaseHTTPMiddleware):
-    """
-    @brief Replace the client IP with Cloudflare's ``CF-Connecting-IP`` header.
-
-    Only activates when ``CF_ACCESS_ENABLED=true`` **and** the header is
-    present.  This ensures the WAF and rate limiter see the actual user IP
-    rather than a Cloudflare edge IP.
-
-    Registered **before** the WAF and rate limiter in the middleware stack.
-    """
-
-    def __init__(self, app: Starlette, settings: Settings) -> None:
-        super().__init__(app)
-        self._enabled = settings.CF_ACCESS_ENABLED
-
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if self._enabled:
-            cf_ip = request.headers.get("CF-Connecting-IP")
-            if cf_ip:
-                request.scope["client"] = (cf_ip, 0)
-        return await call_next(request)

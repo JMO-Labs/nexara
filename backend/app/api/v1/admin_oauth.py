@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.encryption import derive_fernet_key, encrypt_secret
@@ -44,14 +45,6 @@ router = APIRouter(prefix="/admin/oauth", tags=["admin-oauth"])
 def _community_id(settings: Settings = Depends(get_settings)) -> uuid.UUID:
     """@brief Extract community UUID from settings."""
     return uuid.UUID(settings.COMMUNITY_ID)
-
-
-def _client_ip(request: Request) -> str | None:
-    """@brief Extract client IP from request."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else None
 
 
 @router.get("/providers", response_model=list[OAuthProviderResponse])
@@ -122,7 +115,7 @@ async def create_provider(
         target_type="oauth_provider",
         target_id=provider.id,
         extra_data={"slug": provider.slug},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     logger.info("oauth_provider_created", provider_id=str(provider.id), slug=provider.slug)
     return OAuthProviderResponse.model_validate(provider)
@@ -161,7 +154,7 @@ async def update_provider(
         target_type="oauth_provider",
         target_id=provider.id,
         extra_data={"slug": provider.slug},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return OAuthProviderResponse.model_validate(provider)
 
@@ -209,7 +202,7 @@ async def delete_provider(
         target_type="oauth_provider",
         target_id=provider_id,
         extra_data={"slug": provider.slug},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return MessageResponse(message=_("OAuth provider deleted"))
 
@@ -237,7 +230,7 @@ async def toggle_provider(
         target_type="oauth_provider",
         target_id=provider.id,
         extra_data={"slug": provider.slug, "enabled": provider.enabled},
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return OAuthProviderResponse.model_validate(provider)
 

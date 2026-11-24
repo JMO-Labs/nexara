@@ -79,7 +79,11 @@ async def test_apply_preset_calls_service_for_admin(app: FastAPI) -> None:
         return_value=result,
     ) as apply:
         async with _client(app) as c:
-            resp = await c.post("/api/v1/branding/presets/Forest/apply")
+            resp = await c.post(
+                "/api/v1/branding/presets/Forest/apply",
+                headers={"X-Forwarded-For": "198.51.100.4"},
+            )
     assert resp.status_code == 200
     assert resp.json()["branding"]["community_name"] == "C"
     assert apply.await_args.args[0] == "Forest"
+    assert apply.await_args.kwargs["ip_address"] == "198.51.100.4"

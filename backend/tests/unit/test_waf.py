@@ -26,7 +26,7 @@ def waf_app() -> TestClient:
     async def ok_post():
         return {"status": "ok"}
 
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def waf_disabled_app() -> TestClient:
     async def ok():
         return {"status": "ok"}
 
-    return TestClient(app)
+    return TestClient(app, client=("127.0.0.1", 50000))
 
 
 class TestWAFBlocking:
@@ -83,3 +83,15 @@ class TestWAFDisabled:
     def test_blocked_ua_passes_when_disabled(self, waf_disabled_app):
         resp = waf_disabled_app.get("/ok", headers={"User-Agent": "nikto"})
         assert resp.status_code == 200
+
+
+def test_block_logs_real_client_ip(waf_app):
+    from unittest.mock import patch
+
+    with patch("app.core.waf.logger") as log:
+        r = waf_app.get(
+            "/ok?q=information_schema",
+            headers={"X-Forwarded-For": "198.51.100.3"},
+        )
+    assert r.status_code == 400
+    assert log.warning.call_args.kwargs["ip"] == "198.51.100.3"

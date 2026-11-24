@@ -7,7 +7,7 @@
  */
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/stores/session";
@@ -17,6 +17,7 @@ import { useUserSettings } from "@/hooks/useSettings";
 import { useModals } from "@/stores/modals";
 import { BrandingStyle } from "./BrandingStyle";
 import { TopBar } from "./TopBar";
+import { GraceBanner } from "./GraceBanner";
 import { TimezoneSync } from "@/components/settings/TimezoneSync";
 import { PresenceSync } from "./PresenceSync";
 import { SimpleModeSync } from "./SimpleModeSync";
@@ -33,6 +34,7 @@ import { TooltipProvider } from "@/components/ui/Tooltip";
 export function Shell({ children }: { children: ReactNode }) {
   useSessionBootstrap();
   const router = useRouter();
+  const pathname = usePathname();
   const status = useSession((s) => s.status);
   const density = useUI((s) => s.density);
   const { data: settings } = useUserSettings();
@@ -58,6 +60,18 @@ export function Shell({ children }: { children: ReactNode }) {
     window.addEventListener("nx:auth-expired", onAuthExpired);
     return () => window.removeEventListener("nx:auth-expired", onAuthExpired);
   }, [router]);
+
+  // Past the 2FA grace period the API 403s everything but setup routes.
+  useEffect(() => {
+    function onSetupRequired() {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (pathname !== "/app/settings" || tab !== "security")
+        router.replace("/app/settings?tab=security");
+    }
+    window.addEventListener("nx:2fa-setup-required", onSetupRequired);
+    return () =>
+      window.removeEventListener("nx:2fa-setup-required", onSetupRequired);
+  }, [router, pathname]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -111,6 +125,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {!isBooting && <PresenceSync />}
         <div className="flex min-h-dvh min-w-0 flex-col">
           <TopBar />
+          {!isBooting && <GraceBanner />}
           <main
             id="main"
             className={cn(

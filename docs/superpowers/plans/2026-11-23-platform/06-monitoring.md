@@ -66,3 +66,10 @@
 
 ### Task 5: Polish PR 6
 - [ ] Full suites + build; live: stop eval worker → System page shows Workers "Down" within 30 s and admin ntfy target receives alert (disk threshold is unit-tested only); screenshots; PR "Platform 6: admin monitoring and audit".
+
+---
+
+### Carry-overs from PR 3 (2026-11-24)
+- TRUSTED_PROXIES / client_ip already shipped in PR 3 — drop the nginx `set_real_ip_from` item.
+- Burn the 2fa_pending token on successful `/2fa/login` or passkey step (today it stays retryable with a valid factor for 5 min).
+- YourDevices + "Sign out everywhere else" is the mitigation for the PR 3 rulings: passkey add/remove without re-auth.

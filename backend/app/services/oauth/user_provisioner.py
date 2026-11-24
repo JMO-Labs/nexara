@@ -24,6 +24,7 @@ from app.repositories.calendar_repo import CalendarRepository
 from app.repositories.oauth_repo import UserOAuthLinkRepository
 from app.repositories.subgroup_repo import SubgroupMemberRepository, SubgroupRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth.policy import factor_methods
 from app.services.oauth.group_mapper import apply_subgroup_mappings, global_role_mappings
 
 if TYPE_CHECKING:
@@ -88,6 +89,8 @@ class UserProvisioner:
         """
         self._db = db
         self._community_id = community_id
+        self.pending_link: dict[str, str | None] | None = None
+        """@brief Link deferred until the existing account's local 2FA passes."""
         self._link_repo = UserOAuthLinkRepository(db)
         self._user_repo = UserRepository(db)
 
@@ -106,6 +109,8 @@ class UserProvisioner:
         @return The user (created or updated).
         """
         user = await self._provision_identity(auth_result, provider, role)
+        if self.pending_link is not None:
+            return user  # group mappings apply on the first login over the real link
         await apply_subgroup_mappings(
             SubgroupRepository(self._db),
             SubgroupMemberRepository(self._db),
@@ -171,6 +176,17 @@ class UserProvisioner:
         email = auth_result.email.strip().lower()
 
         user = await self._user_repo.find_by_email(email)
+        if user and await factor_methods(self._db, user):
+            # First link to an account with a local factor: persist nothing until
+            # that factor is passed (see services.auth.pending_link).
+            self.pending_link = {
+                "provider_id": str(provider.id),
+                "sub": auth_result.sub,
+                "email_from_provider": auth_result.email,
+                "avatar_url": auth_result.avatar_url,
+                "role": role if has_group_mappings and user.role != role else None,
+            }
+            return user
         if user:
             # First OAuth link for existing user — only set role when
             # the provider actively maps groups.

@@ -98,8 +98,12 @@ async def consume_backup_code(session: AsyncSession, user_id: uuid.UUID, code: s
     """
     @brief Spend an unused backup code with one atomic UPDATE ... RETURNING.
 
+    Input is normalised (trimmed, upper-cased, spaces/dashes dropped) so codes
+    typed in lowercase or grouped still match.
+
     @return True only if this call flipped the row (concurrent callers lose).
     """
+    code = code.strip().upper().replace(" ", "").replace("-", "")
     stmt = (
         update(UserBackupCode)
         .where(

@@ -70,8 +70,9 @@ class LoginResponse(BaseModel):
     """
     @brief Login result that may require 2FA completion.
 
-    When ``requires_2fa`` is True, the client must POST the TOTP code
-    along with the ``two_factor_token`` to ``/auth/2fa/verify``.
+    When ``requires_2fa`` is True, the client completes the login with one of
+    ``two_factor_methods``: ``totp``/``recovery`` via ``/auth/2fa/login``, or
+    ``passkey`` via ``/auth/passkeys/login/verify`` with ``pending_token``.
     """
 
     access_token: str | None = None
@@ -79,6 +80,7 @@ class LoginResponse(BaseModel):
     expires_in: int | None = None
     requires_2fa: bool = False
     two_factor_token: str | None = None
+    two_factor_methods: list[str] | None = None
 
 
 class RefreshResponse(BaseModel):
@@ -96,23 +98,11 @@ class TwoFactorEnrollResponse(BaseModel):
     otpauth_uri: str = Field(description="otpauth:// URI for QR code generation")
 
 
-class TwoFactorVerifyRequest(BaseModel):
-    """@brief Payload to verify a TOTP code (enrollment or login)."""
-
-    code: str = Field(..., min_length=6, max_length=8, description="TOTP or backup code")
-
-
 class TwoFactorLoginRequest(BaseModel):
     """@brief Payload to complete a 2FA-pending login."""
 
     two_factor_token: str
     code: str = Field(..., min_length=6, max_length=8)
-
-
-class TwoFactorVerifyResponse(BaseModel):
-    """@brief Response after successful 2FA enrollment verification."""
-
-    backup_codes: list[str] = Field(description="One-time recovery codes")
 
 
 class MagicLinkRequestPayload(BaseModel):

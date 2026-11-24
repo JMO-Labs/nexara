@@ -27,6 +27,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings
 
 logger = structlog.get_logger(__name__)
@@ -115,10 +116,9 @@ class WAFMiddleware(BaseHTTPMiddleware):
         @param reason Machine-readable reason code.
         @return A 400 JSON response with the standard error shape.
         """
-        client_ip = request.client.host if request.client else "unknown"
         logger.warning(
             "waf_blocked",
-            ip=client_ip,
+            ip=client_ip(request) or "unknown",
             path=str(request.url.path),
             reason=reason,
         )

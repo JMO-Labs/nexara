@@ -208,7 +208,16 @@ async def oauth_callback(
 
     exchange_code = secrets.token_urlsafe(48)
     valkey = _get_valkey_client(settings)
-    payload = json.dumps({"user_id": str(user.id), "provider_slug": slug})
+    payload = json.dumps(
+        {
+            "user_id": str(user.id),
+            "provider_slug": slug,
+            # First link to an account with a local factor: created only after 2FA.
+            "pending_link": (
+                provisioner.pending_link if isinstance(provisioner.pending_link, dict) else None
+            ),
+        }
+    )
     await valkey.setex(f"oauth_exchange:{exchange_code}", 60, payload)
 
     _clear_oauth_cookies(response)
@@ -247,7 +256,18 @@ async def oauth_exchange(
         raise AuthenticationError(message=_("User not found or deactivated"))
 
     auth_svc = AuthService(db, settings)
-    result = await auth_svc.login_sso(user, request=request)
+    pending_link = data.get("pending_link")
+    result = await auth_svc.login_sso(
+        user,
+        request=request,
+        pending_link=pending_link if isinstance(pending_link, dict) else None,
+    )
+    if result.get("requires_2fa"):
+        return LoginResponse(
+            requires_2fa=True,
+            two_factor_token=result["two_factor_token"],
+            two_factor_methods=result.get("two_factor_methods"),
+        )
     _set_refresh_cookie(response, result["raw_refresh_token"], settings)
     return LoginResponse(
         access_token=result["access_token"],

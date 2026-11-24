@@ -32,10 +32,11 @@ def test_app() -> FastAPI:
     @brief Create a FastAPI app for integration tests with mocked external deps.
     """
     from slowapi import Limiter
-    from slowapi.util import get_remote_address
+
+    from app.core.rate_limit import rate_limit_key
 
     memory_limiter = Limiter(
-        key_func=get_remote_address,
+        key_func=rate_limit_key,
         default_limits=["1000/minute"],
         storage_uri="memory://",
         strategy="fixed-window",

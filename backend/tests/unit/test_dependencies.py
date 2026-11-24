@@ -144,14 +144,16 @@ class TestGetOptionalUser:
     async def test_returns_none_without_token(self):
         db = AsyncMock()
         settings = _make_settings()
-        result = await get_optional_user(token=None, db=db, settings=settings)
+        result = await get_optional_user(request=MagicMock(), token=None, db=db, settings=settings)
         assert result is None
 
     @pytest.mark.asyncio
     async def test_returns_none_on_invalid_token(self):
         db = AsyncMock()
         settings = _make_settings()
-        result = await get_optional_user(token="bad-token", db=db, settings=settings)
+        result = await get_optional_user(
+            request=MagicMock(), token="bad-token", db=db, settings=settings
+        )
         assert result is None
 
     @pytest.mark.asyncio
@@ -171,7 +173,7 @@ class TestGetOptionalUser:
         db = AsyncMock()
         db.execute.return_value = mock_result
 
-        result = await get_optional_user(token=token, db=db, settings=settings)
+        result = await get_optional_user(request=MagicMock(), token=token, db=db, settings=settings)
         assert result is not None
         assert result.id == user_id
 
@@ -223,7 +225,7 @@ class TestGetAdminAIService:
         assert isinstance(svc._communities, CommunityRepository)
         assert isinstance(svc._audit, AuditRepository)
         assert svc._actor_id == user.id
-        assert svc._ip == "9.9.9.9"
+        assert svc._ip == "10.0.0.1"
         assert svc._provider_factory() is None  # AI_PROVIDER unset
 
     def test_falls_back_to_client_host(self):

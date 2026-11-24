@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import RootModel, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.core.features import FEATURE_DEFAULTS
@@ -40,8 +41,7 @@ def get_features_service(
     settings: Settings = Depends(get_settings),
 ) -> FeaturesService:
     """@brief DI factory with audit logging bound to the caller."""
-    fwd = request.headers.get("x-forwarded-for")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
+    ip = client_ip(request)
     return FeaturesService(
         CommunityRepository(db),
         uuid.UUID(settings.COMMUNITY_ID),

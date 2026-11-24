@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.plugins import get_plugin_service
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
 from app.core.exceptions import NotFoundError
@@ -57,13 +58,6 @@ def _out(k: PluginApiKey) -> dict[str, object]:
     }
 
 
-def _ip(request: Request) -> str | None:
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.client.host if request.client else None
-
-
 def _community(settings: Settings = Depends(get_settings)) -> uuid.UUID:
     return uuid.UUID(settings.COMMUNITY_ID)
 
@@ -90,7 +84,7 @@ async def create_api_key(
         target_type="plugin_api_key",
         target_id=row.id,
         extra_data={"plugin_id": plugin_id},
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return {**_out(row), "key": plain}
 
@@ -113,7 +107,7 @@ async def list_api_keys(
         action="plugin_api_key.listed",
         target_type="plugin",
         extra_data={"plugin_id": plugin_id},
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return [_out(k) for k in keys]
 
@@ -139,7 +133,7 @@ async def revoke_api_key(
         target_type="plugin_api_key",
         target_id=key.id,
         extra_data={"plugin_id": plugin_id},
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return _out(key)
 
@@ -182,7 +176,7 @@ async def install_request(
             "plugin_id": body.plugin_id,
             "permissions_requested": review["permissions_requested"],
         },
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return review
 
@@ -202,7 +196,7 @@ async def install_confirm(
         action="plugin.installed",
         target_type="plugin",
         extra_data={"plugin_id": row.id, "version": row.version, "permissions_granted": perms},
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return {
         "id": row.id,
@@ -236,7 +230,7 @@ async def upgrade_plugin(
                 "new_permissions": review["new_permissions"],
                 "removed_permissions": review["removed_permissions"],
             },
-            ip_address=_ip(request),
+            ip_address=client_ip(request),
         )
         return review
     row, diff = await svc.confirm_upgrade(plugin_id)
@@ -250,7 +244,7 @@ async def upgrade_plugin(
             "new_permissions": diff["new_permissions"],
             "removed_permissions": diff["removed_permissions"],
         },
-        ip_address=_ip(request),
+        ip_address=client_ip(request),
     )
     return {
         "id": row.id,

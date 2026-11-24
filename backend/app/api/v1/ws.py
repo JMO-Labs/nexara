@@ -21,8 +21,10 @@ import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 
+from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.core.security import decode_token
+from app.services.auth.policy import enforce_setup
 from app.services.realtime.connection_manager import manager
 from app.services.realtime.presence import set_offline, set_online
 from app.services.realtime.protocol import (
@@ -109,7 +111,8 @@ async def _authenticate(ws: WebSocket) -> UUID | None:
     try:
         payload = decode_token(token, expected_type="access")
         user_id = UUID(payload["sub"])
-    except (ValueError, KeyError):
+        enforce_setup(payload, ws.url.path)
+    except (ValueError, KeyError, AppError):
         error_msg = build_outbound(OutboundType.AUTH_ERROR, {"message": _("Invalid token")})
         await ws.send_text(error_msg)
         await _close_safe(ws, 4001, _("Invalid token"))

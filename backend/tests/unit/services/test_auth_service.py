@@ -16,6 +16,7 @@ import pytest
 
 from app.core.config import Settings
 from app.core.security import hash_password
+from app.services.auth.two_factor import seal_secret
 from app.services.auth_service import AuthService
 
 
@@ -47,7 +48,8 @@ def _make_user(**overrides):
     user.role = overrides.get("role", "member")
     user.is_active = overrides.get("is_active", True)
     user.totp_enabled = overrides.get("totp_enabled", False)
-    user.totp_secret = overrides.get("totp_secret", None)
+    raw = overrides.get("totp_secret", None)
+    user.totp_secret = seal_secret(raw, _make_settings()) if raw else None  # stored encrypted
     user.deleted_at = None
     user.memorialized_at = overrides.get("memorialized_at", None)
     return user
@@ -62,7 +64,11 @@ def _sso_only_off():
 
 def _make_service(session=None, settings=None):
     """@brief Construct an AuthService with a mocked DB session."""
-    s = session or AsyncMock()
+    if session is None:
+        session = AsyncMock()
+        # Policy queries (passkey count) see an empty result by default.
+        session.execute.return_value = MagicMock(**{"scalar_one.return_value": 0})
+    s = session
     svc = AuthService(s, settings or _make_settings())
     svc._user_repo = AsyncMock()
     svc._token_repo = AsyncMock()

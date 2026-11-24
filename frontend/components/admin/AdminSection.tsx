@@ -21,12 +21,14 @@ import { EmailTab } from "./EmailTab";
 import { AlertsTab } from "./AlertsTab";
 import { EmailRepliesTab } from "./EmailRepliesTab";
 import { FeaturesTab } from "./FeaturesTab";
+import { SecurityPolicy } from "./SecurityPolicy";
 
 const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   metrics: MetricsTab,
   users: UsersTab,
   invites: InvitesTab,
   sso: SsoTab,
+  security: SecurityPolicy,
   interests: InterestsTab,
   prompts: PromptsTab,
   branding: BrandingTab,

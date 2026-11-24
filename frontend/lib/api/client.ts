@@ -102,7 +102,14 @@ export async function api<T = unknown>(
     } catch {
       /* non-JSON error body */
     }
-    throw ApiError.fromUnknown(res.status, body);
+    const err = ApiError.fromUnknown(res.status, body);
+    if (
+      res.status === 403 &&
+      err.code === "2fa_setup_required" &&
+      typeof window !== "undefined"
+    )
+      window.dispatchEvent(new CustomEvent("nx:2fa-setup-required"));
+    throw err;
   }
 
   return parseResponse<T>(res);

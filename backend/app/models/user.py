@@ -86,6 +86,9 @@ class User(Base):
     email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     totp_secret: Mapped[str | None] = mapped_column(Text)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Fernet token of an enrollment-in-progress secret (promoted on confirm).
+    totp_pending_secret: Mapped[str | None] = mapped_column(Text)
+    two_factor_required_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     oidc_sub: Mapped[str | None] = mapped_column(Text, unique=True)
 
     # Bot

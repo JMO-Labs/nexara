@@ -17,6 +17,13 @@ from app.services.oauth.user_provisioner import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _no_local_factor():
+    """@brief Existing accounts here have no 2FA factor (see test_first_link_2fa)."""
+    with patch("app.services.oauth.user_provisioner.factor_methods", AsyncMock(return_value=[])):
+        yield
+
+
 class TestDeriveUsername:
     """@brief Tests for _derive_username function."""
 
