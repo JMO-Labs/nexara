@@ -95,3 +95,7 @@ class MediaServingMixin:
             raise NotFoundError(_("Thumbnail not available"))
         data = await self._storage.get(media.thumbnail_key)
         return data, "image/webp"
+
+    async def is_nsfw(self, media_id: uuid.UUID) -> bool:
+        """@brief NSFW by own flag or via an NSFW post or album (no viewer check)."""
+        return media_id in await self._repo.nsfw_media_among({media_id})

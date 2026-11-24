@@ -218,3 +218,20 @@ class TestRealtimeAndActivity:
 
         assert await seen(kid) is False
         assert await seen(grown) is True
+
+
+class TestIsNsfw:
+    async def test_own_flag_post_and_album(self, session) -> None:
+        owner = await adult(session)
+        flagged, in_post, in_album, safe = [
+            await make_media(session, owner, nsfw=n) for n in (True, False, False, False)
+        ]
+        await attach(session, await make_post(session, owner, nsfw=True), in_post)
+        await make_album(session, owner, nsfw=True, media=in_album)
+        svc = _media_svc(session)
+        assert [await svc.is_nsfw(m.id) for m in (flagged, in_post, in_album, safe)] == [
+            True,
+            True,
+            True,
+            False,
+        ]

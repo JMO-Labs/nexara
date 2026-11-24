@@ -20,6 +20,7 @@ from app.repositories.gallery_repo import GalleryRepository
 from app.repositories.media_repo import MediaRepository
 from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.post_repo import PostRepository
+from app.repositories.tag_repo import TagRepository
 from app.schemas.gallery import GalleryUpdate
 from app.services.gallery_service import GalleryService
 from app.services.media import nsfw as media_nsfw
@@ -151,7 +152,9 @@ class TestAlbumsAndPhotos:
             await gallery_svc.update_gallery(g.id, owner.id, GalleryUpdate(is_nsfw=False))
 
     def _media_svc(self, s: AsyncSession) -> MediaService:
-        return MediaService(MediaRepository(s), AsyncMock(), MagicMock(), CID)
+        return MediaService(
+            MediaRepository(s), AsyncMock(), MagicMock(), CID, tag_repo=TagRepository(s)
+        )
 
     async def test_uploader_flags_photo(self, session) -> None:
         me, other, kid = await adult(session), await adult(session), await teen(session)

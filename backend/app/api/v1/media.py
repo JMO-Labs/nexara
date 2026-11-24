@@ -23,6 +23,7 @@ from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
 from app.repositories.comment_repo import ReactionRepository
 from app.repositories.media_repo import MediaRepository
+from app.repositories.tag_repo import TagRepository
 from app.repositories.time_capsule_repo import TimeCapsuleRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.media import (
@@ -64,6 +65,7 @@ def _build_service(
         community_id=community_id,
         valkey_client=valkey,
         capsule_repo=TimeCapsuleRepository(db),
+        tag_repo=TagRepository(db),
     )
 
 
@@ -203,6 +205,21 @@ async def get_media_metadata(
     return await service.get_metadata(media_id, user.id)
 
 
+async def _cache_headers(
+    service: MediaService, media_id: uuid.UUID, max_age: int
+) -> dict[str, str]:
+    """
+    @brief Per-viewer bytes (NSFW/capsule gating): vary on auth so a shared
+           browser never replays one member's copy to another; NSFW is never stored.
+    """
+    nsfw = await service.is_nsfw(media_id)
+    return {
+        "Cache-Control": "private, no-store" if nsfw else f"private, max-age={max_age}",
+        "Vary": "Authorization, Cookie",
+        "Content-Disposition": "inline",
+    }
+
+
 @router.get("/{media_id}/file")
 async def get_media_file(
     media_id: uuid.UUID,
@@ -219,10 +236,7 @@ async def get_media_file(
     return StreamingResponse(
         iter([content]),
         media_type=content_type,
-        headers={
-            "Cache-Control": "private, max-age=86400",
-            "Content-Disposition": "inline",
-        },
+        headers=await _cache_headers(service, media_id, 86400),
     )
 
 
@@ -241,11 +255,7 @@ async def get_media_thumbnail(
     return StreamingResponse(
         iter([content]),
         media_type="image/webp",
-        headers={
-            "Cache-Control": "private, max-age=604800",
-            "Vary": "Authorization, Cookie",
-            "Content-Disposition": "inline",
-        },
+        headers=await _cache_headers(service, media_id, 604800),
     )
 
 
