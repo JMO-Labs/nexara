@@ -15,14 +15,14 @@ import structlog
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.auth_2fa import router as auth_2fa_router
 from app.api.v1.auth_magic_link import router as magic_link_router
 from app.api.v1.auth_oidc import router as oidc_router
 from app.api.v1.auth_password_reset import router as password_reset_router
 from app.core.config import Settings, get_settings
 from app.core.cookies import should_secure_cookie
-from app.core.dependencies import get_current_user, get_db, get_dispatcher, get_optional_user
+from app.core.dependencies import get_db, get_dispatcher, get_optional_user
 from app.core.i18n import _
-from app.core.rate_limit import limiter
 from app.models.user import User
 from app.repositories.notification_repo import NotificationRepository
 from app.repositories.settings_repo import SettingsRepository
@@ -32,10 +32,6 @@ from app.schemas.auth import (
     LoginResponse,
     LogoutResponse,
     RegisterRequest,
-    TwoFactorEnrollResponse,
-    TwoFactorLoginRequest,
-    TwoFactorVerifyRequest,
-    TwoFactorVerifyResponse,
 )
 from app.services.auth_service import AuthService
 from app.services.notification_service import NotificationService
@@ -256,56 +252,7 @@ async def logout(
     )
 
 
-# ── Two-Factor Authentication ────────────────────────────────────────────
-
-
-@router.post("/2fa/enroll", response_model=TwoFactorEnrollResponse)
-async def enroll_2fa(
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """@brief Start 2FA enrollment (returns TOTP secret + QR URI)."""
-    svc = AuthService(db, settings)
-    return await svc.enroll_2fa(user)
-
-
-@router.post("/2fa/verify", response_model=TwoFactorVerifyResponse)
-async def verify_2fa_enrollment(
-    body: TwoFactorVerifyRequest,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """@brief Complete 2FA enrollment by verifying the first TOTP code."""
-    svc = AuthService(db, settings)
-    codes = await svc.verify_2fa_enrollment(user, body.code)
-    return TwoFactorVerifyResponse(backup_codes=codes)
-
-
-@router.post("/2fa/login", response_model=LoginResponse)
-@limiter.limit("10/minute")
-async def login_2fa(
-    request: Request,
-    body: TwoFactorLoginRequest,
-    response: Response,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Any:
-    """@brief Complete a 2FA-pending login with a TOTP code."""
-    svc = AuthService(db, settings)
-    result = await svc.verify_2fa_login(
-        two_factor_token=body.two_factor_token,
-        code=body.code,
-        request=request,
-    )
-    _set_refresh_cookie(response, result["raw_refresh_token"], settings)
-    return LoginResponse(
-        access_token=result["access_token"],
-        expires_in=result["expires_in"],
-    )
-
-
+router.include_router(auth_2fa_router)
 router.include_router(magic_link_router, prefix="/magic-link")
 router.include_router(password_reset_router)
 router.include_router(oidc_router)

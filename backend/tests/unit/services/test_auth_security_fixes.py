@@ -12,29 +12,12 @@ import pyotp
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.core.exceptions import AuthenticationError, AuthorizationError
+from app.core.exceptions import AuthenticationError
 from tests.unit.services.test_auth_service import (  # noqa: F401
     _make_service,
     _make_user,
     _sso_only_off,
 )
-
-
-class TestEnrollWhileEnabled:
-    @pytest.mark.asyncio
-    async def test_enroll_refused_when_enabled(self):
-        svc = _make_service()
-        user = _make_user(totp_enabled=True, totp_secret="SECRET")
-        with pytest.raises(AuthorizationError, match="2fa_already_enabled"):
-            await svc.enroll_2fa(user)
-        svc._user_repo.update_totp.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_enroll_ok_when_disabled(self):
-        svc = _make_service()
-        result = await svc.enroll_2fa(_make_user(totp_enabled=False))
-        assert result["secret"]
-        svc._user_repo.update_totp.assert_awaited_once()
 
 
 class TestMagicLink2FA:

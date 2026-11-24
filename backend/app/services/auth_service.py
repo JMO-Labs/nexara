@@ -32,7 +32,6 @@ from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 from app.services.auth import sso_only as _sso_only
-from app.services.auth import two_factor
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
 from app.services.auth.memorial_guard import reject_memorialized
@@ -46,6 +45,7 @@ from app.services.auth.totp_replay import (
     normalize_totp,
     reserve_attempt,
 )
+from app.services.auth.two_factor import open_secret
 from app.services.notification_service import NotificationService
 from app.services.password_service import PasswordService
 
@@ -199,7 +199,8 @@ class AuthService:
             raise AuthenticationError(message=_("Invalid 2FA session"))
 
         canonical = normalize_totp(code)
-        if canonical and verify_totp(user.totp_secret, canonical):
+        secret = open_secret(user.totp_secret, self._settings)
+        if canonical and verify_totp(secret, canonical):
             method = "totp"
             ok = await claim_totp_code(user.id, canonical, self._settings)
         else:
@@ -276,24 +277,6 @@ class AuthService:
         if stored and stored.revoked_at is None:
             await self._token_repo.revoke(stored.id)
             logger.info("user_logged_out", user_id=str(stored.user_id))
-
-    async def enroll_2fa(self, user: User, current_code: str | None = None) -> dict[str, str]:
-        """
-        @brief Start 2FA enrollment (see :func:`app.services.auth.two_factor.enroll`).
-
-        @return Dict with ``secret`` and ``otpauth_uri``.
-        @raises AuthorizationError If 2FA is already enabled.
-        """
-        return await two_factor.enroll(self._user_repo, self._settings, user)
-
-    async def verify_2fa_enrollment(self, user: User, code: str) -> list[str]:
-        """
-        @brief Finish 2FA enrollment (see :func:`app.services.auth.two_factor.verify_enrollment`).
-
-        @return One-time backup codes.
-        @raises AuthenticationError If the code is invalid.
-        """
-        return await two_factor.verify_enrollment(self._session, self._user_repo, user, code)
 
     async def check_hibp(self, password: str) -> bool:
         """@brief Delegate to PasswordService.check_hibp."""

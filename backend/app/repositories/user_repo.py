@@ -79,28 +79,18 @@ class UserRepository(BaseRepository[User]):
         stmt = update(User).where(User.id == user_id).values(last_seen_at=datetime.now(UTC))
         await self._session.execute(stmt)
 
-    async def update_totp(
-        self,
-        user_id: uuid.UUID,
-        *,
-        totp_secret: str | None = None,
-        totp_enabled: bool | None = None,
-    ) -> None:
+    async def update_totp(self, user_id: uuid.UUID, **fields: Any) -> None:
         """
-        @brief Update TOTP-related fields on a user.
+        @brief Update TOTP fields; passing ``None`` clears the column.
 
         @param user_id UUID of the user.
-        @param totp_secret New TOTP secret (or None to clear).
-        @param totp_enabled Whether TOTP is active.
+        @param fields Any of ``totp_secret``, ``totp_pending_secret``, ``totp_enabled``.
         """
-        values: dict[str, Any] = {}
-        if totp_secret is not None:
-            values["totp_secret"] = totp_secret
-        if totp_enabled is not None:
-            values["totp_enabled"] = totp_enabled
-        if values:
-            stmt = update(User).where(User.id == user_id).values(**values)
-            await self._session.execute(stmt)
+        bad = set(fields) - {"totp_secret", "totp_pending_secret", "totp_enabled"}
+        if bad:
+            raise ValueError(f"unknown totp fields: {sorted(bad)}")
+        if fields:
+            await self._session.execute(update(User).where(User.id == user_id).values(**fields))
 
     async def email_exists(self, email: str) -> bool:
         """
