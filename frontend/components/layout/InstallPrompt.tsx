@@ -33,14 +33,14 @@ function store(op: "get" | "set", key: string, val = ""): string | null {
   return null;
 }
 
-function standalone(): boolean {
+export function standalone(): boolean {
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
     (navigator as unknown as { standalone?: boolean }).standalone === true
   );
 }
 
-function iosSafari(): boolean {
+export function iosSafari(): boolean {
   const ua = navigator.userAgent;
   return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
 }

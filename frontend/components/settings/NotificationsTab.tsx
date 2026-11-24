@@ -20,7 +20,7 @@ import { DnDScheduleEditor } from "./DnDScheduleEditor";
 import { NotificationMatrix } from "./NotificationMatrix";
 import { RecapSetting } from "./RecapSetting";
 import { ReconnectSetting } from "./ReconnectSetting";
-import { PushSubscriptionRow } from "./PushSubscriptionRow";
+import { PushDevices } from "./PushDevices";
 import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
 import { AppriseSection } from "./AppriseSection";
 import { useAppriseUrls } from "@/hooks/useAppriseUrls";
@@ -121,7 +121,7 @@ export function NotificationsTab() {
           onChange={change}
         />
       </Panel>
-      <PushSubscriptionRow />
+      <PushDevices />
       <Panel title={t("matrix_title")}>
         <NotificationMatrix
           types={types}

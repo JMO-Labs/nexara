@@ -4,7 +4,7 @@
  *        VAPID key fetch, subscribe (POST), unsubscribe (DELETE w/ body),
  *        list subscriptions.
  */
-import { apiGet, apiPost, api } from "./client";
+import { apiGet, apiPost, apiPatch, apiDelete, api, seg } from "./client";
 
 export interface VAPIDPublicKeyResponse {
   public_key: string;
@@ -34,5 +34,20 @@ export const unsubscribePush = (endpoint: string) =>
     body: { endpoint },
   });
 
-export const listPushSubscriptions = () =>
-  apiGet<PushSubscriptionResponse[]>("/api/v1/push/subscriptions");
+export interface PushDevice {
+  id: string;
+  name: string;
+  /** sha256(endpoint) hex, first 16 chars. */
+  endpoint_hash: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export const listPushDevices = () =>
+  apiGet<PushDevice[]>("/api/v1/push/devices");
+
+export const renamePushDevice = (id: string, name: string) =>
+  apiPatch<PushDevice>(`/api/v1/push/devices/${seg(id)}`, { name });
+
+export const removePushDevice = (id: string) =>
+  apiDelete(`/api/v1/push/devices/${seg(id)}`);

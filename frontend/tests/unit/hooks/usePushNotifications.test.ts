@@ -9,7 +9,7 @@ import { renderHookWithProviders } from "../../utils/renderWithProviders";
 
 const api = vi.hoisted(() => ({
   getVapidKey: vi.fn(),
-  listPushSubscriptions: vi.fn(),
+  listPushDevices: vi.fn(),
   subscribePush: vi.fn(),
   unsubscribePush: vi.fn(),
 }));
@@ -49,7 +49,7 @@ function setupBrowser(
 describe("usePushNotifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    api.listPushSubscriptions.mockResolvedValue([]);
+    api.listPushDevices.mockResolvedValue([]);
     api.getVapidKey.mockResolvedValue({ public_key: "AQAB" });
     api.subscribePush.mockResolvedValue({ id: "1" });
   });

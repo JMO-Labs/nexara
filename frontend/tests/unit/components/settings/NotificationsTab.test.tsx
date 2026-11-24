@@ -14,8 +14,8 @@ vi.mock("next-intl", () => ({
 }));
 const sse = vi.hoisted(() => ({ useSSE: vi.fn() }));
 vi.mock("@/hooks/useSSE", () => sse);
-vi.mock("@/components/settings/PushSubscriptionRow", () => ({
-  PushSubscriptionRow: () => <div>push-row</div>,
+vi.mock("@/components/settings/PushDevices", () => ({
+  PushDevices: () => <div>push-row</div>,
 }));
 
 const api = vi.hoisted(() => ({

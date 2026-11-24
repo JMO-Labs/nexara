@@ -229,4 +229,82 @@ describe("sw.js", () => {
     await Promise.all(waits);
     expect(pages(env)).toBeUndefined();
   });
+
+  describe("push", () => {
+    const push = (d: any) => {
+      const waits: Promise<any>[] = [];
+      env.handlers.push({
+        data: { json: () => d, text: () => "" },
+        waitUntil: (x: any) => waits.push(x),
+      });
+      return Promise.all(waits);
+    };
+    it("shows a stacked notification and sets the badge", async () => {
+      const setAppBadge = vi.fn().mockResolvedValue(undefined);
+      env.self.navigator = { setAppBadge };
+      await push({
+        title: "T",
+        body: "B",
+        url: "/app/x",
+        tag: "g",
+        badge_count: 4,
+      });
+      expect(env.self.registration.showNotification).toHaveBeenCalledWith(
+        "T",
+        expect.objectContaining({
+          body: "B",
+          tag: "g",
+          renotify: true,
+          badge: "/icons/badge-72.png",
+          data: { url: "/app/x" },
+        }),
+      );
+      expect(setAppBadge).toHaveBeenCalledWith(4);
+    });
+    it("works without setAppBadge", async () => {
+      await push({ title: "T", badge_count: 2 });
+      expect(env.self.registration.showNotification).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("notificationclick", () => {
+    const click = async (clients: any[], url = "/app/events") => {
+      env.self.clients.matchAll.mockResolvedValue(clients);
+      const close = vi.fn();
+      const waits: Promise<any>[] = [];
+      env.handlers.notificationclick({
+        notification: { close, data: { url } },
+        waitUntil: (x: any) => waits.push(x),
+      });
+      await Promise.all(waits);
+      expect(close).toHaveBeenCalled();
+    };
+    const mk = (url: string, vis: string) => ({
+      url,
+      visibilityState: vis,
+      focus: vi.fn().mockResolvedValue(undefined),
+      postMessage: vi.fn(),
+    });
+    it("focuses a visible client already on the URL", async () => {
+      const a = mk("https://x.test/app/chat", "visible");
+      const b = mk("https://x.test/app/events", "visible");
+      await click([a, b]);
+      expect(b.focus).toHaveBeenCalled();
+      expect(b.postMessage).not.toHaveBeenCalled();
+      expect(a.focus).not.toHaveBeenCalled();
+    });
+    it("posts navigate to another client otherwise", async () => {
+      const a = mk("https://x.test/app/chat", "hidden");
+      await click([a]);
+      expect(a.postMessage).toHaveBeenCalledWith({
+        type: "navigate",
+        url: "/app/events",
+      });
+      expect(a.focus).toHaveBeenCalled();
+    });
+    it("opens a window when none exist", async () => {
+      await click([]);
+      expect(env.self.clients.openWindow).toHaveBeenCalledWith("/app/events");
+    });
+  });
 });

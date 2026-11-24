@@ -3,7 +3,7 @@
  * @brief Nexara service worker. Cache-first for /_next/static + fonts,
  *        network-first (LRU, max 30) for navigations with /offline fallback,
  *        API never cached. Update flow: new SW waits until the page posts
- *        {type:"SKIP_WAITING"}. Web Push: shows notification, focuses tab.
+ *        {type:"SKIP_WAITING"}. Web Push: shows notification, app badge, deep-link click.
  *        VERSION comes from /sw-version.js (written by next.config at build).
  */
 let BUILD = "dev";
@@ -162,17 +162,27 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { title: "Nexara", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "Nexara";
   const options = {
     body: data.body || "",
     icon: "/icons/icon-192.png",
     badge: "/icons/badge-72.png",
     tag: data.tag || "nexara-notification",
+    renotify: true,
     data: { url: data.url || "/app" },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  const jobs = [
+    self.registration.showNotification(data.title || "Nexara", options),
+  ];
+  if (typeof data.badge_count === "number" && self.navigator?.setAppBadge)
+    jobs.push(
+      Promise.resolve(self.navigator.setAppBadge(data.badge_count)).catch(
+        () => {},
+      ),
+    );
+  event.waitUntil(Promise.all(jobs));
 });
 
+/** @brief Focus the visible matching tab, else any tab (+navigate msg), else open. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target =
@@ -181,11 +191,16 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((all) => {
-        for (const client of all) {
-          if ("focus" in client) {
-            client.navigate(target).catch(() => {});
-            return client.focus();
-          }
+        const match = all.find(
+          (c) =>
+            c.visibilityState === "visible" &&
+            new URL(c.url, self.location.origin).pathname ===
+              new URL(target, self.location.origin).pathname,
+        );
+        const client = match || all[0];
+        if (client) {
+          if (!match) client.postMessage({ type: "navigate", url: target });
+          return client.focus();
         }
         return self.clients.openWindow(target);
       }),

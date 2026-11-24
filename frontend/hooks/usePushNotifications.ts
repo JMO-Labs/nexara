@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file hooks/usePushNotifications.ts
- * @brief Web Push subscription manager. Handles permission prompt, SW
+ * @brief Web Push subscription manager. Handles permission prompt (isSubscribed = this device's endpoint hash is in /push/devices), SW
  *        readiness, VAPID key fetch, browser pushManager.subscribe and
  *        backend POST /api/v1/push/subscribe round-trip. Idempotent —
  *        if an existing subscription is present we POST it again so the
@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "./useMutationWithToast";
 import {
   getVapidKey,
-  listPushSubscriptions,
+  listPushDevices,
   subscribePush,
   unsubscribePush,
   type PushSubscriptionResponse,
@@ -20,7 +20,27 @@ import {
 
 export type PushPermission = "default" | "granted" | "denied" | "unsupported";
 
-const SUBS_KEY = ["push", "subscriptions"] as const;
+const SUBS_KEY = ["push", "devices"] as const;
+const LOCAL_KEY = ["push", "local-hash"] as const;
+
+/** @brief sha256(endpoint) hex, first 16 chars (matches backend endpoint_hash). */
+export async function endpointHash(endpoint: string): Promise<string> {
+  const d = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(endpoint),
+  );
+  return [...new Uint8Array(d)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 16);
+}
+
+/** @brief Hash of this browser's current push endpoint, or null. */
+async function localHash(): Promise<string | null> {
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  return sub ? endpointHash(sub.endpoint) : null;
+}
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -65,7 +85,13 @@ export function usePushNotifications() {
 
   const subsQuery = useQuery({
     queryKey: SUBS_KEY,
-    queryFn: listPushSubscriptions,
+    queryFn: listPushDevices,
+    enabled: supported,
+    staleTime: 60_000,
+  });
+  const localQuery = useQuery({
+    queryKey: LOCAL_KEY,
+    queryFn: localHash,
     enabled: supported,
     staleTime: 60_000,
   });
@@ -104,7 +130,7 @@ export function usePushNotifications() {
     },
     successKey: "toasts.settings.saved",
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: SUBS_KEY });
+      qc.invalidateQueries({ queryKey: ["push"] });
     },
   });
 
@@ -122,7 +148,7 @@ export function usePushNotifications() {
     },
     successKey: "toasts.settings.saved",
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: SUBS_KEY });
+      qc.invalidateQueries({ queryKey: ["push"] });
     },
   });
 
@@ -135,13 +161,16 @@ export function usePushNotifications() {
     [unsubscribeMutation],
   );
 
-  const isSubscribed = (subsQuery.data?.length ?? 0) > 0;
+  const thisHash = localQuery.data ?? null;
+  const isSubscribed =
+    !!thisHash && !!subsQuery.data?.some((d) => d.endpoint_hash === thisHash);
 
   return {
     supported,
     permission,
     isSubscribed,
-    subscriptions: subsQuery.data ?? [],
+    devices: subsQuery.data ?? [],
+    thisHash,
     isLoading: subsQuery.isLoading,
     subscribe,
     unsubscribe,
