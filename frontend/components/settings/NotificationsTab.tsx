@@ -22,6 +22,8 @@ import { RecapSetting } from "./RecapSetting";
 import { ReconnectSetting } from "./ReconnectSetting";
 import { PushSubscriptionRow } from "./PushSubscriptionRow";
 import { PREFS_KEY, SnoozeControls } from "./SnoozeControls";
+import { AppriseSection } from "./AppriseSection";
+import { useAppriseUrls } from "@/hooks/useAppriseUrls";
 import { WebhookList } from "./WebhookList";
 
 const DEBOUNCE_MS = 400;
@@ -39,6 +41,7 @@ export function NotificationsTab() {
   const [local, setLocal] = useState<PreferencesPayload | null>(null);
   const pending = useRef<Partial<PreferencesPayload>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data: apps } = useAppriseUrls();
   const prefs = local ?? data ?? null;
 
   useEffect(() => {
@@ -125,7 +128,15 @@ export function NotificationsTab() {
           prefs={prefs}
           onChannel={onChannel}
           onCadence={onCadence}
+          disabledChannels={
+            apps && apps.length === 0
+              ? { apprise: t("apprise_add_first") }
+              : undefined
+          }
         />
+      </Panel>
+      <Panel title={t("apprise_title")}>
+        <AppriseSection />
       </Panel>
       <Panel title={t("webhooks_title")}>
         <WebhookList />

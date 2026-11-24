@@ -17,6 +17,7 @@ CID = uuid4()
 
 def _svc() -> tuple[AppriseService, AsyncMock]:
     repo = AsyncMock(spec=AppriseRepository)
+    repo.allow_local.return_value = False
     return AppriseService(repo, CID), repo
 
 
@@ -24,6 +25,8 @@ def _row(user_id, community_id=CID) -> MagicMock:
     row = MagicMock(spec=AppriseURL)
     row.user_id = user_id
     row.community_id = community_id
+    row.is_admin_target = False
+    row.apprise_url = "discord://a/b"
     return row
 
 
@@ -39,8 +42,15 @@ async def test_create_rejects_invalid_url() -> None:
 async def test_create_stores_valid_url() -> None:
     svc, repo = _svc()
     uid = uuid4()
-    await svc.create(uid, "json://localhost", "x")
-    repo.create.assert_awaited_once_with(CID, uid, "json://localhost", "x")
+    created = _row(uid)
+    fetched = _row(uid)
+    fetched.apprise_url = "ntfy://ntfy.sh/topic"
+    repo.create.return_value = created
+    repo.get.return_value = fetched
+    out = await svc.create(uid, "discord://a/b", "x")
+    repo.create.assert_awaited_once_with(CID, uid, "discord://a/b", "x")
+    assert out is fetched
+    assert out.apprise_url.partition("://")[0] == "ntfy"
 
 
 async def test_other_users_row_is_404() -> None:
@@ -95,3 +105,40 @@ async def test_test_sends_for_owned_row() -> None:
     repo.test_send.return_value = (True, "ok")
     assert await svc.test(uid, rid) == (True, "ok")
     repo.test_send.assert_awaited_once_with(rid, "Nexara test", "Test notification from Nexara")
+
+
+async def test_member_create_private_blocked_422() -> None:
+    svc, repo = _svc()
+    with pytest.raises(AppError) as ei:
+        await svc.create(uuid4(), "json://127.0.0.1/x", None)
+    assert ei.value.code == "apprise_url_blocked" and ei.value.status_code == 422
+    repo.create.assert_not_awaited()
+
+
+async def test_member_create_private_ok_when_allow_local() -> None:
+    svc, repo = _svc()
+    repo.allow_local.return_value = True
+    await svc.create(uuid4(), "json://127.0.0.1/x", None)
+    repo.create.assert_awaited_once()
+
+
+def _admin_row() -> MagicMock:
+    row = _row(None)
+    row.is_admin_target = True
+    return row
+
+
+async def test_member_test_admin_row_is_404() -> None:
+    svc, repo = _svc()
+    repo.get.return_value = _admin_row()
+    with pytest.raises(NotFoundError):
+        await svc.test(uuid4(), uuid4())
+    repo.test_send.assert_not_awaited()
+
+
+async def test_member_delete_admin_row_is_404() -> None:
+    svc, repo = _svc()
+    repo.get.return_value = _admin_row()
+    with pytest.raises(NotFoundError):
+        await svc.delete(uuid4(), uuid4())
+    repo.delete.assert_not_awaited()

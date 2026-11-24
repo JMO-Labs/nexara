@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import apprise
@@ -12,6 +13,7 @@ from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.apprise_url import AppriseURL
 from app.repositories.apprise_repo import AppriseRepository
+from app.services.notifications.apprise_guard import check_apprise_url
 
 
 class AppriseService:
@@ -22,9 +24,18 @@ class AppriseService:
         self._repo = repo
         self._community_id = community_id
 
+    async def _guard(self, url: str) -> None:
+        allow = await self._repo.allow_local(self._community_id)
+        await asyncio.to_thread(check_apprise_url, url, allow_local=allow)
+
     async def _owned(self, user_id: uuid.UUID, url_id: uuid.UUID) -> AppriseURL:
         row = await self._repo.get(url_id)
-        if row is None or row.user_id != user_id or row.community_id != self._community_id:
+        if (
+            row is None
+            or row.is_admin_target
+            or row.user_id != user_id
+            or row.community_id != self._community_id
+        ):
             raise NotFoundError(_("Apprise URL not found"))
         return row
 
@@ -36,6 +47,7 @@ class AppriseService:
         """@brief Validate via Apprise, then store encrypted.
 
         @raises AppError 400 ``INVALID_APPRISE_URL`` if the URL does not parse.
+        @raises AppError 422 ``apprise_url_blocked`` for private hosts (unless opted in).
         """
         try:
             valid = bool(apprise.Apprise().add(url))
@@ -47,8 +59,9 @@ class AppriseService:
                 message=_("Invalid Apprise URL"),
                 status_code=400,
             )
+        await self._guard(url)
         row = await self._repo.create(self._community_id, user_id, url, label)
-        return row
+        return await self._repo.get(row.id) or row
 
     async def update(
         self, user_id: uuid.UUID, url_id: uuid.UUID, label: str | None, enabled: bool | None
@@ -69,5 +82,6 @@ class AppriseService:
 
     async def test(self, user_id: uuid.UUID, url_id: uuid.UUID) -> tuple[bool, str]:
         """@brief Send a test notification to an owned URL."""
-        await self._owned(user_id, url_id)
+        row = await self._owned(user_id, url_id)
+        await self._guard(row.apprise_url)
         return await self._repo.test_send(url_id, "Nexara test", "Test notification from Nexara")

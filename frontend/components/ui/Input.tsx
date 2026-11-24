@@ -16,9 +16,26 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> &
  * @return labelled input
  */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  function Input({ label, error, hint, className, id, ...rest }, ref) {
+  function Input(
+    {
+      label,
+      error,
+      hint,
+      className,
+      id,
+      "aria-describedby": describedBy,
+      ...rest
+    },
+    ref,
+  ) {
     return (
-      <Field label={label} error={error} hint={hint} id={id}>
+      <Field
+        label={label}
+        error={error}
+        hint={hint}
+        id={id}
+        describedBy={describedBy}
+      >
         {(a) => (
           <input
             ref={ref}

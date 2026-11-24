@@ -38,4 +38,16 @@ describe("Input", () => {
     );
     expect(cls).not.toContain("glass-item");
   });
+
+  it("merges caller aria-describedby with the field message id", () => {
+    render(
+      <>
+        <p id="extra">Extra help</p>
+        <Input label="Name" error="Bad" aria-describedby="extra" />
+      </>,
+    );
+    expect(screen.getByLabelText("Name")).toHaveAccessibleDescription(
+      "Bad Extra help",
+    );
+  });
 });

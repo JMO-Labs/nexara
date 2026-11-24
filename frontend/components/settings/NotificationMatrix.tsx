@@ -4,7 +4,7 @@
  * @brief Per-type channel/cadence matrix built from the type registry.
  */
 import { useTranslations } from "next-intl";
-import { Option, Select, Switch } from "@/components/ui";
+import { Option, Select, Switch, Tooltip } from "@/components/ui";
 import type {
   Channel,
   DigestCadence,
@@ -19,6 +19,8 @@ export interface NotificationMatrixProps {
   prefs: Pick<PreferencesPayload, "notification_prefs" | "digest_cadence">;
   onChannel: (type: string, channel: Channel, value: boolean) => void;
   onCadence: (type: string, cadence: DigestCadence) => void;
+  /** Channels shown but not toggleable, with the tooltip explaining why. */
+  disabledChannels?: Partial<Record<Channel, string>>;
 }
 
 /**
@@ -31,6 +33,7 @@ export function NotificationMatrix({
   prefs,
   onChannel,
   onCadence,
+  disabledChannels = {},
 }: NotificationMatrixProps) {
   const t = useTranslations("settings.notif");
   const tr = useTranslations();
@@ -57,18 +60,27 @@ export function NotificationMatrix({
                     prefs.notification_prefs[d.key]?.[ch] ??
                     d.default_channels[ch] ??
                     false;
-                  return (
+                  const hint = disabledChannels[ch];
+                  const row = (
                     <label
                       key={ch}
                       className="flex min-h-11 items-center gap-2 text-sm"
                     >
                       <Switch
                         aria-label={`${label} ${chLabel}`}
-                        checked={on}
+                        checked={hint ? false : on}
+                        disabled={!!hint}
                         onCheckedChange={(v) => onChannel(d.key, ch, v)}
                       />
                       {chLabel}
                     </label>
+                  );
+                  return hint ? (
+                    <Tooltip key={ch} content={hint}>
+                      {row}
+                    </Tooltip>
+                  ) : (
+                    row
                   );
                 })}
                 {d.digestable && (

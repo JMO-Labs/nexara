@@ -117,6 +117,7 @@ def _run_task(ok: bool, enabled: bool = True) -> tuple[AsyncMock, MagicMock]:
     row.apprise_url = "discord://a/b"
     repo.get.return_value = row
     repo.record_failure.return_value = 1
+    repo.allow_local.return_value = False
     apobj = MagicMock()
     apobj.notify.return_value = ok
     return repo, apobj
@@ -126,10 +127,10 @@ async def test_deliver_success_records_success() -> None:
     from app.tasks.notification_tasks import _apprise_deliver_async
 
     repo, apobj = _run_task(True)
-    with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
+    with patch(f"{TASKS}.build_apprise", return_value=apobj):
         out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
     assert out == "sent"
-    apobj.add.assert_called_once_with("discord://a/b")
+    assert apobj.notify.called
     repo.record_success.assert_awaited_once()
 
 
@@ -137,7 +138,7 @@ async def test_deliver_failure_increments_and_does_not_retry() -> None:
     from app.tasks.notification_tasks import _apprise_deliver_async
 
     repo, apobj = _run_task(False)
-    with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
+    with patch(f"{TASKS}.build_apprise", return_value=apobj):
         out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
     assert out == "failed"
     repo.record_failure.assert_awaited_once()
@@ -149,7 +150,7 @@ async def test_deliver_transient_raises_for_retry() -> None:
     repo, apobj = _run_task(False)
     apobj.notify.side_effect = TimeoutError("slow")
     with (
-        patch(f"{TASKS}.apprise.Apprise", return_value=apobj),
+        patch(f"{TASKS}.build_apprise", return_value=apobj),
         pytest.raises(TransientDeliveryError),
     ):
         await _apprise_deliver_async(repo, uuid4(), "T", "B")
@@ -160,7 +161,7 @@ async def test_deliver_disabled_row_skipped() -> None:
     from app.tasks.notification_tasks import _apprise_deliver_async
 
     repo, apobj = _run_task(True, enabled=False)
-    with patch(f"{TASKS}.apprise.Apprise", return_value=apobj):
+    with patch(f"{TASKS}.build_apprise", return_value=apobj):
         out = await _apprise_deliver_async(repo, uuid4(), "T", "B")
     assert out == "skipped"
     apobj.notify.assert_not_called()
@@ -253,3 +254,13 @@ def test_task_success_returns_status() -> None:
     with patch(f"{TASKS}._apprise_deliver_run", new=AsyncMock(return_value="sent")):
         out = apprise_deliver.run(str(uuid4()), str(uuid4()), "T", "B")
     assert out == {"status": "sent"}
+
+
+async def test_member_send_builds_no_redirect_sender() -> None:
+    from app.tasks.notification_tasks import _apprise_deliver_async
+
+    repo, apobj = _run_task(True)
+    repo.get.return_value.is_admin_target = False
+    with patch(f"{TASKS}.build_apprise", return_value=apobj) as b:
+        await _apprise_deliver_async(repo, uuid4(), "T", "B")
+    assert b.call_args.kwargs == {"allow_local": False}

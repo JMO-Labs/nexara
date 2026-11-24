@@ -63,6 +63,10 @@ class Community(Base):
     # Name the receiving server uses in Authentication-Results (e.g. mx.google.com).
     inbound_authserv_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     # SMTP (overrides env SMTP_*); password / google_refresh are Fernet-encrypted.
+    # Members may add Apprise URLs that resolve to private/loopback addresses.
+    apprise_allow_local: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
     smtp_host: Mapped[str | None] = mapped_column(Text, nullable=True)
     smtp_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
     smtp_security: Mapped[str | None] = mapped_column(Text, nullable=True)

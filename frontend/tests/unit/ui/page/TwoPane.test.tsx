@@ -27,4 +27,10 @@ describe("TwoPane", () => {
       .closest("[data-slot='two-pane']") as HTMLElement;
     expect(grid.style.getPropertyValue("--aside-w")).toBe("300px");
   });
+  it("offsets the sticky aside below the top bar", () => {
+    render(<TwoPane aside={<nav>side</nav>}>main</TwoPane>);
+    expect(screen.getByText("side").closest("aside")?.className).toContain(
+      "md:top-20",
+    );
+  });
 });

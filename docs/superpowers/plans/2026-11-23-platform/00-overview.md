@@ -64,6 +64,10 @@ Each branch starts from the previous one. Each PR ends with a polish task: full 
 | 0073_monitoring | 6.1 | 0072_push_devices |
 | 0074_onboarding_age | 7.1 | 0073_monitoring |
 | 0075_countdowns | 8.1 | 0074_onboarding_age |
+| 0076_plugins | 9.3 | 0075_countdowns |
+| 0077_sassybot_extract | 11.6 | 0076_plugins |
+
+PRs 10 and 12 add no migration (0076 creates every spec §6.1 table up front).
 
 ## Global Constraints
 

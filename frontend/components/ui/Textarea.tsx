@@ -16,9 +16,26 @@ export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> &
  * @return labelled textarea
  */
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  function Textarea({ label, error, hint, className, id, ...rest }, ref) {
+  function Textarea(
+    {
+      label,
+      error,
+      hint,
+      className,
+      id,
+      "aria-describedby": describedBy,
+      ...rest
+    },
+    ref,
+  ) {
     return (
-      <Field label={label} error={error} hint={hint} id={id}>
+      <Field
+        label={label}
+        error={error}
+        hint={hint}
+        id={id}
+        describedBy={describedBy}
+      >
         {(a) => (
           <textarea
             ref={ref}

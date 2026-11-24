@@ -6,36 +6,30 @@ import { apiGet, apiPost, apiPatch, apiDelete, seg } from "./client";
 
 export interface AppriseUrl {
   id: string;
-  label: string;
-  service: string | null;
+  label: string | null;
   enabled: boolean;
+  scheme: string;
+  failure_count: number;
+  last_failure_at: string | null;
+  created_at: string;
 }
 
 export interface AppriseCreate {
-  url: string;
-  label: string;
-  enabled: boolean;
+  apprise_url: string;
+  label?: string;
 }
 
-export type AppriseUpdate = Partial<AppriseCreate>;
+export interface AppriseUpdate {
+  label?: string;
+  enabled?: boolean;
+}
 
 export interface AppriseTestResult {
   status: string;
   message: string;
 }
 
-const BASE = "/api/v1/apprise/urls";
-const SCHEME = /^([a-z][a-z0-9+.-]*):\/\/\S+$/i;
-
-/**
- * @brief Extract the Apprise service from a URL scheme.
- * @param url raw Apprise URL
- * @return lowercase scheme, or null when the URL is malformed
- */
-export function serviceFromUrl(url: string): string | null {
-  const m = SCHEME.exec(url.trim());
-  return m ? m[1].toLowerCase() : null;
-}
+const BASE = "/api/v1/notifications/apprise";
 
 export const listAppriseUrls = () => apiGet<AppriseUrl[]>(BASE);
 export const createAppriseUrl = (b: AppriseCreate) =>

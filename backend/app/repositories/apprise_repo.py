@@ -8,11 +8,12 @@ import asyncio
 import uuid
 from datetime import UTC, datetime
 
-import apprise
-from sqlalchemy import select
+from sqlalchemy import Select, select
 
 from app.models.apprise_url import AppriseURL
+from app.models.community import Community
 from app.repositories.base import BaseRepository
+from app.services.notifications.apprise_guard import build_apprise
 from app.services.notifications.secrets import decrypt_url, encrypt_url
 
 AUTO_DISABLE_THRESHOLD = 10
@@ -25,7 +26,12 @@ class AppriseRepository(BaseRepository[AppriseURL]):
 
     # create() takes extra domain args, narrower than base
     async def create(  # type: ignore[override]
-        self, community_id: uuid.UUID, user_id: uuid.UUID, url: str, label: str | None = None
+        self,
+        community_id: uuid.UUID,
+        user_id: uuid.UUID | None,
+        url: str,
+        label: str | None = None,
+        is_admin_target: bool = False,
     ) -> AppriseURL:
         """@brief Store a new URL encrypted.
 
@@ -36,6 +42,7 @@ class AppriseRepository(BaseRepository[AppriseURL]):
             user_id=user_id,
             apprise_url=encrypt_url(url),
             label=label,
+            is_admin_target=is_admin_target,
         )
         self._session.add(row)
         await self._session.flush()
@@ -52,7 +59,23 @@ class AppriseRepository(BaseRepository[AppriseURL]):
         stmt = select(AppriseURL).where(
             AppriseURL.user_id == user_id,
             AppriseURL.community_id == community_id,
+            AppriseURL.is_admin_target.is_(False),
         )
+        return await self._decrypted(stmt, enabled_only)
+
+    async def list_admin_targets(
+        self, community_id: uuid.UUID, *, enabled_only: bool = True
+    ) -> list[AppriseURL]:
+        """@brief Community-level admin alert targets, ``apprise_url`` decrypted (detached)."""
+        stmt = select(AppriseURL).where(
+            AppriseURL.community_id == community_id,
+            AppriseURL.is_admin_target.is_(True),
+        )
+        return await self._decrypted(stmt, enabled_only)
+
+    async def _decrypted(
+        self, stmt: Select[tuple[AppriseURL]], enabled_only: bool
+    ) -> list[AppriseURL]:
         if enabled_only:
             stmt = stmt.where(AppriseURL.enabled.is_(True))
         rows = list((await self._session.execute(stmt)).scalars().all())
@@ -61,6 +84,18 @@ class AppriseRepository(BaseRepository[AppriseURL]):
             self._session.expunge(r)
             r.apprise_url = plain
         return rows
+
+    async def allow_local(self, community_id: uuid.UUID) -> bool:
+        """@brief Whether members may target private/local hosts."""
+        c = await self._session.get(Community, community_id)
+        return bool(c and c.apprise_allow_local)
+
+    async def set_allow_local(self, community_id: uuid.UUID, value: bool) -> None:
+        """@brief Persist the community's local-network opt-in."""
+        c = await self._session.get(Community, community_id)
+        if c is not None:
+            c.apprise_allow_local = value
+            await self._session.flush()
 
     async def get(self, url_id: uuid.UUID) -> AppriseURL | None:
         """@brief Fetch one row with ``apprise_url`` decrypted (detached)."""
@@ -126,8 +161,9 @@ class AppriseRepository(BaseRepository[AppriseURL]):
         if row is None:
             return False, "URL not found"
         try:
-            apobj = apprise.Apprise()
-            if not apobj.add(row.apprise_url):
+            allow = row.is_admin_target or await self.allow_local(row.community_id)
+            apobj = build_apprise(row.apprise_url, allow_local=allow)
+            if len(apobj) != 1:
                 return False, "Invalid Apprise URL"
             ok = await asyncio.to_thread(apobj.notify, body=body, title=title)
         except Exception as exc:

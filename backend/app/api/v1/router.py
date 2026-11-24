@@ -11,6 +11,7 @@ from fastapi import APIRouter
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_ai import router as admin_ai_router
+from app.api.v1.admin_apprise import router as admin_apprise_router
 from app.api.v1.admin_email import callback_router as admin_email_callback_router
 from app.api.v1.admin_email import router as admin_email_router
 from app.api.v1.admin_email_reply import router as admin_email_reply_router
@@ -90,6 +91,7 @@ api_v1_router.include_router(admin_storage_router)
 api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
+api_v1_router.include_router(admin_apprise_router)
 api_v1_router.include_router(admin_email_router)
 api_v1_router.include_router(admin_email_callback_router)
 api_v1_router.include_router(admin_email_reply_router)

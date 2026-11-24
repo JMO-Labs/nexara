@@ -151,12 +151,15 @@ async def test_burst_logged_once_per_window(repo, notifier):
     with (
         patch.object(signin_log, "get_pool", return_value=redis),
         patch.object(signin_log, "logger") as log,
+        patch.object(signin_log, "admin_alert", AsyncMock()) as alert,
     ):
         for _ in range(2):
             await _rec(repo, notifier, success=False, reason="bad_password")
     redis.set.assert_awaited_with("signin:burst:203.0.113.5", "1", nx=True, ex=600)
     events = [c.args[0] for c in log.warning.call_args_list]
     assert events.count("security.signin_burst") == 1
+    alert.assert_awaited_once()
+    assert alert.await_args.args[2:] == ("signin_burst", {"ip": "203.0.113.5"})
 
 
 async def test_below_threshold_no_burst(repo, notifier):
