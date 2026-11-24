@@ -207,7 +207,8 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
         has_next = len(rows) > limit
         items = rows[:limit]
 
-        # Build response
+        # Build response; ``is_nsfw`` lets the UI blur NSFW photos for adults.
+        nsfw = await self._base_repo.nsfw_media_among({row.id for row in items})
         items_data = []
         for row in items:
             items_data.append(
@@ -226,6 +227,7 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
                         "alt_text": row.alt_text,
                         "status": row.status,
                         "created_at": row.created_at.isoformat(),
+                        "is_nsfw": row.id in nsfw,
                     },
                     "source": row.source,
                     "source_id": str(row.source_id),

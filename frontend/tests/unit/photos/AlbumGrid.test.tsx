@@ -143,3 +143,22 @@ describe("AlbumGrid", () => {
     );
   });
 });
+
+vi.mock("@/hooks/useSettings", async (orig) => ({
+  ...(await orig<object>()),
+  useUserSettings: () => ({ data: { always_show_nsfw: false } }),
+}));
+
+describe("AlbumGrid NSFW cover", () => {
+  it("covers a safe album whose cover photo is NSFW", () => {
+    render(
+      <AlbumGrid
+        items={[{ ...g("1"), cover_is_nsfw: true }, g("2")]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(
+      screen.getAllByRole("button", { name: "Show NSFW content" }),
+    ).toHaveLength(1);
+  });
+});

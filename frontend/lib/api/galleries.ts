@@ -21,6 +21,8 @@ export interface Gallery {
   is_nsfw?: boolean;
   /** Moderator-locked: owner cannot clear NSFW. */
   nsfw_locked?: boolean;
+  /** Adults only: the cover photo is NSFW (blur it). */
+  cover_is_nsfw?: boolean;
   created_at: string;
   updated_at: string;
 }

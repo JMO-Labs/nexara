@@ -96,7 +96,7 @@ export function AlbumGrid({
             )}
           >
             <NsfwCover
-              nsfw={g.is_nsfw}
+              nsfw={g.is_nsfw || g.cover_is_nsfw}
               itemId={`gallery:${g.id}`}
               className="rounded-[28px]"
             >

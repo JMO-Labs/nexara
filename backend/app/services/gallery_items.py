@@ -86,7 +86,11 @@ class GalleryItemsMixin(GalleryServiceBase):
         rows, _next = await self._repo.list_items(
             gallery_id, limit=limit, cursor=cursor, viewer_id=user_id
         )
-        return [GalleryItemResponse.model_validate(r) for r in rows]
+        out = [GalleryItemResponse.model_validate(r) for r in rows]
+        nsfw = await self._repo.nsfw_media_among({o.media_id for o in out})
+        for o in out:
+            o.is_nsfw = o.media_id in nsfw
+        return out
 
     async def add_item(
         self, gallery_id: uuid.UUID, user_id: uuid.UUID, data: GalleryItemCreate

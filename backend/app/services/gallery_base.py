@@ -62,13 +62,21 @@ class GalleryServiceBase:
             await require_owner_may_flag(self._repo, self._community_id, user_id, True)
 
     async def _out(self, rows: list[Gallery], viewer_id: uuid.UUID) -> list[GalleryResponse]:
-        """@brief Responses; a non-adult never gets an NSFW photo as album cover."""
+        """
+        @brief Responses; an NSFW cover is marked ``cover_is_nsfw`` for adults and
+               dropped for non-adults.
+        """
         out = [GalleryResponse.model_validate(r) for r in rows]
         covers = {o.cover_media_id for o in out if o.cover_media_id is not None}
-        if covers and not await self._repo.viewer_adult(viewer_id):
-            hidden = await self._repo.nsfw_media_among(covers)
-            for o in out:
-                if o.cover_media_id in hidden:
+        nsfw = await self._repo.nsfw_media_among(covers) if covers else set()
+        if not nsfw:
+            return out
+        adult = await self._repo.viewer_adult(viewer_id)
+        for o in out:
+            if o.cover_media_id in nsfw:
+                if adult:
+                    o.cover_is_nsfw = True
+                else:
                     o.cover_media_id = None
         return out
 

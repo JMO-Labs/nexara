@@ -62,7 +62,7 @@ export function MemberGalleriesTab({ userId }: MemberGalleriesTabProps) {
       {items.map((g) => (
         <li key={g.id}>
           <NsfwCover
-            nsfw={g.is_nsfw}
+            nsfw={g.is_nsfw || g.cover_is_nsfw}
             itemId={`gallery:${g.id}`}
             className="rounded-[24px]"
           >

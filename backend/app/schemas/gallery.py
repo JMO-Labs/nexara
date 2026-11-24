@@ -71,6 +71,7 @@ class GalleryItemResponse(BaseModel):
     caption: str | None
     position: int
     created_at: datetime
+    is_nsfw: bool = False  # photo is NSFW (own flag, NSFW post or album)
 
     model_config = {"from_attributes": True}
 
@@ -93,6 +94,7 @@ class GalleryResponse(BaseModel):
     is_nsfw: bool = False
     nsfw_locked: bool = False
     nsfw_lock_level: str | None = None
+    cover_is_nsfw: bool = False  # adults only; non-adults get no NSFW cover
 
     @field_validator("nsfw_lock_level", mode="before")
     @classmethod
