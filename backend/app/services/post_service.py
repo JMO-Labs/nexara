@@ -221,14 +221,15 @@ class PostService(CommentsMixin, ReactionsMixin):
         is_nsfw: bool | None = None,
     ) -> dict[str, Any]:
         """@brief Update post content and optionally the NSFW flag (author only).
-        @raises NotFoundError If post does not exist.
+        @raises NotFoundError If post does not exist or is NSFW for a non-adult
+                (author included, as on every read path).
         @raises AuthorizationError If user is not the author.
         """
         post = await self._post_repo.get_by_id(
             post_id,
             community_id=self._community_id,
         )
-        if not post:
+        if not post or await self._post_repo.nsfw_hidden(user.id, post_id=post_id):
             raise NotFoundError(_("Post not found"))
         if post.author_id != user.id:
             raise AuthorizationError(_("You can only edit your own posts"))

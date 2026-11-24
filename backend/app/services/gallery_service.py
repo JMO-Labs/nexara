@@ -84,7 +84,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="create", user_id=user_id
         )
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def get_or_create_for_event(
         self, event_id: uuid.UUID, *, viewer_id: uuid.UUID
@@ -152,7 +152,8 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         self, gallery_id: uuid.UUID, user_id: uuid.UUID, data: GalleryUpdate
     ) -> GalleryResponse:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
-        if gallery is None:
+        # NSFW albums are adults-only, owner included (same as every read path).
+        if gallery is None or not await self._nsfw_ok(gallery, user_id):
             raise NotFoundError(_("Gallery not found"))
         if gallery.owner_id != user_id:
             raise AuthorizationError(_("Only the gallery owner can edit this gallery"))
@@ -166,7 +167,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         await invalidate_search_cache_for_community(
             self._community_id, service="gallery", action="update", user_id=user_id
         )
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def delete_gallery(self, gallery_id: uuid.UUID, user_id: uuid.UUID) -> None:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)

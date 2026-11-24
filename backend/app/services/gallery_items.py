@@ -34,7 +34,7 @@ class GalleryItemsMixin(GalleryServiceBase):
         """@brief Get-or-create the default "All Photos" gallery for a user."""
         existing = await self._repo.get_default_for_user(self._community_id, user_id)
         if existing is not None:
-            return GalleryResponse.model_validate(existing)
+            return (await self._out([existing], user_id))[0]
 
         gallery = Gallery(
             community_id=self._community_id,

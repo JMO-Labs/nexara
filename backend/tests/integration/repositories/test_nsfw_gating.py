@@ -133,7 +133,7 @@ class TestPostDetailAndComments:
     async def test_teen_author_cannot_unflag(self, session) -> None:
         kid = await teen(session)
         p = await make_post(session, kid, nsfw=True)
-        with pytest.raises(AuthorizationError):
+        with pytest.raises(NotFoundError):  # hidden from them: 404, like reads
             await _svc(session).update_post(p.id, kid, "x", is_nsfw=False)
 
 
