@@ -30,9 +30,19 @@ function initial(
     const v = k in values ? values[k] : f.default;
     if (f.type === "secret") out[k] = "";
     else if (f.type === "boolean") out[k] = v === true;
-    else
-      out[k] = v ?? (f.type === "number" ? "" : f.type === "select" ? "" : "");
+    else out[k] = v ?? "";
   }
+  return out;
+}
+
+/** @brief Same draft with every secret field blanked. */
+function clearSecrets(
+  fields: Record<string, FieldSpec>,
+  draft: Record<string, unknown>,
+) {
+  const out = { ...draft };
+  for (const [k, f] of Object.entries(fields))
+    if (f.type === "secret") out[k] = "";
   return out;
 }
 
@@ -50,6 +60,12 @@ export function ManifestFieldsForm({
 }: ManifestFieldsFormProps) {
   const uid = useId();
   const [draft, setDraft] = useState(() => initial(fields, values));
+  // Fresh values (refetch after a save) mean typed secrets were stored: drop them.
+  const [seen, setSeen] = useState(values);
+  if (seen !== values) {
+    setSeen(values);
+    setDraft((d) => clearSecrets(fields, d));
+  }
   const set = (k: string, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
 
   const submit = (e: FormEvent) => {

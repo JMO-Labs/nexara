@@ -85,4 +85,16 @@ describe("ManifestFieldsForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSubmit).toHaveBeenCalledWith({ count: 4, name: "hi", on: true });
   });
+
+  it("clears a typed secret once saved values come back", () => {
+    const props = { fields: { key: fields.key }, onSubmit: vi.fn() };
+    const { rerender } = render(
+      <ManifestFieldsForm {...props} values={{ key: { set: false } }} />,
+    );
+    const input = screen.getByLabelText("API key");
+    fireEvent.change(input, { target: { value: "s3cret" } });
+    expect(input).toHaveValue("s3cret");
+    rerender(<ManifestFieldsForm {...props} values={{ key: { set: true } }} />);
+    expect(screen.getByLabelText("API key")).toHaveValue("");
+  });
 });
