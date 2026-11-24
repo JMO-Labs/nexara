@@ -8,6 +8,9 @@ data:
   LOCAL_STORAGE_PATH: "/data/media"
   S3_ENDPOINT_URL: {{ .Values.storage.s3.endpointUrl | quote }}
   S3_BUCKET: {{ .Values.storage.s3.bucket | quote }}
+  {{- if .Values.pluginHost.enabled }}
+  PLUGIN_HOST_URL: "http://{{ include "nexara.fullname" . }}-plugin-host:{{ .Values.pluginHost.port }}"
+  {{- end }}
   {{- range $k, $v := .Values.env }}
   {{ $k }}: {{ $v | quote }}
   {{- end }}

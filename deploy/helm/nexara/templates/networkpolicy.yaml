@@ -22,6 +22,12 @@
   {{- range .Values.networkPolicy.externalEgressPorts }}
     - {port: {{ . }}}
   {{- end }}
+{{- if .Values.pluginHost.enabled }}
+- to:
+    - podSelector:
+        matchLabels: {{- include "nexara.selector" (dict "root" . "component" "plugin-host") | nindent 10 }}
+  ports: [{port: {{ .Values.pluginHost.port }}}]
+{{- end }}
 {{- end }}
 {{- if .Values.networkPolicy.enabled }}
 {{- $np := .Values.networkPolicy }}
@@ -43,6 +49,12 @@ spec:
       {{- with $np.apiIngressFrom }}
       from: {{- toYaml . | nindent 8 }}
       {{- end }}
+    {{- if $.Values.pluginHost.enabled }}
+    - from:
+        - podSelector:
+            matchLabels: {{- include "nexara.selector" (dict "root" $ "component" "plugin-host") | nindent 14 }}
+      ports: [{port: {{ $.Values.api.port }}}]
+    {{- end }}
   {{- end }}
   egress: {{- include "nexara.egress" $ | indent 4 }}
 {{- end }}
@@ -67,4 +79,39 @@ spec:
       ports: [{port: {{ $port }}}]
 {{- end }}
 {{- end }}
+{{- end }}
+{{- if .Values.pluginHost.enabled }}
+{{- /* Plugin host: only api/worker may call it; it may reach DNS, the API and
+       the internet, but not private ranges (Postgres/Valkey live there). */}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nexara.fullname" . }}-plugin-host
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "nexara.selector" (dict "root" . "component" "plugin-host") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        {{- range list "api" "worker" }}
+        - podSelector:
+            matchLabels: {{- include "nexara.selector" (dict "root" $ "component" .) | nindent 14 }}
+        {{- end }}
+      ports: [{port: {{ .Values.pluginHost.port }}}]
+  egress:
+    - ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+    - to:
+        - podSelector:
+            matchLabels: {{- include "nexara.selector" (dict "root" . "component" "api") | nindent 14 }}
+      ports: [{port: {{ .Values.api.port }}}]
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: {{- toYaml .Values.networkPolicy.privateCidrs | nindent 14 }}
+      ports:
+      {{- range .Values.pluginHost.egressPorts }}
+        - {port: {{ . }}}
+      {{- end }}
 {{- end }}

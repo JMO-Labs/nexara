@@ -24,6 +24,7 @@ port 8080), the Celery worker and Celery beat (command overrides).
 | `secrets` | `jwtSecret`, `existingSecret` | Generated randomly if empty. |
 | `env` | `COMMUNITY_DEFAULT`, `LOG_LEVEL`, ... | Free-form map rendered into a ConfigMap. |
 | `storage` | `backend` (`local`/`s3`), `local.size`, `s3.*` | |
+| `pluginHost` | `enabled` (false), `image.*`, `existingSecret`, `persistence.size`, `egressPorts`, `resources` | Optional sandboxed plugin runner on :8700; sets `PLUGIN_HOST_URL`/`PLUGIN_HOST_SECRET` on nexara pods. |
 
 Generated secrets are created on first install and reused on upgrade (via `lookup`,
 kept on uninstall). Set
@@ -32,6 +33,22 @@ Set them explicitly for production. Passwords are placed in the database URL
 unescaped, so avoid `@`, `/` and `:` in them. With `storage.backend=local`, use a
 StorageClass supporting `ReadWriteMany` (see `storage.local.accessModes`) when
 running replicas on multiple nodes.
+
+## Plugin host
+
+`pluginHost.enabled=true` deploys one replica (RWO `/data` PVC, `/tmp` emptyDir)
+running as root with seccomp and AppArmor `Unconfined` and caps
+`SETUID,SETGID,CHOWN,KILL` (bubblewrap needs user namespaces); `/proc` stays masked,
+the SA token is not mounted and the rootfs is read-only. The namespace must permit
+this (Pod Security `baseline`/`privileged`, not `restricted`). The memory limit is in
+`pluginHost.resources`; a pids limit is a kubelet setting (`--pod-max-pids`).
+`PLUGIN_HOST_SECRET` comes from `pluginHost.existingSecret` (key
+`plugin-host-secret`) or is generated once and kept.
+
+With `networkPolicy.enabled`, only api/worker reach the host, and the host may reach
+DNS, the API and the internet except `networkPolicy.privateCidrs`. That exclusion is
+what blocks Postgres/Valkey: add your pod/service CIDRs if they are outside the
+defaults, or the deny is incomplete. Requires a CNI that enforces NetworkPolicy.
 
 ## External database
 

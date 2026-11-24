@@ -134,6 +134,53 @@ networkPolicy:
   apiIngressFrom: []
   # Ports pods may reach outside the cluster (SMTP, HTTPS APIs, S3, push).
   externalEgressPorts: [443, 587, 465]
+  # Ranges the plugin host may NOT reach (cluster pod/service CIDRs, RFC1918).
+  # CAVEAT: in-cluster Postgres/Valkey live inside these ranges, so the exclusion
+  # is what denies host -> DB. Add your actual pod/service CIDRs if they are not
+  # covered (e.g. a public-range pod CIDR), or the deny is incomplete.
+  privateCidrs:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 100.64.0.0/10
+    - 169.254.0.0/16
+
+# -- Plugin host (optional): runs untrusted plugin code in bubblewrap sandboxes.
+# Needs seccomp/AppArmor Unconfined + SETUID/SETGID/CHOWN/KILL for user namespaces;
+# runs as root in-container with no DB creds, no SA token, read-only rootfs.
+# Enforce NetworkPolicies (networkPolicy.enabled) so it cannot reach Postgres/Valkey.
+# Cluster must allow Unconfined seccomp (PSA "privileged"/"baseline" namespace label;
+# "restricted" will reject the pod). pids limit is a kubelet setting (--pod-max-pids).
+pluginHost:
+  enabled: false
+  port: 8700
+  image:
+    repository: ghcr.io/jmo-labs/nexara-plugin-host
+    tag: ""            # defaults to Chart appVersion
+    pullPolicy: IfNotPresent
+  # Existing Secret with key "plugin-host-secret"; otherwise generated and kept.
+  existingSecret: ""
+  # Ports plugins may use to reach the internet.
+  egressPorts: [443, 80]
+  persistence:
+    size: 2Gi
+    storageClass: ""
+  tmpSize: 256Mi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  podSecurityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    seccompProfile: {type: Unconfined}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+      add: [SETUID, SETGID, CHOWN, KILL]
+    # k8s >= 1.30 field; the annotation in the template covers older clusters.
+    appArmorProfile: {type: Unconfined}
 
 # -- Pod/container security for worker/beat (data stores keep image defaults)
 securityContext:
