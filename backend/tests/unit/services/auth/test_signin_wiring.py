@@ -56,7 +56,7 @@ async def test_memorialized_login_recorded():
         patch(FACTORY, return_value=_own_session()),
         patch(REC, AsyncMock(return_value=object())) as rec,
         patch("app.services.auth_service.verify_password", return_value=True),
-        patch("app.services.auth_service.reject_memorialized", side_effect=err),
+        patch("app.services.auth.memorial_guard.reject_memorialized", side_effect=err),
         patch.object(svc, "_assert_password_auth_allowed", AsyncMock()),
         pytest.raises(AppError),
     ):

@@ -35,7 +35,7 @@ from app.services.auth import pending_link as _pending_link
 from app.services.auth import sso_only as _sso_only
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
-from app.services.auth.memorial_guard import reject_memorialized
+from app.services.auth.memorial_guard import assert_usable, reject_memorialized
 from app.services.auth.policy import factor_methods
 from app.services.auth.registration import register_user
 from app.services.auth.signin_log import log_failure, log_success
@@ -146,14 +146,7 @@ class AuthService:
         if not verify_password(password, user.password_hash):
             await fail(user, email, "password", "bad_password")
             raise AuthenticationError(message=_("Invalid email or password"))
-        try:
-            reject_memorialized(user)
-        except AppError:
-            await fail(user, email, "password", "memorialized")
-            raise
-        if not user.is_active:
-            await fail(user, email, "password", "inactive")
-            raise AuthenticationError(message=_("Account is deactivated"))
+        await assert_usable(user, partial(fail, user, email, "password"))
 
         if pending := await self._pending_2fa(user):
             return pending
@@ -198,6 +191,8 @@ class AuthService:
         if not user or not user.totp_enabled or not user.totp_secret:
             await fail(user, None, "totp", "bad_2fa_session")
             raise AuthenticationError(message=_("Invalid 2FA session"))
+        # Suspended / memorialised during the pending window: no tokens.
+        await assert_usable(user, partial(fail, user, user.email, "totp"))
 
         canonical = normalize_totp(code)
         secret = read_secret(user.totp_secret, self._settings, user.id)
