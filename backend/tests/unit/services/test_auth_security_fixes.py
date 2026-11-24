@@ -95,7 +95,9 @@ class Test2FALoginRateLimit:
             AsyncMock(side_effect=AuthenticationError(message="bad")),
         ):
             transport = ASGITransport(app=test_app)
-            async with AsyncClient(transport=transport, base_url="http://test") as c:
+            # Fresh bucket per run: the route limit is keyed by client IP in shared Valkey.
+            ip = {"X-Forwarded-For": f"198.19.{uuid.uuid4().int % 256}.{uuid.uuid4().int % 256}"}
+            async with AsyncClient(transport=transport, base_url="http://test", headers=ip) as c:
                 codes = []
                 for _ in range(11):
                     r = await c.post(

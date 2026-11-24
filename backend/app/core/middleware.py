@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings
 
 logger = structlog.get_logger(__name__)
@@ -66,7 +67,7 @@ class StructuredLoggingMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
             status=response.status_code,
             duration_ms=duration_ms,
-            client_ip=request.client.host if request.client else None,
+            client_ip=client_ip(request),
         )
         return response
 

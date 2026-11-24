@@ -73,7 +73,10 @@ async def client(test_app, factory):
     test_app.dependency_overrides[get_db] = _db
     valkey._pools.clear()  # pools are bound to the loop that created them
     with patch("app.services.auth.signin_log.async_session_factory", factory):
-        async with AsyncClient(transport=ASGITransport(app=test_app), base_url=ORIGIN) as c:
+        # Route limits live in shared Valkey keyed by client IP: use a private bucket.
+        ip = {"X-Forwarded-For": f"198.18.{secrets.randbelow(256)}.{secrets.randbelow(256)}"}
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url=ORIGIN, headers=ip) as c:
             yield c
     test_app.dependency_overrides.clear()
     await close_pools()

@@ -101,3 +101,16 @@ class TestCloudflareRealIPMiddleware:
         client = TestClient(test_app)
         resp = client.get("/ip", headers={"CF-Connecting-IP": "1.2.3.4"})
         assert resp.json()["ip"] != "1.2.3.4"
+
+
+def test_request_log_uses_real_client_ip(_base_app):
+    from unittest.mock import patch
+
+    from starlette.testclient import TestClient
+
+    from app.core.middleware import StructuredLoggingMiddleware
+
+    _base_app.add_middleware(StructuredLoggingMiddleware)
+    with patch("app.core.middleware.logger") as log:
+        TestClient(_base_app).get("/echo", headers={"X-Forwarded-For": "198.51.100.5"})
+    assert log.info.call_args.kwargs["client_ip"] == "198.51.100.5"

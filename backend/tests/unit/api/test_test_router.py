@@ -37,10 +37,11 @@ async def test_mounted_in_test_env_and_notifies(test_app):
     from contextlib import asynccontextmanager
 
     from slowapi import Limiter
-    from slowapi.util import get_remote_address
+
+    from app.core.rate_limit import rate_limit_key
 
     memory_limiter = Limiter(
-        key_func=get_remote_address,
+        key_func=rate_limit_key,
         default_limits=["1000/minute"],
         storage_uri="memory://",
         strategy="fixed-window",
