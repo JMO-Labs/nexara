@@ -8,7 +8,7 @@ Secrets are Fernet tokens at rest; plaintext only exists transiently here.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -28,6 +28,7 @@ from app.core.security import (
 from app.models.user import User
 from app.repositories.two_factor_repo import TwoFactorRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth.policy import GRACE, covers
 from app.services.auth.totp_replay import (
     claim_totp_code,
     clear_user_attempts,
@@ -37,9 +38,6 @@ from app.services.auth.totp_replay import (
 )
 
 logger = structlog.get_logger(__name__)
-
-GRACE = timedelta(days=7)
-"""@brief Time members get to enrol after an admin turns the policy on."""
 
 
 def seal_secret(secret: str, settings: Settings) -> str:
@@ -214,7 +212,7 @@ class TwoFactorService:
         u = self._user
         passkeys = await self._repo.count_passkeys(u.id, u.community_id)
         policy = await self._repo.get_policy(u.community_id)
-        applies = policy == "everyone" or (policy == "admins" and u.role == "admin")
+        applies = covers(policy, u)
         since: datetime | None = u.two_factor_required_since
         return {
             "totp": bool(u.totp_enabled),

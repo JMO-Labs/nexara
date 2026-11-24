@@ -10,23 +10,36 @@ enforce enrolment from the token alone (no extra query per request).
 from __future__ import annotations
 
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from app.core.exceptions import AppError
 from app.core.i18n import _
 from app.repositories.passkey_repo import PasskeyRepository
 from app.repositories.two_factor_repo import TwoFactorRepository
-from app.services.auth.two_factor import GRACE
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from app.models.user import User
 
+GRACE = timedelta(days=7)
+"""@brief Time members get to enrol after the policy starts covering them."""
+
 SETUP_PREFIXES = ("/api/v1/auth/2fa/", "/api/v1/auth/passkeys/register/")
 """@brief Routes still reachable once the grace period has ended without a factor."""
 SETUP_PATHS = frozenset({"/api/v1/users/me", "/api/v1/auth/logout"})
+
+
+def covers(policy: str, user: User) -> bool:
+    """
+    @brief Whether the community ``require_2fa`` policy applies to this user.
+
+    SSO-only users (no password) are never covered: their IdP owns MFA.
+    """
+    if user.password_hash is None:
+        return False
+    return policy == "everyone" or (policy == "admins" and user.role == "admin")
 
 
 async def factor_methods(session: AsyncSession, user: User) -> list[str]:
@@ -61,10 +74,10 @@ async def setup_claims(session: AsyncSession, user: User) -> dict[str, Any]:
     if user.password_hash is None:
         return {}
     policy = await TwoFactorRepository(session).get_policy(user.community_id)
-    covered = policy == "everyone" or (policy == "admins" and user.role == "admin")
-    if not covered or await second_factor_needed(session, user):
+    if not covers(policy, user) or await second_factor_needed(session, user):
         return {}
     if user.two_factor_required_since is None:
+        # Persisted by the request's commit: first token after becoming covered starts the clock.
         user.two_factor_required_since = datetime.now(UTC)
     deadline = user.two_factor_required_since + GRACE
     return {"twofa_setup_required": True, "grace_until": int(deadline.timestamp())}

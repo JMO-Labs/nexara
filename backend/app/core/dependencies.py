@@ -203,6 +203,7 @@ async def get_current_user_sse(
 
 
 async def get_optional_user(
+    request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
@@ -216,6 +217,7 @@ async def get_optional_user(
     @param db Async database session.
     @param settings Application settings.
     @return The authenticated :class:`User` instance, or None if unauthenticated.
+    @raises AppError 403 ``2fa_setup_required`` for a valid token past its 2FA grace period.
     """
     if token is None:
         return None
@@ -227,6 +229,7 @@ async def get_optional_user(
         user_id = UUID(payload["sub"])
     except (ValueError, KeyError, TypeError):
         return None
+    _enforce_2fa_setup(payload, request)
 
     result = await db.execute(select(User).where(User.id == user_id, User.deleted_at.is_(None)))
     return result.scalar_one_or_none()

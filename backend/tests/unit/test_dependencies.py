@@ -144,14 +144,16 @@ class TestGetOptionalUser:
     async def test_returns_none_without_token(self):
         db = AsyncMock()
         settings = _make_settings()
-        result = await get_optional_user(token=None, db=db, settings=settings)
+        result = await get_optional_user(request=MagicMock(), token=None, db=db, settings=settings)
         assert result is None
 
     @pytest.mark.asyncio
     async def test_returns_none_on_invalid_token(self):
         db = AsyncMock()
         settings = _make_settings()
-        result = await get_optional_user(token="bad-token", db=db, settings=settings)
+        result = await get_optional_user(
+            request=MagicMock(), token="bad-token", db=db, settings=settings
+        )
         assert result is None
 
     @pytest.mark.asyncio
@@ -171,7 +173,7 @@ class TestGetOptionalUser:
         db = AsyncMock()
         db.execute.return_value = mock_result
 
-        result = await get_optional_user(token=token, db=db, settings=settings)
+        result = await get_optional_user(request=MagicMock(), token=token, db=db, settings=settings)
         assert result is not None
         assert result.id == user_id
 

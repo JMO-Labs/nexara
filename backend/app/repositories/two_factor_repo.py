@@ -8,8 +8,9 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, false, func, not_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.security import hash_token
 from app.models.auth import UserBackupCode
@@ -67,16 +68,27 @@ class TwoFactorRepository:
         return (await self._session.execute(stmt)).scalar_one_or_none() or "off"
 
     async def set_policy(self, community_id: uuid.UUID, policy: str) -> None:
-        """@brief Store the policy and start (or clear) every member's grace clock."""
+        """
+        @brief Store the policy; start grace clocks of newly covered members, clear the rest.
+
+        Covered = has a password and (``everyone``, or ``admins`` and role admin);
+        mirrors :func:`app.services.auth.policy.covers`. Existing clocks of members
+        who stay covered are kept.
+        """
         await self._session.execute(
             update(Community).where(Community.id == community_id).values(require_2fa=policy)
         )
         users = update(User).where(User.community_id == community_id)
-        if policy == "off":
-            await self._session.execute(users.values(two_factor_required_since=None))
-        else:
-            await self._session.execute(
-                users.where(User.two_factor_required_since.is_(None)).values(
-                    two_factor_required_since=datetime.now(UTC)
-                )
+        covered: ColumnElement[bool] = User.password_hash.is_not(None)
+        if policy == "admins":
+            covered = and_(covered, User.role == "admin")
+        elif policy != "everyone":
+            covered = false()
+        await self._session.execute(
+            users.where(not_(covered)).values(two_factor_required_since=None)
+        )
+        await self._session.execute(
+            users.where(covered, User.two_factor_required_since.is_(None)).values(
+                two_factor_required_since=datetime.now(UTC)
             )
+        )

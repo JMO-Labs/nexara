@@ -260,6 +260,11 @@ async def test_policy_everyone_day8_blocks_until_enrolled(client, factory):
     assert r.status_code == 403 and r.json()["error"]["code"] == "2fa_setup_required"
     assert (await client.get("/api/v1/auth/2fa/status", headers=h)).status_code == 200
     assert (await client.get("/api/v1/users/me", headers=h)).status_code == 200
+    media = await client.get(f"/api/v1/media/{uuid.uuid4()}/file", headers=h)
+    assert media.status_code == 403 and media.json()["error"]["code"] == "2fa_setup_required"
+    thumb = await client.get(f"/api/v1/media/{uuid.uuid4()}/thumbnail", headers=h)
+    assert thumb.status_code == 403
+    assert (await client.post("/api/v1/auth/logout", headers=h)).status_code == 200
     assert (await client.post("/api/v1/auth/passkeys/register/options", headers=h)).status_code == (
         200
     )

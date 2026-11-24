@@ -246,3 +246,15 @@ async def test_unreadable_secret_fails_closed_503_and_logs():
     assert e.value.status_code == 503 and e.value.code == "2fa_secret_unreadable"
     log.error.assert_called_once_with("2fa.secret_unreadable", user_id=str(svc._user.id))
     repo.replace_recovery_codes.assert_not_called()
+
+
+async def test_status_not_required_for_sso_only():
+    from datetime import UTC, datetime
+
+    since = datetime(2026, 1, 1, tzinfo=UTC)
+    svc, _, repo, _ = _svc(_user(password_hash=None, two_factor_required_since=since))
+    repo.count_passkeys.return_value = 0
+    repo.count_recovery_left.return_value = 0
+    repo.get_policy.return_value = "everyone"
+    st = await svc.status()
+    assert st["required"] is False and st["grace_until"] is None

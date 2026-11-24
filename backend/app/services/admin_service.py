@@ -23,6 +23,7 @@ from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.community_repo import CommunityRepository
 from app.repositories.settings_repo import SettingsRepository
+from app.repositories.two_factor_repo import TwoFactorRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.admin import (
     AdminSettingsResponse,
@@ -93,7 +94,13 @@ class AdminService:
         if not target:
             raise NotFoundError(message=_("User not found"))
         old_role = target.role
-        await self._user_repo.update(target, {"role": new_role})
+        fields: dict[str, Any] = {"role": new_role}
+        if (old_role == "admin") != (new_role == "admin"):
+            policy = await TwoFactorRepository(self._session).get_policy(self._community_id)
+            if policy == "admins":
+                # Coverage flips: drop any stale clock; the next token mint starts a fresh one.
+                fields["two_factor_required_since"] = None
+        await self._user_repo.update(target, fields)
         await self._audit_repo.append(
             actor_id=admin_user.id,
             action="admin.user.role_changed",
