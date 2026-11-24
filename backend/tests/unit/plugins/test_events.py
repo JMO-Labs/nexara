@@ -87,11 +87,11 @@ async def _run(
     post=None,
     comment=None,
     author=None,
-    audience=(BOT,),
+    visible=True,
+    blocked=False,
     pref=None,
     inst=None,
     bot_name="echo",
-    audience_fn=None,
 ):
     repo = MagicMock()
     repo.list_enabled_for_event = AsyncMock(
@@ -100,13 +100,13 @@ async def _run(
     repo.get_user_pref = AsyncMock(return_value=pref or {})
     repo.list_post_media = AsyncMock(return_value=[])
     repo.get_usernames = AsyncMock(return_value={BOT: bot_name})
+    posts = MagicMock(is_visible=AsyncMock(return_value=visible))
+    mod = MagicMock(is_blocked_either=AsyncMock(return_value=blocked))
     delay = MagicMock()
     with (
         patch("app.plugins.events.PluginRepository", return_value=repo),
-        patch(
-            "app.plugins.events.resolve_audience",
-            audience_fn or AsyncMock(return_value=list(audience)),
-        ),
+        patch("app.plugins.events.PostRepository", return_value=posts),
+        patch("app.plugins.events.ModerationRepository", return_value=mod),
         patch("app.tasks.plugin_tasks.deliver_plugin_event.delay", delay),
     ):
         await dispatch_plugin_event(
@@ -133,8 +133,8 @@ async def test_comment_created_has_comment_data():
     [
         {"author": _author(is_bot=True)},
         {"post": _post(visibility="private")},
-        {"post": _post(visibility="subgroup", subgroup_id=uuid.uuid4()), "audience": ()},
-        {"audience": ()},  # blocked author: resolve_audience drops the bot
+        {"post": _post(visibility="subgroup", subgroup_id=uuid.uuid4()), "visible": False},
+        {"visible": False},  # REST is_visible says no (blocks, hidden answer, ...)
         {"post": _post(is_nsfw=True)},
         {"inst": _inst(scopes=("comments:read",))},
     ],
@@ -174,21 +174,11 @@ async def test_mention_fires_for_real_suffixed_name():
 
 
 async def test_comment_author_block_excludes_bot():
-    commenter = uuid.uuid4()
+    assert await _run(comment=_comment(), blocked=True) == []
 
-    async def fn(session, cid, *, visibility, subgroup_id, author_id):
-        return [BOT] if author_id == AUTHOR_ID else []  # commenter blocked the bot
 
-    c = SimpleNamespace(
-        id=uuid.uuid4(),
-        content="hi",
-        parent_id=None,
-        created_at=datetime.now(UTC),
-        author_id=commenter,
-    )
-    a = SimpleNamespace(id=commenter, username="c", display_name="C", is_bot=False)
-    out = await _run(comment=c, author=a, audience_fn=fn)
-    assert out == []
+async def test_post_block_relation_irrelevant_without_comment():
+    assert len(await _run(blocked=True)) == 1
 
 
 async def test_comment_event_without_posts_read_hides_post_content():

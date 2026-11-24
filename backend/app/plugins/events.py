@@ -2,9 +2,10 @@
 @file events.py
 @brief Decide which plugins receive a post/comment/mention webhook and enqueue delivery.
 
-A plugin only ever gets content its bot account could see: community posts, or
-subgroup posts when the bot is a member. Private and NSFW posts, bot-authored
-content and authors who blocked (or are blocked by) the bot are never sent.
+A plugin only ever gets content its bot account could read over REST
+(``PostRepository.is_visible``: group membership, private, blocks, hidden
+answers, NSFW). Bot-authored content, NSFW media and comments whose author is
+in a block relation with the bot are never sent.
 """
 
 from __future__ import annotations
@@ -22,10 +23,11 @@ from sqlalchemy.orm import Session
 from app.models.post import Comment, Post
 from app.models.user import User
 from app.plugins.manifest import PluginManifest
+from app.repositories.moderation_repo import ModerationRepository
 from app.repositories.plugin_repo import PluginRepository
+from app.repositories.post_repo import PostRepository
 from app.services import mentions
 from app.services.plugin_settings import prefs_with_defaults
-from app.services.realtime.audience import resolve_audience
 
 logger = structlog.get_logger(__name__)
 
@@ -127,17 +129,20 @@ async def dispatch_plugin_event(
         logger.warning("plugin_dispatch_failed", post_id=str(post.id), exc_info=True)
 
 
-async def _audience(
-    session: AsyncSession, community_id: uuid.UUID, post: Post, author_id: uuid.UUID
-) -> set[uuid.UUID]:
-    return set(
-        await resolve_audience(
-            session,
-            community_id,
-            visibility=post.visibility,
-            subgroup_id=post.subgroup_id,
-            author_id=author_id,
-        )
+async def _bot_can_see(
+    session: AsyncSession,
+    community_id: uuid.UUID,
+    post: Post,
+    author: User,
+    comment: Comment | None,
+    bot_id: uuid.UUID,
+) -> bool:
+    """@brief Same rule as REST reads, plus no block between commenter and bot."""
+    if not await PostRepository(session).is_visible(post.id, bot_id, community_id):
+        return False
+    return not (
+        comment is not None
+        and await ModerationRepository(session).is_blocked_either(author.id, bot_id)
     )
 
 
@@ -150,14 +155,14 @@ async def _dispatch(
     parent_author_id: uuid.UUID | None,
 ) -> None:
     if author.is_bot or post.is_nsfw or post.visibility == "private":
-        return
+        return  # cheap early exits; _bot_can_see is the real gate
     from app.tasks.plugin_tasks import deliver_plugin_event
 
     kind = "comment" if comment else "post"
     content = comment.content if comment else post.content
     mentioned = {u.lower() for u in mentions.extract(content)}
     repo = PluginRepository(session)
-    audience: set[uuid.UUID] | None = None
+    seen: dict[uuid.UUID, bool] = {}
     post_data: dict[str, Any] | None = None
     for ev in (f"{kind}.created", "mention"):
         for inst, pc in await repo.list_enabled_for_event(community_id, ev):
@@ -173,11 +178,10 @@ async def _dispatch(
                 name = (await repo.get_usernames([pc.bot_user_id])).get(pc.bot_user_id, "")
                 if name.lower() not in mentioned:
                     continue
-            if audience is None:
-                audience = await _audience(session, community_id, post, post.author_id)
-                if comment and author.id != post.author_id:
-                    audience &= await _audience(session, community_id, post, author.id)
-            if pc.bot_user_id not in audience:
+            bot = pc.bot_user_id
+            if bot not in seen:
+                seen[bot] = await _bot_can_see(session, community_id, post, author, comment, bot)
+            if not seen[bot]:
                 continue
             can_post = "posts:read" in inst.granted_scopes
             if post_data is None:

@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from app.core.dependencies import get_current_user
 from app.models.media import Media
 from app.models.post import Post, PostMedia
+from app.models.prompt import Prompt, PromptPost
 from app.models.subgroup import Subgroup, SubgroupMember
 from app.models.user import User
 from app.plugins.events import dispatch_plugin_event
@@ -129,6 +131,38 @@ async def test_webhook_skips_nsfw_post(env):
     await _bot_client(env)
     p = await _post(env.s, env.u.member, is_nsfw=True)
     assert await _dispatch(env, p, env.u.member) == []
+
+
+# --- I2: webhook visibility == REST visibility ------------------------------------------
+
+
+async def test_unrevealed_daily_answer_not_pushed(env):
+    await _bot_client(env)
+    prompt = Prompt(
+        community_id=CID, title="Q", body="Q?", frequency_type="daily", created_by=env.u.owner.id,
+        prompt_type="daily_question", reveal_after_answer=True,
+    )  # fmt: skip
+    env.s.add(prompt)
+    await env.s.flush()
+    host = await _post(env.s, env.u.owner)
+    pp = PromptPost(
+        community_id=CID, prompt_id=prompt.id, post_id=host.id, fired_at=date.today(),
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )  # fmt: skip
+    env.s.add(pp)
+    await env.s.flush()
+    answer = await _post(env.s, env.u.member, reply_to_prompt_id=pp.id)
+    assert await _dispatch(env, answer, env.u.member) == []
+
+
+async def test_group_post_pushed_only_when_bot_is_member(env):
+    bot, _h = await _bot_client(env)
+    g = await _group(env.s, env.u.member)
+    p = await _post(env.s, env.u.member, subgroup_id=g.id, visibility="subgroup")
+    assert await _dispatch(env, p, env.u.member) == []
+    env.s.add(SubgroupMember(community_id=CID, subgroup_id=g.id, user_id=bot.id))
+    await env.s.flush()
+    assert len(await _dispatch(env, p, env.u.member)) == 1
 
 
 # --- I3: ?subgroup_id= never bypasses visibility ----------------------------------------
