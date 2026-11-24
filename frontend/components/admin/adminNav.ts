@@ -3,6 +3,7 @@
  * @brief Admin section registry: grouped nav items and active-id resolution.
  */
 import {
+  Activity,
   BarChart3,
   BellRing,
   Bot,
@@ -55,7 +56,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (16 tabs + 4 route links). */
+/** @brief Grouped admin sections (17 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -126,6 +127,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "System",
     items: [
+      tab("system", "System", "Health, disk and runtime.", Activity),
       route(
         "storage",
         "Storage",

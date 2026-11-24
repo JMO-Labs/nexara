@@ -18,6 +18,7 @@ import { AuditLogTab } from "./AuditLogTab";
 import { AdminSettingsTab } from "./AdminSettingsTab";
 import { ShoppingTab } from "./ShoppingTab";
 import { EmailTab } from "./EmailTab";
+import { SystemTab } from "./system/SystemTab";
 import { AlertsTab } from "./AlertsTab";
 import { EmailRepliesTab } from "./EmailRepliesTab";
 import { FeaturesTab } from "./FeaturesTab";
@@ -35,6 +36,7 @@ const SECTIONS: Record<string, () => React.JSX.Element | null> = {
   ai: AIConfigTab,
   shopping: ShoppingTab,
   email: EmailTab,
+  system: SystemTab,
   alerts: AlertsTab,
   "email-reply": EmailRepliesTab,
   features: FeaturesTab,
