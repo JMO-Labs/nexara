@@ -4,7 +4,8 @@
 
 Community admins: anything. Group owners/moderators (incl. inherited from a
 parent group): posts and albums in their group. Album owners use this endpoint
-too, but under owner rules (no lock; cannot clear a moderator lock).
+Authors, uploaders and album owners acting on their own content always get owner
+rules (no lock; cannot clear a moderator lock), even when they moderate the group.
 A non-admin moderator must be an adult to clear a flag (they must be able to
 see what they unflag). Every change is audited and busts the search cache.
 """
@@ -27,6 +28,7 @@ from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 from app.services.subgroups.helpers import effective_membership, is_admin
 
 _MOD_ROLES = {"moderator", "owner"}
+_OWNER_COL = {"posts": "author_id", "galleries": "owner_id", "media": "uploader_id"}
 
 
 class NsfwModerationService:
@@ -66,16 +68,18 @@ class NsfwModerationService:
         if entity is None:
             raise NotFoundError(_("Content not found"))
         admin = is_admin(actor)
+        if not admin and getattr(entity, _OWNER_COL[kind]) == actor.id:
+            # Own content: owner rules even for a group moderator (no lock, and a
+            # moderator/admin lock cannot be cleared).
+            await require_owner_may_flag(self._repo, self._cid, actor.id, value)
+            if apply_owner_flag(entity, value):
+                await self._session.flush()
+                await self._record(kind, entity_id, actor, value, locked=False)
+            return
         moderator = admin or (
             kind != "media" and await self._group_moderator(entity.subgroup_id, actor)
         )
         if not moderator:
-            if kind == "galleries" and entity.owner_id == actor.id:
-                await require_owner_may_flag(self._repo, self._cid, actor.id, value)
-                if apply_owner_flag(entity, value):
-                    await self._session.flush()
-                    await self._record(kind, entity_id, actor, value, locked=False)
-                return
             raise AuthorizationError(_("Only moderators can change the NSFW flag"))
         if not value and not admin and not await self._repo.viewer_adult(actor.id):
             raise AuthorizationError(_("Only adults can remove the NSFW flag"))

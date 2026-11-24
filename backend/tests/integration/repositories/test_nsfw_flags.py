@@ -29,6 +29,7 @@ from app.services.post_service import PostService
 from tests.integration.repositories.nsfw_fixtures import (
     CID,
     adult,
+    attach,
     make_album,
     make_media,
     make_post,
@@ -155,6 +156,7 @@ class TestAlbumsAndPhotos:
     async def test_uploader_flags_photo(self, session) -> None:
         me, other, kid = await adult(session), await adult(session), await teen(session)
         m = await make_media(session, me)
+        await attach(session, await make_post(session, me, nsfw=False), m)  # visible to others
         svc = self._media_svc(session)
         out = await media_nsfw.set_media_nsfw(svc, me, m.id, True)
         assert out.is_nsfw is True

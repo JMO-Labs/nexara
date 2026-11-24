@@ -208,6 +208,16 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         community = await self._session.get(Community, community_id)
         return community is None or is_enabled(community, key)
 
+    async def nsfw_media_among(self, media_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+        """@brief Which of these photos are NSFW (own flag, NSFW post or album)."""
+        from app.models.media import Media
+        from app.repositories.visibility_preds import media_is_nsfw
+
+        if not media_ids:
+            return set()
+        stmt = select(Media.id).where(Media.id.in_(media_ids), media_is_nsfw(Media.id))
+        return set((await self._session.execute(stmt)).scalars().all())
+
     async def nsfw_hidden(
         self,
         viewer_id: uuid.UUID | None,

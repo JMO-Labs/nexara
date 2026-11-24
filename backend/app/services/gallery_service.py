@@ -99,7 +99,9 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         # Check for existing gallery first
         existing = await self._repo.get_event_gallery(self._community_id, event_id)
         if existing is not None:
-            return GalleryResponse.model_validate(existing)
+            if not await self._nsfw_ok(existing, viewer_id):
+                raise NotFoundError(_("Gallery not found"))
+            return (await self._out([existing], viewer_id))[0]
 
         # Fetch the event to verify visibility and extract properties
         event = await self._session.get(Event, event_id)
@@ -144,7 +146,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             raise NotFoundError(_("Gallery not found"))
         if not await self._can_view(gallery, user_id):
             raise AuthorizationError(_("You cannot view this gallery"))
-        return GalleryResponse.model_validate(gallery)
+        return (await self._out([gallery], user_id))[0]
 
     async def update_gallery(
         self, gallery_id: uuid.UUID, user_id: uuid.UUID, data: GalleryUpdate
@@ -202,7 +204,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             if await self._can_view(gallery, viewer_id):
                 visible_rows.append(gallery)
         return GalleryList(
-            items=[GalleryResponse.model_validate(r) for r in visible_rows],
+            items=await self._out(visible_rows, viewer_id),
             next_cursor=None,
             has_more=False,
         )
@@ -233,7 +235,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             cursor=cursor,
         )
         return GalleryList(
-            items=[GalleryResponse.model_validate(r) for r in rows],
+            items=await self._out(rows, user_id),
             next_cursor=next_cursor,
             has_more=next_cursor is not None,
         )

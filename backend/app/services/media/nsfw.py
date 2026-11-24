@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
+from app.repositories.tag_repo import TagRepository
 from app.schemas.media import MediaResponse
 from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 
@@ -28,11 +29,16 @@ async def set_media_nsfw(
 ) -> MediaResponse:
     """
     @brief Uploader sets/clears the flag (cannot clear a moderator lock).
-    @throws NotFoundError missing / other community; AuthorizationError not the uploader.
+    @throws NotFoundError missing, other community, or not visible to the user
+            (NSFW for a non-adult included); AuthorizationError visible but not theirs.
     """
     repo = service._repo
     media = await repo.get(media_id)
     if media is None or media.community_id != service._community_id:
+        raise NotFoundError(_("Media not found"))
+    if media.uploader_id != user.id and not await TagRepository(repo.session).media_viewable(
+        media_id, user.id, service._community_id
+    ):
         raise NotFoundError(_("Media not found"))
     if media.uploader_id != user.id:
         raise AuthorizationError(_("Only the uploader can change this photo"))

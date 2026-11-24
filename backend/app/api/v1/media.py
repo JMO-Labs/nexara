@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,14 +110,20 @@ async def upload_part(
 @router.post("/upload/{upload_id}/complete", response_model=MultipartCompleteResponse)
 async def complete_multipart_upload(
     upload_id: str,
+    is_nsfw: bool = Query(False),
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MultipartCompleteResponse:
-    """@brief Complete multipart upload, assemble parts, create media record."""
+    """@brief Complete multipart upload, assemble parts, create media record.
+    ``is_nsfw``: flag it in the same transaction (adults only, feature on)."""
+    if is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
     media = await service.complete_multipart_upload(
         upload_id=upload_id,
         user=user,
     )
+    if is_nsfw:
+        await media_nsfw.set_media_nsfw(service, user, media.id, True)
     return MultipartCompleteResponse(media_id=media.id)
 
 
@@ -167,6 +173,7 @@ class ImportUrlRequest(BaseModel):
     """@brief Body for importing an image from a public URL."""
 
     url: str = Field(..., min_length=8, max_length=2000, pattern=r"^https?://")
+    is_nsfw: bool = False
 
 
 @router.post("/import-url", response_model=MediaResponse, status_code=201)
@@ -177,8 +184,13 @@ async def import_media_url(
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
-    """@brief Download an image from a public URL and store it as media."""
-    return await import_image_from_url(service, user, body.url)
+    """@brief Download an image from a public URL and store it as media (optionally NSFW)."""
+    if body.is_nsfw:
+        await media_nsfw.precheck_flag(service, user)
+    out = await import_image_from_url(service, user, body.url)
+    if body.is_nsfw:
+        out = await media_nsfw.set_media_nsfw(service, user, out.id, True)
+    return out
 
 
 @router.get("/{media_id}", response_model=MediaResponse)

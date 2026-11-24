@@ -15,6 +15,7 @@ from app.models.gallery import Gallery
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
 from app.repositories.gallery_repo import GalleryRepository
+from app.schemas.gallery import GalleryResponse
 from app.services.nsfw_rules import require_owner_may_flag
 
 
@@ -59,6 +60,17 @@ class GalleryServiceBase:
         """@throws AuthorizationError/AppError when the owner may not flag (nsfw_rules)."""
         if is_nsfw:
             await require_owner_may_flag(self._repo, self._community_id, user_id, True)
+
+    async def _out(self, rows: list[Gallery], viewer_id: uuid.UUID) -> list[GalleryResponse]:
+        """@brief Responses; a non-adult never gets an NSFW photo as album cover."""
+        out = [GalleryResponse.model_validate(r) for r in rows]
+        covers = {o.cover_media_id for o in out if o.cover_media_id is not None}
+        if covers and not await self._repo.viewer_adult(viewer_id):
+            hidden = await self._repo.nsfw_media_among(covers)
+            for o in out:
+                if o.cover_media_id in hidden:
+                    o.cover_media_id = None
+        return out
 
     async def _can_view(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
         """@brief Audience check; NSFW albums are adults-only (owner included)."""

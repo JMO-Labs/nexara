@@ -325,6 +325,8 @@ class ModerationRepository(ModerationContentMixin, BaseRepository[UserBlock]):
         stmt = select(model).where(model.id == entity_id, model.community_id == community_id)
         if kind == "posts":
             stmt = stmt.where(Post.deleted_at.is_(None))
+        # Fresh row: set_nsfw updates bypass the identity map.
+        stmt = stmt.execution_options(populate_existing=True)
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
 

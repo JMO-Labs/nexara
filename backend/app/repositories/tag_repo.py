@@ -23,6 +23,7 @@ from app.models.tag import Tag
 from app.models.user import User
 from app.repositories.household_repo import household_visible
 from app.repositories.visibility_preds import (
+    media_is_nsfw,
     media_nsfw_ok,
     media_visible,
     my_subgroup_ids,
@@ -343,6 +344,13 @@ class TagRepository:
         if before is not None:
             stmt = stmt.where(Tag.created_at < before)
         return [(mid, at) for mid, at in (await self._session.execute(stmt)).all()]
+
+    async def nsfw_media_among(self, media_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        """@brief Which of these photos are NSFW (own flag, NSFW post or album)."""
+        if not media_ids:
+            return set()
+        stmt = select(Media.id).where(Media.id.in_(media_ids), media_is_nsfw(Media.id))
+        return set((await self._session.execute(stmt)).scalars().all())
 
     async def household_by_handles(
         self, community_id: uuid.UUID, viewer_id: uuid.UUID, handles: list[str]
