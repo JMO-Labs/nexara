@@ -14,8 +14,9 @@ from fastapi import Depends, FastAPI
 from httpx import ASGITransport, AsyncClient
 from slowapi import Limiter
 
-from app.core.dependencies import get_current_user, get_db, require_instance_owner
+from app.core.dependencies import get_current_user, get_db
 from app.core.exceptions import AuthorizationError, register_exception_handlers
+from app.core.plugin_deps import require_instance_owner
 from app.models.user import COMMUNITY_DEFAULT
 from app.services.age_service import is_adult
 
@@ -173,6 +174,21 @@ async def test_media_metadata_other_community_404() -> None:
     from app.services.media_service import MediaService
 
     svc = MediaService.__new__(MediaService)
-    svc._repo = MagicMock(get=AsyncMock(return_value=SimpleNamespace(community_id=uuid.uuid4())))
+    svc._repo = MagicMock(
+        get=AsyncMock(return_value=SimpleNamespace(community_id=uuid.uuid4())),
+        nsfw_hidden=AsyncMock(return_value=False),
+    )
     with pytest.raises(NotFoundError):
-        await svc.get_metadata(uuid.uuid4(), CID)
+        await svc.get_metadata(uuid.uuid4(), uuid.uuid4(), CID)
+
+
+async def test_media_metadata_nsfw_hidden_from_bots() -> None:
+    from app.core.exceptions import NotFoundError
+    from app.services.media_service import MediaService
+
+    svc = MediaService.__new__(MediaService)
+    media = SimpleNamespace(community_id=CID, is_nsfw=True)
+    # nsfw_hidden is the SQL predicate (bots never adult); see integration tests.
+    svc._repo = MagicMock(get=AsyncMock(return_value=media), nsfw_hidden=AsyncMock(return_value=True))
+    with pytest.raises(NotFoundError):
+        await svc.get_metadata(uuid.uuid4(), uuid.uuid4(), CID)
