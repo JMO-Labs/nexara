@@ -22,7 +22,8 @@
   --nx-danger-fg: #ffffff;
   --nx-blue: #a9bcc4;
   --nx-red: #a8505f;
-  --nx-ok: #3e9e68;
+  --nx-ok: #3c9b66;
+  --nx-warn: #946b1f;
   --nx-glass: rgba(255, 255, 255, 0.55);
   --nx-glass-edge: rgba(255, 255, 255, 0.78);
   --nx-glass-hi: rgba(255, 255, 255, 0.9);
@@ -72,6 +73,7 @@
   --nx-blue: #8fb6cf;
   --nx-red: #e7a3ae;
   --nx-ok: #5cc08a;
+  --nx-warn: #e6c07a;
   --nx-glass: rgba(28, 40, 52, 0.55);
   --nx-glass-edge: rgba(255, 255, 255, 0.09);
   --nx-glass-hi: rgba(255, 255, 255, 0.12);
@@ -99,6 +101,7 @@
   --color-blue: var(--nx-blue);
   --color-red: var(--nx-red);
   --color-ok: var(--nx-ok);
+  --color-warn: var(--nx-warn);
   --color-danger: var(--nx-danger);
   --color-destructive: var(--nx-danger);
   --color-destructive-foreground: var(--nx-danger-fg);

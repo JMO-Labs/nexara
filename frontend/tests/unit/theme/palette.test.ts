@@ -70,3 +70,14 @@ test.each(["light", "dark"] as const)("%s feed text pairs meet AA", (mode) => {
     4.5,
   );
 });
+
+test.each(["light", "dark"] as const)(
+  "%s status icons (ok, warn, danger) meet 3:1 on surface",
+  (mode) => {
+    const p = palette[mode];
+    for (const c of [p.ok, p.warn, p.danger]) {
+      expect(contrastRatio(c, p.surface)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(c, p["glass-solid"])).toBeGreaterThanOrEqual(3);
+    }
+  },
+);

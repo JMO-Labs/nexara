@@ -7,7 +7,7 @@ import type { ComponentStatus, SystemComponent } from "@/lib/api/adminSystem";
 
 const STATUS = {
   ok: { Icon: CheckCircle, label: "Healthy", cls: "text-ok" },
-  warn: { Icon: AlertTriangle, label: "Needs attention", cls: "text-sun" },
+  warn: { Icon: AlertTriangle, label: "Needs attention", cls: "text-warn" },
   down: { Icon: XCircle, label: "Down", cls: "text-danger" },
 } satisfies Record<ComponentStatus, object>;
 
