@@ -34,6 +34,8 @@ class AgeSuggestionResponse(BaseModel):
     decided_by: UUID | None = None
     decided_at: datetime | None = None
     created_at: datetime
+    subject_name: str | None = None
+    suggested_by_name: str | None = None
 
     model_config = {"from_attributes": True}
 

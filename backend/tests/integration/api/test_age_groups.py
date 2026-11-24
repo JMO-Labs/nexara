@@ -111,3 +111,14 @@ async def test_note_over_500_422(env):
             json={"subject_id": str(SUBJECT), "age_group": "teen", "note": "x" * 501},
         )
     assert r.status_code == 422
+
+
+async def test_admin_list_includes_display_names(env):
+    row = _row()
+    env.repo.list.return_value = [(row, "Sam Subject", "Ann Admin")]
+    async with env.client("admin") as c:
+        r = await c.get("/api/v1/admin/age-groups/suggestions")
+    assert r.status_code == 200
+    item = r.json()[0]
+    assert item["subject_id"] == str(row.subject_id)
+    assert (item["subject_name"], item["suggested_by_name"]) == ("Sam Subject", "Ann Admin")

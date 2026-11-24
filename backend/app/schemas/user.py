@@ -74,6 +74,8 @@ class UserDetailResponse(BaseModel):
     last_seen_at: datetime | None = None
     tour_completed_at: datetime | None = None
     age_group: str | None = None  # effective (read-only); set by /users/me
+    # admin | birthday | approval_pending | unknown (read-only); set by /users/me
+    age_group_source: str | None = None
 
     model_config = {"from_attributes": True}
 

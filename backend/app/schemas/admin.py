@@ -122,6 +122,8 @@ class AdminUserListItem(BaseModel):
     status: str = "active"
     memorialized_at: datetime | None = None
     passed_on: date | None = None
+    age_group: str | None = None  # admin-set value (null = derived)
+    effective_age_group: str = "unknown"
 
 
 class UserSimpleModeUpdate(BaseModel):

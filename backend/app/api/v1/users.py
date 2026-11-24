@@ -31,7 +31,7 @@ from app.schemas.user import (
     UserDetailResponse,
     UserUpdateRequest,
 )
-from app.services.age_service import effective_age_group
+from app.services.age_service import age_group_source, effective_age_group
 from app.services.profiles.service import ProfileService
 from app.services.storage.usage_service import StorageUsageService
 from app.services.user_service import UserService
@@ -58,6 +58,7 @@ def _detail(user: User, community: Community | None) -> UserDetailResponse:
     """@brief Detail response with the effective (derived) age group."""
     out = UserDetailResponse.model_validate(user)
     out.age_group = effective_age_group(user, community)
+    out.age_group_source = age_group_source(user, community)
     return out
 
 

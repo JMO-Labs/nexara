@@ -146,3 +146,21 @@ async def test_approval_toggle_audited_and_bumps_cache():
     await svc.set_adult_requires_approval(True)
     assert audit.append.await_args.kwargs["action"] == "age_group.approval_mode_changed"
     cache.incr.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "user,approval,source",
+    [
+        (_u(_bday(10), "adult"), False, "admin"),
+        (_u(None, "teen"), True, "admin"),
+        (_u(_bday(30)), False, "birthday"),
+        (_u(_bday(15)), True, "birthday"),
+        (_u(_bday(30)), True, "approval_pending"),
+        (_u(), False, "unknown"),
+    ],
+)
+def test_age_group_source(user, approval, source):
+    from app.services.age_service import age_group_source
+
+    c = SimpleNamespace(adult_requires_approval=approval)
+    assert age_group_source(user, c) == source

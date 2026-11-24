@@ -18,7 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_db, require_role
+from app.core.deps_age import get_community
 from app.core.i18n import _
+from app.models.community import Community
 from app.models.user import User
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.gallery_repo import GalleryRepository
@@ -34,6 +36,7 @@ from app.schemas.admin import (
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.schemas.gallery import AdminGalleryUpdate, GalleryResponse
 from app.services.admin_service import AdminService
+from app.services.age_service import effective_age_group
 from app.services.gallery_service import GalleryService
 
 logger = structlog.get_logger(__name__)
@@ -70,8 +73,8 @@ async def get_metrics(
     return await service.get_metrics()
 
 
-def _user_to_admin_item(u: User) -> AdminUserListItem:
-    """@brief Convert User to AdminUserListItem with status from is_active."""
+def _user_to_admin_item(u: User, community: Community | None = None) -> AdminUserListItem:
+    """@brief Convert User to AdminUserListItem (status from is_active, age groups)."""
     return AdminUserListItem(
         id=u.id,
         username=u.username,
@@ -90,6 +93,8 @@ def _user_to_admin_item(u: User) -> AdminUserListItem:
         ),
         memorialized_at=u.memorialized_at,
         passed_on=u.passed_on,
+        age_group=u.age_group,
+        effective_age_group=effective_age_group(u, community),
     )
 
 
@@ -100,6 +105,7 @@ async def list_users(
     limit: int = Query(20, ge=1, le=100),
     cursor: str | None = Query(None),
     search: str | None = Query(None),
+    community: Community | None = Depends(get_community),
 ) -> PaginatedResponse[AdminUserListItem]:
     """@brief List community users with optional search (admin only)."""
     users, next_cursor = await service.list_users(
@@ -108,7 +114,7 @@ async def list_users(
         cursor=cursor,
     )
     return PaginatedResponse(
-        items=[_user_to_admin_item(u) for u in users],
+        items=[_user_to_admin_item(u, community) for u in users],
         next_cursor=next_cursor,
         has_more=next_cursor is not None,
     )

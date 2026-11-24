@@ -50,6 +50,7 @@ def _mock_user(**overrides) -> MagicMock:
     user.website_url = None
     user.birthday = None
     user.age_group = None
+    user.age_group_source = None
     user.banner_media_id = None
     for f in ("phone", "contact_email", "address", "emergency_contact", "availability", "dietary"):
         setattr(user, f, None)

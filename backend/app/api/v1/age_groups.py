@@ -44,8 +44,13 @@ async def suggest(
 async def list_suggestions(
     status: str | None = "pending", svc: AgeService = Depends(get_age_service)
 ) -> list[AgeSuggestionResponse]:
-    """@brief Admin: list suggestions (default pending)."""
-    return [AgeSuggestionResponse.model_validate(r) for r in await svc.list_suggestions(status)]
+    """@brief Admin: list suggestions (default pending), with display names."""
+    return [
+        AgeSuggestionResponse.model_validate(r).model_copy(
+            update={"subject_name": subject, "suggested_by_name": by}
+        )
+        for r, subject, by in await svc.list_suggestions(status)
+    ]
 
 
 @admin_router.post("/age-groups/suggestions/{suggestion_id}/approve")

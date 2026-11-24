@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.age_suggestion import AgeSuggestion
 from app.models.community import Community
@@ -109,13 +110,22 @@ class AgeRepository:
         )
         return res.scalar_one_or_none()
 
-    async def list(self, community_id: uuid.UUID, status: str | None) -> list[AgeSuggestion]:
-        """@brief Suggestions, newest first, optionally by status."""
-        stmt = select(AgeSuggestion).where(AgeSuggestion.community_id == community_id)
+    async def list(
+        self, community_id: uuid.UUID, status: str | None
+    ) -> list[tuple[AgeSuggestion, str | None, str | None]]:
+        """@brief Suggestions newest first (optionally by status), with the subject's
+        and suggester's display names."""
+        subject, by = aliased(User), aliased(User)
+        stmt = (
+            select(AgeSuggestion, subject.display_name, by.display_name)
+            .outerjoin(subject, subject.id == AgeSuggestion.subject_id)
+            .outerjoin(by, by.id == AgeSuggestion.suggested_by)
+            .where(AgeSuggestion.community_id == community_id)
+        )
         if status:
             stmt = stmt.where(AgeSuggestion.status == status)
         res = await self._session.execute(stmt.order_by(AgeSuggestion.created_at.desc()))
-        return list(res.scalars())
+        return [(r, s, b) for r, s, b in res.all()]
 
     async def decide(self, row: AgeSuggestion, status: str, decided_by: uuid.UUID) -> None:
         """@brief Mark a suggestion approved/rejected."""

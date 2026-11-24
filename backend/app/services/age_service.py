@@ -54,6 +54,23 @@ def effective_age_group(user: Any, community: Any | None) -> AgeGroup:
     return "adult"
 
 
+def age_group_source(
+    user: Any, community: Any | None
+) -> Literal["admin", "birthday", "approval_pending", "unknown"]:
+    """
+    @brief Why ``effective_age_group`` says what it says: an admin set it, the
+           birthday decided, an 18+ birthday awaits admin approval, or unknown.
+    """
+    if getattr(user, "age_group", None) in GROUPS:
+        return "admin"
+    if not isinstance(user.birthday, date):
+        return "unknown"
+    pending = community is not None and community.adult_requires_approval is True
+    if pending and _age(user.birthday) >= 18:
+        return "approval_pending"
+    return "birthday"
+
+
 def is_adult(user: Any, community: Any | None) -> bool:
     """@brief Whether the user may see adult (NSFW) content."""
     return effective_age_group(user, community) == "adult"
@@ -167,8 +184,10 @@ class AgeService:
                 )
         return row
 
-    async def list_suggestions(self, status: str | None) -> list[AgeSuggestion]:
-        """@brief Admin: suggestions filtered by status."""
+    async def list_suggestions(
+        self, status: str | None
+    ) -> list[tuple[AgeSuggestion, str | None, str | None]]:
+        """@brief Admin: suggestions filtered by status, with (subject, suggester) names."""
         return await self._repo.list(self._cid, status)
 
     async def decide(self, suggestion_id: uuid.UUID, approve: bool) -> AgeSuggestion:
