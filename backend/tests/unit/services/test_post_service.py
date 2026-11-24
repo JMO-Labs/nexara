@@ -149,6 +149,7 @@ class TestCreatePost:
             subgroup_id=None,
             private=False,
             is_nsfw=False,
+            plugin_flags={},
         )
         post_repo.get_post_detail.assert_awaited_once_with(post.id, COMMUNITY_ID, user.id)
 
@@ -269,6 +270,7 @@ class TestCreatePost:
             subgroup_id=subgroup_id,
             private=False,
             is_nsfw=False,
+            plugin_flags={},
         )
 
 

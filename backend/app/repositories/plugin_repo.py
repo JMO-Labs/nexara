@@ -70,6 +70,19 @@ class PluginRepository(BaseRepository[PluginInstall]):
         await self._session.refresh(merged)
         return merged
 
+    async def list_enabled_installs(self, community_id: uuid.UUID) -> list[PluginInstall]:
+        """@brief Running installs enabled in the community."""
+        res = await self._session.execute(
+            select(PluginInstall)
+            .join(PluginCommunity, PluginCommunity.install_id == PluginInstall.id)
+            .where(
+                PluginCommunity.community_id == community_id,
+                PluginCommunity.enabled.is_(True),
+                PluginInstall.status == "running",
+            )
+        )
+        return list(res.scalars().all())
+
     async def list_enabled_for_event(
         self, community_id: uuid.UUID, event: str
     ) -> list[tuple[PluginInstall, PluginCommunity]]:

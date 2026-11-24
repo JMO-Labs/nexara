@@ -86,6 +86,7 @@ def _user_to_admin_item(u: User, community: Community | None = None) -> AdminUse
         location=u.location,
         website_url=u.website_url,
         role=u.role,
+        is_bot=bool(u.is_bot),
         created_at=u.created_at,
         last_seen_at=u.last_seen_at,
         status=(

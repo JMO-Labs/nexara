@@ -255,6 +255,7 @@ class PostRepository(BaseRepository[Post]):
         subgroup_id: uuid.UUID | None = None,
         private: bool = False,
         is_nsfw: bool = False,
+        plugin_flags: dict[str, Any] | None = None,
     ) -> Post:
         """
         @brief Insert a new post row.
@@ -275,6 +276,7 @@ class PostRepository(BaseRepository[Post]):
             subgroup_id=None if private else subgroup_id,
             visibility="private" if private else ("subgroup" if subgroup_id else "community"),
             is_nsfw=is_nsfw,
+            plugin_flags=plugin_flags or {},
         )
         return await self.create(post)
 

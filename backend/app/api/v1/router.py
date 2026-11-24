@@ -62,6 +62,8 @@ from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
 from app.api.v1.onboarding import admin_router as admin_onboarding_router
 from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.plugins import me_router as plugin_prefs_router
+from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
 from app.api.v1.presence import router as presence_router
@@ -168,6 +170,8 @@ api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
 api_v1_router.include_router(recap_router)
 api_v1_router.include_router(daily_questions_router)
+api_v1_router.include_router(plugins_router)
+api_v1_router.include_router(plugin_prefs_router)
 api_v1_router.include_router(push_router)
 api_v1_router.include_router(search_router)
 api_v1_router.include_router(settings_router)

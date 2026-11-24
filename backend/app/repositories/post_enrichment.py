@@ -253,6 +253,7 @@ async def enrich_posts(
                 "username": author.username,
                 "display_name": author.display_name,
                 "avatar_url": author.avatar_url,
+                "is_bot": bool(author.is_bot),
             },
             "media": media_map.get(post.id, []),
             "poll": poll_map.get(post.id),

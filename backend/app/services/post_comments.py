@@ -107,6 +107,7 @@ class CommentsMixin(PostServiceBase):
                 "username": user.username,
                 "display_name": user.display_name,
                 "avatar_url": user.avatar_url,
+                "is_bot": bool(user.is_bot),
             },
             "parent_id": str(comment.parent_id) if comment.parent_id else None,
             "created_at": comment.created_at.isoformat(),

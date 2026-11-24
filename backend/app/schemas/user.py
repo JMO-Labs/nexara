@@ -31,6 +31,7 @@ class UserResponse(BaseModel):
     location: str | None = None
     website_url: str | None = None
     role: str
+    is_bot: bool = False
     created_at: datetime
     last_seen_at: datetime | None = None
 
@@ -67,6 +68,7 @@ class UserDetailResponse(BaseModel):
     availability: str | None = None
     dietary: str | None = None
     role: str
+    is_bot: bool = False
     totp_enabled: bool
     storage_used: int
     storage_quota: int

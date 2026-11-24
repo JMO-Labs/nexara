@@ -130,6 +130,7 @@ class UserSummaryResponse(BaseModel):
     username: str
     display_name: str
     avatar_url: str | None = None
+    is_bot: bool = False
 
     model_config = {"from_attributes": True}
 
