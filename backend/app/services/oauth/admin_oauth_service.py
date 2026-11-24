@@ -8,7 +8,7 @@ Keeps repositories out of the admin routes. Mutations are audit logged.
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -18,6 +18,7 @@ from app.core.config import Settings
 from app.core.encryption import derive_fernet_key, encrypt_secret
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
+from app.core.valkey import DB_CACHE, get_pool
 from app.models.oauth_provider import OAuthProvider
 from app.repositories.audit_repo import AuditRepository
 from app.repositories.oauth_repo import OAuthProviderRepository
@@ -29,10 +30,12 @@ from app.schemas.oauth import (
     OIDCTestResult,
 )
 from app.services.auth import sso_only
+from app.services.oauth import sso_test_login
 from app.services.oauth.discovery import DiscoveryEndpoints, discover_endpoints, fetch_discovery
 from app.services.oauth.group_mapper import preview_group_mapping
 from app.services.oauth.presets import PRESETS
 from app.services.oauth.provider_manager import ProviderManager
+from app.services.oauth.public_url import callback_url
 
 logger = structlog.get_logger(__name__)
 
@@ -82,6 +85,54 @@ class AdminOAuthService:
     def _encrypt(self, secret: str) -> str:
         return encrypt_secret(secret, derive_fernet_key(self._settings.SECRET_KEY))
 
+    async def _discover(self, discovery_url: str) -> tuple[DiscoveryEndpoints, str]:
+        """
+        @brief Fetch a discovery document: endpoints plus the exact issuer (ID token iss).
+
+        @raises AppError 422 invalid_discovery.
+        """
+        try:
+            doc = await fetch_discovery(discovery_url.strip(), self._settings.OIDC_HTTP_TIMEOUT)
+        except (ValueError, httpx.HTTPError) as exc:
+            raise AppError(code="invalid_discovery", message=str(exc), status_code=422) from exc
+        keys = (
+            "authorization_endpoint",
+            "token_endpoint",
+            "userinfo_endpoint",
+            "jwks_uri",
+            "end_session_endpoint",
+        )
+        endpoints = cast(DiscoveryEndpoints, {k: doc[k] for k in keys if doc.get(k)})
+        return endpoints, str(doc["issuer"])
+
+    def callback_url(self, slug: str) -> str:
+        """@brief Redirect URI the admin registers at the IdP."""
+        return callback_url(self._settings, slug)
+
+    async def start_test_login(self, provider_id: uuid.UUID) -> str:
+        """
+        @brief Begin an admin test login (nothing is provisioned).
+
+        @return IdP authorize URL for the popup.
+        """
+        provider = await self.get(provider_id)
+        if not provider.authorization_endpoint or not provider.token_endpoint:
+            raise AppError(
+                code="sso_test_unavailable",
+                message=_("Provider has no authorization/token endpoint"),
+                status_code=422,
+            )
+        valkey = get_pool(self._settings, DB_CACHE)
+        return await sso_test_login.start(valkey, self._settings, provider, self._actor)
+
+    async def read_test_result(self, result_id: str) -> dict[str, Any]:
+        """@brief One-time read of this admin's test login result."""
+        valkey = get_pool(self._settings, DB_CACHE)
+        result = await sso_test_login.read_result(valkey, result_id, self._actor)
+        if result is None:
+            raise NotFoundError(message=_("Test result not found or expired"))
+        return result
+
     async def get(self, provider_id: uuid.UUID) -> OAuthProvider:
         """@brief Fetch a provider or raise NotFoundError."""
         provider = await self._repo.get_by_id(provider_id, self._cid)
@@ -97,7 +148,10 @@ class AdminOAuthService:
     async def create(self, body: OAuthProviderCreate) -> OAuthProvider:
         """@brief Create a provider, filling endpoints from OIDC discovery."""
         endpoints: DiscoveryEndpoints = {}
-        if body.provider_type == "oidc" and body.issuer:
+        issuer = body.issuer
+        if body.provider_type == "oidc" and body.discovery_url:
+            endpoints, issuer = await self._discover(body.discovery_url)
+        elif body.provider_type == "oidc" and body.issuer:
             endpoints = await discover_endpoints(body.issuer.strip())
         provider = OAuthProvider(
             community_id=self._cid,
@@ -106,8 +160,8 @@ class AdminOAuthService:
             provider_type=body.provider_type,
             client_id=body.client_id,
             client_secret_encrypted=self._encrypt(body.client_secret),
-            issuer=body.issuer,
-            discovery_url=body.discovery_url,
+            issuer=issuer,
+            discovery_url=body.discovery_url.strip() if body.discovery_url else None,
             claim_mapping=body.claim_mapping,
             icon_url=body.icon_url,
             scopes=body.scopes or "openid profile email groups",
@@ -173,6 +227,10 @@ class AdminOAuthService:
         secret = data.pop("client_secret", None)
         if secret:
             data["client_secret_encrypted"] = self._encrypt(secret)
+        new_url = (data.get("discovery_url") or "").strip()
+        if new_url and new_url != provider.discovery_url and provider.provider_type == "oidc":
+            endpoints, issuer = await self._discover(new_url)
+            data.update({**endpoints, "issuer": issuer, "discovery_url": new_url})
         provider = await self._repo.update(provider, data)
         await self._audit("oauth.provider.updated", provider.id, {"slug": provider.slug})
         return provider

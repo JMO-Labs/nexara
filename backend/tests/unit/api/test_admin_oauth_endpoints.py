@@ -85,6 +85,9 @@ class TestAdminOAuthProvidersList:
                 resp = await client.get("/api/v1/admin/oauth/providers")
 
             assert resp.status_code == 200
+            assert resp.json()[0]["callback_url"] == (
+                "http://localhost:3000/api/v1/oauth/oidc/callback"
+            )
 
 
 class TestAdminOAuthProviderCreate:
@@ -457,3 +460,22 @@ class TestProviderInputValidation:
         async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
             resp = await c.post("/api/v1/admin/oauth/providers", json={**self.BASE, "preset": "x"})
         assert resp.status_code == 422
+
+
+class TestCallbackTemplate:
+    """@brief GET /api/v1/admin/oauth/callback-url."""
+
+    @pytest.mark.asyncio
+    async def test_returns_template_with_slug_placeholder(self, test_app, admin_override):
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/v1/admin/oauth/callback-url")
+        assert resp.status_code == 200
+        assert resp.json() == {"template": "http://localhost:3000/api/v1/oauth/{slug}/callback"}
+
+    @pytest.mark.asyncio
+    async def test_requires_auth(self, test_app):
+        transport = ASGITransport(app=test_app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/api/v1/admin/oauth/callback-url")
+        assert resp.status_code in (401, 403)

@@ -29,6 +29,7 @@ def _mock_provider(slug: str = "oidc", enabled: bool = True) -> MagicMock:
     p.scopes = "openid profile email"
     p.provider_type = "oidc"
     p.userinfo_endpoint = None
+    p.preset = None
     return p
 
 

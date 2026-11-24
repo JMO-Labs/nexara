@@ -62,3 +62,33 @@ async def test_provider(
 ) -> OIDCTestResult:
     """@brief Test discovery and a sandbox token exchange."""
     return await svc.test(provider_id)
+
+
+class TestLoginStart(BaseModel):
+    """@brief IdP authorize URL for the admin test-login popup."""
+
+    authorize_url: str
+
+
+@router.post("/providers/{provider_id}/test-login", response_model=TestLoginStart)
+async def start_test_login(
+    provider_id: uuid.UUID, svc: AdminOAuthService = Depends(get_admin_oauth_service)
+) -> TestLoginStart:
+    """@brief Start a test login: real IdP round-trip, nothing provisioned."""
+    return TestLoginStart(authorize_url=await svc.start_test_login(provider_id))
+
+
+@router.get("/test-login/{result_id}")
+async def read_test_login(
+    result_id: str, svc: AdminOAuthService = Depends(get_admin_oauth_service)
+) -> dict[str, Any]:
+    """@brief One-time read of the calling admin's test-login result."""
+    return await svc.read_test_result(result_id)
+
+
+@router.get("/callback-url")
+async def callback_url_template(
+    svc: AdminOAuthService = Depends(get_admin_oauth_service),
+) -> dict[str, str]:
+    """@brief Redirect URI template (``{slug}`` placeholder) for providers not yet saved."""
+    return {"template": svc.callback_url("{slug}")}

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import secrets
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode
 
 import httpx
@@ -32,12 +32,17 @@ from app.schemas.auth import LoginResponse
 from app.schemas.oauth import OAuthExchangeRequest
 from app.services.auth.memorial_guard import reject_memorialized
 from app.services.auth_service import AuthService
+from app.services.oauth import sso_test_login
 from app.services.oauth.claim_mapper import map_claims
 from app.services.oauth.flow import OAuthFlow, apply_verified_email
 from app.services.oauth.group_mapper import global_role_mappings, map_groups_to_role
 from app.services.oauth.provider_manager import ProviderManager
+from app.services.oauth.public_url import callback_url, public_base
 from app.services.oauth.token_verifier import extract_claims, verify_id_token
-from app.services.oauth.user_provisioner import UserProvisioner
+from app.services.oauth.user_provisioner import OAuthAuthResult, UserProvisioner
+
+if TYPE_CHECKING:
+    from app.models.oauth_provider import OAuthProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -106,15 +111,72 @@ def _clear_oauth_cookies(response: Response) -> None:
         response.delete_cookie(name)
 
 
-def _build_redirect_uri(request: Request, slug: str, settings: Settings) -> str:
-    """@brief Build callback URL using the public frontend origin.
+async def _fetch_claims(
+    provider: OAuthProvider, token_data: dict[str, Any], nonce: str | None
+) -> dict[str, Any]:
+    """@brief Verified ID token claims (OIDC) or userinfo claims (OAuth2)."""
+    if provider.provider_type == "oidc" and token_data.get("id_token"):
+        if not nonce:
+            raise AuthenticationError(message=_("Missing OAuth session"))
+        return await verify_id_token(token_data["id_token"], provider, nonce=nonce)
+    if provider.userinfo_endpoint and token_data.get("access_token"):
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                provider.userinfo_endpoint,
+                headers={"Authorization": f"Bearer {token_data['access_token']}"},
+            )
+            resp.raise_for_status()
+            return cast(dict[str, Any], resp.json())
+    raise AuthenticationError(message=_("OAuth response missing identity"))
 
-    Uses ALLOWED_ORIGINS so the callback goes through the frontend proxy,
-    ensuring cookies set during login are present on the callback request.
+
+async def _identity(
+    provider: OAuthProvider, token_data: dict[str, Any], nonce: str | None
+) -> tuple[dict[str, Any], OAuthAuthResult, str]:
+    """@brief Claims, mapped identity and group-mapped community role."""
+    claims = await _fetch_claims(provider, token_data, nonce)
+    if isinstance(provider.claim_mapping, dict) and provider.claim_mapping:
+        auth_result = map_claims(
+            claims, provider.claim_mapping, provider.username_claim or "preferred_username"
+        )
+    else:
+        auth_result = extract_claims(claims, provider)
+    await apply_verified_email(provider, token_data, auth_result)
+    role = map_groups_to_role(
+        auth_result.groups or [],
+        {**(provider.group_mappings or {}), **global_role_mappings(provider.claim_mapping)},
+        provider.default_role or "member",
+    )
+    return claims, auth_result, role
+
+
+async def _test_callback(
+    ctx: dict[str, Any], code: str, db: AsyncSession, settings: Settings
+) -> RedirectResponse:
     """
-    origins = settings.allowed_origins_list
-    base = origins[0] if origins else str(request.base_url).rstrip("/")
-    return f"{base}/api/v1/oauth/{slug}/callback"
+    @brief Finish an admin test login: verify and report, never provision.
+
+    No user, link, membership, token or sign-in record is written.
+    """
+    community_id = uuid.UUID(settings.COMMUNITY_ID)
+    provider = await sso_test_login.load_provider(db, community_id, ctx["provider_id"])
+    if provider is None:
+        raise AuthenticationError(message=_("OAuth provider not found"))
+    token_data = await OAuthFlow().exchange_code(
+        provider,
+        code,
+        ctx["verifier"],
+        callback_url(settings, provider.slug),
+        settings.SECRET_KEY,
+    )
+    claims, auth_result, role = await _identity(provider, token_data, ctx.get("nonce"))
+    result = await sso_test_login.build_result(
+        db, community_id, provider, claims, auth_result, role
+    )
+    valkey = _get_valkey_client(settings)
+    result_id = await sso_test_login.store_result(valkey, ctx["admin_id"], result)
+    query = urlencode({"result": result_id})
+    return RedirectResponse(url=f"{public_base(settings)}/sso-test?{query}", status_code=302)
 
 
 @router.get("/{slug}/login")
@@ -136,7 +198,7 @@ async def oauth_login(
     if not provider or not provider.enabled:
         raise AuthenticationError(message=_("OAuth provider not found or disabled"))
 
-    redirect_uri = _build_redirect_uri(request, slug, settings)
+    redirect_uri = callback_url(settings, slug)
     flow = OAuthFlow()
     nonce = secrets.token_urlsafe(32) if provider.provider_type == "oidc" else None
     url, state, verifier = flow.build_authorize_url(provider, redirect_uri, nonce=nonce)
@@ -163,7 +225,11 @@ async def oauth_callback(
     @brief Handle OAuth callback: exchange code, provision user, redirect to frontend.
     """
     if not oauth_state or not secrets.compare_digest(oauth_state, state):
-        raise AuthenticationError(message=_("Invalid OAuth state"))
+        # Not this browser's login: maybe an admin test login (state kept server-side).
+        ctx = await sso_test_login.consume_context(_get_valkey_client(settings), state)
+        if ctx is None or ctx.get("slug") != slug:
+            raise AuthenticationError(message=_("Invalid OAuth state"))
+        return await _test_callback(ctx, code, db, settings)
     if not oauth_verifier or oauth_provider != slug:
         raise AuthenticationError(message=_("Missing OAuth session"))
 
@@ -173,42 +239,14 @@ async def oauth_callback(
     if not provider or not provider.enabled:
         raise AuthenticationError(message=_("OAuth provider not found"))
 
-    redirect_uri = _build_redirect_uri(request, slug, settings)
+    redirect_uri = callback_url(settings, slug)
     flow = OAuthFlow()
     token_data = await flow.exchange_code(
         provider, code, oauth_verifier, redirect_uri, settings.SECRET_KEY
     )
 
-    claims: dict[str, Any]
-    if provider.provider_type == "oidc" and token_data.get("id_token"):
-        if not oauth_nonce:
-            raise AuthenticationError(message=_("Missing OAuth session"))
-        claims = await verify_id_token(token_data["id_token"], provider, nonce=oauth_nonce)
-    elif provider.userinfo_endpoint and token_data.get("access_token"):
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                provider.userinfo_endpoint,
-                headers={"Authorization": f"Bearer {token_data['access_token']}"},
-            )
-            resp.raise_for_status()
-            claims = resp.json()
-    else:
-        raise AuthenticationError(message=_("OAuth response missing identity"))
-
-    if isinstance(provider.claim_mapping, dict) and provider.claim_mapping:
-        auth_result = map_claims(
-            claims, provider.claim_mapping, provider.username_claim or "preferred_username"
-        )
-    else:
-        auth_result = extract_claims(claims, provider)
-    await apply_verified_email(provider, token_data, auth_result)
-    role = map_groups_to_role(
-        auth_result.groups or [],
-        {**(provider.group_mappings or {}), **global_role_mappings(provider.claim_mapping)},
-        provider.default_role or "member",
-    )
-    origins = settings.allowed_origins_list
-    frontend_url = origins[0] if origins else str(request.base_url).rstrip("/")
+    _claims, auth_result, role = await _identity(provider, token_data, oauth_nonce)
+    frontend_url = public_base(settings)
     provisioner = UserProvisioner(db, community_id)
     try:
         user = await provisioner.provision_user(auth_result, provider, role)

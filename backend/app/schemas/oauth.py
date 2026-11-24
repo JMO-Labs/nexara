@@ -202,6 +202,12 @@ class OAuthProviderResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdminOAuthProviderResponse(OAuthProviderResponse):
+    """@brief Admin view of a provider, plus the redirect URI to register at the IdP."""
+
+    callback_url: str
+
+
 class OAuthExchangeRequest(BaseModel):
     """@brief Request body for exchanging OAuth callback code for tokens."""
 
