@@ -74,6 +74,8 @@ class Gallery(Base):
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     is_event_gallery: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # NSFW album: every photo in it is hidden from non-adults.
+    is_nsfw: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     search_fts = mapped_column(
         TSVECTOR,
         Computed(

@@ -38,6 +38,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
                 message=_("Subgroup is required for subgroup-scoped galleries"),
                 status_code=400,
             )
+        await self._require_adult_for_nsfw(data.is_nsfw, user_id)
 
         gallery = Gallery(
             community_id=self._community_id,
@@ -49,6 +50,7 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             subgroup_id=data.subgroup_id,
             event_id=data.event_id,
             cover_media_id=data.cover_media_id,
+            is_nsfw=data.is_nsfw,
         )
         gallery = await self._repo.create(gallery)
 
@@ -137,6 +139,8 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
         if gallery is None:
             raise NotFoundError(_("Gallery not found"))
+        if not await self._nsfw_ok(gallery, user_id):
+            raise NotFoundError(_("Gallery not found"))
         if not await self._can_view(gallery, user_id):
             raise AuthorizationError(_("You cannot view this gallery"))
         return GalleryResponse.model_validate(gallery)
@@ -149,6 +153,8 @@ class GalleryService(GalleryItemsMixin, GalleryAdminMixin):
             raise NotFoundError(_("Gallery not found"))
         if gallery.owner_id != user_id:
             raise AuthorizationError(_("Only the gallery owner can edit this gallery"))
+        if data.is_nsfw is not None and data.is_nsfw != gallery.is_nsfw:
+            await self._require_adult_for_nsfw(True, user_id)
 
         update_data = data.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(UTC)

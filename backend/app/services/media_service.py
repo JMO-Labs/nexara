@@ -196,23 +196,26 @@ class MediaService:
 
         return MediaResponse.model_validate(media)
 
-    async def get_metadata(self, media_id: uuid.UUID) -> MediaResponse:
+    async def get_metadata(
+        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
+    ) -> MediaResponse:
         """
-        @brief Return media metadata by ID.
-
-        @param media_id UUID of the media.
-        @return MediaResponse with metadata.
-        @raises NotFoundError If media does not exist.
+        @brief Return media metadata by ID (NSFW: adults only).
+        @raises NotFoundError If media does not exist or is NSFW for a non-adult.
         """
+        if await self._repo.nsfw_hidden(viewer_id, media_id=media_id):
+            raise NotFoundError(_("Media not found"))
         media = await self._repo.get(media_id)
         if media is None:
             raise NotFoundError(_("Media not found"))
         return MediaResponse.model_validate(media)
 
     async def _guard_sealed(self, media_id: uuid.UUID, viewer_id: uuid.UUID | None) -> None:
-        """@brief 404 for media in an unopened time capsule (author bypasses)."""
-        if self._capsule_repo and await self._capsule_repo.is_sealed_media(
-            media_id, self._community_id, viewer_id
+        """@brief 404 for NSFW media and a non-adult viewer, or for media in an
+        unopened time capsule (author bypasses)."""
+        if await self._repo.nsfw_hidden(viewer_id, media_id=media_id) or (
+            self._capsule_repo
+            and await self._capsule_repo.is_sealed_media(media_id, self._community_id, viewer_id)
         ):
             raise NotFoundError(_("Media not found"))
 
@@ -221,14 +224,7 @@ class MediaService:
         media_id: uuid.UUID,
         user: User,
     ) -> tuple[bytes, str]:
-        """
-        @brief Retrieve the original file content and content type (authenticated).
-
-        @param media_id UUID of the media.
-        @param user Requesting user (for access control).
-        @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media does not exist.
-        """
+        """@brief Original file for ``user`` (see ``get_file_public``)."""
         return await self.get_file_public(media_id, user.id)
 
     async def get_file_public(
@@ -238,7 +234,8 @@ class MediaService:
         @brief Retrieve the original file content without auth.
         @param media_id UUID of the media.
         @return Tuple of (content bytes, content_type).
-        @raises NotFoundError If media does not exist or is sealed in a capsule.
+        @raises NotFoundError If media does not exist, is sealed in a capsule, or is
+                NSFW and the viewer is not an adult.
         """
         await self._guard_sealed(media_id, viewer_id)
         media = await self._repo.get(media_id)

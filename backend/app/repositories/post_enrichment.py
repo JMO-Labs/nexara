@@ -23,6 +23,7 @@ from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.subgroup import Subgroup
 from app.models.user import User
 from app.repositories.post_extras import post_extras
+from app.repositories.visibility_preds import nsfw_allowed, viewer_is_adult
 
 
 async def enrich_posts(
@@ -35,11 +36,15 @@ async def enrich_posts(
 
     @param session Async SQLAlchemy session.
     @param post_ids List of post UUIDs.
-    @param viewer_id Current user for ``reacted_by_me`` flag.
+    @param viewer_id Current user for ``reacted_by_me``; NSFW posts are dropped
+           unless the viewer is an adult.
     @return Dict mapping post_id -> enriched dict.
     """
+    # Last line of defence: NSFW posts never leave here for a non-adult viewer.
     posts_stmt = (
-        select(Post, User).join(User, Post.author_id == User.id).where(Post.id.in_(post_ids))
+        select(Post, User)
+        .join(User, Post.author_id == User.id)
+        .where(Post.id.in_(post_ids), nsfw_allowed(viewer_is_adult(viewer_id)))
     )
     posts_result = await session.execute(posts_stmt)
     post_rows = posts_result.all()
@@ -232,6 +237,7 @@ async def enrich_posts(
         enriched[post.id] = {
             "id": str(post.id),
             "content": post.content,
+            "is_nsfw": post.is_nsfw,
             "author": {
                 "id": str(author.id),
                 "username": author.username,

@@ -41,5 +41,5 @@ def test_require_passes_when_on():
 
 
 def test_defaults_has_all_keys():
-    assert len(FEATURE_DEFAULTS) == 18
+    assert len(FEATURE_DEFAULTS) == 19
     assert [k for k, v in FEATURE_DEFAULTS.items() if not v] == ["reply_by_email"]

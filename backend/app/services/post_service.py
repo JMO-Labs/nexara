@@ -84,8 +84,12 @@ class PostService(CommentsMixin, ReactionsMixin):
         subgroup_id: uuid.UUID | None = None,
         private: bool = False,
         celebrate: CelebrateIn | None = None,
+        is_nsfw: bool = False,
     ) -> dict[str, Any]:
-        """@brief Create a new post, attach media/poll, send notifications, and publish SSE."""
+        """@brief Create a new post, attach media/poll, send notifications, and publish SSE.
+        @raises AuthorizationError If a non-adult marks the post NSFW.
+        """
+        await self._require_adult_for_nsfw(is_nsfw, user)
         celebrated = (
             await post_celebrate.resolve(
                 CelebrationRepository(self._post_repo.session), self._community_id, user, celebrate
@@ -108,6 +112,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             reply_to_prompt_id=reply_to_prompt_id,
             subgroup_id=subgroup_id,
             private=private,
+            is_nsfw=is_nsfw,
         )
 
         if celebrated:
@@ -211,8 +216,10 @@ class PostService(CommentsMixin, ReactionsMixin):
         post_id: uuid.UUID,
         user: User,
         content: str,
+        *,
+        is_nsfw: bool | None = None,
     ) -> dict[str, Any]:
-        """@brief Update post content (author only).
+        """@brief Update post content and optionally the NSFW flag (author only).
         @raises NotFoundError If post does not exist.
         @raises AuthorizationError If user is not the author.
         """
@@ -224,6 +231,10 @@ class PostService(CommentsMixin, ReactionsMixin):
             raise NotFoundError(_("Post not found"))
         if post.author_id != user.id:
             raise AuthorizationError(_("You can only edit your own posts"))
+        if is_nsfw is not None and is_nsfw != post.is_nsfw:
+            # Any change (incl. un-flagging a moderated post) needs an adult.
+            await self._require_adult_for_nsfw(True, user)
+            post.is_nsfw = is_nsfw
 
         await self._post_repo.update_content(post, content)
         await self._sync_tags("post", post.id, content, user, post, fresh=False)

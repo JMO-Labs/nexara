@@ -13,6 +13,7 @@ from sqlalchemy import ColumnElement, and_, delete, func, literal, or_, select, 
 
 from app.models.gallery import Gallery, GalleryCollaborator, GalleryItem
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import media_nsfw_ok, nsfw_allowed, viewer_is_adult
 
 __all__ = ["GalleryRepository"]
 
@@ -79,7 +80,7 @@ class GalleryRepository(BaseRepository[Gallery]):
                 Gallery.subgroup_id.in_(allowed) if allowed else literal(False),
             ),
         )
-        stmt = stmt.where(visible)
+        stmt = stmt.where(visible, nsfw_allowed(viewer_is_adult(viewer_id), Gallery.is_nsfw))
 
         if owner_id is not None:
             stmt = stmt.where(Gallery.owner_id == owner_id)
@@ -160,6 +161,8 @@ class GalleryRepository(BaseRepository[Gallery]):
         )
         if viewer_id is not None:
             stmt = self.apply_block_filter(stmt, viewer_id)
+        # NSFW photos (flagged, or in an NSFW post) inside a safe album: adults only.
+        stmt = stmt.where(media_nsfw_ok(GalleryItem.media_id, viewer_id))
         if cursor:
             try:
                 stmt = stmt.where(GalleryItem.id > uuid.UUID(cursor))
@@ -372,7 +375,7 @@ class GalleryRepository(BaseRepository[Gallery]):
                 Gallery.subgroup_id.in_(allowed) if allowed else literal(False),
             ),
         )
-        stmt = stmt.where(visible)
+        stmt = stmt.where(visible, nsfw_allowed(viewer_is_adult(viewer_id), Gallery.is_nsfw))
 
         stmt = self.apply_block_filter(stmt, viewer_id)
         stmt = stmt.order_by(Gallery.created_at.desc())

@@ -21,6 +21,7 @@ from app.models.post import Comment, Post, PostMedia, Reaction
 from app.models.recipe import Recipe
 from app.models.user import User
 from app.repositories.visibility_preds import (
+    media_is_nsfw,
     my_subgroup_ids,
     not_blocked,
     post_visible,
@@ -137,7 +138,7 @@ class NewsletterRepository:
                 Media.community_id == self._cid,
                 Media.content_type.like("image/%"),
                 Media.status == "ready",
-                Media.is_nsfw.is_(False),
+                ~media_is_nsfw(Media.id),
             )
             .order_by(PostMedia.post_id, PostMedia.position)
         )

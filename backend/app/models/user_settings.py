@@ -158,6 +158,8 @@ class UserSettings(Base):
         Boolean, nullable=False, server_default="false"
     )
     simple_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Adults only: show NSFW media unblurred (frontend); never widens access.
+    always_show_nsfw: Mapped[bool] = _bool_col("false")
 
     # Locale
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="en-US")

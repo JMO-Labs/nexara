@@ -103,6 +103,8 @@ class PostCreate(BaseModel):
     subgroup_id: UUID | None = None
     # "private" = only the author sees it; otherwise subgroup_id decides.
     visibility: Literal["community", "subgroup", "private"] | None = None
+    # Adults-only; only adult authors may set it.
+    is_nsfw: bool = False
 
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:
@@ -120,6 +122,7 @@ class PostUpdate(BaseModel):
     """
 
     content: str = Field(..., min_length=1, max_length=10000)
+    is_nsfw: bool | None = None
 
 
 class CommentResponse(BaseModel):

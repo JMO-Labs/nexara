@@ -20,6 +20,7 @@ from app.models.poll import Poll, PollVote
 from app.models.post import Post
 from app.models.prompt import Prompt, PromptPost
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import nsfw_allowed, viewer_is_adult
 
 
 def _post_visible(subgroup_ids: list[uuid.UUID]) -> Any:
@@ -103,6 +104,7 @@ class HomeNeedsRepository(BaseRepository[Event]):
                 Post.author_id != viewer_id,
                 _post_visible(subgroup_ids),
                 _not_blocked(Post.author_id, viewer_id),
+                nsfw_allowed(viewer_is_adult(viewer_id)),
                 ~voted,
             )
             .order_by(Post.created_at.desc())

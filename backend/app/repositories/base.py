@@ -194,6 +194,36 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
         result = await self._session.execute(stmt)
         return result.scalar_one()
 
+    async def viewer_adult(self, viewer_id: uuid.UUID | None) -> bool:
+        """@brief Whether the viewer may see NSFW content (unknown/no viewer = False)."""
+        from app.repositories.visibility_preds import viewer_is_adult
+
+        return bool((await self._session.execute(select(viewer_is_adult(viewer_id)))).scalar())
+
+    async def nsfw_hidden(
+        self,
+        viewer_id: uuid.UUID | None,
+        *,
+        post_id: uuid.UUID | None = None,
+        gallery_id: uuid.UUID | None = None,
+        media_id: uuid.UUID | None = None,
+    ) -> bool:
+        """
+        @brief A referenced post/album/photo is NSFW (a photo also via its post or
+               album) and the viewer is not an adult (anonymous/unknown included).
+        """
+        from sqlalchemy import and_, literal
+        from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
+        from app.repositories.visibility_preds import target_is_nsfw, viewer_is_adult
+
+        if post_id is None and gallery_id is None and media_id is None:
+            return False
+        t = PG_UUID(as_uuid=True)
+        nsfw = target_is_nsfw(literal(post_id, t), literal(gallery_id, t), literal(media_id, t))
+        stmt = select(and_(nsfw, ~viewer_is_adult(viewer_id)))
+        return bool((await self._session.execute(stmt)).scalar())
+
     @staticmethod
     def apply_block_filter(
         stmt: Select[Any],

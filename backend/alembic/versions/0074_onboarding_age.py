@@ -1,7 +1,7 @@
 """Onboarding + age groups.
 
 @file 0074_onboarding_age.py
-@brief Age group columns, onboarding state and the age_suggestions table.
+@brief Age group columns, onboarding state, age_suggestions and NSFW columns.
 
 Revision ID: 0074_onboarding_age
 Revises: 0073_monitoring
@@ -92,10 +92,19 @@ def upgrade() -> None:
         postgresql_where=sa.text("status = 'pending'"),
     )
     op.create_index("age_suggestions_comm_status", "age_suggestions", ["community_id", "status"])
+    op.add_column(
+        "galleries", sa.Column("is_nsfw", sa.Boolean(), nullable=False, server_default="false")
+    )
+    op.add_column(
+        "user_settings",
+        sa.Column("always_show_nsfw", sa.Boolean(), nullable=False, server_default="false"),
+    )
 
 
 def downgrade() -> None:
     """@brief Drop everything added by upgrade."""
+    op.drop_column("user_settings", "always_show_nsfw")
+    op.drop_column("galleries", "is_nsfw")
     op.drop_table("age_suggestions")
     op.drop_column("communities", "onboarding_required")
     op.drop_column("communities", "adult_requires_approval")

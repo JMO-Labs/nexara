@@ -84,6 +84,7 @@ async def run_sassybot(
             visibility=post.visibility,
             subgroup_id=post.subgroup_id,
             author_id=post.author_id,
+            adults_only=post.is_nsfw is True,
         )
         await emit_to_audience(event_bus, audience, event.type, event.payload)
     return True

@@ -41,12 +41,14 @@ class GalleryPollSearchMixin:
         viewer_id: uuid.UUID,
         cursor: str | None,
         limit: int,
+        include_nsfw: bool = False,
     ) -> tuple[list[tuple[Gallery, float]], str | None, int]:
         """
         @brief Search galleries by title/description using FTS.
 
         Visibility: community galleries for all; private only for the owner;
-        subgroup galleries only for members of that subgroup.
+        subgroup galleries only for members of that subgroup. NSFW albums only
+        when *include_nsfw* (adult viewers).
 
         @return Tuple of (items with rank, next_cursor, total).
         """
@@ -64,6 +66,8 @@ class GalleryPollSearchMixin:
             and_(Gallery.visibility == "private", Gallery.owner_id == viewer_id),
             and_(Gallery.visibility == "subgroup", Gallery.subgroup_id.in_(member_subq)),
         )
+        if not include_nsfw:
+            visibility = and_(visibility, Gallery.is_nsfw.is_(False))
         stmt = (
             select(Gallery, rank_expr.label("rank"))
             .where(Gallery.community_id == community_id, visibility, match_expr)

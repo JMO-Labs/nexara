@@ -29,6 +29,7 @@ def poll_repo():
     repo = AsyncMock(spec=PollRepository)
     repo._session = AsyncMock()
     repo._session.get.return_value = None
+    repo.nsfw_hidden.return_value = False
     return repo
 
 

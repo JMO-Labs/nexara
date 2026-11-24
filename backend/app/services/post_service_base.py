@@ -11,6 +11,7 @@ from typing import Any
 
 import structlog
 
+from app.core.exceptions import AuthorizationError
 from app.core.i18n import _
 from app.models.post import Post
 from app.models.user import User
@@ -113,6 +114,11 @@ class PostServiceBase:
         except Exception:
             logger.warning("sassybot_enqueue_failed", post_id=str(post_id))
 
+    async def _require_adult_for_nsfw(self, is_nsfw: bool, user: User) -> None:
+        """@throws AuthorizationError when a non-adult marks content NSFW."""
+        if is_nsfw and not await self._post_repo.viewer_adult(user.id):
+            raise AuthorizationError(_("Only adults can mark content as NSFW"))
+
     @property
     def _target(self) -> CommunityTarget:
         """@brief Nominal target for builders; real routing is per-user via audience."""
@@ -128,6 +134,7 @@ class PostServiceBase:
             visibility=post.visibility,
             subgroup_id=post.subgroup_id,
             author_id=post.author_id,
+            adults_only=post.is_nsfw is True,
         )
         await emit_to_audience(self._event_bus, audience, event.type, event.payload)
 

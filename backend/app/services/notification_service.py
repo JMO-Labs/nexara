@@ -154,7 +154,7 @@ class NotificationService:
         type: str,  # noqa: A002
         payload: dict[str, Any],
         actor_id: uuid.UUID | None = None,
-    ) -> Notification:
+    ) -> Notification | None:
         """
         @brief Validate, persist and dispatch a notification.
 
@@ -162,7 +162,8 @@ class NotificationService:
         @param type Registered notification type key.
         @param payload Payload validated against the type's schema.
         @param actor_id Optional actor UUID.
-        @return The persisted Notification.
+        @return The persisted Notification, or None when skipped because it points at
+                NSFW content and the recipient is not an adult (no channel fires).
         @throws AppError NOTIF_TYPE_UNKNOWN or NOTIF_PREF_INVALID (400).
         """
         try:
@@ -183,6 +184,8 @@ class NotificationService:
                 details={"errors": exc.errors(include_url=False, include_context=False)},
             ) from exc
 
+        if await self._notification_repo.nsfw_blocked(user_id, payload):
+            return None
         settings = await self._settings_repo.get_or_create(user_id, self._community_id)
         eff = effective_channels(type_, user_prefs=settings.notification_prefs or {})
         tz = await self.effective_timezone(user_id, settings.dnd_timezone)

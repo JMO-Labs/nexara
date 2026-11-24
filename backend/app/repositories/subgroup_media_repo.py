@@ -20,6 +20,7 @@ from app.models.media import Media
 from app.models.post import Post, PostMedia
 from app.repositories.base import BaseRepository
 from app.repositories.subgroup_media_aggregate_repo import SubgroupMediaAggregateMixin
+from app.repositories.visibility_preds import media_nsfw_ok
 
 
 class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
@@ -174,6 +175,9 @@ class SubgroupMediaRepository(SubgroupMediaAggregateMixin):
             )
             queries.append(event_q)
 
+        # NSFW photos (own flag, NSFW post or album) are adults-only.
+        adult_ok = media_nsfw_ok(Media.id, viewer_id)
+        queries = [q.where(adult_ok) for q in queries]
         if not queries:
             return [], None
 

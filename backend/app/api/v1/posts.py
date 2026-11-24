@@ -73,6 +73,7 @@ async def create_post(
         subgroup_id=body.subgroup_id,
         private=body.visibility == "private",
         celebrate=body.celebrate,
+        is_nsfw=body.is_nsfw,
     )
 
 
@@ -94,7 +95,7 @@ async def update_post(
     service: PostService = Depends(_build_service),
 ) -> dict[str, Any]:
     """@brief Edit post content (author only)."""
-    return await service.update_post(post_id, user, body.content)
+    return await service.update_post(post_id, user, body.content, is_nsfw=body.is_nsfw)
 
 
 @router.delete("/{post_id}", response_model=MessageResponse)

@@ -13,13 +13,30 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 import structlog
-from sqlalchemy import and_, delete, or_, select, update
+from sqlalchemy import and_, case, delete, or_, select, update
 from sqlalchemy.engine import CursorResult
 
 from app.models.activity_event import ActivityEvent
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import target_is_nsfw, viewer_is_adult
 
 logger = structlog.get_logger(__name__)
+
+
+def _ref(kind: str) -> Any:
+    """@brief The activity's object or target id when it is of ``kind``."""
+    ev = ActivityEvent
+    return case(
+        (ev.object_type == kind, ev.object_id),
+        (ev.target_type == kind, ev.target_id),
+        else_=None,
+    )
+
+
+def _nsfw_ok(viewer_id: uuid.UUID) -> Any:
+    """@brief Activity about an NSFW post/album/photo: adults only."""
+    nsfw = target_is_nsfw(_ref("post"), _ref("gallery"), _ref("media"))
+    return or_(~nsfw, viewer_is_adult(viewer_id))
 
 
 class ActivityRepository(BaseRepository[ActivityEvent]):
@@ -168,6 +185,7 @@ class ActivityRepository(BaseRepository[ActivityEvent]):
 
         # Apply block filter (excludes actors blocked by viewer or who blocked viewer)
         stmt = self.apply_block_filter(stmt, viewer_id)
+        stmt = stmt.where(_nsfw_ok(viewer_id))
 
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

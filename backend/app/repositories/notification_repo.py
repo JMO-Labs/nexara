@@ -17,6 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import NotFoundError
 from app.models.notification import Notification
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import payload_nsfw_ok
+
+
+def _uuid_or_none(value: Any) -> uuid.UUID | None:
+    """@brief Parse a payload id; None when absent or malformed."""
+    try:
+        return uuid.UUID(str(value)) if value else None
+    except ValueError:
+        return None
 
 
 class NotificationRepository(BaseRepository[Notification]):
@@ -78,7 +87,9 @@ class NotificationRepository(BaseRepository[Notification]):
         @param unread_only Only rows with read_at and dismissed_at NULL.
         @return Tuple of (items, next_cursor).
         """
-        stmt = select(Notification).where(Notification.user_id == user_id)
+        stmt = select(Notification).where(
+            Notification.user_id == user_id, payload_nsfw_ok(Notification.payload, user_id)
+        )
         if types is not None:
             stmt = stmt.where(Notification.type.in_(types))
         if unread_only:
@@ -103,6 +114,18 @@ class NotificationRepository(BaseRepository[Notification]):
 
         return rows, next_cursor
 
+    async def nsfw_blocked(self, user_id: uuid.UUID, payload: dict[str, Any]) -> bool:
+        """
+        @brief The payload references an NSFW post/album/photo and the recipient
+               is not an adult: the notification must not be sent on any channel.
+        """
+        return await self.nsfw_hidden(
+            user_id,
+            post_id=_uuid_or_none(payload.get("post_id")),
+            gallery_id=_uuid_or_none(payload.get("gallery_id")),
+            media_id=_uuid_or_none(payload.get("media_id")),
+        )
+
     async def list_active(self, user_id: uuid.UUID, limit: int = 20) -> list[Notification]:
         """
         @brief List a user's non-dismissed notifications, newest first.
@@ -113,7 +136,11 @@ class NotificationRepository(BaseRepository[Notification]):
         """
         stmt = (
             select(Notification)
-            .where(Notification.user_id == user_id, Notification.dismissed_at.is_(None))
+            .where(
+                Notification.user_id == user_id,
+                Notification.dismissed_at.is_(None),
+                payload_nsfw_ok(Notification.payload, user_id),
+            )
             .order_by(Notification.created_at.desc())
             .limit(limit)
         )

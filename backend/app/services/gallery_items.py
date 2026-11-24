@@ -79,7 +79,7 @@ class GalleryItemsMixin(GalleryServiceBase):
         limit: int = 100,
     ) -> list[GalleryItemResponse]:
         gallery = await self._repo.get_by_id(gallery_id, community_id=self._community_id)
-        if gallery is None:
+        if gallery is None or not await self._nsfw_ok(gallery, user_id):
             raise NotFoundError(_("Gallery not found"))
         if not await self._can_view(gallery, user_id):
             raise AuthorizationError(_("You cannot view this gallery"))

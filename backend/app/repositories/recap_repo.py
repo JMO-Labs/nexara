@@ -84,6 +84,7 @@ class RecapRepository:
                 Prompt.prompt_type == "daily_question",
                 Prompt.scope == "community",
                 Post.deleted_at.is_(None),
+                Post.is_nsfw.is_(False),
             )
             .limit(1)
         )

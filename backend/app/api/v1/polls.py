@@ -73,7 +73,7 @@ async def get_poll_results(
     service: PollService = Depends(_build_service),
 ) -> PollResultsResponse:
     """@brief Get poll results (vote counts per option)."""
-    return await service.get_results(poll_id)
+    return await service.get_results(poll_id, user.id)
 
 
 @router.post("/{poll_id}/close", response_model=MessageResponse)

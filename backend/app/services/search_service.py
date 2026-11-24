@@ -281,7 +281,7 @@ class SearchService:
                 (
                     "galleries",
                     self._repo.search_galleries(
-                        q, prefix_q, self._community_id, user.id, cursor, limit
+                        q, prefix_q, self._community_id, user.id, cursor, limit, include_nsfw=adult
                     ),
                 )
             )

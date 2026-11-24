@@ -23,6 +23,7 @@ from app.models.tag import Tag
 from app.models.user import User
 from app.repositories.household_repo import household_visible
 from app.repositories.visibility_preds import (
+    media_nsfw_ok,
     media_visible,
     my_subgroup_ids,
     not_blocked,
@@ -251,6 +252,7 @@ class TagRepository:
                     Media.uploader_id == viewer_id,
                     media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id), community_id),
                 ),
+                media_nsfw_ok(Media.id, viewer_id),
             )
         )
         return bool((await self._session.execute(stmt)).scalar())
@@ -332,6 +334,7 @@ class TagRepository:
                     Media.uploader_id == viewer_id,
                     media_visible(Media.id, viewer_id, my_subgroup_ids(viewer_id), community_id),
                 ),
+                media_nsfw_ok(Media.id, viewer_id),
                 not_blocked(Media.uploader_id, viewer_id),
             )
             .order_by(Tag.created_at.desc(), Media.id.desc())

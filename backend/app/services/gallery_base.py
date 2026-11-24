@@ -11,6 +11,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import AuthorizationError
+from app.core.i18n import _
 from app.models.gallery import Gallery
 from app.models.subgroup import SubgroupMember
 from app.repositories.activity_repo import ActivityRepository
@@ -50,7 +52,19 @@ class GalleryServiceBase:
         direct = list(result.scalars().all())
         return await expand_with_descendants(self._session, direct)
 
+    async def _nsfw_ok(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
+        """@brief NSFW albums are adults-only (owner included)."""
+        return gallery.is_nsfw is False or await self._repo.viewer_adult(user_id)
+
+    async def _require_adult_for_nsfw(self, is_nsfw: bool | None, user_id: uuid.UUID) -> None:
+        """@throws AuthorizationError when a non-adult tries to mark an album NSFW."""
+        if is_nsfw and not await self._repo.viewer_adult(user_id):
+            raise AuthorizationError(_("Only adults can mark content as NSFW"))
+
     async def _can_view(self, gallery: Gallery, user_id: uuid.UUID) -> bool:
+        """@brief Audience check; NSFW albums are adults-only (owner included)."""
+        if not await self._nsfw_ok(gallery, user_id):
+            return False
         if gallery.visibility == "community":
             return True
         if gallery.visibility == "private":

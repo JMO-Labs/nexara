@@ -15,6 +15,7 @@ from app.models.post import Post
 from app.models.subgroup import SubgroupMember
 from app.models.user import User
 from app.repositories.base import BaseRepository
+from app.repositories.visibility_preds import nsfw_allowed, viewer_is_adult
 
 
 class KudosRepository(BaseRepository[Post]):
@@ -75,6 +76,7 @@ class KudosRepository(BaseRepository[Post]):
                 Post.recipient_id.isnot(None),
                 Post.deleted_at.is_(None),
                 or_(Post.subgroup_id.is_(None), Post.subgroup_id.in_(member_subgroups)),
+                nsfw_allowed(viewer_is_adult(viewer_id)),
             )
         )
         if recipient_id is not None:

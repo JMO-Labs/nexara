@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 GalleryVisibility = Literal["private", "subgroup", "community"]
 ContributionPolicy = Literal["owner_only", "collaborators", "community"]
@@ -25,6 +25,7 @@ class GalleryCreate(BaseModel):
     subgroup_id: UUID | None = None
     event_id: UUID | None = None
     cover_media_id: UUID | None = None
+    is_nsfw: bool = False
 
 
 class GalleryUpdate(BaseModel):
@@ -36,6 +37,7 @@ class GalleryUpdate(BaseModel):
     contribution_policy: ContributionPolicy | None = None
     cover_media_id: UUID | None = None
     is_featured: bool | None = None
+    is_nsfw: bool | None = None
 
 
 class GalleryItemCreate(BaseModel):
@@ -88,6 +90,14 @@ class GalleryResponse(BaseModel):
     item_count: int
     is_featured: bool
     is_default: bool
+    is_nsfw: bool = False
+
+    @field_validator("is_nsfw", mode="before")
+    @classmethod
+    def _unflushed_nsfw(cls, v: object) -> bool:
+        """@brief A not-yet-flushed row has None (server default): treat as False."""
+        return v is True
+
     is_event_gallery: bool
     created_at: datetime
     updated_at: datetime

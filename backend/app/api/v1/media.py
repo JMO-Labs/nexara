@@ -167,8 +167,8 @@ async def get_media_metadata(
     user: User = Depends(get_current_user),
     service: MediaService = Depends(_build_service),
 ) -> MediaResponse:
-    """@brief Return media metadata by ID."""
-    return await service.get_metadata(media_id)
+    """@brief Return media metadata by ID (NSFW: adults only)."""
+    return await service.get_metadata(media_id, user.id)
 
 
 @router.get("/{media_id}/file")
@@ -241,7 +241,7 @@ async def toggle_media_reaction(
 
     Validates media exists. Uses ReactionRepository.toggle with target_type="media".
     """
-    await service.get_metadata(media_id)
+    await service.get_metadata(media_id, user.id)
     reaction_repo = ReactionRepository(db)
     action, count = await reaction_repo.toggle(
         user_id=user.id,
