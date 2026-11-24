@@ -100,6 +100,15 @@ describe("PushDevices", () => {
     await waitFor(() => expect(api.removePushDevice).toHaveBeenCalledWith("b"));
   });
 
+  it("shows the hint on iOS Chrome too", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) CriOS/120 Mobile Safari/604.1",
+    );
+    renderWithProviders(<PushDevices />);
+    expect(screen.getByText(/add Nexara to your Home Screen/)).toBeTruthy();
+    vi.restoreAllMocks();
+  });
+
   it("shows the iPhone hint when not standalone", () => {
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/604.1",

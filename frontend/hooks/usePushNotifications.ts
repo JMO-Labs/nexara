@@ -171,7 +171,7 @@ export function usePushNotifications() {
     isSubscribed,
     devices: subsQuery.data ?? [],
     thisHash,
-    isLoading: subsQuery.isLoading,
+    isLoading: subsQuery.isLoading || localQuery.isLoading,
     subscribe,
     unsubscribe,
     isSubscribing: subscribeMutation.isPending,

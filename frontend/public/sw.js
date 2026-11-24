@@ -182,11 +182,25 @@ self.addEventListener("push", (event) => {
   event.waitUntil(Promise.all(jobs));
 });
 
-/** @brief Focus the visible matching tab, else any tab (+navigate msg), else open. */
+/** @brief Same-origin path+query+hash of raw, else "/app". */
+function safeTarget(raw) {
+  try {
+    const u = new URL(raw, self.location.origin);
+    if (u.origin === self.location.origin)
+      return u.pathname + u.search + u.hash;
+  } catch {
+    /* fall through */
+  }
+  return "/app";
+}
+
+/** @brief Focus the matching visible tab, else focused/visible/any (+navigate msg), else open. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target =
-    (event.notification.data && event.notification.data.url) || "/app";
+  const target = safeTarget(
+    event.notification.data && event.notification.data.url,
+  );
+  const path = target.split(/[?#]/)[0];
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
@@ -194,10 +208,13 @@ self.addEventListener("notificationclick", (event) => {
         const match = all.find(
           (c) =>
             c.visibilityState === "visible" &&
-            new URL(c.url, self.location.origin).pathname ===
-              new URL(target, self.location.origin).pathname,
+            new URL(c.url, self.location.origin).pathname === path,
         );
-        const client = match || all[0];
+        const client =
+          match ||
+          all.find((c) => c.focused) ||
+          all.find((c) => c.visibilityState === "visible") ||
+          all[0];
         if (client) {
           if (!match) client.postMessage({ type: "navigate", url: target });
           return client.focus();

@@ -6,6 +6,7 @@
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { safePath } from "@/lib/notifications/pushTag";
 
 /** @brief Mount once in the authenticated shell. @return null */
 export function SwNavigateBridge() {
@@ -15,7 +16,8 @@ export function SwNavigateBridge() {
     if (!sw) return;
     const on = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null;
-      if (d?.type === "navigate" && d.url?.startsWith("/")) router.push(d.url);
+      const url = safePath(d?.url);
+      if (d?.type === "navigate" && url) router.push(url);
     };
     sw.addEventListener("message", on);
     return () => sw.removeEventListener("message", on);

@@ -8,6 +8,7 @@ import { render } from "@testing-library/react";
 const m = vi.hoisted(() => ({
   onMessage: null as null | ((d: unknown) => Promise<void>),
   subscribed: false,
+  loading: false,
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("@/hooks/useSSE", () => ({
@@ -16,7 +17,10 @@ vi.mock("@/hooks/useSSE", () => ({
   },
 }));
 vi.mock("@/hooks/usePushNotifications", () => ({
-  usePushNotifications: () => ({ isSubscribed: m.subscribed }),
+  usePushNotifications: () => ({
+    isSubscribed: m.subscribed,
+    isLoading: m.loading,
+  }),
 }));
 vi.mock("@/lib/api/notifications", () => ({ STREAM_PATH: "/s" }));
 vi.mock("@/lib/notifications/registry", () => ({
@@ -50,6 +54,7 @@ describe("ForegroundNotifier", () => {
   beforeEach(() => {
     show.mockClear();
     m.subscribed = false;
+    m.loading = false;
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -74,6 +79,22 @@ describe("ForegroundNotifier", () => {
     setup("hidden");
     await m.onMessage!(evt);
     expect(show).not.toHaveBeenCalled();
+  });
+
+  it("is silent while devices are loading", async () => {
+    m.loading = true;
+    setup("hidden");
+    await m.onMessage!(evt);
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it("tags with type:thread like the backend", async () => {
+    setup("hidden");
+    await m.onMessage!({ ...evt, payload: { post_id: "p9" } });
+    expect(show).toHaveBeenCalledWith(
+      "Hi",
+      expect.objectContaining({ tag: "mention:p9" }),
+    );
   });
 
   it("is silent without permission", async () => {

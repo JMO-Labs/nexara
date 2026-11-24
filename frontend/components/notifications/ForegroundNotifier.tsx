@@ -10,6 +10,7 @@ import { useSSE } from "@/hooks/useSSE";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { STREAM_PATH } from "@/lib/api/notifications";
 import { useNotificationRegistry } from "@/lib/notifications/registry";
+import { pushTag } from "@/lib/notifications/pushTag";
 import { renderNotif, type Translate } from "@/lib/notifications/renderers";
 
 interface StreamEvent {
@@ -22,12 +23,13 @@ interface StreamEvent {
 export function ForegroundNotifier() {
   const t = useTranslations();
   const { byKey } = useNotificationRegistry();
-  const { isSubscribed } = usePushNotifications();
+  const { isSubscribed, isLoading } = usePushNotifications();
 
   useSSE(STREAM_PATH, {
     eventTypes: ["user_notification"],
     onMessage: async (data) => {
-      if (document.visibilityState !== "hidden" || isSubscribed) return;
+      if (document.visibilityState !== "hidden" || isSubscribed || isLoading)
+        return;
       if (typeof Notification === "undefined") return;
       if (Notification.permission !== "granted") return;
       const evt = data as StreamEvent;
@@ -40,7 +42,7 @@ export function ForegroundNotifier() {
           body: r.body,
           icon: "/icons/icon-192.png",
           badge: "/icons/badge-72.png",
-          tag: evt.type,
+          tag: pushTag(evt.type, evt.payload),
           data: { url: r.link ?? "/app" },
         });
       } catch {

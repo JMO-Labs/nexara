@@ -302,6 +302,32 @@ describe("sw.js", () => {
       });
       expect(a.focus).toHaveBeenCalled();
     });
+    it.each([
+      ["https://evil.com/x"],
+      ["//evil.com"],
+      ["/\\evil.com"],
+      ["javascript:alert(1)"],
+    ])("never opens or navigates to %s", async (bad) => {
+      const a = mk("https://x.test/app/chat", "hidden");
+      await click([a], bad);
+      const sent = a.postMessage.mock.calls[0]?.[0].url;
+      expect(sent).toMatch(/^\/(?![/\\])/);
+      await click([], bad);
+      expect(env.self.clients.openWindow.mock.calls.at(-1)![0]).toMatch(
+        /^\/(?![/\\])/,
+      );
+    });
+    it("prefers focused, then visible client for fallback", async () => {
+      const a = mk("https://x.test/app/a", "hidden");
+      const b = mk("https://x.test/app/b", "visible");
+      const c = { ...mk("https://x.test/app/c", "hidden"), focused: true };
+      await click([a, b, c]);
+      expect(c.postMessage).toHaveBeenCalled();
+      expect(b.postMessage).not.toHaveBeenCalled();
+      c.focused = false;
+      await click([a, b]);
+      expect(b.postMessage).toHaveBeenCalled();
+    });
     it("opens a window when none exist", async () => {
       await click([]);
       expect(env.self.clients.openWindow).toHaveBeenCalledWith("/app/events");

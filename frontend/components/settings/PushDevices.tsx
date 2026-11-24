@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button, Badge, IconButton, Input, SettingsRow } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
-import { iosSafari, standalone } from "@/components/layout/InstallPrompt";
+import { isIos, standalone } from "@/components/layout/InstallPrompt";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
@@ -110,7 +110,7 @@ export function PushDevices() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["push"] }),
   });
 
-  if (typeof window !== "undefined" && iosSafari() && !standalone()) {
+  if (typeof window !== "undefined" && isIos() && !standalone()) {
     return (
       <Panel className="space-y-3">
         <h2 className="text-lg font-semibold">Push notifications</h2>

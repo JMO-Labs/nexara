@@ -40,9 +40,13 @@ export function standalone(): boolean {
   );
 }
 
-export function iosSafari(): boolean {
+/** @brief Any iOS browser (incl. iPadOS reporting a Mac UA with touch). */
+export function isIos(): boolean {
   const ua = navigator.userAgent;
-  return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  );
 }
 
 /**
@@ -78,7 +82,7 @@ export function InstallPrompt({ variant }: { variant: "card" | "banner" }) {
   }, [key, variant]);
 
   if (!ready || dismissed || standalone()) return null;
-  const ios = iosSafari();
+  const ios = isIos();
   if (!ios && !deferred) return null;
 
   const dismiss = () => {
