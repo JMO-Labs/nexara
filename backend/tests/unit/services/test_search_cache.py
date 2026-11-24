@@ -35,6 +35,10 @@ class FakeRedis:
         self.ttl[key] = ttl
         return True
 
+    async def incr(self, key):
+        self.data[key] = str(int(self.data.get(key, 0)) + 1)
+        return int(self.data[key])
+
     async def scan(self, cursor=0, match=None, count=None):
         return 0, [k for k in self.data if fnmatch.fnmatch(k, match or "*")]
 
@@ -423,3 +427,28 @@ class TestMediaReady:
                 AsyncMock(), storage, AsyncMock(), CID, valkey, user, "u1"
             )
         _assert_inv(inv, "media", "create")
+
+
+class TestAgeGroupCache:
+    async def test_demoted_adult_not_served_nsfw_cache(self):
+        redis = FakeRedis()
+        svc, repo = _service(redis)
+        user = _user()
+        user.age_group = "adult"
+        await _search(svc, user)
+        assert repo.search_posts.await_args.kwargs["include_nsfw"] is True
+        user.age_group = "child"  # admin demotes (or birthday changes)
+        await _search(svc, user)
+        assert repo.search_posts.await_count == 2
+        assert repo.search_posts.await_args.kwargs["include_nsfw"] is False
+
+    async def test_version_bump_orphans_entries(self):
+        from app.core.cache import bump_search_version
+
+        redis = FakeRedis()
+        svc, repo = _service(redis)
+        user = _user()
+        await _search(svc, user)
+        await bump_search_version(redis, CID)
+        await _search(svc, user)
+        assert repo.search_posts.await_count == 2

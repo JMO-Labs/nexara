@@ -94,8 +94,9 @@ class AgeRepository:
             age_group=age_group,
             note=note,
         )
-        self._session.add(row)
-        await self._session.flush()
+        async with self._session.begin_nested():  # IntegrityError rolls back only this
+            self._session.add(row)
+            await self._session.flush()
         await self._session.refresh(row)
         return row
 

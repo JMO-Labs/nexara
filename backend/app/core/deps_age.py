@@ -38,11 +38,22 @@ def get_age_service(
 ) -> AgeService:
     """@brief AgeService for the current user (admin routes add a role guard)."""
     from app.core.list_dependencies import _notifier
+    from app.core.valkey import DB_CACHE, get_pool
     from app.repositories.age_repo import AgeRepository
     from app.repositories.audit_repo import AuditRepository
     from app.services.age_service import AgeService
 
     cid = uuid.UUID(settings.COMMUNITY_ID)
+    try:
+        cache = get_pool(settings, DB_CACHE)
+    except Exception:  # noqa: BLE001
+        cache = None
     return AgeService(
-        AgeRepository(db), cid, user.id, AuditRepository(db), _notifier(db, cid), client_ip(request)
+        AgeRepository(db),
+        cid,
+        user.id,
+        AuditRepository(db),
+        _notifier(db, cid),
+        client_ip(request),
+        cache,
     )

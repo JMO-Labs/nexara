@@ -10,9 +10,12 @@ Suggestions never notify the subject; only admins are told.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
+from sqlalchemy.exc import IntegrityError
+
+from app.core.cache import bump_search_version
 from app.core.exceptions import AppError, NotFoundError
 from app.core.i18n import _
 from app.models.age_suggestion import AgeSuggestion
@@ -23,7 +26,8 @@ GROUPS = ("child", "teen", "adult")
 
 
 def _age(birthday: date) -> int:
-    today = date.today()
+    # ponytail: no per-community timezone exists, so ages use the UTC date.
+    today = datetime.now(UTC).date()
     return today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
 
 
@@ -66,7 +70,9 @@ class AgeService:
         audit_repo: Any | None = None,
         notifier: Any | None = None,
         ip_address: str | None = None,
+        cache: Any | None = None,
     ) -> None:
+        self._cache = cache
         self._repo = repo
         self._cid = community_id
         self._actor = actor_id
@@ -74,12 +80,14 @@ class AgeService:
         self._notifier = notifier
         self._ip = ip_address
 
-    async def _log(self, action: str, target_id: uuid.UUID, extra: dict[str, Any]) -> None:
+    async def _log(
+        self, action: str, target_id: uuid.UUID, extra: dict[str, Any], target_type: str = "user"
+    ) -> None:
         if self._audit is not None:
             await self._audit.append(
                 actor_id=self._actor,
                 action=action,
-                target_type="user",
+                target_type=target_type,
                 target_id=target_id,
                 extra_data=extra,
                 ip_address=self._ip,
@@ -108,6 +116,11 @@ class AgeService:
     async def set_adult_requires_approval(self, value: bool) -> bool:
         """@brief Admin toggles approval mode."""
         await self._repo.set_adult_requires_approval(self._cid, value)
+        if self._cache is not None:  # who counts as adult changed: orphan cached searches
+            await bump_search_version(self._cache, self._cid)
+        await self._log(
+            "age_group.approval_mode_changed", self._cid, {"enabled": value}, "community"
+        )
         return value
 
     async def settings(self) -> bool:
@@ -118,10 +131,6 @@ class AgeService:
     async def suggest(self, subject_id: uuid.UUID, group: str, note: str | None) -> AgeSuggestion:
         """@brief Member suggests a group for another member; admins are notified."""
         self._check_group(group)
-        if group is None:
-            raise AppError(
-                code="INVALID_AGE_GROUP", message=_("Invalid age group"), status_code=400
-            )
         if subject_id == self._actor:
             raise AppError(
                 code="SELF_AGE_SUGGESTION",
@@ -135,7 +144,14 @@ class AgeService:
                 message=_("You already have a pending suggestion for this member"),
                 status_code=409,
             )
-        row = await self._repo.create(self._cid, subject_id, self._actor, group, note)
+        try:
+            row = await self._repo.create(self._cid, subject_id, self._actor, group, note)
+        except IntegrityError:  # concurrent duplicate hit the partial unique index
+            raise AppError(
+                code="AGE_SUGGESTION_EXISTS",
+                message=_("You already have a pending suggestion for this member"),
+                status_code=409,
+            ) from None
         if self._notifier is not None:
             for admin_id in await self._repo.list_admin_ids(self._cid):
                 if admin_id in (subject_id, self._actor):

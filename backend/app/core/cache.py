@@ -90,6 +90,27 @@ async def cache_delete(client: Redis, key: str) -> bool:
         return False
 
 
+def search_version_key(community_id: uuid.UUID) -> str:
+    """@brief Key holding the community-wide search cache version (outside ``search:*:*``)."""
+    return f"searchver:{community_id}"
+
+
+async def get_search_version(client: Redis, community_id: uuid.UUID) -> int:
+    """@brief Current search cache version (0 when unset or Valkey is down)."""
+    try:
+        return int(await client.get(search_version_key(community_id)) or 0)
+    except Exception:
+        return 0
+
+
+async def bump_search_version(client: Redis, community_id: uuid.UUID) -> None:
+    """@brief Orphan every cached search entry of a community (never raises)."""
+    try:
+        await client.incr(search_version_key(community_id))
+    except Exception:
+        logger.warning("search_version_bump_failed", exc_info=True)
+
+
 SEARCH_KEY_PATTERN: str = "search:*:*"
 """@brief SCAN pattern matching every search cache entry."""
 

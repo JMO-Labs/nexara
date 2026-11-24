@@ -102,3 +102,12 @@ async def test_member_cannot_approve(env):
         b = await c.get("/api/v1/admin/age-groups/suggestions")
         d = await c.put("/api/v1/admin/age-groups/settings", json={"adult_requires_approval": True})
     assert (a.status_code, b.status_code, d.status_code) == (403, 403, 403)
+
+
+async def test_note_over_500_422(env):
+    async with env.client("member") as c:
+        r = await c.post(
+            "/api/v1/age-groups/suggestions",
+            json={"subject_id": str(SUBJECT), "age_group": "teen", "note": "x" * 501},
+        )
+    assert r.status_code == 422

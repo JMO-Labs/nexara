@@ -6,11 +6,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import AppError
 from app.models.age_suggestion import AgeSuggestion
@@ -100,3 +101,48 @@ async def test_decide_twice_409():
     with pytest.raises(AppError) as e:
         await svc.decide(uuid.uuid4(), False)
     assert e.value.status_code == 409
+
+
+def _freeze(monkeypatch, today: date):
+    import app.services.age_service as mod
+
+    class _DT:
+        @staticmethod
+        def now(tz=None):
+            return datetime(today.year, today.month, today.day, 12, tzinfo=UTC)
+
+    monkeypatch.setattr(mod, "datetime", _DT)
+
+
+def test_turns_18_today_is_adult(monkeypatch):
+    _freeze(monkeypatch, date(2026, 6, 15))
+    assert effective_age_group(_u(date(2008, 6, 15)), None) == "adult"
+    assert effective_age_group(_u(date(2008, 6, 16)), None) == "teen"
+
+
+def test_leap_day_birthday_adult_on_mar_1_not_feb_28(monkeypatch):
+    b = date(2008, 2, 29)  # turns 18 in 2026 (non-leap)
+    _freeze(monkeypatch, date(2026, 2, 28))
+    assert effective_age_group(_u(b), None) == "teen"
+    _freeze(monkeypatch, date(2026, 3, 1))
+    assert effective_age_group(_u(b), None) == "adult"
+
+
+async def test_duplicate_race_409():
+    me, subj = uuid.uuid4(), uuid.uuid4()
+    svc, repo, *_ = _svc(me)
+    repo.get_user.return_value = _u()
+    repo.pending_exists.return_value = False
+    repo.create.side_effect = IntegrityError("x", {}, Exception())
+    with pytest.raises(AppError) as e:
+        await svc.suggest(subj, "teen", None)
+    assert e.value.status_code == 409
+
+
+async def test_approval_toggle_audited_and_bumps_cache():
+    svc, repo, audit, _n = _svc(uuid.uuid4())
+    cache = MagicMock(incr=AsyncMock())
+    svc._cache = cache
+    await svc.set_adult_requires_approval(True)
+    assert audit.append.await_args.kwargs["action"] == "age_group.approval_mode_changed"
+    cache.incr.assert_awaited_once()
