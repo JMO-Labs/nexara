@@ -12,8 +12,9 @@ from typing import Any
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.models.media import Media
 from app.models.plugin import PluginCommunity, PluginInstall, PluginToken, PluginUserPref
-from app.models.post import Comment, Post, Reaction
+from app.models.post import Comment, Post, PostMedia, Reaction
 from app.repositories.base import BaseRepository
 
 REMOVED_COMMENT = "This comment was removed."
@@ -192,3 +193,13 @@ class PluginRepository(BaseRepository[PluginInstall]):
             select(PluginCommunity).where(PluginCommunity.install_id == install_id)
         )
         return list(res.scalars().all())
+
+    async def list_post_media(self, post_id: uuid.UUID) -> list[tuple[uuid.UUID, str]]:
+        """@brief ``(media_id, content_type)`` of a post's attachments, in order."""
+        res = await self._session.execute(
+            select(Media.id, Media.content_type)
+            .join(PostMedia, PostMedia.media_id == Media.id)
+            .where(PostMedia.post_id == post_id)
+            .order_by(PostMedia.position)
+        )
+        return [(r[0], r[1]) for r in res.all()]

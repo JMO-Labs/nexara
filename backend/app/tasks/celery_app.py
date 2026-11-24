@@ -50,6 +50,7 @@ celery_app = Celery(
         "app.tasks.notification_email_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
+        "app.tasks.plugin_tasks",
         "app.tasks.poll_tasks",
         "app.tasks.prompt_tasks",
         "app.tasks.retention_tasks",
@@ -96,6 +97,7 @@ celery_app.conf.update(
         "inbound_email.*": {"queue": "email"},
         "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
+        "app.tasks.plugin_tasks.*": {"queue": "plugins"},
     },
     imports=("app.tasks.list_tasks",),
     # ── Reliability ───────────────────────────────────────────────────

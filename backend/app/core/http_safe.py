@@ -68,9 +68,11 @@ def _pin(url: str) -> tuple[str, str, str]:
     return urlunparse(parsed._replace(netloc=ip_netloc)), host_header, host
 
 
-async def _fetch(client: httpx.AsyncClient, url: str, max_bytes: int) -> bytes:
+async def _fetch(client: httpx.AsyncClient, url: str, max_bytes: int, strict: bool) -> bytes:
     current = url
     for _ in range(_MAX_REDIRECTS + 1):
+        if strict and urlparse(current).scheme != "https":
+            raise UnsafeUrlError("https required")
         pinned, host_header, hostname = _pin(current)
         req = client.build_request(
             "GET",
@@ -86,6 +88,8 @@ async def _fetch(client: httpx.AsyncClient, url: str, max_bytes: int) -> bytes:
                     raise UnsafeUrlError("Redirect without Location header")
                 current = urljoin(current, loc)
                 continue
+            if strict:
+                resp.raise_for_status()  # non-2xx -> httpx.HTTPStatusError
             buf = bytearray()
             async for chunk in resp.aiter_bytes():
                 buf += chunk
@@ -102,11 +106,13 @@ async def safe_fetch(
     *,
     timeout: float = 30.0,
     max_bytes: int = 10 * 1024 * 1024,
+    strict: bool = False,
 ) -> bytes:
     """
     @brief Fetch a public URL with SSRF protection.
     @param timeout Total seconds for all hops and the body (not per read).
     @param max_bytes Body cap; the result is truncated there.
+    @param strict Require https on every hop and raise on a non-2xx status.
     @raises UnsafeUrlError for disallowed targets; TimeoutError past the deadline.
     """
     async with (
@@ -118,4 +124,37 @@ async def safe_fetch(
             limits=httpx.Limits(max_connections=10),
         ) as client,
     ):
-        return await _fetch(client, url, max_bytes)
+        return await _fetch(client, url, max_bytes, strict)
+
+
+async def safe_post(
+    url: str,
+    *,
+    content: bytes,
+    headers: dict[str, str],
+    timeout: float = 10.0,
+) -> int:
+    """
+    @brief POST to a public URL with the same SSRF pinning as ``safe_fetch``.
+
+    Redirects are never followed; the response body is discarded.
+    @return HTTP status code.
+    @raises UnsafeUrlError for disallowed targets; TimeoutError past the deadline.
+    """
+    async with (
+        asyncio.timeout(timeout),
+        httpx.AsyncClient(timeout=timeout, follow_redirects=False, trust_env=False) as client,
+    ):
+        pinned, host_header, hostname = _pin(url)
+        req = client.build_request(
+            "POST",
+            pinned,
+            content=content,
+            headers={**headers, "Host": host_header},
+            extensions={"sni_hostname": hostname},
+        )
+        resp = await client.send(req, stream=True)
+        try:
+            return resp.status_code
+        finally:
+            await resp.aclose()
