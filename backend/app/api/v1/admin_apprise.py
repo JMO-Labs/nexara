@@ -13,9 +13,9 @@ from app.core.dependencies import require_role
 from app.core.deps_apprise import get_admin_apprise_service
 from app.schemas.apprise import (
     AdminAppriseSettings,
+    AppriseMemberResponse,
     AppriseTestResponse,
     AppriseURLCreate,
-    AppriseURLResponse,
 )
 from app.schemas.common import MessageResponse
 from app.services.admin_apprise_service import AdminAppriseService
@@ -27,20 +27,20 @@ router = APIRouter(
 )
 
 
-@router.get("/targets", response_model=list[AppriseURLResponse])
+@router.get("/targets", response_model=list[AppriseMemberResponse])
 async def list_targets(
     svc: AdminAppriseService = Depends(get_admin_apprise_service),
-) -> list[AppriseURLResponse]:
+) -> list[AppriseMemberResponse]:
     """@brief List admin alert targets."""
-    return [AppriseURLResponse.model_validate(r) for r in await svc.list()]
+    return [AppriseMemberResponse.from_row(r) for r in await svc.list()]
 
 
-@router.post("/targets", response_model=AppriseURLResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/targets", response_model=AppriseMemberResponse, status_code=status.HTTP_201_CREATED)
 async def create_target(
     body: AppriseURLCreate, svc: AdminAppriseService = Depends(get_admin_apprise_service)
-) -> AppriseURLResponse:
+) -> AppriseMemberResponse:
     """@brief Add an admin alert target (local addresses allowed)."""
-    return AppriseURLResponse.model_validate(await svc.create(body.apprise_url, body.label))
+    return AppriseMemberResponse.from_row(await svc.create(body.apprise_url, body.label))
 
 
 @router.delete("/targets/{url_id}", response_model=MessageResponse)

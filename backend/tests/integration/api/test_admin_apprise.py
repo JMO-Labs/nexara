@@ -84,6 +84,7 @@ async def test_create_local_target_ok_and_never_returns_url(env):
         assert "192.168" not in r.text and "apprise_url" not in r.json()
         lst = await c.get("/api/v1/admin/apprise/targets")
     assert len(lst.json()) == 1
+    assert lst.json()[0]["scheme"] == "ntfy" and r.json()["scheme"] == "ntfy"
     assert env.audit.append.await_args.kwargs["action"] == "apprise.target.created"
     assert "192.168" not in str(env.audit.append.await_args)
     assert next(iter(env.repo.rows.values())).is_admin_target
