@@ -212,8 +212,10 @@ async def oauth_callback(
         {
             "user_id": str(user.id),
             "provider_slug": slug,
-            # First link to an existing local account must still pass its local 2FA.
-            "linked_now": provisioner.linked_existing is True,
+            # First link to an account with a local factor: created only after 2FA.
+            "pending_link": (
+                provisioner.pending_link if isinstance(provisioner.pending_link, dict) else None
+            ),
         }
     )
     await valkey.setex(f"oauth_exchange:{exchange_code}", 60, payload)
@@ -254,8 +256,11 @@ async def oauth_exchange(
         raise AuthenticationError(message=_("User not found or deactivated"))
 
     auth_svc = AuthService(db, settings)
+    pending_link = data.get("pending_link")
     result = await auth_svc.login_sso(
-        user, request=request, first_link=data.get("linked_now") is True
+        user,
+        request=request,
+        pending_link=pending_link if isinstance(pending_link, dict) else None,
     )
     if result.get("requires_2fa"):
         return LoginResponse(

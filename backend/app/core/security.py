@@ -163,6 +163,7 @@ def create_access_token(
 def create_2fa_pending_token(
     subject: UUID | str,
     settings: Settings | None = None,
+    oauth_link: dict[str, Any] | None = None,
 ) -> str:
     """
     @brief Create a short-lived token for 2FA-pending login sessions.
@@ -172,6 +173,7 @@ def create_2fa_pending_token(
 
     @param subject User ID.
     @param settings Override settings for testing.
+    @param oauth_link First SSO link held until this 2FA step passes (signed claim).
     @return Encoded JWT string with type="2fa_pending".
     """
     s = settings or get_settings()
@@ -182,6 +184,8 @@ def create_2fa_pending_token(
         "iat": now,
         "type": "2fa_pending",
     }
+    if oauth_link:
+        payload["oauth_link"] = oauth_link
     return str(jwt.encode(payload, _get_signing_key(s), algorithm=s.JWT_ALGORITHM))
 
 

@@ -31,6 +31,7 @@ from app.repositories.invite_repo import InviteRepository
 from app.repositories.settings_repo import SettingsRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
+from app.services.auth import pending_link as _pending_link
 from app.services.auth import sso_only as _sso_only
 from app.services.auth.magic_link import request_magic_link as _request_magic_link_impl
 from app.services.auth.magic_link import verify_magic_link as _verify_magic_link_impl
@@ -212,6 +213,7 @@ class AuthService:
             await fail(user, user.email, method, "bad_code")
             raise AuthenticationError(message=_("Invalid 2FA code"))
         await clear_user_attempts(user.id, self._settings)
+        await _pending_link.create_link(self._session, user.id, payload.get("oauth_link"))
 
         await self._user_repo.update_last_seen(user.id)
         logger.info("user_2fa_login_complete", user_id=str(user.id))
@@ -333,30 +335,38 @@ class AuthService:
         return await _issue_tokens_impl(self._token_repo, user, self._settings)
 
     async def login_sso(
-        self, user: User, request: Request | None = None, *, first_link: bool = False
+        self,
+        user: User,
+        request: Request | None = None,
+        *,
+        pending_link: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         @brief Record an SSO sign-in and issue tokens for the already-verified user.
 
         @param user Authenticated (active, non-memorialized) user.
         @param request Current request (sign-in log IP / User-Agent).
-        @param first_link The provider was just linked to a pre-existing account:
-               its local factor (if any) is still required.
+        @param pending_link First link to a pre-existing account, not yet persisted:
+               with a local factor it is held until 2FA passes, else created now.
         @return Token dict with ``raw_refresh_token``, or the pending-2FA dict.
         """
-        if first_link and (pending := await self._pending_2fa(user)):
-            return pending
+        if pending_link is not None:
+            if pending := await self._pending_2fa(user, oauth_link=pending_link):
+                return pending
+            await _pending_link.create_link(self._session, user.id, pending_link)
         await log_success(self._session, self._settings, user, "sso", request)
         return await self._issue_tokens(user)
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
-    async def _pending_2fa(self, user: User) -> dict[str, Any] | None:
+    async def _pending_2fa(
+        self, user: User, oauth_link: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
         """@brief Pending-2FA response (token + usable methods), or None if no factor is set."""
         methods = await factor_methods(self._session, user)
         if not methods:
             return None
-        pending = create_2fa_pending_token(user.id, settings=self._settings)
+        pending = create_2fa_pending_token(user.id, settings=self._settings, oauth_link=oauth_link)
         return {"requires_2fa": True, "two_factor_token": pending, "two_factor_methods": methods}
 
     async def _issue_tokens(

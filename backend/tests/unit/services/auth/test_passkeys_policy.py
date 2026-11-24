@@ -27,6 +27,7 @@ def env():
         patch(PR + "log_failure", fail),
         patch(PR + "reserve_attempt", AsyncMock(return_value=True)),
         patch(PR + "clear_user_attempts", AsyncMock()),
+        patch(PR + "create_link", AsyncMock()),
         patch(PR + "issue_tokens", AsyncMock(return_value={"access_token": "T"})),
     ):
         svc, users = mk()
@@ -54,10 +55,14 @@ async def test_sso_only_mode_allows_passkey_as_second_factor(env):
     svc, u, a, _, sso = env
     await _reg(env)
     sso.side_effect = AuthorizationError(message="sso only")
-    tok = create_2fa_pending_token(u.id, settings=S)
-    out = await svc.login_verify(a.get(await svc.login_options(None)), tok, None)
+    held = {"provider_id": str(uuid.uuid4()), "sub": "s"}
+    tok = create_2fa_pending_token(u.id, settings=S, oauth_link=held)
+    with patch(PR + "create_link", AsyncMock()) as link:
+        out = await svc.login_verify(a.get(await svc.login_options(None)), tok, None)
     assert out["access_token"] == "T"
     sso.assert_not_awaited()
+    # A held first SSO link is created only once the passkey 2FA step passes.
+    assert link.await_args.args[1:] == (u.id, held)
 
 
 async def test_sso_user_cannot_sign_in_passwordless(env):

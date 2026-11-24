@@ -43,6 +43,7 @@ from app.repositories.passkey_repo import PasskeyRepository
 from app.repositories.token_repo import TokenRepository
 from app.repositories.user_repo import UserRepository
 from app.services.auth.memorial_guard import reject_memorialized
+from app.services.auth.pending_link import create_link
 from app.services.auth.signin_log import log_failure, log_success
 from app.services.auth.sso_only import assert_password_auth_allowed
 from app.services.auth.token_utils import issue_tokens
@@ -216,6 +217,7 @@ class PasskeyService:
         """
         fail = partial(log_failure, self._s, request=request)
         pending_user: uuid.UUID | None = None
+        held_link: dict[str, Any] | None = None
         if pending_token:
             try:
                 payload = decode_token(pending_token, expected_type="2fa_pending", settings=self._s)
@@ -223,6 +225,7 @@ class PasskeyService:
                 await fail(None, None, "passkey", "bad_2fa_session")
                 raise AuthenticationError(message=str(exc)) from exc
             pending_user = uuid.UUID(payload["sub"])
+            held_link = payload.get("oauth_link")
             if not await reserve_attempt(pending_token, pending_user, self._s):
                 await fail(None, None, "passkey", "bad_2fa_session")
                 raise AuthenticationError(message=_("Invalid 2FA session"))
@@ -281,6 +284,7 @@ class PasskeyService:
             raise _bad("passkey_cloned", _("Passkey rejected: possible cloned authenticator"))
         if pending_token and pending_user:
             await clear_user_attempts(pending_user, self._s)
+            await create_link(self._repo.session, pending_user, held_link)
         await self._users.update_last_seen(user.id)
         await log_success(self._repo.session, self._s, user, "passkey", request)
         return await issue_tokens(self._tokens, user, self._s)

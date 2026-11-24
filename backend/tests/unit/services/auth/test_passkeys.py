@@ -44,6 +44,7 @@ def redis():
     with (
         patch(PR + "get_pool", return_value=r),
         patch(PR + "assert_password_auth_allowed", AsyncMock()),
+        patch(PR + "create_link", AsyncMock()),
     ):
         yield r
 
