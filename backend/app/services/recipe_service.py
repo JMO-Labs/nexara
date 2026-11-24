@@ -107,6 +107,7 @@ class RecipeService:
             r.best_maker_user_id for r in rows if r.best_maker_user_id
         }
         names = await self._repo.author_names(list(users))
+        bots = await self._repo.bot_ids(list(users))
         # Hidden household members (private pets/family) never leak a name.
         hh = await self._repo.household_names(
             [r.best_maker_household_id for r in rows if r.best_maker_household_id],
@@ -128,7 +129,9 @@ class RecipeService:
                         **{f: getattr(r, f) for f in RecipeBase.model_fields},
                         "id": r.id,
                         "author": RecipeAuthor(
-                            id=r.author_id, display_name=names.get(r.author_id, "")
+                            id=r.author_id,
+                            display_name=names.get(r.author_id, ""),
+                            is_bot=r.author_id in bots,
                         ),
                         "best_maker_name": maker,
                         "created_at": r.created_at,

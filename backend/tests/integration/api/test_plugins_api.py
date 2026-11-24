@@ -74,6 +74,13 @@ async def _user(s: AsyncSession, role: str, cid: uuid.UUID = CID) -> User:
     return u
 
 
+@pytest.fixture(autouse=True)
+def _no_pubsub():
+    """@brief Valkey pubsub pools are bound to the first test's event loop; stub emits."""
+    with patch("app.services.realtime.event_bus.EventBus.emit", AsyncMock()):
+        yield
+
+
 @pytest.fixture
 async def env(test_app, session):
     who: dict[str, User] = {}
@@ -144,6 +151,7 @@ async def test_install_enable_credentials_and_masked_settings(env):
     assert r.json()["api_key"] == {"set": True} and "sekret" not in r.text
     r = await env.c.get("/api/v1/plugins")
     assert any(p["plugin_id"] == env.pid and p["enabled"] for p in r.json())
+    assert all("tier" in p for p in r.json())
     r = await env.c.request("DELETE", f"/api/v1/plugins/{env.pid}", json={"delete_content": True})
     assert r.status_code == 204
 
@@ -181,10 +189,75 @@ async def test_post_flags_valid_stored_unknown_422(env):
         await env.s.execute(select(Post.plugin_flags).where(Post.id == uuid.UUID(ok.json()["id"])))
     ).scalar_one()
     assert stored == {env.pid: {"silent": True}}
-    for flags in ({"no.such": {"silent": True}}, {env.pid: {"bogus": True}}):
+    for flags in ({env.pid: {"bogus": True}}, {env.pid: {"silent": "notabool"}}):
         r = await env.c.post("/api/v1/posts", json={"content": "x", "plugin_flags": flags})
         assert r.status_code == 422
         assert r.json()["error"]["code"] == "invalid_plugin_flag"
+
+
+async def test_flags_for_unknown_or_disabled_plugin_dropped(env):
+    await _install(env)
+    await _enable(env)
+    await env.c.patch(f"/api/v1/plugins/{env.pid}/communities/{CID}", json={"enabled": False})
+    env.who["u"] = env.u.member
+    for flags in ({"no.such": {"silent": True}}, {env.pid: {"silent": True}}):
+        r = await env.c.post("/api/v1/posts", json={"content": "x", "plugin_flags": flags})
+        assert r.status_code == 201, r.text
+        stored = (
+            await env.s.execute(
+                select(Post.plugin_flags).where(Post.id == uuid.UUID(r.json()["id"]))
+            )
+        ).scalar_one()
+        assert stored == {}
+
+
+async def test_settings_validation_failure_422(env):
+    await _install(env)
+    r = await env.c.patch(
+        f"/api/v1/plugins/{env.pid}/communities/{CID}", json={"settings": {"nope": 1}}
+    )
+    assert r.status_code == 422
+
+
+async def _bot_post(env) -> tuple[User, uuid.UUID]:
+    r = await _enable(env)
+    bot = await env.s.get(User, uuid.UUID(r.json()["bot_user_id"]))
+    env.who["u"] = bot
+    p = await env.c.post("/api/v1/posts", json={"content": "beep"})
+    assert p.status_code == 201, p.text
+    return bot, uuid.UUID(p.json()["id"])
+
+
+async def test_bot_author_flagged_end_to_end(env):
+    await _install(env)
+    bot, pid = await _bot_post(env)
+    env.who["u"] = env.u.member
+    r = await env.c.get(f"/api/v1/posts/{pid}")
+    assert r.json()["author"]["is_bot"] is True
+
+
+async def test_uninstall_delete_content_hides_bot_posts(env):
+    await _install(env)
+    _bot, pid = await _bot_post(env)
+    env.who["u"] = env.u.owner
+    r = await env.c.request("DELETE", f"/api/v1/plugins/{env.pid}", json={"delete_content": True})
+    assert r.status_code == 204
+    deleted = (await env.s.execute(select(Post.deleted_at).where(Post.id == pid))).scalar_one()
+    assert deleted is not None
+
+
+async def test_prefs_require_running_install(env):
+    await _install(env)
+    await _enable(env)
+    from sqlalchemy import update
+
+    from app.models.plugin import PluginInstall
+
+    await env.s.execute(
+        update(PluginInstall).where(PluginInstall.plugin_id == env.pid).values(status="disabled")
+    )
+    env.who["u"] = env.u.member
+    assert (await env.c.get(f"/api/v1/me/plugin-prefs/{env.pid}")).status_code == 404
 
 
 async def test_user_out_has_is_bot(env):

@@ -31,7 +31,8 @@ async def validate_plugin_flags(
     @param community_id The author's community.
     @param flags ``{plugin_id: {flag: value}}`` from the request.
     @return The flags to store (only validated keys).
-    @raises AppError 422 ``invalid_plugin_flag`` for an unknown plugin, flag or value.
+    Flags of plugins not enabled here are silently dropped.
+    @raises AppError 422 ``invalid_plugin_flag`` for an unknown flag key or bad value.
     """
     if not flags:
         return {}
@@ -42,7 +43,7 @@ async def validate_plugin_flags(
     out: dict[str, dict[str, Any]] = {}
     for plugin_id, values in flags.items():
         if plugin_id not in allowed:
-            raise _invalid(f"{plugin_id}: unknown plugin")
+            continue  # not installed/enabled/running here: dropped, the post still succeeds
         try:
             out[plugin_id] = dict(validate_values(allowed[plugin_id], values))
         except AppError as exc:

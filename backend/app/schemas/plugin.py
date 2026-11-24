@@ -63,6 +63,7 @@ class PluginInstallOut(BaseModel):
     name: str
     version: str
     status: str
+    tier: str | None = None
     scopes: list[str]
     events: list[str]
     egress: list[str]

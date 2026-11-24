@@ -159,6 +159,13 @@ class TimeCapsuleRepository:
         )
         return int((await self._session.execute(stmt)).scalar_one())
 
+    async def bot_ids(self, ids: list[uuid.UUID]) -> set[uuid.UUID]:
+        """@brief Subset of ``ids`` that are plugin bot accounts."""
+        if not ids:
+            return set()
+        stmt = select(User.id).where(User.id.in_(ids), User.is_bot.is_(True))
+        return set((await self._session.execute(stmt)).scalars().all())
+
     async def author_names(self, ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
         """@brief Display names keyed by user id."""
         if not ids:

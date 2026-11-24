@@ -95,6 +95,7 @@ class PluginService:
             name=m.name,
             version=inst.version,
             status=inst.status,
+            tier=inst.tier,
             scopes=list(inst.granted_scopes),
             events=m.events,
             egress=m.egress,
@@ -271,7 +272,7 @@ class PluginService:
     async def _enabled(self, plugin_id: str) -> tuple[PluginInstall, PluginManifest]:
         inst = await self._install(plugin_id)
         pc = await self._repo.get_community(inst.id, self._cid)
-        if pc is None or not pc.enabled:
+        if pc is None or not pc.enabled or inst.status != "running":
             raise NotFoundError(message="Plugin not found")
         return inst, self._manifest(inst)
 

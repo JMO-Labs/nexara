@@ -192,6 +192,7 @@ async def enrich_posts(
                         "id": str(voter.id),
                         "display_name": voter.display_name,
                         "avatar_url": voter.avatar_url,
+                        "is_bot": bool(voter.is_bot),
                     }
                 )
 

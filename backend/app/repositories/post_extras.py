@@ -48,6 +48,7 @@ async def post_extras(
             "username": u.username,
             "display_name": u.display_name,
             "avatar_url": u.avatar_url,
+            "is_bot": bool(u.is_bot),
         }
 
     out: dict[uuid.UUID, dict[str, Any]] = {}
