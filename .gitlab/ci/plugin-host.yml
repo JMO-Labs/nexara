@@ -5,7 +5,8 @@
 # Unit tests run as a non-root user (some assert non-root behaviour). The
 # `sandbox`-marked tests need real bwrap and run ONLY here, as root inside the
 # image with the same security options as the compose service
-# (docker-in-docker, so it needs a privileged runner).
+# (docker-in-docker, so it needs a privileged runner), including an end-to-end
+# install+start+upgrade+purge as root without DAC_OVERRIDE (test_e2e_sandbox).
 #
 # The sandbox job runs only when PLUGIN_HOST_SANDBOX_CI == "true" (project CI
 # variable) and only on runners tagged `privileged`. Otherwise a visible
@@ -68,7 +69,7 @@ test:plugin-host:
       /opt/venv/bin/pytest -q -p no:cacheprovider -m "not sandbox"
     - >-
       docker run --rm --cap-drop ALL
-      --cap-add SETUID --cap-add SETGID --cap-add CHOWN --cap-add KILL
+      --cap-add SETUID --cap-add SETGID --cap-add CHOWN --cap-add KILL --cap-add NET_ADMIN
       --security-opt seccomp=unconfined --security-opt apparmor=unconfined
       --security-opt no-new-privileges:true --read-only
       --tmpfs /tmp:size=64m --tmpfs /data:size=256m plugin-host-test

@@ -21,6 +21,7 @@ from host.deps import Runner, install_deps, run_subprocess
 from host.download import fetch
 from host.errors import InstallError
 from host.models import InstallSpec
+from host.perms import seal_tree
 
 log = logging.getLogger(__name__)
 
@@ -113,6 +114,10 @@ async def install(
         del data
         _check_manifest(plugin_id, spec, root)
         await install_deps(spec, root, runner, uid)
+        # The runner handed the tree to the plugin uid; root lacks DAC_OVERRIDE, so
+        # take it back (sealed, as at start) before writing anything into it.
+        if uid is not None:
+            await asyncio.to_thread(seal_tree, root, uid)
         (root / SHA_MARKER).write_text(sha)
     except BaseException:
         await remove_tree(root, uid, data_dir)  # logs anything it cannot remove

@@ -21,7 +21,7 @@ from host.auth import require_secret
 from host.cleanup import remove_tree
 from host.deps import Runner, run_subprocess
 from host.download import INSECURE_ENV, insecure_downloads
-from host.errors import SandboxUnavailableError
+from host.errors import SandboxUnavailableError, describe_error
 from host.installer import InstallError, current_version, install, prune, swap_current
 from host.models import (
     PLUGIN_ID_RE,
@@ -127,14 +127,14 @@ async def _install_and_start(host: HostState, pid: str, spec: InstallSpec) -> No
             log.warning("[%s] install failed: %s", pid, e.code)
             return _fail(rec, spec, e.code)
         except Exception as e:  # never format the exception: it may embed the spec
-            log.error("[%s] install error: %s", pid, type(e).__name__)
+            log.error("[%s] install error: %s", pid, describe_error(e))
             return _fail(rec, spec, "install_error")
         try:
             await host.supervisor.start(pid, root, spec)
         except SandboxUnavailableError:
             return _sandbox_down(rec, spec)
         except Exception as e:
-            log.error("[%s] start failed: %s", pid, type(e).__name__)
+            log.error("[%s] start failed: %s", pid, describe_error(e))
             await _rollback(host, pid, rec, root)
             return _fail(rec, spec, "start_failed")
         swap_current(host.pdir(pid), spec.version)
