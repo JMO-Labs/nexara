@@ -60,6 +60,7 @@ describe("InstallUrlDialog", () => {
       )
       .mockResolvedValueOnce(plugin);
     wrap(<InstallUrlDialog open onClose={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("External plugin (advanced)"));
     fireEvent.change(screen.getByLabelText("Manifest URL"), {
       target: { value: "https://x/m.json" },
     });

@@ -51,6 +51,7 @@ celery_app = Celery(
         "app.tasks.notification_tasks",
         "app.tasks.nudge_tasks",
         "app.tasks.plugin_tasks",
+        "app.tasks.plugin_host_tasks",
         "app.tasks.poll_tasks",
         "app.tasks.prompt_tasks",
         "app.tasks.retention_tasks",
@@ -98,6 +99,7 @@ celery_app.conf.update(
         "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
         "app.tasks.plugin_tasks.*": {"queue": "plugins"},
+        "app.tasks.plugin_host_tasks.*": {"queue": "maintenance"},
     },
     imports=("app.tasks.list_tasks",),
     # ── Reliability ───────────────────────────────────────────────────
@@ -126,6 +128,10 @@ celery_app.conf.update(
         "cleanup-expired-exports": {
             "task": "app.tasks.maintenance_tasks.cleanup_expired_exports",
             "schedule": crontab(hour=0, minute=30),
+        },
+        "plugin-host-poll": {
+            "task": "app.tasks.plugin_host_tasks.poll",
+            "schedule": 60.0,
         },
         "close-expired-polls": {
             "task": "app.tasks.poll_tasks.close_expired_polls",

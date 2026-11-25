@@ -1,15 +1,19 @@
 "use client";
 /**
  * @file components/admin/plugins/InstallUrlDialog.tsx
- * @brief Install a plugin from a manifest URL. The first submit sends no
- *        approvals; the backend answers `scopes_not_approved` with what the
- *        plugin wants, which the admin must tick before it is resent.
+ * @brief Install a plugin from a package (URL + SHA-256, run by the plugin
+ *        host) or, as "External plugin (advanced)", from a manifest URL. The
+ *        first submit sends no approvals; the backend answers
+ *        `scopes_not_approved` with what the plugin wants, which the admin
+ *        must tick before it is resent.
  */
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Checkbox, Input, Modal } from "@/components/ui";
 import { ApiError, formatApiError } from "@/lib/api/errors";
-import { installPlugin } from "@/lib/api/plugins";
+import { installPackage, installPlugin } from "@/lib/api/plugins";
+
+type Mode = "package" | "url";
 
 interface Review {
   scopes: string[];
@@ -49,6 +53,9 @@ export function InstallUrlDialog({
   onInstalled?: () => void;
 }) {
   const qc = useQueryClient();
+  const [mode, setMode] = useState<Mode>("package");
+  const [pkgUrl, setPkgUrl] = useState("");
+  const [sha, setSha] = useState("");
   const [manifest, setManifest] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [review, setReview] = useState<Review | null>(null);
@@ -57,11 +64,17 @@ export function InstallUrlDialog({
 
   const install = useMutation({
     mutationFn: (approved: string[]) =>
-      installPlugin({
-        manifest_url: manifest.trim(),
-        endpoint_url: endpoint.trim(),
-        approved_scopes: approved,
-      }),
+      mode === "package"
+        ? installPackage({
+            package_url: pkgUrl.trim(),
+            sha256: sha.trim(),
+            approved_scopes: approved,
+          })
+        : installPlugin({
+            manifest_url: manifest.trim(),
+            endpoint_url: endpoint.trim(),
+            approved_scopes: approved,
+          }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["admin", "plugins"] });
       onInstalled?.();
@@ -76,6 +89,13 @@ export function InstallUrlDialog({
         });
         setTicked(new Set());
         setError("");
+      } else if (
+        e instanceof ApiError &&
+        e.code === "plugin_host_not_configured"
+      ) {
+        setError(
+          "Package installs need the plugin host, which is not set up on this server. Ask whoever runs Nexara to enable it, or use External plugin (advanced).",
+        );
       } else setError(formatApiError(e));
     },
   });
@@ -99,26 +119,74 @@ export function InstallUrlDialog({
       open={open}
       onClose={onClose}
       title="Install plugin"
-      description="Install from a manifest URL."
+      description="Install a plugin package, or connect a plugin you run yourself."
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <Input
-          label="Manifest URL"
-          type="url"
-          required
-          value={manifest}
-          disabled={review !== null}
-          onChange={(e) => setManifest(e.target.value)}
-        />
-        <Input
-          label="Endpoint URL"
-          type="url"
-          required
-          hint="Where Nexara sends events to the plugin."
-          value={endpoint}
-          disabled={review !== null}
-          onChange={(e) => setEndpoint(e.target.value)}
-        />
+        <fieldset className="flex flex-col gap-2" disabled={review !== null}>
+          <legend className="text-sm font-semibold">Install from</legend>
+          {(
+            [
+              ["package", "Plugin package"],
+              ["url", "External plugin (advanced)"],
+            ] as const
+          ).map(([m, label]) => (
+            <label key={m} className="flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="install-mode"
+                value={m}
+                checked={mode === m}
+                onChange={() => {
+                  setMode(m);
+                  setError("");
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+        {mode === "package" ? (
+          <>
+            <Input
+              label="Package URL"
+              type="url"
+              required
+              hint="An https link to the plugin's .tar.gz package."
+              value={pkgUrl}
+              disabled={review !== null}
+              onChange={(e) => setPkgUrl(e.target.value)}
+            />
+            <Input
+              label="SHA-256"
+              required
+              pattern="[0-9a-fA-F]{64}"
+              hint="The package checksum published by the plugin author."
+              value={sha}
+              disabled={review !== null}
+              onChange={(e) => setSha(e.target.value)}
+            />
+          </>
+        ) : (
+          <>
+            <Input
+              label="Manifest URL"
+              type="url"
+              required
+              value={manifest}
+              disabled={review !== null}
+              onChange={(e) => setManifest(e.target.value)}
+            />
+            <Input
+              label="Endpoint URL"
+              type="url"
+              required
+              hint="Where Nexara sends events to the plugin."
+              value={endpoint}
+              disabled={review !== null}
+              onChange={(e) => setEndpoint(e.target.value)}
+            />
+          </>
+        )}
         {review && (
           <div className="flex flex-col gap-3">
             <fieldset className="flex flex-col gap-2">

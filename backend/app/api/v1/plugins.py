@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +26,7 @@ from app.schemas.plugin import (
     PluginCommunityOut,
     PluginInstallIn,
     PluginInstallOut,
+    PluginLogsOut,
     PluginSettingsIn,
     PluginUiOut,
     PluginUninstallIn,
@@ -71,7 +72,7 @@ async def install_plugin(
     _owner: User = Depends(require_instance_owner),
     service: PluginService = Depends(_plugin_service),
 ) -> PluginInstallOut:
-    """@brief Install a plugin from a manifest URL (instance owner)."""
+    """@brief Install a plugin from a manifest URL or a package (instance owner)."""
     return await service.install(body)
 
 
@@ -94,6 +95,17 @@ async def uninstall_plugin(
     """@brief Uninstall a plugin, optionally hiding its bot's content (instance owner)."""
     await service.uninstall(plugin_id, body.delete_content if body else False)
     return Response(status_code=204)
+
+
+@router.get("/{plugin_id}/logs", response_model=PluginLogsOut)
+async def plugin_logs(
+    plugin_id: str,
+    lines: int = Query(200, ge=1, le=200),
+    _owner: User = Depends(require_instance_owner),
+    service: PluginService = Depends(_plugin_service),
+) -> PluginLogsOut:
+    """@brief Last output lines of a package plugin from the plugin host (instance owner)."""
+    return PluginLogsOut(lines=await service.logs(plugin_id, lines))
 
 
 @router.patch("/{plugin_id}/communities/{community_id}", response_model=PluginCommunityOut)

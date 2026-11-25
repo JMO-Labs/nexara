@@ -21,9 +21,12 @@ class UrlInstall(BaseModel):
 
 
 class PackageInstall(BaseModel):
-    """@brief Install from an uploaded package (not yet supported)."""
+    """@brief Install a package tarball via the plugin host; scopes approved as for url."""
 
     source: Literal["package"]
+    package_url: str = Field(max_length=2048)
+    sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    approved_scopes: list[str] = []
 
 
 class IndexInstall(BaseModel):
@@ -70,6 +73,16 @@ class PluginInstallOut(BaseModel):
     enabled: bool = False
     bot_user_id: uuid.UUID | None = None
     settings_schema: dict[str, Any] = {}
+    source: Literal["url", "package"] = "url"
+    host_status: str | None = None
+    """@brief Live plugin-host status (package installs), ``unreachable`` if the host is down."""
+    host_error: str | None = None
+
+
+class PluginLogsOut(BaseModel):
+    """@brief Last plugin output lines from the host."""
+
+    lines: list[str]
 
 
 class PluginUiOut(BaseModel):

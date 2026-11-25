@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     """@brief Dev/eval only: allow http and private hosts when fetching plugin manifests."""
     PLUGIN_HOST_URL: str = ""
     """@brief Trusted internal plugin host origin; webhooks to it skip the private-IP block."""
+    PLUGIN_HOST_SECRET: str = ""
+    """@brief Bearer secret for the plugin-host control API (never logged)."""
     LOG_LEVEL: str = "INFO"
 
     # --- Database ---

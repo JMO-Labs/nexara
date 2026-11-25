@@ -31,6 +31,11 @@ export interface PluginInstall {
   enabled: boolean;
   bot_user_id: string | null;
   settings_schema: Record<string, FieldSpec>;
+  /** "package" = run by the plugin host; "url" = external plugin. */
+  source?: "url" | "package";
+  /** Live plugin-host status; "unreachable" when the host is down. */
+  host_status?: string | null;
+  host_error?: string | null;
 }
 
 export interface PluginCredentials {
@@ -53,11 +58,21 @@ export interface InstallBody {
   approved_scopes: string[];
 }
 
+export interface PackageInstallBody {
+  package_url: string;
+  sha256: string;
+  approved_scopes: string[];
+}
+
 const BASE = "/api/v1/plugins";
 
 export const listPlugins = () => apiGet<PluginInstall[]>(BASE);
 export const installPlugin = (b: InstallBody) =>
   apiPost<PluginInstall>(`${BASE}/install`, { source: "url", ...b });
+export const installPackage = (b: PackageInstallBody) =>
+  apiPost<PluginInstall>(`${BASE}/install`, { source: "package", ...b });
+export const getPluginLogs = (pluginId: string) =>
+  apiGet<{ lines: string[] }>(`${BASE}/${seg(pluginId)}/logs`);
 export const uninstallPlugin = (pluginId: string, deleteContent = false) =>
   apiDelete(`${BASE}/${seg(pluginId)}`, {
     body: { delete_content: deleteContent },

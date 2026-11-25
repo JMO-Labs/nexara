@@ -20,10 +20,12 @@ from app.models.plugin import PluginCommunity, PluginInstall
 from app.models.user import User
 from app.plugins.fetch import endpoint_allowed, fetch_manifest_text
 from app.plugins.manifest import PluginManifest, is_compatible, parse_manifest, validate_values
+from app.plugins.package import fetch_package_manifest
 from app.plugins.tokens import new_token
 from app.repositories.plugin_repo import PluginRepository
 from app.repositories.user_repo import UserRepository
 from app.schemas.plugin import (
+    PackageInstall,
     PluginCommunityOut,
     PluginCredentials,
     PluginInstallIn,
@@ -31,6 +33,8 @@ from app.schemas.plugin import (
     PluginUiOut,
     UrlInstall,
 )
+from app.services.plugin_host_client import HostPluginStatus, PluginHostClient, not_configured
+from app.services.plugin_host_sync import endpoint_for, push_to_host
 from app.services.plugin_settings import (
     decrypt_settings,
     mask_settings,
@@ -61,6 +65,7 @@ class PluginService:
         self._users = user_repo
         self._cid = community_id
         self._session = session
+        self._settings = settings
         self._key = derive_fernet_key(settings.SECRET_KEY)
         self._audit = audit_repo
         self._actor = actor_id
@@ -86,9 +91,18 @@ class PluginService:
     def _manifest(inst: PluginInstall) -> PluginManifest:
         return PluginManifest.model_validate(inst.manifest)
 
-    async def _out(self, inst: PluginInstall) -> PluginInstallOut:
+    def _host(self) -> PluginHostClient:
+        return PluginHostClient.from_settings(self._settings)
+
+    async def _push(self, inst: PluginInstall) -> None:
+        await push_to_host(self._repo, inst, self._key, self._settings, self._host())
+
+    async def _out(
+        self, inst: PluginInstall, host: dict[str, HostPluginStatus] | None = None
+    ) -> PluginInstallOut:
         m = self._manifest(inst)
         pc = await self._repo.get_community(inst.id, self._cid)
+        row = (host or {}).get(inst.plugin_id)
         return PluginInstallOut(
             id=inst.id,
             plugin_id=inst.plugin_id,
@@ -102,17 +116,38 @@ class PluginService:
             enabled=bool(pc and pc.enabled),
             bot_user_id=pc.bot_user_id if pc else None,
             settings_schema=_specs(m.settings),
+            source="package" if inst.package_url else "url",
+            host_status=row.status if row else None,
+            host_error=row.last_error if row else None,
         )
 
     # -- install / uninstall ------------------------------------------------
 
+    async def _review(self, m: PluginManifest, approved: list[str]) -> None:
+        if not is_compatible(m):
+            raise AppError(
+                code="plugin_incompatible", message="Plugin needs a newer Nexara", status_code=422
+            )
+        if set(approved) != set(m.scopes):
+            raise AppError(
+                code="scopes_not_approved",
+                message="All requested scopes must be approved",
+                status_code=422,
+                details={"scopes": m.scopes, "events": m.events, "egress": m.egress},
+            )
+        if await self._repo.get_install(m.id) is not None:
+            raise AppError(
+                code="plugin_already_installed", message="Plugin already installed", status_code=409
+            )
+
     async def install(self, body: PluginInstallIn) -> PluginInstallOut:
         """
-        @brief Install from a manifest URL after the admin approved every scope.
-        @raises AppError ``not_supported`` (422) for package/index sources,
-            ``scopes_not_approved`` (422) with the review details, ``plugin_already_installed``,
-            ``endpoint_insecure`` (422) for http unless dev flag or PLUGIN_HOST_URL origin.
+        @brief Install from a manifest URL or a package after the admin approved every scope.
+        @raises AppError ``not_supported`` (index), ``scopes_not_approved`` (with details),
+            ``plugin_already_installed``, ``endpoint_insecure`` (http, unless dev/plugin host).
         """
+        if isinstance(body, PackageInstall):
+            return await self._install_package(body)
         if not isinstance(body, UrlInstall):
             raise AppError(
                 code="not_supported", message="Install source not supported", status_code=422
@@ -128,21 +163,7 @@ class PluginService:
                 status_code=422,
             )
         m = parse_manifest(await fetch_manifest_text(body.manifest_url))
-        if not is_compatible(m):
-            raise AppError(
-                code="plugin_incompatible", message="Plugin needs a newer Nexara", status_code=422
-            )
-        if set(body.approved_scopes) != set(m.scopes):
-            raise AppError(
-                code="scopes_not_approved",
-                message="All requested scopes must be approved",
-                status_code=422,
-                details={"scopes": m.scopes, "events": m.events, "egress": m.egress},
-            )
-        if await self._repo.get_install(m.id) is not None:
-            raise AppError(
-                code="plugin_already_installed", message="Plugin already installed", status_code=409
-            )
+        await self._review(m, body.approved_scopes)
         inst = await self._repo.create_install(
             plugin_id=m.id,
             version=m.version,
@@ -155,9 +176,40 @@ class PluginService:
         await self._log("plugin.installed", m.id, {"version": m.version, "scopes": m.scopes})
         return await self._out(inst)
 
+    async def _install_package(self, body: PackageInstall) -> PluginInstallOut:
+        """
+        @brief Verify the package, then hand it to the plugin host and enable it here.
+
+        Nothing is persisted unless the host accepted the PUT (errors roll back).
+        @raises AppError ``plugin_host_not_configured`` (422), ``package_sha256_mismatch``,
+            ``invalid_manifest``, ``plugin_host_unavailable`` (503).
+        """
+        if not self._settings.PLUGIN_HOST_URL:
+            raise not_configured()
+        m = await fetch_package_manifest(body.package_url, body.sha256)
+        await self._review(m, body.approved_scopes)
+        inst = await self._repo.create_install(
+            plugin_id=m.id,
+            version=m.version,
+            manifest=m.model_dump(mode="json"),
+            package_url=body.package_url,
+            sha256=body.sha256.lower(),
+            endpoint_url=endpoint_for(self._settings, m.id),
+            granted_scopes=list(m.scopes),
+            status="installing",
+        )
+        await self._log(
+            "plugin.installed", m.id, {"version": m.version, "scopes": m.scopes, "package": True}
+        )
+        await self.set_community(m.id, self._cid, enabled=True)
+        return await self._out(inst)
+
     async def uninstall(self, plugin_id: str, delete_content: bool = False) -> None:
         """@brief Disable everywhere, optionally hide bot content, delete the install."""
         inst = await self._install(plugin_id)
+        # host first: a failure (503, retry) leaves the install intact
+        if inst.package_url and self._settings.PLUGIN_HOST_URL:
+            await self._host().delete(plugin_id, purge=delete_content)
         for pc in await self._repo.list_communities(inst.id):
             await self._deactivate(inst, pc)
             if delete_content and pc.bot_user_id is not None:
@@ -234,12 +286,14 @@ class PluginService:
         @brief Enable/disable the plugin in a community and/or update its settings.
 
         Enabling from a disabled state (url mode) returns fresh credentials once.
+        Package installs instead re-push their env to the plugin host (503 if it is down).
         """
         inst = await self._install(plugin_id)
         m = self._manifest(inst)
         pc = await self._repo.get_community(inst.id, community_id) or PluginCommunity(
             install_id=inst.id, community_id=community_id, enabled=False, settings={}
         )
+        was_enabled = bool(pc.enabled)
         if settings is not None:
             pc.settings = merge_settings(m, dict(pc.settings or {}), settings, self._key)
             await self._repo.upsert_community(pc)
@@ -251,6 +305,12 @@ class PluginService:
         elif enabled is False and pc.enabled:
             await self._deactivate(inst, pc)
             await self._log("plugin.disabled", plugin_id, {"community_id": str(community_id)})
+        if inst.package_url:
+            creds = None  # secrets go only to the plugin host
+            if pc.enabled and not self._settings.PLUGIN_HOST_URL:
+                raise not_configured()
+            if (was_enabled or pc.enabled) and self._settings.PLUGIN_HOST_URL:
+                await self._push(inst)
         return PluginCommunityOut(
             plugin_id=plugin_id,
             enabled=bool(pc.enabled),
@@ -302,8 +362,26 @@ class PluginService:
     # -- listings -------------------------------------------------------------
 
     async def list_installed(self) -> list[PluginInstallOut]:
-        """@brief All installs with this community's enablement."""
-        return [await self._out(i) for i in await self._repo.list_installs()]
+        """@brief All installs with this community's enablement and live host status."""
+        installs = await self._repo.list_installs()
+        host: dict[str, HostPluginStatus] = {}
+        if self._settings.PLUGIN_HOST_URL and any(i.package_url for i in installs):
+            try:
+                host = {r.id: r for r in await self._host().status()}
+            except AppError:
+                host = {
+                    i.plugin_id: HostPluginStatus(id=i.plugin_id, status="unreachable")
+                    for i in installs
+                    if i.package_url
+                }
+        return [await self._out(i, host) for i in installs]
+
+    async def logs(self, plugin_id: str, lines: int = 200) -> list[str]:
+        """@brief Last output lines of a package plugin from the host (url installs: none)."""
+        inst = await self._install(plugin_id)
+        if not inst.package_url:
+            return []
+        return await self._host().logs(plugin_id, lines)
 
     async def list_enabled_ui(self) -> list[PluginUiOut]:
         """@brief Member-facing prefs/composer flag specs of running plugins enabled here."""
