@@ -144,11 +144,20 @@ networkPolicy:
     - 192.168.0.0/16
     - 100.64.0.0/10
     - 169.254.0.0/16
-  # IPv6 equivalents (loopback, ULA, link-local) for the host's ::/0 egress rule.
+  # IPv6 ranges excluded from the host's ::/0 egress rule (only rendered when
+  # pluginHost.ipv6Egress=true): loopback, ULA, link-local, NAT64, 6to4, v4-mapped,
+  # discard, documentation. REQUIRED on dual-stack clusters: append your global
+  # pod/Service/node IPv6 ranges, or plugins can reach in-cluster services over IPv6.
   privateCidrs6:
     - ::1/128
     - fc00::/7
     - fe80::/10
+    - 64:ff9b::/96
+    - 64:ff9b:1::/48
+    - 2002::/16
+    - ::ffff:0:0/96
+    - 100::/64
+    - 2001:db8::/32
 
 # -- Plugin host (optional): runs untrusted plugin code in bubblewrap sandboxes.
 # Needs seccomp/AppArmor Unconfined + SETUID/SETGID/CHOWN/KILL for user namespaces;
@@ -170,6 +179,8 @@ pluginHost:
   dns:
     namespaceLabels: {kubernetes.io/metadata.name: kube-system}
     podLabels: {k8s-app: kube-dns}
+  # Allow plugin egress over IPv6 (off by default; see networkPolicy.privateCidrs6).
+  ipv6Egress: false
   # Ports plugins may use to reach the internet.
   egressPorts: [443, 80]
   persistence:

@@ -119,6 +119,7 @@ spec:
       {{- range .Values.pluginHost.egressPorts }}
         - {port: {{ . }}}
       {{- end }}
+    {{- if .Values.pluginHost.ipv6Egress }}
     - to:
         - ipBlock:
             cidr: ::/0
@@ -127,4 +128,5 @@ spec:
       {{- range .Values.pluginHost.egressPorts }}
         - {port: {{ . }}}
       {{- end }}
+    {{- end }}
 {{- end }}

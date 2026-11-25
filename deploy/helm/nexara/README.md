@@ -49,7 +49,9 @@ this (Pod Security `privileged`; `baseline` and `restricted` reject Unconfined s
 The plugin-host NetworkPolicy always renders when `pluginHost.enabled` (it only takes
 effect on a CNI that enforces NetworkPolicy): only api/worker may reach the host, and
 the host may reach DNS, the API and the internet except `networkPolicy.privateCidrs`
-(IPv4) and `networkPolicy.privateCidrs6` (IPv6). That exclusion is what blocks
+(IPv4). IPv6 egress is off unless `pluginHost.ipv6Egress=true`; then
+`networkPolicy.privateCidrs6` applies and dual-stack clusters must add their global
+pod/Service/node IPv6 ranges to it. That exclusion is what blocks
 Postgres/Valkey: add your pod/service CIDRs if they are outside the defaults, or the
 deny is incomplete. Host DNS egress is limited to cluster DNS
 (`pluginHost.dns.*` selectors, default kube-system `k8s-app=kube-dns`). Never add the
