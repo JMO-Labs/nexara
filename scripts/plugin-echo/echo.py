@@ -10,7 +10,7 @@ import urllib.request as u
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 E = os.environ.get
-SECRET, TOKEN = E("WEBHOOK_SECRET", ""), E("NEXARA_TOKEN", "")
+SECRET = E("NEXARA_WEBHOOK_SECRET") or E("WEBHOOK_SECRET", "")  # legacy name: URL mode; TOKEN = E("NEXARA_TOKEN", "")
 API = E("NEXARA_URL", "http://localhost:8000").rstrip("/")
 MANIFEST = open(__file__.replace("echo.py", "nexara-plugin.toml"), "rb").read()
 SEEN: set[str] = set()  # handled X-Nexara-Delivery ids (in memory)
