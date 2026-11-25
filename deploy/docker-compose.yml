@@ -144,6 +144,8 @@ services:
       # internet, Docker DNS and NEXARA_URL only; no loopback/private/link-local ranges.
       # If it cannot be installed, plugins report sandbox_unavailable.
       PLUGIN_EGRESS_FILTER: "${PLUGIN_EGRESS_FILTER:-true}"
+      # DEV ONLY: allow http:// and private-address package URLs (downloads only).
+      PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS: "${PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS:-false}"
     volumes:
       - plugin_data:/data
     networks:

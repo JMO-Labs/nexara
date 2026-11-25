@@ -202,3 +202,21 @@ async def test_unresolvable(dns: dict, monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(download, "_resolve", fail)
     assert await code_of(URL) == "download_failed"
+
+
+async def test_insecure_flag_off_by_default(dns: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS", "false")
+    assert await code_of("http://pkgs.example.com/p.tgz") == "download_failed"
+    assert await code_of("https://127.0.0.1/p.tgz") == "download_blocked"
+
+
+async def test_insecure_flag_allows_http_and_private(
+    dns: dict, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS", "true")
+    dns["pkgs.example.com"] = ["10.0.0.5"]
+    with respx.mock:
+        respx.get("http://10.0.0.5/p.tgz").respond(200, content=b"ok")
+        with caplog.at_level("WARNING", logger="plugin_host"):
+            assert await fetch("http://pkgs.example.com/p.tgz") == b"ok"
+    assert "INSECURE download" in caplog.text

@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from host.auth import require_secret
 from host.cleanup import remove_tree
 from host.deps import Runner, run_subprocess
+from host.download import INSECURE_ENV, insecure_downloads
 from host.errors import SandboxUnavailableError
 from host.installer import InstallError, current_version, install, prune, swap_current
 from host.models import (
@@ -254,6 +255,10 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         set_nondumpable()
+        if insecure_downloads():
+            log.warning(
+                "INSECURE: %s=true (dev only): http/private package URLs allowed", INSECURE_ENV
+            )
         if isinstance(sup, BwrapSupervisor):
             await asyncio.to_thread(lambda: sup.available)  # startup self-test
         yield

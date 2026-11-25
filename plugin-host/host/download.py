@@ -6,6 +6,8 @@
 
 import asyncio
 import ipaddress
+import logging
+import os
 import socket
 
 import httpx
@@ -16,6 +18,14 @@ MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
 MAX_REDIRECTS = 5
 DOWNLOAD_DEADLINE_S: float = 300
 _REDIRECTS = {301, 302, 303, 307, 308}
+INSECURE_ENV = "PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS"
+log = logging.getLogger("plugin_host")
+
+
+def insecure_downloads() -> bool:
+    """@brief DEV ONLY flag: allow http:// and private/loopback package hosts.
+    Affects downloads only, never plugin egress filtering or the sandbox."""
+    return os.environ.get(INSECURE_ENV, "").lower() == "true"
 
 
 async def _resolve(host: str) -> list[str]:
@@ -53,7 +63,8 @@ def _public(addr: str) -> bool:
 
 async def _vetted_ip(url: httpx.URL) -> str:
     """@brief Resolve the URL host; every address must be public. @return first address."""
-    if url.scheme != "https" or not url.host:
+    insecure = insecure_downloads()
+    if url.scheme not in (("http", "https") if insecure else ("https",)) or not url.host:
         raise InstallError("download_failed")
     try:
         addrs = [str(ipaddress.ip_address(url.host))]
@@ -64,7 +75,9 @@ async def _vetted_ip(url: httpx.URL) -> str:
             raise InstallError("download_failed") from e
     if not addrs:
         raise InstallError("download_failed")
-    if not all(_public(a) for a in addrs):
+    if insecure:
+        log.warning("INSECURE download of %s (%s=true)", url.host, INSECURE_ENV)
+    elif not all(_public(a) for a in addrs):
         raise InstallError("download_blocked")
     return addrs[0]
 
