@@ -287,6 +287,10 @@
   grid-template-rows: none;
   grid-auto-rows: auto;
 }
+/* No fixed height to shrink into: photo thumbs keep their square shape. */
+[data-simple] .home-bento [data-tile="photos"] .grid > a {
+  aspect-ratio: 1;
+}
 
 /* Signature featured-card shape: one sharp bottom-left corner. */
 .corner-leaf {

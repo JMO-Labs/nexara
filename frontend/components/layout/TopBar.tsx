@@ -52,7 +52,7 @@ export function TopBar() {
         >
           <BrandLockup logoUrl={logoUrl} name={name} size={32} />
         </Link>
-        <div className="hidden flex-1 justify-center md:flex">
+        <div className="hidden min-w-0 flex-1 justify-center md:flex">
           <TopNav />
         </div>
         <div className="ml-auto flex items-center gap-2 md:ml-0">
