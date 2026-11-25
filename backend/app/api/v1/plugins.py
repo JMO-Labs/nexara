@@ -9,7 +9,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.client_ip import client_ip
@@ -92,9 +92,17 @@ async def uninstall_plugin(
     _owner: User = Depends(require_instance_owner),
     service: PluginService = Depends(_plugin_service),
 ) -> Response:
-    """@brief Uninstall a plugin, optionally hiding its bot's content (instance owner)."""
-    await service.uninstall(plugin_id, body.delete_content if body else False)
-    return Response(status_code=204)
+    """
+    @brief Uninstall a plugin, optionally hiding its bot's content (instance owner).
+
+    204 when done. 200 ``{removed, host_error}`` when the plugin host could not be told:
+    ``unreachable`` (removed; the host is cleaned up later) or ``cleanup_failed``
+    (kept and disabled; retry).
+    """
+    err = await service.uninstall(plugin_id, body.delete_content if body else False)
+    if err is None:
+        return Response(status_code=204)
+    return JSONResponse({"removed": err != "cleanup_failed", "host_error": err})
 
 
 @router.get("/{plugin_id}/logs", response_model=PluginLogsOut)

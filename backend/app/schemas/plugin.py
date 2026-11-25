@@ -56,6 +56,8 @@ class PluginCommunityOut(BaseModel):
     bot_user_id: uuid.UUID | None = None
     settings: dict[str, Any] = {}
     credentials: PluginCredentials | None = None
+    host_error: str | None = None
+    """@brief Plugin host could not be told (``unreachable``); the change still applied."""
 
 
 class PluginInstallOut(BaseModel):

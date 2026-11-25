@@ -69,11 +69,12 @@ async def push_to_host(
     @raises AppError ``plugin_host_unavailable`` (503) / ``plugin_host_not_configured``.
     """
     client = client or PluginHostClient.from_settings(settings)
+    await repo.lock_install(inst.id)  # one rotation at a time: never two active tokens
     m = PluginManifest.model_validate(inst.manifest)
     comms = await _communities(repo, inst, m, key)
     if not comms:
-        await client.stop(inst.plugin_id)
         inst.status = "disabled"
+        await client.stop(inst.plugin_id)
         return
     default = next((c for c in comms if c["community_id"] == settings.COMMUNITY_ID), comms[0])
     body = {

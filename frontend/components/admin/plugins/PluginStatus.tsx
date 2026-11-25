@@ -21,7 +21,7 @@ const STATUS: Record<string, { label: string; icon: LucideIcon; tone: Tone }> =
     installing: { label: "Installing", icon: Loader2, tone: "accent" },
     needs_config: { label: "Starting", icon: Loader2, tone: "accent" },
     stopped: { label: "Stopped", icon: CircleOff, tone: "neutral" },
-    disabled: { label: "Stopped", icon: CircleOff, tone: "neutral" },
+    disabled: { label: "Not running", icon: CircleOff, tone: "neutral" },
     failed: { label: "Failed", icon: AlertTriangle, tone: "sun" },
     sandbox_unavailable: {
       label: "Sandbox unavailable",

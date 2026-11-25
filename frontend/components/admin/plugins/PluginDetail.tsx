@@ -57,6 +57,12 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
     }) => api.setPluginCommunity(pluginId, communityId ?? "", body),
     onSuccess: async (r, body) => {
       if (r.credentials) setCreds(r.credentials);
+      if (r.host_error)
+        push({
+          variant: "warning",
+          message:
+            "Disabled. The plugin host could not be reached; the plugin is stopped there once it is back.",
+        });
       if (body.settings)
         push({ variant: "success", message: "Settings saved" });
       await qc.invalidateQueries({ queryKey: PLUGINS_KEY });
@@ -65,8 +71,17 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
   });
   const remove = useMutation({
     mutationFn: (del: boolean) => api.uninstallPlugin(pluginId, del),
-    onSuccess: async () => {
+    onSuccess: async (r) => {
       await qc.invalidateQueries({ queryKey: PLUGINS_KEY });
+      if (r?.host_error) {
+        push({
+          variant: r.removed ? "warning" : "danger",
+          message: r.removed
+            ? "Uninstalled. The plugin host could not be reached; its files are removed once it is back."
+            : hostErrorText(r.host_error),
+        });
+        if (!r.removed) return setRemoving(false);
+      }
       router.push("/app/admin/plugins");
     },
     onError: fail,

@@ -50,6 +50,14 @@ export interface PluginCommunity {
   bot_user_id: string | null;
   settings: Record<string, unknown>;
   credentials: PluginCredentials | null;
+  /** Set when the plugin host could not be told (the change still applied). */
+  host_error?: string | null;
+}
+
+/** Uninstall outcome when the plugin host could not be told (else undefined). */
+export interface UninstallResult {
+  removed: boolean;
+  host_error: string;
 }
 
 export interface InstallBody {
@@ -74,7 +82,7 @@ export const installPackage = (b: PackageInstallBody) =>
 export const getPluginLogs = (pluginId: string) =>
   apiGet<{ lines: string[] }>(`${BASE}/${seg(pluginId)}/logs`);
 export const uninstallPlugin = (pluginId: string, deleteContent = false) =>
-  apiDelete(`${BASE}/${seg(pluginId)}`, {
+  apiDelete<UninstallResult | undefined>(`${BASE}/${seg(pluginId)}`, {
     body: { delete_content: deleteContent },
   });
 export const setPluginCommunity = (

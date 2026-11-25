@@ -136,12 +136,50 @@ async def test_repush_failure_rolls_back(env):
     session.commit.assert_not_called()
 
 
-async def test_disabled_install_skipped(env):
+@pytest.mark.parametrize("status", ["running", "installing"])
+async def test_disabled_everywhere_but_live_on_host_is_stopped(env, status):
     inst, repo, client, session, _ = env
-    inst.status = "disabled"
-    client.status.return_value = []
+    repo.list_communities.return_value[0].enabled = False
+    client.status.return_value = _rows(status)
     await sync_installs(session, client)
+    client.stop.assert_awaited_once_with(M.id)
     client.put.assert_not_called()
+
+
+async def test_disabled_everywhere_and_stopped_on_host_is_left(env):
+    _, repo, client, session, _ = env
+    repo.list_communities.return_value[0].enabled = False
+    client.status.return_value = _rows("stopped")
+    await sync_installs(session, client)
+    client.stop.assert_not_called()
+    client.put.assert_not_called()
+
+
+async def test_blocked_is_stopped(env):
+    inst, _, client, session, _ = env
+    inst.status = "blocked"
+    client.status.return_value = _rows("running")
+    await sync_installs(session, client)
+    client.stop.assert_awaited_once_with(M.id)
+
+
+async def test_stop_failure_is_quiet(env):
+    _, repo, client, session, _ = env
+    repo.list_communities.return_value[0].enabled = False
+    client.status.return_value = _rows("running")
+    client.stop.side_effect = AppError(code="plugin_host_unavailable", status_code=503)
+    await sync_installs(session, client)  # no raise
+
+
+async def test_host_plugin_unknown_to_nexara_is_deleted(env):
+    _, repo, client, session, _ = env
+    repo.list_installs.return_value = []
+    client.status.return_value = [
+        HostPluginStatus(id="dev.gone.x", status="running"),
+        HostPluginStatus(id="dev.new.y", status="installing"),
+    ]
+    await sync_installs(session, client)
+    client.delete.assert_awaited_once_with("dev.gone.x", purge=False)
 
 
 def test_beat_entry():

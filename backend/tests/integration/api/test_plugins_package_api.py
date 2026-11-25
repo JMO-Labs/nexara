@@ -109,7 +109,7 @@ async def env(test_app, session):
     with (
         patch.object(PluginHostClient, "from_settings", return_value=client),
         patch(
-            "app.services.plugin_service.fetch_package_manifest",
+            "app.services.plugin_host_ops.fetch_package_manifest",
             AsyncMock(return_value=_manifest(pid)),
         ),
     ):
@@ -136,53 +136,80 @@ async def _row(e):
     ).scalar_one_or_none()
 
 
-async def test_package_install_pushes_and_enables(env):
+async def _enable(e, on: bool = True):
+    return await e.c.patch(f"/api/v1/plugins/{e.pid}/communities/{CID}", json={"enabled": on})
+
+
+async def _active_tokens(e, inst) -> int:
+    rows = await e.s.execute(
+        select(PluginToken).where(
+            PluginToken.install_id == inst.id, PluginToken.revoked_at.is_(None)
+        )
+    )
+    return len(list(rows.scalars()))
+
+
+async def test_install_records_only_then_first_enable_pushes(env):
     r = await _install(env)
     assert r.status_code == 201, r.text
-    assert r.json()["status"] == "installing" and r.json()["source"] == "package"
+    body = r.json()
+    assert body["status"] == "disabled" and body["source"] == "package" and not body["enabled"]
     inst = await _row(env)
     assert inst.endpoint_url == f"{HOST}/plugins/{env.pid}/events" and inst.sha256 == SHA
-    pc = (
-        await env.s.execute(select(PluginCommunity).where(PluginCommunity.install_id == inst.id))
-    ).scalar_one()
+    assert env.calls == []  # host untouched until enable
+    r = await _enable(env)
+    assert r.status_code == 200, r.text
+    assert r.json()["credentials"] is None
+    pc = await env.s.get(PluginCommunity, (inst.id, CID))
     assert pc.enabled and pc.bot_user_id is not None
     put = env.calls[-1]
     assert put.method == "PUT" and put.url.path == f"/plugins/{env.pid}"
-    body = json.loads(put.content)
-    assert body["env"]["NEXARA_COMMUNITIES"][0]["bot_user_id"] == str(pc.bot_user_id)
-    active = (
-        await env.s.execute(
-            select(PluginToken).where(
-                PluginToken.install_id == inst.id, PluginToken.revoked_at.is_(None)
-            )
-        )
-    ).scalars()
-    assert len(list(active)) == 1
+    pushed = json.loads(put.content)
+    assert pushed["env"]["NEXARA_COMMUNITIES"][0]["bot_user_id"] == str(pc.bot_user_id)
+    assert await _active_tokens(env, inst) == 1 and inst.status == "installing"
     r = await env.c.get(f"/api/v1/plugins/{env.pid}/logs")
     assert r.json() == {"lines": ["[p] ready"]}
 
 
-async def test_host_down_install_503_nothing_persisted(env):
-    env.state["down"] = True
-    r = await _install(env)
-    assert r.status_code == 503
-    assert r.json()["error"]["code"] == "plugin_host_unavailable"
-    assert await _row(env) is None
-
-
-async def test_host_down_disable_503_status_unchanged(env):
+async def test_host_down_enable_503_nothing_enabled(env):
     assert (await _install(env)).status_code == 201
     env.state["down"] = True
-    r = await env.c.patch(f"/api/v1/plugins/{env.pid}/communities/{CID}", json={"enabled": False})
+    r = await _enable(env)
     assert r.status_code == 503
+    assert r.json()["error"]["code"] == "plugin_host_unavailable"
+    inst = await _row(env)
+    assert await env.s.get(PluginCommunity, (inst.id, CID)) is None
+    assert await _active_tokens(env, inst) == 0
+
+
+async def test_host_down_disable_still_revokes(env):
+    assert (await _install(env)).status_code == 201
+    assert (await _enable(env)).status_code == 200
+    env.state["down"] = True
+    r = await _enable(env, False)
+    assert r.status_code == 200, r.text
+    assert r.json()["enabled"] is False and r.json()["host_error"] == "unreachable"
     inst = await _row(env)
     pc = await env.s.get(PluginCommunity, (inst.id, CID))
-    assert pc.enabled and inst.status == "installing"
+    bot = await env.s.get(User, pc.bot_user_id)
+    assert not pc.enabled and not bot.is_active and inst.status == "disabled"
+    assert await _active_tokens(env, inst) == 0
 
 
 async def test_uninstall_deletes_on_host(env):
     assert (await _install(env)).status_code == 201
+    assert (await _enable(env)).status_code == 200
     r = await env.c.request("DELETE", f"/api/v1/plugins/{env.pid}", json={"delete_content": False})
     assert r.status_code == 204
     assert env.calls[-1].method == "DELETE" and env.calls[-1].url.params["purge"] == "false"
+    assert await _row(env) is None
+
+
+async def test_uninstall_host_down_removes_and_reports(env):
+    assert (await _install(env)).status_code == 201
+    assert (await _enable(env)).status_code == 200
+    env.state["down"] = True
+    r = await env.c.request("DELETE", f"/api/v1/plugins/{env.pid}")
+    assert r.status_code == 200
+    assert r.json() == {"removed": True, "host_error": "unreachable"}
     assert await _row(env) is None

@@ -4,7 +4,13 @@
  *        package install mode.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
 
@@ -16,7 +22,8 @@ const client = vi.hoisted(() => ({
   seg: (s: string) => s,
 }));
 vi.mock("@/lib/api/client", () => client);
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 vi.mock("@/stores/session", () => ({
   useSession: (sel: (s: unknown) => unknown) =>
     sel({ user: { community_id: "c1" } }),
@@ -25,6 +32,7 @@ vi.mock("@/stores/session", () => ({
 import { PluginLogs } from "@/components/admin/plugins/PluginLogs";
 import { PluginDetail } from "@/components/admin/plugins/PluginDetail";
 import { InstallUrlDialog } from "@/components/admin/plugins/InstallUrlDialog";
+import { useToasts } from "@/stores/toasts";
 
 const SHA = "a".repeat(64);
 const plugin = {
@@ -49,7 +57,12 @@ function wrap(ui: React.ReactNode) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  useToasts.getState().clear();
+});
+
+const toasts = () => useToasts.getState().items;
 
 describe("PluginLogs", () => {
   it("shows lines in a <pre> and refreshes", async () => {
@@ -97,6 +110,50 @@ describe("PluginDetail (package)", () => {
       screen.getByText(/plugin sandbox cannot start on this server/),
     ).toBeInTheDocument();
     expect(await screen.findByLabelText("Plugin log")).toBeInTheDocument();
+  });
+});
+
+describe("PluginDetail (package) host errors", () => {
+  const load = () =>
+    client.apiGet.mockImplementation(async (u: string) =>
+      u.endsWith("/settings")
+        ? {}
+        : u.endsWith("/logs")
+          ? { lines: [] }
+          : [{ ...plugin, host_status: "running", host_error: null }],
+    );
+
+  it("warns when disable could not reach the host", async () => {
+    load();
+    client.apiPatch.mockResolvedValue({
+      plugin_id: "echo",
+      enabled: false,
+      bot_user_id: "b1",
+      settings: {},
+      credentials: null,
+      host_error: "unreachable",
+    });
+    wrap(<PluginDetail pluginId="echo" />);
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "Enabled in this community" }),
+    );
+    await waitFor(() => expect(toasts()[0]?.variant).toBe("warning"));
+    expect(toasts()[0].message).toMatch(/^Disabled\./);
+  });
+
+  it("stays on the page when host cleanup failed", async () => {
+    load();
+    client.apiDelete.mockResolvedValue({
+      removed: false,
+      host_error: "cleanup_failed",
+    });
+    wrap(<PluginDetail pluginId="echo" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Uninstall" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Uninstall" }));
+    await waitFor(() => expect(toasts()[0]?.variant).toBe("danger"));
+    expect(toasts()[0].message).toMatch(/could not remove/);
+    expect(nav.push).not.toHaveBeenCalled();
   });
 });
 

@@ -34,6 +34,12 @@ class PluginRepository(BaseRepository[PluginInstall]):
         )
         return res.scalar_one_or_none()
 
+    async def lock_install(self, install_id: uuid.UUID) -> None:
+        """@brief ``SELECT ... FOR UPDATE`` the install row (serialises token rotation)."""
+        await self._session.execute(
+            select(PluginInstall.id).where(PluginInstall.id == install_id).with_for_update()
+        )
+
     async def list_installs(self) -> list[PluginInstall]:
         """@brief List all installs ordered by plugin id."""
         res = await self._session.execute(select(PluginInstall).order_by(PluginInstall.plugin_id))
