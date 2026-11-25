@@ -59,6 +59,7 @@ class PostResponse(BaseModel):
     recipient_id: UUID | None = None
     recipient: dict[str, Any] | None = None
     celebration: dict[str, Any] | None = None
+    countdown_id: UUID | None = None
     reactions: list[ReactionSummary] = Field(default_factory=list)
     comment_count: int = 0
     is_bookmarked: bool = False

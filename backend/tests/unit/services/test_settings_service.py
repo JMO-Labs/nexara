@@ -327,6 +327,7 @@ NOTIF_TYPES = (
     "system",
     "invite_accepted",
     "event_reminder",
+    "countdown_reminder",
     "event_rsvp",
     "gallery_activity",
     "prompt",
@@ -348,7 +349,7 @@ class TestNotificationPreferencesSchema:
         fields = NotificationPreferences.model_fields
         for name in TOGGLE_FIELDS + EXTRA_FIELDS:
             assert name in fields, name
-        assert len(fields) == 46
+        assert len(fields) == 49
         assert NotificationPreferences().model_dump(exclude_none=True) == {}
 
     def test_digest_hour_bounds(self):
@@ -365,7 +366,7 @@ class TestGetNotificationPreferences:
 
     @pytest.mark.asyncio
     async def test_returns_every_stored_field(self):
-        """All 46 fields are read from the stored settings row."""
+        """All 49 fields are read from the stored settings row."""
         row = MagicMock()
         stored: dict[str, object] = {n: i % 2 == 0 for i, n in enumerate(TOGGLE_FIELDS)}
         stored.update(

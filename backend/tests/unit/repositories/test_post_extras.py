@@ -19,6 +19,7 @@ def _post(**kw):
         "celebrate_type": None,
         "celebrate_id": None,
         "celebrate_occasion": None,
+        "countdown_id": None,
     }
     return SimpleNamespace(**{**base, **kw})
 
@@ -33,7 +34,12 @@ async def test_plain_posts_skip_queries():
     session = AsyncMock()
     out = await post_extras(session, [_post()], uuid.uuid4())
     session.execute.assert_not_awaited()
-    assert list(out.values())[0] == {"recipient_id": None, "recipient": None, "celebration": None}
+    assert list(out.values())[0] == {
+        "recipient_id": None,
+        "recipient": None,
+        "celebration": None,
+        "countdown_id": None,
+    }
 
 
 async def test_kudos_recipient_and_user_celebration():

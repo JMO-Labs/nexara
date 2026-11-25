@@ -18,6 +18,7 @@ from app.models.calendar_token import CalendarToken  # noqa: F401
 from app.models.chat import ChatMessage  # noqa: F401
 from app.models.chat_read import ChatRead  # noqa: F401
 from app.models.community import Community  # noqa: F401
+from app.models.countdown import Countdown, CountdownFollower, CountdownReminderSent  # noqa: F401
 from app.models.device_token import DeviceToken  # noqa: F401
 from app.models.event import CalendarSubscription, Event, EventAttendance  # noqa: F401
 from app.models.event_ride import EventRide, RidePassenger  # noqa: F401

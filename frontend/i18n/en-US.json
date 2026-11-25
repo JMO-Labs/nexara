@@ -1009,6 +1009,9 @@
     "comment": {
       "label": "New comment"
     },
+    "countdown_reminder": {
+      "label": "Countdown reminders"
+    },
     "event_reminder": {
       "label": "Event reminder"
     },

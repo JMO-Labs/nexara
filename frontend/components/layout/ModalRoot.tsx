@@ -30,6 +30,13 @@ const GalleryCreateModal = dynamic(
     ),
   { ssr: false },
 );
+const CountdownComposer = dynamic(
+  () =>
+    import("@/components/countdowns/CountdownComposer").then(
+      (m) => m.CountdownComposer,
+    ),
+  { ssr: false },
+);
 
 export function ModalRoot() {
   const open = useModals((s) => s.open);
@@ -51,6 +58,11 @@ export function ModalRoot() {
 
       {/* create-gallery */}
       {open === "create-gallery" && <GalleryCreateModal open onClose={close} />}
+
+      {/* create-countdown */}
+      {open === "create-countdown" && (
+        <CountdownComposer open onClose={close} />
+      )}
     </>
   );
 }

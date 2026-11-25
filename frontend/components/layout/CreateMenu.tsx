@@ -7,6 +7,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlus,
+  Hourglass,
   ImagePlus,
   Gift,
   ListPlus,
@@ -77,6 +78,10 @@ export function CreateMenu({
           >
             <Gift aria-hidden className="size-4" />
             New wishlist
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => show("create-countdown")}>
+            <Hourglass aria-hidden className="size-4" />
+            Countdown
           </DropdownMenuItem>
           {trips && (
             <DropdownMenuItem onSelect={() => setTripOpen(true)}>
