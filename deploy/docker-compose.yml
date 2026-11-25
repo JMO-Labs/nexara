@@ -141,6 +141,10 @@ services:
       # Generate with `openssl rand -hex 32`.
       PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
       NEXARA_URL: "http://nexara:8080"
+      # iptables egress filter for plugin uids (needs NET_ADMIN below): plugins reach the
+      # internet, Docker DNS and NEXARA_URL only; no loopback/private/link-local ranges.
+      # If it cannot be installed, plugins report sandbox_unavailable.
+      PLUGIN_EGRESS_FILTER: "${PLUGIN_EGRESS_FILTER:-true}"
     volumes:
       - plugin_data:/data
     networks:
@@ -150,8 +154,10 @@ services:
       - /tmp:size=256m
     # bwrap needs user namespaces: seccomp/apparmor are unconfined for this
     # container only (the host applies its own seccomp filter per plugin).
+    # NET_ADMIN: only for the egress filter (own netns); drop it together with
+    # PLUGIN_EGRESS_FILTER=false. Plugins never hold capabilities.
     cap_drop: [ALL]
-    cap_add: [SETUID, SETGID, CHOWN, KILL]
+    cap_add: [SETUID, SETGID, CHOWN, KILL, NET_ADMIN]
     security_opt:
       - seccomp=unconfined
       - apparmor=unconfined

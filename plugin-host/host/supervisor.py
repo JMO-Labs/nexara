@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from host import netstat, seccomp
+from host import egress, netstat, seccomp
 from host.errors import SandboxUnavailableError
 from host.logs import LogBuffer, secrets_of
 from host.models import Endpoint, InstallSpec, ProcStatus, Status
@@ -106,10 +106,22 @@ class BwrapSupervisor:
 
     @property
     def available(self) -> bool:
-        """@brief Result of the sandbox self-test (run once)."""
+        """@brief Sandbox self-test and, if enabled, the egress filter (checked once)."""
         if self._available is None:
-            self._available = _self_test(self.data_dir)
+            self._available = _self_test(self.data_dir) and self._egress()
         return self._available
+
+    @staticmethod
+    def _egress() -> bool:
+        """@brief (Re)install the egress filter if enabled (re-resolves NEXARA_URL)."""
+        if not egress.enabled():
+            return True
+        try:
+            egress.apply()
+        except egress.EgressError as e:
+            log.error("sandbox unavailable: egress filter: %s", e)
+            return False
+        return True
 
     def _bwrap(
         self, pid: str, uid: int, root: Path, state: Path, spec: InstallSpec, fd: int | None
@@ -137,7 +149,7 @@ class BwrapSupervisor:
 
     async def start(self, plugin_id: str, root: Path, spec: InstallSpec) -> None:
         """@brief (Re)start; raises if the sandbox is unavailable or the process dies at once."""
-        if not self.available:
+        if not self.available or not await asyncio.to_thread(self._egress):
             raise SandboxUnavailableError()
         await self.stop(plugin_id)
         uid = plugin_uid(self.data_dir, plugin_id)
