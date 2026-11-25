@@ -163,7 +163,7 @@ export function HomeTile({
         ref={bodyRef}
         id={bodyId}
         className={cn(
-          "min-h-0 flex-1 flex-col px-3 pb-3 md:px-4 md:pb-4",
+          "min-h-0 flex-1 flex-col px-3 pb-3 md:overflow-y-auto md:overscroll-contain md:px-4 md:pb-4",
           open ? "flex" : "hidden md:flex",
         )}
       >

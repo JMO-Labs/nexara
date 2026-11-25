@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/home/tiles/PhotosTile.tsx
- * @brief Photos tile: 2x2 hero plus square thumbs from recent media.
+ * @brief Photos tile: 2x2 hero plus square thumbs from recent media. At md+
+ *        the 3-row grid shrinks to the tile's height instead of overflowing.
  */
 import Link from "next/link";
 import { Image as ImageIcon } from "lucide-react";
@@ -41,14 +42,16 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5 md:min-h-0 md:flex-1 md:grid-rows-[repeat(3,minmax(0,1fr))]">
           {items.map((it, i) => (
             <Link
               key={it.media_id}
               href="/app/photos"
               className={cn(
-                "relative block overflow-hidden rounded-xl",
-                i === 0 ? "col-span-2 row-span-2" : "aspect-square",
+                "relative block min-h-0 overflow-hidden rounded-xl",
+                i === 0
+                  ? "col-span-2 row-span-2"
+                  : "aspect-square md:aspect-auto",
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- API-served thumbnails, not optimizable by next/image */}
@@ -56,7 +59,7 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
                 src={mediaThumbUrl(it.media)}
                 alt={it.media.alt_text ?? ""}
                 loading="lazy"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover md:absolute md:inset-0"
               />
               {i === 5 && more ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-lg font-medium text-white">
