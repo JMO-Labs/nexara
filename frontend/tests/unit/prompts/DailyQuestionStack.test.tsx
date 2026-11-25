@@ -84,6 +84,25 @@ describe("DailyQuestionStack", () => {
     expect(screen.getByLabelText("answer-c")).toHaveFocus();
     expect(screen.queryByLabelText("answer-a")).toBeNull();
   });
+
+  it("quick-nav scrolls only the feed card, never the page", () => {
+    const { container } = render(
+      <div data-testid="pane" style={{ overflowY: "auto" }}>
+        <DailyQuestionStack posts={posts} />
+      </div>,
+    );
+    const pane = container.firstElementChild as HTMLElement;
+    Object.defineProperty(pane, "scrollHeight", { value: 2000 });
+    Object.defineProperty(pane, "clientHeight", { value: 500 });
+    pane.scrollTo = vi.fn();
+    const intoView = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    act(() => openFirstUnanswered());
+    expect(pane.scrollTo).toHaveBeenCalled();
+    expect(intoView).not.toHaveBeenCalled();
+    intoView.mockRestore();
+  });
 });
 
 describe("placement", () => {
