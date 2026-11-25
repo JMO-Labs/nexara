@@ -23,7 +23,12 @@ def test_v4_ruleset_order_and_content() -> None:
     rules = lines(egress.ruleset(False, NEX + [("fd00::5", 8080)]))
     c = egress.CHAIN
     assert rules[0] == f"-A {c} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT"
-    assert f"-A {c} -d 127.0.0.11/32 -p udp -j ACCEPT" in rules[:4]
+    dns = [
+        f"-A {c} -p udp -m conntrack --ctorigdst 127.0.0.11 --ctorigdstport 53 -j ACCEPT",
+        f"-A {c} -p tcp -m conntrack --ctorigdst 127.0.0.11 --ctorigdstport 53 -j ACCEPT",
+    ]
+    assert rules[1:3] == dns  # only DNS to the Docker resolver, never other 127.0.0.11 ports
+    assert not any("-d 127.0.0.11" in r for r in rules)
     assert f"-A {c} -d 172.20.0.5/32 -p tcp --dport 8080 -j ACCEPT" in rules
     assert not any("fd00::5" in r for r in rules)
     for net in ("127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
@@ -32,6 +37,7 @@ def test_v4_ruleset_order_and_content() -> None:
     accept_idx = max(i for i, r in enumerate(rules) if r.endswith("ACCEPT"))
     first_drop = min(i for i, r in enumerate(rules) if r.endswith("DROP"))
     assert accept_idx < first_drop  # allows (DNS, nexara) before the private drops
+    assert rules[first_drop] == f"-A {c} -m addrtype --dst-type LOCAL -j DROP"
     assert rules[-1] == f"-A {c} -j RETURN"
     text = egress.ruleset(False, NEX)
     assert text.startswith(f"*filter\n:{c} - [0:0]\n-F {c}\n") and text.endswith("COMMIT\n")
@@ -41,6 +47,7 @@ def test_v6_ruleset() -> None:
     rules = lines(egress.ruleset(True, NEX + [("fd00::5", 8080)]))
     assert f"-A {egress.CHAIN} -d fd00::5/128 -p tcp --dport 8080 -j ACCEPT" in rules
     assert not any("127.0.0.11" in r or "172.20.0.5" in r for r in rules)
+    assert f"-A {egress.CHAIN} -m addrtype --dst-type LOCAL -j DROP" in rules
     for net in ("::1/128", "fc00::/7", "fe80::/10", "::ffff:0:0/96", "64:ff9b::/96"):
         assert f"-A {egress.CHAIN} -d {net} -j DROP" in rules
 

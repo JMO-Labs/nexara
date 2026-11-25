@@ -3,8 +3,10 @@
 @brief Compose-only egress filter: iptables/ip6tables rules in the host's own network
        namespace for packets from plugin uids (owner match; OUTPUT chain).
 
-Plugins may reach the public internet, the Docker DNS resolver (127.0.0.11) and the
-resolved NEXARA_URL host:port. Everything else that is local or private is dropped:
+Plugins may reach the public internet, DNS on the Docker resolver (127.0.0.11:53 by
+conntrack original destination, nothing else on that address) and the resolved
+NEXARA_URL host:port. Every local address of the host (addrtype LOCAL) and everything
+private is dropped:
 loopback (the host control API on 8700, other plugins' ports), RFC1918, CGNAT,
 link-local (cloud metadata), and the IPv6 equivalents incl. translation ranges.
 Replies on connections the host opened to a plugin (the event proxy) stay allowed via
@@ -71,10 +73,13 @@ def ruleset(v6: bool, allow: list[tuple[str, int]]) -> str:
     fam = [(ip, port) for ip, port in allow if (":" in ip) == v6]
     lines = ["*filter", f":{CHAIN} - [0:0]", f"-F {CHAIN}"]
     lines.append(f"-A {CHAIN} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT")
-    if not v6:
-        lines += [f"-A {CHAIN} -d {DOCKER_DNS}/32 -p {p} -j ACCEPT" for p in ("udp", "tcp")]
+    if not v6:  # Docker DNATs 127.0.0.11:53 to a random port: match the original dst
+        dns = f"-m conntrack --ctorigdst {DOCKER_DNS} --ctorigdstport 53 -j ACCEPT"
+        lines += [f"-A {CHAIN} -p {p} {dns}" for p in ("udp", "tcp")]
     plen = 128 if v6 else 32
     lines += [f"-A {CHAIN} -d {ip}/{plen} -p tcp --dport {port} -j ACCEPT" for ip, port in fam]
+    # every address of this host (any subnet, 127.0.0.11 after DNAT, 0.0.0.0 listeners)
+    lines.append(f"-A {CHAIN} -m addrtype --dst-type LOCAL -j DROP")
     lines += [f"-A {CHAIN} -d {net} -j DROP" for net in (V6_DROP if v6 else V4_DROP)]
     lines += [f"-A {CHAIN} -j RETURN", "COMMIT", ""]
     return "\n".join(lines)
