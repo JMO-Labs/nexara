@@ -134,7 +134,8 @@ class PluginServiceBase:
                 return bot
         bot = User(
             community_id=community_id,
-            email=f"{m.bot_username}+{inst.id}@plugins.invalid",
+            # email is globally unique: include the community
+            email=f"{m.bot_username}+{inst.id}.{community_id.hex}@plugins.invalid",
             username=await self._unique_username(m.bot_username),
             display_name=m.bot_display_name,
             password_hash=None,

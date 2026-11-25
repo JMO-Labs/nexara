@@ -29,6 +29,7 @@ MAX_PACKAGE_BYTES = 50 * 1024 * 1024
 MAX_MEMBERS = 10_000
 MAX_WALK_BYTES = 64 * 1024 * 1024  # decompressed bytes (headers included) read at most
 MAX_EXT_HEADER = 64 * 1024  # GNU long-name/link and PAX header payloads
+MAX_EXT_CHAIN = 4  # consecutive extended headers before one member
 _EXT_TYPES = frozenset(
     {tarfile.GNUTYPE_LONGNAME, tarfile.GNUTYPE_LONGLINK, tarfile.XHDTYPE, tarfile.XGLTYPE,
      tarfile.SOLARIS_XHDTYPE}
@@ -110,14 +111,44 @@ class _CappedReader(io.RawIOBase):
 
 
 class _GuardedInfo(tarfile.TarInfo):
-    """@brief Rejects oversized GNU long-name / PAX headers before their payload is read."""
+    """
+    @brief Header guards that run before CPython reads extended-header payloads.
+
+    Rejects oversized GNU long-name / PAX headers, chains of more than
+    ``MAX_EXT_CHAIN`` extended headers (CPython recurses per header) and every GNU sparse
+    format (the 1.0 map is unbounded). Hooks private ``TarInfo`` methods; checked against
+    CPython 3.12 (3.12.12). The bomb regression tests fail loudly if the hooks stop firing.
+    """
 
     def _proc_member(self, tf: tarfile.TarFile) -> tarfile.TarInfo:
-        # Private CPython hook: runs before GNU long-name / PAX payloads are read.
-        if self.type in _EXT_TYPES and self.size > MAX_EXT_HEADER:
-            raise _UnsafeArchiveError("extended header too large")
+        if self.type == tarfile.GNUTYPE_SPARSE:
+            raise _UnsafeArchiveError("sparse members are not allowed")
+        if self.type in _EXT_TYPES:
+            chain = getattr(tf, "_nx_ext_chain", 0) + 1
+            if self.size > MAX_EXT_HEADER or chain > MAX_EXT_CHAIN:
+                raise _UnsafeArchiveError("extended header too large")
+            tf._nx_ext_chain = chain  # type: ignore[attr-defined]
+        else:
+            tf._nx_ext_chain = 0  # type: ignore[attr-defined]
         info: tarfile.TarInfo = super()._proc_member(tf)  # type: ignore[misc]
         return info
+
+    def _proc_sparse(self, *_: object) -> tarfile.TarInfo:
+        raise _UnsafeArchiveError("sparse members are not allowed")
+
+    def _proc_gnusparse_00(self, *_: object) -> None:
+        raise _UnsafeArchiveError("sparse members are not allowed")
+
+    def _proc_gnusparse_01(self, *_: object) -> None:
+        raise _UnsafeArchiveError("sparse members are not allowed")
+
+    def _proc_gnusparse_10(self, *_: object) -> None:
+        raise _UnsafeArchiveError("sparse members are not allowed")
+
+    def _apply_pax_info(self, pax_headers: dict[str, str], *args: object) -> None:
+        if any(k.startswith("GNU.sparse.") for k in pax_headers):
+            raise _UnsafeArchiveError("sparse members are not allowed")
+        super()._apply_pax_info(pax_headers, *args)  # type: ignore[misc]
 
 
 def read_manifest_from_tar(data: bytes) -> str:
@@ -148,7 +179,15 @@ def read_manifest_from_tar(data: bytes) -> str:
                 return fh.read(MAX_MANIFEST_BYTES + 1).decode()
     except _UnsafeArchiveError:
         raise _invalid("package archive is too large or unsafe") from None
-    except (tarfile.TarError, EOFError, OSError, UnicodeDecodeError, MemoryError):
+    except (
+        tarfile.TarError,
+        EOFError,
+        OSError,
+        UnicodeDecodeError,
+        MemoryError,
+        RecursionError,
+        ValueError,
+    ):
         raise _invalid("package is not a readable .tar.gz archive") from None
     raise _invalid("nexara-plugin.toml not found at the package root")
 

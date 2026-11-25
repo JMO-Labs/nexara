@@ -184,3 +184,86 @@ async def test_review_round_trip_downloads_once():
         await fetch_package_manifest("https://x.test/p.tgz", sha)
         m = await fetch_package_manifest("https://x.test/p.tgz", sha.upper())
     assert m.id == "dev.example.echo" and f.await_count == 1
+
+
+def _pax_record(key: str, value: str) -> bytes:
+    body = f" {key}={value}\n".encode()
+    n = len(body) + 1
+    while len(str(n)) + len(body) != n:
+        n += 1
+    return str(n).encode() + body
+
+
+def _raw_member(name: str, typ: bytes, data: bytes) -> bytes:
+    info = tarfile.TarInfo(name)
+    info.type = typ
+    info.size = len(data)
+    pad = (-len(data)) % tarfile.BLOCKSIZE
+    return info.tobuf(format=tarfile.USTAR_FORMAT) + data + b"\0" * pad
+
+
+def _raw_tgz(*parts: bytes) -> bytes:
+    import gzip
+
+    return gzip.compress(b"".join(parts) + b"\0" * (tarfile.BLOCKSIZE * 2))
+
+
+def _manifest_member() -> bytes:
+    return _raw_member("nexara-plugin.toml", tarfile.REGTYPE, TOML.encode())
+
+
+@pytest.mark.parametrize(
+    "ext",
+    [
+        lambda: _raw_member("pax", tarfile.XHDTYPE, _pax_record("comment", "x")),
+        lambda: _raw_member("././@LongLink", tarfile.GNUTYPE_LONGNAME, b"name\0"),
+    ],
+)
+def test_chained_extended_headers_rejected(ext):
+    """@brief 5,000 small chained x / L headers used to raise RecursionError (500)."""
+    one = ext()
+    data = _raw_tgz(one * 5000, _manifest_member())
+    with pytest.raises(AppError) as e:
+        read_manifest_from_tar(data)
+    assert e.value.code == "invalid_manifest"
+
+
+def test_short_extended_chain_ok():
+    pax = _raw_member("pax", tarfile.XHDTYPE, _pax_record("comment", "x"))
+    assert "dev.example.echo" in read_manifest_from_tar(_raw_tgz(pax * 2, _manifest_member()))
+
+
+def test_pax_sparse_10_rejected():
+    """@brief GNU sparse 1.0 map in member data used to cost ~280 MB + ValueError."""
+    pax = b"".join(
+        _pax_record(k, v)
+        for k, v in [
+            ("GNU.sparse.major", "1"),
+            ("GNU.sparse.minor", "0"),
+            ("GNU.sparse.name", "nexara-plugin.toml"),
+            ("GNU.sparse.realsize", "10"),
+        ]
+    )
+    sparse_map = b"99999999\n" + b"0\n1\n" * 20000
+    data = _raw_tgz(
+        _raw_member("pax", tarfile.XHDTYPE, pax),
+        _raw_member("GNUSparseFile.0/x", tarfile.REGTYPE, sparse_map),
+    )
+    with pytest.raises(AppError) as e:
+        read_manifest_from_tar(data)
+    assert "unsafe" in e.value.details["errors"][0]
+
+
+@pytest.mark.parametrize("key", ["GNU.sparse.map", "GNU.sparse.size", "GNU.sparse.name"])
+def test_any_pax_sparse_key_rejected(key):
+    pax = _raw_member("pax", tarfile.XHDTYPE, _pax_record(key, "0"))
+    with pytest.raises(AppError) as e:
+        read_manifest_from_tar(_raw_tgz(pax, _manifest_member()))
+    assert "unsafe" in e.value.details["errors"][0]
+
+
+def test_gnu_sparse_member_rejected():
+    data = _raw_tgz(_raw_member("s.bin", tarfile.GNUTYPE_SPARSE, b""), _manifest_member())
+    with pytest.raises(AppError) as e:
+        read_manifest_from_tar(data)
+    assert e.value.code == "invalid_manifest"

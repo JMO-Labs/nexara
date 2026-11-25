@@ -2,13 +2,15 @@
 @file plugin_host_sync.py
 @brief Build a package plugin's env from its enabled communities and push it to the host.
 
-Every push issues a fresh token per enabled community (previous ones revoked). The env
+Every successful push issues a fresh token per enabled community (previous ones revoked
+after the host accepted the PUT; a failed PUT changes no token). The env
 (tokens, webhook secrets, decrypted settings) goes only into the PUT body.
 """
 
 from __future__ import annotations
 
 import secrets
+import uuid
 from typing import Any
 
 from app.core.config import Settings
@@ -28,8 +30,10 @@ def endpoint_for(settings: Settings, plugin_id: str) -> str:
 
 async def _communities(
     repo: PluginRepository, inst: PluginInstall, m: PluginManifest, key: bytes
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[tuple[uuid.UUID, str]]]:
+    """@return Env entries and the (community_id, token_hash) pairs to store after the PUT."""
     out: list[dict[str, Any]] = []
+    hashes: list[tuple[uuid.UUID, str]] = []
     for pc in await repo.list_communities(inst.id):
         if not pc.enabled:
             continue
@@ -40,8 +44,7 @@ async def _communities(
             pc.webhook_secret = encrypt_secret(secret, key)
             await repo.upsert_community(pc)
         token, token_hash = new_token()
-        await repo.revoke_tokens(inst.id, pc.community_id)
-        await repo.add_token(inst.id, pc.community_id, token_hash)
+        hashes.append((pc.community_id, token_hash))
         out.append(
             {
                 "community_id": str(pc.community_id),
@@ -51,7 +54,7 @@ async def _communities(
                 "bot_user_id": str(pc.bot_user_id) if pc.bot_user_id else None,
             }
         )
-    return out
+    return out, hashes
 
 
 async def push_to_host(
@@ -71,7 +74,7 @@ async def push_to_host(
     client = client or PluginHostClient.from_settings(settings)
     await repo.lock_install(inst.id)  # one rotation at a time: never two active tokens
     m = PluginManifest.model_validate(inst.manifest)
-    comms = await _communities(repo, inst, m, key)
+    comms, hashes = await _communities(repo, inst, m, key)
     if not comms:
         inst.status = "disabled"
         await client.stop(inst.plugin_id)
@@ -91,5 +94,9 @@ async def push_to_host(
         },
     }
     await client.put(inst.plugin_id, body)
+    # Rotate only once the host has the new tokens: a failed PUT leaves live ones valid.
+    for community_id, token_hash in hashes:
+        await repo.revoke_tokens(inst.id, community_id)
+        await repo.add_token(inst.id, community_id, token_hash)
     if inst.status != "running":
         inst.status = "installing"

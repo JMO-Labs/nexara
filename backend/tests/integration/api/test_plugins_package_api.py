@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 import app.models  # noqa: F401
 from app.core.config import Settings, get_settings
 from app.core.dependencies import get_current_user, get_db
+from app.models.community import Community
 from app.models.plugin import PluginCommunity, PluginInstall, PluginToken
 from app.models.user import COMMUNITY_DEFAULT, User
 from app.plugins.manifest import parse_manifest
@@ -102,7 +103,8 @@ async def env(test_app, session):
     await session.flush()
     settings = Settings(**{**get_settings().model_dump(), "PLUGIN_HOST_URL": HOST})
     test_app.dependency_overrides[get_db] = _db
-    test_app.dependency_overrides[get_current_user] = lambda: owner
+    who = {"u": owner}
+    test_app.dependency_overrides[get_current_user] = lambda: who["u"]
     test_app.dependency_overrides[get_settings] = lambda: settings
     pid = f"dev.pkg.{n}"
     client = PluginHostClient(HOST, "hs", httpx.MockTransport(handler))
@@ -114,7 +116,9 @@ async def env(test_app, session):
         ),
     ):
         async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://t") as c:
-            yield SimpleNamespace(c=c, s=session, pid=pid, calls=calls, state=state)
+            yield SimpleNamespace(
+                c=c, s=session, pid=pid, calls=calls, state=state, who=who, owner=owner
+            )
     test_app.dependency_overrides.clear()
 
 
@@ -136,17 +140,21 @@ async def _row(e):
     ).scalar_one_or_none()
 
 
-async def _enable(e, on: bool = True):
-    return await e.c.patch(f"/api/v1/plugins/{e.pid}/communities/{CID}", json={"enabled": on})
+async def _enable(e, on: bool = True, cid: uuid.UUID = CID):
+    return await e.c.patch(f"/api/v1/plugins/{e.pid}/communities/{cid}", json={"enabled": on})
+
+
+async def _active(e, inst, cid: uuid.UUID | None = None) -> list[str]:
+    stmt = select(PluginToken.token_hash).where(
+        PluginToken.install_id == inst.id, PluginToken.revoked_at.is_(None)
+    )
+    if cid is not None:
+        stmt = stmt.where(PluginToken.community_id == cid)
+    return list((await e.s.execute(stmt)).scalars())
 
 
 async def _active_tokens(e, inst) -> int:
-    rows = await e.s.execute(
-        select(PluginToken).where(
-            PluginToken.install_id == inst.id, PluginToken.revoked_at.is_(None)
-        )
-    )
-    return len(list(rows.scalars()))
+    return len(await _active(e, inst))
 
 
 async def test_install_records_only_then_first_enable_pushes(env):
@@ -213,3 +221,31 @@ async def test_uninstall_host_down_removes_and_reports(env):
     assert r.status_code == 200
     assert r.json() == {"removed": True, "host_error": "unreachable"}
     assert await _row(env) is None
+
+
+async def test_partial_disable_host_down_keeps_other_community_token(env):
+    other = Community(name=f"o-{uuid.uuid4().hex[:6]}")
+    env.s.add(other)
+    await env.s.flush()
+    n = uuid.uuid4().hex[:8]
+    admin_a = User(
+        community_id=other.id,
+        email=f"pa_{n}@nexara.dev",
+        username=f"pa_{n}",
+        display_name=n,
+        role="admin",
+    )
+    env.s.add(admin_a)
+    await env.s.flush()
+    assert (await _install(env)).status_code == 201
+    assert (await _enable(env)).status_code == 200  # B = default community
+    env.who["u"] = admin_a
+    assert (await _enable(env, cid=other.id)).status_code == 200  # A
+    inst = await _row(env)
+    [b_hash] = await _active(env, inst, CID)
+    assert len(await _active(env, inst, other.id)) == 1
+    env.state["down"] = True
+    r = await _enable(env, False, other.id)
+    assert r.status_code == 200 and r.json()["host_error"] == "unreachable"
+    assert await _active(env, inst, other.id) == []  # A revoked regardless of host
+    assert await _active(env, inst, CID) == [b_hash]  # B untouched, still valid
