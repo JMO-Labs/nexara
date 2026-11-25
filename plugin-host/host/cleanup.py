@@ -23,7 +23,15 @@ log = logging.getLogger(__name__)
 PROC = Path("/proc")
 GONE_TIMEOUT_S = 5.0
 OWNER_TIMEOUT_S = 120
-OWNER_CMD = ["sh", "-c", "chmod -R u+rwX . 2>/dev/null; find . -mindepth 1 -delete 2>/dev/null"]
+# $1 = the tree. The owner can always chmod its own top dir (even if it set 0000), so
+# never chdir into it; the parent comes from the bwrap tmpfs (0755).
+OWNER_CMD = [
+    "sh",
+    "-c",
+    'chmod u+rwx -- "$1"; chmod -R u+rwX -- "$1" 2>/dev/null; '
+    'find "$1" -mindepth 1 -delete 2>/dev/null',
+    "sh",
+]
 
 
 def remove_argv(path: Path, uid: int, data_dir: Path, seccomp_fd: int) -> list[str]:
@@ -36,24 +44,24 @@ def remove_argv(path: Path, uid: int, data_dir: Path, seccomp_fd: int) -> list[s
         "--bind", str(real), str(real),
         *_tail(uid, seccomp_fd),
         "--remount-ro", str(data_dir),
-        "--chdir", str(real),
-        "--", *OWNER_CMD,
+        "--chdir", "/",
+        "--", *OWNER_CMD, str(real),
     ]  # fmt: skip
 
 
 def uid_processes(uid: int) -> list[int]:
-    """@brief Pids whose real uid is `uid`."""
+    """@brief Live (non-zombie) pids whose real uid is `uid`."""
     pids = []
     for d in PROC.iterdir():
         if not d.name.isdigit():
             continue
         try:
-            for line in (d / "status").read_text().splitlines():
-                if line.startswith("Uid:"):
-                    if int(line.split()[1]) == uid:
-                        pids.append(int(d.name))
-                    break
-        except (OSError, ValueError, IndexError):
+            fields = dict(
+                ln.split(":", 1) for ln in (d / "status").read_text().splitlines() if ":" in ln
+            )
+            if fields["State"].split()[0] != "Z" and int(fields["Uid"].split()[0]) == uid:
+                pids.append(int(d.name))
+        except (OSError, ValueError, IndexError, KeyError):
             continue
     return pids
 

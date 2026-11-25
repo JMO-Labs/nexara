@@ -360,3 +360,24 @@ async def test_sandbox_unavailable_reported(
     assert seen["uid"] == 20000  # installs run as the plugin's uid
     row = (await c.get("/plugins")).json()[0]
     assert row["status"] == "sandbox_unavailable"
+
+
+async def test_delete_reports_cleanup_failure(
+    c: httpx.AsyncClient, app: FastAPI, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(main, "install", fake_install(tmp_path))
+    await c.put(f"/plugins/{PID}", json=spec_body(good_tar()))
+    await settle(app)
+
+    async def fails(path: Path, uid: int | None, data_dir: Path) -> bool:
+        return False
+
+    monkeypatch.setattr(main, "remove_tree", fails)
+    r = await c.delete(f"/plugins/{PID}?purge=true")
+    assert r.status_code == 500 and r.json() == {"detail": "cleanup_failed"}
+    monkeypatch.setattr(main, "remove_tree", lambda *a: _true())
+    assert (await c.delete(f"/plugins/{PID}?purge=true")).status_code == 204  # retry
+
+
+async def _true() -> bool:
+    return True

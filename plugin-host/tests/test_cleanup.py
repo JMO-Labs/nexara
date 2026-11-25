@@ -25,21 +25,25 @@ def test_remove_argv_binds_only_target(tmp_path: Path) -> None:
     binds = [head[i + 1] for i, a in enumerate(head) if a == "--bind"]
     assert binds == [str(target)]
     assert head[head.index("--uid") + 1] == str(UID) and "--seccomp" in head
-    assert head[head.index("--chdir") + 1] == str(target)
-    assert argv[argv.index("--") + 1 :] == cleanup.OWNER_CMD
+    assert head[head.index("--chdir") + 1] == "/"  # never chdir into the plugin's tree
+    assert argv[argv.index("--") + 1 :] == [*cleanup.OWNER_CMD, str(target)]
+    assert 'chmod u+rwx -- "$1"' in cleanup.OWNER_CMD[2]
     with pytest.raises(ValueError):
         cleanup.remove_argv(Path("/etc"), UID, tmp_path, 7)
 
 
-def _status(proc: Path, pid: int, uid: int) -> None:
+def _status(proc: Path, pid: int, uid: int, state: str = "S (sleeping)") -> None:
     (proc / str(pid)).mkdir()
-    (proc / str(pid) / "status").write_text(f"Name:\tx\nUid:\t{uid}\t{uid}\t{uid}\t{uid}\n")
+    (proc / str(pid) / "status").write_text(
+        f"Name:\tx\nState:\t{state}\nUid:\t{uid}\t{uid}\t{uid}\t{uid}\n"
+    )
 
 
 async def test_wait_uid_gone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cleanup, "PROC", tmp_path)
     _status(tmp_path, 10, 0)
     _status(tmp_path, 11, UID)
+    _status(tmp_path, 12, UID, "Z (zombie)")  # zombies hold nothing: ignored
     (tmp_path / "self").mkdir()
     assert cleanup.uid_processes(UID) == [11]
     assert await cleanup.wait_uid_gone(UID, timeout=0.1) is False
@@ -66,6 +70,13 @@ async def test_remove_tree_logs_failures(
     assert "PermissionError" in caplog.text and "not fully removed" in caplog.text
 
 
+def _chmod_as(path: Path, uid: int, mode: int) -> None:
+    """@brief chmod as the owner uid (root without CAP_FOWNER cannot)."""
+    import subprocess
+
+    subprocess.run(["chmod", oct(mode)[2:], str(path)], check=True, **perms.as_user(uid))
+
+
 _CAN = (
     shutil.which("bwrap") is not None
     and all(p.is_dir() for p in sandbox.MOUNTPOINTS)
@@ -75,7 +86,8 @@ _CAN = (
 
 @pytest.mark.sandbox
 @pytest.mark.skipif(not _CAN, reason="needs root + bwrap + image mountpoints")
-async def test_owner_delete_of_hostile_tree() -> None:
+@pytest.mark.parametrize("top_mode", [0o700, 0o000])
+async def test_owner_delete_of_hostile_tree(top_mode: int) -> None:
     data = Path(tempfile.mkdtemp())
     data.chmod(0o755)
     state = data / "plugin-state" / "dev.nexara.echo"
@@ -90,6 +102,7 @@ async def test_owner_delete_of_hostile_tree() -> None:
     (state / "a").chmod(0o700)
     os.chown(state / "a", UID, UID)
     perms.prepare_state(state, UID)
+    _chmod_as(state, UID, top_mode)  # the plugin owns its state dir and may lock it
     try:
         assert await cleanup.remove_tree(state, UID, data) is True
         assert not state.exists()

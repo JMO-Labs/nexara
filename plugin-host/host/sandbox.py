@@ -153,7 +153,8 @@ def install_argv(
 def plugin_env(env: PluginEnv, port: int) -> dict[str, str]:
     """@brief The plugin's entire process env: NEXARA_* + PORT + minimal PATH/HOME."""
     out = {k: v for k, v in env.model_dump().items() if v is not None}
-    url = out.get("NEXARA_URL") or os.environ.get("NEXARA_URL")
+    # host env wins: it is what the egress filter allowlists (a pushed URL is a fallback)
+    url = os.environ.get("NEXARA_URL") or out.get("NEXARA_URL")
     out.pop("NEXARA_URL", None)
     if url:
         out = {"NEXARA_URL": url, **out}

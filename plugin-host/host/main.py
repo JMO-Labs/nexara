@@ -162,14 +162,20 @@ async def put_plugin(plugin_id: PluginId, spec: InstallSpec, host: Host) -> Resp
 
 @router.delete("/plugins/{plugin_id}", status_code=204)
 async def delete_plugin(plugin_id: PluginId, host: Host, purge: bool = False) -> Response:
-    """@brief Stop and remove code; keep /data/plugin-state/{id} unless purge."""
+    """
+    @brief Stop and remove code; keep /data/plugin-state/{id} unless purge.
+    500 `cleanup_failed` if files could not be removed (the record is gone; retry DELETE).
+    """
     host.records.pop(plugin_id, None)
     async with host.locks.setdefault(plugin_id, asyncio.Lock()):
         await host.supervisor.stop(plugin_id)
         uid = plugin_uid(host.data_dir, plugin_id)
-        await remove_tree(host.pdir(plugin_id), uid, host.data_dir)
+        ok = await remove_tree(host.pdir(plugin_id), uid, host.data_dir)
         if purge:
-            await remove_tree(host.data_dir / "plugin-state" / plugin_id, uid, host.data_dir)
+            state = host.data_dir / "plugin-state" / plugin_id
+            ok = await remove_tree(state, uid, host.data_dir) and ok
+    if not ok:  # details are logged; DELETE is idempotent, so Nexara can retry
+        raise HTTPException(500, "cleanup_failed")
     return Response(status_code=204)
 
 

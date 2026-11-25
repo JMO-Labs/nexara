@@ -209,12 +209,14 @@ def test_plugin_env_is_exact(monkeypatch: pytest.MonkeyPatch) -> None:
     }
 
 
-def test_plugin_env_prefers_pushed_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_plugin_env_host_url_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    """@brief Plugins get the same NEXARA_URL the egress filter allowlists (host env)."""
     monkeypatch.setenv("NEXARA_URL", "http://host-side")
     e = _env()
     e.NEXARA_URL = "http://pushed"
-    assert plugin_env(e, 9100)["NEXARA_URL"] == "http://pushed"
+    assert plugin_env(e, 9100)["NEXARA_URL"] == "http://host-side"
     monkeypatch.delenv("NEXARA_URL")
+    assert plugin_env(e, 9100)["NEXARA_URL"] == "http://pushed"  # no host value: pushed
     assert "NEXARA_URL" not in plugin_env(_env(), 9100)
 
 
