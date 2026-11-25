@@ -74,6 +74,24 @@ function Row({ post, open, onToggle, reduced }: RowProps) {
 }
 
 /**
+ * @brief Nearest ancestor that scrolls vertically (has overflow and room).
+ * @param el start element
+ * @return the scrolling ancestor, or null when only the page scrolls
+ */
+function scrollPane(el: HTMLElement): HTMLElement | null {
+  for (
+    let p = el.parentElement;
+    p && p !== document.body;
+    p = p.parentElement
+  ) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
+      return p;
+  }
+  return null;
+}
+
+/**
  * @brief Collapsed-by-default stack of daily questions.
  * @param posts daily_question prompt posts (any order)
  * @return card element, or null when empty
@@ -98,13 +116,24 @@ export function DailyQuestionStack({ posts }: { posts: PromptPost[] }) {
   React.useEffect(() => {
     const onOpen = () => {
       const target = selectUnanswered(useQotd.getState())?.[0];
-      ref.current?.scrollIntoView?.({
-        block: "start",
-        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")
-          .matches
-          ? "auto"
-          : "smooth",
-      });
+      const behavior: ScrollBehavior = window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)",
+      ).matches
+        ? "auto"
+        : "smooth";
+      const el = ref.current;
+      const pane = el && scrollPane(el);
+      // Inside a scrolling card (desktop bento): scroll only the card;
+      // scrollIntoView would also scroll the page and leave it shifted.
+      if (el && pane) {
+        const top =
+          el.getBoundingClientRect().top -
+          pane.getBoundingClientRect().top +
+          pane.scrollTop;
+        pane.scrollTo({ top, behavior });
+      } else {
+        el?.scrollIntoView?.({ block: "start", behavior });
+      }
       if (!target) return;
       setOpen((s) => new Set(s).add(target));
       focusRef.current = target;
