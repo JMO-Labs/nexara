@@ -149,7 +149,7 @@ export function HomeSideColumn({
       </nav>
       <div
         className={cn(
-          "contents lg:absolute lg:top-0 lg:right-0 lg:z-30 lg:flex lg:h-full lg:w-[340px] lg:flex-col lg:gap-[18px] lg:transition-[opacity,transform] lg:duration-200 motion-reduce:lg:transition-none lg:[&>section]:bg-[var(--nx-glass-solid)] lg:[&>section]:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.6)]",
+          "contents lg:absolute lg:top-0 lg:right-0 lg:z-30 lg:flex lg:h-full lg:w-[340px] lg:flex-col lg:gap-[18px] lg:transition-[opacity,transform] lg:duration-200 motion-reduce:lg:transition-none lg:[&>section]:min-h-24 lg:[&>section]:overflow-hidden lg:[&>section]:bg-[var(--nx-glass-solid)] lg:[&>section]:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.6)]",
           expanded
             ? "lg:translate-x-0 lg:opacity-100"
             : "lg:pointer-events-none lg:invisible lg:translate-x-6 lg:opacity-0",

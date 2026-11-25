@@ -10,6 +10,7 @@ import { useSession } from "@/stores/session";
 import { useHomeChats } from "@/hooks/useHomeChats";
 import { useHomeAccordion } from "@/hooks/useHomeAccordion";
 import { CompleteProfileCard } from "@/components/home/CompleteProfileCard";
+import { useFillHeight } from "@/hooks/useFillHeight";
 import { Greeting } from "@/components/home/Greeting";
 import { ScopeBar } from "@/components/home/ScopeBar";
 import { PeopleStrip } from "@/components/home/PeopleStrip";
@@ -44,6 +45,9 @@ export default function AppHome() {
     : {};
   const sectionProps = animateIn ? { variants: homeTile } : {};
   const { open, toggle } = useHomeAccordion(mention ? "chat" : "next");
+  // Bento fills the viewport below the header content; 24px = page py-6.
+  const bentoRef = React.useRef<HTMLDivElement>(null);
+  useFillHeight(bentoRef, "--bento-h", 24);
   return (
     <motion.div className="py-6" {...rootProps}>
       <motion.div
@@ -64,8 +68,9 @@ export default function AppHome() {
         <OnThisDayTile open={open === "memories"} onToggle={toggle} />
       </motion.div>
       <motion.div
+        ref={bentoRef}
         {...sectionProps}
-        className="home-bento flex flex-col gap-2.5 md:grid md:h-[1158px] md:grid-cols-[1.3fr_1fr_.8fr] md:grid-rows-[auto_1fr_340px] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_weather_lists'] lg:h-[max(800px,calc(100dvh-260px))] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,.85fr)_auto] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:'feed_chat_next_side''feed_chat_photos_side']"
+        className="home-bento flex flex-col gap-2.5 md:grid md:h-[max(640px,var(--bento-h,1158px))] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,.8fr)] md:grid-rows-[auto_minmax(0,1fr)_minmax(0,1fr)] md:gap-[18px] md:[grid-template-areas:'feed_chat_next''feed_chat_photos''people_weather_lists'] lg:h-[max(520px,var(--bento-h,max(800px,calc(100dvh-260px))))] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,.85fr)_auto] lg:grid-rows-[auto_minmax(0,1fr)] lg:[grid-template-areas:'feed_chat_next_side''feed_chat_photos_side']"
       >
         <UpNextTile open={open === "next"} onToggle={toggle} />
         <ChatsTile open={open === "chat"} onToggle={toggle} />
