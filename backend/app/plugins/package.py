@@ -9,11 +9,13 @@ read in memory, with caps on download size, member count and bytes walked.
 from __future__ import annotations
 
 import asyncio
+import gzip
 import hashlib
 import hmac
 import io
 import re
 import tarfile
+import time
 from urllib.parse import urlparse
 
 import httpx
@@ -25,7 +27,15 @@ from app.plugins.manifest import MAX_MANIFEST_BYTES, PluginManifest, parse_manif
 
 MAX_PACKAGE_BYTES = 50 * 1024 * 1024
 MAX_MEMBERS = 10_000
-MAX_WALK_BYTES = 512 * 1024 * 1024  # uncompressed bytes scanned before giving up
+MAX_WALK_BYTES = 64 * 1024 * 1024  # decompressed bytes (headers included) read at most
+MAX_EXT_HEADER = 64 * 1024  # GNU long-name/link and PAX header payloads
+_EXT_TYPES = frozenset(
+    {tarfile.GNUTYPE_LONGNAME, tarfile.GNUTYPE_LONGLINK, tarfile.XHDTYPE, tarfile.XGLTYPE,
+     tarfile.SOLARIS_XHDTYPE}
+)  # fmt: skip
+CACHE_TTL = 600.0
+CACHE_MAX = 32
+_cache: dict[tuple[str, str], tuple[float, PluginManifest]] = {}
 MANIFEST_NAME = "nexara-plugin.toml"
 TIMEOUT = 60.0
 SHA256_RE = re.compile(r"[0-9a-fA-F]{64}", re.ASCII)
@@ -76,18 +86,57 @@ async def download_package(url: str) -> bytes:
     return data
 
 
+class _UnsafeArchiveError(Exception):
+    """@brief Archive exceeded a cap while being read."""
+
+
+class _CappedReader(io.RawIOBase):
+    """@brief Stream that fails once more than ``cap`` decompressed bytes were read."""
+
+    def __init__(self, inner: gzip.GzipFile, cap: int) -> None:
+        self._inner, self._left = inner, cap
+
+    def readable(self) -> bool:
+        return True
+
+    def read(self, size: int | None = -1) -> bytes:
+        if size is None or size < 0 or size > self._left + 1:
+            size = self._left + 1
+        data = self._inner.read(size)
+        self._left -= len(data)
+        if self._left < 0:
+            raise _UnsafeArchiveError("archive too large")
+        return data
+
+
+class _GuardedInfo(tarfile.TarInfo):
+    """@brief Rejects oversized GNU long-name / PAX headers before their payload is read."""
+
+    def _proc_member(self, tf: tarfile.TarFile) -> tarfile.TarInfo:
+        # Private CPython hook: runs before GNU long-name / PAX payloads are read.
+        if self.type in _EXT_TYPES and self.size > MAX_EXT_HEADER:
+            raise _UnsafeArchiveError("extended header too large")
+        info: tarfile.TarInfo = super()._proc_member(tf)  # type: ignore[misc]
+        return info
+
+
 def read_manifest_from_tar(data: bytes) -> str:
     """
-    @brief Return the text of ``nexara-plugin.toml`` at the archive root, without extracting.
-    @raises AppError ``invalid_manifest`` if missing, not a regular file, too large or the
-        archive is unreadable.
+    @brief Return the text of ``nexara-plugin.toml`` at the root of a .tar.gz, in one
+        streaming pass without extracting. Decompressed bytes, member count and extended
+        header sizes are capped (decompression-bomb guard).
+    @raises AppError ``invalid_manifest`` if missing, not a regular file, too large, or the
+        archive is unreadable or unsafe.
     """
-    walked = 0
     try:
-        with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as tf:
+        with (
+            gzip.GzipFile(fileobj=io.BytesIO(data)) as gz,
+            tarfile.open(
+                fileobj=_CappedReader(gz, MAX_WALK_BYTES), mode="r|", tarinfo=_GuardedInfo
+            ) as tf,
+        ):
             for n, member in enumerate(tf):
-                walked = member.offset_data + member.size
-                if n >= MAX_MEMBERS or walked > MAX_WALK_BYTES:
+                if n >= MAX_MEMBERS:
                     break
                 if member.name.removeprefix("./") != MANIFEST_NAME:
                     continue
@@ -97,8 +146,10 @@ def read_manifest_from_tar(data: bytes) -> str:
                 if fh is None:
                     raise _invalid("nexara-plugin.toml is unreadable")
                 return fh.read(MAX_MANIFEST_BYTES + 1).decode()
-    except (tarfile.TarError, EOFError, OSError, UnicodeDecodeError):
-        raise _invalid("package is not a readable tar archive") from None
+    except _UnsafeArchiveError:
+        raise _invalid("package archive is too large or unsafe") from None
+    except (tarfile.TarError, EOFError, OSError, UnicodeDecodeError, MemoryError):
+        raise _invalid("package is not a readable .tar.gz archive") from None
     raise _invalid("nexara-plugin.toml not found at the package root")
 
 
@@ -114,14 +165,28 @@ def _invalid(msg: str) -> AppError:
 async def fetch_package_manifest(url: str, sha256: str) -> PluginManifest:
     """
     @brief Download the package, verify ``sha256`` and parse its manifest.
+
+    Verified manifests are cached per (url, sha256) for 10 min in-process, so the
+    scope-approval resubmit does not download the package again.
     @param url https package URL.
     @param sha256 Expected hex digest of the tarball.
     @raises AppError ``package_sha256_mismatch``, ``invalid_manifest`` and download errors.
     """
     if not SHA256_RE.fullmatch(sha256):
         raise _fail("invalid_sha256", "SHA-256 must be 64 hex characters")
+    key = (url, sha256.lower())
+    hit = _cache.get(key)
+    if hit and hit[0] > time.monotonic():  # scope-review round trip: skip the 2nd download
+        return hit[1]
     data = await download_package(url)
     if not hmac.compare_digest(hashlib.sha256(data).hexdigest(), sha256.lower()):
         raise _fail("package_sha256_mismatch", "Package checksum does not match")
     text = await asyncio.to_thread(read_manifest_from_tar, data)
-    return parse_manifest(text)
+    m = parse_manifest(text)
+    now = time.monotonic()
+    for k in [k for k, (exp, _) in _cache.items() if exp <= now]:
+        del _cache[k]
+    if len(_cache) >= CACHE_MAX:
+        _cache.pop(next(iter(_cache)))
+    _cache[key] = (now + CACHE_TTL, m)
+    return m
