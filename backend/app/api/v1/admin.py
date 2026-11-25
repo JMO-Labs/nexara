@@ -27,7 +27,6 @@ from app.schemas.admin import (
     AdminSettingsResponse,
     AdminSettingsUpdate,
     AdminUserListItem,
-    AuditLogEntry,
     MetricsResponse,
     UserRoleUpdate,
     UserSimpleModeUpdate,
@@ -195,49 +194,6 @@ async def update_admin_settings(
 ) -> AdminSettingsResponse:
     """@brief Update admin settings (Phase 1: audit log only)."""
     return await service.update_admin_settings(user, data, client_ip(request))
-
-
-@router.get("/audit-log", response_model=PaginatedResponse[AuditLogEntry])
-async def get_audit_log(
-    _user: User = Depends(require_role("admin")),
-    service: AdminService = Depends(_build_service),
-    db: AsyncSession = Depends(get_db),
-    limit: int = Query(20, ge=1, le=100),
-    cursor: str | None = Query(None),
-    action_filter: str | None = Query(None),
-) -> PaginatedResponse[AuditLogEntry]:
-    """@brief List audit log entries enriched with actor display names."""
-    from sqlalchemy import select
-
-    entries, next_cursor = await service.list_audit_entries(
-        action_filter=action_filter,
-        limit=limit,
-        cursor=cursor,
-    )
-
-    actor_ids = {e.actor_id for e in entries if e.actor_id is not None}
-    target_user_ids = {e.target_id for e in entries if e.target_id and e.target_type == "user"}
-    all_ids = actor_ids | target_user_ids
-
-    display_map: dict[uuid.UUID, str] = {}
-    if all_ids:
-        result = await db.execute(select(User.id, User.display_name).where(User.id.in_(all_ids)))
-        display_map = {row.id: row.display_name for row in result}
-
-    items: list[AuditLogEntry] = []
-    for e in entries:
-        entry = AuditLogEntry.model_validate(e)
-        if e.actor_id and e.actor_id in display_map:
-            entry.actor_display_name = display_map[e.actor_id]
-        if e.target_id and e.target_type == "user" and e.target_id in display_map:
-            entry.target_display = display_map[e.target_id]
-        items.append(entry)
-
-    return PaginatedResponse(
-        items=items,
-        next_cursor=next_cursor,
-        has_more=next_cursor is not None,
-    )
 
 
 def _build_gallery_service(

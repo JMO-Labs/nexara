@@ -203,20 +203,3 @@ export const getAdminSettings = () =>
  */
 export const updateAdminSettings = (updates: AdminSettingsUpdate) =>
   apiPut<AdminSettingsResponse>("/api/v1/admin/settings", updates);
-
-/**
- * @brief List audit log entries.
- * @param filters Optional pagination: limit, cursor
- * @return PaginatedResponse of AuditLogEntry
- */
-export const getAuditLog = (filters?: {
-  limit?: number;
-  cursor?: string | null;
-}) => {
-  const qs = new URLSearchParams();
-  if (filters?.limit) qs.set("limit", String(filters.limit));
-  if (filters?.cursor) qs.set("cursor", filters.cursor);
-  return apiGet<PaginatedResponse<AuditLogEntry>>(
-    `/api/v1/admin/audit-log?${qs}`,
-  );
-};

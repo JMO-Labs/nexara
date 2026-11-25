@@ -28,6 +28,7 @@ def get_google_mail_service(
 ) -> GoogleMailService:
     """@brief Provide the Google mail connect flow (no auth: the callback is a browser redirect)."""
     from app.core.valkey import DB_CACHE, get_pool
+    from app.repositories.audit_repo import AuditRepository
     from app.repositories.community_repo import CommunityRepository
     from app.repositories.user_repo import UserRepository
     from app.services.admin_google_mail import GoogleMailService
@@ -37,6 +38,7 @@ def get_google_mail_service(
         UserRepository(db),
         settings,
         get_pool(settings, DB_CACHE),
+        AuditRepository(db),
     )
 
 

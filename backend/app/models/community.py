@@ -82,6 +82,7 @@ class Community(Base):
     smtp_google_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
     smtp_last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     smtp_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audit_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="365")
     # Per-community feature flags (see app.core.features); unset keys use defaults.
     features: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")

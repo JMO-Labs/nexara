@@ -2,20 +2,21 @@
 @file audit_repo.py
 @brief Repository for the append-only audit log.
 
-Audit entries are never updated or deleted.  This repository provides
-``append()`` for writing and ``list()`` for reading with pagination.
+Audit entries are never updated.  ``append()`` writes, ``list_entries()`` reads,
+and ``purge_older_than()`` is used only by the retention task.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import String, cast, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 _CURSOR_SEP = "|"
@@ -26,7 +27,7 @@ class AuditRepository(BaseRepository[AuditLog]):
     """
     @brief Async repository for audit log entries.
 
-    Append-only — no update or delete methods are provided.
+    Append-only apart from the retention purge.
     """
 
     model = AuditLog
@@ -73,6 +74,9 @@ class AuditRepository(BaseRepository[AuditLog]):
         *,
         action_filter: str | None = None,
         actor_filter: uuid.UUID | None = None,
+        q: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
         limit: int = 20,
         cursor: str | None = None,
     ) -> tuple[list[AuditLog], str | None]:
@@ -81,6 +85,9 @@ class AuditRepository(BaseRepository[AuditLog]):
 
         @param action_filter Filter by action key prefix.
         @param actor_filter Filter by actor UUID.
+        @param q Case-insensitive match on action, target type, actor name or IP.
+        @param since Only entries at or after this instant.
+        @param until Only entries before this instant.
         @param limit Max items per page.
         @param cursor Opaque pagination cursor.
         @return Tuple of (entries, next_cursor).
@@ -88,9 +95,25 @@ class AuditRepository(BaseRepository[AuditLog]):
         stmt = select(AuditLog).order_by(AuditLog.created_at.desc())
 
         if action_filter:
-            stmt = stmt.where(AuditLog.action.startswith(action_filter))
+            stmt = stmt.where(AuditLog.action.startswith(action_filter, autoescape=True))
         if actor_filter:
             stmt = stmt.where(AuditLog.actor_id == actor_filter)
+        if since:
+            stmt = stmt.where(AuditLog.created_at >= since)
+        if until:
+            stmt = stmt.where(AuditLog.created_at < until)
+        if q:
+            esc = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{esc}%"
+            names = select(User.id).where(User.display_name.ilike(like, escape="\\"))
+            stmt = stmt.where(
+                or_(
+                    AuditLog.action.ilike(like, escape="\\"),
+                    AuditLog.target_type.ilike(like, escape="\\"),
+                    cast(AuditLog.ip_address, String).ilike(like, escape="\\"),
+                    AuditLog.actor_id.in_(names),
+                )
+            )
         if cursor:
             try:
                 if _CURSOR_SEP in cursor:
@@ -122,3 +145,14 @@ class AuditRepository(BaseRepository[AuditLog]):
             next_cursor = f"{created_iso}{_CURSOR_SEP}{last.id}"
 
         return rows, next_cursor
+
+    async def purge_older_than(self, days: int) -> int:
+        """
+        @brief Retention-only delete of entries older than ``days`` (the sole delete path).
+
+        @param days Retention window in days.
+        @return Rows deleted.
+        """
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        res = await self._session.execute(delete(AuditLog).where(AuditLog.created_at < cutoff))
+        return int(res.rowcount or 0)  # type: ignore[attr-defined]

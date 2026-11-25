@@ -7,11 +7,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Select, String, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.signin_event import SigninEvent
+from app.models.user import User
+
+Row = tuple[SigninEvent, str | None]
+"""@brief (event, username-or-None) result row."""
 
 
 class SigninRepository:
@@ -76,3 +81,61 @@ class SigninRepository:
             delete(SigninEvent).where(SigninEvent.created_at < cutoff)
         )
         return int(res.rowcount or 0)  # type: ignore[attr-defined]
+
+    def _filtered(
+        self,
+        community_id: uuid.UUID,
+        q: str | None,
+        success: bool | None,
+        method: str | None,
+        since: datetime | None,
+    ) -> Select[Any]:
+        stmt = (
+            select(SigninEvent, User.username)
+            .outerjoin(User, User.id == SigninEvent.user_id)
+            .where(SigninEvent.community_id == community_id)
+        )
+        if q:
+            like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            stmt = stmt.where(
+                or_(
+                    SigninEvent.email_tried.ilike(like, escape="\\"),
+                    cast(SigninEvent.ip, String).ilike(like, escape="\\"),
+                    SigninEvent.device.ilike(like, escape="\\"),
+                )
+            )
+        if success is not None:
+            stmt = stmt.where(SigninEvent.success.is_(success))
+        if method:
+            stmt = stmt.where(SigninEvent.method == method)
+        if since:
+            stmt = stmt.where(SigninEvent.created_at >= since)
+        return stmt.order_by(SigninEvent.created_at.desc(), SigninEvent.id.desc())
+
+    async def search(
+        self,
+        community_id: uuid.UUID,
+        *,
+        q: str | None = None,
+        success: bool | None = None,
+        method: str | None = None,
+        since: datetime | None = None,
+        after: tuple[datetime, uuid.UUID] | None = None,
+        limit: int = 50,
+    ) -> list[Row]:
+        """
+        @brief Newest-first filtered page (keyset on created_at, id).
+
+        @param after Keyset position of the last row already seen.
+        @return Up to ``limit`` (event, username) rows.
+        """
+        stmt = self._filtered(community_id, q, success, method, since)
+        if after:
+            ts, eid = after
+            stmt = stmt.where(
+                or_(
+                    SigninEvent.created_at < ts,
+                    (SigninEvent.created_at == ts) & (SigninEvent.id < eid),
+                )
+            )
+        return [(e, u) for e, u in (await self._session.execute(stmt.limit(limit))).all()]

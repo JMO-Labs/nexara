@@ -7,11 +7,20 @@ These schemas define the standard shapes used across all API endpoints.
 
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar
+from datetime import UTC, datetime
+from typing import Annotated, Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 T = TypeVar("T")
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
+"""@brief Datetime input where a naive value is taken as UTC (filters compare to timestamptz)."""
 
 
 class ErrorDetail(BaseModel):

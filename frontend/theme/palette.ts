@@ -18,6 +18,7 @@ export type TokenName =
   | "blue"
   | "red"
   | "ok"
+  | "warn"
   | "glass-solid";
 
 export const palette: {
@@ -38,7 +39,8 @@ export const palette: {
     "danger-fg": "#FFFFFF",
     blue: "#A9BCC4",
     red: "#A8505F",
-    ok: "#3E9E68",
+    ok: "#3C9B66",
+    warn: "#946B1F",
     "glass-solid": "#F7F2EC",
   },
   dark: {
@@ -56,6 +58,7 @@ export const palette: {
     blue: "#8FB6CF",
     red: "#E7A3AE",
     ok: "#5CC08A",
+    warn: "#E6C07A",
     "glass-solid": "#1C2834",
   },
 };

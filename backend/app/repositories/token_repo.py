@@ -164,3 +164,52 @@ class TokenRepository:
         stmt = delete(RefreshToken).where(RefreshToken.expires_at < now)
         result = await self._session.execute(stmt)
         return cast(int, getattr(result, "rowcount", 0))
+
+    async def list_active_families(self, user_id: uuid.UUID) -> list[RefreshToken]:
+        """
+        @brief Newest token row of each still-usable family of ``user_id``.
+
+        A family is usable while it has an unrevoked, unexpired token.
+
+        @return One row per family (latest ``created_at``), newest first.
+        """
+        live = select(RefreshToken.family_id).where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > datetime.now(UTC),
+        )
+        stmt = (
+            select(RefreshToken)
+            .where(RefreshToken.user_id == user_id, RefreshToken.family_id.in_(live))
+            .distinct(RefreshToken.family_id)
+            .order_by(RefreshToken.family_id, RefreshToken.created_at.desc())
+        )
+        rows = list((await self._session.execute(stmt)).scalars().all())
+        return sorted(rows, key=lambda r: r.created_at, reverse=True)
+
+    async def revoke_user_family(self, user_id: uuid.UUID, family_id: uuid.UUID) -> int:
+        """
+        @brief Revoke one family, only if it belongs to ``user_id``.
+
+        @return Tokens revoked (0 when the family is unknown, foreign or already dead).
+        """
+        stmt = (
+            update(RefreshToken)
+            .where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.family_id == family_id,
+                RefreshToken.revoked_at.is_(None),
+            )
+            .values(revoked_at=datetime.now(UTC))
+        )
+        return cast(int, getattr(await self._session.execute(stmt), "rowcount", 0))
+
+    async def revoke_other_families(self, user_id: uuid.UUID, keep: uuid.UUID | None) -> int:
+        """@brief Revoke every active token of ``user_id`` outside family ``keep``."""
+        stmt = update(RefreshToken).where(
+            RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)
+        )
+        if keep is not None:
+            stmt = stmt.where(RefreshToken.family_id != keep)
+        res = await self._session.execute(stmt.values(revoked_at=datetime.now(UTC)))
+        return cast(int, getattr(res, "rowcount", 0))

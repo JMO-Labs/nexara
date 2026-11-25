@@ -3,6 +3,7 @@
  * @brief Admin section registry: grouped nav items and active-id resolution.
  */
 import {
+  Activity,
   BarChart3,
   BellRing,
   Bot,
@@ -12,6 +13,7 @@ import {
   ToggleRight,
   History,
   KeyRound,
+  LogIn,
   Mail,
   MailPlus,
   MessageSquareQuote,
@@ -55,7 +57,7 @@ const route = (
   icon: LucideIcon,
 ): AdminItem => ({ id, label, description, icon, href: `${BASE}/${id}` });
 
-/** @brief Grouped admin sections (16 tabs + 4 route links). */
+/** @brief Grouped admin sections (18 tabs + 4 route links). */
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "Community",
@@ -85,6 +87,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         "Security",
         "Require two-step sign-in for admins or everyone.",
         ShieldCheck,
+      ),
+      tab(
+        "signins",
+        "Sign-ins",
+        "Who signed in, from where, and failed attempts.",
+        LogIn,
       ),
     ],
   },
@@ -126,6 +134,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   {
     label: "System",
     items: [
+      tab("system", "System", "Health, disk and runtime.", Activity),
       route(
         "storage",
         "Storage",

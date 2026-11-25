@@ -43,4 +43,7 @@ class AuditLog(Base):
         nullable=False,
     )
 
-    __table_args__ = (Index("audit_log_created_idx", created_at.desc()),)
+    __table_args__ = (
+        Index("audit_log_created_idx", created_at.desc()),
+        Index("audit_log_action_idx", action),
+    )

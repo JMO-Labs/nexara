@@ -35,7 +35,9 @@ celery_app = Celery(
         "app.tasks.event_tasks",
         "app.tasks.export_tasks",
         "app.tasks.gallery_tasks",
+        "app.tasks.health_tasks",
         "app.tasks.inbound_email_tasks",
+        "app.tasks.admin_alert_tasks",
         "app.tasks.group_tag_tasks",
         "app.tasks.link_preview_tasks",
         "app.tasks.list_tasks",
@@ -68,6 +70,8 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     # ── Task routing ──────────────────────────────────────────────────
+    # Unrouted tasks go to "default" (Celery's own "celery" queue has no consumer).
+    task_default_queue="default",
     task_routes={
         "app.tasks.email_tasks.*": {"queue": "email"},
         "app.tasks.media_tasks.*": {"queue": "media"},
@@ -75,6 +79,8 @@ celery_app.conf.update(
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.notification_email_tasks.*": {"queue": "notifications"},
         "app.tasks.maintenance_tasks.*": {"queue": "maintenance"},
+        "app.tasks.health_tasks.*": {"queue": "maintenance"},
+        "app.tasks.admin_alert_tasks.*": {"queue": "notifications"},
         "app.tasks.poll_tasks.*": {"queue": "maintenance"},
         "app.tasks.birthday_tasks.*": {"queue": "notifications"},
         "app.tasks.event_tasks.dispatch_event_reminders": {"queue": "notifications"},
@@ -266,6 +272,10 @@ celery_app.conf.update(
         "capsules-open-due": {
             "task": "capsules.open_due",
             "schedule": crontab(minute="*/10"),
+        },
+        "health-check": {
+            "task": "app.tasks.health_tasks.check",
+            "schedule": 300.0,
         },
         "prune-activity-events": {
             "task": "app.tasks.maintenance_tasks.prune_activity_events",

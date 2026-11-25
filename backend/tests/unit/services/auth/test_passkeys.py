@@ -179,7 +179,7 @@ async def test_both_zero_counters_allowed_with_pending_token(redis):
     with (
         patch(PR + "verify_authentication_response", return_value=ver) as v,
         patch(PR + "reserve_attempt", AsyncMock(return_value=True)),
-        patch(PR + "clear_user_attempts", AsyncMock()),
+        patch(PR + "finish_pending", AsyncMock()),
         patch(PR + "log_success", AsyncMock()),
         patch(PR + "issue_tokens", AsyncMock(return_value={"access_token": "t"})),
     ):

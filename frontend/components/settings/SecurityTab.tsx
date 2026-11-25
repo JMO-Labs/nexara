@@ -1,7 +1,7 @@
 "use client";
 /**
  * @file components/settings/SecurityTab.tsx
- * @brief Settings › Security: authenticator app, recovery codes, passkeys.
+ * @brief Settings › Security: authenticator app, recovery codes, passkeys, devices.
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import { refreshAccessToken } from "@/lib/auth/session";
 import { PasskeyList } from "./security/PasskeyList";
 import { ProofDialog } from "./security/ProofDialog";
 import { RecoveryCodes } from "./security/RecoveryCodes";
+import { YourDevices } from "./security/YourDevices";
 import { TotpSetup } from "./security/TotpSetup";
 
 const STATUS = ["2fa", "status"];
@@ -84,6 +85,12 @@ export function SecurityTab() {
         description="Sign in with your fingerprint, face or a security key."
       >
         <PasskeyList />
+      </SettingsRow>
+      <SettingsRow
+        label="Your devices"
+        description="Where you are signed in right now."
+      >
+        <YourDevices />
       </SettingsRow>
 
       {setup && (

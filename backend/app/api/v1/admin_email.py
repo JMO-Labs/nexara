@@ -8,9 +8,10 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Request, Response
 from fastapi.responses import RedirectResponse
 
+from app.core.client_ip import client_ip
 from app.core.config import Settings, get_settings
 from app.core.cookies import should_secure_cookie
 from app.core.dependencies import require_role
@@ -96,6 +97,7 @@ def _redirect(result: str) -> RedirectResponse:
 
 @callback_router.get("/google/callback")
 async def google_callback(
+    request: Request,
     code: str = "",
     state: str = "",
     error: str = "",
@@ -106,7 +108,7 @@ async def google_callback(
     if error or not code or not state:
         return _redirect("error")
     try:
-        await svc.complete(code, state, nonce)
+        await svc.complete(code, state, nonce, client_ip(request))
     except AppError as exc:
         logger.warning("google_mail_connect_failed", code=exc.code)
         return _redirect("error")

@@ -12,10 +12,13 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.exceptions import NotFoundError
 from app.repositories.retention_repo import RetentionRepository
 from app.schemas.admin_retention import RetentionPolicyOut, RetentionUpdate
 
+MIN_AUDIT_DAYS = 365
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 # key -> (enabled, retention_days, delete_media_files); mirrors frontend POLICY_META.
@@ -77,3 +80,26 @@ class RetentionService:
             key, body.enabled, body.retention_days, body.delete_media_files, user_id
         )
         return RetentionPolicyOut.model_validate(row)
+
+
+async def purge_audit_log(session: AsyncSession) -> int:
+    """
+    @brief Delete audit rows past the admin's ``audit_logs`` retention policy.
+
+    Source of truth is ``retention_policies['audit_logs']`` (the Retention UI), falling
+    back to the built-in default. Disabled (or no day limit) means keep forever; the
+    window is clamped to at least 365 days. ``communities.audit_retention_days`` is
+    not consulted (it has no write path).
+
+    @param session Open session (caller commits).
+    @return Rows deleted.
+    """
+    from app.repositories.audit_repo import AuditRepository
+
+    row = await RetentionRepository(session).get("audit_logs")
+    enabled, days, _ = DEFAULT_POLICIES["audit_logs"]
+    if row is not None:
+        enabled, days = row.enabled, row.retention_days
+    if not enabled or days is None:
+        return 0
+    return await AuditRepository(session).purge_older_than(max(days, MIN_AUDIT_DAYS))

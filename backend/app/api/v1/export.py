@@ -11,11 +11,12 @@ from datetime import UTC, datetime
 from io import BytesIO
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.client_ip import client_ip
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user, get_db
 from app.core.exceptions import (
@@ -29,6 +30,7 @@ from app.core.i18n import _
 from app.core.metrics import export_downloads_total
 from app.core.valkey import DB_CACHE, get_pool
 from app.models.user import User
+from app.repositories.audit_repo import AuditRepository
 from app.repositories.user_export_repo import UserExportRepository
 from app.schemas.export import ExportRequested, ExportStatus
 from app.services.storage.base import StorageBackend
@@ -42,6 +44,11 @@ RATE_LIMIT_TTL_SECONDS = 86400
 def _get_repo(db: AsyncSession = Depends(get_db)) -> UserExportRepository:
     """@brief Build the export repository."""
     return UserExportRepository(db)
+
+
+def _get_audit(db: AsyncSession = Depends(get_db)) -> AuditRepository:
+    """@brief Build the audit repository."""
+    return AuditRepository(db)
 
 
 def _get_storage() -> StorageBackend:
@@ -67,10 +74,12 @@ def _get_enqueue() -> Callable[[str, str], Any]:
 
 @router.post("/request", response_model=ExportRequested)
 async def request_export(
+    request: Request,
     user: User = Depends(get_current_user),
     repo: UserExportRepository = Depends(_get_repo),
     redis: Redis = Depends(_get_redis),
     enqueue: Callable[[str, str], Any] = Depends(_get_enqueue),
+    audit: AuditRepository = Depends(_get_audit),
 ) -> Any:
     """@brief Create an export (1 per user per day) and enqueue generation."""
     key = f"export_request:{user.id}:{datetime.now(UTC).date().isoformat()}"
@@ -78,6 +87,13 @@ async def request_export(
         raise RateLimitError(_("You can request one export per day"))
     try:
         row = await repo.create(user.id, user.community_id)
+        await audit.append(
+            actor_id=user.id,
+            action="data_export.started",
+            target_type="user_export",
+            target_id=row.id,
+            ip_address=client_ip(request),
+        )
         await repo.commit()
         enqueue(str(user.id), str(row.id))
     except Exception:

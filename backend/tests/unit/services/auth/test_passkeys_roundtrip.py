@@ -82,7 +82,7 @@ def env():
         patch(PR + "log_success", ok),
         patch(PR + "log_failure", fail),
         patch(PR + "reserve_attempt", AsyncMock(return_value=True)),
-        patch(PR + "clear_user_attempts", AsyncMock()),
+        patch(PR + "finish_pending", AsyncMock()),
         patch(PR + "create_link", AsyncMock()),
         patch(PR + "issue_tokens", AsyncMock(return_value={"access_token": "T"})),
     ):

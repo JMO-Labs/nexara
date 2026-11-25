@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import router as admin_router
 from app.api.v1.admin_ai import router as admin_ai_router
 from app.api.v1.admin_apprise import router as admin_apprise_router
+from app.api.v1.admin_audit import router as admin_audit_router
 from app.api.v1.admin_email import callback_router as admin_email_callback_router
 from app.api.v1.admin_email import router as admin_email_router
 from app.api.v1.admin_email_reply import router as admin_email_reply_router
@@ -22,7 +23,9 @@ from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
 from app.api.v1.admin_security import router as admin_security_router
 from app.api.v1.admin_shop import router as admin_shop_router
+from app.api.v1.admin_signins import router as admin_signins_router
 from app.api.v1.admin_storage import router as admin_storage_router
+from app.api.v1.admin_system import router as admin_system_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.bookmarks import router as bookmarks_router
 from app.api.v1.branding import router as branding_router
@@ -67,6 +70,7 @@ from app.api.v1.reconnect import router as reconnect_router
 from app.api.v1.relations import router as relations_router
 from app.api.v1.rides import router as rides_router
 from app.api.v1.search import router as search_router
+from app.api.v1.sessions import router as sessions_router
 from app.api.v1.settings import router as settings_router
 from app.api.v1.sse import router as sse_router
 from app.api.v1.stories import router as stories_router
@@ -86,6 +90,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 """@brief Top-level v1 API router mounted in ``main.py``."""
 
 api_v1_router.include_router(admin_router)
+api_v1_router.include_router(admin_audit_router)
 api_v1_router.include_router(admin_oauth_router)
 api_v1_router.include_router(admin_oauth_tools_router)
 api_v1_router.include_router(admin_storage_router)
@@ -93,6 +98,9 @@ api_v1_router.include_router(admin_sso_router)
 api_v1_router.include_router(admin_ai_router)
 api_v1_router.include_router(admin_shop_router)
 api_v1_router.include_router(admin_apprise_router)
+api_v1_router.include_router(admin_system_router)
+api_v1_router.include_router(admin_signins_router)
+api_v1_router.include_router(sessions_router)
 api_v1_router.include_router(admin_security_router)
 api_v1_router.include_router(admin_email_router)
 api_v1_router.include_router(admin_email_callback_router)

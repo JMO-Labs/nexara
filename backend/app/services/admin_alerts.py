@@ -1,5 +1,8 @@
 """@file admin_alerts.py
-@brief Alert admins (admin Apprise targets + in-app ``system`` notification).
+@brief Alert admins (in-app ``system`` notification inline; Apprise sends via Celery).
+
+``worker_down`` is the exception: its Apprise send runs inline in the calling (API)
+process, because queueing it would wait on the very workers that are down.
 
 Deduped per ``(kind, key)`` for 30 minutes in Valkey. If Valkey is unreachable the
 alert is sent anyway: a duplicate is better than a missed alert. Never raises.
@@ -12,19 +15,20 @@ import uuid
 from typing import Any
 
 import structlog
-from sqlalchemy import select
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.valkey import DB_CACHE, get_pool
-from app.models.user import User
 from app.repositories.apprise_repo import AppriseRepository
+from app.repositories.user_repo import UserRepository
 from app.services.notifications.apprise_guard import build_apprise
 from app.services.notifications.factory import build_notification_service
 
 logger = structlog.get_logger(__name__)
 
 DEDUPE_SECONDS = 1800
+INLINE_KINDS = frozenset({"worker_down"})
 _MESSAGES = {
     "signin_burst": "Repeated failed sign-ins from {ip}",
     "disk_high": "Disk usage is high",
@@ -40,7 +44,8 @@ def _message(kind: str, data: dict[str, Any]) -> str:
         return _MESSAGES.get(kind, kind)
 
 
-async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, msg: str) -> None:
+async def deliver_apprise(session: AsyncSession, community_id: uuid.UUID, msg: str) -> None:
+    """@brief Send ``msg`` to the community's admin Apprise targets (runs in a worker)."""
     for t in await AppriseRepository(session).list_admin_targets(community_id):
         try:
             apobj = build_apprise(t.apprise_url, allow_local=True)
@@ -51,21 +56,20 @@ async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, ms
             logger.warning(
                 "admin_alert.apprise_failed", target_id=str(t.id), error=type(exc).__name__
             )
+
+
+async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, msg: str) -> None:
+    from app.tasks.admin_alert_tasks import send_apprise_alert
+
+    if kind in INLINE_KINDS:
+        await deliver_apprise(session, community_id, msg)
+    else:
+        try:
+            send_apprise_alert.delay(str(community_id), msg)
+        except Exception:
+            logger.warning("admin_alert.enqueue_failed", kind=kind, exc_info=True)
     svc = build_notification_service(session, community_id)
-    admins = (
-        (
-            await session.execute(
-                select(User.id).where(
-                    User.community_id == community_id,
-                    User.role == "admin",
-                    User.deleted_at.is_(None),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    for uid in admins:
+    for uid in await UserRepository(session).admin_ids(community_id):
         try:
             await svc.notify(uid, "system", {"message": msg})
         except Exception:
@@ -73,7 +77,11 @@ async def _deliver(session: AsyncSession, community_id: uuid.UUID, kind: str, ms
 
 
 async def admin_alert(
-    session: AsyncSession, community_id: uuid.UUID, kind: str, data: dict[str, Any]
+    session: AsyncSession,
+    community_id: uuid.UUID,
+    kind: str,
+    data: dict[str, Any],
+    redis: Redis | None = None,
 ) -> None:
     """
     @brief Notify admins about ``kind`` unless the same alert fired in the last 30 min.
@@ -82,10 +90,12 @@ async def admin_alert(
     @param community_id Tenant scope.
     @param kind ``signin_burst`` | ``disk_high`` | ``worker_down`` | ``email_failing``.
     @param data Context; ``ip`` (else ``key``) distinguishes dedupe keys.
+    @param redis Cache client for dedupe. Callers under ``asyncio.run`` (Celery) must pass
+           their own: the shared pool is bound to the first run's loop.
     """
     key = str(data.get("ip") or data.get("key") or "-")
     try:
-        redis = get_pool(get_settings(), DB_CACHE)
+        redis = redis or get_pool(get_settings(), DB_CACHE)
         if not await redis.set(f"admin_alert:{kind}:{key}", "1", nx=True, ex=DEDUPE_SECONDS):
             return
     except Exception:

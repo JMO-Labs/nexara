@@ -129,14 +129,15 @@ def cleanup_expired_link_previews() -> dict[str, int]:
 )
 def age_audit_logs() -> dict[str, int]:
     """
-    @brief Archive or delete audit log entries past the retention window.
+    @brief Delete audit log entries past the ``audit_logs`` retention policy.
 
-    Reads ``retention_policies['audit_logs']``.  Run weekly (Sunday 03:15 UTC).
+    Run weekly (Sunday 03:15 UTC).
 
     @return Dict with ``deleted_count``.
     """
-    logger.info("age_audit_logs")
-    return {"deleted_count": 0}
+    deleted = asyncio.run(_purge_audit_async())
+    logger.info("age_audit_logs", deleted_count=deleted)
+    return {"deleted_count": deleted}
 
 
 @celery_app.task(
@@ -188,6 +189,16 @@ def age_posts() -> dict[str, int]:
 
 
 SIGNIN_RETENTION_DAYS = 90
+
+
+async def _purge_audit_async() -> int:
+    from app.db.session import async_session_factory
+    from app.services.retention_service import purge_audit_log
+
+    async with async_session_factory() as session:
+        deleted = await purge_audit_log(session)
+        await session.commit()
+    return deleted
 
 
 async def _purge_signin_events_async() -> int:

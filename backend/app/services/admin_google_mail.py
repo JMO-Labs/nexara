@@ -37,11 +37,13 @@ class GoogleMailService:
         users: Any,
         settings: Settings,
         valkey: Any,
+        audit: Any | None = None,
     ) -> None:
         self._communities = communities
         self._users = users
         self._settings = settings
         self._vk = valkey
+        self._audit = audit
         self._cid = uuid.UUID(settings.COMMUNITY_ID)
 
     @property
@@ -82,7 +84,9 @@ class GoogleMailService:
         url = build_auth_url(client_id, self.redirect_uri, state, challenge.decode().rstrip("="))
         return url, nonce
 
-    async def complete(self, code: str, state: str, nonce: str | None) -> None:
+    async def complete(
+        self, code: str, state: str, nonce: str | None, ip: str | None = None
+    ) -> None:
         """
         @brief Verify state (consumed) and browser nonce, check the initiator is still
                an admin, then store tokens.
@@ -120,3 +124,12 @@ class GoogleMailService:
         if row is not None and not row.smtp_from:
             values["smtp_from"] = email
         await self._communities.update_smtp(self._cid, values)
+        if self._audit is not None:
+            await self._audit.append(
+                actor_id=uid,
+                action="email.google.connected",
+                target_type="community",
+                target_id=self._cid,
+                extra_data={"account": email},  # address only, never tokens
+                ip_address=ip,
+            )

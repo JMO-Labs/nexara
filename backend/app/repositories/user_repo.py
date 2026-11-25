@@ -163,6 +163,24 @@ class UserRepository(BaseRepository[User]):
         )
         return int((await self._session.execute(stmt)).scalar_one())
 
+    async def admin_ids(self, community_id: uuid.UUID) -> list[uuid.UUID]:
+        """@brief Ids of non-deleted admins in a community (alert recipients)."""
+        stmt = select(User.id).where(
+            User.community_id == community_id,
+            User.role == "admin",
+            User.deleted_at.is_(None),
+        )
+        return list((await self._session.execute(stmt)).scalars().all())
+
+    async def display_names(self, ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
+        """@brief ``{id: display_name}`` for the given user ids (deleted users included)."""
+        if not ids:
+            return {}
+        res = await self._session.execute(
+            select(User.id, User.display_name).where(User.id.in_(ids))
+        )
+        return {r.id: r.display_name for r in res}
+
     async def username_owner_id(self, username: str) -> uuid.UUID | None:
         """
         @brief Id of the user holding ``username``, soft-deleted users included.
