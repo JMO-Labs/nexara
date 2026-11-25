@@ -175,7 +175,7 @@ async def test_enable_creates_bot_and_returns_credentials_once(env):
     out = await svc.set_community(M.id, CID, enabled=True)
     bot = users.try_create.call_args.args[0]
     assert bot.is_bot and bot.role == "member" and bot.password_hash is None
-    assert bot.email == f"echo+{inst.id}@plugins.invalid"
+    assert bot.email == f"echo+{inst.id}.{CID.hex}@plugins.invalid"
     assert bot.onboarding_done_at is not None
     assert out.credentials and out.credentials.token.startswith("nxp_")
     repo.add_token.assert_awaited_once()
