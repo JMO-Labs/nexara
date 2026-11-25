@@ -7,6 +7,7 @@
 """
 
 import asyncio
+import json
 import os
 import shutil
 import tempfile
@@ -46,8 +47,35 @@ pytestmark = [
 ]
 
 
+# deps that can never resolve (online or offline): the install step itself must fail
+# with deps_failed — never install_error from root tripping over uid-owned dirs
+BAD_REQS = b"nexara-e2e-does-not-exist==0.0.1\n"
+BAD_LOCK = json.dumps(
+    {
+        "name": "p",
+        "version": "1.0.0",
+        "lockfileVersion": 3,
+        "requires": True,
+        "packages": {
+            "": {"name": "p", "version": "1.0.0", "dependencies": {"nexara-e2e-nope": "1.0.0"}},
+            "node_modules/nexara-e2e-nope": {
+                "version": "1.0.0",
+                "resolved": "https://registry.npmjs.org/nexara-e2e-nope/-/nexara-e2e-nope-1.0.0.tgz",
+                "integrity": "sha512-" + "A" * 86 + "==",
+            },
+        },
+    }
+).encode()
+BAD_PJ = b'{"name": "p", "version": "1.0.0", "dependencies": {"nexara-e2e-nope": "1.0.0"}}'
+
+
 def _pkg(version: str) -> bytes:
-    return make_tar({"nexara-plugin.toml": manifest(PID, version), "echo.py": PLUGIN})
+    files = {"nexara-plugin.toml": manifest(PID, version), "echo.py": PLUGIN}
+    if version == "2.0.0":
+        files["requirements.txt"] = BAD_REQS
+    if version == "3.0.0":
+        files |= {"index.js": b"", "package.json": BAD_PJ, "package-lock.json": BAD_LOCK}
+    return make_tar(files)
 
 
 @pytest.fixture
@@ -55,7 +83,7 @@ async def c(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[httpx.AsyncClient]
     monkeypatch.setenv("PLUGIN_EGRESS_FILTER", "false")
     data = Path(tempfile.mkdtemp())
     data.chmod(0o755)
-    pkgs = {v: _pkg(v) for v in ("1.0.0", "1.0.1")}
+    pkgs = {v: _pkg(v) for v in ("1.0.0", "1.0.1", "2.0.0", "3.0.0")}
 
     async def fetch(url: str) -> bytes:
         return pkgs[url.rsplit("-", 1)[1].removesuffix(".tar.gz")]
@@ -72,9 +100,9 @@ async def c(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[httpx.AsyncClient]
     shutil.rmtree(data, ignore_errors=True)
 
 
-async def _put(c: httpx.AsyncClient, version: str) -> dict[str, object]:
+async def _put(c: httpx.AsyncClient, version: str, **over: str) -> dict[str, object]:
     url = f"https://pkgs.example.com/{PID}-{version}.tar.gz"
-    body = spec_body(c.pkgs[version], version, package_url=url)  # type: ignore[attr-defined]
+    body = spec_body(c.pkgs[version], version, package_url=url, **over)  # type: ignore[attr-defined]
     assert (await c.put(f"/plugins/{PID}", json=body)).status_code == 202
     host = c.app.state.host  # type: ignore[attr-defined]
     while host.tasks:
@@ -115,3 +143,20 @@ async def test_install_start_upgrade_purge_as_root_without_dac_override(
 
     assert (await c.delete(f"/plugins/{PID}", params={"purge": "true"})).status_code == 204
     assert not pdir.exists() and not (data / "plugin-state" / PID).exists()
+
+
+@pytest.mark.parametrize(
+    ("version", "over"),
+    [("2.0.0", {}), ("3.0.0", {"runtime": "node", "entrypoint": "index.js"})],
+    ids=["python-requirements", "node-lockfile"],
+)
+async def test_dependency_failure_is_deps_failed_and_cleaned(
+    c: httpx.AsyncClient, version: str, over: dict[str, str]
+) -> None:
+    """@brief Every runner step works as root without DAC_OVERRIDE; failure is reported
+    as the step's exit code and the version dir is removed."""
+    row = await _put(c, version, **over)
+    assert row["status"] == "failed", row
+    assert str(row["last_error"]).startswith("deps_failed:exit="), row
+    data: Path = c.data  # type: ignore[attr-defined]
+    assert not (data / "plugins" / PID / version).exists()

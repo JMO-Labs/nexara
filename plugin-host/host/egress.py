@@ -99,13 +99,18 @@ def _run(argv: list[str], stdin: str | None) -> int:
         return -1
 
 
-def apply(url: str | None = None, run: Run = _run) -> None:
+def apply(
+    url: str | None = None, run: Run = _run, targets: list[tuple[str, int]] | None = None
+) -> None:
     """
     @brief (Re)build the rules for IPv4 and, if the kernel has IPv6, IPv6. Idempotent.
-    @param url NEXARA_URL (default: host env).
+    @param url NEXARA_URL (default: host env); ignored when `targets` is given.
+    @param targets Already-resolved NEXARA_URL (ip, port) pairs.
     @raise EgressError on any failure.
     """
-    allow = nexara_targets(url if url is not None else os.environ.get("NEXARA_URL"))
+    if targets is None:
+        targets = nexara_targets(url if url is not None else os.environ.get("NEXARA_URL"))
+    allow = targets
     families = [("iptables", False)]
     if IF_INET6.exists():
         families.append(("ip6tables", True))

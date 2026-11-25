@@ -45,6 +45,19 @@ def _check_manifest(plugin_id: str, spec: InstallSpec, root: Path) -> None:
         raise InstallError("entrypoint_missing")
 
 
+def write_marker(root: Path, sha: str) -> None:
+    """
+    @brief Write <root>/SHA_MARKER as root without following a planted symlink or blocking
+    on a FIFO: any existing entry is unlinked, then the file is created O_EXCL|O_NOFOLLOW.
+    """
+    marker = root / SHA_MARKER
+    marker.unlink(missing_ok=True)  # unlink never follows symlinks
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    fd = os.open(marker, flags, 0o644)
+    with os.fdopen(fd, "w") as f:
+        f.write(sha)
+
+
 def current_version(pdir: Path) -> str | None:
     """@brief Name of the version dir `current` points at, if any."""
     cur = pdir / "current"
@@ -118,7 +131,7 @@ async def install(
         # take it back (sealed, as at start) before writing anything into it.
         if uid is not None:
             await asyncio.to_thread(seal_tree, root, uid)
-        (root / SHA_MARKER).write_text(sha)
+        write_marker(root, sha)
     except BaseException:
         await remove_tree(root, uid, data_dir)  # logs anything it cannot remove
         raise

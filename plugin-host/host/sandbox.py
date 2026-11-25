@@ -22,7 +22,7 @@ from host import perms, seccomp
 from host.deps import DEPS_TIMEOUT_S, Runner, install_env
 from host.errors import InstallError, SandboxUnavailableError
 from host.models import PluginEnv
-from host.perms import PROBE_UID, chown_tree
+from host.perms import PROBE_UID, chown_tree, seal_tree
 
 log = logging.getLogger(__name__)
 
@@ -242,7 +242,8 @@ async def _run(argv: list[str], env: dict[str, str], uid: int, fd: int) -> None:
 def bwrap_runner(data_dir: Path) -> Runner:
     """
     @brief Install-step runner: bwrap as the plugin's uid with install_env() only. The
-    version dir and cache are handed to the uid for the step; supervisor.start seals them.
+    version dir and cache are handed to the uid for the step and sealed back to root
+    after it (success or not), so root can write between steps without DAC_OVERRIDE.
     """
 
     async def run(argv: list[str], cwd: Path, uid: int | None) -> None:
@@ -260,6 +261,10 @@ def bwrap_runner(data_dir: Path) -> Runner:
         except BaseException:
             os.close(fd)
             raise
-        await _run(wrapped, env, uid, fd)
+        try:
+            await _run(wrapped, env, uid, fd)
+        finally:  # root lacks DAC_OVERRIDE: take both trees back before it writes there
+            await asyncio.to_thread(seal_tree, cwd, uid)
+            await asyncio.to_thread(seal_tree, Path(env["HOME"]), uid)
 
     return run

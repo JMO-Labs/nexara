@@ -3,6 +3,7 @@
 @brief Installer orchestration: sha256, extraction, manifest, deps, swap and prune.
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -201,3 +202,20 @@ async def test_symlinked_plugin_path_refused_first(
     assert e.value.code == "unsafe_path"
     assert not route.called and not calls
     assert list(target.iterdir()) == []
+
+
+def test_marker_never_follows_symlink_or_fifo(tmp_path: Path) -> None:
+    from host.installer import SHA_MARKER, write_marker
+
+    target = tmp_path / "outside"
+    target.write_text("keep")
+    root = tmp_path / "v"
+    root.mkdir()
+    (root / SHA_MARKER).symlink_to(target)
+    write_marker(root, "abc")
+    assert target.read_text() == "keep"
+    assert not (root / SHA_MARKER).is_symlink() and (root / SHA_MARKER).read_text() == "abc"
+    (root / SHA_MARKER).unlink()
+    os.mkfifo(root / SHA_MARKER)
+    write_marker(root, "def")  # would block forever if it opened the FIFO
+    assert (root / SHA_MARKER).read_text() == "def"

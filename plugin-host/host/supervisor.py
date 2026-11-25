@@ -114,17 +114,19 @@ class BwrapSupervisor:
             self._available = _self_test(self.data_dir) and self._egress()
         return self._available
 
-    def _egress(self) -> bool:
-        """@brief (Re)install the egress filter if enabled (re-resolves NEXARA_URL)."""
+    def _egress(self, targets: list[tuple[str, int]] | None = None) -> bool:
+        """@brief (Re)install the egress filter if enabled (resolves NEXARA_URL unless given)."""
         if not egress.enabled():
             return True
         self._egress_at = time.monotonic()
-        self._egress_targets = egress.nexara_targets(os.environ.get("NEXARA_URL"))
+        if targets is None:
+            targets = egress.nexara_targets(os.environ.get("NEXARA_URL"))
         try:
-            egress.apply()
+            egress.apply(targets=targets)
         except egress.EgressError as e:
             log.error("sandbox unavailable: egress filter: %s", e)
             return False
+        self._egress_targets = targets  # only once installed: a failed refresh retries
         return True
 
     def refresh_egress(self) -> None:
@@ -138,8 +140,9 @@ class BwrapSupervisor:
         if time.monotonic() - self._egress_at < EGRESS_REFRESH_S:
             return
         self._egress_at = time.monotonic()
-        if egress.nexara_targets(os.environ.get("NEXARA_URL")) != self._egress_targets:
-            self._egress()
+        targets = egress.nexara_targets(os.environ.get("NEXARA_URL"))
+        if targets != self._egress_targets:
+            self._egress(targets)
 
     def _bwrap(
         self, pid: str, uid: int, root: Path, state: Path, spec: InstallSpec, fd: int | None

@@ -273,8 +273,9 @@ The process gets exactly these variables and nothing from the host:
 ### Network, logs and failures
 
 - **Egress (compose):** plugins reach the public internet, Docker DNS and `NEXARA_URL`
-  only. Loopback (other than their own port), private, link-local and metadata ranges
-  are blocked. Helm uses a NetworkPolicy instead.
+  only. All loopback (including the plugin's own port: do not call yourself over
+  127.0.0.1), the container's own addresses, and private, link-local and metadata
+  ranges are blocked. Helm uses a NetworkPolicy instead.
 - **Logs:** stdout and stderr, the last 200 lines (2,000 chars each), are shown under
   Admin > Plugins. The plugin's own token, secret and settings values are redacted.
 - **Crashes:** restarts back off for 1, 2, 4, 8 and 16 s. More than 5 crashes in 10

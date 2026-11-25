@@ -128,3 +128,22 @@ def test_mention_in_second_community_uses_its_secret_and_token(
     assert _FakeApi.calls == [
         ("/api/v1/posts/p9/comments", "Bearer tok2", {"content": "echo: @echo yo"})
     ]
+
+
+def test_community_entry_without_creds_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """@brief A malformed NEXARA_COMMUNITIES entry gives 401, never an unhandled error."""
+    api = _serve(_FakeApi)
+    mod = _load(monkeypatch, api, NEXARA_COMMUNITIES=json.dumps([{"community_id": "c3"}]))
+    assert mod.creds(b'{"community_id": "c3"}') == ("", "")
+    plugin = _serve(mod.Handler)
+    body = b'{"event": "mention", "community_id": "c3", "data": {}}'
+    try:
+        r = httpx.post(
+            f"http://127.0.0.1:{plugin.server_port}/events",
+            content=body,
+            headers={"X-Nexara-Timestamp": "1", "X-Nexara-Signature": sign("", 1, body)},
+        )
+    finally:
+        plugin.shutdown()
+        api.shutdown()
+    assert r.status_code == 401

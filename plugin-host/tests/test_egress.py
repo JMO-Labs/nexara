@@ -114,12 +114,12 @@ def test_supervisor_unavailable_when_filter_fails(
     monkeypatch.setenv(egress.ENV, "true")
     monkeypatch.setattr("host.supervisor._self_test", lambda d: True)
 
-    def fail(url: str | None = None) -> None:
+    def fail(**kw: Any) -> None:
         raise egress.EgressError("nope")
 
     monkeypatch.setattr(egress, "apply", fail)
     assert BwrapSupervisor(tmp_path).available is False
-    monkeypatch.setattr(egress, "apply", lambda url=None: None)
+    monkeypatch.setattr(egress, "apply", lambda **kw: None)
     assert BwrapSupervisor(tmp_path).available is True
     monkeypatch.setenv(egress.ENV, "false")
     monkeypatch.setattr(egress, "apply", fail)
@@ -135,7 +135,7 @@ def test_refresh_reapplies_only_when_nexara_ip_changes(
     clock = [1000.0]
     monkeypatch.setattr(egress, "enabled", lambda: True)
     monkeypatch.setattr(egress, "nexara_targets", lambda url: list(targets))
-    monkeypatch.setattr(egress, "apply", lambda: applied.append(1))
+    monkeypatch.setattr(egress, "apply", lambda **kw: applied.append(1))
     monkeypatch.setattr("host.supervisor.time.monotonic", lambda: clock[0])
     sup = BwrapSupervisor(tmp_path, available=True)
     assert sup._egress() and applied == [1]
@@ -153,8 +153,42 @@ def test_refresh_reapplies_only_when_nexara_ip_changes(
 def test_refresh_noop_when_sandbox_down_or_filter_off(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(egress, "apply", lambda: pytest.fail("must not apply"))
+    monkeypatch.setattr(egress, "apply", lambda **kw: pytest.fail("must not apply"))
     monkeypatch.setattr(egress, "enabled", lambda: True)
     BwrapSupervisor(tmp_path, available=False).refresh_egress()
     monkeypatch.setattr(egress, "enabled", lambda: False)
     BwrapSupervisor(tmp_path, available=True).refresh_egress()
+
+
+def test_failed_refresh_is_retried_next_poll(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """@brief Targets are recorded only after apply() succeeds, and resolved once."""
+    targets = [("172.20.0.5", 8080)]
+    resolves: list[int] = []
+    outcomes = [None, egress.EgressError("x"), None]
+    got: list[object] = []
+    clock = [1000.0]
+
+    def apply(**kw: Any) -> None:
+        got.append(kw["targets"])
+        if (o := outcomes.pop(0)) is not None:
+            raise o
+
+    def resolve(url: object) -> list[tuple[str, int]]:
+        resolves.append(1)
+        return list(targets)
+
+    monkeypatch.setattr(egress, "enabled", lambda: True)
+    monkeypatch.setattr(egress, "nexara_targets", resolve)
+    monkeypatch.setattr(egress, "apply", apply)
+    monkeypatch.setattr("host.supervisor.time.monotonic", lambda: clock[0])
+    sup = BwrapSupervisor(tmp_path, available=True)
+    assert sup._egress() and len(resolves) == 1  # one resolution per apply
+    targets[0] = ("172.20.0.9", 8080)
+    clock[0] += 61
+    sup.refresh_egress()  # apply fails: old targets stay recorded
+    clock[0] += 61
+    sup.refresh_egress()  # so the change is still seen and retried
+    assert len(resolves) == 3  # each refresh resolves once and passes the result on
+    assert got == [[("172.20.0.5", 8080)], [("172.20.0.9", 8080)], [("172.20.0.9", 8080)]]

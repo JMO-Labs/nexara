@@ -34,7 +34,7 @@ def creds(body: bytes) -> tuple[str, str]:
         c = COMMUNITIES.get(json.loads(body).get("community_id"))
     except (ValueError, AttributeError, TypeError):
         c = None
-    return (c["webhook_secret"], c["token"]) if c else (SECRET, TOKEN)
+    return (c.get("webhook_secret", ""), c.get("token", "")) if c else (SECRET, TOKEN)
 
 
 def reply(post_id: str, text: str, token: str = "") -> None:
