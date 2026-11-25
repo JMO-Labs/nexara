@@ -36,6 +36,7 @@ print(" ".join(out))
 """
 
 
+@pytest.mark.sandbox  # CI: runs in the root job (unprivileged userns needs unconfined seccomp)
 @pytest.mark.skipif(
     shutil.which("bwrap") is None or os.uname().machine != "x86_64",
     reason="needs bwrap on x86_64 (syscall numbers)",
@@ -55,7 +56,7 @@ def test_filter_blocks_attack_surface() -> None:
         **perms.as_user(perms.PROBE_UID),  # root without CAP_SYS_ADMIN cannot unshare
     )
     os.close(fd)
-    if "No permissions to create a new namespace" in r.stderr:
+    if "No permissions to create" in r.stderr:  # wording differs across bwrap versions
         pytest.skip("unprivileged user namespaces disabled here")
     got = dict(kv.split("=") for kv in r.stdout.split())
     assert got == {
