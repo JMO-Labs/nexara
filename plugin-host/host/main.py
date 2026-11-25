@@ -146,7 +146,9 @@ async def _install_and_start(host: HostState, pid: str, spec: InstallSpec) -> No
 
 @router.get("/plugins")
 async def list_plugins(host: Host) -> list[PluginRow]:
-    """@brief Status of every known plugin."""
+    """@brief Status of every known plugin (Nexara polls this; also refreshes egress)."""
+    if isinstance(host.supervisor, BwrapSupervisor):
+        await asyncio.to_thread(host.supervisor.refresh_egress)
     return [_row(host, pid, rec) for pid, rec in sorted(host.records.items())]
 
 

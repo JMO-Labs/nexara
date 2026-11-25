@@ -1,6 +1,6 @@
 """
 @file test_plugin_host_tasks.py
-@brief plugin-host poll: status sync, re-push on needs_config/missing, one failure alert.
+@brief plugin-host poll: status sync, re-push on needs_config/stopped/missing, one alert.
 """
 
 from __future__ import annotations
@@ -90,8 +90,8 @@ async def test_running_flips_install(env):
     session.commit.assert_awaited()
 
 
-@pytest.mark.parametrize("rows", [[], _rows("needs_config")])
-async def test_repush_on_needs_config_or_missing(env, rows):
+@pytest.mark.parametrize("rows", [[], _rows("needs_config"), _rows("stopped")])
+async def test_repush_on_needs_config_stopped_or_missing(env, rows):
     inst, repo, client, session, _ = env
     client.status.return_value = rows
     await sync_installs(session, client)

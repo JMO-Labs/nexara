@@ -35,6 +35,7 @@ PORT_BASE = 9100
 GRACE_S = 1.0
 STOP_TIMEOUT_S = 5.0
 PROC = Path("/proc")
+EGRESS_REFRESH_S = 60.0
 
 
 def descendants(pid: int) -> list[int]:
@@ -103,6 +104,8 @@ class BwrapSupervisor:
         self.plugins: dict[str, _Plugin] = {}
         self.buffers: dict[str, LogBuffer] = {}
         self.spawns: dict[str, int] = {}
+        self._egress_at = 0.0
+        self._egress_targets: list[tuple[str, int]] = []
 
     @property
     def available(self) -> bool:
@@ -111,17 +114,32 @@ class BwrapSupervisor:
             self._available = _self_test(self.data_dir) and self._egress()
         return self._available
 
-    @staticmethod
-    def _egress() -> bool:
+    def _egress(self) -> bool:
         """@brief (Re)install the egress filter if enabled (re-resolves NEXARA_URL)."""
         if not egress.enabled():
             return True
+        self._egress_at = time.monotonic()
+        self._egress_targets = egress.nexara_targets(os.environ.get("NEXARA_URL"))
         try:
             egress.apply()
         except egress.EgressError as e:
             log.error("sandbox unavailable: egress filter: %s", e)
             return False
         return True
+
+    def refresh_egress(self) -> None:
+        """
+        @brief Called on every status poll: at most once per EGRESS_REFRESH_S, re-resolve
+        NEXARA_URL and rebuild the rules if its address changed (nexara recreated with a
+        new IP), so running plugins keep API access without a restart.
+        """
+        if not self._available or not egress.enabled():
+            return
+        if time.monotonic() - self._egress_at < EGRESS_REFRESH_S:
+            return
+        self._egress_at = time.monotonic()
+        if egress.nexara_targets(os.environ.get("NEXARA_URL")) != self._egress_targets:
+            self._egress()
 
     def _bwrap(
         self, pid: str, uid: int, root: Path, state: Path, spec: InstallSpec, fd: int | None

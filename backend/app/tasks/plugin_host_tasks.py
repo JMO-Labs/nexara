@@ -4,7 +4,8 @@
 
 Installs enabled somewhere: host ``running`` → ``running``; ``failed``/``sandbox_unavailable``
 → ``failed`` plus one ``plugin_failed`` admin alert (on the transition only);
-``needs_config`` or unknown to the host (e.g. after a host restart) → re-PUT with fresh env.
+``needs_config``/``stopped`` or unknown to the host (e.g. after a host restart) → re-PUT
+with fresh env.
 Installs enabled nowhere (or blocked) but live on the host → stop. Host plugins with no
 package install → delete (uninstalled while the host was down).
 """
@@ -33,6 +34,8 @@ logger = structlog.get_logger(__name__)
 
 FAILED = frozenset({"failed", "sandbox_unavailable"})
 LIVE = frozenset({"running", "installing"})
+# enabled but not running on the host (host restart, or stopped while Nexara was down)
+REPUSH = frozenset({"needs_config", "stopped"})
 
 
 async def _quiet(coro: Awaitable[None], event: str, plugin_id: str) -> None:
@@ -61,7 +64,7 @@ async def _sync_one(
         if row is not None and row.status in LIVE:
             await _quiet(client.stop(plugin_id), "plugin_host_poll.stop_failed", plugin_id)
         return
-    if row is None or row.status == "needs_config":
+    if row is None or row.status in REPUSH:
         try:
             await push_to_host(repo, inst, derive_fernet_key(settings.SECRET_KEY), settings, client)
         except AppError:

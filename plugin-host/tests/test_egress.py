@@ -124,3 +124,37 @@ def test_supervisor_unavailable_when_filter_fails(
     monkeypatch.setenv(egress.ENV, "false")
     monkeypatch.setattr(egress, "apply", fail)
     assert BwrapSupervisor(tmp_path).available is True
+
+
+def test_refresh_reapplies_only_when_nexara_ip_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """@brief nexara recreated with a new IP: the next poll (≥60 s later) rebuilds rules."""
+    targets = [("172.20.0.5", 8080)]
+    applied: list[int] = []
+    clock = [1000.0]
+    monkeypatch.setattr(egress, "enabled", lambda: True)
+    monkeypatch.setattr(egress, "nexara_targets", lambda url: list(targets))
+    monkeypatch.setattr(egress, "apply", lambda: applied.append(1))
+    monkeypatch.setattr("host.supervisor.time.monotonic", lambda: clock[0])
+    sup = BwrapSupervisor(tmp_path, available=True)
+    assert sup._egress() and applied == [1]
+    targets[0] = ("172.20.0.9", 8080)
+    sup.refresh_egress()  # within the interval: not even re-resolved
+    assert applied == [1]
+    clock[0] += 61
+    sup.refresh_egress()
+    assert applied == [1, 1]
+    clock[0] += 61
+    sup.refresh_egress()  # unchanged: no rebuild
+    assert applied == [1, 1]
+
+
+def test_refresh_noop_when_sandbox_down_or_filter_off(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(egress, "apply", lambda: pytest.fail("must not apply"))
+    monkeypatch.setattr(egress, "enabled", lambda: True)
+    BwrapSupervisor(tmp_path, available=False).refresh_egress()
+    monkeypatch.setattr(egress, "enabled", lambda: False)
+    BwrapSupervisor(tmp_path, available=True).refresh_egress()
