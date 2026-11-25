@@ -3,6 +3,7 @@
 @brief Event proxy tests: unauthenticated route, verbatim signature headers and body.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -138,7 +139,6 @@ async def test_bad_id_422_and_control_routes_still_need_auth(c: httpx.AsyncClien
     [
         (tcp_line(9107, 20009), ""),  # another plugin's uid holds the port
         ("", ""),  # nobody listens
-        (tcp_line(9107, UID), tcp_line(9107, 20009, ip="0" * 32)),  # foreign v6 listener too
         (tcp_line(9108, UID), ""),  # plugin listens elsewhere
     ],
 )
@@ -151,6 +151,37 @@ async def test_port_hijack_refused(
     r = await c.post(f"/plugins/{PID}/events", content=BODY, headers=HEADERS)
     assert r.status_code == 503 and r.json() == {"detail": "port_hijacked"}
     assert not route.called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "tcp,tcp6",
+    [
+        (tcp_line(9107, 20009, ip="0200007F"), ""),  # other plugin on 127.0.0.2
+        ("", tcp_line(9107, 20009, ip="0" * 31 + "1")),  # ... on [::1] (v6 loopback)
+        (tcp_line(9107, 20009, ip="0A000005"), ""),  # ... on 10.0.0.5
+        ("", tcp_line(9107, 20009, ip="0" * 32)),  # v6only [::] beside our 127.0.0.1
+    ],
+)
+async def test_listeners_unreachable_via_127_0_0_1_ignored(
+    c: httpx.AsyncClient, proc_net: Path, tcp: str, tcp6: str
+) -> None:
+    (proc_net / "tcp").write_text(TCP_HEAD + tcp_line(9107, UID) + tcp)
+    (proc_net / "tcp6").write_text(TCP_HEAD + tcp6)
+    respx.post(UPSTREAM).mock(return_value=httpx.Response(204))
+    assert (await c.post(f"/plugins/{PID}/events", content=b"{}")).status_code == 204
+
+
+@respx.mock
+@pytest.mark.parametrize("ip", ["0000000000000000FFFF00000100007F", "0" * 32])
+async def test_foreign_v6_listener_without_v4_refused(
+    c: httpx.AsyncClient, proc_net: Path, ip: str
+) -> None:
+    """@brief No IPv4 listener: a dual-stack [::] / [::ffff:127.0.0.1] one gets 127.0.0.1."""
+    (proc_net / "tcp").write_text(TCP_HEAD)
+    (proc_net / "tcp6").write_text(TCP_HEAD + tcp_line(9107, 20009, ip=ip))
+    r = await c.post(f"/plugins/{PID}/events", content=b"{}")
+    assert r.status_code == 503 and r.json() == {"detail": "port_hijacked"}
 
 
 @respx.mock
@@ -176,5 +207,54 @@ async def test_busy_when_all_slots_taken(tmp_path: Path, monkeypatch: pytest.Mon
 
 def test_netstat_parses_real_format(proc_net: Path) -> None:
     assert netstat.listeners() == [(9107, UID)]
+    (proc_net / "tcp").write_text(TCP_HEAD + tcp_line(9107, UID) + tcp_line(9107, 7, ip="0200007F"))
+    assert netstat.listeners() == [(9107, UID), (9107, 7)]  # port allocation sees all
     assert netstat.listener_uids(9107) == [UID]
     assert netstat.listener_uids(1) == []
+
+
+async def _slow_body() -> AsyncIterator[bytes]:
+    yield b"{"
+    await asyncio.sleep(5)
+    yield b"}"
+
+
+@respx.mock
+async def test_stalled_body_times_out_without_holding_a_slot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(proxy, "MAX_INFLIGHT", 1)
+    monkeypatch.setattr(proxy, "BODY_TIMEOUT_S", 0.3)
+    respx.post(UPSTREAM).mock(return_value=httpx.Response(204))
+    t = httpx.ASGITransport(app=make_app(tmp_path))
+    async with httpx.AsyncClient(transport=t, base_url="http://h") as cl:
+        slow = asyncio.create_task(cl.post(f"/plugins/{PID}/events", content=_slow_body()))
+        await asyncio.sleep(0.05)
+        fast = await cl.post(f"/plugins/{PID}/events", content=b"{}")
+        assert fast.status_code == 204  # the slow upload holds no slot
+        assert (await slow).status_code == 408
+
+
+@respx.mock
+async def test_total_deadline_504(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(proxy, "TIMEOUT_S", 0.3)
+
+    async def stall(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(5)
+        return httpx.Response(200)
+
+    respx.post(UPSTREAM).mock(side_effect=stall)
+    t = httpx.ASGITransport(app=make_app(tmp_path))
+    async with httpx.AsyncClient(transport=t, base_url="http://h") as cl:
+        r = await cl.post(f"/plugins/{PID}/events", content=b"{}")
+    assert r.status_code == 504 and r.json() == {"detail": "plugin_timeout"}
+
+
+async def test_per_plugin_cap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(proxy, "MAX_PER_PLUGIN", 1)
+    app = make_app(tmp_path)
+    async with proxy._proxy(app).slot_for(PID):
+        t = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=t, base_url="http://h") as cl:
+            r = await cl.post(f"/plugins/{PID}/events", content=b"{}")
+    assert r.status_code == 503 and r.json() == {"detail": "proxy_busy"}

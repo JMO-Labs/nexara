@@ -8,6 +8,7 @@
 import json
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 from collections.abc import Iterator
@@ -23,6 +24,7 @@ from host.sandbox import bwrap_argv, install_argv, plugin_env
 PID = "dev.nexara.echo"
 OTHER = "dev.nexara.other"
 FD = 7
+MIB = 1024 * 1024
 BIND_OPTS = {"--bind", "--ro-bind", "--dev-bind", "--bind-try", "--ro-bind-try", "--dev-bind-try"}
 
 
@@ -81,23 +83,39 @@ def test_argv_layout(tmp_path: Path) -> None:
 def test_limits_and_tmpfs_sizes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root, state = _dirs(tmp_path)
     argv = _argv(tmp_path, root, state)
-    assert argv[: argv.index("bwrap")] == [
+    assert argv[: argv.index("bwrap")] == [  # no RLIMIT_AS: it breaks WebAssembly / fetch
         "prlimit",
         "--nproc=256",
-        f"--as={4096 * 1024 * 1024}",
         f"--fsize={1024 * 1024 * 1024}",
         "--nofile=1024",
     ]
     head = _head(argv)
-    tmpfs = [i for i, a in enumerate(head) if a == "--tmpfs"]
-    assert len(tmpfs) == 2
-    assert all(head[i - 2 : i] == ["--size", str(64 * 1024 * 1024)] for i in tmpfs)
+    tmpfs = [head[i + 1] for i, a in enumerate(head) if a == "--tmpfs"]
+    assert tmpfs == ["/tmp", str(tmp_path), "/dev/shm"]
+    sized = [i for i, a in enumerate(head) if a == "--tmpfs"]
+    assert all(head[i - 2 : i] == ["--size", str(64 * 1024 * 1024)] for i in sized)
+    dev = head.index("--dev")
+    assert head[dev : dev + 6] == ["--dev", "/dev", "--size", str(64 * MIB), "--tmpfs", "/dev/shm"]
     monkeypatch.setenv("PLUGIN_LIMIT_NPROC", "32")
-    monkeypatch.setenv("PLUGIN_LIMIT_AS_MB", "bogus")  # invalid → default
+    monkeypatch.setenv("PLUGIN_LIMIT_FSIZE_MB", "bogus")  # invalid → default
     monkeypatch.setenv("PLUGIN_TMPFS_MB", "8")
     argv = _argv(tmp_path, root, state)
-    assert "--nproc=32" in argv and f"--as={4096 * 1024 * 1024}" in argv
-    assert str(8 * 1024 * 1024) in argv
+    assert "--nproc=32" in argv and f"--fsize={1024 * MIB}" in argv
+    assert str(8 * MIB) in argv
+
+
+@pytest.mark.parametrize("install", [False, True])
+def test_data_mask_is_read_only(tmp_path: Path, install: bool) -> None:
+    root, state = _dirs(tmp_path)
+    if install:
+        argv = install_argv(["npm", "ci"], root, 20000, tmp_path, seccomp_fd=FD)
+    else:
+        argv = _argv(tmp_path, root, state)
+    head = _head(argv)
+    i = head.index("--remount-ro")
+    assert head[i + 1] == str(tmp_path)
+    last_bind = max(j for j, a in enumerate(head) if a in BIND_OPTS)
+    assert i > last_bind  # after the binds, so only the mask itself turns read-only
 
 
 def test_argv_python_uses_venv_interpreter(tmp_path: Path) -> None:
@@ -229,6 +247,8 @@ def test_self_test_requires_mountpoints(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 def test_self_test_probes_real_flags(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
+    monkeypatch.setattr(perms, "is_root", lambda: True)
+    monkeypatch.setattr(perms, "as_user", lambda uid: {})
     monkeypatch.setattr(sandbox, "MOUNTPOINTS", ())
     monkeypatch.setattr(seccomp, "filter_fd", lambda: os.open(os.devnull, os.O_RDONLY))
     monkeypatch.setattr(sandbox, "_probe", lambda a, fd=None: calls.append(a) or True)
@@ -240,10 +260,25 @@ def test_self_test_probes_real_flags(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_self_test_fails_without_seccomp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(perms, "is_root", lambda: True)
     monkeypatch.setattr(sandbox, "MOUNTPOINTS", ())
     monkeypatch.setattr(sandbox, "_probe", lambda a, fd=None: True)
     monkeypatch.setattr(seccomp, "filter_fd", lambda: None)
     assert sandbox.self_test() is False
+
+
+def test_self_test_fails_closed_when_not_root(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(perms, "is_root", lambda: False)
+    monkeypatch.setattr(sandbox, "MOUNTPOINTS", ())
+    monkeypatch.setattr(sandbox, "_probe", lambda a, fd=None: True)
+    monkeypatch.setattr(seccomp, "filter_fd", lambda: os.open(os.devnull, os.O_RDONLY))
+    monkeypatch.delenv("PLUGIN_HOST_INSECURE_DEV", raising=False)
+    assert sandbox.self_test() is False
+    monkeypatch.setenv("PLUGIN_HOST_INSECURE_DEV", "true")
+    assert sandbox.self_test() is True
+    assert "INSECURE" in caplog.text
 
 
 def test_seccomp_filter_compiles_when_libseccomp_present() -> None:
@@ -275,7 +310,10 @@ catch (e) { out.push('ro-code'); }
 out.push(process.env.PLUGIN_HOST_SECRET ? 'leak' : 'no-leak');
 try { cp.execSync('unshare -U true', {stdio: 'ignore'}); out.push('userns'); }
 catch (e) { out.push('no-userns'); }
-console.log(out.join(','));
+new WebAssembly.Memory({initial: 1}); out.push('wasm');
+// undici's llhttp is WebAssembly: fetch must reject cleanly, not crash the process
+fetch('http://127.0.0.1:1/').then(() => out.push('fetch'), () => out.push('fetch'))
+  .finally(() => console.log(out.join(',')));
 """
 
 
@@ -314,7 +352,7 @@ def test_node_plugin_isolated(data: Path, monkeypatch: pytest.MonkeyPatch) -> No
     )
     os.close(fd)
     assert out.stdout.decode().strip() == (
-        "no-other,no-data,wrote-state,ro-code,no-leak,no-userns"
+        "no-other,no-data,wrote-state,ro-code,no-leak,no-userns,wasm,fetch"
     ), out.stderr.decode()
 
 
@@ -322,3 +360,18 @@ def test_node_plugin_isolated(data: Path, monkeypatch: pytest.MonkeyPatch) -> No
 @needs_sandbox
 def test_self_test_passes_in_image(data: Path) -> None:
     assert sandbox.self_test(data) is True
+
+
+@pytest.mark.skipif(os.geteuid() != 0, reason="needs root (chown)")
+def test_seal_and_chown_handle_hostile_modes(tmp_path: Path) -> None:
+    """@brief Works as root without DAC_OVERRIDE: uid-owned 0000 dirs are taken over first."""
+    top = tmp_path / "v"
+    (top / "d" / "e").mkdir(parents=True)
+    (top / "d" / "e" / "f").write_text("x")
+    (top / "d" / "e").chmod(0o700)
+    perms.chown_tree(top, 20000)
+    st = (top / "d" / "e").stat()  # (f is not reachable for root without DAC_OVERRIDE)
+    assert st.st_uid == 20000 and stat.S_IMODE(st.st_mode) == 0o700  # modes kept
+    perms.seal_tree(top, 20000)
+    st = (top / "d" / "e").stat()
+    assert (st.st_uid, st.st_gid, stat.S_IMODE(st.st_mode)) == (0, 20000, 0o750)

@@ -8,6 +8,7 @@
 import asyncio
 import hashlib
 import hmac
+import logging
 import os
 import shutil
 import tomllib
@@ -15,10 +16,13 @@ import uuid
 from pathlib import Path
 
 from host.archive import safe_extract
+from host.cleanup import remove_tree
 from host.deps import Runner, install_deps, run_subprocess
 from host.download import fetch
 from host.errors import InstallError
 from host.models import InstallSpec
+
+log = logging.getLogger(__name__)
 
 __all__ = ["InstallError", "install", "prune", "swap_current"]
 
@@ -53,6 +57,10 @@ def swap_current(pdir: Path, version: str) -> None:
     os.replace(tmp, pdir / "current")
 
 
+def _log_rm(func: object, path: str, exc: BaseException) -> None:
+    log.error("prune: cannot remove %s: %s", path, type(exc).__name__)
+
+
 def prune(pdir: Path, keep: str) -> None:
     """@brief Remove every version dir except `keep` (and `current`, the cache)."""
     for d in pdir.iterdir():
@@ -61,7 +69,7 @@ def prune(pdir: Path, keep: str) -> None:
         if d.is_symlink() or d.is_file():
             d.unlink()
         else:
-            shutil.rmtree(d, ignore_errors=True)
+            shutil.rmtree(d, onexc=_log_rm)
 
 
 async def install(
@@ -93,7 +101,8 @@ async def install(
             if marker.is_file() and hmac.compare_digest(marker.read_text().strip(), sha):
                 return root
             raise InstallError("version_conflict")
-        shutil.rmtree(root)
+        if not await remove_tree(root, uid, data_dir):
+            raise InstallError("cleanup_failed")
 
     data = await fetch(spec.package_url)
     if not hmac.compare_digest(hashlib.sha256(data).hexdigest(), sha):
@@ -106,6 +115,6 @@ async def install(
         await install_deps(spec, root, runner, uid)
         (root / SHA_MARKER).write_text(sha)
     except BaseException:
-        shutil.rmtree(root, ignore_errors=True)
+        await remove_tree(root, uid, data_dir)  # logs anything it cannot remove
         raise
     return root

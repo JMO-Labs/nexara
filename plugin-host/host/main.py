@@ -6,7 +6,6 @@
 import asyncio
 import logging
 import os
-import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -19,6 +18,7 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
 
 from host.auth import require_secret
+from host.cleanup import remove_tree
 from host.deps import Runner, run_subprocess
 from host.errors import SandboxUnavailableError
 from host.installer import InstallError, current_version, install, prune, swap_current
@@ -29,7 +29,7 @@ from host.models import (
     PluginRow,
     Supervisor,
 )
-from host.perms import plugin_uid
+from host.perms import plugin_uid, set_nondumpable
 from host.proxy import close_proxy, events_router
 from host.sandbox import bwrap_runner
 from host.supervisor import BwrapSupervisor
@@ -103,7 +103,7 @@ def _sandbox_down(rec: PluginRecord, spec: InstallSpec) -> None:
 async def _rollback(host: HostState, pid: str, rec: PluginRecord, root: Path) -> None:
     """@brief New version failed to start: drop it and restart the last-good one."""
     if current_version(host.pdir(pid)) != root.name:
-        shutil.rmtree(root, ignore_errors=True)
+        await remove_tree(root, plugin_uid(host.data_dir, pid), host.data_dir)
     if rec.spec is not None and rec.version is not None:
         try:
             await host.supervisor.start(pid, host.pdir(pid) / rec.version, rec.spec)
@@ -166,9 +166,10 @@ async def delete_plugin(plugin_id: PluginId, host: Host, purge: bool = False) ->
     host.records.pop(plugin_id, None)
     async with host.locks.setdefault(plugin_id, asyncio.Lock()):
         await host.supervisor.stop(plugin_id)
-        shutil.rmtree(host.pdir(plugin_id), ignore_errors=True)
+        uid = plugin_uid(host.data_dir, plugin_id)
+        await remove_tree(host.pdir(plugin_id), uid, host.data_dir)
         if purge:
-            shutil.rmtree(host.data_dir / "plugin-state" / plugin_id, ignore_errors=True)
+            await remove_tree(host.data_dir / "plugin-state" / plugin_id, uid, host.data_dir)
     return Response(status_code=204)
 
 
@@ -246,6 +247,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        set_nondumpable()
         if isinstance(sup, BwrapSupervisor):
             await asyncio.to_thread(lambda: sup.available)  # startup self-test
         yield

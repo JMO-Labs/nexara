@@ -131,7 +131,7 @@ async def test_runs_with_exact_env_and_logs(
         st is not None
         and st.status == "running"
         and port(sup) == 9100
-        and sup.endpoint(PID).uid == os.geteuid()
+        and sup.endpoint(PID).uid == (20000 if os.geteuid() == 0 else os.geteuid())
     )  # type: ignore[union-attr]
     assert (tmp_path / "plugin-state" / PID).is_dir()
     await sup.stop(PID)

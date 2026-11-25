@@ -5,7 +5,9 @@
 
 Allow by default; EPERM for kernel-attack-surface syscalls plugins never need
 (ptrace, bpf, keyrings, perf, userfaultfd, kexec, mount family, setns) and for
-clone/unshare with CLONE_NEWUSER. clone3 gets ENOSYS (its flags live in memory the
+clone/unshare with CLONE_NEWUSER, io_uring, file handles, and personality values
+other than PER_LINUX(32)/UNAME26 combinations (the 0xffffffff query is denied too).
+clone3 gets ENOSYS (its flags live in memory the
 filter cannot read) so libc falls back to clone. Foreign arches (i386/x32) are killed
 by libseccomp's default bad-arch action. No filter → sandbox unavailable (fail closed).
 """
@@ -30,8 +32,13 @@ DENY = (
     "kexec_load", "kexec_file_load",
     "mount", "umount2", "pivot_root", "chroot", "setns",
     "fsopen", "fsconfig", "fsmount", "fspick", "move_mount", "open_tree", "mount_setattr",
+    "io_uring_setup", "io_uring_enter", "io_uring_register",
+    "open_by_handle_at", "name_to_handle_at",
 )  # fmt: skip
 NO_NEWUSER = ("clone", "unshare")  # flags are arg 0 on x86_64 and aarch64
+# personality: Docker allows 0, 8 (PER_LINUX32), 0x20000 (UNAME26), 0x20008, 0xffffffff.
+# libseccomp allows one comparison per argument per rule, so deny every other bit.
+PERSONALITY_OK_BITS = 0x00020008
 
 
 class _ArgCmp(ctypes.Structure):
@@ -77,6 +84,10 @@ def _compile() -> bytes:
         for name in NO_NEWUSER:
             add(name, _errno_action(errno.EPERM), newuser)
         add("clone3", _errno_action(errno.ENOSYS))
+        for bit in range(32):
+            if not (1 << bit) & PERSONALITY_OK_BITS:
+                flag = _ArgCmp(0, SCMP_CMP_MASKED_EQ, 1 << bit, 1 << bit)
+                add("personality", _errno_action(errno.EPERM), flag)
         r, w = os.pipe()  # program is a few hundred bytes: fits the pipe buffer
         try:
             rc = lib.seccomp_export_bpf(ctx, w)

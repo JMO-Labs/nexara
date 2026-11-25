@@ -18,11 +18,11 @@ import os
 import subprocess
 from pathlib import Path
 
-from host import seccomp
+from host import perms, seccomp
 from host.deps import DEPS_TIMEOUT_S, Runner, install_env
 from host.errors import InstallError, SandboxUnavailableError
 from host.models import PluginEnv
-from host.perms import PROBE_UID, as_user, chown_tree
+from host.perms import PROBE_UID, chown_tree
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +32,15 @@ MOUNTPOINTS = (Path("/plugin"), Path("/state"))
 PLUGIN_PATH = "/usr/local/bin:/usr/bin:/bin"
 _NS_FLAGS = ["--unshare-pid", "--unshare-ipc", "--die-with-parent", "--new-session"]
 MIB = 1024 * 1024
-# env var -> (prlimit option, default, unit multiplier)
+# env var -> (prlimit option, default, unit multiplier). No RLIMIT_AS: V8 reserves large
+# virtual ranges (WebAssembly, so Node's fetch/undici); memory is capped by the container.
 LIMITS = {
     "PLUGIN_LIMIT_NPROC": ("--nproc", 256, 1),
-    "PLUGIN_LIMIT_AS_MB": ("--as", 4096, MIB),
     "PLUGIN_LIMIT_FSIZE_MB": ("--fsize", 1024, MIB),
     "PLUGIN_LIMIT_NOFILE": ("--nofile", 1024, 1),
 }
 TMPFS_ENV, TMPFS_DEFAULT_MB = "PLUGIN_TMPFS_MB", 64
+INSECURE_ENV = "PLUGIN_HOST_INSECURE_DEV"
 
 
 def _env_int(name: str, default: int) -> int:
@@ -51,7 +52,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 def limits_prefix() -> list[str]:
-    """@brief `prlimit --nproc=… --as=… --fsize=… --nofile=…` (RLIMIT_NPROC is per uid)."""
+    """@brief `prlimit --nproc=… --fsize=… --nofile=…` (RLIMIT_NPROC is per uid)."""
     opts = [f"{opt}={_env_int(env, d) * mult}" for env, (opt, d, mult) in LIMITS.items()]
     return [PRLIMIT, *opts]
 
@@ -82,6 +83,7 @@ def _tail(uid: int, seccomp_fd: int) -> list[str]:
     """@brief /dev, private pid/ipc namespaces, uid/gid inside, no caps, seccomp filter."""
     return [
         "--dev", "/dev",
+        *_tmpfs("/dev/shm"),  # --dev's own /dev/shm is unsized
         *_NS_FLAGS,
         "--unshare-user", "--uid", str(uid), "--gid", str(uid),
         "--cap-drop", "ALL",
@@ -120,6 +122,7 @@ def bwrap_argv(
         "--ro-bind", str(root), "/plugin",
         "--bind", str(state), "/state",
         *_tail(uid, seccomp_fd),
+        "--remount-ro", str(data_dir),
         "--chdir", "/plugin",
         "--", *cmd,
     ]  # fmt: skip
@@ -141,6 +144,7 @@ def install_argv(
         "--bind", str(cwd), str(cwd),
         "--bind", str(cache), str(cache),
         *_tail(uid, seccomp_fd),
+        "--remount-ro", str(data_dir),
         "--chdir", str(cwd),
         "--", *argv,
     ]  # fmt: skip
@@ -167,7 +171,7 @@ def _probe(argv: list[str], fd: int | None = None) -> bool:
             capture_output=True,
             timeout=10,
             pass_fds=(fd,) if fd is not None else (),
-            **as_user(PROBE_UID),
+            **perms.as_user(PROBE_UID),
         )
         return proc.returncode == 0
     except (OSError, subprocess.SubprocessError):
@@ -182,6 +186,15 @@ def self_test(data_dir: Path = Path("/data")) -> bool:
     @brief Mountpoints exist; `bwrap --ro-bind / / true`; then the exact limits,
     namespaces, tmpfs sizes and seccomp filter plugins use — as an unprivileged uid.
     """
+    if not perms.is_root():
+        if os.environ.get(INSECURE_ENV, "").lower() != "true":
+            log.error("sandbox unavailable: host is not root (no per-plugin uids)")
+            return False
+        log.warning(
+            "INSECURE: %s=true — plugins run as the host's own uid, NOT isolated from "
+            "each other or the host's files. Development only.",
+            INSECURE_ENV,
+        )
     missing = [str(p) for p in MOUNTPOINTS if not p.is_dir()]
     if missing:
         log.error("sandbox unavailable: missing mountpoints %s", missing)
@@ -210,7 +223,7 @@ async def _run(argv: list[str], env: dict[str, str], uid: int, fd: int) -> None:
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
             pass_fds=(fd,),
-            **as_user(uid),
+            **perms.as_user(uid),
         )
     finally:
         os.close(fd)

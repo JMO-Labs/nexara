@@ -30,20 +30,35 @@ def is_root() -> bool:
     return os.geteuid() == 0
 
 
-def _walk(path: Path) -> list[str]:
-    """@brief `path` and everything below it (symlinks not followed)."""
-    out = [str(path)]
-    for dirpath, dirnames, filenames in os.walk(path):
-        out += [os.path.join(dirpath, n) for n in dirnames + filenames]
-    return out
+def _retree(path: str, owner: int, group: int, seal: bool) -> None:
+    """
+    @brief Re-own one tree as root WITHOUT CAP_DAC_OVERRIDE: each dir is first taken
+    over (root:root 0700) so it can be listed even if it was a plugin's 0000 dir, then
+    its entries are handled, then it gets its final owner/mode. Symlinks are re-owned,
+    never followed. Only runs while no process of the plugin uid is alive.
+    """
+    st = os.lstat(path)
+    if stat.S_ISDIR(st.st_mode):
+        os.chown(path, 0, 0, follow_symlinks=False)
+        os.chmod(path, 0o700)
+        with os.scandir(path) as it:
+            names = [e.name for e in it]
+        for name in names:
+            _retree(os.path.join(path, name), owner, group, seal)
+    elif stat.S_ISLNK(st.st_mode):
+        os.chown(path, owner, group, follow_symlinks=False)
+        return
+    else:
+        os.chown(path, 0, 0, follow_symlinks=False)
+    mode = sealed_mode(st.st_mode) if seal else stat.S_IMODE(st.st_mode)
+    os.chmod(path, mode)  # while root-owned (no CAP_FOWNER needed)
+    os.chown(path, owner, group, follow_symlinks=False)
 
 
 def chown_tree(path: Path, uid: int) -> None:
-    """@brief chown -R uid:uid (install time: the plugin may write it). Root only."""
-    if not is_root() or not path.exists():
-        return
-    for p in _walk(path):
-        os.chown(p, uid, uid, follow_symlinks=False)
+    """@brief chown -R uid:uid, modes kept (install time: the plugin may write it). Root only."""
+    if is_root() and path.exists():
+        _retree(str(path), uid, uid, seal=False)
 
 
 def sealed_mode(mode: int) -> int:
@@ -57,14 +72,8 @@ def seal_tree(path: Path, uid: int) -> None:
     @brief After install: root:uid, group read(+exec where owner has it), no group/other
     write. The plugin can read its code and cache but never modify them. Root only.
     """
-    if not is_root() or not path.exists():
-        return
-    for p in _walk(path):
-        st = os.lstat(p)
-        os.chown(p, 0, uid, follow_symlinks=False)
-        if stat.S_ISLNK(st.st_mode):
-            continue
-        os.chmod(p, sealed_mode(st.st_mode))
+    if is_root() and path.exists():
+        _retree(str(path), 0, uid, seal=True)
 
 
 def prepare_state(state: Path, uid: int) -> None:
@@ -90,3 +99,16 @@ def as_user(uid: int | None) -> Creds:
     if uid is None or not is_root():
         return Creds(user=None, group=None, extra_groups=None)
     return Creds(user=uid, group=uid, extra_groups=[])
+
+
+def set_nondumpable() -> None:
+    """
+    @brief prctl(PR_SET_DUMPABLE, 0): /proc/<host>/* becomes root-owned, so even a
+    same-uid process (insecure dev mode) cannot read the host's environ/memory.
+    """
+    import ctypes
+
+    try:
+        ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0)  # PR_SET_DUMPABLE
+    except (OSError, AttributeError):
+        pass
