@@ -12,7 +12,7 @@ import { useSimpleMode } from "@/stores/simpleMode";
 import { SIMPLE_NAV, TOP_NAV, isItemActive } from "./navItems";
 
 const LINK =
-  "relative inline-flex items-center rounded-full px-5 py-2.5 text-sm focus-visible:outline-accent focus-visible:outline-2 focus-visible:outline-offset-2";
+  "relative inline-flex shrink-0 items-center rounded-full px-3 py-2.5 xl:px-5 text-sm focus-visible:outline-accent focus-visible:outline-2 focus-visible:outline-offset-2";
 
 /**
  * @brief Top pill navigation.
@@ -28,7 +28,7 @@ export function TopNav() {
       layout={!reduced}
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
       aria-label="Main"
-      className="glass flex items-center gap-0.5 rounded-full p-1"
+      className="glass flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full p-1 [scrollbar-width:none]"
     >
       {(simple ? SIMPLE_NAV : TOP_NAV)
         .filter((i) => tree || i.href !== "/app/family")

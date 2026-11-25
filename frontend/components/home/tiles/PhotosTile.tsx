@@ -1,7 +1,8 @@
 "use client";
 /**
  * @file components/home/tiles/PhotosTile.tsx
- * @brief Photos tile: 2x2 hero plus square thumbs from recent media.
+ * @brief Photos tile: 2x2 hero plus square thumbs from recent media. At md+
+ *        the 3-row grid shrinks to the tile's height instead of overflowing.
  */
 import Link from "next/link";
 import { Image as ImageIcon } from "lucide-react";
@@ -42,13 +43,15 @@ export function PhotosTile({ open, onToggle }: TileSlotProps) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5 md:min-h-0 md:flex-1 md:grid-rows-[repeat(3,minmax(0,1fr))]">
           {items.map((it, i) => (
             <div
               key={it.media_id}
               className={cn(
-                "relative",
-                i === 0 ? "col-span-2 row-span-2" : "aspect-square",
+                "relative min-h-0",
+                i === 0
+                  ? "col-span-2 row-span-2"
+                  : "aspect-square md:aspect-auto",
               )}
             >
               <NsfwCover
