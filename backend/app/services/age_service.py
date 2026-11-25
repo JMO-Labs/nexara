@@ -38,6 +38,8 @@ def effective_age_group(user: Any, community: Any | None) -> AgeGroup:
     @param community Object with ``adult_requires_approval`` (None = off).
     @return child/teen/adult, or unknown when undetermined.
     """
+    if getattr(user, "is_bot", False) is True:
+        return "unknown"  # plugin bots never count as adults (NSFW)
     group = getattr(user, "age_group", None)
     if group in GROUPS:
         return group  # type: ignore[no-any-return]
@@ -154,7 +156,9 @@ class AgeService:
                 message=_("You cannot suggest your own age group"),
                 status_code=400,
             )
-        await self._subject(subject_id)
+        subject = await self._subject(subject_id)
+        if getattr(subject, "is_bot", False) is True:
+            raise NotFoundError(_("User not found"))
         if await self._repo.pending_exists(self._cid, subject_id, self._actor):
             raise AppError(
                 code="AGE_SUGGESTION_EXISTS",

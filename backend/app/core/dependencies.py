@@ -88,6 +88,12 @@ async def get_current_user(
     if token is None:
         raise AuthenticationError(message=_("Authentication required"))
 
+    if token.startswith("nxp_"):
+        # Plugin bot token: no JWT claims, hence no 2FA-setup enforcement (bots have no password).
+        from app.plugins.tokens import authenticate_plugin_token
+
+        return await authenticate_plugin_token(request, token, db)
+
     try:
         payload = decode_token(token, expected_type="access", settings=settings)
     except ValueError as exc:
@@ -221,6 +227,12 @@ async def get_optional_user(
     """
     if token is None:
         return None
+
+    if token.startswith("nxp_"):
+        # Never treat a plugin token as anonymous: authenticate (scope + rate limit) or 401/403.
+        from app.plugins.tokens import authenticate_plugin_token
+
+        return await authenticate_plugin_token(request, token, db)
 
     from app.models.user import User
 
@@ -356,29 +368,6 @@ def get_amazon_admin_service(
         actor_id=user.id,
         ip_address=ip,
     )
-
-
-async def get_plugin_from_api_key(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> str:
-    """
-    @brief Authenticate a plugin by API key (``X-Plugin-Api-Key`` or ``Bearer nxr_plugin_...``).
-
-    Optional alternative to JWT for plugin routes; never grants user access.
-    @return The authenticated plugin_id.
-    @throws AuthenticationError (401) if missing, invalid or revoked.
-    """
-    from app.plugins.api_keys import resolve_plugin_from_key
-
-    key = request.headers.get("x-plugin-api-key")
-    if not key:
-        auth = request.headers.get("authorization", "")
-        key = auth[7:] if auth.lower().startswith("bearer ") else ""
-    if not key:
-        raise AuthenticationError(message=_("Authentication required"))
-    return await resolve_plugin_from_key(db, key, uuid.UUID(settings.COMMUNITY_ID))
 
 
 _dispatcher: Dispatcher | None = None

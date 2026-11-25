@@ -44,7 +44,7 @@ api:
 # -- Celery worker
 worker:
   replicas: 2
-  queues: default,maintenance,email,notifications,media
+  queues: default,maintenance,email,notifications,media,plugins
   concurrency: 4
   resources:
     requests: {cpu: 250m, memory: 512Mi}

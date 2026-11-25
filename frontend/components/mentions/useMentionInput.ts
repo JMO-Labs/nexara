@@ -24,7 +24,7 @@ export function useMentionInput(
   setValue: (v: string) => void,
   ref: React.RefObject<Field | null>,
 ) {
-  const { data: members = [] } = useMembersList();
+  const { data: members = [] } = useMembersList({ bots: true });
   const groups = useTaggableGroups();
   const [caret, setCaret] = React.useState(0);
   const [active, setActive] = React.useState(0);

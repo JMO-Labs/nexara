@@ -14,6 +14,13 @@ const users = [
   { id: "u1", username: "alice", display_name: "Alice A", avatar_url: null },
   { id: "u2", username: "bob", display_name: "Bob B", avatar_url: null },
   { id: "u3", username: "carol", display_name: "Carol C", avatar_url: null },
+  {
+    id: "u9",
+    username: "bot",
+    display_name: "Sassybot",
+    avatar_url: null,
+    is_bot: true,
+  },
 ];
 
 function setup(props: Partial<Parameters<typeof NewDmModal>[0]> = {}) {
@@ -40,6 +47,7 @@ describe("NewDmModal", () => {
     expect(await screen.findByText("Alice A")).toBeInTheDocument();
     expect(screen.getByLabelText("Search members")).toBeInTheDocument();
     expect(listUsers).toHaveBeenCalledWith(null, 100);
+    expect(screen.queryByText("Sassybot")).not.toBeInTheDocument();
   });
 
   it("does not fetch when closed", () => {

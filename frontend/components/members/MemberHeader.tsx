@@ -5,6 +5,7 @@
  *        overlapping it, name line, bio, shared groups and actions.
  */
 import * as React from "react";
+import { BotBadge } from "@/components/ui/BotBadge";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -185,6 +186,12 @@ export function MemberHeader({
 
         <h1 className="mt-3 text-3xl font-medium tracking-tight md:text-4xl">
           {profile.display_name}
+          {profile.is_bot && (
+            <>
+              {" "}
+              <BotBadge active={profile.bot_active !== false} />
+            </>
+          )}
         </h1>
         <p className="mt-1 text-sm text-muted">
           {meta.join(" · ")}

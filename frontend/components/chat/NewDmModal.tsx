@@ -34,7 +34,7 @@ export function NewDmModal({
 
   const filtered = React.useMemo(() => {
     const base = (usersQ.data?.items ?? []).filter(
-      (u) => !excludeUserId || u.id !== excludeUserId,
+      (u) => !u.is_bot && (!excludeUserId || u.id !== excludeUserId),
     );
     const query = q.trim().toLowerCase();
     if (!query) return base;

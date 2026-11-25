@@ -38,11 +38,16 @@ def _build_storage_uri() -> str | None:
 
 def rate_limit_key(request: Request) -> str:
     """
-    @brief Bucket key = real client IP behind our proxy (not nginx's 127.0.0.1).
+    @brief Bucket key: ``plugin:{token_id}`` for plugin tokens, else the real client IP.
+
+    The token id is set only after a token verified, never from an unverified header.
 
     @param request Current request.
-    @return Client IP, or ``"unknown"`` when none can be determined.
+    @return Bucket key, or ``"unknown"`` when no client IP can be determined.
     """
+    token_id = getattr(getattr(request, "state", None), "plugin_token_id", None)
+    if token_id:
+        return f"plugin:{token_id}"
     return client_ip(request) or "unknown"
 
 

@@ -19,6 +19,9 @@ export interface SelectProps {
   onValueChange?: (v: string) => void;
   placeholder?: string;
   label?: string;
+  /** Trigger id (for an external <label htmlFor>). */
+  id?: string;
+  "aria-describedby"?: string;
   disabled?: boolean;
   /** Extra classes for the trigger (e.g. glass pill styling). */
   className?: string;
@@ -39,12 +42,16 @@ export function Select({
   placeholder,
   className,
   children,
+  id,
+  "aria-describedby": describedBy,
   ...root
 }: SelectProps) {
   return (
     <Root {...root}>
       <SelectTrigger
+        id={id}
         aria-label={label}
+        aria-describedby={describedBy}
         className={cn(TRIGGER, "w-full", className)}
       >
         <SelectValue placeholder={placeholder} />

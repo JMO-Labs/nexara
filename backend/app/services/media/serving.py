@@ -44,16 +44,20 @@ class MediaServingMixin:
     _community_id: uuid.UUID
 
     async def get_metadata(
-        self, media_id: uuid.UUID, viewer_id: uuid.UUID | None = None
+        self,
+        media_id: uuid.UUID,
+        viewer_id: uuid.UUID | None = None,
+        community_id: uuid.UUID | None = None,
     ) -> MediaResponse:
         """
         @brief Return media metadata by ID (NSFW: adults only).
+        @param community_id When set (bots), media outside it is 404.
         @raises NotFoundError If media does not exist or is NSFW for a non-adult.
         """
         if await self._repo.nsfw_hidden(viewer_id, media_id=media_id):
             raise NotFoundError(_("Media not found"))
         media = await self._repo.get(media_id)
-        if media is None:
+        if media is None or (community_id is not None and media.community_id != community_id):
             raise NotFoundError(_("Media not found"))
         return await effective_response(self._repo, media)
 

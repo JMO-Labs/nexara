@@ -16,14 +16,7 @@ vi.mock("next-themes", () => ({
   },
 }));
 
-const loadPlugins = vi.fn(async () => {});
-vi.mock("@/lib/plugins/plugin-loader", () => ({
-  loadPlugins: () => loadPlugins(),
-}));
-
-import { act } from "@testing-library/react";
 import Providers from "@/app/providers";
-import { useSession } from "@/stores/session";
 
 describe("Providers", () => {
   it("renders children with class-based system theme", () => {
@@ -35,19 +28,5 @@ describe("Providers", () => {
     expect(screen.getByText("hi")).toBeVisible();
     expect(captured.attribute).toBe("class");
     expect(captured.defaultTheme).toBe("system");
-  });
-
-  it("loads plugins only once the session is authenticated", () => {
-    // The manifest endpoint needs auth; fetching at boot 401'd on every page.
-    loadPlugins.mockClear();
-    useSession.setState({ status: "loading" });
-    render(
-      <Providers>
-        <p>x</p>
-      </Providers>,
-    );
-    expect(loadPlugins).not.toHaveBeenCalled();
-    act(() => useSession.setState({ status: "authenticated" }));
-    expect(loadPlugins).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,1 +1,4 @@
-"""@file Plugin system package."""
+"""
+@file
+@brief Nexara plugin system core.
+"""

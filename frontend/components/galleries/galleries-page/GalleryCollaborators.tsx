@@ -47,7 +47,7 @@ export function GalleryCollaborators({
   const nameOf = (id: string) =>
     members.find((u) => u.id === id)?.display_name ?? id;
   const taken = new Set([ownerId, ...collaborators.map((c) => c.user_id)]);
-  const candidates = members.filter((u) => !taken.has(u.id));
+  const candidates = members.filter((u) => !taken.has(u.id) && !u.is_bot);
 
   const handleAdd = () => {
     if (!pick) return;

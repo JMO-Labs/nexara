@@ -15,14 +15,16 @@ from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import AuthorizationError, NotFoundError
 from app.core.i18n import _
 from app.models.user import User
-from app.plugins.hooks import HookRegistry
+from app.plugins.events import schedule_plugin_dispatch
 from app.repositories.celebration_repo import CelebrationRepository
+from app.repositories.plugin_repo import PluginRepository
 from app.schemas.poll import PollCreate
 from app.schemas.post import CelebrateIn
 from app.services import post_celebrate
 from app.services.activity_publish import record_activity
 from app.services.nsfw_rules import apply_owner_flag, require_owner_may_flag
 from app.services.post_comments import CommentsMixin
+from app.services.post_plugin_flags import validate_plugin_flags
 from app.services.post_reactions import ReactionsMixin
 from app.services.realtime import events
 
@@ -86,25 +88,22 @@ class PostService(CommentsMixin, ReactionsMixin):
         private: bool = False,
         celebrate: CelebrateIn | None = None,
         is_nsfw: bool = False,
+        plugin_flags: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """@brief Create a new post, attach media/poll, send notifications, and publish SSE.
         @raises AuthorizationError If a non-adult marks the post NSFW.
+        @raises AppError 422 ``invalid_plugin_flag`` for flags the enabled plugins do not declare.
         """
         await self._require_adult_for_nsfw(is_nsfw, user)
+        flags = await validate_plugin_flags(
+            PluginRepository(self._post_repo.session), user.community_id, plugin_flags or {}
+        )
         celebrated = (
             await post_celebrate.resolve(
                 CelebrationRepository(self._post_repo.session), self._community_id, user, celebrate
             )
             if celebrate
             else None
-        )
-        await HookRegistry.emit(
-            "before_post_created",
-            community_id=self._community_id,
-            session=self._post_repo.session,
-            user_id=user.id,
-            content=content,
-            subgroup_id=subgroup_id,
         )
         post = await self._post_repo.create_post(
             author_id=user.id,
@@ -114,6 +113,7 @@ class PostService(CommentsMixin, ReactionsMixin):
             subgroup_id=subgroup_id,
             private=private,
             is_nsfw=is_nsfw,
+            plugin_flags=flags,
         )
 
         if celebrated:
@@ -190,15 +190,6 @@ class PostService(CommentsMixin, ReactionsMixin):
                 },
             )
 
-        await HookRegistry.emit(
-            "after_post_created",
-            community_id=self._community_id,
-            session=self._post_repo.session,
-            user_id=user.id,
-            post_id=post.id,
-            content=content,
-            subgroup_id=subgroup_id,
-        )
         await invalidate_search_cache_for_community(
             self._community_id, service="post", action="create", user_id=user.id
         )
@@ -209,6 +200,7 @@ class PostService(CommentsMixin, ReactionsMixin):
                 events.post_created(self._target, enriched),
                 post,
             )
+        schedule_plugin_dispatch(self._post_repo._session, self._community_id, post.id, None)
 
         return enriched or {}
 

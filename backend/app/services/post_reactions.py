@@ -25,7 +25,7 @@ class ReactionsMixin(PostServiceBase):
         emoji: str,
     ) -> ReactionResponse:
         """@brief Toggle a reaction on a post.
-        @raises NotFoundError If post does not exist.
+        @raises NotFoundError If post does not exist or the user may not read it.
         """
         post = await self._post_repo.get_by_id(
             post_id,
@@ -98,7 +98,7 @@ class ReactionsMixin(PostServiceBase):
         emoji: str,
     ) -> ReactionResponse:
         """@brief Toggle a reaction on a comment.
-        @raises NotFoundError If post or comment does not exist.
+        @raises NotFoundError If post or comment does not exist or the post is hidden.
         """
         post = await self._post_repo.get_by_id(
             post_id,

@@ -16,7 +16,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import AppError, NotFoundError
 from app.core.features import require_feature
 from app.core.i18n import _
 from app.models.user import User
@@ -93,6 +93,12 @@ class AdminService:
         target = await self._user_repo.get_by_id(target_user_id, self._community_id)
         if not target:
             raise NotFoundError(message=_("User not found"))
+        if target.is_bot is True:
+            raise AppError(
+                code="bot_account",
+                message=_("Plugin bot accounts cannot be changed"),
+                status_code=422,
+            )
         old_role = target.role
         fields: dict[str, Any] = {"role": new_role}
         if (old_role == "admin") != (new_role == "admin"):
@@ -201,6 +207,12 @@ class AdminService:
         target = await self._user_repo.get_by_id_include_deleted(target_user_id, self._community_id)
         if not target:
             raise NotFoundError(message=_("User not found"))
+        if target.is_bot is True:
+            raise AppError(
+                code="bot_account",
+                message=_("Plugin bot accounts cannot be changed"),
+                status_code=422,
+            )
         await self._user_repo.update(
             target,
             {"deleted_at": None, "is_active": True},

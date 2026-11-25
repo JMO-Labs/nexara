@@ -48,6 +48,8 @@ class ProfileService:
             "display_name": target.display_name,
             "avatar_url": target.avatar_url,
             "role": target.role,
+            "is_bot": bool(target.is_bot),
+            "bot_active": target.bot_active,
             "created_at": target.created_at,
             "last_seen_at": (
                 target.last_seen_at if is_self or not settings or settings.show_last_seen else None

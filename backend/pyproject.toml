@@ -81,7 +81,6 @@ packages = ["app"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-pythonpath = ["../plugins"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
@@ -95,8 +94,6 @@ select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/versions/*.py" = ["E501"]
-# Hyphenated dir is intentional: the plugin loader must reject it.
-"tests/fixtures/plugins/broken-security/*.py" = ["N999"]
 
 [tool.mypy]
 python_version = "3.12"

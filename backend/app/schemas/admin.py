@@ -117,6 +117,7 @@ class AdminUserListItem(BaseModel):
     location: str | None = None
     website_url: str | None = None
     role: str
+    is_bot: bool = False
     created_at: datetime
     last_seen_at: datetime | None = None
     status: str = "active"

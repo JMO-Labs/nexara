@@ -54,7 +54,7 @@ class BaseRepository(Generic[ModelT]):  # noqa: UP046
 
     @property
     def session(self) -> AsyncSession:
-        """@brief Public access to the underlying session (e.g. for plugin hooks)."""
+        """@brief Public access to the underlying session."""
         return self._session
 
     def _base_query(self) -> Select[Any]:

@@ -1,165 +1,226 @@
-"""@file Plugin manifest schema and loader.
-
-@brief Pydantic models validating ``manifest.toml`` / ``manifest.json``.
-Permissions are declared here but enforced in PluginContext, not at this layer.
+"""
+@file
+@brief Plugin manifest (nexara-plugin.toml) parser and field validation.
 """
 
-import json
+import math
+import re
 import tomllib
-from enum import StrEnum
-from pathlib import Path
 from typing import Any, Literal
 
 from packaging.version import InvalidVersion, Version
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
+
+from app.core.config import get_settings
+from app.core.exceptions import AppError
+
+KNOWN_SCOPES = frozenset(
+    "posts:read posts:write comments:read comments:write reactions:write "
+    "media:read users:read notifications:send".split()
+)
+KNOWN_EVENTS = frozenset({"post.created", "comment.created", "mention"})
+_ID_RE = re.compile(r"[a-z0-9]+(\.[a-z0-9-]+)+", re.ASCII)
+_SEMVER_RE = re.compile(r"\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?", re.ASCII)
+_KEY_RE = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
+MAX_MANIFEST_BYTES = 64 * 1024
+MAX_STR_LEN = 1024
 
 
-class PluginPermission(StrEnum):
-    """@brief Permissions a plugin may request.
+class FieldSpec(BaseModel):
+    """@brief One configurable field (setting, user pref or composer flag)."""
 
-    - ``db_read``: read access to the plugin's scoped data.
-    - ``db_write``: write access to the plugin's scoped data.
-    - ``hooks_before_post_created``: intercept posts before creation.
-    - ``hooks_after_post_created``: react after a post is created.
-    - ``hooks_before_chat_sent`` / ``hooks_after_chat_sent``: chat message hooks.
-    - ``hooks_on_user_joined`` / ``hooks_on_community_created``: membership/community hooks.
-    - ``send_notifications``: send notifications to users.
-    - ``storage_access``: use the file/object storage.
-    - ``external_http``: make outbound HTTP requests.
-    - ``frontend_routes``: register frontend routes/slots.
-    - ``celery_tasks``: register background Celery tasks.
-    """
-
-    DB_READ = "db_read"
-    DB_WRITE = "db_write"
-    HOOKS_BEFORE_POST_CREATED = "hooks_before_post_created"
-    HOOKS_AFTER_POST_CREATED = "hooks_after_post_created"
-    HOOKS_BEFORE_CHAT_SENT = "hooks_before_chat_sent"
-    HOOKS_AFTER_CHAT_SENT = "hooks_after_chat_sent"
-    HOOKS_ON_USER_JOINED = "hooks_on_user_joined"
-    HOOKS_ON_COMMUNITY_CREATED = "hooks_on_community_created"
-    SEND_NOTIFICATIONS = "send_notifications"
-    STORAGE_ACCESS = "storage_access"
-    EXTERNAL_HTTP = "external_http"
-    FRONTEND_ROUTES = "frontend_routes"
-    CELERY_TASKS = "celery_tasks"
-
-
-def _check_semver(value: str) -> str:
-    """@brief Require strict MAJOR.MINOR.PATCH.
-    @param value Version string.
-    @return The same string if valid.
-    """
-    parts = value.split(".")
-    if len(parts) != 3 or not all(p.isascii() and p.isdigit() for p in parts):
-        raise ValueError(f"'{value}' is not a valid semantic version (MAJOR.MINOR.PATCH)")
-    try:
-        Version(value)
-    except InvalidVersion as exc:
-        raise ValueError(str(exc)) from exc
-    return value
-
-
-class ManifestHook(BaseModel):
-    """@brief A hook event name with its description."""
-
-    event: str
-    description: str = ""
-
-
-class SettingSpec(BaseModel):
-    """@brief Declaration of one plugin setting."""
-
-    type: Literal["string", "integer", "boolean", "number"]
+    type: Literal["boolean", "select", "number", "string", "secret"]
     label: str
-    required: bool = False
-    secret: bool = False
+    help: str | None = None
     default: Any = None
-
-
-class BackendSpec(BaseModel):
-    """@brief Backend entry files (relative paths)."""
-
-    routes: str | None = None
-    tasks: str | None = None
-
-
-class FrontendSpec(BaseModel):
-    """@brief Frontend slot name -> component name."""
-
-    slots: dict[str, str] = Field(default_factory=dict)
-
-
-class PluginManifest(BaseModel):
-    """@brief Validated plugin manifest."""
+    options: list[str] | None = None
+    min: float | None = None
+    max: float | None = None
+    max_length: int | None = None
 
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    @model_validator(mode="after")
+    def _self_consistent(self) -> "FieldSpec":
+        for b in (self.min, self.max):
+            if b is not None and not math.isfinite(b):
+                raise ValueError("min/max must be finite")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("min > max")
+        if self.type in ("string", "secret"):
+            if self.max_length is None:
+                self.max_length = MAX_STR_LEN
+            elif not 0 < self.max_length <= MAX_STR_LEN:
+                raise ValueError(f"max_length must be 1..{MAX_STR_LEN}")
+        if self.default is not None and not _check(self, self.default):
+            raise ValueError("default does not fit field type")
+        return self
+
+
+class PluginManifest(BaseModel):
+    """@brief Parsed and validated plugin manifest."""
+
+    id: str
     name: str
     version: str
-    author: str
-    description: str
-    min_core_version: str
-    permissions: list[PluginPermission] = Field(default_factory=list)
-    hooks: dict[str, str] = Field(default_factory=dict)
-    settings: dict[str, SettingSpec] = Field(default_factory=dict)
-    backend: BackendSpec = Field(default_factory=BackendSpec)
-    frontend: FrontendSpec = Field(default_factory=FrontendSpec)
-
-    @field_validator("version", "min_core_version")
-    @classmethod
-    def _semver(cls, v: str) -> str:
-        return _check_semver(v)
-
-    @field_validator("permissions")
-    @classmethod
-    def _unique_permissions(cls, v: list[PluginPermission]) -> list[PluginPermission]:
-        if len(set(v)) != len(v):
-            raise ValueError("duplicate permissions")
-        return v
+    description: str = ""
+    author: str = ""
+    license: str = ""
+    homepage: str = ""
+    min_core_version: str = "0.0.0"
+    runtime: Literal["node", "python"]
+    entrypoint: str
+    icon: str | None = None
+    bot_display_name: str
+    bot_username: str
+    bot_avatar: str | None = None
+    scopes: list[str] = []
+    events: list[str] = []
+    egress: list[str] = []
+    settings: dict[str, FieldSpec] = {}
+    user_prefs: dict[str, FieldSpec] = {}
+    composer_flags: dict[str, FieldSpec] = {}
 
 
-def _no_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    keys = [k for k, _ in pairs]
-    dupes = {k for k in keys if keys.count(k) > 1}
-    if dupes:
-        raise ValueError(f"duplicate keys in manifest: {sorted(dupes)}")
-    return dict(pairs)
+def _fail(errors: list[str]) -> AppError:
+    return AppError(
+        code="invalid_manifest",
+        message="Invalid plugin manifest",
+        status_code=422,
+        details={"errors": errors},
+    )
 
 
-def load_manifest(plugin_dir: Path) -> PluginManifest:
-    """@brief Load ``manifest.toml`` or ``manifest.json`` from a plugin dir.
-    @param plugin_dir Plugin directory.
+def parse_manifest(text: str) -> PluginManifest:
+    """
+    @brief Parse nexara-plugin.toml text.
+    @param text TOML source.
     @return Validated manifest.
-    @throws FileNotFoundError if neither file exists.
-    @throws pydantic.ValidationError on invalid content (duplicate JSON keys,
-    e.g. duplicate hooks, are reported as a ValidationError too).
+    @throws AppError invalid_manifest (422) on any problem.
     """
-    plugin_dir = Path(plugin_dir)
-    toml_path = plugin_dir / "manifest.toml"
-    json_path = plugin_dir / "manifest.json"
-    if toml_path.is_file():
-        data = tomllib.loads(toml_path.read_text(encoding="utf-8"))
-    elif json_path.is_file():
-        try:
-            data = json.loads(
-                json_path.read_text(encoding="utf-8"), object_pairs_hook=_no_duplicate_keys
-            )
-        except ValueError as exc:
-            raise ValidationError.from_exception_data(
-                "PluginManifest",
-                [{"type": "value_error", "loc": (), "input": None, "ctx": {"error": exc}}],
-            ) from exc
-    else:
-        raise FileNotFoundError(f"No manifest.toml or manifest.json in {plugin_dir}")
-    return PluginManifest.model_validate(data)
+    if len(text.encode()) > MAX_MANIFEST_BYTES:
+        raise _fail(["manifest too large"])
+    try:
+        raw = tomllib.loads(text)
+    except (tomllib.TOMLDecodeError, RecursionError) as exc:
+        raise _fail([f"toml: {exc}"]) from exc
+    bad = [
+        k
+        for k in ("plugin", "bot", "permissions", "settings", "user_prefs", "composer_flags")
+        if not isinstance(raw.get(k, {}), dict)
+    ]
+    if bad:
+        raise _fail([f"{k}: must be a table" for k in bad])
+    p, bot, perm = raw.get("plugin", {}), raw.get("bot", {}), raw.get("permissions", {})
+    try:
+        m = PluginManifest(
+            **p,
+            bot_display_name=bot.get("display_name"),
+            bot_username=bot.get("username"),
+            bot_avatar=bot.get("avatar"),
+            scopes=perm.get("scopes", []),
+            events=perm.get("events", []),
+            egress=perm.get("egress", []),
+            settings=raw.get("settings", {}),
+            user_prefs=raw.get("user_prefs", {}),
+            composer_flags=raw.get("composer_flags", {}),
+        )
+    except (ValidationError, TypeError) as exc:
+        errs = (
+            [f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()]
+            if isinstance(exc, ValidationError)
+            else [str(exc)]
+        )
+        raise _fail(errs) from exc
+    errors: list[str] = []
+    if not _ID_RE.fullmatch(m.id):
+        errors.append(f"id: invalid '{m.id}'")
+    for label, ver in (("version", m.version), ("min_core_version", m.min_core_version)):
+        if not _SEMVER_RE.fullmatch(ver):
+            errors.append(f"{label}: not semver '{ver}'")
+    for label, path in (
+        ("entrypoint", m.entrypoint),
+        ("icon", m.icon),
+        ("bot_avatar", m.bot_avatar),
+    ):
+        if path is not None and not _safe_path(path):
+            errors.append(f"{label}: must be a relative path without '..'")
+    for group in ("settings", "user_prefs", "composer_flags"):
+        errors += [
+            f"{group}.{k}: invalid key" for k in getattr(m, group) if not _KEY_RE.fullmatch(k)
+        ]
+    errors += [f"scopes: unknown '{s}'" for s in m.scopes if s not in KNOWN_SCOPES]
+    errors += [f"events: unknown '{e}'" for e in m.events if e not in KNOWN_EVENTS]
+    for group in ("user_prefs", "composer_flags"):
+        for k, f in getattr(m, group).items():
+            if f.type == "secret":
+                errors.append(f"{group}.{k}: secret only allowed in settings")
+    for group in ("settings", "user_prefs", "composer_flags"):
+        for k, f in getattr(m, group).items():
+            if f.type == "select" and not f.options:
+                errors.append(f"{group}.{k}: select needs options")
+    if errors:
+        raise _fail(errors)
+    return m
 
 
-def is_compatible(manifest: PluginManifest, core_version: str) -> bool:
-    """@brief Check core version >= manifest.min_core_version.
-    @param manifest Plugin manifest.
-    @param core_version Running core version.
-    @return True if compatible.
+def _safe_path(p: str) -> bool:
+    parts = p.replace("\\", "/").split("/")
+    return bool(p) and not p.startswith(("/", "\\")) and ".." not in parts and ":" not in parts[0]
+
+
+def core_version() -> str:
+    """@brief Running core version."""
+    return str(get_settings().APP_VERSION)
+
+
+def is_compatible(m: PluginManifest) -> bool:
+    """@brief True if core version >= manifest min_core_version."""
+    try:
+        return Version(core_version()) >= Version(m.min_core_version)
+    except InvalidVersion:
+        return False
+
+
+def _check(spec: FieldSpec, v: Any) -> bool:
+    t = spec.type
+    if t == "boolean":
+        return isinstance(v, bool)
+    if t == "select":
+        return v in (spec.options or [])
+    if t == "number":
+        if isinstance(v, bool) or not isinstance(v, int | float):
+            return False
+        return (spec.min is None or v >= spec.min) and (spec.max is None or v <= spec.max)
+    if not isinstance(v, str):
+        return False
+    return spec.max_length is None or len(v) <= spec.max_length
+
+
+def validate_values(fields: dict[str, FieldSpec], values: dict[str, Any]) -> dict[str, Any]:
     """
-    return Version(core_version) >= Version(manifest.min_core_version)
+    @brief Validate values against field specs.
+    @param fields Field specs by key.
+    @param values Candidate values.
+    @return values unchanged when valid.
+    @throws AppError invalid_plugin_value (422).
+    """
+    errors = [
+        f"{k}: unknown key" if k not in fields else f"{k}: invalid value"
+        for k, v in values.items()
+        if k not in fields or not _check(fields[k], v)
+    ]
+    if errors:
+        raise AppError(
+            code="invalid_plugin_value",
+            message="Invalid plugin value",
+            status_code=422,
+            details={"errors": errors},
+        )
+    return values
+
+
+def with_defaults(fields: dict[str, FieldSpec], values: dict[str, Any]) -> dict[str, Any]:
+    """@brief Return values with missing keys filled from non-null defaults."""
+    out = {k: f.default for k, f in fields.items() if f.default is not None}
+    return {**out, **values}

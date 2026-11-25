@@ -30,8 +30,8 @@ import { AppearanceTab } from "./AppearanceTab";
 import { PrivacyTab } from "./PrivacyTab";
 import { StorageTab } from "./StorageTab";
 import { NudgePreferences } from "./NudgePreferences";
-import { PluginsSettingsTab } from "./PluginsSettingsTab";
-import { PluginSettingsProvider } from "@/lib/plugins/PluginSettingsContext";
+import { PluginPrefsTab } from "./PluginPrefsTab";
+import { usePluginUi } from "@/hooks/usePluginUi";
 import { HelpTab } from "./HelpTab";
 import { SecurityTab } from "./SecurityTab";
 
@@ -108,9 +108,9 @@ const TABS: {
   {
     id: "plugins",
     label: "Plugins",
-    description: "Settings for installed plugins.",
+    description: "Preferences for your community's plugins.",
     icon: Puzzle,
-    Body: PluginsSettingsTab,
+    Body: PluginPrefsTab,
   },
   {
     id: "help",
@@ -121,13 +121,6 @@ const TABS: {
   },
 ];
 
-const ITEMS = TABS.map(({ id, label, icon }) => ({
-  id,
-  label,
-  icon,
-  href: `?tab=${id}`,
-}));
-
 /**
  * @brief Settings sections beside a glass side nav (phone: a picker).
  * @return settings layout
@@ -135,11 +128,20 @@ const ITEMS = TABS.map(({ id, label, icon }) => ({
 export function SettingsTabs() {
   const param = useSearchParams().get("tab");
   const router = useRouter();
-  const current = TABS.find((t) => t.id === param) ?? TABS[0];
+  const { data: plugins = [] } = usePluginUi();
+  const hasPrefs = plugins.some((p) => Object.keys(p.user_prefs).length > 0);
+  const tabs = TABS.filter((t) => t.id !== "plugins" || hasPrefs);
+  const items = tabs.map(({ id, label, icon }) => ({
+    id,
+    label,
+    icon,
+    href: `?tab=${id}`,
+  }));
+  const current = tabs.find((t) => t.id === param) ?? tabs[0];
   const Body = current.Body;
 
   return (
-    <PluginSettingsProvider>
+    <>
       <PageHeader title="Settings" description={current.description} />
       <TwoPane
         aside={
@@ -150,7 +152,7 @@ export function SettingsTabs() {
                 value={current.id}
                 onValueChange={(v) => router.push(`?tab=${v}`)}
               >
-                {TABS.map((t) => (
+                {tabs.map((t) => (
                   <Option key={t.id} value={t.id}>
                     {t.label}
                   </Option>
@@ -159,7 +161,7 @@ export function SettingsTabs() {
             </div>
             <div className="hidden md:block">
               <SideNav
-                items={ITEMS}
+                items={items}
                 activeId={current.id}
                 label="Settings sections"
               />
@@ -172,6 +174,6 @@ export function SettingsTabs() {
           <Body />
         </section>
       </TwoPane>
-    </PluginSettingsProvider>
+    </>
   );
 }

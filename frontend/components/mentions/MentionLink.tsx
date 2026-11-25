@@ -25,7 +25,7 @@ function Smart({
   name: string;
   children: React.ReactNode;
 }) {
-  const { data: members } = useMembersList();
+  const { data: members } = useMembersList({ bots: true });
   const { data: groups } = useSubgroupList();
   const { data: household } = useVisibleHousehold();
   const person = members?.some((u) => u.username === name);

@@ -1,12 +1,7 @@
 """
 @file plugin.py
-@brief Plugin installation state and key-value plugin data models.
-
-Plugins are installed independently per community. Uninstall is a soft
-delete (deleted_at); rows are never removed.
+@brief Out-of-process plugin install, per-community enablement, token, pref and index models.
 """
-
-from __future__ import annotations
 
 import uuid
 from datetime import datetime
@@ -14,125 +9,159 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
-    ForeignKeyConstraint,
     Index,
-    String,
+    PrimaryKeyConstraint,
     Text,
-    UniqueConstraint,
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.models.user import COMMUNITY_DEFAULT
 
 
-class Plugin(Base):
-    """
-    @brief A plugin installed in a community.
+class PluginInstall(Base):
+    """@brief Instance-wide installed plugin package/manifest."""
 
-    The primary key is (id, community_id) so the same plugin id can be
-    installed independently in several communities.
-    """
-
-    __tablename__ = "plugins"
+    __tablename__ = "plugin_installs"
     __table_args__ = (
-        Index("ix_plugins_id_community", "id", "community_id"),
-        Index("ix_plugins_deleted_at", "deleted_at"),
-    )
-
-    id: Mapped[str] = mapped_column(Text, primary_key=True)
-    community_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("communities.id", ondelete="CASCADE"),
-        primary_key=True,
-        server_default=COMMUNITY_DEFAULT,
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    version: Mapped[str] = mapped_column(String(64), nullable=False)
-    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
-    permissions_granted: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, server_default=text("'[]'::jsonb")
-    )
-    settings: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, server_default=text("'{}'::jsonb")
-    )
-    pending_manifest: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
-    installed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-
-class PluginData(Base):
-    """@brief Arbitrary per-plugin JSON key-value storage."""
-
-    __tablename__ = "plugin_data"
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["plugin_id", "community_id"],
-            ["plugins.id", "plugins.community_id"],
-            ondelete="CASCADE",
+        CheckConstraint(
+            "tier IS NULL OR tier IN ('official','verified','community')",
+            name="plugin_installs_tier_check",
         ),
-        UniqueConstraint("plugin_id", "community_id", "key", name="uq_plugin_data_key"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        server_default=func.gen_random_uuid(),
-    )
-    plugin_id: Mapped[str] = mapped_column(Text, nullable=False)
-    community_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, server_default=COMMUNITY_DEFAULT
-    )
-    key: Mapped[str] = mapped_column(String(255), nullable=False)
-    value_json: Mapped[Any] = mapped_column(JSONB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-
-class PluginApiKey(Base):
-    """@brief Narrow-scope API key for a plugin (bcrypt-hashed, never plaintext)."""
-
-    __tablename__ = "plugin_api_keys"
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["plugin_id", "community_id"],
-            ["plugins.id", "plugins.community_id"],
-            ondelete="CASCADE",
+        CheckConstraint(
+            "status IN ('installing','running','disabled','failed','blocked')",
+            name="plugin_installs_status_check",
         ),
-        Index("ix_plugin_api_keys_plugin", "plugin_id", "community_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
-    plugin_id: Mapped[str] = mapped_column(Text, nullable=False)
-    community_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), nullable=False, server_default=COMMUNITY_DEFAULT
+    plugin_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    version: Mapped[str] = mapped_column(Text, nullable=False)
+    manifest: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    manifest_url: Mapped[str | None] = mapped_column(Text)
+    endpoint_url: Mapped[str | None] = mapped_column(Text)
+    package_url: Mapped[str | None] = mapped_column(Text)
+    sha256: Mapped[str | None] = mapped_column(Text)
+    source_index: Mapped[str | None] = mapped_column(Text)
+    tier: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="running")
+    granted_scopes: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, server_default=text("'{}'::text[]")
     )
-    key_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    key_hint: Mapped[str] = mapped_column(String(8), nullable=False)
+    installed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PluginCommunity(Base):
+    """@brief Per-community plugin enablement, bot account and settings."""
+
+    __tablename__ = "plugin_communities"
+    __table_args__ = (
+        PrimaryKeyConstraint("install_id", "community_id"),
+        Index("ix_plugin_communities_community", "community_id"),
+    )
+
+    install_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False
+    )
+    community_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=False,
+        server_default=COMMUNITY_DEFAULT,
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    bot_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), unique=True
+    )
+    settings: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    webhook_secret: Mapped[str | None] = mapped_column(Text)  # Fernet ciphertext
+
+
+class PluginToken(Base):
+    """@brief Scoped bot API token (sha256 hash only)."""
+
+    __tablename__ = "plugin_tokens"
+    __table_args__ = (
+        Index("ix_plugin_tokens_install", "install_id", "community_id"),
+        Index(
+            "uq_plugin_tokens_active",
+            "install_id",
+            "community_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    install_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False
+    )
+    community_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=False,
+        server_default=COMMUNITY_DEFAULT,
+    )
+    token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PluginUserPref(Base):
+    """@brief Per-user plugin preference values."""
+
+    __tablename__ = "plugin_user_prefs"
+    __table_args__ = (
+        PrimaryKeyConstraint("install_id", "user_id", "community_id"),
+        Index("ix_plugin_user_prefs_user", "user_id"),
+    )
+
+    install_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("plugin_installs.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    community_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("communities.id", ondelete="CASCADE"),
+        nullable=False,
+        server_default=COMMUNITY_DEFAULT,
+    )
+    values: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+
+
+class PluginIndex(Base):
+    """@brief Marketplace index source (instance-wide)."""
+
+    __tablename__ = "plugin_indexes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    url: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)

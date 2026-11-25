@@ -43,7 +43,9 @@ async def test_plain_posts_skip_queries():
 
 
 async def test_kudos_recipient_and_user_celebration():
-    ruth = SimpleNamespace(id=uuid.uuid4(), username="ruth", display_name="Ruth", avatar_url=None)
+    ruth = SimpleNamespace(
+        id=uuid.uuid4(), username="ruth", display_name="Ruth", avatar_url=None, is_bot=False
+    )
     kudos = _post(recipient_id=ruth.id)
     bday = _post(celebrate_type="user", celebrate_id=ruth.id, celebrate_occasion="birthday")
     session = AsyncMock()

@@ -62,7 +62,7 @@ and email notifications. When you add a notification type, extend `PREF_MAP`.
 ## Background jobs
 
 Celery handles asynchronous work with these queues: `default`, `maintenance`,
-`notifications`, `email`, and `media`. The schedule lives in
+`notifications`, `email`, `media`, and `plugins`. The schedule lives in
 `tasks/celery_app.py`. Beat runs as a singleton guarded by a PostgreSQL
 advisory lock in `tasks/beat_lock.py`. To add a periodic job, append it to
 `beat_schedule` and route the task to the right queue.

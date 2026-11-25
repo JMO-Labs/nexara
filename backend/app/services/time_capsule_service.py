@@ -113,6 +113,7 @@ class TimeCapsuleService:
         self, caps: list[TimeCapsule], *, full: bool
     ) -> list[CapsuleSealed | CapsuleOpen]:
         names = await self._repo.author_names(list({c.author_id for c in caps}))
+        bots = await self._repo.bot_ids(list({c.author_id for c in caps}))
         rows = await self._repo.recipients([c.id for c in caps])
         out: list[CapsuleSealed | CapsuleOpen] = []
         for c in caps:
@@ -120,7 +121,11 @@ class TimeCapsuleService:
             head: dict[str, Any] = {
                 "id": c.id,
                 "title": c.title,
-                "author": CapsuleAuthor(id=c.author_id, display_name=names.get(c.author_id, "")),
+                "author": CapsuleAuthor(
+                    id=c.author_id,
+                    display_name=names.get(c.author_id, ""),
+                    is_bot=c.author_id in bots,
+                ),
                 "open_at": c.open_at,
                 "recipients_summary": _summary(kinds),
             }

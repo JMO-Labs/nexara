@@ -1,110 +1,173 @@
-"""@file Unit tests for plugin manifest validation."""
-
-import json
+"""
+@file
+@brief Tests for the plugin manifest parser and field validation.
+"""
 
 import pytest
-from packaging.version import InvalidVersion
-from pydantic import ValidationError
 
-from app.plugins import manifest as manifest_mod
+from app.core.exceptions import AppError
 from app.plugins.manifest import (
-    PluginManifest,
-    PluginPermission,
+    core_version,
     is_compatible,
-    load_manifest,
+    parse_manifest,
+    validate_values,
+    with_defaults,
 )
 
-VALID = {
-    "id": "hello",
-    "name": "Hello",
-    "version": "1.2.3",
-    "author": "Jane",
-    "description": "Demo",
-    "min_core_version": "0.1.0",
-    "permissions": ["db_read", "send_notifications"],
-    "hooks": {"before_post_created": "Check posts"},
-    "settings": {"api_key": {"type": "string", "label": "Key", "required": True, "secret": True}},
-    "backend": {"routes": "routes.py", "tasks": "tasks.py"},
-    "frontend": {"slots": {"sidebar": "Widget"}},
-}
+TOML = """
+[plugin]
+id = "io.jmolabs.sassybot"
+name = "Sassybot"
+version = "1.0.0"
+description = "A bot."
+author = "JMO Labs"
+license = "MIT"
+homepage = "https://example.com"
+min_core_version = "0.1.0"
+runtime = "node"
+entrypoint = "dist/index.js"
+icon = "assets/icon.png"
+
+[bot]
+display_name = "Sassybot"
+username = "sassybot"
+avatar = "assets/avatar.png"
+
+[permissions]
+scopes = ["posts:read", "comments:write"]
+events = ["post.created", "mention"]
+egress = ["api.anthropic.com"]
+
+[settings.daily_cap]
+type = "number"
+label = "Cap"
+min = 0
+max = 500
+default = 30
+
+[settings.claude_token]
+type = "secret"
+label = "Token"
+
+[user_prefs.roast_level]
+type = "select"
+label = "Roast me"
+options = ["off", "mild", "full"]
+default = "off"
+
+[composer_flags.roast_me]
+type = "boolean"
+label = "Roast"
+"""
 
 
-class TestManifest:
-    def test_valid_parses(self):
-        m = PluginManifest.model_validate(VALID)
-        assert m.version == "1.2.3"
-        assert PluginPermission.DB_READ in m.permissions
-        assert m.settings["api_key"].secret is True
-
-    @pytest.mark.parametrize("field", ["version", "min_core_version"])
-    @pytest.mark.parametrize("bad", ["1.0", "v1", "abc", "1.2.3.4", "1.2.3-beta"])
-    def test_bad_semver(self, field, bad):
-        with pytest.raises(ValidationError):
-            PluginManifest.model_validate({**VALID, field: bad})
-
-    def test_invalid_version_from_packaging_is_wrapped(self, monkeypatch):
-        def boom(_value):
-            raise InvalidVersion("boom")
-
-        monkeypatch.setattr(manifest_mod, "Version", boom)
-        with pytest.raises(ValidationError, match="boom"):
-            PluginManifest.model_validate(VALID)
-
-    def test_unknown_permission(self):
-        with pytest.raises(ValidationError):
-            PluginManifest.model_validate({**VALID, "permissions": ["root"]})
-
-    def test_duplicate_permissions_rejected(self):
-        with pytest.raises(ValidationError):
-            PluginManifest.model_validate({**VALID, "permissions": ["db_read", "db_read"]})
-
-    def test_missing_required(self):
-        data = {k: v for k, v in VALID.items() if k != "name"}
-        with pytest.raises(ValidationError):
-            PluginManifest.model_validate(data)
-
-    def test_duplicate_hooks_rejected_in_json(self, tmp_path):
-        d = tmp_path / "p"
-        d.mkdir()
-        (d / "manifest.json").write_text(
-            '{"id":"p","name":"P","version":"1.0.0","author":"a","description":"d",'
-            '"min_core_version":"0.1.0","hooks":{"x":"a","x":"b"}}'
-        )
-        with pytest.raises(ValidationError):
-            load_manifest(d)
-
-    def test_setting_bad_type(self):
-        bad = {**VALID, "settings": {"k": {"type": "blob", "label": "K"}}}
-        with pytest.raises(ValidationError):
-            PluginManifest.model_validate(bad)
+def _bad(old: str, new: str) -> str:
+    assert old in TOML
+    return TOML.replace(old, new)
 
 
-class TestCompatibility:
-    def test_core_meets_min(self):
-        m = PluginManifest.model_validate({**VALID, "min_core_version": "1.2.0"})
-        assert is_compatible(m, "1.2.0")
-        assert is_compatible(m, "2.0.0")
+def test_parses_spec_example() -> None:
+    m = parse_manifest(TOML)
+    assert m.id == "io.jmolabs.sassybot"
+    assert m.bot_username == "sassybot"
+    assert m.icon == "assets/icon.png"
+    assert m.bot_avatar == "assets/avatar.png"
+    assert m.user_prefs["roast_level"].options == ["off", "mild", "full"]
+    assert m.settings["claude_token"].type == "secret"
 
-    def test_core_too_old(self):
-        m = PluginManifest.model_validate({**VALID, "min_core_version": "1.2.0"})
-        assert not is_compatible(m, "1.1.9")
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ('"posts:read", "comments:write"', '"db:write"'),
+        ('"post.created", "mention"', '"nope"'),
+        ('id = "io.jmolabs.sassybot"', 'id = "Bad_ID"'),
+        ('version = "1.0.0"', 'version = "1.x"'),
+        ('type = "select"', 'type = "secret"'),
+    ],
+)
+def test_rejects_bad_manifest(old: str, new: str) -> None:
+    with pytest.raises(AppError) as e:
+        parse_manifest(_bad(old, new))
+    assert e.value.code == "invalid_manifest"
+    assert e.value.status_code == 422
+    assert e.value.details["errors"]
 
 
-class TestLoad:
-    def test_load_json(self, tmp_path):
-        (tmp_path / "manifest.json").write_text(json.dumps(VALID))
-        assert load_manifest(tmp_path).id == "hello"
+def test_rejects_invalid_toml() -> None:
+    with pytest.raises(AppError) as e:
+        parse_manifest("[[")
+    assert e.value.code == "invalid_manifest"
 
-    def test_load_toml(self, tmp_path):
-        (tmp_path / "manifest.toml").write_text(
-            'id="hello"\nname="Hello"\nversion="1.0.0"\nauthor="a"\ndescription="d"\n'
-            'min_core_version="0.1.0"\npermissions=["db_write"]\n'
-            '[hooks]\non_user_joined="joined"\n'
-        )
-        m = load_manifest(tmp_path)
-        assert m.permissions == [PluginPermission.DB_WRITE]
-        assert "on_user_joined" in m.hooks
 
-    def test_missing_file(self, tmp_path):
-        with pytest.raises(FileNotFoundError):
-            load_manifest(tmp_path)
+def test_validate_values() -> None:
+    m = parse_manifest(TOML)
+    p = m.user_prefs
+    assert validate_values(p, {"roast_level": "mild"}) == {"roast_level": "mild"}
+    for fields, vals in [
+        (p, {"roast_level": "x"}),
+        (p, {"nope": 1}),
+        (m.settings, {"daily_cap": 501}),
+        (m.settings, {"daily_cap": True}),
+        (m.composer_flags, {"roast_me": "yes"}),
+    ]:
+        with pytest.raises(AppError) as e:
+            validate_values(fields, vals)
+        assert e.value.code == "invalid_plugin_value"
+        assert e.value.status_code == 422
+
+
+def test_with_defaults_fills_missing() -> None:
+    m = parse_manifest(TOML)
+    assert with_defaults(m.user_prefs, {}) == {"roast_level": "off"}
+
+
+def test_compat() -> None:
+    m = parse_manifest(TOML)
+    assert is_compatible(m)
+    assert core_version()
+    m2 = parse_manifest(_bad('min_core_version = "0.1.0"', 'min_core_version = "999.0.0"'))
+    assert not is_compatible(m2)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ('id = "io.jmolabs.sassybot"', 'id = "io.a\\n"'),
+        ('version = "1.0.0"', 'version = "١.0.0"'),
+        ('version = "1.0.0"', 'version = "1.0.0\\n"'),
+        ('entrypoint = "dist/index.js"', 'entrypoint = "../x.js"'),
+        ('entrypoint = "dist/index.js"', 'entrypoint = "/etc/x"'),
+        ('icon = "assets/icon.png"', 'icon = "a/../../b"'),
+        ("[settings.daily_cap]", '[settings."é k"]'),
+        ("min = 0\nmax = 500", "min = 9\nmax = 5"),
+        ("min = 0", "min = nan"),
+        ("default = 30", 'default = "x"'),
+        ('default = "off"', "default = 5"),
+        ('default = "off"', 'default = "zzz"'),
+        ('label = "Cap"', 'label = "Cap"\nmax_lenght = 3'),
+    ],
+)
+def test_hardening_rejects(old: str, new: str) -> None:
+    with pytest.raises(AppError) as e:
+        parse_manifest(_bad(old, new))
+    assert e.value.code == "invalid_manifest"
+
+
+def test_structural_abuse() -> None:
+    for text in (
+        "[[permissions]]\na=1",
+        "[[bot]]\na=1",
+        "settings = 1",
+        "a=" + "[" * 5000 + "]" * 5000,
+        "#" + "x" * 70000,
+    ):
+        with pytest.raises(AppError) as e:
+            parse_manifest(text)
+        assert e.value.code == "invalid_manifest"
+
+
+def test_string_cap() -> None:
+    m = parse_manifest(TOML)
+    with pytest.raises(AppError):
+        validate_values(m.settings, {"claude_token": "x" * 2000})

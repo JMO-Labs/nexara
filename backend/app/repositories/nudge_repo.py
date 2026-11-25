@@ -99,6 +99,7 @@ class NudgeRepository(BaseRepository[Nudge]):
             .where(
                 User.community_id == community_id,
                 User.deleted_at.is_(None),
+                User.is_bot.is_(False),
                 User.memorialized_at.is_(None),
                 User.last_seen_at.is_not(None),
                 User.last_seen_at < now - INACTIVE_AFTER,

@@ -19,7 +19,6 @@ from app.api.v1.admin_email_reply import router as admin_email_reply_router
 from app.api.v1.admin_oauth import router as admin_oauth_router
 from app.api.v1.admin_oauth import settings_router as admin_sso_router
 from app.api.v1.admin_oauth_tools import router as admin_oauth_tools_router
-from app.api.v1.admin_plugins import router as admin_plugins_router
 from app.api.v1.admin_retention import router as admin_retention_router
 from app.api.v1.admin_security import router as admin_security_router
 from app.api.v1.admin_shop import router as admin_shop_router
@@ -63,6 +62,7 @@ from app.api.v1.nudges import router as nudges_router
 from app.api.v1.oauth import router as oauth_router
 from app.api.v1.onboarding import admin_router as admin_onboarding_router
 from app.api.v1.onboarding import router as onboarding_router
+from app.api.v1.plugins import me_router as plugin_prefs_router
 from app.api.v1.plugins import router as plugins_router
 from app.api.v1.polls import router as polls_router
 from app.api.v1.posts import router as posts_router
@@ -116,9 +116,7 @@ api_v1_router.include_router(admin_email_router)
 api_v1_router.include_router(admin_email_callback_router)
 api_v1_router.include_router(admin_email_reply_router)
 api_v1_router.include_router(features_router)
-api_v1_router.include_router(admin_plugins_router)
 api_v1_router.include_router(admin_retention_router)
-api_v1_router.include_router(plugins_router)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(oauth_router)
 api_v1_router.include_router(branding_router)
@@ -172,6 +170,8 @@ api_v1_router.include_router(posts_router)
 api_v1_router.include_router(prompts_router)
 api_v1_router.include_router(recap_router)
 api_v1_router.include_router(daily_questions_router)
+api_v1_router.include_router(plugins_router)
+api_v1_router.include_router(plugin_prefs_router)
 api_v1_router.include_router(push_router)
 api_v1_router.include_router(search_router)
 api_v1_router.include_router(settings_router)

@@ -19,7 +19,7 @@ Self-hosted first, container-native, and scaleable to Kubernetes.
 - **Notifications** -- In-app (SSE), push (Web Push), and email
 - **Admin Panel** -- User management, community settings, audit log, WAF controls
 - **PWA** -- Installable progressive web app with offline shell
-- **Plugin System** -- Extensible via backend hooks and frontend slots (Phase 4)
+- **Plugin System** -- Out-of-process plugins with signed webhooks, scoped bot tokens and bot accounts ([contract](developer/plugins.md))
 
 ## Tech Stack
 

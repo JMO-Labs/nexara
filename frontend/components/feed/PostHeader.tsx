@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcn/dropdown-menu";
 import type { Post } from "@/lib/api/posts";
+import { BotBadge } from "@/components/ui/BotBadge";
 import { ReportDialog } from "@/components/moderation/ReportDialog";
 
 export interface PostHeaderProps {
@@ -64,6 +65,12 @@ export function PostHeader({
       <div className="min-w-0 grow">
         <p className="truncate text-sm font-semibold text-ink">
           {post.author.display_name}
+          {post.author.is_bot && (
+            <>
+              {" "}
+              <BotBadge active={post.author.bot_active !== false} />
+            </>
+          )}
         </p>
         <p className="text-xs text-ink/75">
           @{post.author.username} · {time}

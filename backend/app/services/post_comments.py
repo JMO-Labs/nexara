@@ -12,6 +12,7 @@ from app.core.cache import invalidate_search_cache_for_community
 from app.core.exceptions import NotFoundError
 from app.core.i18n import _
 from app.models.user import User
+from app.plugins.events import schedule_plugin_dispatch
 from app.services.activity_publish import record_activity
 from app.services.ai.sassybot_service import wants_sassybot
 from app.services.post_service_base import PostServiceBase
@@ -106,6 +107,8 @@ class CommentsMixin(PostServiceBase):
                 "username": user.username,
                 "display_name": user.display_name,
                 "avatar_url": user.avatar_url,
+                "is_bot": bool(user.is_bot),
+                "bot_active": user.bot_active,
             },
             "parent_id": str(comment.parent_id) if comment.parent_id else None,
             "created_at": comment.created_at.isoformat(),
@@ -138,5 +141,6 @@ class CommentsMixin(PostServiceBase):
                 events.comment_created(self._target, post_id, comment_dict, user.id),
                 post,
             )
+        schedule_plugin_dispatch(self._post_repo._session, self._community_id, post_id, comment.id)
 
         return comment_dict

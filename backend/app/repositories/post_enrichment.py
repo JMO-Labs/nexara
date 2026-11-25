@@ -192,6 +192,7 @@ async def enrich_posts(
                         "id": str(voter.id),
                         "display_name": voter.display_name,
                         "avatar_url": voter.avatar_url,
+                        "is_bot": bool(voter.is_bot),
                     }
                 )
 
@@ -253,6 +254,8 @@ async def enrich_posts(
                 "username": author.username,
                 "display_name": author.display_name,
                 "avatar_url": author.avatar_url,
+                "is_bot": bool(author.is_bot),
+                "bot_active": author.bot_active,
             },
             "media": media_map.get(post.id, []),
             "poll": poll_map.get(post.id),

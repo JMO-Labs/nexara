@@ -94,9 +94,6 @@ export const qk = {
     interestsAnalytics: () => ["admin", "interests-analytics"] as const,
     prompts: () => ["admin", "prompts"] as const,
     retention: () => ["admin", "retention"] as const,
-    plugins: () => ["admin", "plugins"] as const,
-    plugin: (id: string) => ["admin", "plugins", id] as const,
-    pluginKeys: (id: string) => ["admin", "plugins", id, "keys"] as const,
   },
   settings: {
     profile: () => ["settings", "profile"] as const,

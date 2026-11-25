@@ -1,10 +1,9 @@
 /**
  * @file tests/unit/settings/SettingsPage.test.tsx
- * @brief Settings tabs: Plugins tab and plugin settings registry.
+ * @brief Settings tabs: Plugins tab visibility.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, renderHook, act } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { render, screen } from "@testing-library/react";
 
 const tab: string | null = "plugins";
 vi.mock("next/navigation", () => ({
@@ -25,55 +24,10 @@ vi.mock("@/components/settings/AppearanceTab", () => ({
 vi.mock("@/components/settings/StorageTab", () => ({ StorageTab: () => null }));
 
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
-import {
-  PluginSettingsProvider,
-  useRegisterPluginSettings,
-  usePluginSettings,
-  usePluginSettingsSections,
-} from "@/lib/plugins/PluginSettingsContext";
 
 describe("Settings Plugins tab", () => {
-  it("lists Plugins in the nav", () => {
+  it("is hidden when no plugin has member prefs", () => {
     render(<SettingsTabs />);
-    expect(screen.getByRole("link", { name: /^Plugins/ })).toBeTruthy();
-  });
-
-  it("renders the empty state", () => {
-    render(<SettingsTabs />);
-    expect(screen.getByText("No plugins installed")).toBeTruthy();
-    expect(
-      screen.getByText("Plugins extend Nexara with custom features."),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("link", { name: "Browse plugins" }),
-    ).toHaveAttribute("href", "/app/admin/plugins");
-  });
-});
-
-describe("PluginSettingsContext", () => {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <PluginSettingsProvider>{children}</PluginSettingsProvider>
-  );
-
-  it("registers and unregisters sections without conflicts", () => {
-    const A = () => <div>A</div>;
-    const B = () => <div>B</div>;
-    const { result, unmount } = renderHook(
-      () => {
-        useRegisterPluginSettings("a", A);
-        useRegisterPluginSettings("b", B);
-        return usePluginSettingsSections();
-      },
-      { wrapper },
-    );
-    expect(result.current.map((s) => s.pluginId).sort()).toEqual(["a", "b"]);
-    unmount();
-  });
-
-  it("reads and writes per-plugin settings", () => {
-    const { result } = renderHook(() => usePluginSettings("a"), { wrapper });
-    expect(result.current.settings).toEqual({});
-    act(() => result.current.update({ x: 1 }));
-    expect(result.current.settings).toEqual({ x: 1 });
+    expect(screen.queryByRole("link", { name: /^Plugins/ })).toBeNull();
   });
 });

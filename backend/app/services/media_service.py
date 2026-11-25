@@ -62,12 +62,7 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 
 def enqueue_ocr(media_id: uuid.UUID, community_id: uuid.UUID, content_type: str) -> None:
-    """
-    @brief Enqueue OCR for ready images when an AI provider is configured.
-    @param media_id Media UUID.
-    @param community_id Tenant UUID.
-    @param content_type MIME type of the upload.
-    """
+    """@brief Enqueue OCR for an image upload when an AI provider is configured."""
     if not content_type.startswith("image/") or not get_settings().AI_PROVIDER:
         return
     try:

@@ -39,6 +39,7 @@ def _build(prefs: dict | None = None, cadence: dict | None = None):
     row.dnd_until = None
     row.dnd_timezone = "UTC"
     settings_repo.get_or_create.return_value = row
+    settings_repo.user_tz_and_bot.return_value = (None, False)
     dispatcher = AsyncMock(spec=Dispatcher)
     notif = MagicMock(spec=Notification)
     repo.upsert_grouped.return_value = notif
@@ -134,6 +135,7 @@ class TestWrappers:
         row.dnd_until = None
         row.dnd_timezone = "UTC"
         settings_repo.get_or_create.return_value = row
+        settings_repo.user_tz_and_bot.return_value = (None, False)
         repo.upsert_grouped.return_value = MagicMock(spec=Notification)
         disp = AsyncMock(spec=Dispatcher)
         with patch("app.core.dependencies.get_dispatcher", return_value=disp):

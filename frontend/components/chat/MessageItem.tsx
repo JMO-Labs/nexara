@@ -6,6 +6,7 @@
  *        Hover/focus reveals Reply; other authors offer a Send DM action.
  */
 import * as React from "react";
+import { BotBadge } from "@/components/ui/BotBadge";
 import { format } from "date-fns";
 import { CornerUpLeft, MessageSquare } from "lucide-react";
 import { Avatar, IconButton, Markdown } from "@/components/ui";
@@ -109,6 +110,9 @@ export function MessageItem({
         {!compact && (
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-semibold">{name}</span>
+            {message.author?.is_bot && (
+              <BotBadge active={message.author.bot_active !== false} />
+            )}
             <span className="text-xs text-muted">
               {time}
               {message.edited_at && " (edited)"}

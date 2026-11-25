@@ -6,6 +6,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const nav = vi.hoisted(() => ({ tab: null as string | null }));
+const plug = vi.hoisted(() => ({ on: false }));
+vi.mock("@/hooks/usePluginUi", () => ({
+  usePluginUi: () => ({
+    data: plug.on
+      ? [
+          {
+            plugin_id: "a",
+            name: "A",
+            composer_flags: {},
+            user_prefs: { x: {} },
+          },
+        ]
+      : [],
+  }),
+}));
+vi.mock("@/components/settings/PluginPrefsTab", () => ({
+  PluginPrefsTab: () => <p>body:plugins</p>,
+}));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => ({ get: () => nav.tab }),
   useRouter: () => ({ push: vi.fn() }),
@@ -51,7 +69,6 @@ const IDS = [
   "calendar",
   "engagement",
   "storage",
-  "plugins",
   "help",
 ];
 
@@ -60,7 +77,7 @@ describe("SettingsTabs", () => {
     nav.tab = null;
   });
 
-  it("renders the Settings header and a nav with 11 tab links", () => {
+  it("renders the Settings header and a nav with 10 tab links (plugins hidden with none)", () => {
     render(<SettingsTabs />);
     expect(
       screen.getByRole("heading", { name: "Settings", level: 1 }),
@@ -72,6 +89,15 @@ describe("SettingsTabs", () => {
       IDS.map((i) => `?tab=${i}`),
     );
     expect(links[0].querySelector("svg")).not.toBeNull();
+  });
+
+  it("shows the Plugins tab when a plugin has member prefs", () => {
+    plug.on = true;
+    nav.tab = "plugins";
+    render(<SettingsTabs />);
+    plug.on = false;
+    expect(screen.getByText("body:plugins")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Plugins/ })).toBeTruthy();
   });
 
   it("defaults to the account tab", () => {

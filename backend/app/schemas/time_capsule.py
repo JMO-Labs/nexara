@@ -35,6 +35,7 @@ class CapsuleAuthor(BaseModel):
 
     id: uuid.UUID
     display_name: str
+    is_bot: bool = False
 
 
 class CapsuleSealed(BaseModel):

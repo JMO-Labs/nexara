@@ -100,6 +100,15 @@ class SettingsRepository:
         """
         return await self._session.scalar(select(User.timezone).where(User.id == user_id))
 
+    async def user_tz_and_bot(self, user_id: uuid.UUID) -> tuple[str | None, bool]:
+        """@return ``(users.timezone, users.is_bot)``; one query for notify."""
+        row = (
+            await self._session.execute(
+                select(User.timezone, User.is_bot).where(User.id == user_id)
+            )
+        ).first()
+        return (row[0], bool(row[1])) if row else (None, False)
+
     async def user_timezones(self, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, str | None]:
         """@return ``{user_id: users.timezone}`` for the given users."""
         rows = await self._session.execute(

@@ -23,6 +23,8 @@ class PostAuthorResponse(BaseModel):
     username: str
     display_name: str
     avatar_url: str | None = None
+    is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
 
     model_config = {"from_attributes": True}
 
@@ -106,6 +108,8 @@ class PostCreate(BaseModel):
     visibility: Literal["community", "subgroup", "private"] | None = None
     # Adults-only; only adult authors may set it.
     is_nsfw: bool = False
+    # {plugin_id: {flag: value}}; validated against enabled plugins' composer_flags.
+    plugin_flags: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def require_content_or_media(self) -> PostCreate:

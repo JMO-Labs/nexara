@@ -142,3 +142,8 @@ class User(Base):
         Index("users_username_idx", "username"),
         Index("users_search_fts_idx", "search_fts", postgresql_using="gin"),
     )
+
+    @property
+    def bot_active(self) -> bool:
+        """@brief True for a plugin bot whose plugin is enabled (bot account active)."""
+        return bool(self.is_bot and self.is_active)

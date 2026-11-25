@@ -97,9 +97,9 @@ celery_app.conf.update(
         "inbound_email.*": {"queue": "email"},
         "nudges.*": {"queue": "notifications"},
         "app.tasks.export_tasks.*": {"queue": "maintenance"},
-        "plugins.example_trivia.*": {"queue": "maintenance"},
+        "app.tasks.plugin_tasks.*": {"queue": "plugins"},
     },
-    imports=("app.tasks.plugin_tasks", "app.tasks.list_tasks"),
+    imports=("app.tasks.list_tasks",),
     # ── Reliability ───────────────────────────────────────────────────
     task_acks_late=True,
     worker_prefetch_multiplier=1,
@@ -243,14 +243,6 @@ celery_app.conf.update(
             "task": "nudges.reconnect",
             "schedule": crontab(hour="15", minute="0"),
         },
-        "trivia-select-daily-question": {
-            "task": "plugins.example_trivia.select_daily_question",
-            "schedule": crontab(hour="0", minute="0"),
-        },
-        "trivia-reset-streaks": {
-            "task": "plugins.example_trivia.reset_streaks",
-            "schedule": crontab(day_of_week="sun", hour="0", minute="5"),
-        },
         "sweep-list-expirations": {
             "task": "app.tasks.list_tasks.sweep_list_expirations",
             "schedule": crontab(hour=2, minute=0),
@@ -328,14 +320,6 @@ def _on_task_failure(task_id: str, exception: BaseException, **kwargs: object) -
         exception=str(exception),
         exc_info=True,
     )
-
-
-@signals.import_modules.connect(sender=celery_app)
-def _load_plugin_tasks(**kwargs: object) -> None:
-    """@brief Register plugin Celery tasks and Beat entries when worker/beat start."""
-    from app.plugins.task_loader import load_plugin_tasks
-
-    logger.info("plugin_tasks_loaded", plugins=load_plugin_tasks())
 
 
 @signals.worker_process_init.connect

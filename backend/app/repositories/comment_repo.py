@@ -90,6 +90,8 @@ class CommentRepository:
                         "username": author.username,
                         "display_name": author.display_name,
                         "avatar_url": author.avatar_url,
+                        "is_bot": bool(author.is_bot),
+                        "bot_active": author.bot_active,
                     },
                     "parent_id": str(comment.parent_id) if comment.parent_id else None,
                     "created_at": comment.created_at.isoformat(),

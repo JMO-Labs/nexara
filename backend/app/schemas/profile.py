@@ -100,6 +100,8 @@ class ProfileResponse(BaseModel):
     display_name: str
     avatar_url: str | None = None
     role: str
+    is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
     created_at: datetime
     last_seen_at: datetime | None = None
     banner_media_id: UUID | None = None
@@ -130,5 +132,16 @@ class UserSummaryResponse(BaseModel):
     username: str
     display_name: str
     avatar_url: str | None = None
+    is_bot: bool = False
+    bot_active: bool = False  # is_bot and the plugin is enabled
 
     model_config = {"from_attributes": True}
+
+
+class PluginUserResponse(BaseModel):
+    """@brief Public profile fields only; what a plugin bot may read (spec 6.3 users:read)."""
+
+    id: UUID
+    username: str
+    display_name: str
+    avatar_url: str | None = None

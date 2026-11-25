@@ -60,7 +60,7 @@ def viewer_is_adult(viewer_id: uuid.UUID | None) -> Any:
 def adult_cond(u: Any, c: Any) -> Any:
     """
     @brief Row-level adult test for user ``u`` joined to its community ``c``
-           (mirror of ``age_service.effective_age_group == "adult"``).
+           (mirror of ``age_service.effective_age_group == "adult"``; bots never).
     """
     today = cast(func.timezone("UTC", func.now()), Date)
     by_birthday = and_(
@@ -69,7 +69,8 @@ def adult_cond(u: Any, c: Any) -> Any:
         extract("year", func.age(today, u.birthday)) >= 18,
         c.adult_requires_approval.is_(False),
     )
-    return or_(u.age_group == "adult", by_birthday)
+    # Plugin bots are never adults (mirror of age_service.effective_age_group).
+    return and_(u.is_bot.is_(False), or_(u.age_group == "adult", by_birthday))
 
 
 def _adult(viewer_id: uuid.UUID | None, viewer_adult: bool | None) -> Any:

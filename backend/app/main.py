@@ -116,21 +116,6 @@ async def _seed_default_chat_channel(settings: Settings) -> None:
         logger.warning("seed_default_chat_channel_failed", exc_info=True)
 
 
-async def _load_plugins(app: FastAPI, settings: Settings) -> None:
-    """
-    @brief Discover and mount enabled plugins; failures never block startup.
-    """
-    import uuid
-
-    try:
-        from app.plugins.loader import load_plugins
-
-        async with async_session_factory() as session:
-            await load_plugins(app, session, uuid.UUID(settings.COMMUNITY_ID))
-    except Exception:
-        logger.warning("plugins_load_failed", exc_info=True)
-
-
 def _warn_base_url(settings: Settings) -> None:
     """
     @brief Warn loudly when production runs on the default APP_BASE_URL.
@@ -159,9 +144,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     @param app The FastAPI application instance.
     """
-    from app.plugins.hooks import HookRegistry
-
-    HookRegistry.reset()  # hooks are not persisted across restarts
     settings = get_settings()
     setup_logging(
         log_level=settings.LOG_LEVEL,
@@ -177,7 +159,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _warn_base_url(settings)
     await _seed_oauth_from_env(settings)
     await _seed_default_chat_channel(settings)
-    await _load_plugins(app, settings)
 
     from app.services.realtime.pubsub import start_subscriber, stop_subscriber
 

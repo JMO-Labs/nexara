@@ -74,6 +74,7 @@ async def create_post(
         private=body.visibility == "private",
         celebrate=body.celebrate,
         is_nsfw=body.is_nsfw,
+        plugin_flags=body.plugin_flags,
     )
 
 

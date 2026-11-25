@@ -4,6 +4,7 @@
  * @brief Threaded comments list with a single inline reply input.
  */
 import * as React from "react";
+import { BotBadge } from "@/components/ui/BotBadge";
 import { MentionMenu } from "@/components/mentions/MentionMenu";
 import { useMentionInput } from "@/components/mentions/useMentionInput";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -52,7 +53,15 @@ function CommentNode({ comment, depth = 0, onReply }: CommentNodeProps) {
       />
       <div className="min-w-0 grow">
         <div className="glass-item rounded-[20px] px-3 py-2">
-          <p className="text-sm font-semibold">{comment.author.display_name}</p>
+          <p className="text-sm font-semibold">
+            {comment.author.display_name}
+            {comment.author.is_bot && (
+              <>
+                {" "}
+                <BotBadge active={comment.author.bot_active !== false} />
+              </>
+            )}
+          </p>
           <Markdown content={comment.content} size="sm" mentions />
         </div>
         <div className="ml-2 mt-1 flex items-center gap-3 text-xs text-ink/75">
