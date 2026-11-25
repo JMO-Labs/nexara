@@ -26,6 +26,7 @@ include:
   - local: ".gitlab/ci/test-backend.yml"
   - local: ".gitlab/ci/test-frontend.yml"
   - local: ".gitlab/ci/test-mobile.yml"
+  - local: ".gitlab/ci/plugin-host.yml"
   - local: ".gitlab/ci/security.yml"
   - local: ".gitlab/ci/build.yml"
   - local: ".gitlab/ci/container-scan.yml"

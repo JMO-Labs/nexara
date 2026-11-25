@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Switch } from "@/components/ui";
+import { Button, Switch } from "@/components/ui";
 import { Panel } from "@/components/ui/page";
 import { SettingsRow } from "@/components/ui/SettingsRow";
 import { ManifestFieldsForm } from "@/components/plugins/ManifestFieldsForm";
@@ -19,6 +19,12 @@ import * as api from "@/lib/api/plugins";
 import { PLUGINS_KEY } from "./InstalledTab";
 import { CredentialsDialog } from "./CredentialsDialog";
 import { UninstallDialog } from "./UninstallDialog";
+import { PluginLogs } from "./PluginLogs";
+import {
+  PluginStatusBadge,
+  displayStatus,
+  hostErrorText,
+} from "./PluginStatus";
 
 const list = (items: string[]) => (items.length ? items.join(", ") : "None");
 
@@ -51,6 +57,12 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
     }) => api.setPluginCommunity(pluginId, communityId ?? "", body),
     onSuccess: async (r, body) => {
       if (r.credentials) setCreds(r.credentials);
+      if (r.host_error)
+        push({
+          variant: "warning",
+          message:
+            "Disabled. The plugin host could not be reached; the plugin is stopped there once it is back.",
+        });
       if (body.settings)
         push({ variant: "success", message: "Settings saved" });
       await qc.invalidateQueries({ queryKey: PLUGINS_KEY });
@@ -59,8 +71,17 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
   });
   const remove = useMutation({
     mutationFn: (del: boolean) => api.uninstallPlugin(pluginId, del),
-    onSuccess: async () => {
+    onSuccess: async (r) => {
       await qc.invalidateQueries({ queryKey: PLUGINS_KEY });
+      if (r?.host_error) {
+        push({
+          variant: r.removed ? "warning" : "danger",
+          message: r.removed
+            ? "Uninstalled. The plugin host could not be reached; its files are removed once it is back."
+            : hostErrorText(r.host_error),
+        });
+        if (!r.removed) return setRemoving(false);
+      }
       router.push("/app/admin/plugins");
     },
     onError: fail,
@@ -72,15 +93,25 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
   const p = plugins.data.find((x) => x.plugin_id === pluginId);
   if (!p) return <AdminNotice tone="error">Plugin not found</AdminNotice>;
   const hasSettings = Object.keys(p.settings_schema).length > 0;
+  const status = displayStatus(p);
+  const hostProblem =
+    p.source === "package" &&
+    (p.host_error ??
+      (status === "unreachable" || status === "sandbox_unavailable"
+        ? status
+        : null));
 
   return (
     <Panel className="flex max-w-[880px] flex-col gap-2">
       <h2 className="text-lg font-semibold">{p.name}</h2>
       <SettingsRow label="Status">
-        <Badge tone={p.status === "active" ? "leaf" : "neutral"}>
-          {p.status}
-        </Badge>
+        <PluginStatusBadge status={status} />
       </SettingsRow>
+      {hostProblem && (
+        <p role="status" className="text-sm text-muted">
+          {hostErrorText(hostProblem)}
+        </p>
+      )}
       <SettingsRow label="Version">
         <span className="text-sm">v{p.version}</span>
       </SettingsRow>
@@ -116,6 +147,7 @@ export function PluginDetail({ pluginId }: { pluginId: string }) {
           />
         </SettingsRow>
       )}
+      {p.source === "package" && <PluginLogs pluginId={pluginId} />}
       <div className="pt-2">
         <Button variant="destructive" onClick={() => setRemoving(true)}>
           Uninstall

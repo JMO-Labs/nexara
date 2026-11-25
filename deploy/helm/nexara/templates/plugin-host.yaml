@@ -1,0 +1,85 @@
+{{- if .Values.pluginHost.enabled }}
+{{- $ctx := dict "root" . "component" "plugin-host" }}
+{{- $ph := .Values.pluginHost }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexara.fullname" . }}-plugin-host
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}   # RWO volume
+  selector:
+    matchLabels: {{- include "nexara.selector" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nexara.selector" $ctx | nindent 8 }}
+      annotations:
+        checksum/plugin-host: {{ include "nexara.pluginHostChecksum" . }}
+        # Pre-1.30 AppArmor fallback (bwrap needs user namespaces).
+        container.apparmor.security.beta.kubernetes.io/plugin-host: unconfined
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext: {{- toYaml $ph.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: plugin-host
+          image: "{{ $ph.image.repository }}:{{ $ph.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ $ph.image.pullPolicy }}
+          ports:
+            - {name: http, containerPort: {{ $ph.port }}}
+          env:
+            - name: PLUGIN_HOST_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nexara.pluginHostSecret" . }}
+                  key: plugin-host-secret
+            - name: NEXARA_URL
+              value: "http://{{ include "nexara.fullname" . }}-api"
+          readinessProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: {port: http}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          securityContext: {{- toYaml $ph.containerSecurityContext | nindent 12 }}
+          resources: {{- toYaml $ph.resources | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "nexara.fullname" . }}-plugin-host
+        - name: tmp
+          emptyDir: {sizeLimit: {{ $ph.tmpSize }}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexara.fullname" . }}-plugin-host
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "nexara.selector" $ctx | nindent 4 }}
+  ports:
+    - {name: http, port: {{ $ph.port }}, targetPort: http}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "nexara.fullname" . }}-plugin-host
+  labels: {{- include "nexara.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with $ph.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $ph.persistence.size }}
+{{- end }}

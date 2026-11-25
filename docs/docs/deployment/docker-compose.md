@@ -96,3 +96,54 @@ Migrations run on start. Take a backup first.
 `GET /healthz` (root path, not `/api/v1/healthz`) returns 200 when the
 database, Valkey and storage are healthy, 503 otherwise. The compose
 healthcheck uses it.
+
+## Plugin host (optional)
+
+The `plugin-host` service installs and sandboxes plugin packages (bubblewrap,
+one uid per plugin). It is off by default; enable it with a compose profile:
+
+```bash
+# in .env: PLUGIN_HOST_SECRET=<openssl rand -hex 32>  (required, no default)
+#          PLUGIN_HOST_URL=http://plugin-host:8700
+docker compose --profile plugins up -d
+```
+
+- Shares only the `nexara-plugins` network with `nexara`; it cannot reach
+  `nexara-db`. Nexara reaches it at `PLUGIN_HOST_URL` (`http://plugin-host:8700`).
+- The container runs as root with `cap_drop: ALL` plus `SETUID`, `SETGID`,
+  `CHOWN`, `KILL`, `NET_ADMIN`, `seccomp=unconfined`, `apparmor=unconfined`,
+  `no-new-privileges`, a read-only root filesystem, a sized `/tmp` tmpfs and
+  the `plugin_data` volume at `/data`. bubblewrap needs user namespaces, which
+  the default seccomp/AppArmor profiles block; the host applies its own seccomp
+  filter to every plugin instead. Do not add `systempaths=unconfined`.
+- Root has no `DAC_OVERRIDE`/`FOWNER`: it cannot read or change files a plugin
+  uid owns. Do not "fix" permission errors by adding capabilities; the host
+  logs the failing path (`install error: PermissionError errno=13 path=...`).
+- Egress: `PLUGIN_EGRESS_FILTER` (default `true`) installs iptables rules in
+  the plugin-host container's own network namespace (this is what `NET_ADMIN`
+  is for). Plugins may reach the internet, Docker DNS and `NEXARA_URL` only;
+  loopback (including the host's control API), the container's own addresses
+  and private/link-local/metadata ranges are dropped. The rules follow
+  `nexara`'s IP when it is recreated (re-checked at most once a minute). If
+  they cannot be installed, plugins report `sandbox_unavailable`. Set it to `false` only together with removing
+  `NET_ADMIN` from `cap_add`.
+- `PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS` (default `false`) is **development
+  only**: it lets the host download packages over `http://` and from
+  private/loopback addresses (packages are still sha256-checked). For a local
+  test package you also need core `PLUGINS_ALLOW_INSECURE_URLS=true`, since
+  Nexara downloads the package first; see `scripts/plugin-echo/README.md`.
+- `TRUSTED_PROXIES`: never trust a whole Docker range (for example
+  `172.16.0.0/12` for a Traefik container). plugin-host's address on the
+  `nexara-plugins` bridge would match, and plugins could spoof
+  `X-Forwarded-For`. List your proxy's exact address instead.
+- `pids_limit: 512` and `mem_limit` (`PLUGIN_HOST_MEM_LIMIT`, default `1g`)
+  bound all plugins combined.
+- Known gap: a disk quota for each plugin's `/state` is **not enforced**; a
+  plugin can fill the `plugin_data` volume.
+- Uninstalling while the host is unreachable removes the plugin's code at the
+  next poll but keeps its `/state` even if "delete content" was chosen.
+
+GitLab CI: the host's sandbox tests need a privileged docker-in-docker runner.
+The job runs only when the project variable `PLUGIN_HOST_SANDBOX_CI=true` is
+set and a runner tagged `privileged` exists; otherwise a
+`test:plugin-host:skipped` job notes that they did not run.

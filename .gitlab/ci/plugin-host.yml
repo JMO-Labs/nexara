@@ -1,0 +1,80 @@
+##
+# @file .gitlab/ci/plugin-host.yml
+# @brief plugin-host: lint, and tests run inside the built image.
+#
+# Unit tests run as a non-root user (some assert non-root behaviour). The
+# `sandbox`-marked tests need real bwrap and run ONLY here, as root inside the
+# image with the same security options as the compose service
+# (docker-in-docker, so it needs a privileged runner), including an end-to-end
+# install+start+upgrade+purge as root without DAC_OVERRIDE (test_e2e_sandbox).
+#
+# The sandbox job runs only when PLUGIN_HOST_SANDBOX_CI == "true" (project CI
+# variable) and only on runners tagged `privileged`. Otherwise a visible
+# `test:plugin-host:skipped` job explains why; the sandbox tests then run
+# nowhere, so enable this before merging plugin-host changes.
+##
+
+.rules:plugin-host:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        paths:
+          - "plugin-host/**"
+          - "deploy/docker/plugin-host.Dockerfile"
+          - ".gitlab/ci/plugin-host.yml"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+lint:plugin-host:
+  stage: lint
+  image: python:3.12.16-slim-bookworm
+  extends:
+    - .cache:python
+  before_script:
+    - pip install --quiet uv
+    - cd plugin-host
+    - uv sync --frozen
+  script:
+    - uv run ruff check .
+    - uv run ruff format --check .
+    - uv run mypy host
+  rules: !reference [.rules:plugin-host, rules]
+
+test:plugin-host:skipped:
+  stage: test
+  image: busybox:1.37
+  script:
+    - echo "plugin-host unit+sandbox tests SKIPPED; set PLUGIN_HOST_SANDBOX_CI=true and provide a runner tagged 'privileged' (dind) to run them."
+  rules:
+    - if: $PLUGIN_HOST_SANDBOX_CI == "true"
+      when: never
+    - !reference [.rules:plugin-host, rules]
+
+test:plugin-host:
+  stage: test
+  tags: [privileged]
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: "/certs/client"
+  script:
+    - docker build -f deploy/docker/plugin-host.Dockerfile --target test -t plugin-host-test .
+    - >-
+      docker run --rm --user 1000:1000 --cap-drop ALL --read-only
+      --tmpfs /tmp:size=64m plugin-host-test
+      /opt/venv/bin/pytest -q -p no:cacheprovider -m "not sandbox"
+    - >-
+      docker run --rm --cap-drop ALL
+      --cap-add SETUID --cap-add SETGID --cap-add CHOWN --cap-add KILL --cap-add NET_ADMIN
+      --security-opt seccomp=unconfined --security-opt apparmor=unconfined
+      --security-opt no-new-privileges:true --read-only
+      --tmpfs /tmp:size=64m --tmpfs /data:size=256m plugin-host-test
+      /opt/venv/bin/pytest -q -p no:cacheprovider -m sandbox
+  rules:
+    - if: $PLUGIN_HOST_SANDBOX_CI != "true"
+      when: never
+    - !reference [.rules:plugin-host, rules]

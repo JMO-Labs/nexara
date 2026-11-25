@@ -134,6 +134,75 @@ networkPolicy:
   apiIngressFrom: []
   # Ports pods may reach outside the cluster (SMTP, HTTPS APIs, S3, push).
   externalEgressPorts: [443, 587, 465]
+  # Ranges the plugin host may NOT reach (cluster pod/service CIDRs, RFC1918).
+  # CAVEAT: in-cluster Postgres/Valkey live inside these ranges, so the exclusion
+  # is what denies host -> DB. Add your actual pod/service CIDRs if they are not
+  # covered (e.g. a public-range pod CIDR), or the deny is incomplete.
+  privateCidrs:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 100.64.0.0/10
+    - 169.254.0.0/16
+  # IPv6 ranges excluded from the host's ::/0 egress rule (only rendered when
+  # pluginHost.ipv6Egress=true): loopback, ULA, link-local, NAT64, 6to4, v4-mapped,
+  # discard, documentation. REQUIRED on dual-stack clusters: append your global
+  # pod/Service/node IPv6 ranges, or plugins can reach in-cluster services over IPv6.
+  privateCidrs6:
+    - ::1/128
+    - fc00::/7
+    - fe80::/10
+    - 64:ff9b::/96
+    - 64:ff9b:1::/48
+    - 2002::/16
+    - ::ffff:0:0/96
+    - 100::/64
+    - 2001:db8::/32
+
+# -- Plugin host (optional): runs untrusted plugin code in bubblewrap sandboxes.
+# Needs seccomp/AppArmor Unconfined + SETUID/SETGID/CHOWN/KILL for user namespaces;
+# runs as root in-container with no DB creds, no SA token, read-only rootfs.
+# Enforce NetworkPolicies (networkPolicy.enabled) so it cannot reach Postgres/Valkey.
+# Cluster must allow Unconfined seccomp (PSA "privileged" namespace label;
+# "baseline" and "restricted" both reject Unconfined seccomp/AppArmor). pids limit is a kubelet setting (--pod-max-pids).
+pluginHost:
+  enabled: false
+  port: 8700
+  image:
+    repository: ghcr.io/jmo-labs/nexara-plugin-host
+    tag: ""            # defaults to Chart appVersion
+    pullPolicy: IfNotPresent
+  # Existing Secret with key "plugin-host-secret"; otherwise generated and kept.
+  existingSecret: ""
+  # Cluster DNS the host may query (egress is limited to it). Override if your
+  # DNS runs elsewhere (e.g. NodeLocal DNS, k3s uses the same kube-dns labels).
+  dns:
+    namespaceLabels: {kubernetes.io/metadata.name: kube-system}
+    podLabels: {k8s-app: kube-dns}
+  # Allow plugin egress over IPv6 (off by default; see networkPolicy.privateCidrs6).
+  ipv6Egress: false
+  # Ports plugins may use to reach the internet.
+  egressPorts: [443, 80]
+  persistence:
+    size: 2Gi
+    storageClass: ""
+  tmpSize: 256Mi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  podSecurityContext:
+    runAsUser: 0
+    runAsGroup: 0
+    seccompProfile: {type: Unconfined}
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+      add: [SETUID, SETGID, CHOWN, KILL]
+    # Needs k8s >= 1.30 (older API servers may warn/drop it); the pod annotation in
+    # the template provides the fallback there.
+    appArmorProfile: {type: Unconfined}
 
 # -- Pod/container security for worker/beat (data stores keep image defaults)
 securityContext:
@@ -172,6 +241,8 @@ env:
   ALLOWED_ORIGINS: ""
   # Proxies whose X-Forwarded-For is believed (bundled nginx = loopback).
   # Add your ingress controller pod CIDR, e.g. "127.0.0.1/32,::1/128,10.42.0.0/16".
+  # NEVER include the plugin-host pod/network CIDR: plugins could then spoof
+  # X-Forwarded-For when calling the API pod-to-pod.
   TRUSTED_PROXIES: "127.0.0.1/32,::1/128"
   # Web Push: public key pairs with secrets.vapidPrivateKey.
   VAPID_PUBLIC_KEY: ""

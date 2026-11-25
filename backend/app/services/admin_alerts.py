@@ -34,6 +34,7 @@ _MESSAGES = {
     "disk_high": "Disk usage is high",
     "worker_down": "A background worker is down",
     "email_failing": "Outgoing email is failing",
+    "plugin_failed": "Plugin {plugin_id} stopped working ({reason})",
 }
 
 
@@ -88,7 +89,8 @@ async def admin_alert(
 
     @param session DB session.
     @param community_id Tenant scope.
-    @param kind ``signin_burst`` | ``disk_high`` | ``worker_down`` | ``email_failing``.
+    @param kind ``signin_burst`` | ``disk_high`` | ``worker_down`` | ``email_failing`` |
+           ``plugin_failed``.
     @param data Context; ``ip`` (else ``key``) distinguishes dedupe keys.
     @param redis Cache client for dedupe. Callers under ``asyncio.run`` (Celery) must pass
            their own: the shared pool is bound to the first run's loop.

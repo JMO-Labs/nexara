@@ -1,12 +1,20 @@
 # Plugin Contract
 
-Plugins are external HTTP services. Nexara core sends them signed webhooks and the
-plugin calls back with a bot token. A working example lives in `scripts/plugin-echo/`.
+Nexara core sends plugins signed webhooks and the plugin calls back with a bot token.
+A plugin ships in one of two ways:
+
+- **Package (default):** a `.tar.gz` that the plugin host downloads, installs and runs
+  in a sandbox. See [Packaged plugins](#packaged-plugins-plugin-host).
+- **External (advanced):** an HTTP service you run yourself. Nexara needs its manifest
+  URL and endpoint URL.
+
+A working example of both modes is in `scripts/plugin-echo/`.
 
 ## Manifest (`nexara-plugin.toml`)
 
-Max 64 KiB, TOML. Fetched by core from an admin-supplied URL (https only, public
-hosts only, unless `PLUGINS_ALLOW_INSECURE_URLS=true` for development).
+Max 64 KiB, TOML. In package mode it is read from the tarball root. In external mode
+core fetches it from an admin-supplied URL. Both URLs are https and public hosts only,
+unless `PLUGINS_ALLOW_INSECURE_URLS=true` is set for development.
 
 ```toml
 [plugin]
@@ -186,19 +194,126 @@ unknown key or bad value) and stored per plugin id. `user_prefs` are edited by e
 user under Settings > Plugins. Both are delivered with every event. `settings` are
 set by admins per community.
 
+## Packaged plugins (plugin host)
+
+### Tarball layout
+
+- A gzip tar of at most 50 MB downloaded and 200 MB / 10,000 members extracted.
+- `nexara-plugin.toml` and the `entrypoint` file sit at the tar root, not in a
+  sub-directory.
+- `[plugin] id` must equal the installed id. `version` must equal the version being
+  installed (`manifest_mismatch` otherwise).
+- Reinstalling the same version with a different sha256 fails with `version_conflict`.
+  Bump the version for every new build.
+- No links outside the package, devices or absolute paths (`unsafe_archive`).
+- Forbidden anywhere in the tree (`forbidden_config_file`): `.npmrc`, `.yarnrc`,
+  `.yarnrc.yml`, `.pnpmfile.cjs`, `pip.conf`, `pip.ini`, `uv.toml`, `.python-version`,
+  `npm-shrinkwrap.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `bun.lockb`.
+- No top-level `node_modules/` or `.venv/`: the host builds them.
+
+`scripts/plugin-echo/package.sh` is a minimal packaging script.
+
+### Dependencies
+
+Installs run inside the sandbox as the plugin's own uid, with network access but no
+install scripts.
+
+- **node:** if `package.json` exists, a `package-lock.json` (lockfileVersion 2 or later)
+  is required. The host runs `npm ci --omit=dev --ignore-scripts` against
+  `https://registry.npmjs.org/`. Every lock entry must resolve to that registry over
+  https with an `integrity` hash. Rejected (`lockfile_unsafe`): git, file, link and
+  tarball-URL deps, `inBundle` entries, `workspaces`, `bundle(d)Dependencies`, and
+  non-semver ranges in dependencies or `overrides`. There is no lifecycle script, so
+  ship compiled JavaScript.
+- **python:** the host always creates `.venv` with the image's Python 3.12. An optional
+  `requirements.txt` may only hold exact pins, one per line:
+  `name[extras]==version`, optional simple markers (`; python_version >= "3.12"`) and
+  `--hash=sha256:...` (on every line or on none; with hashes, uv runs
+  `--require-hashes`). Options, URLs, paths, `-r`/`-e`, env vars and line
+  continuations are rejected (`requirements_unsafe`). Wheels only, from PyPI.
+- A failed install reports `deps_failed:exit=N`. Its output is never logged.
+
+### Entrypoint and process
+
+- **python:** `entrypoint` is a script run as `/plugin/.venv/bin/python -u <entrypoint>`.
+  The `module:app` form is not supported; start your own server in the script.
+- **node:** run as `node <entrypoint>` (Node 22).
+- The working directory is `/plugin` (your package, read-only). `/state` is the only
+  persistent writable dir. `/tmp` is a private 64 MiB tmpfs.
+- Serve `POST /events` on `127.0.0.1:$PORT`. Bind loopback only. The host forwards
+  Nexara's webhooks there (body at most 1 MiB, 10 s total per delivery, `X-Nexara-*`
+  headers and the body unchanged).
+- Limits: 256 processes, 1024 open files, 1 GiB per file. Memory is capped by the
+  container.
+
+### Environment
+
+The process gets exactly these variables and nothing from the host:
+
+| Variable | Value |
+|---|---|
+| `PORT` | Port to listen on (127.0.0.1) |
+| `NEXARA_URL` | Base URL of the Nexara API as seen from the host (`http://nexara:8080` in compose) |
+| `NEXARA_TOKEN` | Bot token of the default community |
+| `NEXARA_WEBHOOK_SECRET` | Webhook secret of the default community |
+| `NEXARA_SETTINGS` | JSON object: the default community's plugin settings |
+| `NEXARA_COMMUNITIES` | JSON list, one per enabled community: `{community_id, token, webhook_secret, settings, bot_user_id}` |
+| `NEXARA_DATA_DIR` | `/state` |
+| `HOME` | `/tmp` |
+| `PATH` | `/usr/local/bin:/usr/bin:/bin` |
+
+- A plugin enabled in several communities must pick the secret (to verify) and the token
+  (to call back) from `NEXARA_COMMUNITIES` by the payload's `community_id`. The
+  `NEXARA_TOKEN`/`NEXARA_WEBHOOK_SECRET` pair only covers the default community, and
+  other communities' events would fail verification.
+- Tokens rotate every time Nexara pushes the plugin (enable, disable elsewhere, settings
+  change, host restart), and the process is restarted with the new env. Never persist
+  tokens.
+
+### Network, logs and failures
+
+- **Egress (compose):** plugins reach the public internet, Docker DNS and `NEXARA_URL`
+  only. All loopback (including the plugin's own port: do not call yourself over
+  127.0.0.1), the container's own addresses, and private, link-local and metadata
+  ranges are blocked. Helm uses a NetworkPolicy instead.
+- **Logs:** stdout and stderr, the last 200 lines (2,000 chars each), are shown under
+  Admin > Plugins. The plugin's own token, secret and settings values are redacted.
+- **Crashes:** restarts back off for 1, 2, 4, 8 and 16 s. More than 5 crashes in 10
+  minutes marks the plugin `failed` and alerts admins. To retry, disable it and enable
+  it again.
+- **Uninstall:** removes the code. Plugin state in `/state` is purged only when "delete
+  content" is chosen and the host is reachable.
+
 ## Admin install flow
 
+### Package (default)
+
+1. Instance owner: Admin > Plugins > Install, "Plugin package". Enter the package URL and
+   its sha256. Core downloads it, checks the sha256, reads the manifest and shows the
+   scopes, events and egress. The owner must approve every requested scope.
+2. Enable the plugin in a community. Core creates the bot, a token and a webhook secret,
+   and pushes them to the plugin host. Nothing is shown to copy. Nothing runs until the
+   first community is enabled.
+3. The status turns Running within a minute. Settings changes are pushed the same way.
+
+Errors: `plugin_host_not_configured` (422, `PLUGIN_HOST_URL` not set),
+`package_url_invalid` / `package_fetch_failed` / `package_too_large` /
+`package_sha256_mismatch` (422). Host-side failures show on the plugin as a status code
+(for example `manifest_mismatch`, `lockfile_unsafe`, `deps_failed:exit=1`).
+
+### External plugin (advanced)
+
 1. Run the plugin so it serves `nexara-plugin.toml` and an endpoint URL.
-2. Instance owner: Admin > Plugins > Install from URL. Enter the manifest URL and
-   endpoint URL; core fetches and validates the manifest, then shows scopes, events and
-   egress. The owner must approve every requested scope or install fails with
-   `422 scopes_not_approved`.
+2. Instance owner: Admin > Plugins > Install, "External plugin (advanced)". Enter the
+   manifest URL and endpoint URL; core fetches and validates the manifest, then shows
+   scopes, events and egress. The owner must approve every requested scope or install
+   fails with `422 scopes_not_approved`.
 3. Enable the plugin in a community. Core creates the bot, a token and a webhook
    secret, shown once. Give them to the plugin (for example `NEXARA_TOKEN`,
-   `WEBHOOK_SECRET`).
-4. Configure settings if any. Settings are delivered to the plugin by the plugin host
-   (PR 10); in URL mode they are stored but not sent, so configure the plugin directly
-   (for example with environment variables). Posts and comments now trigger deliveries.
+   `NEXARA_WEBHOOK_SECRET`).
+4. Configure settings if any. In URL mode settings are stored but not sent, so configure
+   the plugin directly (for example with environment variables). Posts and comments now
+   trigger deliveries.
 
 Errors: `plugin_already_installed` (409), `plugin_incompatible` (422, core older than
 `min_core_version`), `manifest_url_invalid` / `manifest_fetch_failed` (422),

@@ -65,7 +65,6 @@ services:
       OIDC_SCOPES: "${OIDC_SCOPES:-openid profile email groups}"
       OAUTH_ALLOW_INSECURE_DISCOVERY: "${OAUTH_ALLOW_INSECURE_DISCOVERY:-false}"
       PLUGINS_ALLOW_INSECURE_URLS: "${PLUGINS_ALLOW_INSECURE_URLS:-false}"
-      PLUGIN_HOST_URL: "${PLUGIN_HOST_URL:-}"
       ENABLE_REGISTRATION: "${ENABLE_REGISTRATION:-true}"
       REQUIRE_INVITE: "${REQUIRE_INVITE:-false}"
       AMAZON_CREATORS_CLIENT_ID: "${AMAZON_CREATORS_CLIENT_ID:-}"
@@ -74,10 +73,15 @@ services:
       AMAZON_MARKETPLACE: "${AMAZON_MARKETPLACE:-www.amazon.com}"
       AMAZON_TOKEN_URL: "${AMAZON_TOKEN_URL:-https://api.amazon.com/auth/o2/token}"
       TRANSCODE_HW_ACCEL: "${TRANSCODE_HW_ACCEL:-none}"
+      # Plugin host: leave empty unless the `plugins` profile is enabled, then
+      # set PLUGIN_HOST_URL=http://plugin-host:8700 in .env
+      PLUGIN_HOST_URL: "${PLUGIN_HOST_URL:-}"
+      PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
     volumes:
       - media:/data/media
     networks:
       - nexara-net
+      - nexara-plugins
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
       interval: 30s
@@ -119,7 +123,58 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Plugin Host (optional: docker compose --profile plugins up -d) ─────────
+  # Runs untrusted plugin code in bubblewrap sandboxes. No DB creds, no Docker
+  # socket; reachable only from `nexara` over the dedicated nexara-plugins
+  # bridge network (never joins nexara-net, so it cannot reach nexara-db).
+  plugin-host:
+    profiles: ["plugins"]
+    build:
+      context: ..
+      dockerfile: deploy/docker/plugin-host.Dockerfile
+      target: runtime
+    image: ghcr.io/jmo-labs/nexara-plugin-host:latest
+    restart: unless-stopped
+    environment:
+      # Required, no default on purpose (empty => host rejects every request).
+      # Generate with `openssl rand -hex 32`.
+      PLUGIN_HOST_SECRET: "${PLUGIN_HOST_SECRET:-}"
+      NEXARA_URL: "http://nexara:8080"
+      # iptables egress filter for plugin uids (needs NET_ADMIN below): plugins reach the
+      # internet, Docker DNS and NEXARA_URL only; no loopback/private/link-local ranges.
+      # If it cannot be installed, plugins report sandbox_unavailable.
+      PLUGIN_EGRESS_FILTER: "${PLUGIN_EGRESS_FILTER:-true}"
+      # DEV ONLY: allow http:// and private-address package URLs (downloads only).
+      PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS: "${PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS:-false}"
+    volumes:
+      - plugin_data:/data
+    networks:
+      - nexara-plugins
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    # bwrap needs user namespaces: seccomp/apparmor are unconfined for this
+    # container only (the host applies its own seccomp filter per plugin).
+    # NET_ADMIN: only for the egress filter (own netns); drop it together with
+    # PLUGIN_EGRESS_FILTER=false. Plugins never hold capabilities.
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, CHOWN, KILL, NET_ADMIN]
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+      - no-new-privileges:true
+    pids_limit: 512
+    mem_limit: "${PLUGIN_HOST_MEM_LIMIT:-1g}"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 8700), 3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
+  plugin_data:
+    driver: local
   postgres_data:
     driver: local
   media:
@@ -127,4 +182,8 @@ volumes:
 
 networks:
   nexara-net:
+    driver: bridge
+  # Plugin host <-> nexara only. Not internal:true because plugins need to
+  # download packages and call out to the internet.
+  nexara-plugins:
     driver: bridge

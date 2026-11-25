@@ -17,6 +17,14 @@ app.kubernetes.io/component: {{ .component }}
 {{- else if .Values.postgresql.external.existingSecret }}{{ .Values.postgresql.external.existingSecret }}
 {{- else }}{{ include "nexara.fullname" . }}-db{{- end }}
 {{- end }}
+{{- define "nexara.pluginHostSecret" -}}{{ .Values.pluginHost.existingSecret | default (printf "%s-plugin-host" (include "nexara.fullname" .)) }}{{- end }}
+{{- /* Restart pods when the plugin-host URL/secret changes (empty when disabled). */ -}}
+{{- define "nexara.pluginHostChecksum" -}}
+{{- if .Values.pluginHost.enabled -}}
+{{- $v := include "nexara.lookupSecret" (dict "root" . "name" (include "nexara.pluginHostSecret" .) "key" "plugin-host-secret") -}}
+{{- printf "%s|%s|%s" .Values.pluginHost.port .Release.Name $v | sha256sum -}}
+{{- end -}}
+{{- end }}
 {{- define "nexara.s3Secret" -}}{{ .Values.storage.s3.existingSecret | default (printf "%s-s3" (include "nexara.fullname" .)) }}{{- end }}
 {{- define "nexara.dbHost" -}}{{ if .Values.postgresql.enabled }}{{ include "nexara.fullname" . }}-postgresql{{ else }}{{ required "postgresql.external.host is required when postgresql.enabled=false" .Values.postgresql.external.host }}{{ end }}{{- end }}
 {{- define "nexara.redisUrl" -}}{{ if .Values.valkey.enabled }}redis://{{ include "nexara.fullname" . }}-valkey:6379{{ else }}{{ required "valkey.external.url is required when valkey.enabled=false" .Values.valkey.external.url }}{{ end }}{{- end }}
@@ -50,6 +58,13 @@ env:
       name: {{ include "nexara.appSecret" . }}
       key: vapid-private-key
       optional: true
+{{- if .Values.pluginHost.enabled }}
+- name: PLUGIN_HOST_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "nexara.pluginHostSecret" . }}
+      key: plugin-host-secret
+{{- end }}
 {{- if eq .Values.storage.backend "s3" }}
 - name: S3_ACCESS_KEY
   valueFrom:

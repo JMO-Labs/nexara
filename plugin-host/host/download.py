@@ -1,0 +1,134 @@
+"""
+@file
+@brief SSRF-guarded package download: https only, every hop resolved and checked
+       against non-public ranges, connection pinned to the vetted IP, size and time capped.
+"""
+
+import asyncio
+import ipaddress
+import logging
+import os
+import socket
+
+import httpx
+
+from host.errors import InstallError
+
+MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
+MAX_REDIRECTS = 5
+DOWNLOAD_DEADLINE_S: float = 300
+_REDIRECTS = {301, 302, 303, 307, 308}
+INSECURE_ENV = "PLUGIN_HOST_ALLOW_INSECURE_DOWNLOADS"
+log = logging.getLogger("plugin_host")
+
+
+def insecure_downloads() -> bool:
+    """@brief DEV ONLY flag: allow http:// and private/loopback package hosts.
+    Affects downloads only, never plugin egress filtering or the sandbox."""
+    return os.environ.get(INSECURE_ENV, "").lower() == "true"
+
+
+async def _resolve(host: str) -> list[str]:
+    """@brief All addresses for `host` (A + AAAA)."""
+    infos = await asyncio.get_running_loop().getaddrinfo(
+        host, 443, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP
+    )
+    return [str(i[4][0]) for i in infos]
+
+
+# IPv6 ranges that embed or translate to IPv4 (or are deprecated); is_global alone
+# lets some through (e.g. NAT64 64:ff9b::/96 with a private IPv4 inside).
+_BLOCKED_V6 = tuple(
+    ipaddress.IPv6Network(n)
+    for n in ("::/96", "::ffff:0:0/96", "::ffff:0:0:0/96", "64:ff9b::/96", "64:ff9b:1::/48",
+              "2002::/16", "2001::/32")
+)  # fmt: skip
+
+
+_GLOBAL_UNICAST_V6 = ipaddress.IPv6Network("2000::/3")
+
+
+def _public(addr: str) -> bool:
+    """@brief True only for globally routable unicast (rejects private, loopback,
+    link-local, CGNAT, ULA, multicast, reserved, unspecified and IPv6 ranges that
+    embed/translate IPv4: IPv4-compatible/mapped, SIIT, NAT64, 6to4, Teredo).
+    IPv6 must also be inside 2000::/3 (allowlist; blocks e.g. site-local fec0::/10)."""
+    ip = ipaddress.ip_address(addr.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address) and (
+        ip not in _GLOBAL_UNICAST_V6 or any(ip in n for n in _BLOCKED_V6)
+    ):
+        return False
+    return ip.is_global and not ip.is_multicast
+
+
+async def _vetted_ip(url: httpx.URL) -> str:
+    """@brief Resolve the URL host; every address must be public. @return first address."""
+    insecure = insecure_downloads()
+    if url.scheme not in (("http", "https") if insecure else ("https",)) or not url.host:
+        raise InstallError("download_failed")
+    try:
+        addrs = [str(ipaddress.ip_address(url.host))]
+    except ValueError:
+        try:
+            addrs = await _resolve(url.host)
+        except OSError as e:
+            raise InstallError("download_failed") from e
+    if not addrs:
+        raise InstallError("download_failed")
+    if insecure:
+        log.warning("INSECURE download of %s (%s=true)", url.host, INSECURE_ENV)
+    elif not all(_public(a) for a in addrs):
+        raise InstallError("download_blocked")
+    return addrs[0]
+
+
+async def _fetch(client: httpx.AsyncClient, url: httpx.URL) -> bytes:
+    for _ in range(MAX_REDIRECTS + 1):
+        ip = await _vetted_ip(url)
+        req = client.build_request(
+            "GET",
+            url.copy_with(host=ip),
+            headers={"Host": url.netloc.decode("ascii")},
+            extensions={"sni_hostname": url.host},
+        )
+        r = await client.send(req, stream=True)
+        try:
+            if r.status_code in _REDIRECTS and "location" in r.headers:
+                url = url.join(r.headers["location"])
+                continue
+            if r.status_code != 200:
+                raise InstallError("download_failed")
+            try:
+                declared = int(r.headers.get("content-length") or 0)
+            except ValueError as e:
+                raise InstallError("download_failed") from e
+            if declared > MAX_DOWNLOAD_BYTES:
+                raise InstallError("package_too_large")
+            buf = bytearray()
+            async for chunk in r.aiter_bytes():
+                buf += chunk
+                if len(buf) > MAX_DOWNLOAD_BYTES:
+                    raise InstallError("package_too_large")
+            return bytes(buf)
+        finally:
+            await r.aclose()
+    raise InstallError("download_failed")
+
+
+async def fetch(url: str) -> bytes:
+    """
+    @brief Download `url` (https only, ≤MAX_DOWNLOAD_BYTES, ≤DOWNLOAD_DEADLINE_S overall).
+    @return Package bytes (decoded size is what the cap counts).
+    """
+    try:
+        target = httpx.URL(url)
+    except (httpx.InvalidURL, TypeError) as e:
+        raise InstallError("download_failed") from e
+    try:
+        async with asyncio.timeout(DOWNLOAD_DEADLINE_S):
+            async with httpx.AsyncClient(
+                follow_redirects=False, timeout=60, trust_env=False
+            ) as client:
+                return await _fetch(client, target)
+    except (httpx.HTTPError, TimeoutError, ValueError) as e:
+        raise InstallError("download_failed") from e
